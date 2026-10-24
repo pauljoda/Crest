@@ -11,6 +11,20 @@ namespace CrestCore.Application;
 /// with and written in either form. The value's kind spells itself as `type`
 /// beside it.
 internal abstract record SyncPayload {
+    #region Types
+
+    /// The members only synced values carry; `StoredSessionCodec.Key` spells
+    /// every member a stored record shares.
+    internal static class Key {
+        /// A value's fractional position among its siblings.
+        public const string OrderToken = "orderToken";
+        /// Whether a Space offers saved passwords, which the stored session
+        /// keeps in its credential preferences.
+        public const string CredentialsEnabled = "credentialsEnabled";
+    }
+
+    #endregion
+
     #region Static Variables
 
     /// The widest a fractional position is spelled, in hex digits.

@@ -19,7 +19,12 @@ public static class NativeSyncProjection {
     internal static JsonObject Fields(JsonNode source, params string[] names)
         => new(names.Where(n => source[n] is not null).Select(n => new KeyValuePair<string, JsonNode?>(n, source[n]!.DeepClone())));
 
-    internal static TabPlacement Placement(JsonNode value, string field = "placement")
+    /// The members of `members` a record copies from the stored value it
+    /// projects; the projection places it in its Space and among its siblings.
+    private static string[] Copied(IReadOnlyList<string> members) =>
+        members.Where(member => member is not StoredSessionCodec.Key.SpaceId and not SyncPayload.Key.OrderToken).ToArray();
+
+    internal static TabPlacement Placement(JsonNode value, string field = StoredSessionCodec.Key.Placement)
         => TabPlacement.Named(Text(value[field])) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
 
     internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
@@ -89,12 +94,14 @@ public static class NativeSyncProjection {
             Add(SyncPayloadType.Space, spaceValue);
 
             if (policy.CurrentTabs || policy.SavedStructure) {
-                var folders = Items(space, StoredSessionCodec.Key.Folders).Where(f => policy.Includes(Placement(f!, "location"))).Select(f => f!).ToArray();
-                var tree = new FolderTree(folders.Select(f => new FolderState(Id(f["id"]), Placement(f, "location"),
-                    Text(f["title"])!, ParentId: f["parentID"] is { } parent ? Id(parent) : null)).ToArray());
+                var folders = Items(space, StoredSessionCodec.Key.Folders)
+                    .Where(f => policy.Includes(Placement(f!, StoredSessionCodec.Key.Location))).Select(f => f!).ToArray();
+                var tree = new FolderTree(folders.Select(f => new FolderState(Id(f[StoredSessionCodec.Key.Id]),
+                    Placement(f, StoredSessionCodec.Key.Location), Text(f[StoredSessionCodec.Key.Title])!,
+                    ParentId: f[StoredSessionCodec.Key.ParentId] is { } parent ? Id(parent) : null)).ToArray());
                 IReadOnlyList<FolderState> display;
                 try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new SyncRecordsFlawedException(SyncRecordFlaw.InvalidFolderHierarchy, Id(space["id"])); }
-                var byId = folders.ToDictionary(f => Id(f["id"]));
+                var byId = folders.ToDictionary(f => Id(f[StoredSessionCodec.Key.Id]));
                 var folderTokens = new Dictionary<Guid, string>();
                 foreach (var parent in new Guid?[] { null }.Concat(display.Select(f => (Guid?)f.Id))) {
                     var children = tree.Children(parent).ToArray();
@@ -102,10 +109,9 @@ public static class NativeSyncProjection {
                     for (int j = 0; j < children.Length; j++) folderTokens[children[j].Id] = tokens[j];
                 }
                 foreach (var folder in display) {
-                    var value = Fields(byId[folder.Id], "id", "title", "location", "symbol", "color", "parentID",
-                        "isCollapsed", "collapseModifiedAt", "orderAnchorTabID");
-                    value["spaceID"] = space["id"]!.DeepClone();
-                    value["orderToken"] = folderTokens[folder.Id];
+                    var value = Fields(byId[folder.Id], Copied(FolderPayload.Members));
+                    value[StoredSessionCodec.Key.SpaceId] = space[StoredSessionCodec.Key.Id]!.DeepClone();
+                    value[SyncPayload.Key.OrderToken] = folderTokens[folder.Id];
                     SyncedText.FolderTitle.Fit(value);
                     SyncedText.FolderSymbol.Fit(value);
                     Add(SyncPayloadType.Folder, value);
@@ -118,8 +124,7 @@ public static class NativeSyncProjection {
             if (!policy.HistoryAndArchive) continue;
             foreach (var history in Items(space, StoredSessionCodec.Key.History)
                          .Where(h => SyncedAddress.Includes(Text(h![StoredSessionCodec.Key.Url])))) {
-                var value = Fields(history!, StoredSessionCodec.Key.Id, StoredSessionCodec.Key.Url, StoredSessionCodec.Key.Title,
-                    StoredSessionCodec.Key.FirstVisitedAt, StoredSessionCodec.Key.LastVisitedAt, StoredSessionCodec.Key.VisitCount);
+                var value = Fields(history!, Copied(HistoryPayload.Members));
                 value[StoredSessionCodec.Key.SpaceId] = space[StoredSessionCodec.Key.Id]!.DeepClone();
                 Spell(value, StoredSessionCodec.Key.Url);
                 Visit(value);

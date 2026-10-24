@@ -164,12 +164,13 @@ internal abstract class SyncPayloadType {
     }
 
     private sealed class FolderType() : SyncPayloadType(SyncRecordKind.Folder, FolderPayload.Read) {
-        public override bool SyncsUnder(JsonNode preferences, JsonObject value) => SyncsPlaced(preferences, value, "location");
+        public override bool SyncsUnder(JsonNode preferences, JsonObject value) =>
+            SyncsPlaced(preferences, value, StoredSessionCodec.Key.Location);
 
-        public override JsonNode? ParentFolder(JsonObject value) => value["parentID"];
+        public override JsonNode? ParentFolder(JsonObject value) => value[StoredSessionCodec.Key.ParentId];
 
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) =>
-            LatestFields(result, first, second, "collapseModifiedAt", "isCollapsed");
+            LatestFields(result, first, second, StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.IsCollapsed);
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
             SyncDeletionReason removal) => removal.ForStructure;

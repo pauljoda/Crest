@@ -54,8 +54,13 @@ internal static class NativeSyncCompatibility {
     private static readonly Dictionary<string, Shape> Values = new() {
         [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy accessPolicyModifiedAt credentialsEnabled credentialsEnabledModifiedAt isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
             new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
-        [SyncRecordKind.Folder.Name] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
-            new() { ["id"] = Identity, ["spaceID"] = Identity, ["parentID"] = Identity, ["orderAnchorTabID"] = Identity, ["color"] = Color }),
+        [SyncRecordKind.Folder.Name] = new(FolderPayload.Members, new() {
+            [StoredSessionCodec.Key.Id] = Identity,
+            [StoredSessionCodec.Key.SpaceId] = Identity,
+            [StoredSessionCodec.Key.ParentId] = Identity,
+            [StoredSessionCodec.Key.OrderAnchorTabId] = Identity,
+            [StoredSessionCodec.Key.Color] = Color
+        }),
         [SyncRecordKind.Tab.Name] = Tab,
         [SyncRecordKind.History.Name] = new(HistoryPayload.Members, new() { [StoredSessionCodec.Key.SpaceId] = Identity }),
         [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab })

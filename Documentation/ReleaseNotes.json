@@ -4493,6 +4493,10 @@
     "synced-visit-field-names": {
       "category": "internal",
       "message": "Synced visits spell their fields from the one table the stored session uses."
+    },
+    "synced-folder-field-names": {
+      "category": "internal",
+      "message": "Synced folders spell their fields from one table."
     }
   }
 }
