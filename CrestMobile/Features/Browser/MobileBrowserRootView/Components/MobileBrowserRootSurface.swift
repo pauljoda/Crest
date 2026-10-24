@@ -19,7 +19,8 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let regular: (MobileRegularWindowLayout) -> Regular
     let palette: (EdgeInsets) -> Palette
     @Environment(\.layoutDirection) private var layoutDirection
-    @Environment(\.browserChromeAppearance) private var appearance
+
+    private var sidebarOnRight: Bool { BrowserDeviceAppearanceStore.shared.sidebarOnRight }
 
     var body: some View {
         ZStack {
@@ -42,7 +43,8 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                         availableWidth: proxy.size.width,
                         preferredSidebarWidth: preferredSidebarWidth,
                         foldSpan: fold?.span(across: proxy.frame(in: .global), direction: layoutDirection),
-                        sidebarEdge: appearance.sidebarEdge(in: layoutDirection),
+                        sidebarEdge: BrowserChromeAppearance.sidebarEdge(
+                            onRight: sidebarOnRight, in: layoutDirection),
                         presentsColumns: browser.shownCards.count > 1,
                         sharesTopBandWithStatusBar: MobileBrowserFold.isFoldable(proxy)
                             && proxy.size.height > proxy.size.width

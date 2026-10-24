@@ -5,8 +5,7 @@ struct BrowserNewTabRow: View {
     let capabilities: BrowserInteractionCapabilities
     let action: () -> Void
 
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = 1.0
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         BrowserNewTabRowContent(

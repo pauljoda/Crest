@@ -26,7 +26,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var keyboardEndFrame = CGRect.null
     /// The screen the keyboard last reported for, in its own coordinates.
     @State var keyboardScreenBounds = CGRect.null
-    @Environment(\.browserChromeAppearance) var chromeAppearance
     @AppStorage(
         MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
     private var allowsFloatingSidebar = false

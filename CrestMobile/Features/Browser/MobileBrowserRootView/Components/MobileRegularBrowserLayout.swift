@@ -7,10 +7,13 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     BrowserChromeAnimating
 {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
-    @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
 
-    private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
+    private var appearance: BrowserDeviceAppearanceStore { .shared }
+    private var sidebarOnRight: Bool { appearance.sidebarOnRight }
+    private var sidebarEdge: HorizontalEdge {
+        BrowserChromeAppearance.sidebarEdge(onRight: sidebarOnRight, in: layoutDirection)
+    }
 
     let layout: MobileRegularWindowLayout
     let sidebarPresentation: BrowserSidebarPresentation
@@ -32,7 +35,7 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                 // Extend only the page; sidebar controls keep their safe-area placement.
                 .ignoresSafeArea(
                     .container,
-                    edges: appearance.borderless || controlPlacement.movesControlsToToolbar ? .bottom : []
+                    edges: appearance.isBorderless || controlPlacement.movesControlsToToolbar ? .bottom : []
                 )
         } sidebar: {
             BrowserRootSidebarSurfaceLayer(
@@ -75,7 +78,7 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                 .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
             }
         }
-        .animation(chromeAnimation(CrestMotion.collection), value: appearance.sidebarOnRight)
+        .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
         .animation(
             chromeAnimation(
                 effectivePresentation == .docked

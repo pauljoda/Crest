@@ -56,8 +56,7 @@ enum BrowserSidebarMetrics {
     static func layerCornerRadius(depth: Int = 0) -> CGFloat {
         layerCornerRadius(
             depth: depth, userRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
-            capsuleRadius: capsuleRadius(
-                tabScale: BrowserSidebarDensityPreference.number(BrowserSidebarDensityPreference.scaleKey, default: 1)))
+            capsuleRadius: capsuleRadius(tabScale: BrowserDeviceAppearanceStore.shared.tabScale))
     }
 
     /// The corner radius of a layer drawn inside `depth` containers, for a

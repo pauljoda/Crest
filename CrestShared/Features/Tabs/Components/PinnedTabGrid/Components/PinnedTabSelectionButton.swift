@@ -17,8 +17,7 @@ struct PinnedTabSelectionButton: View {
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.tabFaviconIsReplaced) private var isIconReplaced
     @State private var isHovering = false
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
-        var iconScale = 1.0
+    private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         Button(action: select) {

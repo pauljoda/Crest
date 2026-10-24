@@ -113,7 +113,7 @@ struct BrowserFolderGroup: View {
             BrowserFolderSectionSurface(
                 color: folder.displayColor,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
-                textColorMode: configuration.displayBranding?.shown.textColorMode ?? .automatic,
+                textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
                 depth: depth,
                 isSelected: BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context),
                 folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)

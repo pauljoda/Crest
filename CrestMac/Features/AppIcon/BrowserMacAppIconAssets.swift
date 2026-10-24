@@ -12,10 +12,14 @@ enum BrowserMacAppIconAssets {
         return theme.contains("clear") || theme.contains("tinted") || theme.contains("mono")
     }
 
+    /// The palette images already loaded, by bundle and resource. Settings
+    /// asks for every one on each layout pass of its icon grid.
+    @MainActor private static var loadedImages: [String: NSImage] = [:]
+
     @MainActor
     static func image(named name: String, in bundle: Bundle) -> NSImage? {
         guard name.range(of: "^Crest[A-Z][a-z]{1,20}$", options: .regularExpression) != nil,
-            let light = bundle.image(forResource: NSImage.Name(name + "DockLight"))
+            let light = loadedImage(name + "DockLight", in: bundle)
         else { return nil }
         let theme = UserDefaults.standard.string(forKey: systemAppearanceKey)?.lowercased() ?? ""
         // All palette variants deliberately share their monochrome layers. Let Icon
@@ -29,7 +33,16 @@ enum BrowserMacAppIconAssets {
                 && NSApp?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
         // Both exports contain the same macOS margin and explicit 1x/2x images.
         // Use the finished artwork directly in the Dock and settings selector.
-        return dark ? bundle.image(forResource: NSImage.Name(name + "DockDark")) : light
+        return dark ? loadedImage(name + "DockDark", in: bundle) : light
+    }
+
+    @MainActor
+    private static func loadedImage(_ resource: String, in bundle: Bundle) -> NSImage? {
+        let key = bundle.bundlePath + "/" + resource
+        if let image = loadedImages[key] { return image }
+        let image = bundle.image(forResource: NSImage.Name(resource))
+        loadedImages[key] = image
+        return image
     }
 }
 

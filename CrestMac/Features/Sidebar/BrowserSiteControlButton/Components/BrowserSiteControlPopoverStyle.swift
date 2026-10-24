@@ -5,14 +5,14 @@ import SwiftUI
 /// content behind it never washes out the light labels. A color-scheme override
 /// alone does not replace an inherited foreground style.
 struct BrowserSiteControlPopoverStyle: ViewModifier {
-    @Environment(\.crestSurfaceMaterial) private var surfaceMaterial
+    @Environment(\.crestSurfaceMaterial) private var materialOverride
 
     func body(content: Content) -> some View {
         content
             .font(.body)
             .foregroundStyle(Color.white)
             .tint(CrestBrandTheme.accent(.dark))
-            .presentationBackground(surfaceMaterial.material)
+            .presentationBackground(CrestSurfaceMaterial.shown(materialOverride).material)
             .preferredColorScheme(.dark)
             .environment(\.colorScheme, .dark)
     }

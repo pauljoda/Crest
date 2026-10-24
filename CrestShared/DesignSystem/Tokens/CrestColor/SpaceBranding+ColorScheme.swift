@@ -10,7 +10,17 @@ extension SpaceBranding {
     @MainActor
     var shown: SpaceBranding {
         let appearance = BrowserDeviceAppearanceStore.shared
-        return appearing(in: appearance.shownColorScheme, dimming: appearance.darkSpaceDimming)
+        // Light, or dark undimmed, draws the look as chosen, so only a dimmed
+        // dark window follows how far the dimming goes.
+        guard appearance.dimsSpaceColors else { return self }
+        return appearing(in: .dark, dimming: appearance.darkSpaceDimming)
+    }
+
+    /// The text color mode this look draws with now. A view that needs only
+    /// this tracks whether the windows dim Space colors, not how far.
+    @MainActor
+    var shownTextColorMode: SpaceTextColorMode {
+        BrowserDeviceAppearanceStore.shared.dimsSpaceColors ? .automatic : textColorMode
     }
 
     // MARK: - Actions - Appearance

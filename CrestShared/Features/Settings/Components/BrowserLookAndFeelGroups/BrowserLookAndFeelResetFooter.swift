@@ -33,5 +33,8 @@ struct BrowserLookAndFeelResetFooter: View {
     private func reset() {
         BrowserLookAndFeelDefaults.resetAll()
         resetPlatformChoices()
+        // A platform choice kept in the store, such as the sidebar's hover
+        // area, is written at once too.
+        BrowserDeviceAppearanceStore.shared.saveNow()
     }
 }

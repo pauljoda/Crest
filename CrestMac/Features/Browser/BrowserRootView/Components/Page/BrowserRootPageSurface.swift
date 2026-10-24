@@ -17,18 +17,19 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
     let tabPromotionNamespace: Namespace.ID
     /// The chords the window's commands show in a Start Page's palette.
     let shortcuts: BrowserShortcutStore?
-    var appearance = BrowserChromeAppearance()
     var layoutDirection = LayoutDirection.leftToRight
 
     /// The retained host needs a new root only when its inputs change. The
-    /// models publish their own changes directly to the views that read them.
+    /// models publish their own changes directly to the views that read them,
+    /// the window's frame among them: the frame views read it from
+    /// ``BrowserDeviceAppearanceStore`` themselves, so a border drag never
+    /// rebuilds the page inside.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.model === rhs.model && lhs.space === rhs.space
             && lhs.isSelectedSpace == rhs.isSelectedSpace
             && lhs.transientBrowsing === rhs.transientBrowsing
             && lhs.tabPromotionNamespace == rhs.tabPromotionNamespace
-            && lhs.shortcuts === rhs.shortcuts
-            && lhs.appearance == rhs.appearance && lhs.layoutDirection == rhs.layoutDirection
+            && lhs.shortcuts === rhs.shortcuts && lhs.layoutDirection == rhs.layoutDirection
     }
 
     private var isInteractive: Bool {
@@ -71,16 +72,12 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         )
     }
 
-    /// The window's frame around this Space's pages. Every edge of it moves
-    /// the window, except where Peek covers it.
-    private var frameInsets: EdgeInsets {
-        appearance.pageInsets(docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection)
-    }
-
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
-            .overlay { BrowserPageFrameTitleBarSurface(insets: frameInsets) }
+            // Every edge of the window's frame around this Space's pages moves
+            // the window, except where Peek covers it.
+            .overlay { BrowserPageFrameTitleBarSurface(docked: model.sidebarPresentation.reservesSidebarWidth) }
             .overlay {
                 BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
             }
@@ -114,20 +111,18 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                 members: members,
                 placeholderIndex: placeholderIndex,
                 tabPromotionNamespace: tabPromotionNamespace,
-                shortcuts: shortcuts,
-                appearance: appearance
+                shortcuts: shortcuts
             )
         } else {
             BrowserRootDetailSurface(
                 adjoinsLeadingSidebar:
                     model.sidebarPresentation.reservesSidebarWidth,
-                usesBorderlessFrame: appearance.borderless,
+                usesBorderlessFrame: BrowserDeviceAppearanceStore.shared.isBorderless,
                 isStartPage: previewsStartPage || shownTab?.surface == .startPage,
                 hasActivePage: surfacePage != nil,
                 completedNavigationCount: surfacePage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: true,
                 handleWebContentInteraction: model.chrome.handleWebContentInteraction,
-                frameInsets: frameInsets,
                 content: Group {
                     if model.spaceAccess.isLocked(space) {
                         BrowserSpaceAccessView(

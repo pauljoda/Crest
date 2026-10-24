@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct BrowserQuickWindowPageSurface: View {
-    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.layoutDirection) private var layoutDirection
     let model: BrowserQuickWindowModel
+
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         BrowserRootContentSurface(

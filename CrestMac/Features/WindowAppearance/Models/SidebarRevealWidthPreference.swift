@@ -2,8 +2,8 @@ import CoreGraphics
 
 /// How wide the strip along the window edge is that previews a hidden sidebar
 /// when the pointer rests on it.
+/// The width itself is ``BrowserDeviceAppearanceStore/sidebarRevealWidth``.
 enum SidebarRevealWidthPreference {
-    static let key = "crest.appearance.sidebar-reveal-width"
     static let range: ClosedRange<Double> = 1...24
     static let defaultValue = Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
 

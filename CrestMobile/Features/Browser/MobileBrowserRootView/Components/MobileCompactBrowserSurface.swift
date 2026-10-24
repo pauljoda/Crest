@@ -5,7 +5,7 @@ struct MobileCompactBrowserSurface<
     FloatingSidebar: View,
     Page: View
 >: View {
-    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.colorScheme) private var colorScheme
 
     let compactShowsPage: Bool
@@ -31,6 +31,8 @@ struct MobileCompactBrowserSurface<
     let dockedSidebar: DockedSidebar
     let floatingSidebar: FloatingSidebar
     let page: Page
+
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         dockedSidebar

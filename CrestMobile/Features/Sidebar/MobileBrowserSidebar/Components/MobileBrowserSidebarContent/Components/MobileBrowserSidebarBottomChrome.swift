@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct MobileBrowserSidebarBottomChrome: View {
-    @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let configuration: MobileBrowserSidebarContentConfiguration
+
+    private var sidebarOnRight: Bool { BrowserDeviceAppearanceStore.shared.sidebarOnRight }
 
     var body: some View {
         if controlPlacement.movesControlsToToolbar {
@@ -72,7 +73,7 @@ struct MobileBrowserSidebarBottomChrome: View {
     private var sidebarToggle: some View {
         Button(action: configuration.toggleSidebar) {
             MobileSpaceUtilityButtonLabel(
-                systemImage: appearance.sidebarOnRight ? "sidebar.right" : "sidebar.left")
+                systemImage: sidebarOnRight ? "sidebar.right" : "sidebar.left")
         }
         .help(sidebarToggleTitle)
         .accessibilityLabel(sidebarToggleTitle)

@@ -79,14 +79,10 @@ struct BrowserPinnedTabReorderLayout: Equatable {
     func applyingPreferences(width: CGFloat, touch: Bool) -> Self {
         var value = self
         value.availableWidth = width.isFinite ? max(0, width) : BrowserChromeLayout.sidebarIdealWidth
-        value.preferredColumns = Int(
-            min(
-                max(
-                    BrowserSidebarDensityPreference.number(BrowserSidebarDensityPreference.pinColumnsKey, default: 0), 0
-                ), 6))
-        value.fillsLastRow = BrowserSidebarDensityPreference.defaults.bool(
-            forKey: BrowserSidebarDensityPreference.pinsFillRowKey)
-        let scale = BrowserSidebarDensityPreference.number(BrowserSidebarDensityPreference.scaleKey, default: 1)
+        let appearance = BrowserDeviceAppearanceStore.shared
+        value.preferredColumns = min(max(appearance.pinColumns, 0), 6)
+        value.fillsLastRow = appearance.pinsFillRow
+        let scale = appearance.tabScale
         value.tabScale = scale
         value.tileHeight = BrowserSidebarDensity(scale).pinHeight(touch: touch)
         value.tileSpacing = BrowserSidebarDensity(scale).pinSpacing

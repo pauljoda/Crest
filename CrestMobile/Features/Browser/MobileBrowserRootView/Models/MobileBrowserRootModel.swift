@@ -569,7 +569,7 @@ private struct MobilePaletteOpener: BrowserCommandPaletteOpener {
     }
 
     func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
-        guard selecting else { return model.browser.openNewTab(url: url, in: source.spaceID, selecting: false) != nil }
+        guard selecting else { return model.browser.openBackgroundTab(url: url, in: source.spaceID) != nil }
         guard model.browser.openAddress(url, in: source.spaceID) else { return false }
         model.showLoading(url)
         return true

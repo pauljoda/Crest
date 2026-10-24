@@ -5,8 +5,7 @@ struct BrowserFolderIcon: View {
     let folder: FolderStateModel
     let isExpanded: Bool
     let metrics: BrowserFolderHeaderMetrics
-    @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
-    private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
+    private var iconOnly: Bool { BrowserDeviceAppearanceStore.shared.foldersIconOnly }
 
     var body: some View {
         BrowserFolderArtwork(symbol: folder.displaySymbol, color: folder.displayColor, isExpanded: isExpanded)
@@ -26,10 +25,8 @@ struct BrowserFolderArtwork: View {
     let symbol: String
     let color: BrandColor
     var isExpanded = false
-    @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
-    private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
-    @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
+    private var iconOnly: Bool { BrowserDeviceAppearanceStore.shared.foldersIconOnly }
+    private var tintsTitle: Bool { BrowserDeviceAppearanceStore.shared.foldersTintTitle }
 
     var body: some View {
         BrowserFolderArtworkContent(
@@ -46,8 +43,7 @@ struct BrowserFolderArtwork: View {
 private struct BrowserFolderIconColumn: ViewModifier {
     let metrics: BrowserFolderHeaderMetrics
     let isExpanded: Bool
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
-        var iconScale = 1.0
+    private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     func body(content: Content) -> some View {
         content

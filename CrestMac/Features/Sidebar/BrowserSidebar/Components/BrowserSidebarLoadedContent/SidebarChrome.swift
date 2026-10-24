@@ -14,7 +14,6 @@ struct SidebarChrome: View {
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if let space = selectedSpace {
@@ -63,10 +62,7 @@ struct SidebarChrome: View {
                     )
                 }
             }
-            .environment(
-                \.colorScheme,
-                space.settings.look.shown.colorScheme(over: colorScheme)
-            )
+            .modifier(SpaceColorScheme(branding: space.settings.look))
             .modifier(SpaceForegroundBlend(spaces: context.availableSpaces, selectedSpaceID: space.id))
             .blur(radius: isLocked ? BrowserSidebarMetrics.lockedSpaceBlurRadius : 0)
             .redacted(reason: isLocked ? .placeholder : [])

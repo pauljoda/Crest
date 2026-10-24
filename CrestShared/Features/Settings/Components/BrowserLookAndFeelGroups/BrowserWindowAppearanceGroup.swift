@@ -15,10 +15,6 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     var extraSettings: [CrestResettableSetting] = []
     @ViewBuilder var extraRows: () -> Extra
 
-    @AppStorage(BrowserChromeAppearancePreference.borderWidthKey, store: BrowserChromeAppearancePreference.defaults)
-    private var borderWidth = BrowserLookAndFeelDefaults.windowBorderWidth
-    @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
-    private var sidebarOnRight = BrowserLookAndFeelDefaults.sidebarOnRight
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
     // MARK: - Actions - Drawing
@@ -81,7 +77,7 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     // MARK: - Actions - Settings
 
     private var border: CrestSettingValue<Double> {
-        CrestSettingValue($borderWidth, default: BrowserLookAndFeelDefaults.windowBorderWidth)
+        CrestSettingValue($appearance.windowBorderWidth, default: BrowserLookAndFeelDefaults.windowBorderWidth)
     }
 
     /// The sidebar's layer material, as a position from Ultra Thin to Ultra Thick.
@@ -96,7 +92,7 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     }
 
     private var sidebar: CrestSettingValue<Bool> {
-        CrestSettingValue($sidebarOnRight, default: BrowserLookAndFeelDefaults.sidebarOnRight)
+        CrestSettingValue($appearance.sidebarOnRight, default: BrowserLookAndFeelDefaults.sidebarOnRight)
     }
 
     /// Whether the Space switcher fits its icons to the sidebar, or keeps the

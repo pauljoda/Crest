@@ -9,7 +9,15 @@ import SwiftUI
 /// strips cover the frame alone. A borderless window has no frame, and its
 /// pages keep every press up to the window's edge.
 struct BrowserPageFrameTitleBarSurface: View {
-    let insets: EdgeInsets
+    /// Whether the pages meet a docked sidebar, which leaves no frame on that
+    /// edge.
+    let docked: Bool
+
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var insets: EdgeInsets {
+        BrowserChromeAppearance.device(windowCornerRadius: nil).pageInsets(docked: docked, direction: layoutDirection)
+    }
 
     var body: some View {
         Color.clear

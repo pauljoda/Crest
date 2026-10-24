@@ -44,8 +44,7 @@ final class BrowserMacWindowController: NSObject {
         super.init()
         kind.host(
             content(window)
-                .modifier(BrowserMacWindowActivity.Phase(activity: activity))
-                .modifier(BrowserDeviceAppearanceEnvironment()),
+                .modifier(BrowserMacWindowActivity.Phase(activity: activity)),
             in: window)
         NotificationCenter.default.addObserver(
             self, selector: #selector(windowWillClose), name: NSWindow.willCloseNotification, object: window)

@@ -12,11 +12,6 @@ import SwiftUI
 struct BrowserLookAndFeelSidebarCrop: View {
     var space: BrowserSpaceAppearance?
 
-    @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
-    private var sidebarOnRight = BrowserLookAndFeelDefaults.sidebarOnRight
-    @AppStorage(BrowserChromeAppearancePreference.borderWidthKey, store: BrowserChromeAppearancePreference.defaults)
-    private var borderWidth = BrowserLookAndFeelDefaults.windowBorderWidth
-
     private var pageZoom = BrowserDefaultPageZoomStore.shared
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.colorScheme) private var colorScheme
@@ -48,7 +43,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
         .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),
-            value: sidebarOnRight
+            value: BrowserDeviceAppearanceStore.shared.sidebarOnRight
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Browser window preview")
@@ -144,7 +139,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
     }
 
     private var appearance: BrowserChromeAppearance {
-        BrowserChromeAppearance(sidebarOnRight: sidebarOnRight, borderWidth: borderWidth)
+        .device(windowCornerRadius: nil)
     }
 
     /// The crop's own corner is the window corner its page follows, so a framed

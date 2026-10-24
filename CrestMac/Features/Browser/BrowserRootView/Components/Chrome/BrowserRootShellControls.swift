@@ -5,9 +5,6 @@ struct BrowserRootShellControls: View {
     @Binding var storedSidebarWidth: Double
     var sidebarEdge: HorizontalEdge = .leading
 
-    @AppStorage(SidebarRevealWidthPreference.key, store: BrowserChromeAppearancePreference.defaults)
-    private var storedRevealWidth = SidebarRevealWidthPreference.defaultValue
-
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -53,7 +50,7 @@ struct BrowserRootShellControls: View {
 
     /// How wide the collapsed sidebar's reveal strip is, as Settings sets it.
     private var revealPointerWidth: CGFloat {
-        SidebarRevealWidthPreference.width(storedRevealWidth)
+        SidebarRevealWidthPreference.width(BrowserDeviceAppearanceStore.shared.sidebarRevealWidth)
     }
 
     /// Where the docked sidebar's resize handle sits: at the sidebar's edge,

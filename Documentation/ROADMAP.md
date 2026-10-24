@@ -115,7 +115,6 @@ the live status for each issue.
 - [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/pauljoda/Crest/issues/176)
 - [ ] [Add privacy-preserving analytics and opt-in diagnostics](https://github.com/pauljoda/Crest/issues/179)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
-- [ ] [Investigate mouse side buttons ignoring the sidebar's Space switching](https://github.com/pauljoda/Crest/issues/227)
 - [ ] [Make Quick Windows practical for short browsing sessions](https://github.com/pauljoda/Crest/issues/228)
 - [ ] [Keep tabs opened inside collapsed folders visible](https://github.com/pauljoda/Crest/issues/231)
 - [ ] [Return a pinned tab to its saved address from the mobile menu](https://github.com/pauljoda/Crest/issues/236)
@@ -149,7 +148,6 @@ the live status for each issue.
 - [ ] [bug: Command palette treats custom URL schemes as web search queries instead of opening them](https://github.com/pauljoda/Crest/issues/408)
 - [ ] [Translation language download never progresses on Mac WebKit pages](https://github.com/pauljoda/Crest/issues/413)
 - [ ] [bug: Cannot rearrange bookmarks](https://github.com/pauljoda/Crest/issues/419)
-- [ ] [Show that a link opened in a background tab](https://github.com/pauljoda/Crest/issues/422)
 - [ ] [Tab switches Spaces instead of moving between form fields on iPad](https://github.com/pauljoda/Crest/issues/425)
 - [ ] [Let agents attach local files to a page's file input over MCP](https://github.com/pauljoda/Crest/issues/442)
 - [ ] [Web Inspector shortcut follow-ups](https://github.com/pauljoda/Crest/issues/443)
@@ -169,6 +167,7 @@ the live status for each issue.
 #### Completed
 
 - [x] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
+- [x] [Investigate mouse side buttons ignoring the sidebar's Space switching](https://github.com/pauljoda/Crest/issues/227) — [`36ed0821`](https://github.com/pauljoda/Crest/commit/36ed0821b08b6373775208aa9bb104596f1184a1)
 - [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
 - [x] [feature: Redesign bottom space picker in the sidebar. ](https://github.com/pauljoda/Crest/issues/265)
 - [x] [bug: http://192.168.0.1 automatically turns into https://192.168.0.1 and can not be open](https://github.com/pauljoda/Crest/issues/363)
@@ -184,6 +183,7 @@ the live status for each issue.
 - [x] [bug: Pin layout capped at 4 pins per row since 0.8 — selecting 5 or 6 has no effect](https://github.com/pauljoda/Crest/issues/415)
 - [x] [Crest can quit while playing Reddit videos on iPhone](https://github.com/pauljoda/Crest/issues/420) — [`482a066f`](https://github.com/pauljoda/Crest/commit/482a066fc81362b1d98ce86828acb9eadbf526e3)
 - [x] [Select the address when tapping the iPhone address bar](https://github.com/pauljoda/Crest/issues/421) — [`90021fea`](https://github.com/pauljoda/Crest/commit/90021feac234d549712ac302ae158265e3d0e7b8)
+- [x] [Show that a link opened in a background tab](https://github.com/pauljoda/Crest/issues/422) — [`638ccdc0`](https://github.com/pauljoda/Crest/commit/638ccdc07cafcdce15e45405c078a83d0a013d2f)
 - [x] [Swipe from the edge to go back on iPhone and iPad](https://github.com/pauljoda/Crest/issues/426) — [`53fdbdae`](https://github.com/pauljoda/Crest/commit/53fdbdae36cfe1da158b6693fbe7dbb201708e10)
 - [x] [Air Traffic Control rules for links opened inside Crest](https://github.com/pauljoda/Crest/issues/427) — [`9579e3f4`](https://github.com/pauljoda/Crest/commit/9579e3f417a9c28fc3abd301779de5eafd6a9cec)
 - [x] [bug: cannot input url for new route under links](https://github.com/pauljoda/Crest/issues/437)

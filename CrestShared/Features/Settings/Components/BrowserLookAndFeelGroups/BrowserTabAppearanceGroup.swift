@@ -6,12 +6,6 @@ struct BrowserTabAppearanceGroup: View {
     var showsPreview = false
 
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = BrowserLookAndFeelDefaults.tabScale
-    @AppStorage(BrowserSidebarDensityPreference.pinColumnsKey, store: BrowserSidebarDensityPreference.defaults)
-    private var pinColumns = BrowserLookAndFeelDefaults.pinColumns
-    @AppStorage(BrowserSidebarDensityPreference.pinsFillRowKey, store: BrowserSidebarDensityPreference.defaults)
-    private var pinsFillRow = BrowserLookAndFeelDefaults.pinsFillRow
 
     var body: some View {
         CrestSettingsGroup(
@@ -88,15 +82,15 @@ struct BrowserTabAppearanceGroup: View {
     }
 
     private var scale: CrestSettingValue<Double> {
-        CrestSettingValue($tabScale, default: BrowserLookAndFeelDefaults.tabScale)
+        CrestSettingValue($appearance.tabScale, default: BrowserLookAndFeelDefaults.tabScale)
     }
 
     private var columns: CrestSettingValue<Int> {
-        CrestSettingValue($pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
+        CrestSettingValue($appearance.pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
     }
 
     private var fillsRow: CrestSettingValue<Bool> {
-        CrestSettingValue($pinsFillRow, default: BrowserLookAndFeelDefaults.pinsFillRow)
+        CrestSettingValue($appearance.pinsFillRow, default: BrowserLookAndFeelDefaults.pinsFillRow)
     }
 
     private var borders: CrestSettingValue<BrowserTabAppearance.Borders> {

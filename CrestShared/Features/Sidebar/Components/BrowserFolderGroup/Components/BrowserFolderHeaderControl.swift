@@ -9,14 +9,10 @@ struct BrowserFolderHeaderControl: View {
 
     private var folder: FolderStateModel { configuration.folder }
     @Environment(\.browserInteractionCapabilities) private var capabilities
-    @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
-    private var showsTabCounts = true
-    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var alwaysVisible = false
-    @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
-        var textScale = 1.0
+    private var showsTabCounts: Bool { BrowserDeviceAppearanceStore.shared.foldersShowTabCounts }
+    private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
+    private var tintsTitle: Bool { BrowserDeviceAppearanceStore.shared.foldersTintTitle }
+    private var textScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     private var isEditing: Bool {
         interaction.editingFolderRequest.wrappedValue
