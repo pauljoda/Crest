@@ -2310,6 +2310,7 @@ struct DropAroundTab: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
     let spaceID: UUID
     let selection: TabSelection
     let tabID: UUID
+    let title: String?
 }
 
 struct DropIntoList: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
@@ -2888,6 +2889,7 @@ struct FolderTabs: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let selection: TabSelection
     let placement: TabPlacement
+    let title: String?
 }
 
 struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
@@ -2896,6 +2898,7 @@ struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let selection: TabSelection
     let tabID: UUID
+    let title: String?
 }
 
 struct FoldersChanged: CoreChange, Equatable, Sendable {

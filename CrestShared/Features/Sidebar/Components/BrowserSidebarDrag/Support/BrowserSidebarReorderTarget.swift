@@ -111,7 +111,7 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
                 return BrowserSidebarDrop(
                     intent: DropAroundTab(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        tabID: tabID)
+                        tabID: tabID, title: BrowserStore.newFolderTitle)
                 )
             }
         }

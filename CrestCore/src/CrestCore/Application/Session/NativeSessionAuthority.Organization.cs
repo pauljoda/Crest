@@ -9,6 +9,10 @@ public sealed partial class NativeSessionAuthority {
     /// What a folder created without a title is called.
     internal const string NewFolderTitle = "New Folder";
 
+    /// The name a new folder takes: `title`, which the app sends in its own
+    /// language, or "New Folder" when it sends none.
+    internal static string FolderTitle(string? title) => string.IsNullOrWhiteSpace(title) ? NewFolderTitle : title;
+
     #endregion
 
     #region Actions - Splits

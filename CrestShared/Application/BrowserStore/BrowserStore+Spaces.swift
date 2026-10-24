@@ -212,7 +212,7 @@ extension BrowserStore {
 
     @discardableResult
     func addFolder(
-        title: String = "New Folder",
+        title: String = BrowserStore.newFolderTitle,
         color: BrandColor = .folderDefault,
         parentID: UUID? = nil,
         in spaceID: UUID
@@ -243,7 +243,7 @@ extension BrowserStore {
 
     @discardableResult
     func addFolder(
-        title: String = "New Folder",
+        title: String = BrowserStore.newFolderTitle,
         color: BrandColor = .folderDefault,
         parentID: UUID? = nil,
         matching assignment: BrowserSpaceRuntimeAssignment

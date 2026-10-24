@@ -4473,6 +4473,10 @@
     "menus-use-command-names": {
       "category": "improved",
       "message": "The Space menu and the iPhone page menu now name and show commands the way the menu bar does, such as Clear Unpinned Tabs and Show History."
+    },
+    "localized-new-folder-name": {
+      "category": "fixed",
+      "message": "A folder you make without naming it is called New Folder in the app's language, not always in English."
     }
   }
 }

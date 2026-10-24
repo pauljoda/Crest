@@ -14,8 +14,7 @@ public sealed record CreateFolder(Guid WorkspaceId, Guid SpaceId, Guid FolderId,
     /// Creates the folder and files its tabs in one edit.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) =>
         workspace.Organizing(turn.Basis, SpaceId, SyncStaging.Creation, edited => {
-            edited.AddFolder(FolderId, string.IsNullOrWhiteSpace(Title) ? NativeSessionAuthority.NewFolderTitle : Title,
-                Placement, ParentId);
+            edited.AddFolder(FolderId, NativeSessionAuthority.FolderTitle(Title), Placement, ParentId);
             if (Color is { } color) edited.SetFolderColor(FolderId, color);
             if (Symbol is { } symbol) edited.SetFolderSymbol(FolderId, symbol);
             if (TabIds.Count > 0)

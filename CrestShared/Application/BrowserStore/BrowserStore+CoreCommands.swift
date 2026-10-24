@@ -3,6 +3,9 @@ import Foundation
 // Store commands use the owned core session: they send intent and name this
 // window, which the core's device moves when the command commits.
 extension BrowserStore {
+    /// The name a new folder takes, in the app's language.
+    static var newFolderTitle: String { String(localized: "New Folder") }
+
     func createSessionTabFolder(
         _ tabIDs: [UUID], in spaceID: UUID,
         detachesSplitMembers: Bool
@@ -11,7 +14,7 @@ extension BrowserStore {
         let id = UUID()
         let creation = CreateFolder(
             workspaceID: family.workspaceID, spaceID: spaceID, folderID: id, placement: .current,
-            parentID: nil, title: nil, color: BrandColor.folderDefault, symbol: "folder",
+            parentID: nil, title: Self.newFolderTitle, color: BrandColor.folderDefault, symbol: "folder",
             tabIDs: tabIDs, leavesSplits: detachesSplitMembers)
         guard family.send(creation, from: self) else { return nil }
         return spaceModel(spaceID)?.folders.contains(id) == true ? id : nil

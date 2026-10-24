@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x7e, 0x1f, 0x2c, 0x04, 0x12, 0xf4, 0x55, 0xb1, 0xd4, 0xa4, 0xf8, 0xaf, 0xfc, 0x5d, 0xa4, 0x10, 0x6a, 0xde, 0x21, 0x32, 0x0f, 0x95, 0x7c, 0x87, 0xb3, 0x1f, 0x98, 0x11, 0xcc, 0xb6, 0xf9, 0xf3
+        0x78, 0xfa, 0x83, 0x41, 0x71, 0xf9, 0x99, 0x61, 0xbc, 0x66, 0xd7, 0x56, 0xf3, 0x80, 0xc1, 0xe7, 0x64, 0x8a, 0x1a, 0xd8, 0x35, 0xe5, 0x06, 0xf8, 0x39, 0xba, 0xdd, 0x79, 0x9a, 0x97, 0xf5, 0x14
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -7493,7 +7493,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             ReadTabSelection(reader),
-            reader.ReadGuid());
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
     public static void WriteDropAroundTab(WireWriter writer, DropAroundTab value) {
@@ -7504,6 +7505,12 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         WriteTabSelection(writer, value.Selection);
         writer.WriteGuid(value.TabId);
+        if (value.Title is { } presentTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentTitle);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static DropIntoList ReadDropIntoList(WireReader reader) {
@@ -8897,7 +8904,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             ReadTabSelection(reader),
-            ReadTabPlacement(reader));
+            ReadTabPlacement(reader),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
     public static void WriteFolderTabs(WireWriter writer, FolderTabs value) {
@@ -8908,6 +8916,12 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         WriteTabSelection(writer, value.Selection);
         WriteTabPlacement(writer, value.Placement);
+        if (value.Title is { } presentTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentTitle);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static FolderTabsAround ReadFolderTabsAround(WireReader reader) {
@@ -8917,7 +8931,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             ReadTabSelection(reader),
-            reader.ReadGuid());
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
     public static void WriteFolderTabsAround(WireWriter writer, FolderTabsAround value) {
@@ -8928,6 +8943,12 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         WriteTabSelection(writer, value.Selection);
         writer.WriteGuid(value.TabId);
+        if (value.Title is { } presentTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentTitle);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static FoldersChanged ReadFoldersChanged(WireReader reader) {
