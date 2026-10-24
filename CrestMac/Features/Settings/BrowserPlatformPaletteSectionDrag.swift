@@ -18,9 +18,7 @@ struct BrowserPlatformPaletteSectionDrag: ViewModifier {
                 dragged = source
                 return NSItemProvider(object: source.name as NSString)
             } preview: {
-                // The system draws the preview apart from the window.
                 BrowserPaletteSectionDragPreview(source: source)
-                    .modifier(BrowserDeviceAppearanceEnvironment())
             }
             .onDrop(of: [.plainText], delegate: Drop(target: source, dragged: $dragged, move: move))
     }

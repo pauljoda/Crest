@@ -37,8 +37,7 @@ struct BrowserTabStatusBadgeHost: ViewModifier {
     /// Where the badge hangs when it sits beside the favicon.
     var anchor = BrowserTabStatusBadgeAnchor.favicon
 
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
-        var iconScale = 1.0
+    private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     func body(content: Content) -> some View {
         let mark = tab.flatMap { BrowserTabStatus.marks(of: $0).first }

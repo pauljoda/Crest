@@ -26,7 +26,9 @@ extension MobileBrowserRootContent {
 
     var usesBorderlessPageFrame: Bool {
         presentation.usesBorderlessPageFrame(
-            preferenceIsEnabled: chromeAppearance.borderless,
+            // Only whether the page has a frame, so a drag of the border
+            // width leaves the root alone.
+            preferenceIsEnabled: BrowserDeviceAppearanceStore.shared.isBorderless,
             sidebarPresentation: navigation.regularSidebarPresentation
         )
     }

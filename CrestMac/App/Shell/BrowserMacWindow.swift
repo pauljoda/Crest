@@ -57,9 +57,10 @@ final class BrowserMacWindow: NSWindow {
 
     /// A swipe no view under the pointer took reaches the window: a Chromium
     /// page's, which its engine leaves to the browser window, or one a mouse
-    /// sends for its Back and Forward actions. It goes back or forward on the
-    /// page under the pointer, or the window's active page, as the Back and
-    /// Forward commands do; a WebKit page moves through its own swipes.
+    /// sends for its Back and Forward actions. Like those buttons, it goes
+    /// back or forward on the page under the pointer and switches Space over
+    /// the sidebar; elsewhere it moves the window's active page. A WebKit page
+    /// moves through its own swipes.
     override func swipe(with event: NSEvent) {
         if let action = BrowserSidebarMouseButtonAction(swipeDeltaX: event.deltaX),
             pointerNavigation?.navigate(action, swipedAt: event) == true

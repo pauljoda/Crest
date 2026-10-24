@@ -12,7 +12,7 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
         guard let captured = linkContextCapture.take() else { return nil }
         return BrowserDesktopWebViewMenuContext(
             linkURL: captured.linkURL, imageDownloadURL: captured.imageURL,
-            selectionText: captured.selectionText)
+            selectionText: captured.selectionText, isEditable: captured.isEditable)
     }
 
     func downloadImage(from url: URL) {

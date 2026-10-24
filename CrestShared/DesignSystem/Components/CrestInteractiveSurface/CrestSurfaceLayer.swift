@@ -7,11 +7,11 @@ struct CrestSurfaceLayer<LayerShape: Shape>: View {
     var tint: Color? = nil
     var hoverTint: Color? = nil
 
-    @Environment(\.crestSurfaceMaterial) private var surfaceMaterial
+    @Environment(\.crestSurfaceMaterial) private var materialOverride
 
     var body: some View {
         shape
-            .fill(surfaceMaterial.material)
+            .fill(CrestSurfaceMaterial.shown(materialOverride).material)
             .overlay {
                 if let tint { shape.fill(tint) }
             }

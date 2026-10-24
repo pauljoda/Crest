@@ -101,9 +101,12 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         standard(String(localized: "Cut"), #selector(NSText.cut(_:)), key: "x", in: edit)
         standard(String(localized: "Copy"), #selector(NSText.copy(_:)), key: "c", in: edit)
         standard(String(localized: "Paste"), #selector(NSText.paste(_:)), key: "v", in: edit)
-        standard(
-            String(localized: "Paste and Match Style"), #selector(NSTextView.pasteAsPlainText(_:)), key: "v",
-            modifiers: [.command, .option, .shift], in: edit)
+        let pasteAsPlainText = NSMenuItem(
+            title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainText(_:)),
+            keyEquivalent: "v")
+        pasteAsPlainText.target = self
+        pasteAsPlainText.keyEquivalentModifierMask = [.command, .option, .shift]
+        edit.addItem(pasteAsPlainText)
         standard(String(localized: "Delete"), #selector(NSText.delete(_:)), in: edit)
         standard(String(localized: "Select All"), #selector(NSText.selectAll(_:)), key: "a", in: edit)
         edit.addItem(.separator())
@@ -138,12 +141,25 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         if let action = item.representedObject as? BrowserMacApplicationAction {
             return action.isEnabled(in: shell)
         }
+        if item.action == #selector(pasteAsPlainText(_:)) {
+            return BrowserPlainTextPaste(for: focusedResponder, validating: item) != nil
+        }
         return true
     }
 
     @objc private func runCommand(_ item: NSMenuItem) {
         guard let command = item.representedObject as? ShortcutCommand else { return }
         shell.perform(command)
+    }
+
+    /// Pastes as plain text into the focused field or page, whichever selector
+    /// that responder takes.
+    @objc private func pasteAsPlainText(_ item: NSMenuItem) {
+        BrowserPlainTextPaste(for: focusedResponder)?.perform()
+    }
+
+    private var focusedResponder: NSResponder? {
+        (NSApp.keyWindow ?? NSApp.mainWindow)?.firstResponder
     }
 
     @objc private func runApplicationAction(_ item: NSMenuItem) {

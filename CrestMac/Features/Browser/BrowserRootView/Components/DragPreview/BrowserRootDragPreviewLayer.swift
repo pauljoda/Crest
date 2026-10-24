@@ -6,7 +6,9 @@ struct BrowserRootDragPreviewLayer: View {
     let model: BrowserRootModel
     let reduceMotion: Bool
 
-    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
+
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         BrowserDragPreviewWindowBridge(

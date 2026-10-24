@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct BrowserSidebarSpacePage: View {
-    @Environment(\.colorScheme) private var colorScheme
     private let assignment: BrowserSpaceRuntimeAssignment
     let isSelected: Bool
     let pages: BrowserPagePool
@@ -109,10 +108,7 @@ struct BrowserSidebarSpacePage: View {
         .onChange(of: isLocked) { _, locked in
             if locked, isSelected { browser.tabMultiSelection.clear() }
         }
-        .environment(
-            \.colorScheme,
-            space.settings.look.shown.colorScheme(over: colorScheme)
-        )
+        .modifier(SpaceColorScheme(branding: space.settings.look))
         .blur(
             radius: isLocked
                 ? BrowserSidebarMetrics.lockedSpaceBlurRadius

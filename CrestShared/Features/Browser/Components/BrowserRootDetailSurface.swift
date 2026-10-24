@@ -13,7 +13,7 @@ import SwiftUI
 /// A borderless frame is the compact shell's placement, where the page runs to
 /// the device edges and there is no frame left to draw.
 struct BrowserRootDetailSurface<Content: View>: View {
-    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.layoutDirection) private var layoutDirection
     let adjoinsLeadingSidebar: Bool
     let usesBorderlessFrame: Bool
@@ -22,8 +22,14 @@ struct BrowserRootDetailSurface<Content: View>: View {
     let completedNavigationCount: Int
     let hasSelectedSpace: Bool
     let handleWebContentInteraction: () -> Void
-    var frameInsets: EdgeInsets? = nil
+    /// The frame around the page, from the insets the window's border gives
+    /// it. A shell that stands pages off its display's corners adjusts them;
+    /// it hands over how rather than the result, so the frame is worked out
+    /// here and a drag of the border never rebuilds the page inside.
+    var frameInsets: (EdgeInsets) -> EdgeInsets = { $0 }
     let content: Content
+
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         BrowserRootContentSurface(
@@ -35,10 +41,7 @@ struct BrowserRootDetailSurface<Content: View>: View {
                 : appearance.seamWidth,
             frameInsets: usesBorderlessFrame
                 ? EdgeInsets()
-                : frameInsets
-                    ?? appearance.pageInsets(
-                        docked: adjoinsLeadingSidebar, direction: layoutDirection
-                    ),
+                : frameInsets(appearance.pageInsets(docked: adjoinsLeadingSidebar, direction: layoutDirection)),
             usesTransparentInnerSurface:
                 BrowserPageSurfacePresentation.usesTransparentInnerSurface(
                     isStartPage: isStartPage,

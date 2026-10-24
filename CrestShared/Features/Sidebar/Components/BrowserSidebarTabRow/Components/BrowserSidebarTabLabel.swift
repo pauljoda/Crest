@@ -14,8 +14,7 @@ struct BrowserSidebarTabLabel: View {
     var faviconPrimaryClick: (() -> Void)?
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
-        var textScale = 1.0
+    private var textScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         BrowserSidebarTabLabelContent(

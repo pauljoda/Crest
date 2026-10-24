@@ -26,7 +26,6 @@ struct BrowserSiteControlButton: View {
                 }
             }
             .modifier(BrowserSiteControlPopoverStyle())
-            .modifier(BrowserDeviceAppearanceEnvironment())
         }
         // This control opens the window's extension list, so it is where an
         // extension popup goes when the keyboard asked for one and the

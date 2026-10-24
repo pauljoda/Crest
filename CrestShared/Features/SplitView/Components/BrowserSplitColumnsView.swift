@@ -69,12 +69,14 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     let onPanelResizeCommit: (CGFloat) -> Void
     @ViewBuilder let panelContent: Panel
 
-    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
     @Environment(\.browserSplitInterCardGap) private var interCardGap
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
+
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         GeometryReader { proxy in

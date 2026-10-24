@@ -14,14 +14,11 @@ struct BrowserFolderSectionSurface: ViewModifier {
     private var isTargeted: Bool { reorder.isTargetedFolder(folderID) }
 
     @Environment(\.folderPreviewShowsHighlight) private var previewShowsHighlight
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = 1.0
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var alwaysVisible = false
-    @AppStorage(BrowserFolderAppearancePreference.showsBordersKey, store: BrowserFolderAppearancePreference.defaults)
-    private var showsBorders = true
+    private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
+    private var showsBorders: Bool { BrowserDeviceAppearanceStore.shared.foldersShowBorders }
 
     func body(content: Content) -> some View {
         content

@@ -6,7 +6,6 @@ struct BrowserRootView: View {
     private let shortcuts: BrowserShortcutStore?
     private let persistSidebarWidth: (Double) -> Void
 
-    @Environment(\.browserChromeAppearance) private var appearance
     @State private var model: BrowserRootModel
     @State private var storedSidebarWidth: Double
     @Namespace private var commandSurfaceNamespace
@@ -57,7 +56,6 @@ struct BrowserRootView: View {
             spaceSettingsPresentation: spaceSettingsPresentation,
             shortcuts: shortcuts,
             storedSidebarWidth: $storedSidebarWidth,
-            appearance: appearance,
             commandSurfaceNamespace: commandSurfaceNamespace,
             tabPromotionNamespace: tabPromotionNamespace
         )

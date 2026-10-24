@@ -4,9 +4,10 @@ import SwiftUI
 /// tiles, the selected tab, folders, Split View groups, the address field, the
 /// extension strip and widget cards.
 ///
-/// One choice for the whole device, made in Look and Feel and handed down
-/// through ``SwiftUI/EnvironmentValues/crestSurfaceMaterial``. Reduce
-/// Transparency renders every member opaque on its own.
+/// One choice for the whole device, made in Look and Feel and read where each
+/// layer draws it, from ``BrowserDeviceAppearanceStore``, so changing it never
+/// changes a window's environment. Reduce Transparency renders every member
+/// opaque on its own.
 struct CrestSurfaceMaterial: Hashable, Sendable {
     // MARK: - Static Variables
 
@@ -63,7 +64,16 @@ extension CrestSurfaceMaterial {
     }
 }
 
+extension CrestSurfaceMaterial {
+    /// The device's choice, or `override` where a view draws one of its own.
+    @MainActor
+    static func shown(_ override: CrestSurfaceMaterial?) -> CrestSurfaceMaterial {
+        override ?? BrowserDeviceAppearanceStore.shared.surfaceMaterial
+    }
+}
+
 extension EnvironmentValues {
-    /// Set at each window root from the device's appearance choice.
-    @Entry var crestSurfaceMaterial = CrestSurfaceMaterial.standard
+    /// A material that replaces the device's choice under it, as a preview
+    /// that shows each one sets. Nil draws the device's choice.
+    @Entry var crestSurfaceMaterial: CrestSurfaceMaterial? = nil
 }

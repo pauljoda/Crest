@@ -2953,6 +2953,9 @@
     "Capture in Portrait Mode" : {
 
     },
+    "Capture Page" : {
+
+    },
     "Capture Window" : {
 
     },
@@ -11479,6 +11482,9 @@
     "Screen Sharing" : {
 
     },
+    "screenshot snapshot region selection image clipboard" : {
+
+    },
     "Scripts run with the page’s own access to the site." : {
 
     },
@@ -12980,6 +12986,9 @@
       }
     },
     "Storm Gold" : {
+
+    },
+    "Stretch pins to fill the row" : {
 
     },
     "Strict" : {
@@ -15390,6 +15399,9 @@
           }
         }
       }
+    },
+    "Opened in Background Tab" : {
+
     }
   },
   "version" : "1.3"

@@ -6,16 +6,7 @@ struct BrowserFolderAppearanceGroup: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
 
-    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var alwaysVisible = BrowserLookAndFeelDefaults.foldersAlwaysVisible
-    @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
-    private var showsTabCounts = BrowserLookAndFeelDefaults.foldersShowTabCounts
-    @AppStorage(BrowserFolderAppearancePreference.showsBordersKey, store: BrowserFolderAppearancePreference.defaults)
-    private var showsBorders = BrowserLookAndFeelDefaults.foldersShowBorders
-    @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
-    private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
-    @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
+    @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
     var body: some View {
         CrestSettingsGroup(
@@ -58,15 +49,15 @@ struct BrowserFolderAppearanceGroup: View {
     }
 
     private var highlights: CrestSettingValue<Bool> {
-        CrestSettingValue($alwaysVisible, default: BrowserLookAndFeelDefaults.foldersAlwaysVisible)
+        CrestSettingValue($appearance.foldersAlwaysVisible, default: BrowserLookAndFeelDefaults.foldersAlwaysVisible)
     }
 
     private var counts: CrestSettingValue<Bool> {
-        CrestSettingValue($showsTabCounts, default: BrowserLookAndFeelDefaults.foldersShowTabCounts)
+        CrestSettingValue($appearance.foldersShowTabCounts, default: BrowserLookAndFeelDefaults.foldersShowTabCounts)
     }
 
     private var borders: CrestSettingValue<Bool> {
-        CrestSettingValue($showsBorders, default: BrowserLookAndFeelDefaults.foldersShowBorders)
+        CrestSettingValue($appearance.foldersShowBorders, default: BrowserLookAndFeelDefaults.foldersShowBorders)
     }
 
     private var settings: [CrestResettableSetting] {
@@ -80,10 +71,10 @@ struct BrowserFolderAppearanceGroup: View {
     }
 
     private var icons: CrestSettingValue<Bool> {
-        CrestSettingValue($iconOnly, default: BrowserLookAndFeelDefaults.foldersIconOnly)
+        CrestSettingValue($appearance.foldersIconOnly, default: BrowserLookAndFeelDefaults.foldersIconOnly)
     }
 
     private var titles: CrestSettingValue<Bool> {
-        CrestSettingValue($tintsTitle, default: BrowserLookAndFeelDefaults.foldersTintTitle)
+        CrestSettingValue($appearance.foldersTintTitle, default: BrowserLookAndFeelDefaults.foldersTintTitle)
     }
 }

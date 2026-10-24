@@ -535,11 +535,16 @@ extension BrowserChromeLayoutTests {
                     "document.querySelector('#draft').value='unsaved';window.scrollTo(0,300);window.chromeIdentity")
                 documentIDs.append(try XCTUnwrap(identifier as? String))
             }
+            let device = BrowserDeviceAppearanceStore.shared
+            let initial = (device.sidebarOnRight, device.windowBorderWidth)
+            defer { (device.sidebarOnRight, device.windowBorderWidth) = initial }
             for appearance in [
                 BrowserChromeAppearance(sidebarOnRight: true, borderless: true),
                 .init(sidebarOnRight: false, borderless: true), .init(sidebarOnRight: true, borderless: false), .init(),
             ] {
-                host.rootView = ChromeContinuityTestShell(model: model, appearance: appearance)
+                device.sidebarOnRight = appearance.sidebarOnRight
+                device.windowBorderWidth = appearance.borderWidth
+                host.rootView = ChromeContinuityTestShell(model: model)
                 host.layoutSubtreeIfNeeded()
                 try await Task.sleep(for: .milliseconds(300))
                 XCTAssertEqual(browser.selectedSpaceID, space.id)
@@ -558,8 +563,9 @@ extension BrowserChromeLayoutTests {
                 }
             }
             if split {
-                host.rootView = ChromeContinuityTestShell(
-                    model: model, appearance: .init(sidebarOnRight: true, borderless: true))
+                device.sidebarOnRight = true
+                device.windowBorderWidth = 0
+                host.rootView = ChromeContinuityTestShell(model: model)
                 window.setContentSize(NSSize(width: 1000, height: 800))
                 model.splitWidthTransactionBinding.wrappedValue = BrowserSplitWidthTransaction(
                     persistedFractions: [0.8, 0.2])
@@ -580,14 +586,13 @@ extension BrowserChromeLayoutTests {
 
 private struct ChromeContinuityTestShell: View {
     let model: BrowserRootModel
-    var appearance = BrowserChromeAppearance()
     @Namespace private var commandNamespace
     @Namespace private var tabNamespace
     var body: some View {
         BrowserRootShell(
             model: model, transientBrowsing: BrowserTransientBrowsingCoordinator(),
             spaceSettingsPresentation: BrowserSpaceSettingsPresentationState(), shortcuts: nil,
-            storedSidebarWidth: .constant(289), appearance: appearance,
+            storedSidebarWidth: .constant(289),
             commandSurfaceNamespace: commandNamespace, tabPromotionNamespace: tabNamespace
         )
         .environment(model.sidebarInteraction)

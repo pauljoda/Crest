@@ -36,7 +36,6 @@ struct BrowserSplitPageSurface: View {
     let tabPromotionNamespace: Namespace.ID
     /// The chords the window's commands show in a Start Page card's palette.
     let shortcuts: BrowserShortcutStore?
-    var appearance = BrowserChromeAppearance()
 
     /// The core's app preference; an unbound preview store keeps click-to-focus.
     private var appPreferences: BrowserAppPreferenceStore { .shared }
@@ -66,7 +65,7 @@ struct BrowserSplitPageSurface: View {
         BrowserSplitColumnsView(
             members: displayMembers,
             focusedTabID: isSelectedSpace ? model.pages.activeTabID : model.browser.selectedTabID(in: space.id),
-            frameInsets: appearance.pageInsets(
+            frameInsets: BrowserChromeAppearance.device(windowCornerRadius: nil).pageInsets(
                 docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection
             ),
             accent: space.settings.look.primaryColor.color,
@@ -112,7 +111,7 @@ struct BrowserSplitPageSurface: View {
                 }
             }
         )
-        .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)
+        .environment(\.browserSplitUsesBorderlessFrame, BrowserDeviceAppearanceStore.shared.isBorderless)
         .background {
             if isSelectedSpace {
                 BrowserSplitCardPointerMonitor(

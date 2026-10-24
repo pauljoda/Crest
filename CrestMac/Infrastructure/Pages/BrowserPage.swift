@@ -561,6 +561,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             page: adapter.enginePage, permissionCenter: permissionCenter, spaceID: spaceID)
         engineInfoBars = []
         shareSourceOffer = nil
+        isRegionCapturePresented = false
         isSharedAsTab = false
         isSharingTab = false
         sharedTabPageIDs = []
@@ -624,6 +625,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func cancelRegionCapture() {
         isRegionCapturePresented = false
+    }
+
+    func toggleRegionCapture() {
+        if isRegionCapturePresented { cancelRegionCapture() } else { beginRegionCapture() }
     }
 
     func captureRegion(_ rect: CGRect) {
@@ -1119,6 +1124,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // Cancel the current pull here; suspend new pulls only when WebKit
         // actually starts provisional navigation.
         linkDrag?.cancel()
+        isRegionCapturePresented = false
         engineAdapter.prepareForNavigation()
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()

@@ -23,7 +23,6 @@ struct BrowserSidebarLoadedContent: View {
     let tabPromotionNamespace: Namespace.ID
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
     @Environment(\.spacePagerPresentation) private var inheritedPagerPresentation
     @State private var standalonePagerPresentation = SpacePagerPresentation()
@@ -99,12 +98,7 @@ struct BrowserSidebarLoadedContent: View {
                 selectSpace: context.selectSpace,
                 accessories: switcherAccessories
             )
-            .environment(
-                \.colorScheme,
-                context.browser.shownSpace.map {
-                    $0.settings.look.shown.colorScheme(over: colorScheme)
-                } ?? .dark
-            )
+            .modifier(SpaceColorScheme(branding: context.browser.shownSpace?.settings.look))
             .modifier(
                 SpaceForegroundBlend(
                     spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))

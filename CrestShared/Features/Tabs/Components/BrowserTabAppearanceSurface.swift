@@ -15,8 +15,10 @@ struct BrowserTabAppearanceSurface: ViewModifier {
         let radius = BrowserSidebarMetrics.layerCornerRadius(depth: depth)
         let selectedAccent = isPinned || appearance.outlinesSelectedTabs
         let showsBorder = appearance.borders == .all || (isPinned && appearance.borders == .pinned)
-        let fill = BrowserTabAppearance.intensity(appearance.pinFill)
-        let hover = BrowserTabAppearance.intensity(appearance.hoverFill)
+        // Each choice is read only where it shows, so a drag of the pin fill
+        // or the hover tint re-renders the pins or the hovered row alone.
+        let fill = isPinned ? BrowserTabAppearance.intensity(appearance.pinFill) : 0
+        let hover = isHovering ? BrowserTabAppearance.intensity(appearance.hoverFill) : 0
         content
             .modifier(
                 CrestInteractiveSurfaceModifier(

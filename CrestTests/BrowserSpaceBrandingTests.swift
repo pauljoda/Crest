@@ -35,15 +35,16 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         local.cornerRadius = 24
         local.tabs.dimsUnloadedTabs = false
         local.address.border = 0.6
+        local.saveNow()
         let restored = BrowserDeviceAppearanceStore(defaults: first)
-        XCTAssertEqual(restored.tabs, local.tabs)
+        XCTAssertEqual(try saved(restored.tabs), try saved(local.tabs))
         XCTAssertFalse(restored.tabs.dimsUnloadedTabs)
         XCTAssertEqual(restored.cornerRadius, 24)
-        XCTAssertEqual(restored.address, local.address)
+        XCTAssertEqual(try saved(restored.address), try saved(local.address))
         let otherDevice = BrowserDeviceAppearanceStore(defaults: second)
-        XCTAssertEqual(otherDevice.tabs, .init())
+        XCTAssertEqual(try saved(otherDevice.tabs), try saved(BrowserTabAppearance()))
         XCTAssertEqual(otherDevice.cornerRadius, 10)
-        XCTAssertEqual(otherDevice.address, .init())
+        XCTAssertEqual(try saved(otherDevice.address), try saved(BrowserAddressAppearance()))
     }
 
     func testResetAllLookAndFeelPersistsDefaultDeviceAppearance() throws {
@@ -56,13 +57,52 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         appearance.address.border = 0.6
         appearance.cornerRadius = 24
 
-        BrowserLookAndFeelDefaults.resetAll(
-            appearance: appearance, chrome: defaults, density: defaults, folders: defaults)
+        BrowserLookAndFeelDefaults.resetAll(appearance: appearance)
 
         let restored = BrowserDeviceAppearanceStore(defaults: defaults)
-        XCTAssertEqual(restored.tabs, BrowserLookAndFeelDefaults.tabs)
+        XCTAssertEqual(try saved(restored.tabs), try saved(BrowserLookAndFeelDefaults.tabs))
         XCTAssertTrue(restored.tabs.dimsUnloadedTabs)
-        XCTAssertEqual(restored.address, BrowserLookAndFeelDefaults.address)
+        XCTAssertEqual(try saved(restored.address), try saved(BrowserLookAndFeelDefaults.address))
         XCTAssertEqual(restored.cornerRadius, BrowserLookAndFeelDefaults.cornerRadius)
+    }
+
+    func testMovedChoicesKeepTheirKeysAndWaitToBeWritten() throws {
+        let name = "crest-test-appearance-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(3.5, forKey: BrowserChromeAppearancePreference.borderWidthKey)
+        defaults.set(true, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)
+        defaults.set(20.0, forKey: BrowserDeviceAppearanceStore.sidebarRevealWidthKey)
+        defaults.set(1.2, forKey: BrowserSidebarDensityPreference.scaleKey)
+        defaults.set(true, forKey: BrowserSidebarDensityPreference.pinsFillRowKey)
+        defaults.set(false, forKey: BrowserFolderAppearancePreference.showsTabCountsKey)
+
+        let appearance = BrowserDeviceAppearanceStore(defaults: defaults)
+        XCTAssertEqual(appearance.windowBorderWidth, 3.5)
+        XCTAssertTrue(appearance.sidebarOnRight)
+        XCTAssertEqual(appearance.sidebarRevealWidth, 20)
+        XCTAssertEqual(appearance.tabScale, 1.2)
+        XCTAssertTrue(appearance.pinsFillRow)
+        XCTAssertFalse(appearance.foldersShowTabCounts)
+
+        // A drag writes nothing until the choices settle: every write to these
+        // defaults makes each @AppStorage view over them re-check its value.
+        appearance.windowBorderWidth = 0
+        appearance.tabs.hoverFill = 0.5
+        XCTAssertEqual(defaults.double(forKey: BrowserChromeAppearancePreference.borderWidthKey), 3.5)
+        XCTAssertTrue(appearance.isBorderless)
+
+        appearance.saveNow()
+        let restored = BrowserDeviceAppearanceStore(defaults: defaults)
+        XCTAssertEqual(restored.windowBorderWidth, 0)
+        XCTAssertTrue(restored.isBorderless)
+        XCTAssertEqual(restored.tabs.hoverFill, 0.5)
+    }
+
+    /// The saved form of an appearance model, which is how two of them compare.
+    private func saved(_ appearance: some Encodable) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try encoder.encode(appearance)
     }
 }

@@ -15,7 +15,6 @@ struct CrestMobileApp: App {
                     EmptyView()
                 }
             }
-            .modifier(BrowserDeviceAppearanceEnvironment())
         } defaultValue: {
             MobileWindowRequest()
         }

@@ -19,7 +19,7 @@ import SwiftUI
 /// on the membership change rather than per card, because there is no lazy
 /// materialization here to hang it off.
 struct MobileSplitColumnsPageSurface: View {
-    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.mobileBrowserFold) private var fold
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
@@ -32,6 +32,8 @@ struct MobileSplitColumnsPageSurface: View {
     /// The slot a drag out of the sidebar would drop a card into.
     /// `MobileRegularPageSurface` owns the decision; the row only draws it.
     let placeholderIndex: Int?
+
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         BrowserSplitColumnsView(

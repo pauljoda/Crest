@@ -4366,6 +4366,30 @@
       "category": "improved",
       "message": "The command palette offers to search for a typed or pasted address as well as open it."
     },
+    "capture-page-shortcut": {
+      "category": "new",
+      "message": "On Mac, Capture Page in the Page menu and the command palette lets you drag over part of a page to copy it as an image. Its shortcut is Command-Shift-2."
+    },
+    "paste-and-match-style-web-pages": {
+      "category": "fixed",
+      "message": "Paste and Match Style now works in editable web content, from the Edit menu, its shortcut and the page's right-click menu."
+    },
+    "pins-stretch-to-fill-row": {
+      "category": "new",
+      "message": "Pins can stretch to fill the width of a row that isn't full, so an uneven number of pins no longer leaves empty space."
+    },
+    "mouse-swipe-buttons-switch-spaces-over-sidebar": {
+      "category": "fixed",
+      "message": "Mouse Back and Forward buttons set up as swipes in Logitech Options+ switch Spaces when the pointer is over the sidebar, as other mice do."
+    },
+    "background-link-opening-notice": {
+      "category": "improved",
+      "message": "Opening a link in a background tab now shows a brief confirmation at the top of the window."
+    },
+    "smooth-appearance-previews": {
+      "category": "fixed",
+      "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
     "independent-search-provider-triggers": {
       "category": "improved",
       "message": "Choose in Search settings whether a space after a search shortcut chooses its provider, with or without a $ first, separately from Tab."

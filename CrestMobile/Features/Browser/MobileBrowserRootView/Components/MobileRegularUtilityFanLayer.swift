@@ -2,7 +2,6 @@ import SwiftUI
 import UIKit
 
 struct MobileRegularUtilityFanLayer: View {
-    @Environment(\.browserChromeAppearance) private var appearance
     let layout: MobileRegularWindowLayout
     let layoutDirection: LayoutDirection
     let triggerFrameInGlobal: CGRect?
@@ -17,6 +16,8 @@ struct MobileRegularUtilityFanLayer: View {
     let spaceID: UUID?
     let select: (BrowserUtilitySurface) -> Void
 
+    private var sidebarOnRight: Bool { BrowserDeviceAppearanceStore.shared.sidebarOnRight }
+
     var body: some View {
         GeometryReader { proxy in
             if let triggerFrameInGlobal, sidebarIsPresented {
@@ -29,7 +30,7 @@ struct MobileRegularUtilityFanLayer: View {
                     BrowserUtilitySwitcherLayout.buttonSize / 2
                     + BrowserUtilitySwitcherLayout.destinationGap
                 let destinationX =
-                    appearance.sidebarOnRight
+                    sidebarOnRight
                     ? proxy.size.width - layout.sidebarWidth - edgeOffset
                     : layout.sidebarWidth + edgeOffset
 

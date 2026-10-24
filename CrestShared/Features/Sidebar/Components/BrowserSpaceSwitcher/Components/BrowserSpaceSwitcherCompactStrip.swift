@@ -23,12 +23,13 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     let accessories: BrowserSpaceSwitcherAccessories
     let downloads: BrowserSpaceSwitcherDownloads
 
-    @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.layoutDirection) private var layoutDirection
+
+    private var sidebarOnRight: Bool { BrowserDeviceAppearanceStore.shared.sidebarOnRight }
 
     /// The edge of the window the sidebar, and so this strip, stands against.
     private var sidebarEdge: HorizontalEdge {
-        appearance.sidebarEdge(in: layoutDirection)
+        BrowserChromeAppearance.sidebarEdge(onRight: sidebarOnRight, in: layoutDirection)
     }
 
     var body: some View {
@@ -123,7 +124,7 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     ) -> some View {
         Button(
             sidebarToggle.action.title,
-            systemImage: appearance.sidebarOnRight ? "sidebar.right" : "sidebar.left",
+            systemImage: sidebarOnRight ? "sidebar.right" : "sidebar.left",
             action: sidebarToggle.toggle
         )
         .labelStyle(.iconOnly)

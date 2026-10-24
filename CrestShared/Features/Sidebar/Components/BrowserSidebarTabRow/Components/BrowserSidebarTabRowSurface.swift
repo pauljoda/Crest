@@ -30,8 +30,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     let interaction: BrowserSidebarTabRowInteractionContext
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = 1.0
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     func body(content: Content) -> some View {
         content

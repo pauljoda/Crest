@@ -6,10 +6,6 @@ struct BrowserTabAppearanceGroup: View {
     var showsPreview = false
 
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = BrowserLookAndFeelDefaults.tabScale
-    @AppStorage(BrowserSidebarDensityPreference.pinColumnsKey, store: BrowserSidebarDensityPreference.defaults)
-    private var pinColumns = BrowserLookAndFeelDefaults.pinColumns
 
     var body: some View {
         CrestSettingsGroup(
@@ -43,6 +39,12 @@ struct BrowserTabAppearanceGroup: View {
                 .labelsHidden()
                 .fixedSize()
                 .accessibilityLabel("Pin layout")
+            }
+            CrestSettingRow(
+                "Stretch pins to fill the row", setting: fillsRow.resettable("Stretch pins to fill the row")
+            ) {
+                Toggle("Stretch pins to fill the row", isOn: fillsRow.binding)
+                    .labelsHidden()
             }
             CrestSettingRow("Color borders", setting: borders.resettable("Color borders")) {
                 Picker("Color borders", selection: borders.binding) {
@@ -80,11 +82,15 @@ struct BrowserTabAppearanceGroup: View {
     }
 
     private var scale: CrestSettingValue<Double> {
-        CrestSettingValue($tabScale, default: BrowserLookAndFeelDefaults.tabScale)
+        CrestSettingValue($appearance.tabScale, default: BrowserLookAndFeelDefaults.tabScale)
     }
 
     private var columns: CrestSettingValue<Int> {
-        CrestSettingValue($pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
+        CrestSettingValue($appearance.pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
+    }
+
+    private var fillsRow: CrestSettingValue<Bool> {
+        CrestSettingValue($appearance.pinsFillRow, default: BrowserLookAndFeelDefaults.pinsFillRow)
     }
 
     private var borders: CrestSettingValue<BrowserTabAppearance.Borders> {
@@ -126,6 +132,7 @@ struct BrowserTabAppearanceGroup: View {
             cornerRadius.resettable("Corner radius"),
             scale.resettable("Tab scale"),
             columns.resettable("Pin layout"),
+            fillsRow.resettable("Stretch pins to fill the row"),
             borders.resettable("Color borders"),
             outlines.resettable("Accent outline on selected tabs"),
             websiteColors.resettable("Website colors for pins"),

@@ -10,8 +10,7 @@ struct BrowserFolderHeader: View {
     let interaction: BrowserFolderGroupInteractionContext
 
     private var folder: FolderStateModel { configuration.folder }
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = 1.0
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         BrowserFolderHeaderControl(

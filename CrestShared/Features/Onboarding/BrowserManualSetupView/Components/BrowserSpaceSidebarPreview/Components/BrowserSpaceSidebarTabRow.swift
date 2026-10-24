@@ -6,8 +6,7 @@ struct BrowserSpaceSidebarTabRow: View {
     let profileID: UUID
     let isSelected: Bool
 
-    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
-    private var tabScale = 1.0
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         BrowserSpaceSidebarTabRowContent(

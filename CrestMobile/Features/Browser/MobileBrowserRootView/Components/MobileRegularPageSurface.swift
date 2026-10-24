@@ -16,8 +16,6 @@ import SwiftUI
 /// cards as frames — plus the one thing a touch shell has to add: a feed that
 /// carries the finger's positions to the reorder state while it is over the page.
 struct MobileRegularPageSurface: View {
-    @Environment(\.browserChromeAppearance) private var appearance
-    @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let model: MobileBrowserRootModel
     let adjoinsSidebar: Bool
@@ -47,12 +45,6 @@ struct MobileRegularPageSurface: View {
                 model.sidebarInteraction.sidebarReorderState.hasEnteredSplitContent,
             resolvedTarget: model.sidebarInteraction.sidebarReorderState.resolvedTarget,
             presentsTrailingPanel: false
-        )
-    }
-
-    private var frameInsets: EdgeInsets {
-        controlPlacement.pageInsets(
-            appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection)
         )
     }
 
@@ -99,7 +91,7 @@ struct MobileRegularPageSurface: View {
                         .handleInteraction(.webContent)
                     model.navigation.handleRegularPageInteraction()
                 },
-                frameInsets: frameInsets,
+                frameInsets: controlPlacement.pageInsets,
                 content: MobileBrowserDetailSurface(
                     browser: model.browser,
                     pages: model.pages,
@@ -128,11 +120,7 @@ struct MobileRegularPageSurface: View {
                 )
             )
             .overlay {
-                MobileHistorySwipeBorder(
-                    insets: frameInsets,
-                    leadingPage: model.selectedPage,
-                    trailingPage: model.selectedPage
-                )
+                MobileRegularPageSwipeBorder(adjoinsSidebar: adjoinsSidebar, page: model.selectedPage)
             }
             // The lone tab on show is a card as far as a drag is concerned: it
             // is what a dropped tab would join, and the side of it the finger
@@ -143,5 +131,24 @@ struct MobileRegularPageSurface: View {
                 state: model.sidebarInteraction.sidebarReorderState
             )
         }
+    }
+}
+
+/// The history swipe border around the page on show. It reads the window's
+/// frame where it draws it, so a drag of the border never rebuilds the page.
+private struct MobileRegularPageSwipeBorder: View {
+    @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
+    let adjoinsSidebar: Bool
+    let page: MobileBrowserPage?
+
+    var body: some View {
+        MobileHistorySwipeBorder(
+            insets: controlPlacement.pageInsets(
+                BrowserChromeAppearance.device(windowCornerRadius: nil)
+                    .pageInsets(docked: adjoinsSidebar, direction: layoutDirection)),
+            leadingPage: page,
+            trailingPage: page
+        )
     }
 }

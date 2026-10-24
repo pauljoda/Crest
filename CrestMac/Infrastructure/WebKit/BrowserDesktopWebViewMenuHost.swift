@@ -26,4 +26,6 @@ struct BrowserDesktopWebViewMenuContext: Equatable, Sendable {
     let linkURL: URL?
     let imageDownloadURL: URL?
     let selectionText: String?
+    /// Whether the right-click landed in editable content.
+    let isEditable: Bool
 }

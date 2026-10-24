@@ -8,6 +8,11 @@ extension NSMenu {
         items.first { $0.identifier == .webKitDownloadImage }
     }
 
+    /// WebKit's Paste item, when the menu has one.
+    var webKitPasteItem: NSMenuItem? {
+        items.first { $0.identifier == .webKitPaste }
+    }
+
     // MARK: - Actions - WebKit items
 
     /// Drops WebKit's selection search, which would leave Crest's own search.
