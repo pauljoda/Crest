@@ -350,11 +350,13 @@ final class BrowserDeviceAppearanceStore {
             ?? BrowserLookAndFeelDefaults.foldersTintTitle
         dimsSpaceColors = Self.dims(in: shownColorScheme, by: darkSpaceDimming)
         observeChanges()
-        // A choice made just before the app quits, or leaves for the
-        // background where it may never come back, is written at once.
-        NotificationCenter.default.addObserver(forName: Self.leavingNotification, object: nil, queue: .main) {
-            [weak self] _ in
-            MainActor.assumeIsolated { self?.saveNow() }
+        // A choice made just before the app quits or steps aside, or leaves
+        // for the background where it may never come back, is written at once.
+        for notification in Self.leavingNotifications {
+            NotificationCenter.default.addObserver(forName: notification, object: nil, queue: .main) {
+                [weak self] _ in
+                MainActor.assumeIsolated { self?.saveNow() }
+            }
         }
     }
 
@@ -417,8 +419,10 @@ final class BrowserDeviceAppearanceStore {
     }
 
     #if os(macOS)
-        private static var leavingNotification: Notification.Name { NSApplication.willTerminateNotification }
+        private static var leavingNotifications: [Notification.Name] {
+            [NSApplication.willTerminateNotification, NSApplication.didResignActiveNotification]
+        }
     #else
-        private static var leavingNotification: Notification.Name { UIApplication.didEnterBackgroundNotification }
+        private static var leavingNotifications: [Notification.Name] { [UIApplication.didEnterBackgroundNotification] }
     #endif
 }
