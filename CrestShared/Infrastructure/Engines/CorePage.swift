@@ -204,6 +204,19 @@ final class CorePage {
         _ = try? core?.send(LeavePageFailure(pageID: id))
     }
 
+    /// Reloads the page's document on the engine it offers for protected
+    /// media its own engine cannot play, as an automatic switch would.
+    func acceptProtectedMediaOffer() {
+        guard !isReleased, live.protectedMediaOffer != nil else { return }
+        _ = try? core?.send(AcceptProtectedMediaOffer(pageID: id))
+    }
+
+    /// Keeps the page on its engine, and its document offers no more.
+    func dismissProtectedMediaOffer() {
+        guard !isReleased, live.protectedMediaOffer != nil else { return }
+        _ = try? core?.send(DismissProtectedMediaOffer(pageID: id))
+    }
+
     // MARK: - Actions - Engines
 
     /// The engines this device registered, as the core last published them,

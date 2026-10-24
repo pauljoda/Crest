@@ -108,6 +108,7 @@ internal sealed partial class Device {
         keptPermissions.Restore(records.SitePermissions);
         keptEngines.Restore(records.SiteEngines);
         defaultEngine = records.DefaultEngine;
+        protectedMedia = records.ProtectedMedia;
         shortcuts = records.Shortcuts;
         links = records.Links;
         agents = records.Agents;
@@ -340,7 +341,8 @@ internal sealed partial class Device {
         new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
         PaletteMemories = paletteMemories,
         SearchCatalog = searchCatalog,
-        Agents = agents
+        Agents = agents,
+        ProtectedMedia = protectedMedia
     };
 
     #endregion

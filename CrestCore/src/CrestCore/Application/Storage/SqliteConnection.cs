@@ -163,6 +163,7 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_agent_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_agent (position INTEGER PRIMARY KEY, team TEXT, signing TEXT, path TEXT, "
             + "client TEXT, name TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_protected_media (id INTEGER PRIMARY KEY CHECK (id = 0), fallback TEXT NOT NULL)");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -171,8 +172,19 @@ internal sealed class SqliteConnection : IDisposable {
         ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
         PaletteMemories = ReadPaletteMemories(),
         SearchCatalog = ReadSearchCatalog(),
-        Agents = ReadAgents()
+        Agents = ReadAgents(),
+        ProtectedMedia = ReadProtectedMedia()
     };
+
+    /// The person's protected media fallback, or `Automatic` when the store
+    /// keeps none, as one written before the choice existed does, or it does
+    /// not read.
+    private ProtectedMediaFallback ReadProtectedMedia() {
+        ProtectedMediaFallback? fallback = null;
+        Rows("SELECT fallback FROM device_protected_media WHERE id = 0",
+            statement => fallback = ProtectedMediaFallback.Named(Sqlite.ColumnText(statement, 0)));
+        return fallback ?? ProtectedMediaFallback.Automatic;
+    }
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
     private SearchCatalog? ReadSearchCatalog() {
@@ -376,6 +388,7 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !records.SitePermissions.SequenceEqual(written.SitePermissions)) WriteSitePermissions(records.SitePermissions);
         if (written is null || !records.SiteEngines.SequenceEqual(written.SiteEngines)) WriteSiteEngines(records.SiteEngines);
         if (written is null || records.DefaultEngine != written.DefaultEngine) WriteDefaultEngine(records.DefaultEngine);
+        if (written is null || records.ProtectedMedia != written.ProtectedMedia) WriteProtectedMedia(records.ProtectedMedia);
         if (written is null || !records.Shortcuts.SameAs(written.Shortcuts)) WriteShortcuts(records.Shortcuts);
         if (written is null || !records.Links.Equals(written.Links)) WriteLinks(records.Links);
         if (written is null || !KeptSetupDraft.Same(records.SetupDraft, written.SetupDraft)) WriteSetupDraft(records.SetupDraft);
@@ -527,6 +540,13 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("DELETE FROM device_engine");
         if (engine is not null)
             Insert("INSERT INTO device_engine(id, engine) VALUES(0,?)", statement => Bind(statement, 1, engine.Name));
+    }
+
+    /// The protected media fallback by `Name`, absent while it is `Automatic`.
+    private void WriteProtectedMedia(ProtectedMediaFallback fallback) {
+        Execute("DELETE FROM device_protected_media");
+        if (fallback != ProtectedMediaFallback.Automatic)
+            Insert("INSERT INTO device_protected_media(id, fallback) VALUES(0,?)", statement => Bind(statement, 1, fallback.Name));
     }
 
     /// The site engine choices, least recent first, each engine by `Name`.

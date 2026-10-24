@@ -60,7 +60,7 @@ internal sealed class Page {
     /// history cannot.
     public PageLiveState Live => new(shown.Url, shown.PendingUrl, shown.Title, shown.IsLoading,
         History.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null, History.CanGoForward,
-        shown.Security, failure, shown.Media);
+        shown.Security, failure, shown.Media, ProtectedMediaOffer?.Kind);
 
     /// The page's back and forward history across the engines it moved
     /// through, as their reports and the page's moves left it.
@@ -141,7 +141,14 @@ internal sealed class Page {
     /// The document already offered a protected-media fallback, if any.
     private long? protectedMediaAttempt;
 
+    /// The engine the page offered to reload a document in for the protected
+    /// media it asked for, and that document.
+    private (Engine Engine, long Document)? protectedMediaOffer;
 
+    /// The engine the page offers to reload the document it shows in for the
+    /// protected media it asked for, or null when it offers none.
+    public Engine? ProtectedMediaOffer =>
+        protectedMediaOffer is { } offer && offer.Document == Documents ? offer.Engine : null;
 
     #endregion
 
@@ -212,6 +219,7 @@ internal sealed class Page {
         Icon = null;
         crashes = 0;
         stoppedUnseen = null;
+        protectedMediaOffer = null;
     }
 
     /// Attempts fallback once per document, so repeated capability probes
@@ -220,6 +228,19 @@ internal sealed class Page {
         if (protectedMediaAttempt == Documents) return false;
         protectedMediaAttempt = Documents;
         return true;
+    }
+
+    /// Offers to reload the document the page shows in `engine`, for the
+    /// protected media it asked for, until the person accepts or dismisses
+    /// the offer or the document goes.
+    public void OfferProtectedMedia(Engine engine) => protectedMediaOffer = (engine, Documents);
+
+    /// Takes the page's protected-media offer, once: the engine it offered
+    /// for the document it shows, or null when it offers none.
+    public Engine? TakeProtectedMediaOffer() {
+        var engine = ProtectedMediaOffer;
+        protectedMediaOffer = null;
+        return engine;
     }
 
     /// Whether the page ever moved to another engine for `reason`.

@@ -5,14 +5,18 @@ namespace CrestCore.Contracts;
 /// failure stays until another navigation commits a new document, or the
 /// page is asked to load again or to leave the failure, so an engine that
 /// retries on its own keeps showing it. A failure over the document the page
-/// still shows lets the page go back to that document. Never saved or synced.
+/// still shows lets the page go back to that document. `ProtectedMediaOffer`
+/// names the engine the page offers to reload its document in for protected
+/// media its own engine cannot play, until the person accepts
+/// (`AcceptProtectedMediaOffer`) or dismisses (`DismissProtectedMediaOffer`)
+/// the offer or the document goes. Never saved or synced.
 public sealed record PageLiveState(string? Url, string? PendingUrl, string Title, bool IsLoading, bool CanGoBack,
-    bool CanGoForward, PageSecurity Security, PageFailure? Failure, PageMediaActivity Media) {
+    bool CanGoForward, PageSecurity Security, PageFailure? Failure, PageMediaActivity Media, EngineKind? ProtectedMediaOffer) {
     #region Static Variables
 
     /// A page its engine has shown nothing in yet.
     public static PageLiveState Blank { get; } = new(Url: null, PendingUrl: null, Title: "", IsLoading: false, CanGoBack: false,
-        CanGoForward: false, PageSecurity.None, Failure: null, PageMediaActivity.None);
+        CanGoForward: false, PageSecurity.None, Failure: null, PageMediaActivity.None, ProtectedMediaOffer: null);
 
     #endregion
 

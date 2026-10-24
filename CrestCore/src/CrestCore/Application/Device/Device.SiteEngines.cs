@@ -15,14 +15,25 @@ internal sealed partial class Device {
     /// Every other Space's choices, which live as long as the process.
     private readonly SiteEngineLedger passingEngines = new();
     private EngineKind? defaultEngine;
+    private ProtectedMediaFallback protectedMedia = ProtectedMediaFallback.Automatic;
 
     /// The person's default choice, separate from what this composition carries.
     internal EngineKind? DefaultEngine => defaultEngine;
 
+    /// What a page does for protected media its engine cannot play, for every
+    /// Space on this device.
+    internal ProtectedMediaFallback ProtectedMediaFallback {
+        get {
+            lock (gate) return protectedMedia;
+        }
+    }
+
     /// Persistent engine choices only. Private choices never enter Settings.
     internal EnginePreferences EnginePreferences {
         get {
-            lock (gate) return new(defaultEngine, [.. keptEngines.Choices.Select(choice => new SiteEngineRule(choice.Origin, choice.Engine))]);
+            lock (gate)
+                return new(defaultEngine, [.. keptEngines.Choices.Select(choice => new SiteEngineRule(choice.Origin, choice.Engine))],
+                    protectedMedia);
         }
     }
 
@@ -61,6 +72,17 @@ internal sealed partial class Device {
         lock (gate) {
             if (defaultEngine == engine) return;
             defaultEngine = engine;
+            KeepEnginePreferences(changes);
+        }
+    }
+
+    /// Chooses what pages do from now on for protected media their engine
+    /// cannot play. A page already offering a move keeps its offer.
+    internal void ChooseProtectedMediaFallback(ProtectedMediaFallback fallback, ChangeFeed changes) {
+        ArgumentNullException.ThrowIfNull(fallback);
+        lock (gate) {
+            if (protectedMedia == fallback) return;
+            protectedMedia = fallback;
             KeepEnginePreferences(changes);
         }
     }

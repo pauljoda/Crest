@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The engine's bars for this page, stacked at its top edge.
+/// The bars for this page, stacked at its top edge: the offer to reload it in
+/// WebKit for protected video, then the engine's own bars.
 struct BrowserEngineInfoBarStack: View {
     let page: BrowserPage
     /// Where a sharing bar leads: the tab at the other end of the sharing.
@@ -8,8 +9,18 @@ struct BrowserEngineInfoBarStack: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Whether the page offers to reload in another engine for protected video.
+    private var offersProtectedMedia: Bool { page.live.protectedMediaOffer != nil }
+
     var body: some View {
         VStack(spacing: BrowserWebPageSurfaceMetrics.infoBarSpacing) {
+            if offersProtectedMedia {
+                BrowserProtectedMediaPageBar(
+                    reload: page.corePage.acceptProtectedMediaOffer,
+                    dismiss: page.corePage.dismissProtectedMediaOffer
+                )
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
             ForEach(page.visibleEngineInfoBars) { bar in
                 BrowserEngineInfoBarRow(
                     bar: bar, minimize: { page.minimize(bar) },
@@ -23,6 +34,7 @@ struct BrowserEngineInfoBarStack: View {
         .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(reduceMotion ? nil : CrestMotion.feedbackPresentation, value: page.visibleEngineInfoBars)
+        .animation(reduceMotion ? nil : CrestMotion.feedbackPresentation, value: offersProtectedMedia)
     }
 }
 

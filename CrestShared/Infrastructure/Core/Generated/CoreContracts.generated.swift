@@ -754,6 +754,10 @@ extension Change {
 
 // MARK: - Records
 
+struct AcceptProtectedMediaOffer: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct AcknowledgeDownloads: Intent, DownloadIntent, Equatable, Sendable {
     let profileID: UUID
 }
@@ -1515,6 +1519,10 @@ struct ChoosePeekModifier: Intent, LinkIntent, Equatable, Sendable {
     let modifier: LinkPeekModifier
 }
 
+struct ChooseProtectedMediaFallback: Intent, Equatable, Sendable {
+    let fallback: ProtectedMediaFallback
+}
+
 struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
 }
@@ -2133,6 +2141,10 @@ struct DiscardStagedLink: Intent, PageIntent, Equatable, Sendable {
     let stagedLinkID: UUID
 }
 
+struct DismissProtectedMediaOffer: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct DismissShownTab: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
@@ -2483,6 +2495,7 @@ struct EngineNotRegistered: Equatable, Sendable {
 struct EnginePreferences: Equatable, Sendable {
     let defaultEngine: EngineKind?
     let rules: [SiteEngineRule]
+    let protectedMedia: ProtectedMediaFallback
 }
 
 struct EnginePreferencesChanged: CoreChange, Equatable, Sendable {
@@ -4297,6 +4310,7 @@ struct PageLiveState: Equatable, Sendable {
         security: PageSecurity.none,
         failure: nil,
         media: [],
+        protectedMediaOffer: nil,
         address: nil
     )
 
@@ -4309,6 +4323,7 @@ struct PageLiveState: Equatable, Sendable {
     let security: PageSecurity
     let failure: PageFailure?
     let media: PageMediaActivity
+    let protectedMediaOffer: EngineKind?
     let address: String?
 }
 
@@ -15780,6 +15795,51 @@ struct PracticeTab: Hashable, Sendable {
             self.url = url
             self.placement = placement
             self.artwork = artwork
+        }
+    }
+}
+
+/// The members of the core's `ProtectedMediaFallback`. A member's wire tag is its index in `all`.
+struct ProtectedMediaFallback: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let automatic = ProtectedMediaFallback(
+        tag: 0,
+        name: "automatic",
+        title: LocalizedStringResource("Automatic")
+    )
+    static let ask = ProtectedMediaFallback(tag: 1, name: "ask", title: LocalizedStringResource("Ask"))
+    static let never = ProtectedMediaFallback(tag: 2, name: "never", title: LocalizedStringResource("Never"))
+
+    static let all: [ProtectedMediaFallback] = [automatic, ask, never]
+
+    static func named(_ name: String?) -> ProtectedMediaFallback? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ProtectedMediaFallback, rhs: ProtectedMediaFallback) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }

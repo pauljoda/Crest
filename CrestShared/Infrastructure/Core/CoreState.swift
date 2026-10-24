@@ -50,7 +50,8 @@ final class CoreState {
         get { observed(\.enginePreferencesStorage, as: \.enginePreferences) }
         set { publish(newValue, into: \.enginePreferencesStorage, as: \.enginePreferences) }
     }
-    @ObservationIgnored private var enginePreferencesStorage = EnginePreferences(defaultEngine: nil, rules: [])
+    @ObservationIgnored private var enginePreferencesStorage = EnginePreferences(
+        defaultEngine: nil, rules: [], protectedMedia: .automatic)
     /// Whether agents may use Crest on this device, whether they may run
     /// scripts in pages, the Spaces they may reach and the agents the person
     /// allowed.

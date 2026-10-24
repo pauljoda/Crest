@@ -69,8 +69,11 @@ public sealed partial class BrowserContractsTests {
             using var disposal = app;
             app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, true), _ => { });
             app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, false), _ => { });
+            // A store that never kept a protected media choice switches automatically, as before the choice existed.
+            Assert.Equal(ProtectedMediaFallback.Automatic, app.Query(new GetEnginePreferences()).ProtectedMedia);
             app.Send(new SelectDefaultEngine(EngineKind.WebKit));
             app.Send(new EditEngineRule(null, origin, EngineKind.Chromium));
+            app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Ask));
         }
         {
             var (app, _, _) = DeviceApp(directory);
@@ -81,6 +84,7 @@ public sealed partial class BrowserContractsTests {
             app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, true), commands.Add);
             Assert.Equal(EngineKind.WebKit, app.Query(new GetEnginePreferences()).DefaultEngine);
             Assert.Equal([new SiteEngineRule(origin, EngineKind.Chromium)], app.Query(new GetEnginePreferences()).Rules);
+            Assert.Equal(ProtectedMediaFallback.Ask, app.Query(new GetEnginePreferences()).ProtectedMedia);
             Assert.Equal(EngineKind.WebKit, app.Drain().OfType<EnginesChanged>().Last().Roster.Engines.Single(engine => engine.IsDefault).Kind);
             Assert.Empty(commands);
         }

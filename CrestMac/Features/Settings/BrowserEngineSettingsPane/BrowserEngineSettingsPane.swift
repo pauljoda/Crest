@@ -15,6 +15,9 @@ struct BrowserEngineSettingsPane: View {
     private var defaultEngine: EngineKind {
         core.state.engines?.engines.first(where: \.isDefault)?.kind ?? BrowserEngineRegistration.current.kind
     }
+    private var protectedMedia: Binding<ProtectedMediaFallback> {
+        Binding(get: { preferences.protectedMedia }, set: chooseProtectedMedia)
+    }
 
     // MARK: - Actions - Presentation
 
@@ -78,6 +81,19 @@ struct BrowserEngineSettingsPane: View {
             } footer: {
                 CrestFormFootnote("A rule for a site doesn’t include its subdomains.")
             }
+            Section {
+                CrestSettingRow("Switch to WebKit for protected video") {
+                    Picker("Switch to WebKit for protected video", selection: protectedMedia) {
+                        ForEach(ProtectedMediaFallback.all, id: \.self) { fallback in
+                            Text(fallback.title).tag(fallback)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("protected-media-fallback")
+                }
+            }
             if let failure { Text(failure).foregroundStyle(.red) }
         }
         .sheet(item: $editing) { draft in
@@ -90,6 +106,13 @@ struct BrowserEngineSettingsPane: View {
     private func selectDefault(_ engine: EngineKind?) {
         do {
             try core.send(SelectDefaultEngine(engine: engine))
+            failure = nil
+        } catch { failure = error.explanation }
+    }
+
+    private func chooseProtectedMedia(_ fallback: ProtectedMediaFallback) {
+        do {
+            try core.send(ChooseProtectedMediaFallback(fallback: fallback))
             failure = nil
         } catch { failure = error.explanation }
     }

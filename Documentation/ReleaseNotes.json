@@ -4389,6 +4389,18 @@
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
+    "protected-video-webkit-switch-choice": {
+      "category": "new",
+      "message": "Choose whether Crest switches to WebKit for protected video automatically, asks first, or never."
+    },
+    "engines-search-terms-catalog-key": {
+      "category": "internal",
+      "message": "The Engines settings search terms match their string catalog entry."
+    },
+    "protected-video-offer-pending-navigation": {
+      "category": "internal",
+      "message": "Accepting the WebKit offer for protected video while another page is loading no longer cancels that page."
     }
   }
 }

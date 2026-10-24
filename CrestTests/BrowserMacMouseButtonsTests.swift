@@ -33,7 +33,7 @@ final class BrowserMacMouseButtonsTests: XCTestCase {
         let nativeView = NSView()
         let live = PageLiveState(
             url: nil, pendingURL: nil, title: "", isLoading: false, canGoBack: true, canGoForward: false,
-            security: .none, failure: nil, media: [], address: nil)
+            security: .none, failure: nil, media: [], protectedMediaOffer: nil, address: nil)
         private(set) var backs = 0
         private(set) var spaceSwitches: [BrowserSidebarMouseButtonAction] = []
 

@@ -62,7 +62,8 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         symbol: "paintpalette", tincture: .lionGules)
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
-        searchTerms: "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility",
+        searchTerms:
+            "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility protected media automatic ask never",
         symbol: "cpu", tincture: .riverLapis, isMacOnly: true)
     static let links = BrowserSettingsDestination(
         kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",

@@ -21,7 +21,8 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
-/// persistent Space's palette remembers, and the agent preferences.
+/// persistent Space's palette remembers, the agent preferences, and the
+/// protected media fallback.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
@@ -44,6 +45,9 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// Whether agents may use Crest, and what the person allowed them.
     public AgentPreferences Agents { get; init; } = AgentPreferences.Off;
 
+    /// What a page does for protected media its engine cannot play.
+    public ProtectedMediaFallback ProtectedMedia { get; init; } = ProtectedMediaFallback.Automatic;
+
     #endregion
 
     #region Actions - Adoption
@@ -61,6 +65,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && SitePermissions.SequenceEqual(other.SitePermissions)
         && SiteEngines.SequenceEqual(other.SiteEngines)
         && DefaultEngine == other.DefaultEngine
+        && ProtectedMedia == other.ProtectedMedia
         && Shortcuts.SameAs(other.Shortcuts)
         && Links.Equals(other.Links)
         && KeptSetupDraft.Same(SetupDraft, other.SetupDraft)

@@ -8,8 +8,144 @@ namespace CrestCore.Tests;
 /// The protected media fallback: a page whose engine cannot play the key
 /// system it asked for moves, once, to an engine that plays protected media
 /// through the platform, and its site opens there from then on, unless the
-/// person chose an engine for it.
+/// person chose an engine for it. The person may have it ask first, or never
+/// move.
 public sealed partial class BrowserContractsTests {
+    [Fact]
+    public void NeverKeepsAPageOnItsEngineForProtectedMedia() {
+        var (app, chromium, chromiumBinding, _, webKitBinding, page, _, _, _, _) = ChromiumPage();
+        using var disposal = app;
+        app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Never));
+        app.Drain();
+        int commands = chromiumBinding.Commands.Count;
+
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+
+        Assert.Empty(app.Drain());
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+        Assert.Empty(webKitBinding.Commands);
+    }
+
+    [Fact]
+    public void AskOffersOncePerDocumentAndMovesOnlyWhenAccepted() {
+        var (app, chromium, chromiumBinding, webKit, webKitBinding, page, workspace, window, space, tab) = ChromiumPage();
+        using var disposal = app;
+        var url = TabUrl(app, workspace, space, tab);
+        var site = new WebAddress(url).Origin!;
+        app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Ask));
+        app.Drain();
+        int commands = chromiumBinding.Commands.Count;
+
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        Assert.Equal(EngineKind.WebKit, Assert.Single(app.Drain().OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+
+        // Another probe from the same document offers nothing more.
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.PlayReady));
+        Assert.Empty(app.Drain());
+
+        // Accepting moves the page as the automatic fallback does, and its site opens on WebKit from then on.
+        Assert.Null(Assert.Single(app.Send(new AcceptProtectedMediaOffer(page)).OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+        Assert.Equal(new CheckBeforeUnload(page), chromiumBinding.Commands[^1]);
+        app.Report(chromium, new BeforeUnloadAnswered(page, Proceeds: true));
+        Assert.Equal(new PageRehosted(page, space, site, EngineKind.Chromium, EngineKind.WebKit, RehostReason.ProtectedMedia),
+            Assert.Single(app.Drain().OfType<PageRehosted>()));
+        app.Report(webKit, new PageCreated(page));
+        Assert.Equal(new LoadPage(page, url), webKitBinding.Commands[^1]);
+        app.Send(new ReleasePage(page, KeepsState: false));
+        var next = Guid.NewGuid();
+        app.Send(new OpenPage(next, workspace, space, tab, window));
+        Assert.Equal(next, Assert.IsType<CreatePage>(webKitBinding.Commands[^1]).PageId);
+    }
+
+    [Fact]
+    public void AnOfferGoesWithItsDocumentOrWhenDismissed() {
+        var (app, chromium, chromiumBinding, _, webKitBinding, page, _, _, _, _) = ChromiumPage();
+        using var disposal = app;
+        app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Ask));
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        app.Drain();
+
+        // A new document leaves the offer behind, and accepting it afterwards changes nothing.
+        app.Report(chromium, new NavigationCommitted(page, "https://example.org/another", SameDocument: false));
+        Assert.Null(Assert.Single(app.Drain().OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+        int commands = chromiumBinding.Commands.Count;
+        Assert.Empty(app.Send(new AcceptProtectedMediaOffer(page)));
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+
+        // The new document offers again; dismissing keeps the page and its document offers no more.
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        Assert.Equal(EngineKind.WebKit, Assert.Single(app.Drain().OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+        Assert.Null(Assert.Single(app.Send(new DismissProtectedMediaOffer(page)).OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+        Assert.Empty(app.Send(new AcceptProtectedMediaOffer(page)));
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        Assert.Empty(app.Drain());
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+        Assert.Empty(webKitBinding.Commands);
+    }
+
+    [Fact]
+    public void AcceptingAnOfferDuringAPendingNavigationTakesItAndLeavesTheNavigationAlone() {
+        var (app, chromium, chromiumBinding, _, webKitBinding, page, _, _, _, _) = ChromiumPage();
+        using var disposal = app;
+        app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Ask));
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        app.Send(new Navigate(page, "https://example.org/next"));
+        app.Drain();
+        int commands = chromiumBinding.Commands.Count;
+
+        var accepted = app.Send(new AcceptProtectedMediaOffer(page));
+
+        var changed = Assert.Single(accepted.OfType<PageChanged>()).Page;
+        Assert.Null(changed.Live.ProtectedMediaOffer);
+        Assert.Equal("https://example.org/next", changed.Live.PendingUrl);
+        Assert.Empty(accepted.OfType<PageRehosted>());
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+        Assert.Empty(webKitBinding.Commands);
+
+        // The navigation proceeds, and its document can offer again.
+        app.Report(chromium, new NavigationCommitted(page, "https://example.org/next", SameDocument: false));
+        app.Report(chromium, new PageStateChanged(page, Showing("https://example.org/next")));
+        app.Drain();
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        Assert.Equal(EngineKind.WebKit, Assert.Single(app.Drain().OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+    }
+
+    [Fact]
+    public void ChoosingNeverWithdrawsAnOpenOffer() {
+        var (app, chromium, chromiumBinding, _, webKitBinding, page, _, _, _, _) = ChromiumPage();
+        using var disposal = app;
+        app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Ask));
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        app.Drain();
+        int commands = chromiumBinding.Commands.Count;
+
+        var withdrawn = app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Never));
+
+        Assert.Null(Assert.Single(withdrawn.OfType<PageChanged>()).Page.Live.ProtectedMediaOffer);
+        Assert.Empty(app.Send(new AcceptProtectedMediaOffer(page)));
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+        Assert.Empty(webKitBinding.Commands);
+    }
+
+    [Fact]
+    public void ASiteEngineChosenWhileAnOfferIsOpenKeepsThePageWhereItIs() {
+        var (app, chromium, chromiumBinding, _, webKitBinding, page, workspace, _, space, tab) = ChromiumPage();
+        using var disposal = app;
+        var site = new WebAddress(TabUrl(app, workspace, space, tab)).Origin!;
+        app.Send(new ChooseProtectedMediaFallback(ProtectedMediaFallback.Ask));
+        app.Report(chromium, new ProtectedMediaUnavailable(page, KeySystem.Widevine));
+        app.Send(new ChooseSiteEngine(space, site, EngineKind.Chromium));
+        app.Drain();
+        int commands = chromiumBinding.Commands.Count;
+
+        app.Send(new AcceptProtectedMediaOffer(page));
+
+        Assert.Empty(app.Drain().OfType<PageRehosted>());
+        Assert.Equal(commands, chromiumBinding.Commands.Count);
+        Assert.Empty(webKitBinding.Commands);
+    }
+
     /// A live page of the fixture tab on a default Chromium binding, with a
     /// WebKit binding beside it that plays protected media when `webKitPlays`.
     private static (CrestApp App, Engine Chromium, RecordingEngine ChromiumBinding, Engine WebKit, RecordingEngine WebKitBinding,

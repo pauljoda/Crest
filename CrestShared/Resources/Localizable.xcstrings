@@ -3282,7 +3282,7 @@
     "Chromium" : {
       "comment" : "The name of a browser engine. Keep the product name as it is."
     },
-    "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility" : {
+    "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility protected media automatic ask never" : {
 
     },
     "Claude Code" : {
@@ -10413,6 +10413,9 @@
         }
       }
     },
+    "Reload in WebKit" : {
+      "comment" : "Reloads a page in WebKit so its protected video plays."
+    },
     "Reload options" : {
       "localizations" : {
         "ar" : {
@@ -13117,6 +13120,9 @@
     "Switch to tabs opened from links" : {
 
     },
+    "Switch to WebKit for protected video" : {
+
+    },
     "Sword" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14031,6 +14037,9 @@
     },
     "This site’s certificate is not trusted. Information you send could be read by others." : {
 
+    },
+    "This site’s video needs WebKit to play." : {
+      "comment" : "The bar on a page whose protected video plays only in WebKit."
     },
     "This Tab" : {
       "comment" : "Screen sharing picker note on the tab of the page that asks."

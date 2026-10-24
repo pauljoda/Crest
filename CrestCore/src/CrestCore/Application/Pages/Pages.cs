@@ -180,6 +180,34 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             engine.Kind, reason));
     }
 
+    /// Where the page may fall back for protected media its engine cannot
+    /// play: the engine that plays it and the address of the document that
+    /// asked. Null for a page that is not live or shown, one that moved for
+    /// protected media before, one whose site the person chose an engine for,
+    /// one without a web address, while a navigation is pending, because the
+    /// move would replace it, while a close is underway, or when no other
+    /// engine plays protected media.
+    internal (Engine Engine, string Address)? ProtectedMediaFallback(Page page, PageTurn turn) =>
+        page.Phase == PagePhase.Live && page.Live.PendingUrl is null && Shown(page) is { } space
+            && !page.MovedFor(RehostReason.ProtectedMedia)
+            && engines.PlayingProtectedMedia(page.Engine) is { } fallback
+            && page.DocumentAddress is { } address && new WebAddress(address).Origin is { } origin
+            && device.ChosenEngine(space.Id, origin) is null && turn.Closing.Underway is null
+            ? (fallback, address) : null;
+
+    /// Moves the page to `fallback` for protected media, honoring its
+    /// before-unload decision first, and opens its site there from then on
+    /// once the move goes ahead.
+    internal void FallBack(Page page, Engine fallback, string address, PageTurn turn) =>
+        turn.Closing.Move(page, fallback, address, RehostReason.ProtectedMedia, remembersSite: true, turn);
+
+    /// Withdraws every page's offer to move for protected media, publishing
+    /// each page whose offer went.
+    internal void WithdrawProtectedMediaOffers(ChangeFeed changes) {
+        foreach (var page in open.Values.Where(page => page.ProtectedMediaOffer is not null).ToArray())
+            Update(page, changes, () => page.TakeProtectedMediaOffer());
+    }
+
     /// The engine a new page in `space` opens on: its opener's, when another
     /// page opened it, so a page never leaves the engine of the page that
     /// opened it; otherwise the registered engine chosen for the site `tab`

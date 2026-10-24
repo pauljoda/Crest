@@ -60,7 +60,7 @@ struct BrowserWebPageSurface: View {
                 )
             }
 
-            if !page.visibleEngineInfoBars.isEmpty {
+            if !page.visibleEngineInfoBars.isEmpty || page.live.protectedMediaOffer != nil {
                 BrowserEngineInfoBarStack(page: page, goToSharingCounterpart: goToSharingCounterpart)
             }
 
