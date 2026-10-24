@@ -4489,6 +4489,10 @@
     "staged-link-uuid": {
       "category": "internal",
       "message": "Carry a staged link's identity as a UUID rather than as text both engines parse back."
+    },
+    "synced-visit-field-names": {
+      "category": "internal",
+      "message": "Synced visits spell their fields from the one table the stored session uses."
     }
   }
 }

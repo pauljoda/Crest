@@ -12,6 +12,13 @@ internal static class NativeSyncCompatibility {
     #region Variables
 
     private sealed record Shape(string Names, Dictionary<string, Shape>? Children = null, Shape? Element = null, bool ById = false) {
+        #region Constructors
+
+        public Shape(IEnumerable<string> names, Dictionary<string, Shape>? children = null) : this(string.Join(' ', names), children) {
+        }
+
+        #endregion
+
         #region Variables
 
         public HashSet<string> Fields { get; } = Names.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
@@ -50,7 +57,7 @@ internal static class NativeSyncCompatibility {
         [SyncRecordKind.Folder.Name] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
             new() { ["id"] = Identity, ["spaceID"] = Identity, ["parentID"] = Identity, ["orderAnchorTabID"] = Identity, ["color"] = Color }),
         [SyncRecordKind.Tab.Name] = Tab,
-        [SyncRecordKind.History.Name] = new("id spaceID url title firstVisitedAt lastVisitedAt visitCount", new() { ["spaceID"] = Identity }),
+        [SyncRecordKind.History.Name] = new(HistoryPayload.Members, new() { [StoredSessionCodec.Key.SpaceId] = Identity }),
         [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab })
     };
 

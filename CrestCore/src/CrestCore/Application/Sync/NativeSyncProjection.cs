@@ -116,10 +116,12 @@ public static class NativeSyncProjection {
             var tabTokens = Tokens(SyncPayloadType.Tab, tabs);
             for (int j = 0; j < tabs.Length; j++) Add(SyncPayloadType.Tab, Tab(tabs[j], space["id"]!, tabTokens[j], archived: false));
             if (!policy.HistoryAndArchive) continue;
-            foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncedAddress.Includes(Text(h!["url"])))) {
-                var value = Fields(history!, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
-                value["spaceID"] = space["id"]!.DeepClone();
-                Spell(value, "url");
+            foreach (var history in Items(space, StoredSessionCodec.Key.History)
+                         .Where(h => SyncedAddress.Includes(Text(h![StoredSessionCodec.Key.Url])))) {
+                var value = Fields(history!, StoredSessionCodec.Key.Id, StoredSessionCodec.Key.Url, StoredSessionCodec.Key.Title,
+                    StoredSessionCodec.Key.FirstVisitedAt, StoredSessionCodec.Key.LastVisitedAt, StoredSessionCodec.Key.VisitCount);
+                value[StoredSessionCodec.Key.SpaceId] = space[StoredSessionCodec.Key.Id]!.DeepClone();
+                Spell(value, StoredSessionCodec.Key.Url);
                 Visit(value);
                 Add(SyncPayloadType.History, value);
             }
@@ -174,10 +176,10 @@ public static class NativeSyncProjection {
     /// keeps it; only the record is fitted.
     private static void Visit(JsonObject value) {
         SyncedText.HistoryTitle.Fit(value);
-        if (SyncJson.TryInt(value["visitCount"], out var visits) && visits < 1) value["visitCount"] = 1;
-        if (SyncJson.TryDouble(value["firstVisitedAt"], out var firstVisited) && SyncJson.TryDouble(value["lastVisitedAt"], out var lastVisited)
-            && firstVisited > lastVisited)
-            value["firstVisitedAt"] = value["lastVisitedAt"]!.DeepClone();
+        if (SyncJson.TryInt(value[StoredSessionCodec.Key.VisitCount], out var visits) && visits < 1) value[StoredSessionCodec.Key.VisitCount] = 1;
+        if (SyncJson.TryDouble(value[StoredSessionCodec.Key.FirstVisitedAt], out var firstVisited)
+            && SyncJson.TryDouble(value[StoredSessionCodec.Key.LastVisitedAt], out var lastVisited) && firstVisited > lastVisited)
+            value[StoredSessionCodec.Key.FirstVisitedAt] = value[StoredSessionCodec.Key.LastVisitedAt]!.DeepClone();
     }
 
     #endregion

@@ -214,14 +214,16 @@ internal abstract class SyncPayloadType {
     }
 
     private sealed class HistoryType() : SyncPayloadType(SyncRecordKind.History, HistoryPayload.Read) {
-        public override bool IsPortable(JsonObject value) => SyncedAddress.Includes(value["url"]?.GetValue<string>());
+        public override bool IsPortable(JsonObject value) => SyncedAddress.Includes(value[StoredSessionCodec.Key.Url]?.GetValue<string>());
 
+        /// A visit merges to the earliest first visit, the latest last visit
+        /// and the larger count.
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
-            result["firstVisitedAt"] = Math.Min(NativeSyncEvaluator.Date(first, "firstVisitedAt")!.Value,
-                NativeSyncEvaluator.Date(second, "firstVisitedAt")!.Value);
-            result["lastVisitedAt"] = Math.Max(NativeSyncEvaluator.Date(first, "lastVisitedAt")!.Value,
-                NativeSyncEvaluator.Date(second, "lastVisitedAt")!.Value);
-            result["visitCount"] = Math.Max(SyncJson.Int(first["visitCount"]!), SyncJson.Int(second["visitCount"]!));
+            const string firstVisited = StoredSessionCodec.Key.FirstVisitedAt, lastVisited = StoredSessionCodec.Key.LastVisitedAt;
+            const string visits = StoredSessionCodec.Key.VisitCount;
+            result[firstVisited] = Math.Min(NativeSyncEvaluator.Date(first, firstVisited)!.Value, NativeSyncEvaluator.Date(second, firstVisited)!.Value);
+            result[lastVisited] = Math.Max(NativeSyncEvaluator.Date(first, lastVisited)!.Value, NativeSyncEvaluator.Date(second, lastVisited)!.Value);
+            result[visits] = Math.Max(SyncJson.Int(first[visits]!), SyncJson.Int(second[visits]!));
         }
     }
 

@@ -17,7 +17,12 @@ internal sealed record HistoryPayload(
     long VisitCount) : SyncPayload {
     #region Static Variables
 
-    private const int MaximumTitleBytes = 2_048;
+    /// The members a visit's value carries; a record keeps what a newer build
+    /// writes beside them.
+    public static IReadOnlyList<string> Members { get; } = [
+        StoredSessionCodec.Key.Id, StoredSessionCodec.Key.SpaceId, StoredSessionCodec.Key.Url, StoredSessionCodec.Key.Title,
+        StoredSessionCodec.Key.FirstVisitedAt, StoredSessionCodec.Key.LastVisitedAt, StoredSessionCodec.Key.VisitCount
+    ];
 
     #endregion
 
@@ -32,17 +37,19 @@ internal sealed record HistoryPayload(
 
     #region Actions - Coding
 
-    public static HistoryPayload Read(SyncPayloadReader value) => new(value.Identity("id"), value.WrappedIdentity("spaceID"),
-        new(value.Text("url")), value.Text("title"), value.Time("firstVisitedAt"), value.Time("lastVisitedAt"), value.Integer("visitCount"));
+    public static HistoryPayload Read(SyncPayloadReader value) => new(value.Identity(StoredSessionCodec.Key.Id),
+        value.WrappedIdentity(StoredSessionCodec.Key.SpaceId), new(value.Text(StoredSessionCodec.Key.Url)),
+        value.Text(StoredSessionCodec.Key.Title), value.Time(StoredSessionCodec.Key.FirstVisitedAt),
+        value.Time(StoredSessionCodec.Key.LastVisitedAt), value.Integer(StoredSessionCodec.Key.VisitCount));
 
     public override JsonObject EncodeValue(SyncPayloadForm form) => new() {
-        ["id"] = StoredSessionCodec.BareIdentity(Id),
-        ["spaceID"] = StoredSessionCodec.WrappedIdentity(SpaceId),
-        ["url"] = Url.Spelled ?? Url.Text,
-        ["title"] = Title,
-        ["firstVisitedAt"] = form.Seconds(FirstVisitedAt),
-        ["lastVisitedAt"] = form.Seconds(LastVisitedAt),
-        ["visitCount"] = VisitCount
+        [StoredSessionCodec.Key.Id] = StoredSessionCodec.BareIdentity(Id),
+        [StoredSessionCodec.Key.SpaceId] = StoredSessionCodec.WrappedIdentity(SpaceId),
+        [StoredSessionCodec.Key.Url] = Url.Spelled ?? Url.Text,
+        [StoredSessionCodec.Key.Title] = Title,
+        [StoredSessionCodec.Key.FirstVisitedAt] = form.Seconds(FirstVisitedAt),
+        [StoredSessionCodec.Key.LastVisitedAt] = form.Seconds(LastVisitedAt),
+        [StoredSessionCodec.Key.VisitCount] = VisitCount
     };
 
     #endregion
@@ -51,7 +58,7 @@ internal sealed record HistoryPayload(
 
     public override void Validate() {
         RequireWebAddress(Url);
-        RequireText(Title, MaximumTitleBytes);
+        RequireText(Title, SyncedText.HistoryTitle.Limit);
         if (VisitCount <= 0 || FirstVisitedAt.ReferenceSeconds > LastVisitedAt.ReferenceSeconds) throw new UnreadableSyncPayloadException();
     }
 
