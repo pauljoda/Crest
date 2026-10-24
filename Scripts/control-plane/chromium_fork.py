@@ -1,7 +1,9 @@
 """Crest's maintained Chromium patch fork and persistent build workspace."""
 from __future__ import annotations
 
+import base64
 import contextlib
+import datetime
 import fcntl
 import hashlib
 import json
@@ -29,11 +31,20 @@ TAG = re.compile(r"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)\.([0-9]+)")
 SOURCE_NAME = re.compile(r"[0-9a-f]{20}")
 PREPARATION_FIELDS = ("chromium", "ungoogledMac", "ungoogled", "inputs", "patches", "crestPatches", "esbuild",
                       "typescript")
+CHROMIUM_SOURCE = "https://chromium.googlesource.com/chromium/src/+"
+CT_LOG_LIST = "components/certificate_transparency/data/log_list.json"
+ROOT_STORE = "net/data/ssl/chrome_root_store/root_store.textproto"
+# Chromium enforces Certificate Transparency only while its built-in log list is
+# less than 70 days old (chrome_ct_policy_enforcer.cc). The engine gets no
+# component updates, so a public issue opens this long before that point.
+CT_LOG_LIST_LIFETIME = datetime.timedelta(days=70)
+CT_RENEWAL_NOTICE = datetime.timedelta(days=14)
+CT_RENEWAL_ISSUE = "Update the Chromium engine before Certificate Transparency lapses"
 
 
-def run(*args, cwd=None, capture=False):
+def run(*args, cwd=None, capture=False, timeout=None):
     return subprocess.run([str(arg) for arg in args], cwd=cwd, check=True,
-                          text=True, capture_output=capture).stdout
+                          text=True, capture_output=capture, timeout=timeout).stdout
 
 
 def sha256(path):
@@ -326,6 +337,58 @@ def download(url, destination):
         partial.replace(destination)
     finally:
         partial.unlink(missing_ok=True)
+
+
+def chromium_source_file(ref, path):
+    # Gitiles serves a file's raw bytes base64-encoded with format=TEXT.
+    with urllib.request.urlopen(f"{CHROMIUM_SOURCE}/{ref}/{path}?format=TEXT", timeout=60) as response:
+        return base64.b64decode(response.read()).decode()
+
+
+def certificate_trust(version, now, read=chromium_source_file):
+    """The pinned engine's certificate trust lists against Chromium main."""
+    issued = datetime.datetime.fromisoformat(
+        json.loads(read(f"refs/tags/{version}", CT_LOG_LIST))["log_list_timestamp"])
+    enforced_until = issued + CT_LOG_LIST_LIFETIME
+
+    def root_store(ref):
+        return int(re.search(r"^version_major: ([0-9]+)$", read(ref, ROOT_STORE), re.MULTILINE)[1])
+
+    return {
+        "chromium": version,
+        "logListTimestamp": issued.isoformat(),
+        "transparencyEnforcedUntil": enforced_until.isoformat(),
+        "daysLeft": (enforced_until - now).days,
+        "renewalDue": enforced_until - now <= CT_RENEWAL_NOTICE,
+        "rootStoreVersion": root_store(f"refs/tags/{version}"),
+        "upstreamRootStoreVersion": root_store("main"),
+    }
+
+
+def renewal_issue_change(trust, open_issues):
+    """What keeps the one public renewal issue in step with the deadline."""
+    if trust["renewalDue"] and not open_issues:
+        until = trust["transparencyEnforcedUntil"][:10]
+        return "create", ("--title", CT_RENEWAL_ISSUE, "--body",
+                          f"Chromium {trust['chromium']} stops enforcing Certificate Transparency on {until} "
+                          f"({trust['daysLeft']} days left). The engine receives no certificate components, so "
+                          "only an engine update renews its built-in log list; see "
+                          "`CrestEngines/Chromium/ForkMaintenance.md`.\n\n"
+                          "This issue closes itself once the pinned engine's deadline is further away.")
+    if not trust["renewalDue"] and open_issues:
+        until = trust["transparencyEnforcedUntil"][:10]
+        return "close", (str(open_issues[0]), "--comment",
+                         f"Chromium {trust['chromium']} enforces Certificate Transparency until {until}.")
+    return None
+
+
+def sync_renewal_issue(repository, trust):
+    issues = json.loads(run("gh", "issue", "list", "--repo", repository, "--state", "open", "--limit", "1000",
+                            "--search", f'in:title "{CT_RENEWAL_ISSUE}"', "--json", "number,title", capture=True,
+                            timeout=60))
+    change = renewal_issue_change(trust, [issue["number"] for issue in issues if issue["title"] == CT_RENEWAL_ISSUE])
+    if change:
+        run("gh", "issue", change[0], "--repo", repository, *change[1], timeout=60)
 
 
 def download_profile(root, inputs):

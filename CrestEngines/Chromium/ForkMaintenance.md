@@ -86,6 +86,10 @@ at an unreachable host, so this engine receives neither, nor Certificate
 Transparency log list updates. It trusts only the blocklist, root store and log
 list compiled into its source. Chromium stops enforcing Certificate Transparency
 70 days after the built-in log list's date, so the engine needs regular updates.
+`chromium-fork.py check-trust` reports that date and the root store version
+against Chromium main. The scheduled maintenance run opens one public issue 14
+days before enforcement stops and closes it once an engine update moves the
+deadline.
 
 `native-host.patch` therefore carries upstream distrust changes that the pinned
 source does not yet contain, copied hunk for hunk from Chromium:

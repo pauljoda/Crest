@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import argparse
+import datetime
+import http.client
 import json
 import os
 from pathlib import Path
 import platform
 import shutil
+import subprocess
 import sys
 
-from chromium_fork import (ENGINE, REPO, Workspace, exclusive_workspace, prepare_update,
+from chromium_fork import (ENGINE, REPO, Workspace, certificate_trust, exclusive_workspace, prepare_update,
                            read_json, release_version, run, select_update, sha256,
-                           upstream_releases, write_json)
+                           sync_renewal_issue, upstream_releases, write_json)
 import chromium_engine
 
 
@@ -62,6 +65,8 @@ def main():
     commands.add_parser("status")
     check = commands.add_parser("check-upstream")
     check.add_argument("--allow-major", action="store_true")
+    trust = commands.add_parser("check-trust")
+    trust.add_argument("--issue-repository", help="Open or close the public renewal issue in this repository")
     adoption = commands.add_parser("adopt")
     adoption.add_argument("--upstream", type=Path, required=True)
     for name in ("build", "update"):
@@ -88,6 +93,16 @@ def main():
         result = select_update(workspace.lock["ungoogledMac"]["tag"],
                                upstream_releases(policy["upstreamRepository"]), args.allow_major)
         print(json.dumps(result, indent=2))
+        return
+    if args.command == "check-trust":
+        # A monitor: an unreachable service is reported, never a failed run.
+        try:
+            trust = certificate_trust(workspace.lock["chromium"]["version"], datetime.datetime.now(datetime.UTC))
+            print(json.dumps(trust, indent=2))
+            if args.issue_repository:
+                sync_renewal_issue(args.issue_repository, trust)
+        except (OSError, http.client.HTTPException, subprocess.SubprocessError) as error:
+            print(f"::warning title=Certificate trust::Check unavailable: {type(error).__name__}: {error}")
         return
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         parser.error("Engine preparation and builds require an Apple Silicon Mac")

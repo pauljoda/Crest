@@ -237,3 +237,24 @@ jobs:
           # Publish trusted main, including any newer merges that arrived meanwhile.
           gh('workflow', 'run', 'release.yml', '--ref', branch, '-f', 'channel=development')
           PY
+
+  certificate-trust:
+    # The engine receives no certificate components, so its built-in
+    # Certificate Transparency log list must be renewed by an engine update.
+    # A public issue opens shortly before it lapses and closes once renewed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Check the pinned engine's certificate trust lists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 Scripts/control-plane/chromium-fork.py --workspace "$RUNNER_TEMP/chromium" \
+            check-trust --issue-repository "$GITHUB_REPOSITORY"
