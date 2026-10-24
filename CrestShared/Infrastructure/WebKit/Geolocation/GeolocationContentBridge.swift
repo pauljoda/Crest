@@ -13,8 +13,8 @@ enum BrowserGeolocationContentBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
-    ) -> BrowserGeolocationScriptMessageProxy {
-        let proxy = BrowserGeolocationScriptMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy(receive: receive)
         userContentController.add(
             proxy,
             contentWorld: contentWorld,

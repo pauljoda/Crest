@@ -2,24 +2,6 @@ import Foundation
 import WebKit
 
 @MainActor
-final class BrowserMediaSessionScriptMessageProxy: NSObject,
-    WKScriptMessageHandler
-{
-    private let receive: @MainActor (WKScriptMessage) -> Void
-
-    init(receive: @escaping @MainActor (WKScriptMessage) -> Void) {
-        self.receive = receive
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage
-    ) {
-        receive(message)
-    }
-}
-
-@MainActor
 enum BrowserMediaSessionContentBridge {
     static let messageHandlerName = "crestMediaSession"
     static let contentWorld = WKContentWorld.page
@@ -27,8 +9,8 @@ enum BrowserMediaSessionContentBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
-    ) -> BrowserMediaSessionScriptMessageProxy {
-        let proxy = BrowserMediaSessionScriptMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy(receive: receive)
         userContentController.add(
             proxy,
             contentWorld: contentWorld,

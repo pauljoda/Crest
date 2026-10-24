@@ -135,14 +135,14 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
-    @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
+    @ObservationIgnored private var credentialMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored private var linkActivationMessageProxy: MobileLinkActivationScriptMessageProxy?
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
-    @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
-    @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
-    @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
-    @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
+    @ObservationIgnored private var userActivityMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var geolocationMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var blockedPopupMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var mediaSessionMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     /// The system's consent the page asks before it sends the person's Allow

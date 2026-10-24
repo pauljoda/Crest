@@ -4449,6 +4449,10 @@
     "mobile-window-page-store": {
       "category": "internal",
       "message": "Set up an iPhone or iPad window's pages in one place, so the app and each window wire sign-ins, links and Peeks the same way."
+    },
+    "shared-script-message-proxy": {
+      "category": "internal",
+      "message": "Use one message proxy for every page script bridge instead of a copy per bridge."
     }
   }
 }

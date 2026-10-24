@@ -1,22 +1,6 @@
 import Foundation
 import WebKit
 
-@MainActor
-final class BrowserBlockedPopupScriptMessageProxy: NSObject, WKScriptMessageHandler {
-    private let receive: @MainActor (WKScriptMessage) -> Void
-
-    init(receive: @escaping @MainActor (WKScriptMessage) -> Void) {
-        self.receive = receive
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage
-    ) {
-        receive(message)
-    }
-}
-
 /// Observes the result of top-level document calls to WebKit's native
 /// `window.open` without deciding whether a window is allowed or creating one.
 /// WebKit remains the sole popup policy engine and accepted requests continue to
@@ -29,8 +13,8 @@ enum BrowserBlockedPopupContentBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
-    ) -> BrowserBlockedPopupScriptMessageProxy {
-        let proxy = BrowserBlockedPopupScriptMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy(receive: receive)
         userContentController.add(
             proxy,
             contentWorld: contentWorld,

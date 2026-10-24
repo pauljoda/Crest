@@ -10,8 +10,11 @@ enum BrowserUserActivityBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor () -> Void
-    ) -> BrowserUserActivityScriptMessageProxy {
-        let proxy = BrowserUserActivityScriptMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy { message in
+            guard message.name == messageHandlerName else { return }
+            receive()
+        }
         userContentController.add(
             proxy,
             contentWorld: contentWorld,

@@ -9,7 +9,7 @@ enum BrowserLinkHoverContentBridge {
         // A popup shares this controller. Route by the sending web view rather
         // than retaining the opener, so either page may close independently.
         controller.add(
-            BrowserLinkContextScriptMessageProxy { message in
+            BrowserScriptMessageProxy { message in
                 (message.webView as? BrowserDesktopWebView)?.linkHover?.receive(message)
             },
             contentWorld: world,

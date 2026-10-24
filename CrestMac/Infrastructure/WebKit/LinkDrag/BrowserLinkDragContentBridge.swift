@@ -7,7 +7,7 @@ enum BrowserLinkDragContentBridge {
 
     static func install(in controller: WKUserContentController) {
         controller.add(
-            BrowserLinkContextScriptMessageProxy { message in
+            BrowserScriptMessageProxy { message in
                 (message.webView as? BrowserDesktopWebView)?.linkDrag?.receive(message)
             },
             contentWorld: world, name: name
