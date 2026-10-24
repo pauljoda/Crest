@@ -4481,6 +4481,10 @@
     "engine-page-answers-requests": {
       "category": "internal",
       "message": "The Chromium engine's pages answer the app's page requests themselves, through one path instead of a forwarding handler each."
+    },
+    "engine-extension-profile-check": {
+      "category": "internal",
+      "message": "Decide in one place whether a Chromium extension may run in a private window's profile."
     }
   }
 }

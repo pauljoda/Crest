@@ -128,6 +128,11 @@ class EngineExtensions final {
   engine::ExtensionActionList Pinned(Profile* profile, const std::string& profile_id);
   engine::InstalledExtensionList Installed(Profile* profile, const std::string& profile_id);
   bool Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change);
+  // Whether `extension` runs in `profile`: a private profile runs only the
+  // extensions the person allowed in private browsing.
+  static bool RunsIn(Profile* profile, const extensions::Extension& extension);
+  // The enabled extension `extension_id` names, when it runs in `profile`.
+  static const extensions::Extension* Usable(Profile* profile, const std::string& extension_id);
   // The extension, only if it has a side panel for `contents`' own tab.
   static const extensions::Extension* SidePanelExtension(content::WebContents* contents,
                                                          const std::string& extension_id);
