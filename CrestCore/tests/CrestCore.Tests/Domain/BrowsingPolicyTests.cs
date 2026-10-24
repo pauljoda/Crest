@@ -42,12 +42,8 @@ public sealed class BrowsingPolicyTests {
         Assert.Equal("chrome://extensions/", AddressResolution.Held("chrome://extensions/", allowsInternalPages: true));
     }
     [Fact]
-    public void RetentionAndExplicitDeletionKeepTheirDifferentBoundaryRules() {
-        // Retention excludes an exact cutoff and future records. Explicit
-        // deletion includes its start and excludes its end. The
-        // `SweepExpiredRecords` and `RemoveHistoryRange` intents apply this rule.
+    public void RetentionExcludesAnExactCutoffAndFutureRecords() {
+        // `SweepExpiredRecords` applies this rule.
         Assert.Equal([0], DataRetention.Expired([9, 10, 11, 21], 20, 10));
-        Assert.Equal([1, 2], RemoveHistoryRange.WithinRange([9, 10, 11, 20], 10, 20));
-        Assert.Empty(RemoveHistoryRange.WithinRange([10], 20, 10));
     }
 }

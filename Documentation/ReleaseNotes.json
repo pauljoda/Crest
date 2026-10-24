@@ -4405,6 +4405,10 @@
     "session-rules-on-session-state": {
       "category": "internal",
       "message": "Keep the core's Space lookups, history expiry and seed repair in one place each, on the session and its Spaces."
+    },
+    "remove-unsent-core-intents": {
+      "category": "internal",
+      "message": "Remove core commands the app never sends: cancelling a close check, moving a whole split and removing history by date range."
     }
   }
 }

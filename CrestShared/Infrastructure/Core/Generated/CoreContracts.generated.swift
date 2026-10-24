@@ -235,7 +235,6 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidCredentialOrigin(InvalidCredentialOrigin)
     case invalidCredentialRecord(InvalidCredentialRecord)
     case invalidCredentialUsername(InvalidCredentialUsername)
-    case invalidDateRange(InvalidDateRange)
     case invalidDownloadIdentity(InvalidDownloadIdentity)
     case invalidDownloadProgress(InvalidDownloadProgress)
     case invalidDownloadSample(InvalidDownloadSample)
@@ -1398,10 +1397,6 @@ struct CanTearOff: Query, Equatable, Sendable {
     let profileID: UUID
     let tabID: UUID
     let draggedTabs: [UUID]?
-}
-
-struct CancelClosePreparation: Intent, CloseIntent, Equatable, Sendable {
-    let requestID: UUID
 }
 
 struct CancelDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -3261,9 +3256,6 @@ struct InvalidCredentialRecord: Equatable, Sendable {
 struct InvalidCredentialUsername: Equatable, Sendable {
 }
 
-struct InvalidDateRange: Equatable, Sendable {
-}
-
 struct InvalidDownloadIdentity: Equatable, Sendable {
 }
 
@@ -3775,15 +3767,6 @@ struct MovePageToWindow: PageRequest, Equatable, Sendable {
 struct MoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let spaceID: UUID
     let targetSpaceID: UUID
-}
-
-struct MoveSplit: Intent, SessionIntent, Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let groupID: UUID
-    let placement: TabPlacement
-    let folderID: UUID?
-    let beforeTabID: UUID?
 }
 
 struct MoveSplitMember: Intent, SessionIntent, Equatable, Sendable {
@@ -4987,13 +4970,6 @@ struct RemoveHistoryAddress: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let address: String
-}
-
-struct RemoveHistoryRange: Intent, SessionIntent, Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let start: Date
-    let end: Date
 }
 
 struct RemoveLinkRoute: Intent, LinkIntent, Equatable, Sendable {

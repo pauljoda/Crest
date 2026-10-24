@@ -22,20 +22,15 @@ public sealed partial class BrowserContractsTests {
     private static JsonArray SavedHistory(NativeSessionAuthority core, Guid space) => JsonNode.Parse(core.Checkpoint().Read(space.ToString()))!.AsArray();
 
     [Fact]
-    public void HistoryRemovalUsesLastVisitsHalfOpenRangeAndAddressesWithoutTheirFragment() {
+    public void HistoryRemovalMatchesAddressesWithoutTheirFragment() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
-        space["history"] = new JsonArray([.. new[] { 10.0, 20.0, 30.0 }.Select(time => (JsonNode)Visit(time, $"https://example.org/{time}"))]);
+        space["history"] = new JsonArray([.. new[] { 10.0, 30.0 }.Select(time => (JsonNode)Visit(time, $"https://example.org/{time}"))]);
         using var device = new TestDevice(session);
         var core = device.Authority;
-        DateTimeOffset At(double seconds) => StoredSessionCodec.Date(seconds);
 
-        Assert.IsType<InvalidDateRange>(Assert.Throws<Rejected>(() =>
-            device.Send(new RemoveHistoryRange(device.Workspace, f.Space, At(30), At(10)))).Rejection);
-        device.Send(new RemoveHistoryRange(device.Workspace, f.Space, At(10), At(30)));
-        var retained = Assert.Single(SavedHistory(core, f.Space));
-        Assert.Equal(30.0, retained!["lastVisitedAt"]!.GetValue<double>());
         device.Send(new RemoveHistoryAddress(device.Workspace, f.Space, "https://example.org/30#ignored"));
-        Assert.Empty(SavedHistory(core, f.Space));
+        var retained = Assert.Single(SavedHistory(core, f.Space));
+        Assert.Equal(10.0, retained!["lastVisitedAt"]!.GetValue<double>());
 
         space["history"] = new JsonArray(Visit(40, "https://example.org/40"));
         using var other = new TestDevice(session);
