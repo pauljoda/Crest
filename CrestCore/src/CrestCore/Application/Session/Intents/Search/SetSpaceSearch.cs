@@ -33,8 +33,8 @@ public sealed record SetSpaceSearch(Guid WorkspaceId, Guid SpaceId, SearchProvid
             SearchSuggestionsEnabled = SuggestionsEnabled ?? catalog.SuggestionsEnabled
         };
         if (searching == browsing) return null;
-        var configured = workspace.Configured(space, space.Settings with { BrowsingPreferences = searching });
-        return new(NativeSessionAuthority.Replacing(turn.Basis, configured), SyncStaging.Edit);
+        var configured = space.Configured(space.Settings with { BrowsingPreferences = searching });
+        return new(turn.Basis.Replacing(configured), SyncStaging.Edit);
     }
 
     /// The provider `chosen` names, as the device keeps it or as the Space

@@ -44,7 +44,7 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
             edited.PruneSplitMetadata();
         }
         followUp.ShowTab(space.Id, selected);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, edited.Capture(space)), SyncStaging.Creation, followUp, events);
+        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp, events);
     }
 
     #endregion

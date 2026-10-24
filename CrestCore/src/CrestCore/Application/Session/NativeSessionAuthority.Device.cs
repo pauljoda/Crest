@@ -32,7 +32,7 @@ public sealed partial class NativeSessionAuthority {
     /// Whether `spaceId` is being deleted here or, for a borrowed workspace, in
     /// the workspace it borrows from, which owns the Space's profile.
     internal bool IsDeleting(Guid spaceId) {
-        lock (Gate) return PendingDeletion(session, spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true;
+        lock (Gate) return session.PendingDeletion(spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true;
     }
 
     #endregion
@@ -97,13 +97,13 @@ public sealed partial class NativeSessionAuthority {
     internal (SessionState Previous, SessionState Next)? Touch(Guid spaceId, Guid tabId, DateTimeOffset now) {
         SessionState previous, next;
         lock (Gate) {
-            if (!TakesEdits() || PendingDeletion(session, spaceId) is not null
-                || session.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space
+            if (!TakesEdits() || session.PendingDeletion(spaceId) is not null
+                || session.Space(spaceId) is not { } space
                 || space.Tabs.All(tab => tab.Id != tabId)) return null;
             if (IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
             // The stored spelling of the time, so the next load reads the same value.
             var at = StoredSessionCodec.Date(StoredSessionCodec.Seconds(now));
-            next = Replacing(session, space with {
+            next = session.Replacing(space with {
                 Tabs = [.. space.Tabs.Select(tab => tab.Id == tabId ? tab with { LastActivatedAt = at } : tab)]
             });
             previous = Accept(next);

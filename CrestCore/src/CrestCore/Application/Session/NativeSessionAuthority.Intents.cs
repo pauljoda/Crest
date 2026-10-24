@@ -106,10 +106,10 @@ public sealed partial class NativeSessionAuthority {
         if (released) throw new Rejected(new UnknownWorkspace(workspaceId));
         if (replacement is not null) throw new Rejected(new WorkspaceBusy(workspaceId));
         if (borrowedSource is not { } source) return session;
-        var original = source.session.Spaces.SingleOrDefault(space => space.Id == borrowedSpace);
+        var original = source.session.Space(borrowedSpace);
         if (source.released || original is null || original.ProfileId != borrowedProfile)
             throw new Rejected(new UnknownSpace(borrowedSpace));
-        if (PendingDeletion(source.session, borrowedSpace) is not null) throw new Rejected(new SpaceBeingDeleted(borrowedSpace));
+        if (source.session.PendingDeletion(borrowedSpace) is not null) throw new Rejected(new SpaceBeingDeleted(borrowedSpace));
         var local = session.Spaces.Single();
         var refreshed = BorrowedSpace(original, local);
         return refreshed == local ? session : session with { Spaces = [refreshed] };
@@ -118,8 +118,8 @@ public sealed partial class NativeSessionAuthority {
     /// The Space an intent edits: one `basis` holds that is not being deleted,
     /// and, unless the edit only maintains it, one this process may read.
     internal SpaceState Editable(SessionState basis, Guid spaceId, bool maintains = false) {
-        var space = basis.Spaces.FirstOrDefault(candidate => candidate.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
-        if (PendingDeletion(basis, spaceId) is not null) throw new Rejected(new SpaceBeingDeleted(spaceId));
+        var space = basis.KnownSpace(spaceId);
+        if (basis.PendingDeletion(spaceId) is not null) throw new Rejected(new SpaceBeingDeleted(spaceId));
         if (!maintains && IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
         return space;
     }
@@ -128,7 +128,7 @@ public sealed partial class NativeSessionAuthority {
     /// is not being deleted, and, unless the edit only maintains them, that
     /// this process may read.
     internal IEnumerable<SpaceState> EditableSpaces(SessionState basis, bool maintains = false) =>
-        basis.Spaces.Where(space => PendingDeletion(basis, space.Id) is null && (maintains || !IsLockedUnderGate(space)));
+        basis.Spaces.Where(space => basis.PendingDeletion(space.Id) is null && (maintains || !IsLockedUnderGate(space)));
 
     /// The window that issued an intent, as it is now, or null when it is not
     /// open over this workspace.

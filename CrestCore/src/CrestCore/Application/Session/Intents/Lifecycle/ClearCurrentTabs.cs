@@ -21,7 +21,7 @@ public sealed record ClearCurrentTabs(Guid WorkspaceId, Guid WindowId, Guid Spac
             resetArchivePlacement: false);
         edited.PruneSplitMetadata();
         followUp.ShowTab(space.Id, selected);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, edited.Capture(space)), SyncStaging.Creation, followUp);
+        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp);
     }
 
     #endregion

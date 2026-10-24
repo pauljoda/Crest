@@ -13,16 +13,8 @@ public sealed record DetachedSession(SessionState Seed) : StandaloneQuery<Sessio
     /// The seed repaired as a stored session is when it loads, stamped as the
     /// session stores the time. Throws `Rejected` with `InvalidSession`
     /// naming the first rule it breaks that the repair cannot mend.
-    internal override SessionState Answer(StandaloneContext context) {
-        var now = StoredSessionCodec.Date(StoredSessionCodec.Seconds(context.Now));
-        SessionState repaired;
-        try {
-            repaired = NativeSessionMaintenance.Repair(Seed, now, null, new SystemIdSource(), out _);
-        } catch (BrowserRuleException) {
-            throw new Rejected(new InvalidSession(SessionIdentities.Flaw(Seed) ?? SessionFlaw.Unreadable));
-        }
-        return SessionIdentities.Flaw(repaired) is { } flaw ? throw new Rejected(new InvalidSession(flaw)) : repaired;
-    }
+    internal override SessionState Answer(StandaloneContext context) =>
+        NativeSessionMaintenance.RepairSeed(Seed, context.Now, new SystemIdSource(), out _);
 
     #endregion
 }

@@ -35,8 +35,8 @@ public sealed partial class NativeSessionAuthority {
     /// that is going away.
     internal (SpaceAccessAssignment Assignment, bool RequiresAuthentication) Unlockable(Guid spaceId) {
         lock (Gate) {
-            var space = session.Spaces.FirstOrDefault(candidate => candidate.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
-            if (PendingDeletion(session, spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true)
+            var space = session.KnownSpace(spaceId);
+            if (session.PendingDeletion(spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true)
                 throw new Rejected(new SpaceBeingDeleted(spaceId));
             return (new(space.Id, space.ProfileId), space.Settings.RequiresAuthentication);
         }

@@ -56,7 +56,7 @@ internal sealed partial class Device {
         var (peek, newTab) = preferences.PeekModifier.Intent(gesture.Modifiers, gesture.MiddleClick);
         var page = pages.Hosted(question.PageId);
         var tab = page is { TabId: { } tabId }
-            ? Attached(page.WorkspaceId)?.Current.Spaces.FirstOrDefault(space => space.Id == page.SpaceId)?.Tabs
+            ? Attached(page.WorkspaceId)?.Current.Space(page.SpaceId)?.Tabs
                 .FirstOrDefault(candidate => candidate.Id == tabId)
             : null;
         bool focuses = preferences.FocusesNewTabs || page is { TabId: null, Transient.OpensNewTabsInFront: true };

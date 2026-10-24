@@ -87,7 +87,7 @@ internal sealed partial class Device {
             foreach (var space in next.Spaces) {
                 var known = memories.GetValueOrDefault(space.Id);
                 var memory = known ?? PaletteMemory.Starting(now);
-                if (previous.Spaces.FirstOrDefault(before => before.Id == space.Id) is { } before && !ReferenceEquals(before.History, space.History))
+                if (previous.Space(space.Id) is { } before && !ReferenceEquals(before.History, space.History))
                     memory = Remembered(memory, before.History, space.History, now);
                 if (ReferenceEquals(memory, known)) continue;
                 memories = memories.SetItem(space.Id, memory);
@@ -138,7 +138,7 @@ internal sealed partial class Device {
         if (Showing(windowId, null) is not { } shown || Attached(shown.WorkspaceId) is not { Kind.KeepsAppPreferences: true } authority)
             return null;
         var state = authority.Current;
-        return state?.Spaces.FirstOrDefault(space => space.Id == shown.SpaceId) is { } space ? (space, state.AppPreferences ?? AppPreferences.Default) : null;
+        return state?.Space(shown.SpaceId) is { } space ? (space, state.AppPreferences ?? AppPreferences.Default) : null;
     }
 
     /// Reads the address a tab of `space` shows or keeps.

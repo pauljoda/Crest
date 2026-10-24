@@ -82,10 +82,6 @@ public sealed partial class NativeSessionAuthority {
         if (identities.Index(value) is { } flaw) throw new Rejected(new InvalidSession(flaw));
     }
 
-    internal static SessionState Replacing(SessionState session, params SpaceState[] edited) => session with {
-        Spaces = [.. session.Spaces.Select(space => edited.FirstOrDefault(value => value.Id == space.Id) ?? space)]
-    };
-
     #endregion
 
     #region Actions - Session revisions

@@ -82,8 +82,8 @@ public sealed partial class NativeSessionAuthority {
         receivingTabs.PruneSplitMetadata();
         leaving.ShowTab(space.Id, shown);
         arriving.ShowTab(there.Id, intent.TabId).ShowSpace(there.Id);
-        var next = Replacing(basis, edited.Capture(space));
-        var nextThere = Replacing(theirs, receivingTabs.Capture(there));
+        var next = basis.Replacing(edited.Capture(space));
+        var nextThere = theirs.Replacing(receivingTabs.Capture(there));
         Validate(basis, next);
         ValidateBorrowedSession(next);
         receiving.Validate(theirs, nextThere);

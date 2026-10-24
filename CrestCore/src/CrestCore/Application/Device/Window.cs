@@ -98,7 +98,7 @@ internal sealed class Window {
     /// of the Space it shows, or none.
     public IReadOnlyList<Guid> OnScreen(SessionState session) {
         ArgumentNullException.ThrowIfNull(session);
-        var space = session.Spaces.FirstOrDefault(candidate => candidate.Id == ShownSpaceId);
+        var space = session.Space(ShownSpaceId);
         return space is not null && Tab(space.Id) is { } tabId && Contains(space, tabId) ? Cards(space, tabId).TabIds : [];
     }
 
@@ -236,8 +236,7 @@ internal sealed class Window {
     }
 
     /// The Spaces a window may show, in the session's order: every one not being deleted.
-    internal static IEnumerable<SpaceState> Showable(SessionState session) =>
-        session.Spaces.Where(space => session.SpaceDeletions.All(deletion => deletion.SpaceId != space.Id));
+    internal static IEnumerable<SpaceState> Showable(SessionState session) => session.StayingSpaces;
 
     private static bool Contains(SpaceState space, Guid? tabId) => tabId is { } id && space.Tabs.Any(tab => tab.Id == id);
 

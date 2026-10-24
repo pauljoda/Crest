@@ -1,3 +1,4 @@
+using CrestCore.Application;
 using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
@@ -137,6 +138,60 @@ public sealed record SpaceState(
     /// The key two tab addresses match on: the address a history visit would
     /// record, or the address itself when history would not record it.
     private static string UrlKey(string url) => new WebAddress(url).Normalized ?? url;
+
+    #endregion
+
+    #region Actions - Settings
+
+    /// The Space with `settings`, or itself when it already has them, so an
+    /// edit that changes nothing publishes nothing.
+    internal SpaceState Configured(SpaceSettings settings) => settings == Settings ? this : this with { Settings = settings };
+
+    #endregion
+
+    #region Actions - History and archive
+
+    /// The Space without the history entries `removes` picks, or itself when
+    /// it picks none.
+    internal SpaceState WithoutHistory(Func<HistoryEntryState, bool> removes) => WithoutHistory((entry, _) => removes(entry));
+
+    /// The Space without the history entries `removes` picks by entry and
+    /// position, or itself when it picks none.
+    internal SpaceState WithoutHistory(Func<HistoryEntryState, int, bool> removes) {
+        IReadOnlyList<HistoryEntryState> kept = [.. History.Where((entry, index) => !removes(entry, index))];
+        return kept.Count == History.Count ? this : this with { History = kept };
+    }
+
+    /// The Space without the history and archive entries older at `now` than
+    /// it keeps them, or itself when none are.
+    internal SpaceState Retained(DateTimeOffset now) {
+        var retention = Settings.BrowsingPreferences.DataRetention;
+        var seconds = StoredSessionCodec.Seconds(now);
+        var space = this;
+        if (retention.History.Lifetime is { } history) {
+            var expired = DataRetention.Expired(Seconds(History.Select(entry => entry.LastVisitedAt)), seconds,
+                history.TotalSeconds).ToHashSet();
+            space = space.WithoutHistory((_, index) => expired.Contains(index));
+        }
+        if (retention.Archive.Lifetime is { } archive) {
+            var expired = DataRetention.Expired(Seconds(ArchivedTabs.Select(archived => archived.ArchivedAt)), seconds,
+                archive.TotalSeconds).ToHashSet();
+            if (expired.Count > 0) space = space with { ArchivedTabs = [.. ArchivedTabs.Where((_, index) => !expired.Contains(index))] };
+        }
+        return space;
+    }
+
+    /// The Space with its open tabs unused at `now` for longer than its
+    /// cleanup lifetime archived, keeping `kept`, or itself when none are.
+    internal SpaceState CleanedUp(DateTimeOffset now, IReadOnlySet<Guid>? kept) {
+        if (Settings.BrowsingPreferences.CurrentTabCleanup.Lifetime is not { } lifetime) return this;
+        var edited = BrowserTabCollection.Restore(this);
+        edited.CleanupCurrentTabs(null, lifetime, now, kept?.ToArray());
+        return Tabs.SequenceEqual(edited.TabStates) ? this : edited.Capture(this);
+    }
+
+    /// The dates as the stored format's seconds, which the removal policies read.
+    private static double[] Seconds(IEnumerable<DateTimeOffset> dates) => dates.Select(StoredSessionCodec.Seconds).ToArray();
 
     #endregion
 

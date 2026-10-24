@@ -14,7 +14,7 @@ public sealed record CleanUpCurrentTabs(Guid WorkspaceId, Guid? SpaceId) : Sessi
         IEnumerable<SpaceState> spaces = SpaceId is { } spaceId
             ? [workspace.Editable(turn.Basis, spaceId, maintains: true)] : workspace.EditableSpaces(turn.Basis, maintains: true);
         var kept = workspace.TabsCleanupKeeps(turn);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, [.. spaces.Select(space => workspace.CleanedUp(space, turn.Now, kept))]),
+        return new(turn.Basis.Replacing([.. spaces.Select(space => space.CleanedUp(turn.Now, kept))]),
             SyncStaging.Expiry);
     }
 

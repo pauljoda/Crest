@@ -123,7 +123,7 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
     /// The Space a page may live in, as `Pages.Hosting` decides, or null where
     /// a rule refuses it.
     private static SpaceState? Hostable(NativeSessionAuthority workspace, Guid spaceId) =>
-        workspace.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) is { } space && !workspace.IsDeleting(spaceId)
+        workspace.Current.Space(spaceId) is { } space && !workspace.IsDeleting(spaceId)
             && !workspace.IsLocked(space)
             ? space
             : null;

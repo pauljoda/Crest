@@ -246,7 +246,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     internal void CloseOwner(Page page, PageTurn turn) {
         if (device.Attached(page.WorkspaceId) is not { } workspace) return;
         if (page.TabId is null) {
-            if (!workspace.IsDeleting(page.SpaceId) && workspace.Current.Spaces.Any(space => space.Id == page.SpaceId))
+            if (!workspace.IsDeleting(page.SpaceId) && workspace.Current.Space(page.SpaceId) is not null)
                 turn.Changes.Publish(new TransientPageClosed(page.Id, page.WorkspaceId));
             return;
         }
@@ -469,13 +469,13 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// is not being deleted and this process may show it; null otherwise.
     internal SpaceState? Shown(Page page) =>
         device.Attached(page.WorkspaceId) is { } workspace && !workspace.IsDeleting(page.SpaceId)
-            && workspace.Current.Spaces.FirstOrDefault(space => space.Id == page.SpaceId) is { } space && !workspace.IsLocked(space)
+            && workspace.Current.Space(page.SpaceId) is { } space && !workspace.IsLocked(space)
             ? space : null;
 
     /// A tab its Space still holds, in a Space that is not being deleted.
     private TabState? Held(Guid workspaceId, Guid spaceId, Guid tabId) =>
         device.Attached(workspaceId) is { } workspace && !workspace.IsDeleting(spaceId)
-            && workspace.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) is { } space
+            && workspace.Current.Space(spaceId) is { } space
             ? space.Tabs.FirstOrDefault(tab => tab.Id == tabId) : null;
 
     #endregion
@@ -556,7 +556,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// being deleted, here or in the workspace a borrowed one borrows from, and
     /// that this process may show.
     internal SpaceState Hosting(NativeSessionAuthority workspace, Guid spaceId) {
-        var space = workspace.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
+        var space = workspace.Current.KnownSpace(spaceId);
         if (workspace.IsDeleting(spaceId)) throw new Rejected(new SpaceBeingDeleted(spaceId));
         if (workspace.IsLocked(space)) throw new Rejected(new SpaceLocked(spaceId));
         return space;

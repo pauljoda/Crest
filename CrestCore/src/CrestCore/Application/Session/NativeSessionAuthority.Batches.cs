@@ -32,7 +32,7 @@ public sealed partial class NativeSessionAuthority {
         public SessionEdit Result(SessionState basis, SyncStaging staging, SessionTabEvents? events = null,
             params SpaceState[] alsoEdited) {
             Edited.PruneSplitMetadata();
-            return new(Replacing(basis, [Edited.Capture(Space), .. alsoEdited]), staging, FollowUp, events);
+            return new(basis.Replacing([Edited.Capture(Space), .. alsoEdited]), staging, FollowUp, events);
         }
 
         #endregion

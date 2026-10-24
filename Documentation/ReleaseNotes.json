@@ -4401,6 +4401,10 @@
     "fold-one-sided-platform-seams": {
       "category": "internal",
       "message": "Share the window colour, sheet sizing and text field settings between Mac and iPhone, and drop platform stand-ins that did nothing."
+    },
+    "session-rules-on-session-state": {
+      "category": "internal",
+      "message": "Keep the core's Space lookups, history expiry and seed repair in one place each, on the session and its Spaces."
     }
   }
 }

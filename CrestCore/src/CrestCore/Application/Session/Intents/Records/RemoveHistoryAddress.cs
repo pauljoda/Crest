@@ -11,8 +11,8 @@ public sealed record RemoveHistoryAddress(Guid WorkspaceId, Guid SpaceId, string
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         var address = new WebAddress(Address).Normalized;
-        var remaining = workspace.WithoutHistory(space, entry => address is not null && entry.Url == address);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, remaining), SyncStaging.Deletion);
+        var remaining = space.WithoutHistory(entry => address is not null && entry.Url == address);
+        return new(turn.Basis.Replacing(remaining), SyncStaging.Deletion);
     }
 
     #endregion

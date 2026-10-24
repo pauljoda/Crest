@@ -23,7 +23,7 @@ public sealed record ArchiveTransientPage(Guid WorkspaceId, Guid PageId, Guid Sp
         var edited = BrowserTabCollection.Restore(space);
         edited.ArchiveTransient(workspace.NewTab(turn.Ids.Next(), new TabContent(page.Address, View: null, page.Title),
             TabPlacement.Current, turn.Now), turn.Now);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, edited.Capture(space)), SyncStaging.Edit, Completes: PageId);
+        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Edit, Completes: PageId);
     }
 
     #endregion

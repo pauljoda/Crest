@@ -188,7 +188,7 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
     private Guid? PageSpaceOf(EngineDownload reported) {
         if (reported.SourcePageId is { } pageId && pages.Hosted(pageId) is { } page && page.ProfileId == reported.ProfileId
             && device.Attached(page.WorkspaceId) is { } workspace
-            && workspace.Current.Spaces.FirstOrDefault(space => space.Id == page.SpaceId) is { } pageSpace
+            && workspace.Current.Space(page.SpaceId) is { } pageSpace
             && !workspace.IsDeleting(pageSpace.Id) && !workspace.IsLocked(pageSpace))
             return pageSpace.Id;
         return null;

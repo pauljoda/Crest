@@ -41,8 +41,8 @@ public sealed partial class NativeSessionAuthority {
     /// a report is never refused. An edit that changes nothing is still
     /// taken: the state stays as it was. The caller holds the gate.
     private (SessionState Previous, SessionState Next, SessionTabEvents Events)? ApplyUnderGate(PageEdit edit) {
-        if (!TakesEdits() || PendingDeletion(session, edit.SpaceId) is not null
-            || session.Spaces.FirstOrDefault(space => space.Id == edit.SpaceId) is not { } original
+        if (!TakesEdits() || session.PendingDeletion(edit.SpaceId) is not null
+            || session.Space(edit.SpaceId) is not { } original
             || IsLockedUnderGate(original)) return null;
         SessionState next;
         SessionTabEvents events;
@@ -50,7 +50,7 @@ public sealed partial class NativeSessionAuthority {
             if (edit.Apply(original, Stamp(edit.At)) is not { } edited) return null;
             events = new SessionTabEvents([], edited.Favicon);
             if (edited.Space == original) return (session, session, events);
-            next = Replacing(session, edited.Space);
+            next = session.Replacing(edited.Space);
             Validate(session, next);
             ValidateBorrowedSession(next);
         } catch (Rejected) {

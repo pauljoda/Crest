@@ -61,7 +61,7 @@ public sealed record NativeSyncSessionTransition {
         var pending = local.SpaceDeletions.ToList();
         var pendingIds = pending.Select(deletion => deletion.SpaceId).ToHashSet();
         foreach (var record in records.Where(record => record.Kind == SyncRecordKind.Space && record.Tombstone?.Reason.IsExplicit == true)) {
-            var space = local.Spaces.FirstOrDefault(space => space.Id == record.Id);
+            var space = local.Space(record.Id);
             if (space is not null && pendingIds.Add(space.Id)) pending.Add(new(Guid.NewGuid(), space.Id, space.ProfileId));
         }
         local = local with { SpaceDeletions = pending };

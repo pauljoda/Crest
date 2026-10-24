@@ -13,9 +13,9 @@ public sealed record RemoveHistoryRange(Guid WorkspaceId, Guid SpaceId, DateTime
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         if (End < Start) throw new Rejected(new InvalidDateRange());
-        var removed = WithinRange(workspace.Seconds(space.History.Select(entry => entry.LastVisitedAt)),
+        var removed = WithinRange([.. space.History.Select(entry => StoredSessionCodec.Seconds(entry.LastVisitedAt))],
             StoredSessionCodec.Seconds(Start), StoredSessionCodec.Seconds(End)).ToHashSet();
-        return new(NativeSessionAuthority.Replacing(turn.Basis, workspace.WithoutHistory(space, (_, index) => removed.Contains(index))),
+        return new(turn.Basis.Replacing(space.WithoutHistory((_, index) => removed.Contains(index))),
             SyncStaging.Deletion);
     }
 
