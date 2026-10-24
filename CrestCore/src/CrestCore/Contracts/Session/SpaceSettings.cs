@@ -5,6 +5,8 @@ namespace CrestCore.Contracts;
 /// preferences, who may open it, and whether its saved tabs are expanded.
 /// <see cref="CredentialsEnabledModifiedAt"/> is when the person last turned
 /// Crest Passwords on or off for the Space, on any device, or null when nobody has.
+/// <see cref="AccessPolicyModifiedAt"/> is when the person last turned the Space's lock
+/// on or off, on any device, or null when nobody has since Crest kept that time.
 /// <see cref="Branding"/> is null for a Space stored before branding existed, which
 /// wears the look its accent and symbol give it; <see cref="Look"/> is what it wears.
 /// </summary>
@@ -19,7 +21,8 @@ public sealed record SpaceSettings(
     SpaceAccessPolicy AccessPolicy,
     bool IsSavedTabsExpanded,
     DateTimeOffset? SavedTabsExpansionModifiedAt,
-    DateTimeOffset? CredentialsEnabledModifiedAt = null) {
+    DateTimeOffset? CredentialsEnabledModifiedAt = null,
+    DateTimeOffset? AccessPolicyModifiedAt = null) {
     #region Variables
 
     /// <summary>The branding the Space wears: its own, with a banner strength stored

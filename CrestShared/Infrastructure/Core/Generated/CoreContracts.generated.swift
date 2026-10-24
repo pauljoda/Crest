@@ -6187,6 +6187,7 @@ struct SpaceSettings: Equatable, Sendable {
     let isSavedTabsExpanded: Bool
     let savedTabsExpansionModifiedAt: Date?
     let credentialsEnabledModifiedAt: Date?
+    let accessPolicyModifiedAt: Date?
     let look: SpaceBranding
     let requiresAuthentication: Bool
 
@@ -6203,6 +6204,7 @@ struct SpaceSettings: Equatable, Sendable {
         var isSavedTabsExpanded: Bool
         var savedTabsExpansionModifiedAt: Date?
         var credentialsEnabledModifiedAt: Date?
+        var accessPolicyModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6217,7 +6219,8 @@ struct SpaceSettings: Equatable, Sendable {
             accessPolicy: accessPolicy,
             isSavedTabsExpanded: isSavedTabsExpanded,
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
-            credentialsEnabledModifiedAt: credentialsEnabledModifiedAt
+            credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
+            accessPolicyModifiedAt: accessPolicyModifiedAt
         )
     }
 }
@@ -23435,6 +23438,10 @@ final class SpaceSettingsModel: ObservedModel {
         access(keyPath: \.credentialsEnabledModifiedAt)
         return credentialsEnabledModifiedAtStorage
     }
+    var accessPolicyModifiedAt: Date? {
+        access(keyPath: \.accessPolicyModifiedAt)
+        return accessPolicyModifiedAtStorage
+    }
     var look: SpaceBranding {
         access(keyPath: \.look)
         return lookStorage
@@ -23454,6 +23461,7 @@ final class SpaceSettingsModel: ObservedModel {
     @ObservationIgnored private var isSavedTabsExpandedStorage: Bool
     @ObservationIgnored private var savedTabsExpansionModifiedAtStorage: Date?
     @ObservationIgnored private var credentialsEnabledModifiedAtStorage: Date?
+    @ObservationIgnored private var accessPolicyModifiedAtStorage: Date?
     @ObservationIgnored private var lookStorage: SpaceBranding
     @ObservationIgnored private var requiresAuthenticationStorage: Bool
 
@@ -23469,6 +23477,7 @@ final class SpaceSettingsModel: ObservedModel {
             isSavedTabsExpanded: isSavedTabsExpanded,
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
             credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
+            accessPolicyModifiedAt: accessPolicyModifiedAt,
             look: look,
             requiresAuthentication: requiresAuthentication
         )
@@ -23485,6 +23494,7 @@ final class SpaceSettingsModel: ObservedModel {
         isSavedTabsExpandedStorage = value.isSavedTabsExpanded
         savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
         credentialsEnabledModifiedAtStorage = value.credentialsEnabledModifiedAt
+        accessPolicyModifiedAtStorage = value.accessPolicyModifiedAt
         lookStorage = value.look
         requiresAuthenticationStorage = value.requiresAuthentication
     }
@@ -23529,6 +23539,10 @@ final class SpaceSettingsModel: ObservedModel {
         if credentialsEnabledModifiedAtStorage != value.credentialsEnabledModifiedAt {
             credentialsEnabledModifiedAtStorage = value.credentialsEnabledModifiedAt
             withMutation(keyPath: \.credentialsEnabledModifiedAt) {}
+        }
+        if accessPolicyModifiedAtStorage != value.accessPolicyModifiedAt {
+            accessPolicyModifiedAtStorage = value.accessPolicyModifiedAt
+            withMutation(keyPath: \.accessPolicyModifiedAt) {}
         }
         if lookStorage != value.look {
             lookStorage = value.look

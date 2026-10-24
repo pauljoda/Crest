@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xbe, 0x4b, 0x12, 0xe4, 0xed, 0x38, 0xf6, 0x16, 0xcd, 0x13, 0x68, 0x84, 0x71, 0x66, 0x0f, 0xdc, 0xc2, 0x36, 0x93, 0x26, 0x88, 0x8d, 0xf9, 0x41, 0xbf, 0x57, 0x76, 0x25, 0x78, 0x6c, 0x32, 0x06
+        0xa2, 0xa4, 0xcd, 0xc4, 0x46, 0x66, 0xd6, 0x50, 0xdb, 0xbc, 0x08, 0xaa, 0x0a, 0x9a, 0xd0, 0x2b, 0x79, 0x5b, 0xaa, 0xf5, 0x30, 0x62, 0x8c, 0x6c, 0x35, 0xbc, 0x4c, 0xac, 0xcd, 0x92, 0x62, 0xc1
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -16775,6 +16775,7 @@ public static class ContractCodec {
             ReadSpaceAccessPolicy(reader),
             reader.ReadBool(),
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
         _ = ReadSpaceBranding(reader);
         _ = reader.ReadBool();
@@ -16809,6 +16810,12 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        if (value.AccessPolicyModifiedAt is { } presentAccessPolicyModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentAccessPolicyModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
         WriteSpaceBranding(writer, value.Look);
         writer.WriteBool(value.RequiresAuthentication);
     }
@@ -16824,6 +16831,7 @@ public static class ContractCodec {
             ReadCredentialPreferences(reader),
             ReadSpaceAccessPolicy(reader),
             reader.ReadBool(),
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
     }
@@ -16853,6 +16861,12 @@ public static class ContractCodec {
         if (value.CredentialsEnabledModifiedAt is { } presentCredentialsEnabledModifiedAt) {
             writer.WritePresence(true);
             writer.WriteDate(presentCredentialsEnabledModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.AccessPolicyModifiedAt is { } presentAccessPolicyModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentAccessPolicyModifiedAt);
         } else {
             writer.WritePresence(false);
         }

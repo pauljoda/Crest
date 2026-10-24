@@ -61,6 +61,28 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AnAddressIsOfferedAsASearchBesideOpeningItAndPickingTheSearchNeverChangesWhatReturnOpensOrCompletes() {
+        var (session, space) = PaletteSession([], ("https://example.com/", "Example", 5, 6, 1));
+        using var device = new TestDevice(session);
+        var window = device.Open(space);
+
+        var before = device.Query(Asking(window, "example.co"));
+        var intents = before.Groups.First(group => group.Section == PaletteSection.Intent).Rows;
+        Assert.Equal([PaletteRowKind.OpenAddress, PaletteRowKind.Search], intents.Take(2).Select(row => row.Kind));
+        Assert.Equal("example.co", intents[1].Subtitle);
+        Assert.Contains("example.co", intents[1].Address);
+        Assert.Equal("m", before.Completion?.Suffix);
+
+        device.Send(new RecordPaletteChoice(window, "example.co", intents[1]));
+        device.Send(new RecordPaletteChoice(window, "example.co", intents[1]));
+
+        var after = device.Query(Asking(window, "example.co"));
+        Assert.Equal("m", after.Completion?.Suffix);
+        Assert.Equal(intents.Take(2).Select(row => row.Kind), after.Groups.First(group => group.Section == PaletteSection.Intent).Rows
+            .Take(2).Select(row => row.Kind));
+    }
+
+    [Fact]
     public void APlaceShowsOnceAsItsStrongestKind() {
         var (open, shown) = (Guid.NewGuid(), Guid.NewGuid());
         var (session, space) = PaletteSession([OpenTab(open, "Field notes", "https://example.org/notes"),

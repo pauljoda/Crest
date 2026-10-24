@@ -148,7 +148,9 @@ struct BrowserTabSelectionMonitor: View {
             let command = event.modifierFlags.contains(.command)
             let shift = event.modifierFlags.contains(.shift)
             if command || shift {
-                selection.click(id, units: units, command: command, shift: shift)
+                selection.click(
+                    id, units: units, command: command, shift: shift,
+                    activeItem: browser.selectedTabID(in: assignment.spaceID).map(BrowserSelectionItemID.tab))
                 window.makeFirstResponder(self)
                 consumedDown = true
                 return nil
@@ -207,7 +209,10 @@ struct BrowserTabSelectionMonitor: View {
                 let index =
                     edge
                     ? (backwards ? 0 : units.count - 1) : min(max(current + (backwards ? -1 : 1), 0), units.count - 1)
-                selection.click(units[index][0], units: units, command: command && !edge, shift: shift)
+                selection.click(
+                    units[index][0], units: units, command: command && !edge, shift: shift,
+                    activeItem: assignment.flatMap { browser.selectedTabID(in: $0.spaceID) }.map(
+                        BrowserSelectionItemID.tab))
                 if !shift { selection.selectForKeyboard(units[index][0], units: units) }
                 return nil
             }
