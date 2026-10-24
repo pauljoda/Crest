@@ -4469,6 +4469,10 @@
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
+    "menus-use-command-names": {
+      "category": "improved",
+      "message": "The Space menu and the iPhone page menu now name and show commands the way the menu bar does, such as Clear Unpinned Tabs and Show History."
     }
   }
 }

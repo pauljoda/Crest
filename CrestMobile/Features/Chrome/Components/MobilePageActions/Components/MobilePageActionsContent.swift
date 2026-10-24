@@ -54,18 +54,15 @@ struct MobilePageActionsContent: View {
         ControlGroup {
             if let url = pages.activeURL {
                 ShareLink(item: url) {
-                    Label("Share…", systemImage: "square.and.arrow.up")
+                    Label(ShortcutCommand.sharePage)
                 }
             }
 
-            Button("Copy Page Link", systemImage: "link") {
+            Button(ShortcutCommand.copyPageLink) {
                 pages.copyPageLink()
             }
 
-            Button(
-                pages.activePage?.live.isLoading == true ? "Stop" : "Reload",
-                systemImage: pages.activePage?.live.isLoading == true ? "xmark" : "arrow.clockwise"
-            ) {
+            Button(pages.activePage?.live.isLoading == true ? ShortcutCommand.stopLoading : .reloadPage) {
                 pages.reloadOrStop()
             }
 
@@ -111,7 +108,7 @@ struct MobilePageActionsContent: View {
             .task { await page.translation.refreshInstalledLanguages() }
         }
 
-        Button("Find in Page", systemImage: "text.magnifyingglass") {
+        Button(ShortcutCommand.findInPage) {
             pages.presentFind()
         }
 
@@ -122,21 +119,21 @@ struct MobilePageActionsContent: View {
         }
 
         Section("Page Zoom") {
-            Button("Zoom Out", systemImage: "minus.magnifyingglass") {
+            Button(ShortcutCommand.zoomOut) {
                 pages.zoomOut()
             }
 
-            Button("Actual Size (\(pages.pageZoomLabel))", systemImage: "1.magnifyingglass") {
+            Button("Actual Size (\(pages.pageZoomLabel))", systemImage: ShortcutCommand.actualSize.symbol) {
                 pages.resetZoom()
             }
 
-            Button("Zoom In", systemImage: "plus.magnifyingglass") {
+            Button(ShortcutCommand.zoomIn) {
                 pages.zoomIn()
             }
         }
 
         Section {
-            Button("Copy as Markdown", systemImage: "text.badge.checkmark") {
+            Button(ShortcutCommand.copyPageLinkAsMarkdown) {
                 pages.copyPageLinkAsMarkdown()
             }
 
@@ -144,15 +141,15 @@ struct MobilePageActionsContent: View {
                 Group {
                     if let url = pages.activeURL {
                         ShareLink(item: url) {
-                            Label("Share…", systemImage: "square.and.arrow.up")
+                            Label(ShortcutCommand.sharePage)
                         }
                     }
 
-                    Button("Print…", systemImage: "printer") {
+                    Button(ShortcutCommand.printPage) {
                         pages.printPage()
                     }
 
-                    Menu("Export as PDF…", systemImage: "doc.richtext") {
+                    Menu {
                         ForEach(MobileBrowserFileExportDestination.all) {
                             destination in
                             Button(
@@ -163,9 +160,11 @@ struct MobilePageActionsContent: View {
                             }
                         }
                         .crestMenuActionLabelStyle()
+                    } label: {
+                        Label(ShortcutCommand.exportPDF)
                     }
 
-                    Menu("Export Web Archive…", systemImage: "archivebox") {
+                    Menu {
                         ForEach(MobileBrowserFileExportDestination.all) {
                             destination in
                             Button(
@@ -176,6 +175,8 @@ struct MobilePageActionsContent: View {
                             }
                         }
                         .crestMenuActionLabelStyle()
+                    } label: {
+                        Label(ShortcutCommand.saveWebArchive)
                     }
                 }
                 .crestMenuActionLabelStyle()

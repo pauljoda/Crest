@@ -49,15 +49,11 @@ struct BrowserSpaceHeaderActionsMenu: View {
 
     @ViewBuilder
     private var items: some View {
-        Button("New Tab", systemImage: "plus", action: actions.openNewTab)
+        Button(ShortcutCommand.newTab, action: actions.openNewTab)
 
         if let openNewWindow = actions.openNewWindow, supportsMultipleWindows {
-            Button(
-                "New Window",
-                systemImage: "macwindow.badge.plus",
-                action: openNewWindow
-            )
-            .accessibilityIdentifier("new-browser-window")
+            Button(ShortcutCommand.newWindow, action: openNewWindow)
+                .accessibilityIdentifier("new-browser-window")
         }
 
         Button(
@@ -66,11 +62,7 @@ struct BrowserSpaceHeaderActionsMenu: View {
             action: actions.createFolder
         )
 
-        Button(
-            "History",
-            systemImage: "clock.arrow.circlepath",
-            action: actions.showHistory
-        )
+        Button(ShortcutCommand.showHistory, action: actions.showHistory)
 
         if let showPasswords = actions.showPasswords {
             if isPrivateBrowsing {
@@ -101,11 +93,7 @@ struct BrowserSpaceHeaderActionsMenu: View {
                 .accessibilityIdentifier("settings-button")
         }
 
-        Button(
-            "Clean Up Current Tabs",
-            systemImage: "sparkles",
-            action: actions.cleanup
-        )
+        Button(ShortcutCommand.clearUnpinnedTabs, action: actions.cleanup)
     }
 
     @ViewBuilder
