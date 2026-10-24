@@ -276,8 +276,6 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         await BrowserVisitedLinkStyler.apply(history: history, to: webView)
     }
 
-    func prepareForNavigation() {}
-
     /// WebKit geolocation observes the permission centre itself; the hosted
     /// notification bridge is told so the document sees the new permission.
     func sitePermissionDidChange(_ permission: SitePermission, on page: BrowserPage) {

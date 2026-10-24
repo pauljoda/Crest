@@ -46,8 +46,6 @@ protocol BrowserPageEngineAdapter: EngineHostedPage {
     /// Starts reporting the person's input in the page as `.userActivity`.
     func monitorUserActivity(for page: BrowserPage)
     func styleVisitedLinks(history: [HistoryEntryState]) async
-    /// Runs when Crest prepares a navigation, before the engine starts it.
-    func prepareForNavigation()
     /// Runs after a change to one of the page's site permissions reached the
     /// engine, so bridges the adapter runs inside the page follow it.
     func sitePermissionDidChange(_ permission: SitePermission, on page: BrowserPage)

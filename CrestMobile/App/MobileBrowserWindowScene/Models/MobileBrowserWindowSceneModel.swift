@@ -87,7 +87,6 @@ final class MobileBrowserWindowSceneModel {
             },
             tabStateArchive: tabStateArchive,
             linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
-            openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 browser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },
@@ -230,7 +229,6 @@ final class MobileBrowserWindowSceneModel {
             permissionCenter: downloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
             downloads: downloads,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess),
-            openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 privateBrowser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },

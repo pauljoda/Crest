@@ -4409,6 +4409,10 @@
     "remove-unsent-core-intents": {
       "category": "internal",
       "message": "Remove core commands the app never sends: cancelling a close check, moving a whole split and removing history by date range."
+    },
+    "remove-page-layer-leftovers": {
+      "category": "internal",
+      "message": "Remove page plumbing nothing used: a new-tab callback no page called, an empty navigation hook and stand-in protocols with a single implementation."
     }
   }
 }

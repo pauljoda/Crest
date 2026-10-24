@@ -74,10 +74,7 @@ final class BrowserPeekModelTests: XCTestCase {
         let pages = BrowserPagePool(
             browser: browser,
             browsingMode: browsingMode,
-            usesEphemeralWebsiteDataStores: true,
-            openNewTab: { url in
-                _ = browser.openNewTab(url: url)
-            }
+            usesEphemeralWebsiteDataStores: true
         )
         let request = BrowserPeekRequest(
             url: try XCTUnwrap(URL(string: "about:blank")),

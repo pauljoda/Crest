@@ -215,7 +215,6 @@ final class BrowserMacApplication {
                 )
             },
             tabStateArchive: tabStateArchive,
-            openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 browser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },
@@ -233,7 +232,6 @@ final class BrowserMacApplication {
             browsingMode: .privateBrowsing,
             permissionCenter: permissionCenter,
             passkeyAccess: passkeyAccess,
-            openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 privateBrowser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },

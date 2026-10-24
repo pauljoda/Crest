@@ -79,10 +79,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let pages = BrowserPagePool(
             browser: browser,
             browsingMode: browsingMode,
-            usesEphemeralWebsiteDataStores: true,
-            openNewTab: { url in
-                _ = browser.openNewTab(url: url)
-            }
+            usesEphemeralWebsiteDataStores: true
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: source)
         let request =

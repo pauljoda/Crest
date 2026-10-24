@@ -136,8 +136,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
                     },
                     spaceID: space.id,
                     profileID: space.profileID,
-                    spaceName: space.settings.name,
-                    openNewTab: { _ in }
+                    spaceName: space.settings.name
                 )
             })
         return (page, service, url, browser)

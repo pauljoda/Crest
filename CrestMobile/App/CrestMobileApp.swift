@@ -147,7 +147,6 @@ private final class BrowserMobileApplication {
             },
             tabStateArchive: tabStateArchive,
             linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
-            openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 browser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },

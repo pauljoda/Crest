@@ -115,8 +115,7 @@ final class MobileBrowserInteropTests: XCTestCase {
                     tab: browser.pageTab(tab.id, in: space.id),
                     space: browser.hostedSpace(space.id),
                     downloadCenter: downloads.center,
-                    permissionCenter: permissionCenter,
-                    openNewTab: { _ in }
+                    permissionCenter: permissionCenter
                 )
             }
         )

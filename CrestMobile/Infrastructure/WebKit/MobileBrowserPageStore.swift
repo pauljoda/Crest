@@ -7,7 +7,6 @@ import WebKit
 @MainActor
 final class MobileBrowserPageStore:
     BrowserPageOwner,
-    MobileBrowserPageHosting,
     BrowserDefaultPageZoomObserving
 {
     typealias HTTPAuthenticationCredentialLoader =
@@ -64,7 +63,6 @@ final class MobileBrowserPageStore:
     @ObservationIgnored let serverTrustOverrides = BrowserServerTrustOverrideStore()
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
-    @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
@@ -92,7 +90,6 @@ final class MobileBrowserPageStore:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
-        openNewTab: @escaping (URL) -> Void = { _ in },
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in }
     ) {
@@ -109,7 +106,6 @@ final class MobileBrowserPageStore:
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         self.linkDestinationHost = linkDestinationHost
-        self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         // Windows share their browsing mode's downloads; a store made on its
@@ -173,6 +169,9 @@ final class MobileBrowserPageStore:
         return activePage?.corePage.navigate(to: input) ?? false
     }
 
+    /// Starts the original request in its newly registered tab, independently
+    /// of whether the shared focus policy selects it, on the engine of page
+    /// `opener`, which followed the link.
     func loadOpenedLink(
         _ registration: BrowserModifiedLinkRegistration, request: URLRequest, selecting: Bool, opener: UUID
     ) {
@@ -424,7 +423,6 @@ final class MobileBrowserPageStore:
                     try await saveHTTPAuthenticationCredential(request, space.id)
                 },
                 linkDestinationHost: linkDestinationHost,
-                openNewTab: openNewTab,
                 openModifiedLink: openModifiedLink,
                 openPeek: openPeek
             ))
@@ -459,6 +457,9 @@ final class MobileBrowserPageStore:
         return true
     }
 
+    /// Retires an empty surface whose initial navigation became a download:
+    /// a transient one closes, and a tab's page asks the core to close it as
+    /// its own script would.
     func discardDownloadOnlyPage(_ page: MobileBrowserPage) {
         guard !host.discardDownloadOnlyTransientPage(page) else { return }
         page.corePage.report(PageCloseRequested(pageID: page.corePage.id))
@@ -620,7 +621,6 @@ final class MobileBrowserPageStore:
                     try await saveHTTPAuthenticationCredential(request, space.id)
                 },
                 linkDestinationHost: linkDestinationHost,
-                openNewTab: openNewTab,
                 openModifiedLink: openModifiedLink,
                 openPeek: openPeek
             ))

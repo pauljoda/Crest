@@ -70,8 +70,7 @@ final class BrowserContentBlockingTests: XCTestCase {
                         spaceID: space.id,
                         profileID: space.profileID,
                         spaceName: space.settings.name,
-                        contentRuleList: crestRuleList,
-                        openNewTab: { _ in }
+                        contentRuleList: crestRuleList
                     )
                 })
             defer { page.release(keepingState: false) }
