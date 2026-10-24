@@ -50,6 +50,28 @@ final class CorePage {
         self.core = core
     }
 
+    // MARK: - Actions - Zoom
+
+    func siteZoom(for url: URL) -> SiteZoomPreference? {
+        guard !isReleased else { return nil }
+        return try? core?.query(GetSiteZoom(pageID: id, url: url.absoluteString))
+    }
+
+    func setSiteZoom(_ factor: Double?, for url: URL) -> Bool {
+        guard !isReleased, let core else { return false }
+        do {
+            try core.send(SetSiteZoom(pageID: id, url: url.absoluteString, factor: factor))
+            return true
+        } catch {
+            Self.logger.debug("The core kept the site's zoom: \(String(describing: error))")
+            return false
+        }
+    }
+
+    func followSiteZoom(_ owner: AnyObject, _ handler: @escaping @MainActor (SiteZoomChanged) -> Void) {
+        core?.followSiteZoom(owner, handler)
+    }
+
     // MARK: - Actions - Engines
 
     /// What the platform hosts for the page now that the core moved it off
