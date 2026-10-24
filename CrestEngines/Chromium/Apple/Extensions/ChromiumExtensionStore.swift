@@ -2,6 +2,15 @@ import AppKit
 import Observation
 import SwiftUI
 
+// MARK: - Types
+
+/// How many times one Space's extensions changed, observed apart from every
+/// other Space's so a badge change redraws only that Space's rows.
+@Observable @MainActor
+private final class ProfileExtensionRevision {
+    var value = 0
+}
+
 /// Native presentation state only. Installation, permissions, pinning, workers,
 /// and package storage remain owned by Chromium's independent Space profiles.
 @Observable @MainActor
@@ -16,20 +25,31 @@ final class ChromiumExtensionStore {
         let permissions: [String]
         let webStore: Bool
         let options: String
-        init(_ item: InstalledExtension) {
+        @MainActor init(_ item: InstalledExtension) {
             id = item.id
             name = item.name.isEmpty ? item.id : item.name
             version = item.version
             detail = item.description
-            icon = item.icon.flatMap(NSImage.init(extensionIcon:))
+            icon = item.icon.flatMap(NSImage.extensionIcon)
             enabled = item.enabled
             permissions = item.permissions
             webStore = item.fromWebStore
             options = item.optionsURL ?? ""
         }
     }
+    /// The shortest time between two rereads of one Space's extensions. A
+    /// blocker's count changes many times while a page loads, and each reread
+    /// runs on the main thread that also carries the page's scroll input.
+    private static let refreshInterval = Duration.milliseconds(250)
+
+    /// Advances for a change that reaches every Space's rows.
     var revision = 0
     private(set) var installed: [UUID: [Installed]] = [:]
+    @ObservationIgnored private var profileRevisions: [UUID: ProfileExtensionRevision] = [:]
+    /// Spaces whose extensions changed while a reread was too recent, reread
+    /// together when the interval ends.
+    @ObservationIgnored private var pendingRefreshes: Set<UUID> = []
+    @ObservationIgnored private var refreshWindow: Task<Void, Never>?
     private(set) var installation: ChromiumExtensionInstallation?
     /// The extensions an import brought that still await their install review.
     @ObservationIgnored private var pendingImports: [ImportExtensionInstall] = []
@@ -64,12 +84,53 @@ final class ChromiumExtensionStore {
     }
     func refresh() {
         revision &+= 1
+        reread(where: { _ in true })
+    }
+    /// Rereads only the Space whose profile changed, at once when it was last
+    /// reread longer ago than `refreshInterval`, and otherwise together with
+    /// every other change that arrives before the interval ends. Badge and
+    /// icon updates arrive per profile while pages load, and each reread asks
+    /// the engine for that Space's actions and their icons again.
+    func refresh(profile profileID: UUID) {
+        pendingRefreshes.insert(profileID)
+        guard refreshWindow == nil else { return }
+        refreshPending()
+    }
+    private func refreshPending() {
+        let due = pendingRefreshes
+        pendingRefreshes.removeAll()
+        guard !due.isEmpty else {
+            refreshWindow = nil
+            return
+        }
+        for profileID in due { profileRevision(profileID).value &+= 1 }
+        reread(where: due.contains)
+        refreshWindow = Task { [weak self] in
+            try? await Task.sleep(for: Self.refreshInterval)
+            self?.refreshPending()
+        }
+    }
+    private func reread(where rereads: (UUID) -> Bool) {
         guard ChromiumComposition.chromiumEngine != nil else { return }
         let profiles = Set(spaces.map { $0.profileID })
-        installed = installed.filter { profiles.contains($0.key) }
-        for space in spaces where installed[space.profileID] != nil {
+        if installed.keys.contains(where: { !profiles.contains($0) }) {
+            installed = installed.filter { profiles.contains($0.key) }
+        }
+        for space in spaces where installed[space.profileID] != nil && rereads(space.profileID) {
             installed[space.profileID] = Self.installed(in: space)
         }
+    }
+    private func profileRevision(_ profileID: UUID) -> ProfileExtensionRevision {
+        if let revision = profileRevisions[profileID] { return revision }
+        let revision = ProfileExtensionRevision()
+        profileRevisions[profileID] = revision
+        return revision
+    }
+    /// Makes the calling view follow changes that reach every Space and those
+    /// of `profileID`'s Space alone.
+    private func observeChanges(of profileID: UUID?) {
+        _ = revision
+        if let profileID { _ = profileRevision(profileID).value }
     }
 
     /// What the engine has installed in the Space's profile.
@@ -87,7 +148,7 @@ final class ChromiumExtensionStore {
         revision &+= 1
     }
     func actions(for page: ChromiumNativePage) -> [BrowserExtensionActionPresentation] {
-        _ = revision
+        observeChanges(of: page.profileID)
         return page.extensions
     }
     /// The pinned actions of a Space's own toolbar row.
@@ -99,7 +160,7 @@ final class ChromiumExtensionStore {
     func pinnedActions(
         for space: BrowserSpaceIdentity, page: ChromiumNativePage?
     ) -> [BrowserExtensionActionPresentation] {
-        _ = revision
+        observeChanges(of: space.profileID)
         guard ChromiumComposition.engineHost != nil, let pages = ChromiumComposition.chromiumEngine?.pages else {
             return []
         }

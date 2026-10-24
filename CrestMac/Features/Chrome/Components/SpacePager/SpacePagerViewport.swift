@@ -39,6 +39,11 @@ final class SpacePagerViewport<Content: View>: NSView {
     private var generation: UInt = 0
     private var expectedSelection: UUID?
     private var hosts: [BrowserSpaceRuntimeAssignment: SpacePageHost<Content>] = [:]
+    /// Whether each retained root was last built as the selected page. An
+    /// update rebuilds only the presented root and roots whose role changed:
+    /// the pages observe their own Space, and rebuilding every retained root
+    /// for each update re-evaluates up to four sidebars.
+    private var builtSelections: [BrowserSpaceRuntimeAssignment: Bool] = [:]
     private var makeRoot: ((SpaceModel, Bool) -> SpacePageRoot<Content>)?
     private var selectSpace: (UUID) -> UUID = { $0 }
     private var lastSize = CGSize.zero
@@ -153,7 +158,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         }
         if presentationSpaceID == nil { presentationSpaceID = selectedSpaceID }
         applyContentTopInsets(animated: !invalidatesMotion && !selectionChanged)
-        prepareHosts(around: presentationSpaceID ?? selectedSpaceID)
+        // A changed Space or access policy reaches every retained root, so no
+        // root built under an earlier policy lingers offscreen.
+        prepareHosts(around: presentationSpaceID ?? selectedSpaceID, refreshingAll: invalidatesMotion)
         positionHosts()
         updateAccessibility()
         publishPresentation()
@@ -225,6 +232,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         publishPresentation()
         for host in hosts.values { host.removeFromSuperview() }
         hosts.removeAll()
+        builtSelections.removeAll()
         makeRoot = nil
     }
 
@@ -707,7 +715,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         spaces.first { $0.id == id }.map(BrowserSpaceRuntimeAssignment.init(space:))
     }
 
-    private func prepareHosts(around id: UUID, retaining extra: UUID? = nil, refreshContent: Bool = true) {
+    private func prepareHosts(
+        around id: UUID, retaining extra: UUID? = nil, refreshContent: Bool = true, refreshingAll: Bool = false
+    ) {
         guard let makeRoot, let index = spaces.firstIndex(where: { $0.id == id }) else { return }
         let neighbors = spaces[max(0, index - 1)...min(spaces.count - 1, index + 1)]
         var required = Set(neighbors.map { BrowserSpaceRuntimeAssignment(space: $0) })
@@ -720,14 +730,20 @@ final class SpacePagerViewport<Content: View>: NSView {
         required.formUnion(spare.map { BrowserSpaceRuntimeAssignment(space: $0.element) })
         for key in hosts.keys where !required.contains(key) {
             hosts.removeValue(forKey: key)?.removeFromSuperview()
+            builtSelections[key] = nil
         }
         for space in spaces {
             let key = BrowserSpaceRuntimeAssignment(space: space)
             guard required.contains(key) else { continue }
+            let isSelected = space.id == selectedSpaceID
             if let host = hosts[key] {
-                if refreshContent { host.hostingView.rootView = makeRoot(space, space.id == selectedSpaceID) }
+                if refreshContent, refreshingAll || space.id == id || builtSelections[key] != isSelected {
+                    host.hostingView.rootView = makeRoot(space, isSelected)
+                    builtSelections[key] = isSelected
+                }
             } else {
-                let host = SpacePageHost(root: makeRoot(space, space.id == selectedSpaceID))
+                let host = SpacePageHost(root: makeRoot(space, isSelected))
+                builtSelections[key] = isSelected
                 host.frame = CGRect(
                     x: restingOffset(for: key, during: motion) + (motion?.offset ?? 0),
                     y: topInset(at: displayedPosition),

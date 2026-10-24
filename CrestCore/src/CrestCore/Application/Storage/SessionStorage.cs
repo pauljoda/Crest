@@ -7,8 +7,8 @@ namespace CrestCore.Application;
 /// used, so a rollback build still reads it.
 ///
 /// One connection writes the file, one writer at a time. Accepted revisions
-/// are saved behind by one worker thread, which always writes the newest one
-/// and never an older revision over a newer one. Durable saves write on the
+/// are saved behind by one worker thread, which gathers them for a moment,
+/// always writes the newest one and never an older revision over a newer one. Durable saves write on the
 /// caller's thread before the revision is published. A journal is always
 /// written in one transaction with the newest accepted session, so the
 /// journal is never ahead of the session on disk. Parts whose bytes did not
@@ -61,6 +61,11 @@ internal sealed class SessionStorage : IDisposable {
     /// The rollback journal SQLite keeps beside a checkpoint copy while it writes.
     private const string RollbackJournalSuffix = "-journal";
     private const int StorageVersion = 1;
+    /// How long the worker gathers revisions after the first unwritten one
+    /// before saving the newest. A page load reports its address, title and
+    /// icon in quick succession, and each would otherwise encode and commit
+    /// the whole session on its own.
+    private static readonly TimeSpan SaveBehindDelay = TimeSpan.FromMilliseconds(500);
     private const UnixFileMode OwnerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
 
     private readonly SqliteConnection connection;
@@ -87,6 +92,9 @@ internal sealed class SessionStorage : IDisposable {
     /// The newest file revision handed out, and the newest one `Saved` named.
     private ulong fileRevision, savedRevision;
     private bool pendingIsNew, stopping, closed;
+    /// Whether a caller waits for what is unwritten, so the worker saves it
+    /// without gathering later revisions first.
+    private bool expedited;
 
     public string Directory { get; }
 
@@ -335,12 +343,28 @@ internal sealed class SessionStorage : IDisposable {
         Announce(saved);
     }
 
+    /// Has the worker save what is unwritten now instead of after its delay,
+    /// for a caller about to wait until it is on disk. That includes what a
+    /// failed write left unwritten, which nothing else would retry until the
+    /// next edit; the retry's `Saved` or `StorageFailed` releases the caller.
+    public void Expedite() {
+        lock (queue) {
+            if (pending is null && pendingDevice is null) return;
+            pendingIsNew = true;
+            expedited = true;
+            Monitor.Pulse(queue);
+        }
+    }
+
     private void Run() {
         while (true) {
             lock (queue) {
                 while (!pendingIsNew && !stopping) Monitor.Wait(queue);
                 if (!pendingIsNew) return;
+                var due = DateTime.UtcNow + SaveBehindDelay;
+                while (!stopping && !expedited && due - DateTime.UtcNow is { Ticks: > 0 } remaining) Monitor.Wait(queue, remaining);
                 pendingIsNew = false;
+                expedited = false;
             }
             Announce(WriteBehind());
             Announce(WriteDeviceBehind());
