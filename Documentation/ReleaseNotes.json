@@ -4441,6 +4441,10 @@
     "ipad-menu-from-command-table": {
       "category": "internal",
       "message": "Build the iPad keyboard menu from the same command table the command palette uses, with the same items, shortcuts and enabled states."
+    },
+    "shared-sidebar-page-binding": {
+      "category": "internal",
+      "message": "Bind the sidebar to a window's pages once for Mac and iPhone, with the Mac adding tab sharing and audio."
     }
   }
 }

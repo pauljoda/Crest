@@ -23,6 +23,19 @@ protocol BrowserPageOwner: AnyObject, BrowserTabCopying, BrowserTabLinkProviding
     var usesEphemeralWebsiteDataStores: Bool { get }
     var downloadCenter: BrowserDownloadCenter { get }
     var permissionCenter: BrowserSitePermissionCenter { get }
+    /// The tabs whose content Crest draws itself rather than a web page.
+    var nativeTabs: BrowserNativeTabStore { get }
+    /// Advances whenever which pages the owner keeps resident changes.
+    var residencyRevision: Int { get }
+
+    /// Brings the window's selected tab's page forward, as of `time`.
+    func select(at time: Date)
+    /// Stops presenting the window's page, as when the sidebar takes its place.
+    func deactivatePagePresentation()
+    /// What the page of the tab `assignment` names is playing, if anything.
+    func mediaSession(matching assignment: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot?
+    /// Mutes or unmutes the page of the tab `assignment` names.
+    func setMuted(_ muted: Bool, matching assignment: BrowserTabRuntimeAssignment)
 
     /// A lease on a page the core opens in `space` for a transient request,
     /// on `opener`'s engine when another page opened it.
