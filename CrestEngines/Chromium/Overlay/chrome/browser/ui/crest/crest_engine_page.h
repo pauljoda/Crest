@@ -147,9 +147,45 @@ class EnginePage final : public content::WebContentsObserver,
   // its history again.
   void GoToEntry(const engine::Guid& entry_id);
 
-  // What the platform asks of the page directly. Each answers whether the
-  // page took it; what finishes later is presented.
-  bool Reload(bool bypasses_cache);
+  // What the platform asks of the page directly, each answered with the type
+  // its contract names. A page answers whether it took the request; what
+  // finishes later is presented.
+  bool Answer(const engine::ReloadPage& request);
+  bool Answer(const engine::StopLoading& request);
+  bool Answer(const engine::ZoomPage& request);
+  bool Answer(const engine::FindInPage& request);
+  bool Answer(const engine::CapturePage& request);
+  bool Answer(const engine::ExportPage& request);
+  engine::InteractionState Answer(const engine::SaveInteractionState&) { return {.state = SaveInteractionState()}; }
+  bool Answer(const engine::RestoreInteractionState& request) { return Restore(request.state, request.expected_url); }
+  bool Answer(const engine::ShowPage& request);
+  bool Answer(const engine::HidePage& request);
+  engine::PageIconImage Answer(const engine::PageIcon&) const { return {.image = icon()}; }
+  engine::PageMediaState Answer(const engine::PageMedia&) const { return {.activity = MediaActivity()}; }
+  bool Answer(const engine::EnterPictureInPicture& request);
+  bool Answer(const engine::ActivateMediaSession& request);
+  bool Answer(const engine::PerformMediaAction& request);
+  bool Answer(const engine::MuteMediaSession& request);
+  // Starts or stops measuring the sound the page plays for its tab.
+  bool Answer(const engine::ObserveAudioSpectrum& request);
+  bool Answer(const engine::AnswerInfoBar& request);
+  bool Answer(const engine::RefreshPageIcon& request);
+  bool Answer(const engine::ShowBlockedPopups& request);
+  bool Answer(const engine::AddContentScript& request);
+  bool Answer(const engine::EvaluateContentScript& request);
+  // Keeps the page's console and network for an agent: at once on a live page,
+  // and on one still being made from the moment it goes live, before its first
+  // load.
+  bool Answer(const engine::ObservePageActivity& request);
+  bool Answer(const engine::OpenInspector& request);
+  bool Answer(const engine::CloseInspector& request);
+  bool Answer(const engine::PageInspected& request) const;
+  engine::InspectorLayout Answer(const engine::LayoutInspector& request) const;
+  engine::CertificateChain Answer(const engine::PageCertificates& request) const;
+  bool Answer(const engine::SetSitePermission& request);
+  // The review a Chrome Web Store listing's request began finished.
+  bool Answer(const engine::RefreshStoreListing& request);
+
   // Brings the page back after its renderer stopped, as the core decided.
   bool Recover();
   // Asks the page whether it may go, for a close the core prepares; the
@@ -161,19 +197,11 @@ class EnginePage final : public content::WebContentsObserver,
   // The page's own script asked to close its window, once its document
   // agreed to go; the core decides whether the page closes.
   void RequestClose();
-  bool StopLoading();
-  bool Zoom(double factor);
-  bool Find(const std::string& query, bool backwards, bool case_sensitive);
-  bool Capture(const engine::Guid& capture_id, const std::optional<engine::PageArea>& area, double width);
-  bool Export(const engine::Guid& export_id, engine::PageExportFormat format, double width);
-  bool Show();
-  bool Hide();
   engine::PageMediaActivity MediaActivity() const;
   // Another page began or stopped sharing this one as a tab.
   void SharedChanged(bool shared);
   // This page began or stopped sharing another tab.
   void SharingChanged(bool sharing);
-  bool EnterPictureInPicture();
   // Ends the page's own Picture in Picture, as the core asks once a window
   // shows the page again, returning the video to its place in the page.
   bool ExitPictureInPicture();
@@ -181,33 +209,11 @@ class EnginePage final : public content::WebContentsObserver,
   // whether the page returns from Picture in Picture, which it then reports
   // so the core shows the page's tab; false for any other ask.
   bool ReturnFromPictureInPicture();
-  bool ActivateMediaSession(const std::string& document);
-  bool PerformMediaAction(const std::string& document, engine::MediaSessionAction action);
-  bool MuteMediaSession(const std::string& document, bool muted);
-  // Starts or stops measuring the sound the page plays for its tab.
-  bool ObserveAudioSpectrum(bool observed);
-  bool AnswerInfoBar(int id, engine::InfoBarAnswer answer);
-  bool RefreshIcon();
-  bool ShowBlockedPopups();
-  bool AddContentScript(std::string source, bool main_frame_only);
-  bool EvaluateContentScript(const engine::Guid& evaluation, const std::string& source, const std::string& frame);
   // The page's agent session, made the first time an agent uses the page; null
   // while the page has no WebContents.
   PageAgent* Agent();
-  // Keeps the page's console and network for an agent: at once on a live page,
-  // and on one still being made from the moment it goes live, before its first
-  // load.
-  bool ObserveActivity(bool observing);
-  bool OpenInspector(std::optional<engine::InspectorPanel> panel);
-  bool CloseInspector();
-  bool Inspected() const;
-  engine::InspectorLayout LayoutInspector(double width, double height) const;
-  engine::CertificateChain CertificateChain() const;
-  bool SetSitePermission(engine::SitePermission permission, std::optional<bool> allowed);
   // How often the same server and realm asked in this document before now.
   int AuthenticationAttempt(const std::string& challenge);
-  // The review a Chrome Web Store listing's request began finished.
-  bool FinishStoreRequest();
   // The engine's extensions changed, which a store listing's button shows.
   void RefreshStore();
 

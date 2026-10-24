@@ -249,53 +249,18 @@ class EngineBinding {
   static void CREST_CALL Release(void* context, crest_buffer_t* buffer);
   static void CREST_CALL PresentTo(void* context, crest_engine_present_t present, void* ui);
 
-  // Each request, handled where it lands.
-  bool Handle(const engine::ReloadPage& request);
-  bool Handle(const engine::StopLoading& request);
-  bool Handle(const engine::ZoomPage& request);
-  bool Handle(const engine::FindInPage& request);
-  bool Handle(const engine::CapturePage& request);
-  bool Handle(const engine::ExportPage& request);
-  engine::InteractionState Handle(const engine::SaveInteractionState& request);
-  bool Handle(const engine::RestoreInteractionState& request);
+  // A request about one page, which the page answers, or its agent for what
+  // an agent asks; a page the engine does not have answers nothing.
+  template <typename Request>
+  typename engine::PageRequestAnswer<Request>::Type Handle(const Request& request);
+  // The requests the binding answers itself.
   bool Handle(const engine::MovePageToWindow& request);
-  bool Handle(const engine::ShowPage& request);
-  bool Handle(const engine::HidePage& request);
-  engine::PageIconImage Handle(const engine::PageIcon& request);
   bool Handle(const engine::WatchPage& request);
-  engine::PageMediaState Handle(const engine::PageMedia& request);
-  bool Handle(const engine::EnterPictureInPicture& request);
-  bool Handle(const engine::ActivateMediaSession& request);
-  bool Handle(const engine::PerformMediaAction& request);
-  bool Handle(const engine::MuteMediaSession& request);
-  bool Handle(const engine::ObserveAudioSpectrum& request);
-  bool Handle(const engine::AnswerInfoBar& request);
-  bool Handle(const engine::RefreshPageIcon& request);
-  bool Handle(const engine::ShowBlockedPopups& request);
-  bool Handle(const engine::AddContentScript& request);
-  bool Handle(const engine::EvaluateContentScript& request);
-  bool Handle(const engine::EvaluatePageScript& request);
-  bool Handle(const engine::ClickPage& request);
-  bool Handle(const engine::HoverPage& request);
-  bool Handle(const engine::ScrollPage& request);
-  bool Handle(const engine::TypeInPage& request);
-  bool Handle(const engine::PressKeyInPage& request);
-  bool Handle(const engine::ObservePageActivity& request);
-  engine::PageConsoleLog Handle(const engine::ReadPageConsole& request);
-  engine::PageNetworkLog Handle(const engine::ReadPageNetwork& request);
-  bool Handle(const engine::HoldPageRendering& request);
-  bool Handle(const engine::RefreshStoreListing& request);
-  bool Handle(const engine::OpenInspector& request);
-  bool Handle(const engine::CloseInspector& request);
-  bool Handle(const engine::PageInspected& request);
-  engine::InspectorLayout Handle(const engine::LayoutInspector& request);
   engine::ExtensionActionList Handle(const engine::PageExtensions& request);
   engine::ExtensionActionList Handle(const engine::PinnedExtensions& request);
   engine::InstalledExtensionList Handle(const engine::InstalledExtensions& request);
   bool Handle(const engine::ChangeExtension& request);
   engine::SidePanelScope Handle(const engine::HasSidePanel& request);
-  engine::CertificateChain Handle(const engine::PageCertificates& request);
-  bool Handle(const engine::SetSitePermission& request);
   bool Handle(const engine::StopMediaCapture& request);
   bool Handle(const engine::ChooseShareSource& request);
   bool Handle(const engine::StopTabSharing& request);

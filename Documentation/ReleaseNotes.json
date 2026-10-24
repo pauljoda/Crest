@@ -4477,6 +4477,10 @@
     "localized-new-folder-name": {
       "category": "fixed",
       "message": "A folder you make without naming it is called New Folder in the app's language, not always in English."
+    },
+    "engine-page-answers-requests": {
+      "category": "internal",
+      "message": "The Chromium engine's pages answer the app's page requests themselves, through one path instead of a forwarding handler each."
     }
   }
 }

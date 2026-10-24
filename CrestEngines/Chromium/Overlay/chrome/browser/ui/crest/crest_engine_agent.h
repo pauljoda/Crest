@@ -44,20 +44,19 @@ class PageAgent final : public content::WebContentsObserver, public content::Dev
   PageAgent& operator=(const PageAgent&) = delete;
   ~PageAgent() override;
 
-  bool Evaluate(const engine::Guid& evaluation, const std::string& source, engine::PageScriptWorld world);
-  bool Click(const engine::Guid& input,
-             const engine::PagePoint& point,
-             engine::PointerButton button,
-             int count,
-             engine::KeyModifiers modifiers);
-  bool Hover(const engine::Guid& input, const engine::PagePoint& point);
-  bool Scroll(const engine::Guid& input, const engine::PagePoint& point, double delta_x, double delta_y);
-  bool Type(const engine::Guid& input, const std::string& text);
-  bool PressKey(const engine::Guid& input, const engine::PageKey& key, engine::KeyModifiers modifiers);
+  // What an agent asks of the page, each answered with the type its contract
+  // names.
+  bool Answer(const engine::EvaluatePageScript& request);
+  bool Answer(const engine::ClickPage& request);
+  bool Answer(const engine::HoverPage& request);
+  bool Answer(const engine::ScrollPage& request);
+  bool Answer(const engine::TypeInPage& request);
+  bool Answer(const engine::PressKeyInPage& request);
+  engine::PageConsoleLog Answer(const engine::ReadPageConsole& request) const;
+  engine::PageNetworkLog Answer(const engine::ReadPageNetwork& request) const;
+  bool Answer(const engine::HoldPageRendering& request);
+  // Keeps the page's console and network from now on, or forgets them.
   bool ObserveActivity(bool observing);
-  engine::PageConsoleLog Console(int64_t after) const;
-  engine::PageNetworkLog Network(int64_t after) const;
-  bool HoldRendering(bool held, double width, double height);
 
  private:
   // What a DevTools command answered: its result, or nothing when it failed.

@@ -1146,12 +1146,12 @@ void EnginePage::Watch() {
 
 // What the platform asks of the page directly.
 
-bool EnginePage::Reload(bool bypasses_cache) {
+bool EnginePage::Answer(const engine::ReloadPage& request) {
   if (!web_contents()) {
     return false;
   }
   web_contents()->GetController().Reload(
-      bypasses_cache ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
+      request.bypasses_cache ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
   return true;
 }
 
@@ -1197,7 +1197,7 @@ void EnginePage::RequestClose() {
   Report(engine::PageCloseRequested{.page_id = id_});
 }
 
-bool EnginePage::StopLoading() {
+bool EnginePage::Answer(const engine::StopLoading&) {
   if (!web_contents()) {
     return false;
   }
@@ -1205,11 +1205,11 @@ bool EnginePage::StopLoading() {
   return true;
 }
 
-bool EnginePage::Zoom(double factor) {
-  if (!std::isfinite(factor) || factor < kMinimumZoom || factor > kMaximumZoom) {
+bool EnginePage::Answer(const engine::ZoomPage& request) {
+  if (!std::isfinite(request.factor) || request.factor < kMinimumZoom || request.factor > kMaximumZoom) {
     return false;
   }
-  zoom_ = factor;
+  zoom_ = request.factor;
   ApplyZoom();
   return true;
 }
@@ -1226,18 +1226,18 @@ void EnginePage::ApplyZoom() {
   zoom->SetZoomLevel(blink::ZoomFactorToZoomLevel(*zoom_));
 }
 
-bool EnginePage::Find(const std::string& query, bool backwards, bool case_sensitive) {
+bool EnginePage::Answer(const engine::FindInPage& request) {
   if (!find_helper_) {
     return false;
   }
-  if (query.empty()) {
+  if (request.query.empty()) {
     find_pending_ = false;
     find_helper_->StopFinding(find_in_page::SelectionAction::kClear);
     Present(engine::FindFinished{.page_id = id_, .matches = 0});
     return true;
   }
   find_pending_ = true;
-  find_helper_->StartFinding(base::UTF8ToUTF16(query), !backwards, case_sensitive, true);
+  find_helper_->StartFinding(base::UTF8ToUTF16(request.query), !request.backwards, request.case_sensitive, true);
   return true;
 }
 
@@ -1259,15 +1259,14 @@ void EnginePage::OnFindTabHelperDestroyed(find_in_page::FindTabHelper*) {
   find_pending_ = false;
 }
 
-bool EnginePage::Capture(const engine::Guid& capture_id,
-                         const std::optional<engine::PageArea>& area,
-                         double width) {
+bool EnginePage::Answer(const engine::CapturePage& request) {
   auto* view = web_contents() ? web_contents()->GetRenderWidgetHostView() : nullptr;
+  const double width = request.width;
   if (!view || !std::isfinite(width) || width < 0 || width > kMaximumCaptureWidth) {
     return false;
   }
   gfx::Rect bounds;
-  if (area) {
+  if (const auto& area = request.area) {
     if (!std::isfinite(area->x) || !std::isfinite(area->y) || !std::isfinite(area->width) ||
         !std::isfinite(area->height)) {
       return false;
@@ -1301,20 +1300,20 @@ bool EnginePage::Capture(const engine::Guid& capture_id,
             }
             page->Present(engine::PageCaptured{.page_id = page->id_, .capture_id = capture_id, .png = std::move(png)});
           },
-          weak_factory_.GetWeakPtr(), capture_id));
+          weak_factory_.GetWeakPtr(), request.capture_id));
   return true;
 }
 
-bool EnginePage::Export(const engine::Guid& export_id, engine::PageExportFormat format, double width) {
+bool EnginePage::Answer(const engine::ExportPage& request) {
   // Chromium keeps its archives as MHTML, never as WebKit's web archives.
-  if (!web_contents() || format == engine::PageExportFormat::kWebArchive) {
+  if (!web_contents() || request.format == engine::PageExportFormat::kWebArchive) {
     return false;
   }
   if (!documents_) {
     documents_ = std::make_unique<PageDocuments>(web_contents());
   }
   documents_->Export(
-      format, width,
+      request.format, request.width,
       base::BindOnce(
           [](base::WeakPtr<EnginePage> page, engine::Guid export_id, std::optional<std::vector<uint8_t>> document,
              std::optional<engine::PageExportFailure> failure) {
@@ -1324,11 +1323,11 @@ bool EnginePage::Export(const engine::Guid& export_id, engine::PageExportFormat 
             page->Present(engine::PageExported{
                 .page_id = page->id_, .export_id = export_id, .document = std::move(document), .failure = failure});
           },
-          weak_factory_.GetWeakPtr(), export_id));
+          weak_factory_.GetWeakPtr(), request.export_id));
   return true;
 }
 
-bool EnginePage::Show() {
+bool EnginePage::Answer(const engine::ShowPage&) {
   if (!web_contents()) {
     return false;
   }
@@ -1341,7 +1340,7 @@ bool EnginePage::Show() {
   return true;
 }
 
-bool EnginePage::Hide() {
+bool EnginePage::Answer(const engine::HidePage&) {
   if (!web_contents()) {
     return false;
   }
@@ -1384,7 +1383,7 @@ void EnginePage::PresentSharing() {
   Present(engine::TabSharingChanged{.page_id = id_, .shared = media_->shared(), .sharing = media_->sharing()});
 }
 
-bool EnginePage::EnterPictureInPicture() {
+bool EnginePage::Answer(const engine::EnterPictureInPicture&) {
   return media_ && media_->EnterPictureInPicture();
 }
 
@@ -1400,28 +1399,28 @@ bool EnginePage::ReturnFromPictureInPicture() {
   return true;
 }
 
-bool EnginePage::ActivateMediaSession(const std::string& document) {
-  return media_ && media_->Activate(document);
+bool EnginePage::Answer(const engine::ActivateMediaSession& request) {
+  return media_ && media_->Activate(request.document);
 }
 
-bool EnginePage::PerformMediaAction(const std::string& document, engine::MediaSessionAction action) {
-  return media_ && media_->Perform(document, action);
+bool EnginePage::Answer(const engine::PerformMediaAction& request) {
+  return media_ && media_->Perform(request.document, request.action);
 }
 
-bool EnginePage::MuteMediaSession(const std::string& document, bool muted) {
-  return media_ && media_->Mute(document, muted);
+bool EnginePage::Answer(const engine::MuteMediaSession& request) {
+  return media_ && media_->Mute(request.document, request.muted);
 }
 
-bool EnginePage::ObserveAudioSpectrum(bool observed) {
-  return media_ && media_->ObserveSpectrum(observed);
+bool EnginePage::Answer(const engine::ObserveAudioSpectrum& request) {
+  return media_ && media_->ObserveSpectrum(request.observed);
 }
 
-bool EnginePage::AnswerInfoBar(int id, engine::InfoBarAnswer answer) {
-  return infobars_ && infobars_->Answer(id, answer);
+bool EnginePage::Answer(const engine::AnswerInfoBar& request) {
+  return infobars_ && infobars_->Answer(request.info_bar_id, request.answer);
 }
 
 // Fetches the icon again rather than replay the one the engine has.
-bool EnginePage::RefreshIcon() {
+bool EnginePage::Answer(const engine::RefreshPageIcon&) {
   auto* driver = web_contents() ? favicon::ContentFaviconDriver::FromWebContents(web_contents()) : nullptr;
   if (!driver) {
     return false;
@@ -1430,7 +1429,7 @@ bool EnginePage::RefreshIcon() {
   return true;
 }
 
-bool EnginePage::ShowBlockedPopups() {
+bool EnginePage::Answer(const engine::ShowBlockedPopups&) {
   auto* blocker =
       web_contents() ? blocked_content::PopupBlockerTabHelper::FromWebContents(web_contents()) : nullptr;
   if (!blocker || !blocker->GetBlockedPopupsCount()) {
@@ -1441,18 +1440,16 @@ bool EnginePage::ShowBlockedPopups() {
   return true;
 }
 
-bool EnginePage::AddContentScript(std::string source, bool main_frame_only) {
-  if (!content_ || source.empty()) {
+bool EnginePage::Answer(const engine::AddContentScript& request) {
+  if (!content_ || request.source.empty()) {
     return false;
   }
-  content_->Add(std::move(source), main_frame_only);
+  content_->Add(request.source, request.main_frame_only);
   return true;
 }
 
-bool EnginePage::EvaluateContentScript(const engine::Guid& evaluation,
-                                       const std::string& source,
-                                       const std::string& frame) {
-  return content_ && content_->Evaluate(evaluation, source, frame);
+bool EnginePage::Answer(const engine::EvaluateContentScript& request) {
+  return content_ && content_->Evaluate(request.evaluation_id, request.source, request.frame_id);
 }
 
 PageAgent* EnginePage::Agent() {
@@ -1463,36 +1460,36 @@ PageAgent* EnginePage::Agent() {
   return agent_.get();
 }
 
-bool EnginePage::ObserveActivity(bool observing) {
+bool EnginePage::Answer(const engine::ObservePageActivity& request) {
   if (PageAgent* agent = Agent()) {
-    observes_activity_ = observing;
-    return agent->ObserveActivity(observing);
+    observes_activity_ = request.observing;
+    return agent->ObserveActivity(request.observing);
   }
   if (phase_ != Phase::kCreating) {
     return false;
   }
-  observes_activity_ = observing;
+  observes_activity_ = request.observing;
   return true;
 }
 
-bool EnginePage::OpenInspector(std::optional<engine::InspectorPanel> panel) {
-  return inspector_ && inspector_->Open(panel);
+bool EnginePage::Answer(const engine::OpenInspector& request) {
+  return inspector_ && inspector_->Open(request.panel);
 }
 
-bool EnginePage::CloseInspector() {
+bool EnginePage::Answer(const engine::CloseInspector&) {
   return inspector_ && inspector_->Close();
 }
 
-bool EnginePage::Inspected() const {
+bool EnginePage::Answer(const engine::PageInspected&) const {
   return inspector_ && inspector_->IsOpen();
 }
 
-engine::InspectorLayout EnginePage::LayoutInspector(double width, double height) const {
-  return inspector_ ? inspector_->Layout(width, height) : engine::InspectorLayout{};
+engine::InspectorLayout EnginePage::Answer(const engine::LayoutInspector& request) const {
+  return inspector_ ? inspector_->Layout(request.width, request.height) : engine::InspectorLayout{};
 }
 
 // The chain the engine verified for the visible entry, leaf first.
-engine::CertificateChain EnginePage::CertificateChain() const {
+engine::CertificateChain EnginePage::Answer(const engine::PageCertificates&) const {
   engine::CertificateChain chain;
   auto* entry = web_contents() ? web_contents()->GetController().GetVisibleEntry() : nullptr;
   if (!entry || !entry->GetSSL().certificate) {
@@ -1512,7 +1509,7 @@ engine::CertificateChain EnginePage::CertificateChain() const {
 
 // The content settings the engine enforces for Crest's record: allowed,
 // blocked, or the site's own setting cleared so the engine's default applies.
-bool EnginePage::SetSitePermission(engine::SitePermission permission, std::optional<bool> allowed) {
+bool EnginePage::Answer(const engine::SetSitePermission& request) {
   if (!web_contents()) {
     return false;
   }
@@ -1521,7 +1518,7 @@ bool EnginePage::SetSitePermission(engine::SitePermission permission, std::optio
     return false;
   }
   ContentSettingsType type;
-  switch (permission) {
+  switch (request.permission) {
     case engine::SitePermission::kCamera:
       type = ContentSettingsType::MEDIASTREAM_CAMERA;
       break;
@@ -1543,9 +1540,9 @@ bool EnginePage::SetSitePermission(engine::SitePermission permission, std::optio
     default:
       return false;
   }
-  const ContentSetting setting = !allowed ? CONTENT_SETTING_DEFAULT
-                                 : *allowed ? CONTENT_SETTING_ALLOW
-                                            : CONTENT_SETTING_BLOCK;
+  const ContentSetting setting = !request.allowed ? CONTENT_SETTING_DEFAULT
+                                 : *request.allowed ? CONTENT_SETTING_ALLOW
+                                                    : CONTENT_SETTING_BLOCK;
   HostContentSettingsMapFactory::GetForProfile(Profile::FromBrowserContext(web_contents()->GetBrowserContext()))
       ->SetContentSettingDefaultScope(origin, GURL(), type, setting);
   return true;
@@ -1555,7 +1552,7 @@ int EnginePage::AuthenticationAttempt(const std::string& challenge) {
   return authentication_attempts_[challenge]++;
 }
 
-bool EnginePage::FinishStoreRequest() {
+bool EnginePage::Answer(const engine::RefreshStoreListing&) {
   if (!store_) {
     return false;
   }

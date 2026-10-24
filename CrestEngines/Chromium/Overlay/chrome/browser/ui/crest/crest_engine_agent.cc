@@ -166,11 +166,12 @@ PageAgent::~PageAgent() {
   Detach();
 }
 
-bool PageAgent::Evaluate(const engine::Guid& evaluation, const std::string& source, engine::PageScriptWorld world) {
+bool PageAgent::Answer(const engine::EvaluatePageScript& request) {
   if (!web_contents() || !IsWebPage(web_contents()->GetPrimaryMainFrame()->GetLastCommittedURL())) {
     return false;
   }
-  if (world == engine::PageScriptWorld::kPage) {
+  const std::string& source = request.source;
+  if (request.world == engine::PageScriptWorld::kPage) {
     if (!Attach()) {
       return false;
     }
@@ -200,7 +201,7 @@ bool PageAgent::Evaluate(const engine::Guid& evaluation, const std::string& sour
                }
                agent->present_.Run(std::move(answer));
              },
-             weak_factory_.GetWeakPtr(), evaluation));
+             weak_factory_.GetWeakPtr(), request.evaluation_id));
     return true;
   }
   content::RenderFrameHost* frame = web_contents()->GetPrimaryMainFrame();
@@ -215,67 +216,68 @@ bool PageAgent::Evaluate(const engine::Guid& evaluation, const std::string& sour
   frame->ExecuteJavaScriptInIsolatedWorld(
       base::UTF8ToUTF16(script),
       mojo::WrapCallbackWithDefaultInvokeIfNotRun(
-          base::BindOnce(&PageAgent::Answered, weak_factory_.GetWeakPtr(), evaluation), base::Value()),
+          base::BindOnce(&PageAgent::Answered, weak_factory_.GetWeakPtr(), request.evaluation_id), base::Value()),
       kAgentWorldID);
   return true;
 }
 
-bool PageAgent::Click(const engine::Guid& input,
-                      const engine::PagePoint& point,
-                      engine::PointerButton button,
-                      int count,
-                      engine::KeyModifiers modifiers) {
-  if (!ValidPoint(point) || count < 1 || count > 3 || !Attach()) {
+bool PageAgent::Answer(const engine::ClickPage& request) {
+  const engine::PagePoint& point = request.point;
+  if (!ValidPoint(point) || request.count < 1 || request.count > 3 || !Attach()) {
     return false;
   }
   std::vector<std::pair<const char*, base::DictValue>> events;
   events.emplace_back("Input.dispatchMouseEvent",
-                      MouseEvent("mouseMoved", point).Set("modifiers", ProtocolModifiers(modifiers)));
-  for (int click = 1; click <= count; ++click) {
+                      MouseEvent("mouseMoved", point).Set("modifiers", ProtocolModifiers(request.modifiers)));
+  for (int click = 1; click <= request.count; ++click) {
     for (const char* type : {"mousePressed", "mouseReleased"}) {
       events.emplace_back("Input.dispatchMouseEvent", MouseEvent(type, point)
-                                                          .Set("button", ProtocolButton(button))
-                                                          .Set("buttons", ProtocolButtons(button))
+                                                          .Set("button", ProtocolButton(request.button))
+                                                          .Set("buttons", ProtocolButtons(request.button))
                                                           .Set("clickCount", click)
-                                                          .Set("modifiers", ProtocolModifiers(modifiers)));
+                                                          .Set("modifiers", ProtocolModifiers(request.modifiers)));
     }
   }
-  Deliver(input, std::move(events));
+  Deliver(request.input_id, std::move(events));
   return true;
 }
 
-bool PageAgent::Hover(const engine::Guid& input, const engine::PagePoint& point) {
-  if (!ValidPoint(point) || !Attach()) {
+bool PageAgent::Answer(const engine::HoverPage& request) {
+  if (!ValidPoint(request.point) || !Attach()) {
     return false;
   }
   std::vector<std::pair<const char*, base::DictValue>> events;
-  events.emplace_back("Input.dispatchMouseEvent", MouseEvent("mouseMoved", point));
-  Deliver(input, std::move(events));
+  events.emplace_back("Input.dispatchMouseEvent", MouseEvent("mouseMoved", request.point));
+  Deliver(request.input_id, std::move(events));
   return true;
 }
 
-bool PageAgent::Scroll(const engine::Guid& input, const engine::PagePoint& point, double delta_x, double delta_y) {
-  if (!ValidPoint(point) || !std::isfinite(delta_x) || !std::isfinite(delta_y) || !Attach()) {
+bool PageAgent::Answer(const engine::ScrollPage& request) {
+  if (!ValidPoint(request.point) || !std::isfinite(request.delta_x) || !std::isfinite(request.delta_y) ||
+      !Attach()) {
     return false;
   }
   std::vector<std::pair<const char*, base::DictValue>> events;
-  events.emplace_back("Input.dispatchMouseEvent",
-                      MouseEvent("mouseWheel", point).Set("deltaX", delta_x).Set("deltaY", delta_y));
-  Deliver(input, std::move(events));
+  events.emplace_back(
+      "Input.dispatchMouseEvent",
+      MouseEvent("mouseWheel", request.point).Set("deltaX", request.delta_x).Set("deltaY", request.delta_y));
+  Deliver(request.input_id, std::move(events));
   return true;
 }
 
-bool PageAgent::Type(const engine::Guid& input, const std::string& text) {
-  if (text.empty() || !Attach()) {
+bool PageAgent::Answer(const engine::TypeInPage& request) {
+  if (request.text.empty() || !Attach()) {
     return false;
   }
   std::vector<std::pair<const char*, base::DictValue>> events;
-  events.emplace_back("Input.insertText", base::DictValue().Set("text", text));
-  Deliver(input, std::move(events));
+  events.emplace_back("Input.insertText", base::DictValue().Set("text", request.text));
+  Deliver(request.input_id, std::move(events));
   return true;
 }
 
-bool PageAgent::PressKey(const engine::Guid& input, const engine::PageKey& key, engine::KeyModifiers modifiers) {
+bool PageAgent::Answer(const engine::PressKeyInPage& request) {
+  const engine::PageKey& key = request.key;
+  const engine::KeyModifiers modifiers = request.modifiers;
   if (key.key.empty() || !Attach()) {
     return false;
   }
@@ -296,7 +298,7 @@ bool PageAgent::PressKey(const engine::Guid& input, const engine::PageKey& key, 
     events.emplace_back("Input.dispatchKeyEvent", event("rawKeyDown"));
   }
   events.emplace_back("Input.dispatchKeyEvent", event("keyUp"));
-  Deliver(input, std::move(events));
+  Deliver(request.input_id, std::move(events));
   return true;
 }
 
@@ -332,31 +334,31 @@ bool PageAgent::ObserveActivity(bool observing) {
   return true;
 }
 
-engine::PageConsoleLog PageAgent::Console(int64_t after) const {
+engine::PageConsoleLog PageAgent::Answer(const engine::ReadPageConsole& request) const {
   engine::PageConsoleLog log{.dropped = console_dropped_};
   for (const auto& message : console_) {
-    if (message.sequence > after) {
+    if (message.sequence > request.after) {
       log.messages.push_back(message);
     }
   }
   return log;
 }
 
-engine::PageNetworkLog PageAgent::Network(int64_t after) const {
+engine::PageNetworkLog PageAgent::Answer(const engine::ReadPageNetwork& reading) const {
   engine::PageNetworkLog log{.dropped = network_dropped_};
   for (const auto& request : network_) {
-    if (request.sequence > after) {
+    if (request.sequence > reading.after) {
       log.requests.push_back(request);
     }
   }
   return log;
 }
 
-bool PageAgent::HoldRendering(bool held, double width, double height) {
+bool PageAgent::Answer(const engine::HoldPageRendering& request) {
   if (!web_contents()) {
     return false;
   }
-  if (!held) {
+  if (!request.held) {
     rendering_.RunAndReset();
     // The page counts as unfocused and hidden again; once the agent no
     // longer watches it either, it keeps nothing of the agent's.
@@ -367,6 +369,8 @@ bool PageAgent::HoldRendering(bool held, double width, double height) {
     }
     return true;
   }
+  const double width = request.width;
+  const double height = request.height;
   if (!std::isfinite(width) || !std::isfinite(height) || width < 1 || height < 1 || width > kMaximumHeldSide ||
       height > kMaximumHeldSide) {
     return false;
