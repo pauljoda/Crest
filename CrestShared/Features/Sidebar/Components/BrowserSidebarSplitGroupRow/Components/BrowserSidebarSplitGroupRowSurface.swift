@@ -48,11 +48,6 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                 reorder: configuration.reorderContext,
                 isEnabled: configuration.isAvailableForDisplay && configuration.capabilities.supportsOrganization
             )
-            .modifier(
-                BrowserSidebarSplitGroupRowDropIndicators(
-                    configuration: configuration
-                )
-            )
             .crestCollectionItemTransition()
             .accessibilityElement(children: .contain)
             .accessibilityLabel(

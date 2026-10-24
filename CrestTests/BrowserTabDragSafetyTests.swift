@@ -280,14 +280,8 @@ final class BrowserTabDragSafetyTests: XCTestCase {
 
     func testStaleDragSessionCannotEndANewerDragWithTheSameTabID() {
         let context = makeContext()
-        let firstSession: BrowserDragSessionToken = context.sidebarInteraction.tabDragState.begin(
-            item: context.item,
-            placement: context.tab.placement
-        )
-        let secondSession: BrowserDragSessionToken = context.sidebarInteraction.tabDragState.begin(
-            item: context.item,
-            placement: context.tab.placement
-        )
+        let firstSession: BrowserDragSessionToken = context.sidebarInteraction.tabDragState.begin(item: context.item)
+        let secondSession: BrowserDragSessionToken = context.sidebarInteraction.tabDragState.begin(item: context.item)
 
         XCTAssertNotEqual(firstSession, secondSession)
         context.sidebarInteraction.tabDragState.end(session: firstSession)
@@ -345,7 +339,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             profileID: capturedSource.profileID
         )
         let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
-        let token = sidebarInteraction.tabDragState.begin(item: item, placement: .current)
+        let token = sidebarInteraction.tabDragState.begin(item: item)
         defer { sidebarInteraction.tabDragState.end(session: token) }
 
         XCTAssertTrue(

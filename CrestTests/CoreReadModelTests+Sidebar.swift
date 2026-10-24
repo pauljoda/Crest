@@ -287,9 +287,7 @@ extension SidebarBodies {
         Child(
             key: key, input: AnyEquatable(ObjectIdentifier(list)),
             node: Node(kind: .section) {
-                BrowserSidebarListItem.items(
-                    of: list, in: context.space, namesFollowingTabs: context.capabilities.showsRowDropIndicators
-                ).map {
+                BrowserSidebarListItem.items(of: list, in: context.space).map {
                     Child(
                         key: "\(key)-\($0.id)", input: AnyEquatable($0),
                         node: node(for: $0, context: context, interaction: interaction))
@@ -426,7 +424,7 @@ enum SidebarReads {
         interaction: BrowserSidebarInteractionState
     ) {
         let configuration = BrowserSidebarSplitGroupRowConfiguration(
-            sidebarInteraction: interaction, groupID: groupID, members: members, context: context, followingTabID: nil,
+            sidebarInteraction: interaction, groupID: groupID, members: members, context: context,
             spacePresentation: nil)
         _ = (configuration.shownTitle, configuration.emojiIcon, configuration.tint, configuration.isPresented)
         _ = (configuration.placement, configuration.folderID, configuration.isAvailableForDisplay)
@@ -470,7 +468,7 @@ enum SidebarReads {
     /// current section holds anything to clear.
     static func seam(in context: BrowserSidebarListContext, isSavedTabsExpanded: Bool) {
         let sidebar = context.space.sidebar
-        if isSavedTabsExpanded, !context.capabilities.showsRowDropIndicators {
+        if isSavedTabsExpanded, !context.capabilities.reservesReorderSectionZones {
             _ = sidebar.section(.saved).holdsTabRows
         }
         let current = sidebar.section(.current)

@@ -102,7 +102,6 @@ struct MobileBrowserSidebarSurface: View {
         BrowserInteractionCapabilities(
             supportsHover: true,
             supportsTouch: true,
-            showsRowDropIndicators: true,
             reservesReorderSectionZones: true,
             usesNativeNavigationTransition: usesNativeNavigationTransition,
             pairsRowWithPromotedSurface: false

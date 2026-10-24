@@ -14,13 +14,13 @@ struct BrowserSavedTabsDropSection: View {
     var body: some View {
         let list = context.space.sidebar.section(.saved)
         VStack(spacing: 0) {
-            if context.capabilities.showsRowDropIndicators {
+            if context.capabilities.reservesReorderSectionZones {
                 BrowserSidebarListRows(list: list, context: context).equatable()
 
                 // Also the band an empty unfiled run draws its insertion line
                 // in: it sits directly below the folder groups, where that
                 // run's first row would appear.
-                BrowserSavedTabsEndDropTarget(list: list, context: context)
+                BrowserSavedTabsEndDropTarget(context: context)
                     .browserSidebarReorderSectionIndicator(
                         section,
                         state: sidebarInteraction.sidebarReorderState

@@ -41,27 +41,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpaceID, session.spaces.dropLast().last?.id)
     }
 
-    func testRowInsertionLowerHalfResolvesBeforeTheActualFollowingTab() throws {
-        let first = TabState.Seed(title: "First", url: URL(string: "https://example.com/1"), placement: .current)
-        let second = TabState.Seed(title: "Second", url: URL(string: "https://example.com/2"), placement: .current)
-        let third = TabState.Seed(title: "Third", url: URL(string: "https://example.com/3"), placement: .current)
-        var space = SpaceState.Seed.blank(number: 1)
-        space.tabs = [first, second, third]
-        let browser = BrowserStore(seed: SessionState.Seed(spaces: [space], defaultSpaceID: space.id))
-        let model = try XCTUnwrap(browser.spaceModel(space.id))
-        let items = BrowserSidebarListItem.items(
-            of: model.sidebar.section(.current), in: model, namesFollowingTabs: true)
-        let following = Dictionary(
-            uniqueKeysWithValues: items.compactMap { item in
-                item.id.tabID.map { ($0, item.followingTabID) }
-            })
-
-        XCTAssertEqual(following[first.id], second.id)
-        XCTAssertEqual(following[second.id], third.id)
-        XCTAssertNil(following[third.id] ?? nil)
-        XCTAssertEqual(items.map(\.id), [.tab(first.id), .tab(second.id), .tab(third.id)])
-    }
-
     func testMobileDragLifecycleUsesTheNativeCompletionOnlyWhereItExists() {
         XCTAssertFalse(
             BrowserTabDragSessionLifecyclePhase.usesNativeCompletion(
@@ -93,7 +72,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             profileID: UUID()
         )
 
-        dragState.begin(item: item, placement: .current)
+        dragState.begin(item: item)
         dragState.endAfterTouchRelease()
 
         XCTAssertTrue(dragState.isDragging(item))
@@ -101,7 +80,6 @@ final class BrowserInteractionModelTests: XCTestCase {
             for: BrowserTabDragState.releaseCleanupDelay * 2
         )
         XCTAssertFalse(dragState.isDragging(item))
-        XCTAssertNil(dragState.dropLocation)
     }
 
     func testFallbackTouchReleaseClearsAHeldFolderAfterDropResolution() async {
@@ -121,7 +99,6 @@ final class BrowserInteractionModelTests: XCTestCase {
             for: BrowserTabDragState.releaseCleanupDelay * 2
         )
         XCTAssertFalse(dragState.isDragging(item))
-        XCTAssertNil(dragState.dropLocation)
     }
 
     func testOpeningATabContextMenuCancelsItsFalseDragLift() {
@@ -133,18 +110,17 @@ final class BrowserInteractionModelTests: XCTestCase {
             profileID: UUID()
         )
 
-        dragState.begin(item: firstItem, placement: .current)
+        dragState.begin(item: firstItem)
         dragState.contextMenuDidOpen(for: firstItem.runtimeAssignment)
         let secondItem = BrowserTabDragItem(
             tabID: tabID,
             spaceID: UUID(),
             profileID: UUID()
         )
-        dragState.begin(item: secondItem, placement: .current)
+        dragState.begin(item: secondItem)
         dragState.contextMenuDidClose(for: secondItem.runtimeAssignment)
 
         XCTAssertFalse(dragState.isDragging(secondItem))
-        XCTAssertNil(dragState.dropLocation)
     }
 
     func testOpeningAFolderContextMenuCancelsItsFalseDragLift() {
@@ -167,7 +143,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         dragState.contextMenuDidClose(for: secondItem)
 
         XCTAssertFalse(dragState.isDragging(secondItem))
-        XCTAssertNil(dragState.dropLocation)
     }
 
     // MARK: - In-view sidebar reorder geometry
@@ -876,31 +851,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertNil(state.end())
     }
 
-    func testFolderDragUsesSavedInsertionLocationsAndCannotEnterPinnedTabs() {
-        let folderID = UUID()
-        let siblingID = UUID()
-        let spaceID = UUID()
-        let dragState = BrowserFolderDragState()
-        let item = BrowserFolderDragItem(
-            folderID: folderID,
-            spaceID: spaceID,
-            profileID: UUID()
-        )
-        let location = BrowserFolderDropLocation(
-            parentID: nil,
-            beforeSiblingID: siblingID
-        )
-
-        dragState.begin(item: item)
-        XCTAssertTrue(dragState.isDragging(item))
-        XCTAssertTrue(dragState.enter(location))
-        XCTAssertEqual(dragState.dropLocation, location)
-
-        dragState.end()
-        XCTAssertNil(dragState.item)
-        XCTAssertNil(dragState.dropLocation)
-    }
-
     func testDraggingIntoAnotherSpacesSectionReownsTheTabAndContinuesTheLiveDrag() throws {
         let browser = BrowserStore.preview()
         let source = try XCTUnwrap(browser.spaceModels.first)
@@ -912,7 +862,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             profileID: source.profileID
         )
         let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
-        let token = sidebarInteraction.tabDragState.begin(item: item, placement: tab.placement)
+        let token = sidebarInteraction.tabDragState.begin(item: item)
 
         browser.selectSpace(destination.id)
         XCTAssertTrue(
@@ -930,7 +880,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(moved.placement, .saved)
         XCTAssertEqual(browser.shownTab?.id, tab.id)
         XCTAssertEqual(sidebarInteraction.tabDragState.item?.spaceID, destination.id)
-        XCTAssertEqual(sidebarInteraction.tabDragState.currentPlacement, .current)
         XCTAssertEqual(sidebarInteraction.tabDragState.sessionToken, token)
     }
 

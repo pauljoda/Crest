@@ -2,9 +2,8 @@ import SwiftUI
 
 /// One tab in the sidebar, on every shell.
 ///
-/// The row owns the state a tab row has to keep between events — hover, the
-/// rename in flight, the height a drop indicator sizes itself against — and
-/// hands everything else to `BrowserSidebarTabRowConfiguration`. What differs
+/// The row owns the state a tab row has to keep between events — hover and
+/// the rename in flight — and hands everything else to `BrowserSidebarTabRowConfiguration`. What differs
 /// between a pointer shell and a touch one is read from
 /// `BrowserInteractionCapabilities` rather than from which target compiled
 /// the file, so the two shells share this row instead of a resemblance.
@@ -16,14 +15,9 @@ struct BrowserSidebarTabRow: View {
     /// Set by the container that nests this row inside a split group. See
     /// `BrowserSidebarTabRowConfiguration.isSplitGroupMember`.
     var isSplitGroupMember = false
-    /// The row a drop below this one would land in front of. Only read where
-    /// the shell draws its insertion line on the rows themselves.
-    var followingTabID: UUID? = nil
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var isHovering = false
-    @State private var isDropTargeted = false
-    @State private var dropTargetHeight = CrestLayout.sidebarRowHeight
     @State private var renameRequest: BrowserTabRuntimeAssignment?
     @State private var iconRequest: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
@@ -74,7 +68,6 @@ struct BrowserSidebarTabRow: View {
             isSelected: context.window.shownTabIDs.contains(tab.id),
             isLoaded: context.isLoaded(tab.id),
             isSplitGroupMember: isSplitGroupMember,
-            followingTabID: followingTabID,
             spacePresentation: spacePresentation
         )
     }
@@ -82,8 +75,6 @@ struct BrowserSidebarTabRow: View {
     private var interaction: BrowserSidebarTabRowInteractionContext {
         BrowserSidebarTabRowInteractionContext(
             isHovering: $isHovering,
-            isDropTargeted: $isDropTargeted,
-            dropTargetHeight: $dropTargetHeight,
             isRenaming: isRenaming,
             draftTitle: $draftTitle,
             isTitleFocused: $isTitleFocused,
@@ -202,6 +193,5 @@ extension BrowserSidebarTabRow: @MainActor Equatable {
     /// SwiftUI compares a view's inputs: a list that redraws leaves them be.
     static func == (lhs: BrowserSidebarTabRow, rhs: BrowserSidebarTabRow) -> Bool {
         lhs.tab === rhs.tab && lhs.context == rhs.context && lhs.isSplitGroupMember == rhs.isSplitGroupMember
-            && lhs.followingTabID == rhs.followingTabID
     }
 }

@@ -86,21 +86,19 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                     spaceID: spaceID,
                     profileID: profileID
                 )
-                sessionToken = dragState.begin(
-                    item: item,
-                    placement: tab.placement
-                )
+                sessionToken = dragState.begin(item: item)
                 let data = (try? JSONEncoder().encode(item)) ?? Data()
                 return NSItemProvider(
                     item: data as NSData,
                     typeIdentifier: UTType.json.identifier
                 )
             } preview: {
-                BrowserTabReactiveDragPreview(
+                BrowserTabDragPreview(
                     tab: tab,
                     favicons: favicons,
                     profileID: profileID,
-                    dragState: dragState
+                    progress: BrowserTabDragPreviewLayout.progress(for: tab.placement),
+                    rowMetrics: .touch
                 )
                 .environment(\.colorScheme, colorScheme)
             }

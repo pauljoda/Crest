@@ -23,7 +23,6 @@ struct BrowserSidebarTabRowConfiguration {
     /// gives up is the sidebar's edge inset, which the container already
     /// provides.
     let isSplitGroupMember: Bool
-    let followingTabID: UUID?
     var spacePresentation: SidebarSpacePresentation? = nil
 
     var spaceID: UUID { assignment.spaceID }
@@ -36,8 +35,6 @@ struct BrowserSidebarTabRowConfiguration {
 
     /// A tab the session keeps closes; one it outlives only unloads.
     var canClose: Bool { !tab.placement.isDurable }
-
-    var hasVisibleFollowingRow: Bool { followingTabID != nil }
 
     var promotionNamespace: Namespace.ID? {
         context.promotionNamespace(for: tab.placement)
@@ -77,17 +74,6 @@ struct BrowserSidebarTabRowConfiguration {
         isSplitGroupMember ? 0 : BrowserSidebarMetrics.layerInset
     }
 
-    /// Whether this row draws its own insertion lines.
-    ///
-    /// A grouped member never does, whatever the shell can show. The container
-    /// is one row to the list and owns both anchors for the whole run, and a
-    /// member drawing its own would double the line above the first member and
-    /// light one up under *every* member for a drop aimed at the end of the
-    /// section — neither of which is a place a tab can actually land.
-    var showsDropIndicators: Bool {
-        capabilities.showsRowDropIndicators && !isSplitGroupMember
-    }
-
     /// The identity this row shares with the surface its page grows out of.
     var promotionID: String {
         BrowserTabPromotionID.value(for: tab.id)
@@ -95,24 +81,6 @@ struct BrowserSidebarTabRowConfiguration {
 
     var isPromotionSource: Bool {
         isSelected && !tab.isStartPage
-    }
-
-    var beforeDropLocation: BrowserTabDropLocation {
-        BrowserTabDropLocation(
-            placement: tab.placement,
-            folderID: tab.folderID,
-            beforeTabID: tab.id,
-            destinationAssignment: assignment
-        )
-    }
-
-    var afterDropLocation: BrowserTabDropLocation {
-        BrowserTabDropLocation(
-            placement: tab.placement,
-            folderID: tab.folderID,
-            beforeTabID: followingTabID,
-            destinationAssignment: assignment
-        )
     }
 
     var runtimeAssignment: BrowserTabRuntimeAssignment {
@@ -141,8 +109,7 @@ struct BrowserSidebarTabRowConfiguration {
 
     init(
         tab: TabStateModel, context: BrowserSidebarListContext, isSelected: Bool, isLoaded: Bool,
-        isSplitGroupMember: Bool = false, followingTabID: UUID? = nil,
-        spacePresentation: SidebarSpacePresentation? = nil
+        isSplitGroupMember: Bool = false, spacePresentation: SidebarSpacePresentation? = nil
     ) {
         self.tab = tab
         self.context = context
@@ -150,7 +117,6 @@ struct BrowserSidebarTabRowConfiguration {
         self.isSelected = isSelected
         self.isLoaded = isLoaded
         self.isSplitGroupMember = isSplitGroupMember
-        self.followingTabID = followingTabID
         self.spacePresentation = spacePresentation
     }
 }

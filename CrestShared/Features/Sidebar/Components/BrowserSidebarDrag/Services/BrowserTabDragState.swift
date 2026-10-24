@@ -12,22 +12,13 @@ final class BrowserTabDragState {
 
     private(set) var item: BrowserTabDragItem?
     private(set) var sessionToken: BrowserDragSessionToken?
-    private(set) var sourcePlacement: TabPlacement?
-    private(set) var currentPlacement: TabPlacement?
-    private(set) var dropLocation: BrowserTabDropLocation?
-    private(set) var liveMoveCount = 0
     @ObservationIgnored private var expirationTask: Task<Void, Never>?
-    @ObservationIgnored private var deferredLeaveTask: Task<Void, Never>?
     @ObservationIgnored private var releaseCleanupTask: Task<Void, Never>?
     @ObservationIgnored private var nextSessionGeneration: UInt64 = 0
 
     @discardableResult
-    func begin(
-        item: BrowserTabDragItem,
-        placement: TabPlacement
-    ) -> BrowserDragSessionToken {
+    func begin(item: BrowserTabDragItem) -> BrowserDragSessionToken {
         expirationTask?.cancel()
-        deferredLeaveTask?.cancel()
         releaseCleanupTask?.cancel()
         nextSessionGeneration &+= 1
         let token = BrowserDragSessionToken(
@@ -35,10 +26,6 @@ final class BrowserTabDragState {
         )
         self.item = item
         sessionToken = token
-        sourcePlacement = placement
-        currentPlacement = placement
-        dropLocation = nil
-        liveMoveCount = 0
         expirationTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: BrowserTabDragState.sessionExpiration)
             guard !Task.isCancelled else { return }
@@ -47,43 +34,12 @@ final class BrowserTabDragState {
         return token
     }
 
-    /// Whether the drop indicator at `location` shows: a row drop, not a grid
-    /// one, aimed there by a drag in flight.
-    func showsDropIndicator(at location: BrowserTabDropLocation) -> Bool {
-        !location.placement.isGrid
-            && item != nil
-            && dropLocation == location
-    }
-
     func isDragging(_ item: BrowserTabDragItem) -> Bool {
         self.item == item
     }
 
     func isDragging(_ assignment: BrowserTabRuntimeAssignment) -> Bool {
         item?.runtimeAssignment == assignment
-    }
-
-    @discardableResult
-    func enter(_ location: BrowserTabDropLocation) -> Bool {
-        deferredLeaveTask?.cancel()
-        deferredLeaveTask = nil
-        guard item != nil, dropLocation != location else { return false }
-        dropLocation = location
-        currentPlacement = location.placement
-        return true
-    }
-
-    func leave(
-        _ location: BrowserTabDropLocation,
-        restoringSourcePlacement: Bool = false
-    ) {
-        guard dropLocation == location else { return }
-        dropLocation = nil
-        guard restoringSourcePlacement, let sourcePlacement else { return }
-        let placement = BrowserTabDragPreviewLayout.outsidePinnedPlacement(
-            for: sourcePlacement
-        )
-        currentPlacement = placement
     }
 
     func relocate(to assignment: BrowserSpaceRuntimeAssignment) {
@@ -101,15 +57,10 @@ final class BrowserTabDragState {
     func end() {
         expirationTask?.cancel()
         expirationTask = nil
-        deferredLeaveTask?.cancel()
-        deferredLeaveTask = nil
         releaseCleanupTask?.cancel()
         releaseCleanupTask = nil
         item = nil
         sessionToken = nil
-        sourcePlacement = nil
-        currentPlacement = nil
-        dropLocation = nil
     }
 
     func end(session token: BrowserDragSessionToken) {

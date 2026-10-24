@@ -4389,6 +4389,10 @@
     "memory-warning-unloads-one-tab": {
       "category": "fixed",
       "message": "On iPhone and iPad, running low on memory now unloads one background tab instead of several, so fewer tabs reload when you go back to them."
+    },
+    "remove-dead-sidebar-drop-indicators": {
+      "category": "internal",
+      "message": "Remove the sidebar's drop-indicator code, which never drew anything since the in-place reorder replaced it."
     }
   }
 }

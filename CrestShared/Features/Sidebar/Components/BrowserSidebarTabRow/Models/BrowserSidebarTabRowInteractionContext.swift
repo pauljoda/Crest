@@ -7,10 +7,6 @@ import SwiftUI
 /// take the bindings they need without any of them owning the state.
 struct BrowserSidebarTabRowInteractionContext {
     let isHovering: Binding<Bool>
-    let isDropTargeted: Binding<Bool>
-    /// The row's measured height, which the drop indicators size against on a
-    /// shell that draws them.
-    let dropTargetHeight: Binding<CGFloat>
     let isRenaming: Bool
     let draftTitle: Binding<String>
     let isTitleFocused: FocusState<Bool>.Binding

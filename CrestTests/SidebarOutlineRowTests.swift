@@ -73,45 +73,6 @@ final class SidebarOutlineRowTests: XCTestCase {
         )
     }
 
-    /// A group is one row, so the anchor a drop below it resolves to is the tab
-    /// following its *last* member. An anchor landing inside the run is what
-    /// would drop a foreign tab between two members and split the group.
-    func testAGroupRowsTrailingDropAnchorSkipsPastEveryMember() throws {
-        let group = Self.uuid(0x0C)
-        let leading = makeTab(0xB1, "Leading")
-        let head = makeTab(0xB2, "Head", group: group)
-        let middle = makeTab(0xB3, "Middle", group: group)
-        let tail = makeTab(0xB4, "Tail", group: group)
-        let trailing = makeTab(0xB5, "Trailing")
-
-        let items = try items(of: [leading, head, middle, tail, trailing])
-
-        XCTAssertEqual(items.map(\.id), [.tab(leading.id), .splitGroup(group), .tab(trailing.id)])
-        XCTAssertEqual(
-            items[0].followingTabID,
-            head.id,
-            "The row above a group anchors on the group's first member."
-        )
-        XCTAssertEqual(
-            items[1].followingTabID,
-            trailing.id,
-            "The row below a group anchors past its last member."
-        )
-    }
-
-    /// A group closing a section has no following row, so its own trailing
-    /// indicator is the only one drawn there — the same ownership rule an
-    /// ordinary last row follows.
-    func testAGroupClosingASectionHasNoFollowingRow() throws {
-        let group = Self.uuid(0x0D)
-        let head = makeTab(0xC1, "Head", group: group)
-        let tail = makeTab(0xC2, "Tail", group: group)
-
-        let followingTabID = try items(of: [head, tail])[0].followingTabID
-
-        XCTAssertNil(followingTabID)
-    }
-
     /// A collapsed folder's list still holds its rows, so the row it keeps on
     /// screen for the shown tab is the whole split the content presents.
     func testCollapsedFolderKeepsTheWholeSelectedSplitGroupVisible() throws {
@@ -142,14 +103,6 @@ final class SidebarOutlineRowTests: XCTestCase {
     private func rows(of tabs: [TabState.Seed]) throws -> [SidebarRow] {
         let (store, space) = try open(tabs)
         return try XCTUnwrap(store.spaceModel(space.id)).sidebar.section(.current).rows
-    }
-
-    /// The sidebar's list items for that top level, naming each row's
-    /// following tab as a sidebar drawing drop seams names it.
-    private func items(of tabs: [TabState.Seed]) throws -> [BrowserSidebarListItem] {
-        let (store, space) = try open(tabs)
-        let model = try XCTUnwrap(store.spaceModel(space.id))
-        return BrowserSidebarListItem.items(of: model.sidebar.section(.current), in: model, namesFollowingTabs: true)
     }
 
     private func open(_ tabs: [TabState.Seed]) throws -> (BrowserStore, SpaceState.Seed) {

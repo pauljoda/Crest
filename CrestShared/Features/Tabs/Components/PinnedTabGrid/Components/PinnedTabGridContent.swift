@@ -25,7 +25,6 @@ struct PinnedTabGridContent: View {
 
     private var reorderContext: BrowserSidebarReorderContext? {
         guard
-            BrowserSidebarReorderAvailability.isEnabled,
             capabilities.supportsOrganization,
             let context = grid.context,
             let sidebarInteraction

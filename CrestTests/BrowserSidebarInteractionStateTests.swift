@@ -26,7 +26,7 @@ final class BrowserSidebarInteractionStateTests: XCTestCase {
             } else {
                 interaction.sidebarReorderState.begin(item: .tab(item), section: section, at: .zero)
             }
-            interaction.tabDragState.begin(item: item, placement: tab.placement)
+            interaction.tabDragState.begin(item: item)
 
             browser.resetPrivateBrowsingSession()
 
@@ -62,7 +62,7 @@ final class BrowserSidebarInteractionStateTests: XCTestCase {
         let moved = try XCTUnwrap(source.currentTabs.last)
         XCTAssertNotEqual(dragged.id, moved.id)
         let item = BrowserTabDragItem(tabID: dragged.id, spaceID: source.id, profileID: source.profileID)
-        let token = interaction.tabDragState.begin(item: item, placement: dragged.placement)
+        let token = interaction.tabDragState.begin(item: item)
 
         XCTAssertTrue(browser.moveTab(moved.id, from: source.id, into: destination.id))
 

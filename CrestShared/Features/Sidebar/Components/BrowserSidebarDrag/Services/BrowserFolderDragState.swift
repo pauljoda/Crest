@@ -5,7 +5,6 @@ import Observation
 final class BrowserFolderDragState {
     private(set) var item: BrowserFolderDragItem?
     private(set) var sessionToken: BrowserDragSessionToken?
-    private(set) var dropLocation: BrowserFolderDropLocation?
     @ObservationIgnored private var expirationTask: Task<Void, Never>?
     @ObservationIgnored private var releaseCleanupTask: Task<Void, Never>?
     @ObservationIgnored private var nextSessionGeneration: UInt64 = 0
@@ -20,7 +19,6 @@ final class BrowserFolderDragState {
         )
         self.item = item
         sessionToken = token
-        dropLocation = nil
         expirationTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: BrowserTabDragState.sessionExpiration)
             guard !Task.isCancelled else { return }
@@ -33,18 +31,6 @@ final class BrowserFolderDragState {
         self.item == item
     }
 
-    @discardableResult
-    func enter(_ location: BrowserFolderDropLocation) -> Bool {
-        guard item != nil, dropLocation != location else { return false }
-        dropLocation = location
-        return true
-    }
-
-    func leave(_ location: BrowserFolderDropLocation) {
-        guard dropLocation == location else { return }
-        dropLocation = nil
-    }
-
     func end() {
         expirationTask?.cancel()
         expirationTask = nil
@@ -52,7 +38,6 @@ final class BrowserFolderDragState {
         releaseCleanupTask = nil
         item = nil
         sessionToken = nil
-        dropLocation = nil
     }
 
     func end(session token: BrowserDragSessionToken) {
