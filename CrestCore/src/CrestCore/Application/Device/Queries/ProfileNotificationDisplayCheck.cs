@@ -1,4 +1,5 @@
 using CrestCore.Application;
+using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -13,7 +14,7 @@ public sealed record ProfileNotificationDisplayCheck(Guid ProfileId, SiteOrigin 
     internal override NotificationDisplayVerdict Answer(CrestApp app) {
         if (app.Device.OnlySpaceOf(ProfileId) is not { } space || app.Device.IsPrivate(space)) return new(false);
         return Source == ProfileNotificationSource.Extension
-            ? new(Origin.Scheme == "chrome-extension" && Origin.Host.Length > 0)
+            ? new(Origin.Scheme == UrlScheme.ChromeExtension.Name && Origin.Host.Length > 0)
             : app.Query(new NotificationDisplayCheck(space, Origin));
     }
 

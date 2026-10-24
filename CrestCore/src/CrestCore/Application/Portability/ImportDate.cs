@@ -7,7 +7,7 @@ internal static class ImportDate {
     #region Static Variables
 
     /// Seconds from 1970 to 2001.
-    private const double ReferenceOffset = 978_307_200;
+    private const double ReferenceOffset = StoredSessionCodec.ReferenceEpochUnixSeconds;
 
     /// Seconds from 1601, where Windows and Chromium count from, to 1970.
     private const double WindowsOffset = 11_644_473_600;

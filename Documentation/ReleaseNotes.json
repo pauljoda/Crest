@@ -4417,6 +4417,10 @@
     "emoji-catalog-resource": {
       "category": "internal",
       "message": "Bundle the emoji picker's catalog as a data file instead of compiling it into the app, which speeds up builds."
+    },
+    "core-single-spellings": {
+      "category": "internal",
+      "message": "Keep one definition each in the core for the stored-date epoch, ordered device-store writes and known URL schemes, and show a sync save failure's own message."
     }
   }
 }
