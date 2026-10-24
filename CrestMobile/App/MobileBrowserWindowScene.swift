@@ -9,6 +9,7 @@ struct MobileBrowserWindowScene: View {
     private let onboardingProgress: BrowserOnboardingProgressStore
     private let automaticallyPresentsOnboarding: Bool
     private let sidebarWidgets: BrowserSidebarWidgetRuntime
+    private let memoryPressure: BrowserMemoryPressureMonitor
     @Bindable private var onboardingCoordinator: BrowserOnboardingCoordinator
 
     @State private var runtime = Runtime()
@@ -25,7 +26,7 @@ struct MobileBrowserWindowScene: View {
         tabStateArchive: (any BrowserTabStateArchiving)?,
         windowLayouts: BrowserWindowLayouts,
         startupBehavior: StartupBehavior,
-        monitorsMemoryPressure: Bool,
+        memoryPressure: BrowserMemoryPressureMonitor,
         usesEphemeralWebsiteDataStores: Bool,
         onboardingProgress: BrowserOnboardingProgressStore,
         onboardingCoordinator: BrowserOnboardingCoordinator,
@@ -39,6 +40,7 @@ struct MobileBrowserWindowScene: View {
         self.onboardingCoordinator = onboardingCoordinator
         self.automaticallyPresentsOnboarding = automaticallyPresentsOnboarding
         self.sidebarWidgets = sidebarWidgets
+        self.memoryPressure = memoryPressure
         makeModel = {
             MobileBrowserWindowSceneModel(
                 id: id,
@@ -49,7 +51,6 @@ struct MobileBrowserWindowScene: View {
                 tabStateArchive: tabStateArchive,
                 windowLayouts: windowLayouts,
                 startupBehavior: startupBehavior,
-                monitorsMemoryPressure: monitorsMemoryPressure,
                 usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
                 mediaSessionStore: mediaSessions,
                 downloads: downloads,
@@ -103,17 +104,16 @@ struct MobileBrowserWindowScene: View {
             .onAppear(perform: activateWindow)
             .onDisappear(perform: closeWindowRuntime)
             .onOpenURL(perform: openExternalURL)
-            // UIKit's warning supplements the kernel pressure source the standard store
-            // watches: it only reaches a foregrounded app, but it is also the one signal
-            // the private store gets, since private pages have no archive to come back
-            // from. Both signals land on the same handler, which collapses the pair that
-            // one squeeze produces into a single trim.
+            // UIKit's warning supplements the kernel pressure source, and reaches a
+            // foregrounded app only. Every scene hears it, and the app's one monitor
+            // collapses those and the kernel's event for one squeeze into a single
+            // relief of every window's pages.
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: UIApplication.didReceiveMemoryWarningNotification
                 )
             ) { _ in
-                model.handleMemoryPressure()
+                memoryPressure.relieve(.critical)
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
                 switch phase {

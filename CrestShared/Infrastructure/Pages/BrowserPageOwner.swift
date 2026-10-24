@@ -238,6 +238,12 @@ extension BrowserPageOwner {
         host.unloadPages(in: spaceID)
     }
 
+    /// Releases what memory pressure takes back that the core does not
+    /// decide; see `BrowserPageHost.relieveMemoryPressure`.
+    func relieveMemoryPressure(_ level: MemoryPressureLevel) {
+        host.relieveMemoryPressure(level, presenting: Array(presentedTabIDsAcrossWindows))
+    }
+
     func flushPendingTabStateWrites() async {
         await host.flushPendingTabStateWrites()
     }

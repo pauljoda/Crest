@@ -124,42 +124,6 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(pages.activePage).isCredentialAccessEnabled)
     }
 
-    // MARK: - Memory pressure
-
-    func testCriticalPressureEventReleasesTheActiveTransientLeaseAWarningKeeps() throws {
-        let session = makeSession(index: 7)
-        let space = try XCTUnwrap(session.spaces.first)
-        let browser = BrowserStore.hostingPages(session)
-        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
-        let url = try XCTUnwrap(URL(string: "about:blank"))
-        pages.select()
-        let activeLease = try XCTUnwrap(
-            pages.makeTransientPageLease(url: url, in: try XCTUnwrap(browser.spaceModel(space.id)))
-        )
-        // `dispatch_source_get_data` is only defined for the duration of the
-        // event handler, so the level has to be captured there and passed in as a
-        // value. Reading it back off the source after a hop is what made every
-        // squeeze — critical included — arrive here as a warning.
-
-        pages.handleMemoryPressureEvent([.warning])
-
-        XCTAssertNotNil(
-            activeLease.page,
-            "A warning deliberately preserves the transient surface in use."
-        )
-
-        pages.handleMemoryPressureEvent([.critical])
-
-        XCTAssertNil(
-            activeLease.page,
-            "Critical pressure must reach critical handling instead of collapsing to a warning."
-        )
-        XCTAssertTrue(activeLease.wasReleasedForMemoryPressure)
-        XCTAssertNotNil(pages.activePage)
-    }
-
-    // MARK: - Split View presentation
-
     func testPreparingACardRefusesTabsOutsideTheSelectedSpace() throws {
         let split = makeSplitSession(memberCount: 2, selectedIndex: 0)
         let otherSpace = makeSpace(index: 21, savesCredentials: true)

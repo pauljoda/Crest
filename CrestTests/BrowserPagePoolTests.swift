@@ -400,7 +400,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
         let browser = hosting(space)
         let pool = BrowserPagePool(browser: browser)
-        let monitor = BrowserMemoryPressureMonitor(core: browser.core, pools: BrowserPagePoolRegistry(primary: pool))
+        let monitor = BrowserMemoryPressureMonitor(core: browser.core) { [pool] }
         let url = try XCTUnwrap(URL(string: "about:blank"))
 
         present(pool, tab: tab.id, in: space.id)

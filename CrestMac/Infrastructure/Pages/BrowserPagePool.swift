@@ -907,12 +907,6 @@ final class BrowserPagePool:
         reload(.fromOrigin)
     }
 
-    /// Releases what memory pressure takes back that the core does not
-    /// decide; see `BrowserPageHost.relieveMemoryPressure`.
-    func relieveMemoryPressure(_ level: MemoryPressureLevel) {
-        host.relieveMemoryPressure(level, presenting: Array(runtimeStore.presentedTabIDs))
-    }
-
     /// Hosts `opened`, a page an engine opened by itself that the core
     /// adopted for `tab` in this window, keeping its opener, history,
     /// JavaScript state and extension tab identity, as the tab's resident

@@ -49,7 +49,6 @@ final class MobileBrowserWindowSceneModel {
         tabStateArchive: (any BrowserTabStateArchiving)?,
         windowLayouts: BrowserWindowLayouts,
         startupBehavior: StartupBehavior,
-        monitorsMemoryPressure: Bool,
         usesEphemeralWebsiteDataStores: Bool = false,
         mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloads: MobileBrowserDownloads? = nil,
@@ -67,9 +66,6 @@ final class MobileBrowserWindowSceneModel {
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(
             browser: browser,
-            // The window's own store is where a tab's web view actually lives, so
-            // this is the residency a squeeze has to reach.
-            monitorsMemoryPressure: monitorsMemoryPressure,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             permissionCenter: permissionCenter,
             mediaSessionStore: mediaSessionStore,
@@ -133,6 +129,7 @@ final class MobileBrowserWindowSceneModel {
     func activateWindow() {
         reopenIfClosed()
         pageStoreRegistry.register(pages)
+        pageStoreRegistry.registerPrivateBrowsing(privatePages)
     }
 
     func cleanupDeferredWebsiteDataStores() async {
@@ -143,11 +140,6 @@ final class MobileBrowserWindowSceneModel {
         await browser.sweepExpiredBrowsingDataWhileSceneIsActive {
             pages.downloadCenter.sweepExpiredRecords(in: browser.spaceModels)
         }
-    }
-
-    func handleMemoryPressure() {
-        pages.handleMemoryPressure(.critical)
-        privatePages.handleMemoryPressure(.critical)
     }
 
     func prepareForInactiveScene() {
@@ -169,6 +161,7 @@ final class MobileBrowserWindowSceneModel {
         isClosed = true
         closePrivateWorkspace()
         pageStoreRegistry.unregister(pages)
+        pageStoreRegistry.unregister(privatePages)
         flushPendingPersistence()
     }
 

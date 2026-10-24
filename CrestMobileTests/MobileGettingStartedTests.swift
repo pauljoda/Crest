@@ -23,7 +23,7 @@ final class MobileGettingStartedTests: XCTestCase {
         browser.selectTab(id)
         pages.select()
         XCTAssertEqual(state.lesson, .folders)
-        pages.handleMemoryPressure(.critical)
+        pages.relieveMemoryPressure(.critical)
         XCTAssertTrue(pages.nativeTabs.contains(assignment))
         XCTAssertFalse(
             pages.host.closeDurablePage(

@@ -305,7 +305,9 @@ final class BrowserMacApplication {
         self.systemNowPlaying = systemNowPlaying
         self.startupBehavior = startupBehavior
         self.launchEnvironment = launchEnvironment.coreEnvironment
-        memoryPressure = usesIsolatedLaunch ? nil : BrowserMemoryPressureMonitor(core: core, pools: pagePoolRegistry)
+        memoryPressure =
+            usesIsolatedLaunch
+            ? nil : BrowserMemoryPressureMonitor(core: core) { [pagePoolRegistry] in pagePoolRegistry.livePools }
         browser.family.configureSpaceDataCleanup(pagePoolRegistry, from: browser)
         memoryPressure?.start()
     }

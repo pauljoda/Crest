@@ -1,4 +1,3 @@
-import Dispatch
 import Observation
 import UIKit
 import UniformTypeIdentifiers
@@ -74,15 +73,12 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
     @ObservationIgnored let contentBlocking: BrowserContentBlockingController
-    @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
-    @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
     /// The window this store hosts pages for. Its pages open through the core
     /// from this window, in its workspace.
     @ObservationIgnored let browser: BrowserStore
 
     init(
         browser: BrowserStore,
-        monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchEnvironment.current.requiresIsolation,
@@ -129,19 +125,12 @@ final class MobileBrowserPageStore:
         downloadCenter = downloads.center
         downloadPrompts = downloads.prompts
         contentBlocking = BrowserContentBlockingController(rules: browser.core.engines.webKit?.contentRules)
-        if monitorsMemoryPressure {
-            installMemoryPressureSource()
-        }
         pageZoomPreferences.register(self)
         host.dropPresentation = { [weak self] in self?.dropPresentation(of: $0) }
         browser.core.engines.observeRecords(self) { [weak self] in self?.restyleVisitedLinks(after: $0) }
         browser.core.followUnloadedPages(self) { [weak self] in self?.host.pageUnloaded($0) }
         followAdoptedPages()
         followPutAwayPages()
-    }
-
-    deinit {
-        memoryPressureSource?.cancel()
     }
 
     var activeURL: URL? { activePage?.live.displayURL }
@@ -563,33 +552,6 @@ final class MobileBrowserPageStore:
         )
     }
 
-    /// Relieves one squeeze at `level`, once however many signals it sends:
-    /// the host lets go of what the core does not decide, then the core
-    /// unloads the tab pages off screen longest, as many as a phone or tablet
-    /// gives back at that level, from what each page last told it about its
-    /// media.
-    func handleMemoryPressure(
-        _ level: MemoryPressureLevel,
-        at time: Date = .now
-    ) {
-        guard memoryPressureCoalescer.shouldHandle(level, at: time) else { return }
-        host.relieveMemoryPressure(level, presenting: presentedTabIDs)
-        _ = try? browser.core.send(ReportMemoryPressure(level: level))
-    }
-
-    /// Handles one kernel pressure event. The raw event has to be captured inside
-    /// the dispatch source's own handler, so it arrives here as a value rather than
-    /// being read back off the source.
-    func handleMemoryPressureEvent(
-        _ event: DispatchSource.MemoryPressureEvent,
-        at time: Date = .now
-    ) {
-        handleMemoryPressure(
-            event.contains(.critical) ? .critical : .warning,
-            at: time
-        )
-    }
-
     /// Opens a page for `tab` in `space` through the core and hosts what WebKit
     /// built, on `opener`'s engine when another page opened the tab; nil when
     /// the core refuses the tab a page.
@@ -705,28 +667,5 @@ final class MobileBrowserPageStore:
     /// before an inactive page is unloaded.
     func archiveResidentTabStates() {
         host.archiveResidentTabStates()
-    }
-
-    /// Listens for the kernel's own pressure events. UIKit's memory warning only
-    /// reaches a foreground app and arrives late, so on iOS — where the system
-    /// kills an app rather than swapping — this is the signal that gets ahead of a
-    /// termination. It stays a thin wire: everything it decides is the level.
-    private func installMemoryPressureSource() {
-        let source = DispatchSource.makeMemoryPressureSource(
-            eventMask: [.warning, .critical],
-            queue: .main
-        )
-        source.setEventHandler { [weak self] in
-            // `dispatch_source_get_data` is only defined while this handler is
-            // running: read after a hop it answers zero, and critical pressure
-            // would forever look like a warning. The source runs on the main
-            // queue, so the event is captured and handled without one.
-            MainActor.assumeIsolated {
-                guard let self, let source = self.memoryPressureSource else { return }
-                self.handleMemoryPressureEvent(source.data)
-            }
-        }
-        memoryPressureSource = source
-        source.resume()
     }
 }

@@ -675,7 +675,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(transientLease.page?.isContentBlockingActive, false)
 
         transientLease.setActive(false)
-        pages.handleMemoryPressure(.warning)
+        pages.relieveMemoryPressure(.warning)
         XCTAssertNil(transientLease.page)
         transientLease.restore()
         XCTAssertEqual(transientLease.page?.isContentBlockingActive, false)
@@ -956,7 +956,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         }
 
         let activePage = try XCTUnwrap(pages.activePage)
-        pages.handleMemoryPressure(.warning)
+        BrowserMemoryPressureMonitor(core: browser.core) { [pages] }.relieve(.warning)
 
         XCTAssertEqual(pages.residentPageCount, tabs.count)
         XCTAssertTrue(pages.containsResidentPage(for: tabs[3].id))
@@ -992,6 +992,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
             browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
+        // Another window of the same workspace: its pages are relieved by the
+        // same squeeze, which the core still answers once.
+        let registry = MobileBrowserPageStoreRegistry(primary: pages)
+        registry.register(
+            MobileBrowserPageStore(browser: browser.makeWindowStore(), usesEphemeralWebsiteDataStores: true))
+        let monitor = BrowserMemoryPressureMonitor(core: browser.core) { registry.liveStores }
         let squeeze = Date()
 
         for tab in tabs {
@@ -1000,7 +1006,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             try await showDocument(in: try XCTUnwrap(pages.activePage))
         }
 
-        pages.handleMemoryPressure(.critical, at: squeeze)
+        monitor.relieve(.critical, at: squeeze)
 
         XCTAssertEqual(pages.residentPageCount, tabs.count - 1)
         XCTAssertFalse(pages.containsResidentPage(for: tabs[0].id))
@@ -1054,7 +1060,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         }
         XCTAssertEqual(pages.residentPageCount, 5)
 
-        pages.handleMemoryPressure(.critical)
+        BrowserMemoryPressureMonitor(core: browser.core) { [pages] }.relieve(.critical)
 
         XCTAssertEqual(pages.residentPageCount, 4)
         XCTAssertTrue(pages.containsResidentPage(for: pinned[0].id))

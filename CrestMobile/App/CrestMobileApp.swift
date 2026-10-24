@@ -52,10 +52,12 @@ private final class BrowserMobileApplication {
     let automaticallyPresentsOnboarding: Bool
     let usesEphemeralWebsiteDataStores: Bool
     let presentsInstalledApplicationUI: Bool
-    /// Only an installed launch watches the kernel's pressure events. An isolated
-    /// launch keeps its residency exactly where a test put it without involving
-    /// the installed browser session.
-    let monitorsMemoryPressure: Bool
+    /// The app's one memory pressure monitor, which relieves every window's
+    /// pages. The kernel's pressure events reach the app in the background and
+    /// ahead of UIKit's warning, so they get ahead of a termination. Only an
+    /// installed launch watches them; an isolated launch keeps its residency
+    /// exactly where a test put it, and hears only UIKit's memory warning.
+    let memoryPressure: BrowserMemoryPressureMonitor
 
     init() throws {
         #if CREST_REVIEW_BUILD
@@ -124,7 +126,6 @@ private final class BrowserMobileApplication {
         )
         let pages = MobileBrowserPageStore(
             browser: browser,
-            monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             permissionCenter: permissionCenter,
             mediaSessionStore: mediaSessions,
@@ -171,7 +172,8 @@ private final class BrowserMobileApplication {
         // the Mac menu bar does, composed exactly the way the Mac composes it.
         shortcuts = BrowserShortcutStore(core: core, legacyOverrides: legacyDevice.shortcuts)
         self.permissionCenter = permissionCenter
-        pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
+        let pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
+        self.pageStoreRegistry = pageStoreRegistry
         self.mediaSessions = mediaSessions
         self.downloads = downloads
         self.privateDownloads = privateDownloads
@@ -196,7 +198,11 @@ private final class BrowserMobileApplication {
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
         startupBehavior = browser.startupBehavior(for: launchEnvironment)
-        monitorsMemoryPressure = !usesIsolatedLaunch
+        let memoryPressure = BrowserMemoryPressureMonitor(core: core) { [pageStoreRegistry] in
+            pageStoreRegistry.liveStores
+        }
+        if !usesIsolatedLaunch { memoryPressure.start() }
+        self.memoryPressure = memoryPressure
         usesEphemeralWebsiteDataStores = usesIsolatedLaunch
     }
 
@@ -210,7 +216,7 @@ private final class BrowserMobileApplication {
             tabStateArchive: tabStateArchive,
             windowLayouts: windowLayouts,
             startupBehavior: startupBehavior,
-            monitorsMemoryPressure: monitorsMemoryPressure,
+            memoryPressure: memoryPressure,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             onboardingProgress: onboardingProgress,
             onboardingCoordinator: onboardingCoordinator,

@@ -33,7 +33,6 @@ final class MobileBrowserColdStartTests: XCTestCase {
             tabStateArchive: nil,
             windowLayouts: layouts,
             startupBehavior: .lastActiveTab,
-            monitorsMemoryPressure: false,
             usesEphemeralWebsiteDataStores: true
         )
         XCTAssertTrue(model.navigation.compactShowsPage)

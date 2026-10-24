@@ -1,24 +1,25 @@
 import Dispatch
 import Foundation
 
-/// The app's one memory pressure source on the Mac. Each squeeze first
-/// releases what the page pools keep themselves, then tells the core, which
-/// unloads the tab pages off screen longest from what each page last told it
-/// about its media.
+/// The app's one memory pressure source. Each squeeze first releases what
+/// every page owner keeps itself, then tells the core once, which unloads the
+/// tab pages off screen longest, as many as the device gives back at that
+/// level, from what each page last told it about its media.
 @MainActor
 final class BrowserMemoryPressureMonitor {
     // MARK: - Variables
 
     private weak var core: CrestCore?
-    private let pools: BrowserPagePoolRegistry
+    /// Every page owner alive now, in every window and browsing mode.
+    private let owners: @MainActor () -> [any BrowserPageOwner]
     private var source: (any DispatchSourceMemoryPressure)?
     private var coalescer = BrowserMemoryPressureCoalescer()
 
     // MARK: - Initializers
 
-    init(core: CrestCore, pools: BrowserPagePoolRegistry) {
+    init(core: CrestCore, owners: @escaping @MainActor () -> [any BrowserPageOwner]) {
         self.core = core
-        self.pools = pools
+        self.owners = owners
     }
 
     // MARK: - Actions - Monitoring
@@ -47,10 +48,11 @@ final class BrowserMemoryPressureMonitor {
         relieve(event.contains(.critical) ? MemoryPressureLevel.critical : .warning, at: time)
     }
 
-    /// Relieves one squeeze at `level`, once however many signals it sends.
+    /// Relieves one squeeze at `level`, once however many signals it sends:
+    /// the kernel's source and, on iOS, the memory warning every scene hears.
     func relieve(_ level: MemoryPressureLevel, at time: Date = .now) {
         guard coalescer.shouldHandle(level, at: time) else { return }
-        for pool in pools.livePools { pool.relieveMemoryPressure(level) }
+        for owner in owners() { owner.relieveMemoryPressure(level) }
         let changes = (try? core?.send(ReportMemoryPressure(level: level))) ?? []
         let unloaded = changes.compactMap { change -> UUID? in
             guard case .pageUnloaded(let unloaded) = change else { return nil }

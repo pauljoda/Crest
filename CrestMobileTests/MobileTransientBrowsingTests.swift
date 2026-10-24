@@ -64,7 +64,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
 
         XCTAssertNotNil(lease.page)
         XCTAssertEqual(pages.retainedTransientPageCount, 1)
-        pages.handleMemoryPressure(.critical)
+        pages.relieveMemoryPressure(.critical)
 
         XCTAssertNil(lease.page)
         XCTAssertTrue(lease.wasReleasedForMemoryPressure)

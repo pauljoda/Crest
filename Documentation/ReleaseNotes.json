@@ -4385,6 +4385,10 @@
     "webkit-first-page-under-page-colour": {
       "category": "fixed",
       "message": "On Mac, a page shown in WebKit now uses its own background colour when you scroll past its edges, starting with the first page a tab loads."
+    },
+    "memory-warning-unloads-one-tab": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, running low on memory now unloads one background tab instead of several, so fewer tabs reload when you go back to them."
     }
   }
 }

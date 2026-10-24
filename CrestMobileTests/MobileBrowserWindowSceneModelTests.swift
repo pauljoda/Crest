@@ -38,8 +38,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
                 spaceAccess: BrowserSpaceAccessController(),
                 tabStateArchive: nil,
                 windowLayouts: BrowserWindowLayouts(defaults: nil),
-                startupBehavior: behavior,
-                monitorsMemoryPressure: false
+                startupBehavior: behavior
             )
 
             XCTAssertFalse(model.navigation.compactShowsPage)
@@ -61,7 +60,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             id: UUID(), rootBrowser: rootBrowser, permissionCenter: BrowserSitePermissionCenter(),
             pageStoreRegistry: registry, spaceAccess: BrowserSpaceAccessController(), tabStateArchive: nil,
             windowLayouts: BrowserWindowLayouts(defaults: nil), startupBehavior: .showStartPage,
-            monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
+            usesEphemeralWebsiteDataStores: true)
         model.privateBrowser.openNewTab(url: try XCTUnwrap(URL(string: "https://private.example")))
         let privateSession = model.privateBrowser.sessionSeed
         try model.browser.core.send(StartSetup(workspaceID: model.browser.family.workspaceID, entry: .firstRun))
@@ -93,7 +92,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             id: UUID(), rootBrowser: rootBrowser, permissionCenter: BrowserSitePermissionCenter(),
             pageStoreRegistry: registry, spaceAccess: BrowserSpaceAccessController(), tabStateArchive: nil,
             windowLayouts: BrowserWindowLayouts(defaults: nil), startupBehavior: .lastActiveTab,
-            monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
+            usesEphemeralWebsiteDataStores: true)
         let closing = model.privateBrowser
         let closed = closing.family.workspaceID
 
@@ -130,7 +129,6 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             tabStateArchive: nil,
             windowLayouts: BrowserWindowLayouts(defaults: nil),
             startupBehavior: .lastActiveTab,
-            monitorsMemoryPressure: false,
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -165,7 +163,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
                 id: UUID(), rootBrowser: root, permissionCenter: permissionCenter,
                 pageStoreRegistry: registry, spaceAccess: spaceAccess, tabStateArchive: nil,
                 windowLayouts: windowLayouts, startupBehavior: .lastActiveTab,
-                monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
+                usesEphemeralWebsiteDataStores: true)
         }
         let first = makeScene()
         let second = makeScene()
