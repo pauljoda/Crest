@@ -4425,6 +4425,10 @@
     "shared-notification-delivery": {
       "category": "internal",
       "message": "Show web and extension notifications through one shared path that checks permission, trims long text and withdraws stale ones."
+    },
+    "layer-direction-moves": {
+      "category": "internal",
+      "message": "Move the Space selector out of the design system into Spaces, settings layout into the design system and page state models next to the page."
     }
   }
 }
