@@ -11,7 +11,7 @@
         @MainActor @ViewBuilder
         static func featureFlagsPane(space: SpaceModel?, browser: BrowserStore) -> some View {
             if browser.core.state.engines?.engines.first(where: \.isDefault)?.kind == .webKit {
-                BrowserPlatformWebKitFeatureFlagSettingsPane()
+                BrowserWebKitFeatureFlagSettingsPane(store: BrowserWebKitFeatureFlagStore.active)
             } else {
                 BrowserChromiumFeatureFlagSettingsPane(space: space, browser: browser)
             }

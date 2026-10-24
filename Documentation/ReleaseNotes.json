@@ -4397,6 +4397,10 @@
     "slim-test-suite": {
       "category": "internal",
       "message": "Trim the test suites to the contracts that can break silently: persistence, sync, privacy, security, extensions, input routing and shared session rules."
+    },
+    "fold-one-sided-platform-seams": {
+      "category": "internal",
+      "message": "Share the window colour, sheet sizing and text field settings between Mac and iPhone, and drop platform stand-ins that did nothing."
     }
   }
 }

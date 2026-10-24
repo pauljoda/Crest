@@ -61,13 +61,15 @@ struct BrowserSettingsDestinationRouter: View {
                 spaceAccess: spaceAccess
             )
         case .shortcuts:
-            shortcuts.map { shortcuts in
-                BrowserPlatformShortcutSettingsPane(
-                    shortcuts: shortcuts,
-                    requestedSpaceID: requestedSpaceID,
-                    requestRevision: requestRevision
-                )
-            }
+            #if os(macOS)
+                shortcuts.map { shortcuts in
+                    BrowserShortcutSettingsView(
+                        shortcuts: shortcuts,
+                        requestedSpaceID: requestedSpaceID,
+                        requestRevision: requestRevision
+                    )
+                }
+            #endif
         case .spaces:
             BrowserPlatformSpaceSettingsPane(
                 browser: browser,

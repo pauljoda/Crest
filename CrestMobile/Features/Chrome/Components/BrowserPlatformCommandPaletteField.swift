@@ -41,7 +41,8 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         field.font = .preferredFont(forTextStyle: .title2)
         field.adjustsFontForContentSizeCategory = true
         field.placeholder = String(localized: "Search or Enter URL…")
-        field.keyboardType = BrowserPlatformAddressInputModifier.keyboardType
+        // A URL keyboard would remove the space bar multi-word searches need.
+        field.keyboardType = .default
         field.textContentType = nil
         field.autocapitalizationType = .none
         field.autocorrectionType = .no

@@ -63,7 +63,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
         searchTerms: "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility",
-        symbol: "cpu", tincture: .riverLapis, isMacOnly: true)
+        symbol: "cpu", tincture: .riverLapis)
     static let links = BrowserSettingsDestination(
         kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",
         searchTerms: "external apps Quick Window Peek pinned saved routing open", symbol: "link",
@@ -71,7 +71,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let shortcuts = BrowserSettingsDestination(
         kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
         searchTerms: "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page", symbol: "keyboard",
-        tincture: .lionOr, isMacOnly: true)
+        tincture: .lionOr)
     static let spaces = BrowserSettingsDestination(
         kind: .spaces, name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
         searchTerms:
@@ -100,7 +100,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let featureFlags = BrowserSettingsDestination(
         kind: .featureFlags, name: "featureFlags", title: "Feature Flags", subtitle: "Engine experiments",
         searchTerms: "WebKit Chromium experimental preview testable developer stable runtime flags features",
-        symbol: "flag.2.crossed", tincture: .sunTerracotta, isMacOnly: true,
+        symbol: "flag.2.crossed", tincture: .sunTerracotta,
         requiredCapability: .featureFlags)
     static let advanced = BrowserSettingsDestination(
         kind: .advanced, name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
@@ -110,7 +110,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         kind: .agents, name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
         searchTerms:
             "agents AI MCP model context protocol coding agents scripts automation Claude Codex Cursor command line terminal",
-        symbol: "sparkles", tincture: .meadowForest, isMacOnly: true)
+        symbol: "sparkles", tincture: .meadowForest)
     static let about = BrowserSettingsDestination(
         kind: .about, name: "about", title: "About", subtitle: "Version, updates, and support",
         searchTerms:
@@ -153,10 +153,6 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     /// engine without it never offers the destination.
     let requiredCapability: EngineCapability?
 
-    /// Whether the subject exists only on the Mac: the engine choice,
-    /// rebindable keyboard commands and WebKit's private feature registry.
-    let isMacOnly: Bool
-
     var id: String { name }
 
     // MARK: - Initializers
@@ -164,7 +160,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     private init(
         kind: Kinds, name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
         subtitle: LocalizedStringResource, searchTerms: LocalizedStringResource, symbol: String,
-        tincture: Tincture, isMacOnly: Bool = false, requiredCapability: EngineCapability? = nil
+        tincture: Tincture, requiredCapability: EngineCapability? = nil
     ) {
         self.kind = kind
         self.name = name
@@ -174,7 +170,6 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         self.searchTerms = searchTerms
         self.symbol = symbol
         self.tincture = tincture
-        self.isMacOnly = isMacOnly
         self.requiredCapability = requiredCapability
     }
 

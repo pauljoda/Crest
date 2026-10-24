@@ -10,4 +10,11 @@ enum CrestColor {
     static let dropIndicator = CrestBrandPalette.paper.opacity(CrestOpacity.dropIndicator)
     static let textPrimary = Color.primary
     static let textSecondary = Color.secondary
+
+    /// The platform's own window background, under a Space's colors.
+    #if os(macOS)
+        static let windowBackground = Color(nsColor: .windowBackgroundColor)
+    #else
+        static let windowBackground = Color(uiColor: .systemBackground)
+    #endif
 }

@@ -96,7 +96,12 @@ struct BrowserFindBar: View {
     private var queryField: some View {
         TextField("Find in Page", text: queryBinding)
             .textFieldStyle(.plain)
-            .modifier(BrowserPlatformFindQueryInputModifier())
+            #if os(iOS)
+                // The query stays literal, and the return key reads as search.
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+            #endif
             .focused($focusedField, equals: .query)
             .frame(width: metrics.queryWidth)
             .onSubmit {

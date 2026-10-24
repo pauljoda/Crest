@@ -24,7 +24,9 @@ struct BrowserAboutSettingsPane: View {
                 appIdentity
             }
 
-            BrowserPlatformSoftwareUpdateSettingsSection()
+            #if os(macOS)
+                BrowserSoftwareUpdateSettingsSection()
+            #endif
 
             if !releaseNotes.isEmpty {
                 Section {

@@ -38,6 +38,6 @@ extension View {
     }
 
     func browserSearchEngineSheetSizing(_ size: BrowserSearchEngineSheetSize) -> some View {
-        modifier(BrowserPlatformSearchEngineSheetSizingModifier(size: size))
+        crestSheetSize(minWidth: size.minimumWidth, minHeight: size.minimumHeight)
     }
 }

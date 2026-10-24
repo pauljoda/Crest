@@ -12,13 +12,9 @@ struct BrowserWindowAtmosphere: View {
         space.map(\.settings.look.shown)
     }
 
-    private var platformBackground: Color {
-        BrowserPlatformWindowAtmosphereStyle.backgroundColor
-    }
-
     var body: some View {
         ZStack {
-            platformBackground
+            CrestColor.windowBackground
             if let branding {
                 BrowserSpaceBannerBackground(branding: branding)
             }

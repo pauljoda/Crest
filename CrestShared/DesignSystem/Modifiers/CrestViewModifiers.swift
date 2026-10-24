@@ -63,4 +63,16 @@ extension View {
     func crestMenuActionLabelStyle() -> some View {
         labelStyle(.titleAndIcon)
     }
+
+    /// Sizes a sheet: a window frame on the Mac, and on touch a half-height
+    /// detent that stretches to full height.
+    func crestSheetSize(
+        minWidth: CGFloat, idealWidth: CGFloat? = nil, minHeight: CGFloat, idealHeight: CGFloat? = nil
+    ) -> some View {
+        #if os(macOS)
+            frame(minWidth: minWidth, idealWidth: idealWidth, minHeight: minHeight, idealHeight: idealHeight)
+        #else
+            presentationDetents([.medium, .large])
+        #endif
+    }
 }

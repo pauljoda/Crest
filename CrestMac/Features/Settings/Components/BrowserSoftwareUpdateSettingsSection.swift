@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct BrowserPlatformSoftwareUpdateSettingsSection: View {
+struct BrowserSoftwareUpdateSettingsSection: View {
     // MARK: - Variables
 
     @Environment(BrowserSoftwareUpdateService.self) private var softwareUpdates
