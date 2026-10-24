@@ -3589,6 +3589,7 @@ struct LinkPreferences: Equatable, Sendable {
     let opensPeekAutomatically: Bool
     let peekModifier: LinkPeekModifier
     let dragsLinksToPeek: Bool
+    let dimsPageBehindPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
     let routes: [LinkRoute]
@@ -13583,13 +13584,15 @@ struct LinkBehavior: Hashable, Sendable {
     static let followsMovedTabs = LinkBehavior(tag: 1, name: "followsMovedTabs")
     static let opensPeekAutomatically = LinkBehavior(tag: 2, name: "opensPeekAutomatically")
     static let dragsLinksToPeek = LinkBehavior(tag: 3, name: "dragsLinksToPeek")
-    static let remembersSpaceBySite = LinkBehavior(tag: 4, name: "remembersSpaceBySite")
+    static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
+    static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
         followsMovedTabs,
         opensPeekAutomatically,
         dragsLinksToPeek,
+        dimsPageBehindPeek,
         remembersSpaceBySite
     ]
 

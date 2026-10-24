@@ -72,7 +72,7 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
     }
 
     /// The window's frame around this Space's pages. Every edge of it moves
-    /// the window, except where Peek covers it.
+    /// the window.
     private var frameInsets: EdgeInsets {
         appearance.pageInsets(docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection)
     }
@@ -82,7 +82,12 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         return surface(presentation)
             .overlay { BrowserPageFrameTitleBarSurface(insets: frameInsets) }
             .overlay {
-                BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
+                BrowserRootPeekLayer(
+                    model: model,
+                    transientBrowsing: transientBrowsing,
+                    space: space,
+                    frameInsets: frameInsets
+                )
             }
             .environment(\.browserPagePresentationWindowID, model.windowState?.id)
             .environment(\.spaceContentIsInteractive, isInteractive)

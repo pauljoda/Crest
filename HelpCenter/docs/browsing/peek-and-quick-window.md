@@ -23,6 +23,8 @@ Drag a webpage link to pull out a live preview that follows your gesture and fad
 
 Choose this behavior in **Settings → Links → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
 
+On Mac, Peek dims only the page behind it by default. Turn off **Settings → Links → Dim the page behind Peek** to keep that page at full brightness.
+
 On iPhone and iPad, touch and hold webpage links for the native link preview and actions, including opening a link in another Space. Touch and hold an image for image actions such as saving it.
 
 ## Quick Window

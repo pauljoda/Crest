@@ -4381,6 +4381,10 @@
     "mouse-swipe-buttons-switch-spaces-over-sidebar": {
       "category": "fixed",
       "message": "Mouse Back and Forward buttons set up as swipes in Logitech Options+ switch Spaces when the pointer is over the sidebar, as other mice do."
+    },
+    "dim-only-page-behind-peek": {
+      "category": "improved",
+      "message": "Peek now dims only the page behind it on Mac, and you can turn the dimming off in Settings → Links."
     }
   }
 }
