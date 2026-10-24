@@ -177,16 +177,6 @@ extension BrowserStore {
         {
             return nil
         }
-        #if CREST_PERFORMANCE_HARNESS
-            if let performanceSeed = BrowserPerformanceSoakFixture.makeSeed(
-                baseURLString: launchEnvironment.performanceBaseURLString,
-                rawTabCount: launchEnvironment.performanceTabCount,
-                isHeavy: launchEnvironment.performanceHeavySession,
-                runID: launchEnvironment.performanceRunID
-            ) {
-                return performanceSeed
-            }
-        #endif
         return launchEnvironment.presentsShowcaseSession ? .showcase : .preview
     }
 

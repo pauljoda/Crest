@@ -47,8 +47,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
     }
 
     /// Each fixture input reaches the core's isolation rule through the
-    /// environment's own parsing, including the performance harness whose
-    /// base address counts even when empty. The rule itself is the core's.
+    /// environment's own parsing. The rule itself is the core's.
     func testEveryFixtureLaunchFlagUsesAnIsolatedDataGraph() {
         let fixtures: [[String: String]] = [
             ["CREST_ISOLATED_SESSION": "1"],
@@ -59,7 +58,6 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
             ["CREST_SHOW_SETUP": "1"],
             ["CREST_FORCE_ONBOARDING_SETUP": "1"],
             ["CREST_ISOLATED_CLOUD_SYNC_ID": "review"],
-            ["CREST_PERFORMANCE_BASE_URL": ""],
             ["CREST_UPDATE_TEST_FEED_URL": "http://localhost:48151/appcast.xml"],
         ]
 

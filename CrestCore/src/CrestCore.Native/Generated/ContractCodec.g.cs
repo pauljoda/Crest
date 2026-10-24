@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf6, 0xf5, 0x70, 0x4c, 0x99, 0xdb, 0x65, 0x3c, 0x42, 0x43, 0x9d, 0x52, 0x03, 0x71, 0x3c, 0xb7, 0xa5, 0x1a, 0x7b, 0xb3, 0xd1, 0x24, 0x4d, 0xf6, 0xcf, 0x8d, 0xff, 0x2a, 0x96, 0x13, 0xa3, 0xa8
+        0x7e, 0x1f, 0x2c, 0x04, 0x12, 0xf4, 0x55, 0xb1, 0xd4, 0xa4, 0xf8, 0xaf, 0xfc, 0x5d, 0xa4, 0x10, 0x6a, 0xde, 0x21, 0x32, 0x0f, 0x95, 0x7c, 0x87, 0xb3, 0x1f, 0x98, 0x11, 0xcc, 0xb6, 0xf9, 0xf3
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -10226,7 +10226,6 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
-            reader.ReadBool(),
             reader.ReadBool());
     }
 
@@ -10244,7 +10243,6 @@ public static class ContractCodec {
         writer.WriteBool(value.ForcesOnboardingWelcome);
         writer.WriteBool(value.ForcesDesktopSetup);
         writer.WriteBool(value.ForcesMobileSetup);
-        writer.WriteBool(value.RunsPerformanceHarness);
         writer.WriteBool(value.UsesUpdateTestFeed);
     }
 
@@ -15761,7 +15759,6 @@ public static class ContractCodec {
         _ = reader.ReadBool();
         _ = reader.ReadInt32();
         _ = reader.ReadInt32();
-        _ = reader.ReadInt32();
         _ = reader.ReadList(() => ReadImportExtensionInstall(reader));
         return value;
     }
@@ -15806,7 +15803,6 @@ public static class ContractCodec {
         }
         writer.WriteBool(value.ShowsLastSpace);
         writer.WriteInt32(value.IncludedPasswordCount);
-        writer.WriteInt32(value.IncludedExtensionCount);
         writer.WriteInt32(value.NewSpaceCapacity);
         writer.WriteCount(value.ExtensionInstalls.Count);
         foreach (var itemExtensionInstalls in value.ExtensionInstalls) {

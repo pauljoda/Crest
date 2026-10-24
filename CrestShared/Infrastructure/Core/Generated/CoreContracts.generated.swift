@@ -3433,7 +3433,6 @@ struct LaunchEnvironment: Equatable, Sendable {
         forcesOnboardingWelcome: false,
         forcesDesktopSetup: false,
         forcesMobileSetup: false,
-        runsPerformanceHarness: false,
         usesUpdateTestFeed: false
     )
 
@@ -3448,7 +3447,6 @@ struct LaunchEnvironment: Equatable, Sendable {
     var forcesOnboardingWelcome: Bool
     var forcesDesktopSetup: Bool
     var forcesMobileSetup: Bool
-    var runsPerformanceHarness: Bool
     var usesUpdateTestFeed: Bool
 }
 
@@ -5735,7 +5733,6 @@ struct SetupImportReview: Equatable, Sendable {
     let nextSpaceID: UUID?
     let showsLastSpace: Bool
     let includedPasswordCount: Int
-    let includedExtensionCount: Int
     let newSpaceCapacity: Int
     let extensionInstalls: [ImportExtensionInstall]
 }

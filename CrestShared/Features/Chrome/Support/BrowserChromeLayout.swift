@@ -20,15 +20,4 @@ enum BrowserChromeLayout {
     static func clampedSidebarWidth(_ width: CGFloat) -> CGFloat {
         min(max(width, sidebarMinimumWidth), sidebarMaximumWidth)
     }
-
-    static func pageFrameInsets(
-        adjoinsLeadingSidebar: Bool
-    ) -> EdgeInsets {
-        EdgeInsets(
-            top: pageFrameInset,
-            leading: adjoinsLeadingSidebar ? 0 : pageFrameInset,
-            bottom: pageFrameInset,
-            trailing: pageFrameInset
-        )
-    }
 }

@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xf6, 0xf5, 0x70, 0x4c, 0x99, 0xdb, 0x65, 0x3c, 0x42, 0x43, 0x9d, 0x52, 0x03, 0x71, 0x3c, 0xb7, 0xa5, 0x1a, 0x7b, 0xb3, 0xd1, 0x24, 0x4d, 0xf6, 0xcf, 0x8d, 0xff, 0x2a, 0x96, 0x13, 0xa3, 0xa8
+        0x7e, 0x1f, 0x2c, 0x04, 0x12, 0xf4, 0x55, 0xb1, 0xd4, 0xa4, 0xf8, 0xaf, 0xfc, 0x5d, 0xa4, 0x10, 0x6a, 0xde, 0x21, 0x32, 0x0f, 0x95, 0x7c, 0x87, 0xb3, 0x1f, 0x98, 0x11, 0xcc, 0xb6, 0xf9, 0xf3
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -11306,9 +11306,8 @@ extension LaunchEnvironment {
         let forcesOnboardingWelcome = try reader.readBool()
         let forcesDesktopSetup = try reader.readBool()
         let forcesMobileSetup = try reader.readBool()
-        let runsPerformanceHarness = try reader.readBool()
         let usesUpdateTestFeed = try reader.readBool()
-        self.init(isTestRuntime: isTestRuntime, isPreviewRuntime: isPreviewRuntime, requestsIsolatedSession: requestsIsolatedSession, hasNamedProfile: hasNamedProfile, requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession, presentsShowcase: presentsShowcase, usesInMemoryCredentials: usesInMemoryCredentials, forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesDesktopSetup, forcesMobileSetup: forcesMobileSetup, runsPerformanceHarness: runsPerformanceHarness, usesUpdateTestFeed: usesUpdateTestFeed)
+        self.init(isTestRuntime: isTestRuntime, isPreviewRuntime: isPreviewRuntime, requestsIsolatedSession: requestsIsolatedSession, hasNamedProfile: hasNamedProfile, requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession, presentsShowcase: presentsShowcase, usesInMemoryCredentials: usesInMemoryCredentials, forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesDesktopSetup, forcesMobileSetup: forcesMobileSetup, usesUpdateTestFeed: usesUpdateTestFeed)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -11323,7 +11322,6 @@ extension LaunchEnvironment {
         writer.writeBool(forcesOnboardingWelcome)
         writer.writeBool(forcesDesktopSetup)
         writer.writeBool(forcesMobileSetup)
-        writer.writeBool(runsPerformanceHarness)
         writer.writeBool(usesUpdateTestFeed)
     }
 }
@@ -20143,7 +20141,6 @@ extension SetupImportReview {
         }
         let showsLastSpace = try reader.readBool()
         let includedPasswordCount = try reader.readInt()
-        let includedExtensionCount = try reader.readInt()
         let newSpaceCapacity = try reader.readInt()
         let extensionInstallsCount = try reader.readCount()
         var extensionInstalls: [ImportExtensionInstall] = []
@@ -20152,7 +20149,7 @@ extension SetupImportReview {
             let extensionInstallsElement = try ImportExtensionInstall(from: &reader)
             extensionInstalls.append(extensionInstallsElement)
         }
-        self.init(source: source, spaces: spaces, overflowTabIDs: overflowTabIDs, shownSpaceID: shownSpaceID, leftOut: leftOut, spaceRoom: spaceRoom, browserTitle: browserTitle, title: title, hasIncludedSpaces: hasIncludedSpaces, includedTabCount: includedTabCount, nextSpaceID: nextSpaceID, showsLastSpace: showsLastSpace, includedPasswordCount: includedPasswordCount, includedExtensionCount: includedExtensionCount, newSpaceCapacity: newSpaceCapacity, extensionInstalls: extensionInstalls)
+        self.init(source: source, spaces: spaces, overflowTabIDs: overflowTabIDs, shownSpaceID: shownSpaceID, leftOut: leftOut, spaceRoom: spaceRoom, browserTitle: browserTitle, title: title, hasIncludedSpaces: hasIncludedSpaces, includedTabCount: includedTabCount, nextSpaceID: nextSpaceID, showsLastSpace: showsLastSpace, includedPasswordCount: includedPasswordCount, newSpaceCapacity: newSpaceCapacity, extensionInstalls: extensionInstalls)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -20193,7 +20190,6 @@ extension SetupImportReview {
         }
         writer.writeBool(showsLastSpace)
         writer.writeInt(includedPasswordCount)
-        writer.writeInt(includedExtensionCount)
         writer.writeInt(newSpaceCapacity)
         writer.writeCount(extensionInstalls.count)
         for element0 in extensionInstalls {

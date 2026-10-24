@@ -51,10 +51,6 @@ public sealed partial record SetupImportReview(ImportSource Source, IReadOnlyLis
     [Resolved]
     public int IncludedPasswordCount => Spaces.Where(space => space.Included && space.IncludesPasswords).Sum(space => space.PasswordCount);
 
-    /// How many extensions the review installs.
-    [Resolved]
-    public int IncludedExtensionCount => Spaces.Sum(space => space.BroughtExtensions.Count);
-
     /// How many more of its Spaces the review can bring as new Spaces, beside
     /// those it brings: none once the workspace would be full.
     [Resolved]

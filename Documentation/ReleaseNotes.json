@@ -4429,6 +4429,10 @@
     "layer-direction-moves": {
       "category": "internal",
       "message": "Move the Space selector out of the design system into Spaces, settings layout into the design system and page state models next to the page."
+    },
+    "remove-test-orphans": {
+      "category": "internal",
+      "message": "Remove the in-app performance harness and other code only retired tests and tools used."
     }
   }
 }

@@ -305,9 +305,6 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
-        #if CREST_PERFORMANCE_HARNESS
-            BrowserPerformanceProcessReporter.report(webView: webView)
-        #endif
         guard isCurrentNavigation(navigation) else { return }
         activeNavigation = nil
         let committedNavigation = committedNavigationCount

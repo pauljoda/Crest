@@ -9,7 +9,7 @@ namespace CrestCore.Tests;
 public sealed class LaunchPlanTests {
     private static readonly string[] FixtureFlags = [
         "testRuntime", "previewRuntime", "isolatedSession", "isolatedCloudSync", "resetSession", "showcase",
-        "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup", "performanceHarness", "updateTestFeed"
+        "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup", "updateTestFeed"
     ];
 
     /// A launch environment with the named flags on.
@@ -17,7 +17,7 @@ public sealed class LaunchPlanTests {
         bool On(string flag) => enabled.Contains(flag);
         return new(On("testRuntime"), On("previewRuntime"), On("isolatedSession"), On("namedProfile"), On("isolatedCloudSync"),
             On("resetSession"), On("showcase"), On("inMemoryCredentials"), On("onboardingWelcome"), On("desktopSetup"),
-            On("mobileSetup"), On("performanceHarness"), On("updateTestFeed"));
+            On("mobileSetup"), On("updateTestFeed"));
     }
 
     /// The plan the core answers before any session exists.
@@ -25,7 +25,7 @@ public sealed class LaunchPlanTests {
         new StandaloneAnswers().Query(new LaunchIsolation(platform ?? DevicePlatform.Desktop, environment));
 
     [Fact]
-    public void EveryTestFixtureAndHarnessLaunchStaysOutOfTheInstalledProfile() {
+    public void EveryTestAndFixtureLaunchStaysOutOfTheInstalledProfile() {
         foreach (var flag in FixtureFlags)
             Assert.True(Plan(Environment(flag)).RequiresIsolation, flag);
         var installed = Plan(Environment());

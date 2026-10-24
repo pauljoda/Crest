@@ -72,21 +72,6 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         return visibility
     }
 
-    /// Brings every folder's kept row in step with the Space as the read
-    /// model holds it: the tabs each folder holds however deep, the shown tab
-    /// and which tabs hold a page.
-    func reconcileCollapsedFolders(in space: SpaceModel, selectedTabID: UUID?, residentTabIDs: Set<UUID>) {
-        for folder in space.folders.models {
-            let assignment = BrowserFolderRuntimeAssignment(
-                folderID: folder.id, spaceID: space.id, profileID: space.profileID)
-            let tabIDs = space.tabIDs(inFolder: folder.id)
-            reconcileCollapsedFolder(
-                assignment, isExpanded: !folder.isCollapsed, selectedTabID: selectedTabID,
-                folderTabIDs: tabIDs,
-                residentFolderTabIDs: tabIDs.filter { residentTabIDs.contains($0) })
-        }
-    }
-
     func reconcileCollapsedFolder(
         _ assignment: BrowserFolderRuntimeAssignment, isExpanded: Bool, selectedTabID: UUID?,
         folderTabIDs: [UUID], residentFolderTabIDs: [UUID]
