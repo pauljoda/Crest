@@ -2464,6 +2464,9 @@
     "Available destination" : {
 
     },
+    "Available Space" : {
+
+    },
     "Avoid entering private information until the site fixes its certificate." : {
       "localizations" : {
         "ar" : {
@@ -3241,6 +3244,9 @@
 
     },
     "Choose Language" : {
+
+    },
+    "Choose Quick Window Space" : {
 
     },
     "Choose SF Symbol" : {

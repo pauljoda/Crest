@@ -95,6 +95,26 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         )
     }
 
+    func testSwitchingSpacesReopensTheCurrentPageWithTheChosenSpacesWebsiteData() throws {
+        let context = try makeContext()
+        let model = context.model
+        let url = model.presentedRequest.url
+
+        model.preparePage(isActive: true)
+        let sourceStore = try XCTUnwrap(model.page).webView.configuration.websiteDataStore
+        let destination = BrowserSpaceRuntimeAssignment(space: context.destination)
+        model.selectSpace(destination)
+        model.preparePage(isActive: true)
+
+        let lease = try XCTUnwrap(model.pageLease)
+        XCTAssertEqual(lease.assignment, destination)
+        XCTAssertEqual(model.presentedRequest.assignment, destination)
+        XCTAssertEqual(model.presentedRequest.url, url)
+        XCTAssertEqual(context.requestBinding.request, model.presentedRequest)
+        let destinationStore = try XCTUnwrap(lease.page).webView.configuration.websiteDataStore
+        XCTAssertFalse(sourceStore === destinationStore)
+    }
+
     func testClosingArchivesOnlyTheCurrentLeaseInItsExactSpace() throws {
         let context = try makeContext()
         let model = context.model
