@@ -27,10 +27,11 @@ public static class NativeSyncProjection {
     internal static TabPlacement Placement(JsonNode value, string field = StoredSessionCodec.Key.Placement)
         => TabPlacement.Named(Text(value[field])) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
 
-    internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
-        ?? (Placement(tab).IsDurable ? Text(tab["url"]) : null);
+    internal static string? SavedUrl(JsonNode tab) => Text(tab[StoredSessionCodec.Key.SavedUrl])
+        ?? (Placement(tab).IsDurable ? Text(tab[StoredSessionCodec.Key.Url]) : null);
 
-    internal static bool PortableTab(JsonNode tab) => SyncedAddress.IncludesTab(Text(tab["url"]), tab["nativeContent"] is not null, SavedUrl(tab));
+    internal static bool PortableTab(JsonNode tab) => SyncedAddress.IncludesTab(Text(tab[StoredSessionCodec.Key.Url]),
+        tab[StoredSessionCodec.Key.NativeContent] is not null, SavedUrl(tab));
 
     /// A stored archive record's reason as sync spells it. A reason this build
     /// does not know keeps its stored spelling.
@@ -120,7 +121,8 @@ public static class NativeSyncProjection {
 
             var tabs = portable.Where(t => policy.Includes(Placement(t))).ToArray();
             var tabTokens = Tokens(SyncPayloadType.Tab, tabs);
-            for (int j = 0; j < tabs.Length; j++) Add(SyncPayloadType.Tab, Tab(tabs[j], space["id"]!, tabTokens[j], archived: false));
+            for (int j = 0; j < tabs.Length; j++)
+                Add(SyncPayloadType.Tab, Tab(tabs[j], space[StoredSessionCodec.Key.Id]!, tabTokens[j], archived: false));
             if (!policy.HistoryAndArchive) continue;
             foreach (var history in Items(space, StoredSessionCodec.Key.History)
                          .Where(h => SyncedAddress.Includes(Text(h![StoredSessionCodec.Key.Url])))) {
@@ -132,29 +134,37 @@ public static class NativeSyncProjection {
             }
             // Archive presentation sorts by date after a merge. That is not a
             // user reorder: keep accepted positions and append new identities.
-            var archive = Items(space, StoredSessionCodec.Key.ArchivedTabs).Where(a => PortableTab(a!["tab"]!)).Select(a => a!)
-                .OrderBy(a => existing.GetValueOrDefault(SyncPayloadType.Archive.Kind.RecordName(Id(a["tab"]!["id"]))) ?? "~", StringComparer.Ordinal)
-                .ThenBy(a => Id(a["tab"]!["id"]).ToString("D"), StringComparer.Ordinal).ToArray();
+            static Guid TabId(JsonNode archived) => Id(archived[StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]);
+            var archive = Items(space, StoredSessionCodec.Key.ArchivedTabs).Where(a => PortableTab(a![StoredSessionCodec.Key.Tab]!)).Select(a => a!)
+                .OrderBy(a => existing.GetValueOrDefault(SyncPayloadType.Archive.Kind.RecordName(TabId(a))) ?? "~", StringComparer.Ordinal)
+                .ThenBy(a => TabId(a).ToString("D"), StringComparer.Ordinal).ToArray();
             var archiveTokens = Tokens(SyncPayloadType.Archive, archive);
             for (int j = 0; j < archive.Length; j++) Add(SyncPayloadType.Archive, new JsonObject {
-                ["tab"] = Tab(archive[j]["tab"]!, space["id"]!, archiveTokens[j], archived: true),
-                ["archivedAt"] = archive[j]["archivedAt"]!.DeepClone(),
-                ["reason"] = SyncedArchiveReason(archive[j], archiveReasons.GetValueOrDefault(Id(archive[j]["tab"]!["id"])))
+                [StoredSessionCodec.Key.Tab] = Tab(archive[j][StoredSessionCodec.Key.Tab]!, space[StoredSessionCodec.Key.Id]!, archiveTokens[j], archived: true),
+                [StoredSessionCodec.Key.ArchivedAt] = archive[j][StoredSessionCodec.Key.ArchivedAt]!.DeepClone(),
+                [StoredSessionCodec.Key.Reason] = SyncedArchiveReason(archive[j], archiveReasons.GetValueOrDefault(TabId(archive[j])))
             });
         }
         return result;
     }
 
     private static JsonObject Tab(JsonNode source, JsonNode spaceId, string token, bool archived) {
-        var value = Fields(source, "id", "title", "url", "symbol", "lastActivatedAt", "positionModifiedAt", "customTitle", "titleModifiedAt", "keepsPageLoaded");
-        value["spaceID"] = spaceId.DeepClone(); value["orderToken"] = token;
-        Spell(value, "url");
-        value["placement"] = archived ? JsonValue.Create(TabPlacement.Current.Name) : source["placement"]!.DeepClone();
+        // The placement and what it holds are the tab's own as it sits now; a
+        // native view never syncs, so its content is never copied.
+        var value = Fields(source, StoredSessionCodec.Key.Id, StoredSessionCodec.Key.Title, StoredSessionCodec.Key.Url,
+            StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.LastActivatedAt, StoredSessionCodec.Key.PositionModifiedAt,
+            StoredSessionCodec.Key.CustomTitle, StoredSessionCodec.Key.TitleModifiedAt, StoredSessionCodec.Key.KeepsPageLoaded);
+        value[StoredSessionCodec.Key.SpaceId] = spaceId.DeepClone();
+        value[SyncPayload.Key.OrderToken] = token;
+        Spell(value, StoredSessionCodec.Key.Url);
+        value[StoredSessionCodec.Key.Placement] = archived
+            ? JsonValue.Create(TabPlacement.Current.Name) : source[StoredSessionCodec.Key.Placement]!.DeepClone();
         if (!archived) {
-            if (SavedUrl(source) is { } saved) value["savedURL"] = new SyncedAddress(saved).Spelled ?? saved;
+            if (SavedUrl(source) is { } saved) value[StoredSessionCodec.Key.SavedUrl] = new SyncedAddress(saved).Spelled ?? saved;
             // Only a placement that holds folders names one: a pinned tab never does.
-            if (source["folderID"] is { } folder && Placement(source).HoldsFolders) value["folderID"] = folder.DeepClone();
-            if (source["splitGroupID"] is { } split) value["splitGroupID"] = split.DeepClone();
+            if (source[StoredSessionCodec.Key.FolderId] is { } folder && Placement(source).HoldsFolders)
+                value[StoredSessionCodec.Key.FolderId] = folder.DeepClone();
+            if (source[StoredSessionCodec.Key.SplitGroupId] is { } split) value[StoredSessionCodec.Key.SplitGroupId] = split.DeepClone();
         }
         SyncedText.TabTitle.Fit(value);
         SyncedText.TabCustomTitle.Fit(value);

@@ -47,9 +47,12 @@ internal static class NativeSyncCompatibility {
     private static readonly Shape Group = new("id customTitle titleModifiedAt customIconSymbol iconModifiedAt tint tintModifiedAt",
         new() { ["id"] = Identity, ["tint"] = Color });
 
-    private static readonly Shape Tab = new(
-        "id spaceID title nativeContent url savedURL symbol placement folderID splitGroupID orderToken lastActivatedAt positionModifiedAt customTitle titleModifiedAt keepsPageLoaded",
-        new() { ["id"] = Identity, ["spaceID"] = Identity, ["folderID"] = Identity, ["splitGroupID"] = Identity });
+    private static readonly Shape Tab = new(TabPayload.Members, new() {
+        [StoredSessionCodec.Key.Id] = Identity,
+        [StoredSessionCodec.Key.SpaceId] = Identity,
+        [StoredSessionCodec.Key.FolderId] = Identity,
+        [StoredSessionCodec.Key.SplitGroupId] = Identity
+    });
 
     private static readonly Dictionary<string, Shape> Values = new() {
         [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy accessPolicyModifiedAt credentialsEnabled credentialsEnabledModifiedAt isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
@@ -63,7 +66,7 @@ internal static class NativeSyncCompatibility {
         }),
         [SyncRecordKind.Tab.Name] = Tab,
         [SyncRecordKind.History.Name] = new(HistoryPayload.Members, new() { [StoredSessionCodec.Key.SpaceId] = Identity }),
-        [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab })
+        [SyncRecordKind.Archive.Name] = new(ArchivePayload.Members, new() { [StoredSessionCodec.Key.Tab] = Tab })
     };
 
     #endregion

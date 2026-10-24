@@ -4497,6 +4497,10 @@
     "synced-folder-field-names": {
       "category": "internal",
       "message": "Synced folders spell their fields from one table."
+    },
+    "synced-tab-field-names": {
+      "category": "internal",
+      "message": "Synced tabs and archived tabs spell their fields from one table."
     }
   }
 }

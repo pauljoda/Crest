@@ -136,8 +136,8 @@ internal abstract class SyncPayloadType {
     }
 
     /// Whether every device can take a tab that `tab`, a tab's value, holds.
-    private static bool PortableTab(JsonNode tab) => SyncedAddress.IncludesTab(tab["url"]?.GetValue<string>(),
-        tab["nativeContent"] is not null, tab["savedURL"]?.GetValue<string>());
+    private static bool PortableTab(JsonNode tab) => SyncedAddress.IncludesTab(tab[StoredSessionCodec.Key.Url]?.GetValue<string>(),
+        tab[StoredSessionCodec.Key.NativeContent] is not null, tab[StoredSessionCodec.Key.SavedUrl]?.GetValue<string>());
 
     /// Whether `preferences` syncs a value placed where `value[member]` says:
     /// the current tabs, or the saved structure.
@@ -179,32 +179,37 @@ internal abstract class SyncPayloadType {
     private sealed class TabType() : SyncPayloadType(SyncRecordKind.Tab, TabPayload.Read) {
         public override SyncPayloadType Counterpart => Archive;
 
-        public override bool SyncsUnder(JsonNode preferences, JsonObject value) => SyncsPlaced(preferences, value, "placement");
+        public override bool SyncsUnder(JsonNode preferences, JsonObject value) =>
+            SyncsPlaced(preferences, value, StoredSessionCodec.Key.Placement);
 
         public override bool IsPortable(JsonObject value) => PortableTab(value);
 
         public override JsonNode? ParentFolder(JsonObject value) =>
-            TabPlacement.Named(value["placement"]!.GetValue<string>())?.HoldsFolders != false ? value["folderID"] : null;
+            TabPlacement.Named(value[StoredSessionCodec.Key.Placement]!.GetValue<string>())?.HoldsFolders != false
+                ? value[StoredSessionCodec.Key.FolderId] : null;
 
-        public override double? ActivatedAt(JsonObject value) => NativeSyncEvaluator.Date(value, "lastActivatedAt");
+        public override double? ActivatedAt(JsonObject value) => NativeSyncEvaluator.Date(value, StoredSessionCodec.Key.LastActivatedAt);
 
+        /// A tab merges to its latest showing, the position its later move
+        /// gave it (or the placement both sides keep), and its later rename.
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
-            result["lastActivatedAt"] = Math.Max(NativeSyncEvaluator.Date(first, "lastActivatedAt")!.Value,
-                NativeSyncEvaluator.Date(second, "lastActivatedAt")!.Value);
-            if (SyncRecordStamp.Later(NativeSyncEvaluator.Date(first, "positionModifiedAt"),
-                    NativeSyncEvaluator.Date(second, "positionModifiedAt")) is { } position) {
+            const string activated = StoredSessionCodec.Key.LastActivatedAt, moved = StoredSessionCodec.Key.PositionModifiedAt;
+            const string placed = StoredSessionCodec.Key.Placement, folder = StoredSessionCodec.Key.FolderId;
+            const string split = StoredSessionCodec.Key.SplitGroupId;
+            result[activated] = Math.Max(NativeSyncEvaluator.Date(first, activated)!.Value, NativeSyncEvaluator.Date(second, activated)!.Value);
+            if (SyncRecordStamp.Later(NativeSyncEvaluator.Date(first, moved), NativeSyncEvaluator.Date(second, moved)) is { } position) {
                 var source = position == 0 ? first : second;
-                Copy(result, source, "placement", "folderID", "orderToken", "positionModifiedAt", "splitGroupID");
-                if (!NativeSyncEvaluator.Placement(source).HoldsFolders) result.Remove("folderID");
-                if (!NativeSyncEvaluator.Placement(source).HoldsSplits) result.Remove("splitGroupID");
+                Copy(result, source, placed, folder, SyncPayload.Key.OrderToken, moved, split);
+                if (!NativeSyncEvaluator.Placement(source).HoldsFolders) result.Remove(folder);
+                if (!NativeSyncEvaluator.Placement(source).HoldsSplits) result.Remove(split);
             } else {
                 var placement = NativeSyncEvaluator.Placement(first).Retained(NativeSyncEvaluator.Placement(second));
-                result["placement"] = placement.Name;
-                if (!placement.HoldsFolders) result.Remove("folderID");
-                else result["folderID"] ??= (first["folderID"] ?? second["folderID"])?.DeepClone();
-                result["splitGroupID"] ??= (first["splitGroupID"] ?? second["splitGroupID"])?.DeepClone();
+                result[placed] = placement.Name;
+                if (!placement.HoldsFolders) result.Remove(folder);
+                else result[folder] ??= (first[folder] ?? second[folder])?.DeepClone();
+                result[split] ??= (first[split] ?? second[split])?.DeepClone();
             }
-            LatestFields(result, first, second, "titleModifiedAt", "customTitle");
+            LatestFields(result, first, second, StoredSessionCodec.Key.TitleModifiedAt, StoredSessionCodec.Key.CustomTitle);
         }
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
@@ -231,11 +236,11 @@ internal abstract class SyncPayloadType {
     private sealed class ArchiveType() : SyncPayloadType(SyncRecordKind.Archive, ArchivePayload.Read) {
         public override SyncPayloadType Counterpart => Tab;
 
-        public override JsonObject Subject(JsonObject value) => value["tab"]!.AsObject();
+        public override JsonObject Subject(JsonObject value) => value[StoredSessionCodec.Key.Tab]!.AsObject();
 
         public override bool IsPortable(JsonObject value) => PortableTab(Subject(value));
 
-        public override JsonObject Holding(JsonNode tab) => new() { ["tab"] = tab.DeepClone() };
+        public override JsonObject Holding(JsonNode tab) => new() { [StoredSessionCodec.Key.Tab] = tab.DeepClone() };
     }
 
     #endregion
