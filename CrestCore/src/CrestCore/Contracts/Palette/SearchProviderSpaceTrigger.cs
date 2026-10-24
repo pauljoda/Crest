@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 public sealed class SearchProviderSpaceTrigger {
     #region Static Variables
 
-    public static readonly SearchProviderSpaceTrigger Off = new("off", "Off", "Space always types a space.", false, false);
+    public static readonly SearchProviderSpaceTrigger Off = new("off", "Off", "A space after a provider’s shortcut stays a space.", false, false);
     public static readonly SearchProviderSpaceTrigger PrefixedShortcut = new("prefixedShortcut", "After $ and a shortcut",
         "Type $yt and a space to search YouTube.", true, true);
     public static readonly SearchProviderSpaceTrigger Shortcut = new("shortcut", "After a shortcut",

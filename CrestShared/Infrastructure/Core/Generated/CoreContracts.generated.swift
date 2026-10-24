@@ -16987,7 +16987,7 @@ struct SearchProviderSpaceTrigger: Hashable, Sendable {
         tag: 0,
         name: "off",
         title: LocalizedStringResource("Off"),
-        example: LocalizedStringResource("Space always types a space."),
+        example: LocalizedStringResource("A space after a provider’s shortcut stays a space."),
         isEnabled: false,
         requiresPrefix: false
     )

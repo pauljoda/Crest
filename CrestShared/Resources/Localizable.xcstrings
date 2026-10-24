@@ -1610,6 +1610,9 @@
     "A simplified Crest branding preview" : {
 
     },
+    "A space after a provider’s shortcut stays a space." : {
+
+    },
     "A Space can contain up to %lld custom search engines." : {
 
     },
@@ -12481,9 +12484,6 @@
           }
         }
       }
-    },
-    "Space always types a space." : {
-
     },
     "Space appearance" : {
       "localizations" : {
