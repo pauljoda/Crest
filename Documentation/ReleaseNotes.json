@@ -4437,6 +4437,10 @@
     "shared-webkit-page-handling": {
       "category": "internal",
       "message": "Share WebKit link decisions, sign-in and certificate challenges, permission requests and script dialogs between Mac and iPhone pages."
+    },
+    "ipad-menu-from-command-table": {
+      "category": "internal",
+      "message": "Build the iPad keyboard menu from the same command table the command palette uses, with the same items, shortcuts and enabled states."
     }
   }
 }
