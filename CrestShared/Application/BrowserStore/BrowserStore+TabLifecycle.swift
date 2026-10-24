@@ -72,10 +72,22 @@ extension BrowserStore {
         )
     }
 
+    /// Opens `url` in a new tab behind the one shown in Space `spaceID`, as a
+    /// person asked from a link or the palette, and confirms it. Tabs opened
+    /// for anyone else, such as an agent, use `openNewTab`.
+    @discardableResult
+    func openBackgroundTab(url: URL, in spaceID: UUID) -> UUID? {
+        guard let tabID = openNewTab(url: url, in: spaceID, selecting: false) else { return nil }
+        interactionObserver?.browserDidOpenBackgroundTab()
+        return tabID
+    }
+
     /// Opens `url` in a new tab of Space `spaceID` for a modified link,
     /// selected when `selecting`, and answers the tab with its Space.
     func openModifiedLink(_ url: URL, in spaceID: UUID, selecting: Bool) -> BrowserModifiedLinkRegistration? {
-        guard let tabID = openNewTab(url: url, in: spaceID, selecting: selecting),
+        let opened =
+            selecting ? openNewTab(url: url, in: spaceID, selecting: true) : openBackgroundTab(url: url, in: spaceID)
+        guard let tabID = opened,
             let space = spaceModel(spaceID),
             let tab = space.tabs.model(tabID)
         else { return nil }

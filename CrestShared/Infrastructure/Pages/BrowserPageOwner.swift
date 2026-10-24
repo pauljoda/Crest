@@ -76,6 +76,7 @@ extension BrowserPageOwner {
         else { return }
         hostAdoptedPage(
             opened, as: BrowserPageTab(tab, images: browser.core.state.favicons), in: space, shows: adopted.shows)
+        if !adopted.shows { browser.interactionObserver?.browserDidOpenBackgroundTab() }
     }
 }
 

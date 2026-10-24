@@ -4382,6 +4382,10 @@
       "category": "fixed",
       "message": "Mouse Back and Forward buttons set up as swipes in Logitech Options+ switch Spaces when the pointer is over the sidebar, as other mice do."
     },
+    "background-link-opening-notice": {
+      "category": "improved",
+      "message": "Opening a link in a background tab now shows a brief confirmation at the top of the window."
+    },
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
