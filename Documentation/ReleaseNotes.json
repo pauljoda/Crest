@@ -4433,6 +4433,10 @@
     "remove-test-orphans": {
       "category": "internal",
       "message": "Remove the in-app performance harness and other code only retired tests and tools used."
+    },
+    "shared-webkit-page-handling": {
+      "category": "internal",
+      "message": "Share WebKit link decisions, sign-in and certificate challenges, permission requests and script dialogs between Mac and iPhone pages."
     }
   }
 }

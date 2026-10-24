@@ -410,6 +410,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         reporter.reportHistoryAgain()
     }
 
+    /// The page WebKit's binding built for this page, which hosts every page
+    /// on iPhone and iPad.
+    var webKitEnginePage: WebKitEnginePage? { webKitPage }
+
     func routeModifiedLink(_ url: URL, selecting: Bool) {
         routeModifiedLink(URLRequest(url: url), selecting: selecting)
     }

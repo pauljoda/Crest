@@ -134,21 +134,6 @@ extension BrowserPage: WKUIDelegate {
         }
     }
 
-    /// Asks the core the script dialog `frame`'s document opened, which this
-    /// page shows once the core asks the person. A page WebKit's binding did
-    /// not build has no one to ask, and declines.
-    private func askScriptDialog(
-        _ kind: JavaScriptDialogKind, message: String, defaultText: String?, frame: WKFrameInfo,
-        answer: @escaping @MainActor (Bool, String?) -> Void
-    ) {
-        guard let webKitPage = webKitAdapter?.webKitPage else { return answer(false, nil) }
-        webKitPage.ask(
-            ScriptDialogQuestion(
-                kind: kind, message: message, defaultText: defaultText ?? "",
-                sourceURL: frame.request.url?.absoluteString ?? ""),
-            answer: answer)
-    }
-
     func webView(
         _ webView: WKWebView,
         runOpenPanelWith parameters: WKOpenPanelParameters,
@@ -186,16 +171,7 @@ extension BrowserPage: WKUIDelegate {
         type: WKMediaCaptureType,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        guard webView === self.webKitView,
-            let topLevelOrigin = webView.url.flatMap(SiteOrigin.init(url:))
-        else {
-            decisionHandler(.deny)
-            return
-        }
-        answerPermission(
-            SitePermission(type), origin: SiteOrigin(origin), topLevelOrigin: topLevelOrigin,
-            from: webKitAdapter?.webKitPage,
-            decisionHandler: decisionHandler)
+        answerMediaCapture(type, origin: origin, in: webView, decisionHandler: decisionHandler)
     }
 
     @available(macOS 27.0, *)
@@ -205,14 +181,6 @@ extension BrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        guard frame.webView === webView,
-            let topLevelOrigin = webView.url.flatMap(SiteOrigin.init(url:))
-        else {
-            decisionHandler(.deny)
-            return
-        }
-        answerPermission(
-            .location, origin: SiteOrigin(origin), topLevelOrigin: topLevelOrigin, from: webKitAdapter?.webKitPage,
-            decisionHandler: decisionHandler)
+        answerLocation(origin: origin, frame: frame, in: webView, decisionHandler: decisionHandler)
     }
 }

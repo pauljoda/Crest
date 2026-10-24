@@ -5,6 +5,9 @@ import WebKit
 /// bridges. Each is empty when another engine hosts the page.
 extension BrowserPage {
     var webKitAdapter: BrowserWebKitPageAdapter? { engineAdapter as? BrowserWebKitPageAdapter }
+    /// The page WebKit's binding built for this page, or nil when another
+    /// engine hosts it.
+    var webKitEnginePage: WebKitEnginePage? { webKitAdapter?.webKitPage }
     var webKitView: WKWebView? { webKitAdapter?.webView }
 
     var activeNavigation: WKNavigation? {
