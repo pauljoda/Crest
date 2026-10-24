@@ -125,33 +125,10 @@ private final class BrowserMobileApplication {
             permissionCenter: permissionCenter
         )
         let pages = MobileBrowserPageStore(
-            browser: browser,
-            usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
+            window: browser, usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             permissionCenter: permissionCenter,
-            mediaSessionStore: mediaSessions,
-            downloads: downloads,
-            loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
-                try await browser.httpAuthenticationCredential(
-                    for: protectionSpace,
-                    in: spaceID
-                )
-            },
-            saveHTTPAuthenticationCredential: { request, spaceID in
-                try await browser.saveHTTPAuthenticationCredential(
-                    username: request.username,
-                    password: request.password,
-                    protectionSpace: request.protectionSpace,
-                    in: spaceID,
-                    replacing: request.replacing
-                )
-            },
-            tabStateArchive: tabStateArchive,
-            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
-            openModifiedLink: { url, spaceID, selecting in
-                browser.openModifiedLink(url, in: spaceID, selecting: selecting)
-            },
-            openPeek: { request in transientBrowsing.presentPeek(request) }
-        )
+            mediaSessionStore: mediaSessions, downloads: downloads, tabStateArchive: tabStateArchive,
+            spaceAccess: spaceAccess, transientBrowsing: transientBrowsing)
 
         self.browser = browser
         self.cloudSync = cloudSync

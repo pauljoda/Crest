@@ -4445,6 +4445,10 @@
     "shared-sidebar-page-binding": {
       "category": "internal",
       "message": "Bind the sidebar to a window's pages once for Mac and iPhone, with the Mac adding tab sharing and audio."
+    },
+    "mobile-window-page-store": {
+      "category": "internal",
+      "message": "Set up an iPhone or iPad window's pages in one place, so the app and each window wire sign-ins, links and Peeks the same way."
     }
   }
 }

@@ -129,6 +129,34 @@ final class MobileBrowserPageStore:
         followPutAwayPages()
     }
 
+    /// A standard window's store: its pages' saved sign-ins, link destinations
+    /// and modified clicks go through `browser`, and `transientBrowsing` shows
+    /// their Peeks.
+    convenience init(
+        window browser: BrowserStore, usesEphemeralWebsiteDataStores: Bool,
+        permissionCenter: BrowserSitePermissionCenter, mediaSessionStore: BrowserMediaSessionStore?,
+        downloads: MobileBrowserDownloads?, tabStateArchive: (any BrowserTabStateArchiving)?,
+        spaceAccess: BrowserSpaceAccessController, transientBrowsing: BrowserTransientBrowsingCoordinator
+    ) {
+        self.init(
+            browser: browser, usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
+            permissionCenter: permissionCenter, mediaSessionStore: mediaSessionStore, downloads: downloads,
+            loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
+                try await browser.httpAuthenticationCredential(for: protectionSpace, in: spaceID)
+            },
+            saveHTTPAuthenticationCredential: { request, spaceID in
+                try await browser.saveHTTPAuthenticationCredential(
+                    username: request.username, password: request.password,
+                    protectionSpace: request.protectionSpace, in: spaceID, replacing: request.replacing)
+            },
+            tabStateArchive: tabStateArchive,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
+            openModifiedLink: { url, spaceID, selecting in
+                browser.openModifiedLink(url, in: spaceID, selecting: selecting)
+            },
+            openPeek: { request in transientBrowsing.presentPeek(request) })
+    }
+
     var activeURL: URL? { activePage?.live.displayURL }
     var preferredContentModeActionTitle: LocalizedStringResource {
         activePage?.isRequestingDesktopSite == true

@@ -65,33 +65,10 @@ final class MobileBrowserWindowSceneModel {
         )
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(
-            browser: browser,
-            usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
+            window: browser, usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             permissionCenter: permissionCenter,
-            mediaSessionStore: mediaSessionStore,
-            downloads: downloads,
-            loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
-                try await browser.httpAuthenticationCredential(
-                    for: protectionSpace,
-                    in: spaceID
-                )
-            },
-            saveHTTPAuthenticationCredential: { request, spaceID in
-                try await browser.saveHTTPAuthenticationCredential(
-                    username: request.username,
-                    password: request.password,
-                    protectionSpace: request.protectionSpace,
-                    in: spaceID,
-                    replacing: request.replacing
-                )
-            },
-            tabStateArchive: tabStateArchive,
-            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
-            openModifiedLink: { url, spaceID, selecting in
-                browser.openModifiedLink(url, in: spaceID, selecting: selecting)
-            },
-            openPeek: { request in transientBrowsing.presentPeek(request) }
-        )
+            mediaSessionStore: mediaSessionStore, downloads: downloads, tabStateArchive: tabStateArchive,
+            spaceAccess: spaceAccess, transientBrowsing: transientBrowsing)
         browser.tabLinkProvider = pages
         browser.tabCopying = pages
         self.browser = browser
