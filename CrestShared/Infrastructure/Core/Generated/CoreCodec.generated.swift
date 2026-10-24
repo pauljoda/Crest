@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x57, 0x2f, 0xe7, 0x80, 0xcd, 0x73, 0x5b, 0xa3, 0x45, 0xbe, 0xdb, 0x94, 0xb1, 0x17, 0x1b, 0xc3, 0xd6, 0xa9, 0xfb, 0xe2, 0x96, 0x09, 0xaf, 0xf6, 0x02, 0x98, 0x64, 0x9c, 0x52, 0x40, 0x02, 0x80
+        0xc8, 0x2e, 0xc2, 0xc3, 0xf9, 0xd2, 0xac, 0x1e, 0x55, 0x34, 0x53, 0x39, 0xa8, 0x10, 0x82, 0x57, 0x56, 0x2e, 0xc7, 0x27, 0xc5, 0x0b, 0xf6, 0x2e, 0xfa, 0xce, 0x1f, 0x75, 0x12, 0x8a, 0xc9, 0x5f
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -11914,6 +11914,7 @@ extension LinkPreferences {
         let opensPeekAutomatically = try reader.readBool()
         let peekModifier = try LinkPeekModifier(from: &reader)
         let dragsLinksToPeek = try reader.readBool()
+        let dimsPageBehindPeek = try reader.readBool()
         let archivePolicy = try QuickWindowArchivePolicy(from: &reader)
         let remembersSpaceBySite = try reader.readBool()
         let routesCount = try reader.readCount()
@@ -11930,7 +11931,7 @@ extension LinkPreferences {
             let rememberedSitesElement = try RememberedSite(from: &reader)
             rememberedSites.append(rememberedSitesElement)
         }
-        self.init(destination: destination, destinationSpaceID: destinationSpaceID, focusesNewTabs: focusesNewTabs, followsMovedTabs: followsMovedTabs, opensPeekAutomatically: opensPeekAutomatically, peekModifier: peekModifier, dragsLinksToPeek: dragsLinksToPeek, archivePolicy: archivePolicy, remembersSpaceBySite: remembersSpaceBySite, routes: routes, rememberedSites: rememberedSites)
+        self.init(destination: destination, destinationSpaceID: destinationSpaceID, focusesNewTabs: focusesNewTabs, followsMovedTabs: followsMovedTabs, opensPeekAutomatically: opensPeekAutomatically, peekModifier: peekModifier, dragsLinksToPeek: dragsLinksToPeek, dimsPageBehindPeek: dimsPageBehindPeek, archivePolicy: archivePolicy, remembersSpaceBySite: remembersSpaceBySite, routes: routes, rememberedSites: rememberedSites)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -11946,6 +11947,7 @@ extension LinkPreferences {
         writer.writeBool(opensPeekAutomatically)
         peekModifier.encode(into: &writer)
         writer.writeBool(dragsLinksToPeek)
+        writer.writeBool(dimsPageBehindPeek)
         archivePolicy.encode(into: &writer)
         writer.writeBool(remembersSpaceBySite)
         writer.writeCount(routes.count)

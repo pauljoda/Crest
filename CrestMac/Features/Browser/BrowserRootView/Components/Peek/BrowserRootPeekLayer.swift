@@ -4,6 +4,7 @@ struct BrowserRootPeekLayer: View {
     let model: BrowserRootModel
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let space: SpaceModel
+    let frameInsets: EdgeInsets
 
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -22,7 +23,8 @@ struct BrowserRootPeekLayer: View {
                 coordinator: transientBrowsing,
                 reservedLeadingWidth: 0,
                 layoutDirection: layoutDirection,
-                spaceAccess: model.spaceAccess
+                spaceAccess: model.spaceAccess,
+                frameInsets: frameInsets
             )
             .environment(
                 \.browserWebFocusRestorationGate,

@@ -50,7 +50,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         sizesCard: { windowContentSize(in: $0) },
         insetsContent: { _ in EdgeInsets(top: 30, leading: 30, bottom: 30, trailing: 30) },
         cardCornerRadius: 15, cardBorderOpacity: 0.16, cardShadowOpacity: 0.34, cardShadowRadius: 28,
-        cardShadowOffsetY: 14)
+        cardShadowOffsetY: 14, fadesScrim: true)
 
     /// A card filling a handheld screen's safe area, closed with the control
     /// bar beneath it or by tapping the ground its insets leave showing. The
@@ -70,7 +70,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         // A thumb-sized card is held closer and rounded more heavily than one
         // read at pointer distance.
         cardCornerRadius: 24, cardBorderOpacity: 0.18, cardShadowOpacity: 0.32, cardShadowRadius: 24,
-        cardShadowOffsetY: 12)
+        cardShadowOffsetY: 12, fadesScrim: false)
 
     /// A card floating at a fraction of a large touch screen, with room left
     /// around it for the scrim to be a deliberate target.
@@ -92,7 +92,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
             )
         },
         cardCornerRadius: 15, cardBorderOpacity: 0.18, cardShadowOpacity: 0.32, cardShadowRadius: 24,
-        cardShadowOffsetY: 12)
+        cardShadowOffsetY: 12, fadesScrim: false)
 
     /// Every arrangement.
     static let all: [BrowserTransientCardArrangement] = [pointer, sheet, canvas]
@@ -129,6 +129,9 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     let cardShadowRadius: CGFloat
     let cardShadowOffsetY: CGFloat
 
+    /// Whether the ground fades in with the card instead of appearing at once.
+    let fadesScrim: Bool
+
     /// Whether tapping the ground the card stands on closes it.
     ///
     /// Every room answers a tap outside the card. A pointer window and a large
@@ -151,7 +154,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         sizesCard: @escaping @Sendable (CGSize) -> CGSize?,
         insetsContent: @escaping @Sendable (EdgeInsets) -> EdgeInsets,
         cardCornerRadius: CGFloat, cardBorderOpacity: Double, cardShadowOpacity: Double, cardShadowRadius: CGFloat,
-        cardShadowOffsetY: CGFloat
+        cardShadowOffsetY: CGFloat, fadesScrim: Bool
     ) {
         self.name = name
         self.entranceTarget = entranceTarget
@@ -168,6 +171,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         self.cardShadowOpacity = cardShadowOpacity
         self.cardShadowRadius = cardShadowRadius
         self.cardShadowOffsetY = cardShadowOffsetY
+        self.fadesScrim = fadesScrim
     }
 
     // MARK: - Actions - Geometry
