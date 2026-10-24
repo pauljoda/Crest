@@ -44,8 +44,8 @@ internal static class NativeSyncCompatibility {
         "searchProvider selectedSearchProviderID customSearchProviders searchSuggestionsEnabled searchFollowsDefault suggestionsFollowDefault currentTabCleanupPolicy contentBlockingPolicy dataRetention",
         new() { ["customSearchProviders"] = List(SearchProvider, true), ["dataRetention"] = new("history archive downloads") });
 
-    private static readonly Shape Group = new("id customTitle titleModifiedAt customIconSymbol iconModifiedAt tint tintModifiedAt",
-        new() { ["id"] = Identity, ["tint"] = Color });
+    private static readonly Shape Group = new(SplitGroupPayload.Members,
+        new() { [StoredSessionCodec.Key.Id] = Identity, [StoredSessionCodec.Key.Tint] = Color });
 
     private static readonly Shape Tab = new(TabPayload.Members, new() {
         [StoredSessionCodec.Key.Id] = Identity,
@@ -55,8 +55,12 @@ internal static class NativeSyncCompatibility {
     });
 
     private static readonly Dictionary<string, Shape> Values = new() {
-        [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy accessPolicyModifiedAt credentialsEnabled credentialsEnabledModifiedAt isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
-            new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
+        [SyncRecordKind.Space.Name] = new(SpacePayload.Members, new() {
+            [StoredSessionCodec.Key.Id] = Identity,
+            [StoredSessionCodec.Key.Branding] = Branding,
+            [StoredSessionCodec.Key.BrowsingPreferences] = Browsing,
+            [StoredSessionCodec.Key.SplitGroups] = List(Group, true)
+        }),
         [SyncRecordKind.Folder.Name] = new(FolderPayload.Members, new() {
             [StoredSessionCodec.Key.Id] = Identity,
             [StoredSessionCodec.Key.SpaceId] = Identity,

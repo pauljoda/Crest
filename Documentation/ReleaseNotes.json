@@ -4501,6 +4501,10 @@
     "synced-tab-field-names": {
       "category": "internal",
       "message": "Synced tabs and archived tabs spell their fields from one table."
+    },
+    "synced-space-field-names": {
+      "category": "internal",
+      "message": "Synced Spaces and splits spell their fields from one table."
     }
   }
 }

@@ -102,7 +102,7 @@ internal sealed class SyncedText {
 
     /// The host of the record's address, or the address when it names none.
     private static string? Host(JsonObject value) {
-        if (value["url"] is not JsonValue address || !address.TryGetValue<string>(out var url)) return null;
+        if (value[StoredSessionCodec.Key.Url] is not JsonValue address || !address.TryGetValue<string>(out var url)) return null;
         return Uri.TryCreate(url, UriKind.Absolute, out var parsed) && parsed.Host.Length > 0 ? parsed.Host : url;
     }
 

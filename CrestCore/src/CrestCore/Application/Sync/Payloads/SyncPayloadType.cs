@@ -66,7 +66,8 @@ internal abstract class SyncPayloadType {
     public virtual JsonObject Subject(JsonObject value) => value;
 
     /// The identity of the Space the record `value` belongs to.
-    public JsonNode SpaceIdentity(JsonObject value) => Subject(value)[Kind.NamesItsSpace ? "id" : "spaceID"]!;
+    public JsonNode SpaceIdentity(JsonObject value) =>
+        Subject(value)[Kind.NamesItsSpace ? StoredSessionCodec.Key.Id : StoredSessionCodec.Key.SpaceId]!;
 
     /// Whether the sync category `preferences` syncs `value`.
     public virtual bool SyncsUnder(JsonNode preferences, JsonObject value) => preferences["historyAndArchive"]!.GetValue<bool>();
@@ -123,13 +124,14 @@ internal abstract class SyncPayloadType {
     private static JsonNode? MergeGroups(JsonArray? first, JsonArray? second, int winner) {
         if (first is null || second is null) return (first ?? second)?.DeepClone();
         var preferred = winner == 0 ? first : second;
-        var fallback = (winner == 0 ? second : first).ToDictionary(n => SyncJson.Identity(n!["id"]), n => n!.AsObject());
+        var fallback = (winner == 0 ? second : first)
+            .ToDictionary(n => SyncJson.Identity(n![StoredSessionCodec.Key.Id]), n => n!.AsObject());
         return new JsonArray(preferred.Select(n => {
             var group = n!.DeepClone().AsObject();
-            if (fallback.TryGetValue(SyncJson.Identity(group["id"]), out var older)) {
-                LatestFields(group, n.AsObject(), older, "titleModifiedAt", "customTitle");
-                LatestFields(group, n.AsObject(), older, "iconModifiedAt", "customIconSymbol");
-                LatestFields(group, n.AsObject(), older, "tintModifiedAt", "tint");
+            if (fallback.TryGetValue(SyncJson.Identity(group[StoredSessionCodec.Key.Id]), out var older)) {
+                LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.TitleModifiedAt, StoredSessionCodec.Key.CustomTitle);
+                LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.IconModifiedAt, StoredSessionCodec.Key.CustomIconSymbol);
+                LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.TintModifiedAt, StoredSessionCodec.Key.Tint);
             }
             return (JsonNode)group;
         }).ToArray());
@@ -152,11 +154,14 @@ internal abstract class SyncPayloadType {
     private sealed class SpaceType() : SyncPayloadType(SyncRecordKind.Space, SpacePayload.Read) {
         public override bool SyncsUnder(JsonNode preferences, JsonObject value) => true;
 
+        /// A Space merges each choice someone made with a clock to its later
+        /// side, and its splits' metadata field by field.
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
-            LatestFields(result, first, second, "savedTabsExpansionModifiedAt", "isSavedTabsExpanded");
-            LatestFields(result, first, second, "credentialsEnabledModifiedAt", "credentialsEnabled");
-            LatestFields(result, first, second, "accessPolicyModifiedAt", "accessPolicy");
-            result["splitGroups"] = MergeGroups(first["splitGroups"] as JsonArray, second["splitGroups"] as JsonArray, winner);
+            LatestFields(result, first, second, StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded);
+            LatestFields(result, first, second, StoredSessionCodec.Key.CredentialsEnabledModifiedAt, SyncPayload.Key.CredentialsEnabled);
+            LatestFields(result, first, second, StoredSessionCodec.Key.AccessPolicyModifiedAt, StoredSessionCodec.Key.AccessPolicy);
+            const string groups = StoredSessionCodec.Key.SplitGroups;
+            result[groups] = MergeGroups(first[groups] as JsonArray, second[groups] as JsonArray, winner);
         }
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,

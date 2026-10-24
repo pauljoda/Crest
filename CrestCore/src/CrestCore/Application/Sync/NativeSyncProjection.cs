@@ -58,7 +58,7 @@ public static class NativeSyncProjection {
             if (record["payload"]?["value"] is not JsonObject value) continue;
             var type = SyncPayloadType.Of(record["payload"]!);
             var id = Id(record["id"]!["value"]);
-            existing[type.Kind.RecordName(id)] = Text(type.Subject(value)["orderToken"]);
+            existing[type.Kind.RecordName(id)] = Text(type.Subject(value)[SyncPayload.Key.OrderToken]);
             if (type == SyncPayloadType.Archive) archiveReasons[id] = Text(value["reason"]);
         }
         var result = new JsonArray();
@@ -70,28 +70,35 @@ public static class NativeSyncProjection {
             result.Add((JsonNode)new JsonObject { ["type"] = type.Kind.Name, ["value"] = value });
         }
         IReadOnlyList<string> Tokens(SyncPayloadType type, IReadOnlyList<JsonNode> items)
-            => SyncOrderTokens.Allocate(items.Select(item => existing.GetValueOrDefault(type.Kind.RecordName(Id(type.Subject(item.AsObject())["id"]))))
+            => SyncOrderTokens.Allocate(items.Select(item =>
+                existing.GetValueOrDefault(type.Kind.RecordName(Id(type.Subject(item.AsObject())[StoredSessionCodec.Key.Id]))))
                 .ToArray());
 
-        var spaces = Items(session, "spaces").Select(n => n!).ToArray();
+        var spaces = Items(session, StoredSessionCodec.Key.Spaces).Select(n => n!).ToArray();
         var spaceTokens = Tokens(SyncPayloadType.Space, spaces);
         for (int i = 0; i < spaces.Length; i++) {
             var space = spaces[i];
             var portable = Items(space, StoredSessionCodec.Key.Tabs).Where(t => PortableTab(t!)).Select(t => t!).ToArray();
-            var splitIds = portable.Where(t => t["splitGroupID"] is not null).Select(t => Id(t["splitGroupID"])).ToHashSet();
-            var spaceValue = Fields(space, "id", "name", "symbol", "accent", "branding", "browsingPreferences",
-                "accessPolicy", "accessPolicyModifiedAt", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
-            spaceValue["profileID"] = space["profile"]!["id"]!.DeepClone();
+            var splitIds = portable.Where(t => t[StoredSessionCodec.Key.SplitGroupId] is not null)
+                .Select(t => Id(t[StoredSessionCodec.Key.SplitGroupId])).ToHashSet();
+            // A Space's profile, credentials choice, splits and position are
+            // its record's own; the rest is copied as the session holds it.
+            var spaceValue = Fields(space, StoredSessionCodec.Key.Id, StoredSessionCodec.Key.Name, StoredSessionCodec.Key.Symbol,
+                StoredSessionCodec.Key.Accent, StoredSessionCodec.Key.Branding, StoredSessionCodec.Key.BrowsingPreferences,
+                StoredSessionCodec.Key.AccessPolicy, StoredSessionCodec.Key.AccessPolicyModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded,
+                StoredSessionCodec.Key.SavedTabsExpansionModifiedAt);
+            spaceValue[StoredSessionCodec.Key.ProfileId] = space[StoredSessionCodec.Key.Profile]![StoredSessionCodec.Key.Id]!.DeepClone();
             if (space[StoredSessionCodec.Key.CredentialsEnabledModifiedAt] is { } credentialsModifiedAt) {
-                spaceValue["credentialsEnabled"] = StoredSessionCodec.DecodeCredentialPreferences(
+                spaceValue[SyncPayload.Key.CredentialsEnabled] = StoredSessionCodec.DecodeCredentialPreferences(
                     space[StoredSessionCodec.Key.CredentialPreferences] ?? new JsonObject()).IsEnabled;
-                spaceValue["credentialsEnabledModifiedAt"] = credentialsModifiedAt.DeepClone();
+                spaceValue[StoredSessionCodec.Key.CredentialsEnabledModifiedAt] = credentialsModifiedAt.DeepClone();
             }
             SyncedText.SpaceName.Fit(spaceValue);
             SyncedText.SpaceSymbol.Fit(spaceValue);
-            spaceValue["splitGroups"] = new JsonArray(Items(space, "splitGroups")
-                .Where(g => splitIds.Contains(Id(g!["id"]))).DistinctBy(g => Id(g!["id"])).Select(SplitGroup).ToArray());
-            spaceValue["orderToken"] = spaceTokens[i];
+            spaceValue[StoredSessionCodec.Key.SplitGroups] = new JsonArray(Items(space, StoredSessionCodec.Key.SplitGroups)
+                .Where(g => splitIds.Contains(Id(g![StoredSessionCodec.Key.Id]))).DistinctBy(g => Id(g![StoredSessionCodec.Key.Id]))
+                .Select(SplitGroup).ToArray());
+            spaceValue[SyncPayload.Key.OrderToken] = spaceTokens[i];
             Add(SyncPayloadType.Space, spaceValue);
 
             if (policy.CurrentTabs || policy.SavedStructure) {
