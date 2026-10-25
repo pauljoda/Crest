@@ -128,6 +128,9 @@ public sealed partial class BrowserContractsTests {
         var own = Assert.Single(app.Drain().OfType<WebsiteDataRead>());
         Assert.True(own.Complete);
         Assert.Equal("example.com", Assert.Single(own.Sites).Site);
+        // A host with no name left is refused, never read as every site.
+        Assert.IsType<InvalidSiteHost>(Assert.Throws<Rejected>(() =>
+            app.Send(new ReadWebsiteData(Guid.NewGuid(), profile, Ephemeral: false, Host: " . "))).Rejection);
     }
 
     [Fact]

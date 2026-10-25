@@ -89,6 +89,25 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AWebsiteDataListingTheSpaceLocksBeforeItEndsListsNoSite() {
+        var session = GuardedSession();
+        using var device = new TestDevice(session);
+        var identity = Identity(session);
+        var binding = new RecordingEngine();
+        device.Register(binding);
+        Unlock(device.Send, device.Workspace, identity.Space);
+
+        var request = Guid.NewGuid();
+        Assert.Empty(device.Send(new ReadWebsiteData(request, identity.Profile, Ephemeral: false, Host: null)).OfType<WebsiteDataRead>());
+        var reading = Assert.Single(binding.Commands.OfType<ReadSiteData>());
+        device.Send(new LockSpace(identity.Space));
+        var read = Assert.Single(device.Report(new SiteDataRead(reading.ReadingId,
+            [new StoredSite("example.com", [WebsiteDataKind.Cookies])], Read: true)).OfType<WebsiteDataRead>());
+        Assert.Equal((request, false), (read.RequestId, read.Complete));
+        Assert.Empty(read.Sites);
+    }
+
+    [Fact]
     public void TheResolvedLockRuleIsTheRuleTheGrantGateApplies() {
         using var device = new TestDevice(GuardedSession(withOpenSecondSpace: true));
         var (guarded, open) = (device.Authority.Current.Spaces[0], device.Authority.Current.Spaces[1]);

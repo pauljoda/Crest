@@ -152,13 +152,19 @@ internal sealed partial class Device {
     /// `profileId`: what the profile's engines keep is the grant's to reveal
     /// or erase, as the Space's own records are.
     internal void RefuseLockedProfile(Guid profileId) {
+        if (LockedSpace(profileId) is { } spaceId) throw new Rejected(new SpaceLocked(spaceId));
+    }
+
+    /// The locked Space that holds profile `profileId`, or nil when none does.
+    internal Guid? LockedSpace(Guid profileId) {
         KeyValuePair<Guid, NativeSessionAuthority>[] attached;
         lock (gate) attached = [.. workspaces];
         foreach (var (_, workspace) in attached) {
             foreach (var space in workspace.Current.Spaces.Where(space => space.ProfileId == profileId)) {
-                if (workspace.IsLocked(space)) throw new Rejected(new SpaceLocked(space.Id));
+                if (workspace.IsLocked(space)) return space.Id;
             }
         }
+        return null;
     }
 
     /// The workspaces closing the windows `windowIds` leaves without an open

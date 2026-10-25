@@ -16,7 +16,7 @@ public sealed record SiteDataRead(Guid ReadingId, IReadOnlyList<StoredSite> Site
         reading.Waiting.Remove(ReadingId);
         reading.Complete &= Read;
         SiteDataReads.Add(reading, Sites);
-        if (reading.Waiting.Count == 0) SiteDataReads.Finish(reading, changes);
+        if (reading.Waiting.Count == 0) SiteDataReads.Finish(reading, app.Device, changes);
     }
 
     #endregion

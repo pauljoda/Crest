@@ -11,8 +11,10 @@ internal sealed class SiteDataReads(Engines engines, IIdSource ids) {
     #region Types
 
     /// One reading, until every engine asked has answered.
-    internal sealed class Reading(Guid requestId, string? host) {
+    internal sealed class Reading(Guid requestId, Guid profileId, string? host) {
         public Guid RequestId { get; } = requestId;
+        /// The profile whose sites the reading lists.
+        public Guid ProfileId { get; } = profileId;
         /// The host whose own sites the reading keeps, or nil for every site.
         public string? Host { get; } = host;
         /// The readings still out, each with the engine it went to.
@@ -35,16 +37,16 @@ internal sealed class SiteDataReads(Engines engines, IIdSource ids) {
 
     /// Asks every registered engine which sites keep data in profile
     /// `profileId`, keeping only `host`'s own when it is given.
-    internal void Start(Guid requestId, Guid profileId, bool ephemeral, string? host, ChangeFeed changes,
+    internal void Start(Guid requestId, Guid profileId, bool ephemeral, string? host, Device device, ChangeFeed changes,
         Action<Engine, EngineCommand> issue) {
-        var reading = new Reading(requestId, host);
+        var reading = new Reading(requestId, profileId, host);
         foreach (var engine in engines.All) {
             var id = ids.Next();
             reading.Waiting[id] = engine;
             ByReading[id] = reading;
             issue(engine, new ReadSiteData(profileId, ephemeral, id));
         }
-        if (reading.Waiting.Count == 0) Finish(reading, changes);
+        if (reading.Waiting.Count == 0) Finish(reading, device, changes);
     }
 
     /// Adds one engine's sites to `reading`, merging a site another engine
@@ -69,8 +71,13 @@ internal sealed class SiteDataReads(Engines engines, IIdSource ids) {
 
     #region Actions - Reports
 
-    internal static void Finish(Reading reading, ChangeFeed changes) =>
-        changes.Publish(new WebsiteDataRead(reading.RequestId, [.. reading.Sites.Values], reading.Complete));
+    /// Publishes what `reading` listed, or no site at all when a Space locked
+    /// its profile while the engines answered, as the lock refuses a new
+    /// reading.
+    internal static void Finish(Reading reading, Device device, ChangeFeed changes) {
+        var locked = device.LockedSpace(reading.ProfileId) is not null;
+        changes.Publish(new WebsiteDataRead(reading.RequestId, locked ? [] : [.. reading.Sites.Values], reading.Complete && !locked));
+    }
 
     #endregion
 }

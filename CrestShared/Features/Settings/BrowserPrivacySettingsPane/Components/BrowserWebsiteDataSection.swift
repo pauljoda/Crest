@@ -12,15 +12,18 @@ struct BrowserWebsiteDataSection: View {
     var body: some View {
         Section("Website data") {
             if let list, let sites = list.sites {
-                if sites.isEmpty {
+                if sites.isEmpty, list.isComplete {
                     Text("No website data")
                         .foregroundStyle(.secondary)
                 } else {
-                    BrowserCredentialSearchField(
-                        title: "Search Websites", text: $query, accessibilityIdentifier: "website-data-search")
-                    ForEach(list.sites(matching: query), id: \.site) { site in
-                        BrowserWebsiteDataRow(site: site, isRemoving: list.isRemoving) {
-                            Task { await list.remove([site]) }
+                    // Remove All also clears what an engine could not list.
+                    if !sites.isEmpty {
+                        BrowserCredentialSearchField(
+                            title: "Search Websites", text: $query, accessibilityIdentifier: "website-data-search")
+                        ForEach(list.sites(matching: query), id: \.site) { site in
+                            BrowserWebsiteDataRow(site: site, isRemoving: list.isRemoving) {
+                                Task { await list.remove([site]) }
+                            }
                         }
                     }
                     HStack {
