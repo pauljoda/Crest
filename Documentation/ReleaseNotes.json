@@ -4573,6 +4573,10 @@
     "sidebar-lists-button-choice": {
       "category": "new",
       "message": "Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in."
+    },
+    "hide-sidebar-container-focus-effect": {
+      "category": "fixed",
+      "message": "New Mac windows no longer show a blue focus outline around the sidebar."
     }
   }
 }
