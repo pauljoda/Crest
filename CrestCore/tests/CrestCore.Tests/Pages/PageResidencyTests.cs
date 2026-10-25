@@ -86,6 +86,70 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void IdlePagesUnloadAfterFiveBackgroundMinutesWithoutRemovingTheirTabs() {
+        var (app, engine, binding, clock, workspace, window, space, _) = ResidentHost();
+        using var disposal = app;
+        var (tab, page) = ShowNewTab(app, engine, clock, workspace, window, space, "https://idle.example/");
+        ShowNewTab(app, engine, clock, workspace, window, space, "https://visible.example/");
+        clock.Now += TimeSpan.FromMinutes(5) - TimeSpan.FromMilliseconds(1);
+        Assert.Empty(app.Query(new IdlePages()).Pages);
+        clock.Now += TimeSpan.FromMilliseconds(1);
+        var candidate = Assert.Single(app.Query(new IdlePages()).Pages);
+        Assert.Equal(page, candidate.PageId);
+        var before = app.Workspace(workspace).Current;
+        Assert.Equal([page], Unloaded(app.Send(new UnloadIdlePage(page, candidate.Documents, candidate.HiddenSince))));
+        Assert.Equal(new ClosePage(page, KeepsState: true), binding.Commands[^1]);
+        Assert.Same(before, app.Workspace(workspace).Current);
+        Assert.Contains(before.Spaces.Single(item => item.Id == space).Tabs, item => item.Id == tab);
+        Assert.Empty(app.Query(new IdlePages()).Pages);
+    }
+
+    [Fact]
+    public void IdleUnloadRechecksVisibilityMediaDocumentAndTheBackgroundTimestamp() {
+        var (app, engine, _, clock, workspace, window, space, _) = ResidentHost();
+        using var disposal = app;
+        var (tab, page) = ShowNewTab(app, engine, clock, workspace, window, space, "https://idle.example/");
+        var (visible, _) = ShowNewTab(app, engine, clock, workspace, window, space, "https://visible.example/");
+        clock.Now += TimeSpan.FromMinutes(5);
+        var candidate = Assert.Single(app.Query(new IdlePages()).Pages);
+        var unload = new UnloadIdlePage(page, candidate.Documents, candidate.HiddenSince);
+        app.Send(new ShowTab(window, space, tab));
+        Assert.Empty(Unloaded(app.Send(unload)));
+        app.Send(new ShowTab(window, space, visible));
+        Assert.Empty(app.Query(new IdlePages()).Pages);
+        clock.Now += TimeSpan.FromMinutes(5);
+        Assert.Empty(Unloaded(app.Send(unload)));
+        candidate = Assert.Single(app.Query(new IdlePages()).Pages);
+        unload = new(page, candidate.Documents, candidate.HiddenSince);
+        app.Report(engine, new PageStateChanged(page, Showing("https://idle.example/") with { Media = PageMediaActivity.Capturing }));
+        Assert.Empty(app.Query(new IdlePages()).Pages);
+        Assert.Empty(Unloaded(app.Send(unload)));
+        app.Report(engine, new PageStateChanged(page, Showing("https://idle.example/")));
+        app.Report(engine, new NavigationCommitted(page, "https://idle.example/new", SameDocument: false));
+        Assert.Empty(Unloaded(app.Send(unload)));
+    }
+
+    [Fact]
+    public void AutomaticSleepKeepsPagesVisibleInAnotherWindowAndTabsExplicitlyKeptLoaded() {
+        var (app, engine, _, clock, workspace, window, space, keptTab) = ResidentHost();
+        using var disposal = app;
+        var kept = Guid.NewGuid();
+        app.Send(new OpenPage(kept, workspace, space, keptTab, window));
+        app.Report(engine, new PageCreated(kept));
+        app.Report(engine, new PageStateChanged(kept, Showing("https://kept.example/")));
+        var (shared, page) = ShowNewTab(app, engine, clock, workspace, window, space, "https://shared.example/");
+        ShowNewTab(app, engine, clock, workspace, window, space, "https://visible.example/");
+        var second = Guid.NewGuid();
+        app.Send(new OpenWindow(second, workspace, Saved: false, null, null, [], RestoresTabs: true));
+        app.Send(new ShowTab(second, space, shared));
+        clock.Now += TimeSpan.FromMinutes(5);
+        Assert.Empty(app.Query(new IdlePages()).Pages);
+        app.Send(new ShowTab(second, space, keptTab));
+        clock.Now += TimeSpan.FromMinutes(5);
+        Assert.Equal(page, Assert.Single(app.Query(new IdlePages()).Pages).PageId);
+    }
+
+    [Fact]
     public void AnUnloadedTabRestoresItsPageOnceAtTheSameAddressAndAClosedTabFreesWhatItKept() {
         var (app, engine, binding, clock, workspace, window, space, _) = ResidentHost();
         using var disposal = app;

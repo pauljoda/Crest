@@ -320,6 +320,16 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     #region Actions - Residency
 
+    /// Five minutes entirely off screen makes a loaded document eligible for
+    /// a silent engine check. Visible splits, locked Spaces, media, agents and
+    /// tabs explicitly kept loaded never enter that check.
+    internal bool CanAutomaticallyUnload(Page page, DateTimeOffset now) =>
+        page.TabId is { } tabId && page.Phase == PagePhase.Live
+        && page.HiddenSince is { } hidden && now - hidden >= TimeSpan.FromMinutes(5)
+        && page.Live.Url is not null && !page.Live.IsLoading && !page.RunsMedia
+        && page.Engine.Supports(EngineCapability.PageResidency) && Tab(page) is { KeepsPageLoaded: false }
+        && !device.HoldsForAgent(tabId) && Shown(page) is not null && !IsShown(page);
+
     /// Stamps each tab's page with whether a window shows it now, and ends the
     /// Picture in Picture of every page that may not keep one, which `issue`
     /// asks its engine for; see `EndPictureInPicture`.

@@ -201,6 +201,7 @@ final class BrowserPagePool:
         }
         followAdoptedPages()
         followPutAwayPages()
+        host.startAutomaticUnloading(core: browser.core)
         core.followWindowsBroughtForward(self) { [weak self] brought in
             guard let self, self.browser.isOpen(as: brought.windowID) else { return }
             bringForward()

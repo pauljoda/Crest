@@ -85,6 +85,18 @@ The core decides navigation, download, content-blocking, authentication, permiss
 
 Shared page operations own common navigation and media behavior. `BrowserPageContentRuleSession` tracks only Crest's WebKit content rules, and `BrowserTabStateCoordinator` owns archive eligibility and pending copies without retaining pages. Platform stores apply a shared reconciliation plan and retain their own presentation and memory-pressure policies. On macOS, each `BrowserTabRuntime` owns one live page. Releasing the tab releases that page and its native history.
 
+On macOS, each workspace host checks for sleeping candidates every 30 seconds.
+The core permits automatic unloading after five uninterrupted minutes off screen,
+excluding visible splits and other windows, locked or deleting Spaces, active media,
+agents, loading pages, transient pages, and tabs marked Keep Page Loaded. WebKit
+checks edited forms, editable content and child frames, then asks its native
+before-unload machinery without presenting a dialog. Uninspectable documents,
+refusals and timeouts stay loaded. The final core intent rechecks the document,
+visibility and background timestamp before unloading with restore state retained;
+tab identity, placement and history remain intact. Downloads remain owned by the
+engine's download coordinator. Chromium and mobile do not opt in without a silent
+unsaved-work check. Manual unload controls and memory-pressure policy are unchanged.
+
 ## Platform shape
 
 Regular-width layouts share a persistent sidebar, page surface, Space switcher, pinned sites, saved tabs, current tabs, and archive. Compact-width layouts present the same data through compact navigation and sheets. Settings belongs in the browsing canvas at regular width and uses a sheet only at compact width; the current layout determines presentation, including after a window resize.

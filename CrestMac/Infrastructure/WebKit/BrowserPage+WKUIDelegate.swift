@@ -48,6 +48,11 @@ extension BrowserPage: WKUIDelegate {
         completionHandler: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
         let engine = webKitEngine
+        if engine?.rejectsCloseDialogs == true {
+            completionHandler(false)
+            engine?.beforeUnloadPanelDidFinish(leaving: false)
+            return
+        }
         engine?.beforeUnloadPanelWillAppear()
         askScriptDialog(.beforeUnload, message: message, defaultText: nil, frame: frame) { leaving, _ in
             completionHandler(leaving)

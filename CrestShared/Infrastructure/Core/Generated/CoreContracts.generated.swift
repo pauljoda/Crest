@@ -3049,6 +3049,21 @@ struct IdentifyAgent: Intent, AgentIntent, Equatable, Sendable {
     let color: BrandColor?
 }
 
+struct IdlePageCandidate: Equatable, Sendable {
+    let pageID: UUID
+    let documents: Int64
+    let hiddenSince: Date
+}
+
+struct IdlePageList: Equatable, Sendable {
+    let pages: [IdlePageCandidate]
+}
+
+struct IdlePages: Query, Equatable, Sendable {
+    typealias Answer = IdlePageList
+
+}
+
 struct ImportAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let legacy: LegacyAppPreferences
@@ -6903,6 +6918,12 @@ struct UnknownTab: Equatable, Sendable {
 
 struct UnknownWorkspace: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct UnloadIdlePage: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let documents: Int64
+    let hiddenSince: Date
 }
 
 struct UnregisteredEngine: Equatable, Sendable {

@@ -41,6 +41,7 @@ final class BrowserPageHost {
     /// native content went.
     @ObservationIgnored var dropPresentation: @MainActor (UUID) -> Void = { _ in }
     @ObservationIgnored private(set) var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
+    @ObservationIgnored var automaticUnloadTask: Task<Void, Never>?
     @ObservationIgnored private var peekLeases: [UUID: PeekLease] = [:]
     /// The pages the core adopted as windows pages asked for, by page, until
     /// the Quick Window that shows each takes it. Every window over the
@@ -54,6 +55,8 @@ final class BrowserPageHost {
     init(archive: (any BrowserTabStateArchiving)? = nil) {
         tabState = BrowserTabStateCoordinator(archive: archive)
     }
+
+    deinit { automaticUnloadTask?.cancel() }
 
     // MARK: - Actions - Resident pages
 
