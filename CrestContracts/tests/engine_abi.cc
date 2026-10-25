@@ -246,6 +246,10 @@ void CodecRoundTrips() {
                                  .page_id = page,
                                  .question = {.kind = engine::JavaScriptDialogKind::kBeforeUnload,
                                               .source_url = "https://example.com/"}},
+      engine::SiteDataRead{.reading_id = Filled(0x7b),
+                           .sites = {{.site = "example.com",
+                                      .kinds = {engine::WebsiteDataKind::kCookies, engine::WebsiteDataKind::kCache}}},
+                           .read = true},
       engine::StagedLinkUnavailable{.page_id = page},
   };
   for (size_t tag = 0; tag < events.size(); ++tag) {
