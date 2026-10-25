@@ -78,6 +78,9 @@ internal static partial class StoredSessionCodec {
         public const string IconAccent = "iconAccent";
         public const string IconModifiedAt = "iconModifiedAt";
         public const string IconStyle = "iconStyle";
+        public const string IsGitHubFolderDismissed = "isGitHubFolderDismissed";
+        public const string GitHubOptions = "githubOptions";
+        public const string LiveFolderSource = "liveFolderSource";
         public const string Id = "id";
         public const string IsCollapsed = "isCollapsed";
         public const string IsEnabled = "isEnabled";

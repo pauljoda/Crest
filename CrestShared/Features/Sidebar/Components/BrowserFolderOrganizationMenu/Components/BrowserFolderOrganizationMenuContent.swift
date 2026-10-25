@@ -38,15 +38,18 @@ struct BrowserFolderOrganizationMenuContent: View {
             performIfCurrent(changeColor)
         }
 
-        Button(
-            folder.location == .current ? "Move to Saved Tabs" : "Move to Current Tabs",
-            systemImage: folder.location == .current ? "bookmark" : "rectangle.stack"
-        ) {
-            performIfCurrent {
-                browser.moveFolder(
-                    folder.id, matching: assignment.spaceAssignment,
-                    to: folder.location == .current ? .saved : .current)
+        if folder.source == nil {
+            Button(
+                folder.location == .current ? "Move to Saved Tabs" : "Move to Current Tabs",
+                systemImage: folder.location == .current ? "bookmark" : "rectangle.stack"
+            ) {
+                performIfCurrent {
+                    browser.moveFolder(
+                        folder.id, matching: assignment.spaceAssignment,
+                        to: folder.location == .current ? .saved : .current)
+                }
             }
+
         }
 
         Menu("Move to Folder", systemImage: "folder.badge.gearshape") {

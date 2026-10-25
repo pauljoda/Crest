@@ -134,7 +134,9 @@ public sealed partial class BrowserTabCollection {
         if (destinationDepth + movingIds.Max(tree.Depth) - tree.Depth(id) >= FolderTree.MaximumDepth)
             throw new Rejected(new FolderDepthLimitReached(FolderTree.MaximumDepth));
         var destination = parent is { } owner ? tree.Folder(owner).Location : location ?? source.Location;
-        if (!destination.HoldsFolders) throw new Rejected(new InvalidFolderPlacement());
+        if (!destination.HoldsFolders || destination != TabPlacement.Saved
+            && folders.Any(folder => movingIds.Contains(folder.Id) && folder.Source is not null))
+            throw new Rejected(new InvalidFolderPlacement());
         if (beforeFolder is { } sibling && (movingIds.Contains(sibling) || KnownFolder(sibling).ParentId != parent
             || KnownFolder(sibling).Location != destination)) throw new Rejected(new InvalidFolderPlacement());
         var members = tabs.Where(t => t.FolderId is { } f && movingIds.Contains(f)).ToArray();

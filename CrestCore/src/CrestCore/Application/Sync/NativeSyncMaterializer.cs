@@ -45,7 +45,7 @@ public static class NativeSyncMaterializer {
             var (accessPolicy, accessModifiedAt) = AccessPolicy(local, remote, access);
             var settings = new SpaceSettings(remote.Name, remote.Symbol, remote.Accent, brandingIds.Contains(remote.Id) ? remote.Branding : null, remote.BrowsingPreferences,
                 credentials, accessPolicy, remote.IsSavedTabsExpanded, remote.SavedTabsExpansionModifiedAt?.Moment,
-                credentialsModifiedAt, accessModifiedAt);
+                credentialsModifiedAt, accessModifiedAt, remote.IsGitHubFolderDismissed);
             spaces.Add(new(remote.Id, remote.ProfileId, settings, folders, tabs, groups, archive, history));
         }
         foreach (var id in pending.Where(id => spaces.All(space => space.Id != id))) {
@@ -114,7 +114,7 @@ public static class NativeSyncMaterializer {
         var synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
             .OrderBy(folder => folder.OrderToken, StringComparer.Ordinal).ThenBy(folder => folder.Id.ToString("D"), StringComparer.Ordinal)
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
-                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId)).ToArray();
+                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, folder.Source, folder.LiveOptions)).ToArray();
         IReadOnlyList<FolderState> resolved;
         try { resolved = FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
         var included = resolved.Select(folder => folder.Id).ToHashSet();

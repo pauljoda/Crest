@@ -62,6 +62,12 @@ struct BrowserSpaceHeaderActionsMenu: View {
             action: actions.createFolder
         )
 
+        if let createGitHubLiveFolder = actions.createGitHubLiveFolder {
+            Menu("Live Folder", systemImage: "folder.badge.gearshape") {
+                Button("GitHub", action: createGitHubLiveFolder)
+            }
+        }
+
         Button(ShortcutCommand.showHistory, action: actions.showHistory)
 
         if let showPasswords = actions.showPasswords {

@@ -24,7 +24,7 @@ internal sealed partial record SpacePayload(
     bool IsSavedTabsExpanded,
     SyncTime? SavedTabsExpansionModifiedAt,
     IReadOnlyList<SplitGroupPayload>? SplitGroups,
-    string OrderToken) : SyncPayload {
+    string OrderToken, bool IsGitHubFolderDismissed = false) : SyncPayload {
     #region Static Variables
 
     /// The members a Space's value carries; a record keeps what a newer build
@@ -34,7 +34,7 @@ internal sealed partial record SpacePayload(
         StoredSessionCodec.Key.Accent, StoredSessionCodec.Key.Branding, StoredSessionCodec.Key.BrowsingPreferences,
         StoredSessionCodec.Key.AccessPolicy, StoredSessionCodec.Key.AccessPolicyModifiedAt, SyncPayload.Key.CredentialsEnabled,
         StoredSessionCodec.Key.CredentialsEnabledModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded,
-        StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.SplitGroups, SyncPayload.Key.OrderToken
+        StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.SplitGroups, SyncPayload.Key.OrderToken, StoredSessionCodec.Key.IsGitHubFolderDismissed
     ];
 
     /// The most splits a Space's record names.
@@ -77,7 +77,7 @@ internal sealed partial record SpacePayload(
             value.OptionalFlag(StoredSessionCodec.Key.IsSavedTabsExpanded) ?? true,
             value.OptionalTime(StoredSessionCodec.Key.SavedTabsExpansionModifiedAt),
             value.OptionalArray(StoredSessionCodec.Key.SplitGroups) is { } groups ? SplitGroupPayload.Normalized(groups, value.Form) : null,
-            value.Text(Key.OrderToken));
+            value.Text(Key.OrderToken), value.OptionalFlag(StoredSessionCodec.Key.IsGitHubFolderDismissed) ?? false);
     }
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
@@ -101,6 +101,7 @@ internal sealed partial record SpacePayload(
         if (SplitGroups is { } groups)
             value[StoredSessionCodec.Key.SplitGroups] = new JsonArray([.. groups.Select(group => (JsonNode?)group.Encode(form))]);
         value[Key.OrderToken] = OrderToken;
+        value[StoredSessionCodec.Key.IsGitHubFolderDismissed] = IsGitHubFolderDismissed;
         return value;
     }
 

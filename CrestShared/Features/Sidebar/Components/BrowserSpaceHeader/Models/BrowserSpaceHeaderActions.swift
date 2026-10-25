@@ -33,4 +33,7 @@ struct BrowserSpaceHeaderActions {
 
     /// Toggles live expansion when the header renders a retained page value.
     var toggleSavedTabs: (() -> Void)?
+
+    /// Adds or reconnects a GitHub live folder where the shell supports it.
+    var createGitHubLiveFolder: (() -> Void)?
 }

@@ -149,7 +149,13 @@ struct BrowserFolderGroup: View {
     /// measurement, hover surface and lift include the entire expanded subtree.
     private func folderContents(configuration: BrowserFolderGroupConfiguration) -> some View {
         BrowserSidebarListRows(list: configuration.inside, context: context) { items in
-            if items.isEmpty { BrowserFolderEmptyRunBand(configuration: configuration) }
+            if items.isEmpty {
+                if folder.source == .gitHubPullRequests {
+                    BrowserGitHubFolderEmpty()
+                } else {
+                    BrowserFolderEmptyRunBand(configuration: configuration)
+                }
+            }
         }
         .equatable()
         .browserSidebarReorderSectionIndicator(

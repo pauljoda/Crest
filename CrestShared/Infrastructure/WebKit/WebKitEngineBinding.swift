@@ -29,6 +29,11 @@ final class WebKitEngineBinding: EngineBinding {
         weak var value: WebKitEnginePage?
     }
 
+    struct WeakIntegrationSession {
+        weak var value: WebKitIntegrationSession?
+        let profileID: UUID
+    }
+
     struct WeakStore {
         weak var value: WKWebsiteDataStore?
     }
@@ -77,6 +82,7 @@ final class WebKitEngineBinding: EngineBinding {
     /// core erases the profile: every private profile's, and every profile's
     /// when the launch keeps nothing on disk.
     var memoryStores: [UUID: WKWebsiteDataStore] = [:]
+    var integrationSessions: [WeakIntegrationSession] = []
     /// The store on disk each other profile's pages use, while one holds it,
     /// which its next page shares and a site's data is cleared from.
     private(set) var liveStores: [UUID: WeakStore] = [:]
@@ -317,8 +323,11 @@ final class WebKitEngineBinding: EngineBinding {
     /// it; otherwise the profile's store on disk, which its pages share while
     /// one holds it.
     private func store(for creation: CreatePage) -> WKWebsiteDataStore {
-        let profileID = creation.profileID
-        if creation.isPrivate || keepsProfilesInMemory {
+        store(profileID: creation.profileID, isPrivate: creation.isPrivate)
+    }
+
+    func store(profileID: UUID, isPrivate: Bool) -> WKWebsiteDataStore {
+        if isPrivate || keepsProfilesInMemory {
             if let store = memoryStores[profileID] { return store }
             let store = WKWebsiteDataStore.nonPersistent()
             memoryStores[profileID] = store

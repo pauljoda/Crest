@@ -36,7 +36,7 @@ internal static partial class StoredSessionCodec {
                 Flag(value[Key.IsSavedTabsExpanded]) ?? true,
                 OptionalDate(value[Key.SavedTabsExpansionModifiedAt]),
                 OptionalDate(value[Key.CredentialsEnabledModifiedAt]),
-                OptionalDate(value[Key.AccessPolicyModifiedAt])),
+                OptionalDate(value[Key.AccessPolicyModifiedAt]), Flag(value[Key.IsGitHubFolderDismissed]) ?? false),
             [.. Items(value[Key.Folders]).Select(DecodeFolder)],
             [.. Items(value[Key.Tabs]).Select(DecodeTab)],
             [.. Items(value[Key.SplitGroups]).Select(DecodeSplitGroup)],
@@ -63,6 +63,7 @@ internal static partial class StoredSessionCodec {
         value[Key.CredentialPreferences] = Encode(settings.CredentialPreferences);
         value[Key.AccessPolicy] = SpaceAccessPolicies.Name(settings.AccessPolicy);
         value[Key.IsSavedTabsExpanded] = settings.IsSavedTabsExpanded;
+        if (settings.IsGitHubFolderDismissed) value[Key.IsGitHubFolderDismissed] = true;
         Put(value, Key.SavedTabsExpansionModifiedAt, settings.SavedTabsExpansionModifiedAt);
         Put(value, Key.CredentialsEnabledModifiedAt, settings.CredentialsEnabledModifiedAt);
         Put(value, Key.AccessPolicyModifiedAt, settings.AccessPolicyModifiedAt);

@@ -18,7 +18,9 @@ public sealed record FolderState(
     Guid? ParentId = null,
     bool IsCollapsed = false,
     DateTimeOffset? CollapseModifiedAt = null,
-    Guid? OrderAnchorTabId = null) {
+    Guid? OrderAnchorTabId = null,
+    LiveFolderSource? Source = null,
+    GitHubLiveFolderOptions? LiveOptions = null) {
     #region Static Variables
 
     /// The most folders deep a folder may nest, counting the folder itself.
@@ -34,6 +36,9 @@ public sealed record FolderState(
     #endregion
 
     #region Variables
+
+    [Resolved]
+    public GitHubLiveFolderOptions GitHubOptions => LiveOptions ?? GitHubLiveFolderOptions.Default;
 
     /// The symbol the folder shows: the one chosen, or <see cref="DefaultSymbol"/>.
     [Resolved]

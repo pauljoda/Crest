@@ -30,7 +30,9 @@ struct SpaceSidebarBrowsingContent: View {
 
     var body: some View {
         if let listContext {
-            content(listContext)
+            BrowserIntegrationsSidebar(space: space, browser: browser, spaceAccess: spaceAccess, pages: pages) {
+                content(listContext)
+            }
         }
     }
 
@@ -55,7 +57,15 @@ struct SpaceSidebarBrowsingContent: View {
                 createFolder: beginCreatingFolder,
                 showHistory: showHistory,
                 cleanup: browser.cleanupCurrentTabs,
-                toggleSavedTabs: toggleSavedTabs
+                toggleSavedTabs: toggleSavedTabs,
+                createGitHubLiveFolder: browser.isPrivateBrowsing
+                    ? nil
+                    : {
+                        BrowserGitHubFolderAction(
+                            browser: browser, spaceAccess: spaceAccess,
+                            assignment: BrowserSpaceRuntimeAssignment(space: space)
+                        ).create()
+                    }
             )
         )
 

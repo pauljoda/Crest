@@ -8,6 +8,8 @@ struct BrowserFolderGroupSurface: View {
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
 
+    @Environment(BrowserGitHubIntegration.self) private var github: BrowserGitHubIntegration?
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var folder: FolderStateModel { configuration.folder }
@@ -27,6 +29,10 @@ struct BrowserFolderGroupSurface: View {
         }
         .contextMenu {
             if configuration.capabilities.supportsOrganization {
+                if folder.source == .gitHubPullRequests, github != nil {
+                    BrowserGitHubFolderOptionsMenu(configuration: configuration)
+                    Divider()
+                }
                 BrowserFolderOrganizationMenu(
                     folder: folder,
                     context: configuration.context,
@@ -95,7 +101,11 @@ struct BrowserFolderGroupSurface: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Its tabs stay in this section, and any nested folders move up one level.")
+            if folder.source != nil {
+                Text("Its tabs move to the archive. Nested folders move up one level.")
+            } else {
+                Text("Its tabs stay in this section, and any nested folders move up one level.")
+            }
         }
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),

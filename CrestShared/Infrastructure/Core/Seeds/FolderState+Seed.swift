@@ -15,10 +15,13 @@ extension FolderState.Seed {
         parentID: UUID? = nil,
         isCollapsed: Bool = false,
         collapseModifiedAt: Date? = nil,
-        orderAnchorTabID: UUID? = nil
+        orderAnchorTabID: UUID? = nil,
+        source: LiveFolderSource? = nil,
+        liveOptions: GitHubLiveFolderOptions? = nil
     ) {
         self.init(
             id: id, location: location, title: title, symbol: symbol, color: color, parentID: parentID,
-            isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID)
+            isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID,
+            source: source, liveOptions: liveOptions)
     }
 }

@@ -31,7 +31,8 @@ extension SpaceState.Seed {
                 name: name, symbol: symbol, accent: accent, branding: branding,
                 browsingPreferences: browsingPreferences,
                 credentialPreferences: credentialPreferences, accessPolicy: accessPolicy,
-                isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt),
+                isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
+                isGitHubFolderDismissed: false),
             folders: folders, tabs: tabs, splitGroups: splitGroups, archivedTabs: archivedTabs, history: history)
     }
 

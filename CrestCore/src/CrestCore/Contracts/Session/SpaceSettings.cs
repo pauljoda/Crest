@@ -22,7 +22,8 @@ public sealed record SpaceSettings(
     bool IsSavedTabsExpanded,
     DateTimeOffset? SavedTabsExpansionModifiedAt,
     DateTimeOffset? CredentialsEnabledModifiedAt = null,
-    DateTimeOffset? AccessPolicyModifiedAt = null) {
+    DateTimeOffset? AccessPolicyModifiedAt = null,
+    bool IsGitHubFolderDismissed = false) {
     #region Variables
 
     /// <summary>The branding the Space wears: its own, with a banner strength stored

@@ -244,6 +244,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidFolderSymbol(InvalidFolderSymbol)
     case invalidImport(InvalidImport)
     case invalidLinkRouteEdit(InvalidLinkRouteEdit)
+    case invalidLiveFolder(InvalidLiveFolder)
     case invalidMediaSessionCount(InvalidMediaSessionCount)
     case invalidName(InvalidName)
     case invalidPasswordLength(InvalidPasswordLength)
@@ -2441,6 +2442,13 @@ struct EditLinkRoute: Intent, LinkIntent, Equatable, Sendable {
     let destinationSpaceID: UUID?
 }
 
+struct EnableGitHubLiveFolder: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let profileID: UUID
+    let folderID: UUID
+}
+
 struct EndAgentSession: Intent, AgentIntent, Equatable, Sendable {
     let sessionID: UUID
 }
@@ -2879,6 +2887,9 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let isCollapsed: Bool
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
+    let source: LiveFolderSource?
+    let liveOptions: GitHubLiveFolderOptions?
+    let gitHubOptions: GitHubLiveFolderOptions
     let displaySymbol: String
     let displayColor: BrandColor
 
@@ -2894,6 +2905,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
         var isCollapsed: Bool
         var collapseModifiedAt: Date?
         var orderAnchorTabID: UUID?
+        var source: LiveFolderSource?
+        var liveOptions: GitHubLiveFolderOptions?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -2907,7 +2920,9 @@ struct FolderState: Equatable, Sendable, Identifiable {
             parentID: parentID,
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
-            orderAnchorTabID: orderAnchorTabID
+            orderAnchorTabID: orderAnchorTabID,
+            source: source,
+            liveOptions: liveOptions
         )
     }
 }
@@ -2963,6 +2978,24 @@ struct GetAgentPreferences: Query, Equatable, Sendable {
 struct GetEnginePreferences: Query, Equatable, Sendable {
     typealias Answer = EnginePreferences
 
+}
+
+struct GitHubLiveFolderOptions: Equatable, Sendable {
+    static let `default` = GitHubLiveFolderOptions(
+        authorMe: true,
+        assignedMe: true,
+        reviewRequested: false,
+        includeDrafts: true,
+        excludedRepositories: [],
+        interval: LiveFolderRefreshInterval.thirtyMinutes
+    )
+
+    var authorMe: Bool
+    var assignedMe: Bool
+    var reviewRequested: Bool
+    var includeDrafts: Bool
+    var excludedRepositories: [String]
+    var interval: LiveFolderRefreshInterval
 }
 
 struct GoToHistoryEntry: Equatable, Sendable {
@@ -3257,6 +3290,19 @@ struct InstalledExtensions: PageRequest, Equatable, Sendable {
     let profileID: UUID
 }
 
+struct IntegrationEngine: Query, Equatable, Sendable {
+    typealias Answer = IntegrationEngineChoice
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let profileID: UUID
+    let origin: SiteOrigin
+}
+
+struct IntegrationEngineChoice: Equatable, Sendable {
+    let kind: EngineKind?
+}
+
 struct InteractionState: Equatable, Sendable {
     let state: Data?
 }
@@ -3318,6 +3364,10 @@ struct InvalidImport: Equatable, Sendable {
 
 struct InvalidLinkRouteEdit: Equatable, Sendable {
     let routeID: UUID
+}
+
+struct InvalidLiveFolder: Equatable, Sendable {
+    let spaceID: UUID
 }
 
 struct InvalidMediaSessionCount: Equatable, Sendable {
@@ -3640,6 +3690,11 @@ struct LinkRoutesFull: Equatable, Sendable {
 struct ListDropTarget: Equatable, Sendable {
     let section: TabPlacement
     let folderID: UUID?
+}
+
+struct LiveFolderTab: Equatable, Sendable {
+    var url: String
+    var title: String
 }
 
 struct LoadAddress: Intent, PageIntent, Equatable, Sendable {
@@ -4972,6 +5027,16 @@ struct RecoveryCheckpointUnusable: Equatable, Sendable {
     let reason: StorageFailure
 }
 
+struct RefreshLiveFolder: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let profileID: UUID
+    let folderID: UUID
+    let source: LiveFolderSource
+    let tabs: [LiveFolderTab]
+    let expectedOptions: GitHubLiveFolderOptions?
+}
+
 struct RefreshPageIcon: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -5606,6 +5671,14 @@ struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
     let symbol: String
 }
 
+struct SetGitHubLiveFolderOptions: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let profileID: UUID
+    let folderID: UUID
+    let options: GitHubLiveFolderOptions
+}
+
 struct SetLinkBehavior: Intent, LinkIntent, Equatable, Sendable {
     let behavior: LinkBehavior
     let isOn: Bool
@@ -6233,6 +6306,7 @@ struct SpaceSettings: Equatable, Sendable {
     let savedTabsExpansionModifiedAt: Date?
     let credentialsEnabledModifiedAt: Date?
     let accessPolicyModifiedAt: Date?
+    let isGitHubFolderDismissed: Bool
     let look: SpaceBranding
     let requiresAuthentication: Bool
 
@@ -6250,6 +6324,7 @@ struct SpaceSettings: Equatable, Sendable {
         var savedTabsExpansionModifiedAt: Date?
         var credentialsEnabledModifiedAt: Date?
         var accessPolicyModifiedAt: Date?
+        var isGitHubFolderDismissed: Bool
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6265,7 +6340,8 @@ struct SpaceSettings: Equatable, Sendable {
             isSavedTabsExpanded: isSavedTabsExpanded,
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
             credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
-            accessPolicyModifiedAt: accessPolicyModifiedAt
+            accessPolicyModifiedAt: accessPolicyModifiedAt,
+            isGitHubFolderDismissed: isGitHubFolderDismissed
         )
     }
 }
@@ -14055,6 +14131,133 @@ struct LinkRouteMatch: Hashable, Sendable {
     }
 
     static func == (lhs: LinkRouteMatch, rhs: LinkRouteMatch) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
+/// The members of the core's `LiveFolderRefreshInterval`. A member's wire tag is its index in `all`.
+struct LiveFolderRefreshInterval: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var minutes: Int { facts.minutes }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, minutes: Int, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, minutes: minutes, title: title)
+    }
+
+    static let fifteenMinutes = LiveFolderRefreshInterval(
+        tag: 0,
+        name: "15minutes",
+        minutes: 15,
+        title: LocalizedStringResource("15 minutes")
+    )
+    static let thirtyMinutes = LiveFolderRefreshInterval(
+        tag: 1,
+        name: "30minutes",
+        minutes: 30,
+        title: LocalizedStringResource("30 minutes")
+    )
+    static let oneHour = LiveFolderRefreshInterval(
+        tag: 2,
+        name: "1hour",
+        minutes: 60,
+        title: LocalizedStringResource("1 hour")
+    )
+    static let twoHours = LiveFolderRefreshInterval(
+        tag: 3,
+        name: "2hours",
+        minutes: 120,
+        title: LocalizedStringResource("2 hours")
+    )
+    static let fourHours = LiveFolderRefreshInterval(
+        tag: 4,
+        name: "4hours",
+        minutes: 240,
+        title: LocalizedStringResource("4 hours")
+    )
+    static let eightHours = LiveFolderRefreshInterval(
+        tag: 5,
+        name: "8hours",
+        minutes: 480,
+        title: LocalizedStringResource("8 hours")
+    )
+
+    static let all: [LiveFolderRefreshInterval] = [
+        fifteenMinutes,
+        thirtyMinutes,
+        oneHour,
+        twoHours,
+        fourHours,
+        eightHours
+    ]
+
+    static func named(_ name: String?) -> LiveFolderRefreshInterval? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: LiveFolderRefreshInterval, rhs: LiveFolderRefreshInterval) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let minutes: Int
+        let title: LocalizedStringResource
+
+        init(name: String, minutes: Int, title: LocalizedStringResource) {
+            self.name = name
+            self.minutes = minutes
+            self.title = title
+        }
+    }
+}
+
+/// The members of the core's `LiveFolderSource`. A member's wire tag is its index in `all`.
+struct LiveFolderSource: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let gitHubPullRequests = LiveFolderSource(
+        tag: 0,
+        name: "githubPullRequests",
+        title: LocalizedStringResource("GitHub")
+    )
+
+    static let all: [LiveFolderSource] = [gitHubPullRequests]
+
+    static func named(_ name: String?) -> LiveFolderSource? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: LiveFolderSource, rhs: LiveFolderSource) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -23577,6 +23780,18 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.orderAnchorTabID)
         return orderAnchorTabIDStorage
     }
+    var source: LiveFolderSource? {
+        access(keyPath: \.source)
+        return sourceStorage
+    }
+    var liveOptions: GitHubLiveFolderOptions? {
+        access(keyPath: \.liveOptions)
+        return liveOptionsStorage
+    }
+    var gitHubOptions: GitHubLiveFolderOptions {
+        access(keyPath: \.gitHubOptions)
+        return gitHubOptionsStorage
+    }
     var displaySymbol: String {
         access(keyPath: \.displaySymbol)
         return displaySymbolStorage
@@ -23594,6 +23809,9 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var isCollapsedStorage: Bool
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
+    @ObservationIgnored private var sourceStorage: LiveFolderSource?
+    @ObservationIgnored private var liveOptionsStorage: GitHubLiveFolderOptions?
+    @ObservationIgnored private var gitHubOptionsStorage: GitHubLiveFolderOptions
     @ObservationIgnored private var displaySymbolStorage: String
     @ObservationIgnored private var displayColorStorage: BrandColor
 
@@ -23608,6 +23826,9 @@ final class FolderStateModel: ObservedModel, Identifiable {
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
+            source: source,
+            liveOptions: liveOptions,
+            gitHubOptions: gitHubOptions,
             displaySymbol: displaySymbol,
             displayColor: displayColor
         )
@@ -23623,6 +23844,9 @@ final class FolderStateModel: ObservedModel, Identifiable {
         isCollapsedStorage = value.isCollapsed
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
+        sourceStorage = value.source
+        liveOptionsStorage = value.liveOptions
+        gitHubOptionsStorage = value.gitHubOptions
         displaySymbolStorage = value.displaySymbol
         displayColorStorage = value.displayColor
     }
@@ -23660,6 +23884,18 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if orderAnchorTabIDStorage != value.orderAnchorTabID {
             orderAnchorTabIDStorage = value.orderAnchorTabID
             withMutation(keyPath: \.orderAnchorTabID) {}
+        }
+        if sourceStorage != value.source {
+            sourceStorage = value.source
+            withMutation(keyPath: \.source) {}
+        }
+        if liveOptionsStorage != value.liveOptions {
+            liveOptionsStorage = value.liveOptions
+            withMutation(keyPath: \.liveOptions) {}
+        }
+        if gitHubOptionsStorage != value.gitHubOptions {
+            gitHubOptionsStorage = value.gitHubOptions
+            withMutation(keyPath: \.gitHubOptions) {}
         }
         if displaySymbolStorage != value.displaySymbol {
             displaySymbolStorage = value.displaySymbol
@@ -23812,6 +24048,10 @@ final class SpaceSettingsModel: ObservedModel {
         access(keyPath: \.accessPolicyModifiedAt)
         return accessPolicyModifiedAtStorage
     }
+    var isGitHubFolderDismissed: Bool {
+        access(keyPath: \.isGitHubFolderDismissed)
+        return isGitHubFolderDismissedStorage
+    }
     var look: SpaceBranding {
         access(keyPath: \.look)
         return lookStorage
@@ -23832,6 +24072,7 @@ final class SpaceSettingsModel: ObservedModel {
     @ObservationIgnored private var savedTabsExpansionModifiedAtStorage: Date?
     @ObservationIgnored private var credentialsEnabledModifiedAtStorage: Date?
     @ObservationIgnored private var accessPolicyModifiedAtStorage: Date?
+    @ObservationIgnored private var isGitHubFolderDismissedStorage: Bool
     @ObservationIgnored private var lookStorage: SpaceBranding
     @ObservationIgnored private var requiresAuthenticationStorage: Bool
 
@@ -23848,6 +24089,7 @@ final class SpaceSettingsModel: ObservedModel {
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
             credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
             accessPolicyModifiedAt: accessPolicyModifiedAt,
+            isGitHubFolderDismissed: isGitHubFolderDismissed,
             look: look,
             requiresAuthentication: requiresAuthentication
         )
@@ -23865,6 +24107,7 @@ final class SpaceSettingsModel: ObservedModel {
         savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
         credentialsEnabledModifiedAtStorage = value.credentialsEnabledModifiedAt
         accessPolicyModifiedAtStorage = value.accessPolicyModifiedAt
+        isGitHubFolderDismissedStorage = value.isGitHubFolderDismissed
         lookStorage = value.look
         requiresAuthenticationStorage = value.requiresAuthentication
     }
@@ -23913,6 +24156,10 @@ final class SpaceSettingsModel: ObservedModel {
         if accessPolicyModifiedAtStorage != value.accessPolicyModifiedAt {
             accessPolicyModifiedAtStorage = value.accessPolicyModifiedAt
             withMutation(keyPath: \.accessPolicyModifiedAt) {}
+        }
+        if isGitHubFolderDismissedStorage != value.isGitHubFolderDismissed {
+            isGitHubFolderDismissedStorage = value.isGitHubFolderDismissed
+            withMutation(keyPath: \.isGitHubFolderDismissed) {}
         }
         if lookStorage != value.look {
             lookStorage = value.look

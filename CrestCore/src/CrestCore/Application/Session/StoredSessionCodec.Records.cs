@@ -103,7 +103,8 @@ internal static partial class StoredSessionCodec {
             Text(value[Key.Title]) ?? UntitledFolder, Text(value[Key.Symbol]),
             value[Key.Color] is JsonObject color ? DecodeColor(color) : null, OptionalIdentity(value[Key.ParentId]),
             Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]),
-            OptionalIdentity(value[Key.OrderAnchorTabId]));
+            OptionalIdentity(value[Key.OrderAnchorTabId]), LiveFolderSource.Named(Text(value[Key.LiveFolderSource])),
+            DecodeGitHubOptions(value[Key.GitHubOptions]) is { IsValid: true } options ? options.Normalized() : null);
     }
 
     internal static JsonObject Encode(FolderState folder) {
@@ -118,6 +119,8 @@ internal static partial class StoredSessionCodec {
         value[Key.IsCollapsed] = folder.IsCollapsed;
         Put(value, Key.CollapseModifiedAt, folder.CollapseModifiedAt);
         if (folder.OrderAnchorTabId is { } anchor) value[Key.OrderAnchorTabId] = WrappedIdentity(anchor);
+        if (folder.Source is { } source) value[Key.LiveFolderSource] = source.Name;
+        if (folder.LiveOptions is { } options) value[Key.GitHubOptions] = Encode(options);
         return value;
     }
 
@@ -138,6 +141,23 @@ internal static partial class StoredSessionCodec {
         PutEdit(value, Key.TintModifiedAt, group.TintModifiedAt);
         return value;
     }
+
+    internal static GitHubLiveFolderOptions? DecodeGitHubOptions(JsonNode? node) {
+        if (node is not JsonObject value) return null;
+        return new(Flag(value["authorMe"]) ?? true, Flag(value["assignedMe"]) ?? true,
+            Flag(value["reviewRequested"]) ?? false, Flag(value["includeDrafts"]) ?? true,
+            (value["repoExcludes"] as JsonArray)?.Select(item => Text(item) ?? "").ToArray() ?? [],
+            LiveFolderRefreshInterval.Named(Text(value["interval"])) ?? LiveFolderRefreshInterval.ThirtyMinutes);
+    }
+
+    internal static JsonObject Encode(GitHubLiveFolderOptions options) => new() {
+        ["authorMe"] = options.AuthorMe,
+        ["assignedMe"] = options.AssignedMe,
+        ["reviewRequested"] = options.ReviewRequested,
+        ["includeDrafts"] = options.IncludeDrafts,
+        ["repoExcludes"] = new JsonArray(options.ExcludedRepositories.Select(repository => (JsonNode?)JsonValue.Create(repository)).ToArray()),
+        ["interval"] = options.Interval.Name
+    };
 
     /// A color; alpha defaults to opaque.
     internal static BrandColor DecodeColor(JsonObject value) => new(Component(value, Key.Red), Component(value, Key.Green),
