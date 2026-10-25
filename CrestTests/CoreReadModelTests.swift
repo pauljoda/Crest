@@ -167,7 +167,7 @@ final class CoreReadModelTests: XCTestCase {
                 PageOpened(
                     page: PageState(
                         id: pageID, workspaceID: workspaceID, spaceID: UUID(), tabID: nil, engine: .webKit,
-                        phase: .opening, live: .blank)
+                        phase: .opening, live: .blank, developerMode: nil)
                 ).apply(to: detached)
             })
         assertStoredFirst(

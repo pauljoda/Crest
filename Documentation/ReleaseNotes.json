@@ -4541,6 +4541,10 @@
     "imported-ip-address-passwords-fill": {
       "category": "fixed",
       "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "developer-mode-per-site": {
+      "category": "new",
+      "message": "Turn Developer Mode on or off for a site from Site Controls, and Crest remembers it for that site across reloads, new tabs and relaunches, keeping private browsing’s choices in memory only. Show or Hide Developer Toolbar still works for the page you’re on."
     }
   }
 }

@@ -81,7 +81,7 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         // extension, never by the person, so it may close itself as it would
         // in any browser, and it stays on the engine that opened it.
         var page = new Page(pages.Ids.Next(), engine, space.ProfileId, workspaceId, space.Id, tabId, windowId, transient: null,
-            openedByPage: true);
+            pages.Device.ChosenDeveloperMode, openedByPage: true);
         pages.Add(page);
         turn.Changes.Publish(new PageOpened(page.State));
         turn.Changes.Publish(new OfferedPageAdopted(page.Id, workspaceId, windowId, space.Id, tabId, Foreground));
@@ -97,7 +97,7 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
             || space.ProfileId != ProfileId)
             return false;
         var page = new Page(pages.Ids.Next(), engine, space.ProfileId, source.WorkspaceId, space.Id, tabId: null, source.WindowId,
-            TransientPresentation.QuickWindow, openedByPage: true);
+            TransientPresentation.QuickWindow, pages.Device.ChosenDeveloperMode, openedByPage: true);
         pages.Add(page);
         turn.Changes.Publish(new PageOpened(page.State));
         turn.Changes.Publish(new OfferedWindowAdopted(page.Id, source.Id, source.WorkspaceId, source.WindowId, space.Id, Url));

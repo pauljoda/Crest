@@ -48,9 +48,12 @@ public sealed record PageChanged(PageState Page) : Change;
 /// that owns it, the engine that hosts it, where it stands there and its live
 /// state. A page without a tab belongs to a transient request: a Quick Window,
 /// a Peek, or one of its engine's own pages that Settings shows.
+/// `DeveloperMode` is the Developer Mode choice for the site the page shows
+/// in its Space (see `ChooseSiteDeveloperMode`), or null when none is and the
+/// page follows the default.
 [Observed]
 public sealed record PageState(Guid Id, Guid WorkspaceId, Guid SpaceId, Guid? TabId, EngineKind Engine, PagePhase Phase,
-    PageLiveState Live);
+    PageLiveState Live, bool? DeveloperMode = null);
 
 /// A page opened, and its engine is creating it.
 public sealed record PageOpened(PageState Page) : Change;
@@ -90,6 +93,9 @@ public sealed record PageNotLoadable(Guid PageId) : Rejection;
 /// The Space keeps another profile than the one the page's engine page lives
 /// in, so the page cannot move there.
 public sealed record PageProfileMismatch(Guid PageId, Guid SpaceId) : Rejection;
+
+/// The page shows no web page's address, so it names no site.
+public sealed record PageShowsNoSite(Guid PageId) : Rejection;
 
 /// The page cannot load the link staged in `SourcePageId`: it lives on another
 /// engine or profile, or its engine already holds its page.

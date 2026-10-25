@@ -35,7 +35,7 @@ public sealed record OpenPage(Guid PageId, Guid WorkspaceId, Guid SpaceId, Guid?
         var engine = (history?.History.Engine is { } shown ? pages.Engines.Registered(shown) : null) ?? pages.Opening(space, tab, opener)
             ?? throw new Rejected(new EngineNotRegistered());
         var page = new Page(PageId, engine, space.ProfileId, WorkspaceId, space.Id, TabId, WindowId, Transient,
-            openedByPage: opener is not null);
+            pages.Device.ChosenDeveloperMode, openedByPage: opener is not null);
         pages.Add(page);
         var restore = TabId is { } tabId ? pages.Restorable(WorkspaceId, space, tabId, engine.Kind) : null;
         if (restore is not null) page.Restoring(restore.Url);

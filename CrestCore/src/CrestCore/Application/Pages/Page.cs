@@ -51,7 +51,18 @@ internal sealed class Page {
 
     public PagePhase Phase { get; private set; } = PagePhase.Opening;
 
-    public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase, Live);
+    public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase, Live, DeveloperMode);
+
+    /// The Developer Mode choice for the site the page shows in its Space, or
+    /// null when none is.
+    public bool? DeveloperMode => Origin is { } origin ? siteDeveloperMode(SpaceId, origin) : null;
+
+    /// The site of the address the page shows the person, or null for an
+    /// address that is not a web page's.
+    public SiteOrigin? Origin => Live.Address is { } address ? new WebAddress(address).Origin : null;
+
+    /// Answers the Developer Mode choice for a site in a Space.
+    private readonly Func<Guid, SiteOrigin, bool?> siteDeveloperMode;
 
     /// What rules and views read of the page now: what its engine last showed,
     /// whether its history reaches back or forward, and why its latest
@@ -148,7 +159,7 @@ internal sealed class Page {
     #region Constructors
 
     public Page(Guid id, Engine engine, Guid profileId, Guid workspaceId, Guid spaceId, Guid? tabId, Guid windowId,
-        TransientPresentation? transient, bool openedByPage = false) {
+        TransientPresentation? transient, Func<Guid, SiteOrigin, bool?> siteDeveloperMode, bool openedByPage = false) {
         Id = id;
         Engine = engine;
         ProfileId = profileId;
@@ -158,6 +169,7 @@ internal sealed class Page {
         WindowId = windowId;
         Transient = transient;
         OpenedByPage = openedByPage;
+        this.siteDeveloperMode = siteDeveloperMode;
     }
 
     #endregion

@@ -36,6 +36,10 @@ final class CorePage {
     /// holds the page.
     var live: PageLiveState { state?.live ?? .blank }
 
+    /// The Developer Mode choice for the site the page shows, or nil when
+    /// none is and the site follows the default.
+    var developerMode: Bool? { state?.developerMode }
+
     /// The registered engines this page can move to: every one but its own.
     /// Empty before the core holds the page or while one engine is registered.
     var otherEngines: [EngineKind] {
@@ -217,6 +221,23 @@ final class CorePage {
     func open(_ origin: SiteOrigin, in spaceID: UUID, on engine: EngineKind) -> Bool {
         guard !isReleased, let core else { return false }
         return core.open(origin, in: spaceID, on: engine, moving: id)
+    }
+
+    /// Chooses Developer Mode on or off for the site this page shows, or
+    /// forgets the choice when `isOn` is nil so the site follows the default.
+    /// Every open page of the site takes the choice at once. False when a rule
+    /// refuses it, such as a locked Space or a page that shows no site.
+    @discardableResult
+    func chooseDeveloperMode(_ isOn: Bool?) -> Bool {
+        guard !isReleased, let core else { return false }
+        do {
+            try core.send(ChooseSiteDeveloperMode(pageID: id, isOn: isOn))
+            return true
+        } catch {
+            Self.logger.debug(
+                "The core refused page \(self.id, privacy: .public)'s Developer Mode: \(String(describing: error))")
+            return false
+        }
     }
 
     /// Moves this page alone to `engine`, which loads what it showed; the
