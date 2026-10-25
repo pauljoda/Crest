@@ -163,6 +163,9 @@ class EnginePage final : public content::WebContentsObserver,
   engine::PageIconImage Answer(const engine::PageIcon&) const { return {.image = icon()}; }
   engine::PageMediaState Answer(const engine::PageMedia&) const { return {.activity = MediaActivity()}; }
   bool Answer(const engine::EnterPictureInPicture& request);
+  // Shows the caption, the text the page shows over its video, in the page's
+  // Picture in Picture window; empty shows none.
+  bool Answer(const engine::ShowPictureInPictureCaption& request);
   bool Answer(const engine::ActivateMediaSession& request);
   bool Answer(const engine::PerformMediaAction& request);
   bool Answer(const engine::MuteMediaSession& request);

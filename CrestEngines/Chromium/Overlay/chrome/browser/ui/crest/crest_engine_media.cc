@@ -19,6 +19,7 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 #include "content/public/browser/audio_service.h"
 #include "content/public/browser/media_session.h"
+#include "content/public/browser/video_picture_in_picture_window_controller.h"
 #include "content/public/browser/web_contents.h"
 #include "media/audio/audio_input_device.h"
 #include "media/audio/audio_input_ipc.h"
@@ -405,6 +406,18 @@ bool PageMedia::EnterPictureInPicture() {
     return false;
   }
   session->EnterPictureInPicture();
+  return true;
+}
+
+// The window belongs to the page's video Picture in Picture controller, which
+// hands the text to the window it shows. A document Picture in Picture window
+// is the page's own and shows its own captions.
+bool PageMedia::ShowPictureInPictureCaption(const std::string& caption) {
+  if (!contents_->HasPictureInPictureVideo()) {
+    return false;
+  }
+  content::PictureInPictureWindowController::GetOrCreateVideoPictureInPictureController(contents_)->SetCaption(
+      base::UTF8ToUTF16(caption));
   return true;
 }
 

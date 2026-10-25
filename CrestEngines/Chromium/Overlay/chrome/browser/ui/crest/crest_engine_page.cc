@@ -1387,6 +1387,10 @@ bool EnginePage::Answer(const engine::EnterPictureInPicture&) {
   return media_ && media_->EnterPictureInPicture();
 }
 
+bool EnginePage::Answer(const engine::ShowPictureInPictureCaption& request) {
+  return media_ && media_->ShowPictureInPictureCaption(request.caption);
+}
+
 bool EnginePage::ExitPictureInPicture() {
   return media_ && media_->ExitPictureInPicture();
 }

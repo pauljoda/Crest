@@ -5865,6 +5865,13 @@ struct ShowPage: PageRequest, Equatable, Sendable {
     let pageID: UUID
 }
 
+struct ShowPictureInPictureCaption: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let caption: String
+}
+
 struct ShowSetupStep: Intent, SetupFlowIntent, Equatable, Sendable {
     let step: SetupStep
 }
