@@ -6,6 +6,8 @@ struct MobileBrowserCommandContext {
     let canGoForward: Bool
     let hasSelectedTab: Bool
     let hasActivePage: Bool
+    /// The active page shows a site, whose data the site commands clear.
+    let showsSite: Bool
     let isLoading: Bool
     let canDismissSelectedTab: Bool
     let canArchiveSelectedTab: Bool

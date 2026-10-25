@@ -52,7 +52,7 @@ struct BrowserWebsiteDataSection: View {
         ) {
             Button("Remove All", role: .destructive) {
                 guard let list else { return }
-                Task { await list.remove(list.sites ?? []) }
+                Task { await list.removeAll() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {

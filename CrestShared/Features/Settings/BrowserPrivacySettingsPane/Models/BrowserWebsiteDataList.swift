@@ -51,13 +51,26 @@ final class BrowserWebsiteDataList {
     /// Removes everything `sites` keep in the Space, cookies, storage and
     /// cache alike, then lists the sites again.
     func remove(_ sites: [StoredSite]) async {
-        guard !sites.isEmpty, !isRemoving else { return }
-        isRemoving = true
-        let removed = await core.deleteData(
+        guard !sites.isEmpty else { return }
+        await removing(
             DeleteSiteData(
                 requestID: UUID(), profileID: profileID, ephemeral: ephemeral, hosts: sites.map(\.site),
                 categories: BrowsingDataCategory.all.filter(\.clearsBySite)))
-        removalFailed = !removed
+    }
+
+    /// Removes every site's data in the Space, a site no engine could list
+    /// included, then lists the sites again.
+    func removeAll() async {
+        await removing(
+            DeleteBrowsingData(
+                requestID: UUID(), profileID: profileID, ephemeral: ephemeral, range: .allTime,
+                categories: BrowsingDataCategory.all.filter(\.clearsBySite)))
+    }
+
+    private func removing(_ request: some DataDeletionRequest) async {
+        guard !isRemoving else { return }
+        isRemoving = true
+        removalFailed = !(await core.deleteData(request))
         await read()
         isRemoving = false
     }

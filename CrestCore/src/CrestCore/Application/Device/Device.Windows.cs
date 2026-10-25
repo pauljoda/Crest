@@ -148,6 +148,19 @@ internal sealed partial class Device {
         return owner.Value.IsDeleting(only.Id) || owner.Value.IsLocked(only) ? null : (owner.Key, only.Id);
     }
 
+    /// Refused with `SpaceLocked` when a locked Space holds profile
+    /// `profileId`: what the profile's engines keep is the grant's to reveal
+    /// or erase, as the Space's own records are.
+    internal void RefuseLockedProfile(Guid profileId) {
+        KeyValuePair<Guid, NativeSessionAuthority>[] attached;
+        lock (gate) attached = [.. workspaces];
+        foreach (var (_, workspace) in attached) {
+            foreach (var space in workspace.Current.Spaces.Where(space => space.ProfileId == profileId)) {
+                if (workspace.IsLocked(space)) throw new Rejected(new SpaceLocked(space.Id));
+            }
+        }
+    }
+
     /// The workspaces closing the windows `windowIds` leaves without an open
     /// window, of a kind whose pages go with their windows, so each goes with
     /// its last window, and every page of it with that window.

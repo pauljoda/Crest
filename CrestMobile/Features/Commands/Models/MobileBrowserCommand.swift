@@ -72,9 +72,9 @@ struct MobileBrowserCommand {
         .copyPageLinkAsMarkdown, isEnabled: { $0.hasActivePage }, run: { $0.copyPageLinkAsMarkdown() })
     static let printPage = MobileBrowserCommand(.printPage, isEnabled: { $0.hasActivePage }, run: { $0.printPage() })
     static let clearSiteCookies = MobileBrowserCommand(
-        .clearSiteCookies, isEnabled: { $0.hasActivePage }, run: { $0.beginClearingSiteData(.siteData) })
+        .clearSiteCookies, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.siteData) })
     static let clearSiteCache = MobileBrowserCommand(
-        .clearSiteCache, isEnabled: { $0.hasActivePage }, run: { $0.beginClearingSiteData(.cache) })
+        .clearSiteCache, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.cache) })
     static let toggleSidebar = MobileBrowserCommand(.toggleSidebar) { $0.toggleSidebar() }
     static let toggleTranslationToolbar = MobileBrowserCommand(
         .toggleTranslationToolbar, isAvailable: { $0.canToggleTranslationToolbar },

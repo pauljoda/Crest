@@ -21,4 +21,11 @@ public sealed record DeleteBrowsingData(Guid RequestId, Guid ProfileId, bool Eph
     }
 
     #endregion
+
+    #region Actions - Access
+
+    /// Refused with `SpaceLocked` while a locked Space holds the profile.
+    internal override void Guard(Device device) => device.RefuseLockedProfile(ProfileId);
+
+    #endregion
 }
