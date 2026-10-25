@@ -441,8 +441,10 @@ own nearby-device, QR and security-key fallbacks. Cancelling the system sheet
 returns to Chromium's mechanism list once, so the engine's phone, USB and
 security-key flows stay reachable. Creation defaults to iCloud Keychain rather
 than a browser-owned store, and Chromium's staged rollout features for that
-choice do not apply. A build without the entitlement, such as the review package, keeps
-Chromium's own sheet, so passkeys there are not a test of Crest's behaviour.
+choice do not apply. In Crest mode the availability check that sites make before
+offering Touch ID asks macOS rather than Chromium's Touch ID store. A build without
+the entitlement, such as the review package, keeps Chromium's own sheet and still
+reports it unavailable, so passkeys there are not a test of Crest's behaviour.
 
 A private window works like incognito. Its pages use an off-the-record
 profile that is new each time private browsing opens, is always derived from

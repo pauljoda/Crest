@@ -1,5 +1,6 @@
 #import <AuthenticationServices/AuthenticationServices.h>
 #import <Cocoa/Cocoa.h>
+#import <LocalAuthentication/LocalAuthentication.h>
 #import "CrestChromiumHost.h"
 
 #include <algorithm>
@@ -23,6 +24,7 @@
 #include "base/functional/bind.h"
 #include "base/functional/callback_helpers.h"
 #include "base/task/sequenced_task_runner.h"
+#include "base/task/task_traits.h"
 #include "base/files/file_util.h"
 #include "components/prefs/pref_service.h"
 #include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
@@ -1050,6 +1052,20 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
 @end
 
 namespace crest {
+void CanEvaluateDeviceOwnerAuthentication(base::OnceCallback<void(bool)> callback) {
+  base::ThreadPool::PostTaskAndReplyWithResult(
+      FROM_HERE,
+      {base::TaskPriority::USER_VISIBLE, base::MayBlock(),
+       base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+      base::BindOnce([] {
+        LAContext* context = [[LAContext alloc] init];
+        NSError* error = nil;
+        return static_cast<bool>([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthentication
+                                                      error:&error]);
+      }),
+      std::move(callback));
+}
+
 void SnapPictureInPictureWindow(views::Widget* widget) {
   if (!IsEnabled() || !widget) return;
   NSWindow* window = widget->GetNativeWindow().GetNativeNSWindow();

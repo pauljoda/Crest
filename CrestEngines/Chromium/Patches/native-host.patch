@@ -1751,6 +1751,50 @@
      }
    }
  }
+--- a/chrome/browser/webauthn/chrome_web_authentication_delegate.cc
++++ b/chrome/browser/webauthn/chrome_web_authentication_delegate.cc
+@@ -81,7 +81,9 @@
+ #endif
+ 
+ #if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #include "device/fido/mac/credential_metadata.h"
++#include "device/fido/mac/icloud_keychain.h"
+ #endif
+ 
+ namespace {
+@@ -289,6 +291,31 @@
+                   return;
+                 }
+ 
++#if BUILDFLAG(IS_MAC)
++                // Crest creates and uses passkeys through the system's iCloud
++                // Keychain sheet, not Chromium's Touch ID store, whose keychain
++                // group Crest is not entitled to. Ask macOS instead, so sites
++                // such as Duo that check before offering Touch ID see it. This
++                // also answers for Google, because create() goes to the system
++                // sheet rather than the enclave the check below guards.
++                if (base::CommandLine::ForCurrentProcess()->HasSwitch(
++                        "crest-control-plane")) {
++                  if (!device::fido::icloud_keychain::IsSupported() ||
++                      device::fido::icloud_keychain::HasPermission() ==
++                          false) {
++                    std::move(callback).Run(false);
++                    return;
++                  }
++                  crest::CanEvaluateDeviceOwnerAuthentication(base::BindOnce(
++                      [](base::OnceCallback<void(std::optional<bool>)> callback,
++                         bool available) {
++                        std::move(callback).Run(available);
++                      },
++                      std::move(callback)));
++                  return;
++                }
++#endif
++
+                 // The enclave won't allow credentials for an account to be
+                 // stored in GPM _in_ that account. So we don't want to tell
+                 // accounts.9oo91e.qjz9zk that there is a platform authenticator
 --- a/chrome/browser/webauthn/authenticator_request_dialog_controller.cc
 +++ b/chrome/browser/webauthn/authenticator_request_dialog_controller.cc
 @@ -20,6 +20,7 @@

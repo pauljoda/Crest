@@ -11,6 +11,8 @@
 #include <functional>
 #include <memory>
 
+#include "base/functional/callback_forward.h"
+
 class Browser;
 class DesktopMediaPicker;
 class MediaStreamUI;
@@ -166,6 +168,13 @@ NSMenu* DockMenu();
 bool BeginAuthenticationSession(ASWebAuthenticationSessionRequest* request);
 bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request);
 NSWindow* WindowForBrowser(Browser* browser);
+#endif
+// Whether macOS can authenticate the person with Touch ID, the Apple Watch or
+// the device password. Evaluated off the UI thread; `callback` runs on the
+// caller's sequence. WebAuthn's availability check asks this instead of
+// Chromium's own Touch ID store, which Crest's build does not use.
+void CanEvaluateDeviceOwnerAuthentication(base::OnceCallback<void(bool)> callback);
+#ifdef __OBJC__
 // Crest's own rows for the link or selection a context menu was opened on.
 void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url,
                         const std::u16string& selection);

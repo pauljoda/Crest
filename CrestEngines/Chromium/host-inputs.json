@@ -195,6 +195,10 @@
     "before": "7ead6e3671ed9ee53ac25d00a5d30f7ab85de0554419e5270b2cb6bf2c45c995",
     "after": "0cc0c4f86b1816c363ab150d9d919e79c864b8946b9197e44f7e3424819ba342"
   },
+  "chrome/browser/webauthn/chrome_web_authentication_delegate.cc": {
+    "before": "bdf23cefe9085b47a5fabb1a08e92c88bf488cf854d34e6bcb259e5ad93d33c4",
+    "after": "7e998312da01ffbb77cebf6585b1c415d6dfd260c8e38dbc18b4d23483cb9b92"
+  },
   "chrome/browser/webauthn/authenticator_request_dialog_controller.cc": {
     "before": "5d6a5aca6f7bb1ff42d142b34ad4219f09478a5b45554d95587c9bc7c189c829",
     "after": "0b46f56573a96dfd01209b71e671a8faca09fc454fcd12eca5247ed9561e62ae"
