@@ -19,6 +19,16 @@
             }
         }
 
+        private final class SavedPictureInPictureFrame: NSObject, CrestPictureInPictureFrame {
+            let frame: NSRect
+            let displayUUID: String
+
+            init(_ saved: PictureInPictureFrame) {
+                frame = NSRect(x: saved.x, y: saved.y, width: saved.width, height: saved.height)
+                displayUUID = saved.screen.displayUuid
+            }
+        }
+
         // MARK: - Variables
 
         private var shell: BrowserMacShell? { ChromiumComposition.shell }
@@ -45,6 +55,18 @@
 
         func presentEngineWindow(_ windowID: UUID, space spaceID: UUID, focused: Bool) {
             shell?.presentEngineWindow(windowID, space: spaceID, focused: focused)
+        }
+
+        // MARK: - Actions - Picture in Picture
+
+        func savedPictureInPictureFrame() -> (any CrestPictureInPictureFrame)? {
+            BrowserAppPreferenceStore.shared.pictureInPictureFrame.map(SavedPictureInPictureFrame.init)
+        }
+
+        func savePictureInPictureFrame(_ frame: NSRect, displayUUID: String) {
+            BrowserAppPreferenceStore.shared.pictureInPictureFrame = PictureInPictureFrame(
+                x: frame.origin.x, y: frame.origin.y, width: frame.width, height: frame.height,
+                screen: ScreenIdentity(displayUuid: displayUUID))
         }
 
         // MARK: - Actions - Application

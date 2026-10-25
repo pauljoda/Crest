@@ -246,6 +246,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidMediaSessionCount(InvalidMediaSessionCount)
     case invalidName(InvalidName)
     case invalidPasswordLength(InvalidPasswordLength)
+    case invalidPictureInPictureFrame(InvalidPictureInPictureFrame)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
     case invalidSearchShortcut(InvalidSearchShortcut)
@@ -1082,7 +1083,8 @@ struct AppPreferences: Equatable, Sendable {
             searchesSitesWithTab: true,
             showsReasons: false,
             providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
-        )
+        ),
+        pictureInPictureFrame: nil
     )
 
     var startup: StartupBehavior
@@ -1097,6 +1099,7 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
     var palette: PalettePreferences
+    var pictureInPictureFrame: PictureInPictureFrame?
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
@@ -3307,6 +3310,9 @@ struct InvalidPasswordLength: Equatable, Sendable {
     let maximum: Int
 }
 
+struct InvalidPictureInPictureFrame: Equatable, Sendable {
+}
+
 struct InvalidRetentionLifetime: Equatable, Sendable {
 }
 
@@ -4690,6 +4696,14 @@ struct PersistentWorkspaceRequired: Equatable, Sendable {
     }
 }
 
+struct PictureInPictureFrame: Equatable, Sendable {
+    var x: Double
+    var y: Double
+    var width: Double
+    var height: Double
+    var screen: ScreenIdentity
+}
+
 struct PictureInPictureReturned: EngineEvent, PageEvent, Equatable, Sendable {
     let pageID: UUID
 }
@@ -5235,6 +5249,10 @@ struct ScreenCaptureAccessMissing: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct ScreenIdentity: Equatable, Sendable {
+    var displayUuid: String
+}
+
 struct ScriptDialogAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let pageID: UUID
@@ -5567,6 +5585,11 @@ struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
 struct SetLinkBehavior: Intent, LinkIntent, Equatable, Sendable {
     let behavior: LinkBehavior
     let isOn: Bool
+}
+
+struct SetPictureInPictureFrame: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let frame: PictureInPictureFrame?
 }
 
 struct SetPrivateSearch: Intent, SearchCatalogIntent, Equatable, Sendable {

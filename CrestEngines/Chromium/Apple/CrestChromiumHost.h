@@ -51,6 +51,13 @@ typedef NS_ENUM(NSInteger, CrestEngineNoticeKind) {
 @property(nonatomic, readonly) NSUUID *space;
 @end
 
+// Where a floating Picture in Picture window was last left: its frame in
+// AppKit's screen space, and the UUID of the display it was on.
+@protocol CrestPictureInPictureFrame <NSObject>
+@property(nonatomic, readonly) NSRect frame;
+@property(nonatomic, readonly) NSString *displayUUID;
+@end
+
 // Crest's own UI, which the Mac shell asks on the main thread for what only
 // Crest's windows can answer. The UI framework attaches it when it starts.
 NS_SWIFT_UI_ACTOR
@@ -108,6 +115,12 @@ NS_SWIFT_UI_ACTOR
 // Answers whether Crest's own drag took it; otherwise the engine's goes on.
 - (BOOL)beginLinkDrag:(NSURL *)url title:(NSString *)title page:(NSUUID *)pageID
     NS_SWIFT_NAME(beginLinkDrag(_:title:page:));
+// The Picture in Picture window's remembered frame. Crest's core keeps it with
+// the app-wide preferences; the host asks when a window opens and says when a
+// drag, swipe or resize ends.
+- (nullable id<CrestPictureInPictureFrame>)savedPictureInPictureFrame;
+- (void)savePictureInPictureFrame:(NSRect)frame displayUUID:(NSString *)displayUUID
+    NS_SWIFT_NAME(savePictureInPictureFrame(_:displayUUID:));
 @end
 
 // What an extension's `chrome.commands` shortcut did. A named command has

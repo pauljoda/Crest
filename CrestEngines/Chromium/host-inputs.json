@@ -241,7 +241,7 @@
   },
   "chrome/browser/ui/views/overlay/video_overlay_window_views.cc": {
     "before": "8f2bad918001d2d831247a349b7aec8acd9a0d5392aee6568b02335c4fe8ea2d",
-    "after": "4663d8079dbdab65a728851c543b144ba1bc9260ad581534545cd45129e8df9d"
+    "after": "ec42471786c16bf98807b6cdccaf88cd0737d551f1591909bcdce35286f6cdda"
   },
   "third_party/blink/public/platform/media/key_system_config_selector.h": {
     "before": "ac960b2a40c65ff1c9b640e53ed6ed6e3a9ccf53d7a5607033d0cf59201a3d65",

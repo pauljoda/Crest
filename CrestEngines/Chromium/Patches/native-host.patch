@@ -2011,14 +2011,17 @@
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
  #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"
  #include "chrome/browser/ui/color/chrome_color_id.h"
-@@ -590,6 +591,13 @@
+@@ -590,6 +591,16 @@
    views::Widget::OnNativeWidgetMove();
++#if BUILDFLAG(IS_MAC)
++  crest::PreparePictureInPictureWindow(this);
++#endif
  }
  
 +void VideoOverlayWindowViews::OnNativeWidgetUserDragEnded() {
 +  views::Widget::OnNativeWidgetUserDragEnded();
 +#if BUILDFLAG(IS_MAC)
-+  crest::SnapPictureInPictureWindow(this);
++  crest::PictureInPictureWindowMoved(this);
 +#endif
 +}
 +

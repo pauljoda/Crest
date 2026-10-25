@@ -43,6 +43,9 @@ public sealed record TranslationDecision(TranslationRule? Rule, string? Target);
 /// A language identifier is longer than `Limit` characters.
 public sealed record LanguageTooLong(int Limit) : Rejection;
 
+/// A Picture in Picture frame has a non-finite number, no size, or no screen.
+public sealed record InvalidPictureInPictureFrame : Rejection;
+
 /// Only the persistent workspace keeps the app-wide preferences and takes
 /// imported Spaces.
 public sealed record PersistentWorkspaceRequired(Guid WorkspaceId) : Rejection {

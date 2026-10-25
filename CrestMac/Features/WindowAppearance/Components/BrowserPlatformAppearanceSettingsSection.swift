@@ -12,6 +12,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
     @AppStorage(SidebarFullscreenRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
     private var revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
+    @AppStorage(PictureInPictureMomentumPreference.key)
+    private var pictureInPictureMomentumSpeed = PictureInPictureMomentumPreference.defaultValue.speed
 
     var body: some View {
         let mode = CrestSettingValue($appearance.mode, default: BrowserLookAndFeelDefaults.appearanceMode)
@@ -25,6 +27,12 @@ struct BrowserPlatformAppearanceSettingsSection: View {
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
 
+        let momentum = CrestSettingValue(
+            Binding(
+                get: { PictureInPictureMomentumPreference(storedSpeed: pictureInPictureMomentumSpeed) },
+                set: { pictureInPictureMomentumSpeed = $0.speed }),
+            default: PictureInPictureMomentumPreference.defaultValue)
+
         return BrowserWindowAppearanceGroup(
             space: space,
             showsPreview: showsPreview,
@@ -34,6 +42,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 motion.resettable("Animate pages when switching Spaces"),
                 revealWidth.resettable("Sidebar hover area"),
                 fullscreenReveal.resettable("Show sidebar on hover in full screen"),
+                momentum.resettable("Picture in Picture momentum"),
             ]
         ) {
             CrestSettingRow("Appearance", setting: mode.resettable("Appearance")) {
@@ -81,6 +90,21 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 Toggle("Show sidebar on hover in full screen", isOn: fullscreenReveal.binding)
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-fullscreen-reveal")
+            }
+
+            CrestSettingRow(
+                "Picture in Picture momentum",
+                setting: momentum.resettable("Picture in Picture momentum")
+            ) {
+                Picker("Picture in Picture momentum", selection: momentum.binding) {
+                    ForEach(PictureInPictureMomentumPreference.all) { choice in
+                        Text(choice.title).tag(choice)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("picture-in-picture-momentum")
             }
         }
     }

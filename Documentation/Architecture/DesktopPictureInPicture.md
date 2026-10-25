@@ -80,6 +80,34 @@ opens a window. Closed tabs, locked Spaces and Spaces being deleted show
 nothing, and a private page returns only within the private workspace. Ordinary
 PiP dismissal does not request this routing.
 
+## Chromium's window
+
+Chromium's Picture in Picture window stays Chromium's own Views window, with
+its playback controls and return button; Crest adds placement from the host.
+The window stays where it is dropped, kept inside the visible frame of its
+screen with a small margin, and is drawn lightly toward a corner it is dropped
+near. A release faster than a threshold throws it into the corner it is heading
+toward; the person chooses how readily in Appearance settings
+(`PictureInPictureMomentumPreference`, stored in the app's defaults, which the
+host reads). Two fingers swiped on the window move it
+the way they move content, also kept on screen; a swipe that starts on one of
+the window's controls, or with Command held, is left to Chromium, and a swipe
+that began on the window keeps moving it until the fingers lift, so the page
+never scrolls under it. The window floats above other apps' full-screen Spaces
+and follows the person between Spaces, and stays visible when Crest is not the
+active app. It is a single overlay window: nothing else is drawn in a second
+panel.
+
+Where the window was left is an app-wide core preference
+(`AppPreferences.pictureInPictureFrame`, set with `SetPictureInPictureFrame`),
+kept on this device and never synced: the whole frame, so a size the person
+chose returns, and the UUID of the display it was on. The host saves it when a
+drag, swipe or resize ends and restores it when the next window opens, also
+after a relaunch. It restores onto the display it was saved on, else any
+display still overlapping the frame, else the main display, then clamps to that
+display's visible frame. The saved height follows the new video's shape.
+WebKit's system window is not Crest's to move and keeps no frame.
+
 One application-wide coordinator serves all windows and private Spaces.
 It reserves the slot before dispatching a request, rejects requests while a
 registered page is active or a request is pending, and checks macOS PIPAgent

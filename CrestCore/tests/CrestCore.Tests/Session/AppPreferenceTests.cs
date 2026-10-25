@@ -53,6 +53,30 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ThePictureInPictureFrameIsRememberedAcrossRelaunchesAndCanBeForgotten() {
+        var session = SavedSession().Document["session"]!;
+        var frame = new PictureInPictureFrame(120.5, 80, 480, 270, new("display-uuid-1"));
+        byte[] saved;
+        using (var device = new TestDevice(session)) {
+            Assert.Null(AppPreferences.Default.PictureInPictureFrame);
+            Assert.Null(device.Authority.Current.AppPreferences?.PictureInPictureFrame);
+            device.Send(new SetPictureInPictureFrame(device.Workspace, frame));
+            Assert.Equal(frame, device.Authority.Current.AppPreferences!.PictureInPictureFrame);
+            Assert.Equal(new InvalidPictureInPictureFrame(), Assert.Throws<Rejected>(() =>
+                device.Send(new SetPictureInPictureFrame(device.Workspace, frame with { Width = 0 }))).Rejection);
+            saved = device.Authority.Checkpoint().Read("core");
+        }
+        using (var relaunched = new TestDevice(JsonNode.Parse(saved)!)) {
+            Assert.Equal(frame, relaunched.Authority.Current.AppPreferences!.PictureInPictureFrame);
+            relaunched.Send(new SetPictureInPictureFrame(relaunched.Workspace, null));
+            saved = relaunched.Authority.Checkpoint().Read("core");
+        }
+        Assert.Null(JsonNode.Parse(saved)!["appPreferences"]!["pictureInPictureFrame"]);
+        using var cleared = new TestDevice(JsonNode.Parse(saved)!);
+        Assert.Null(cleared.Authority.Current.AppPreferences!.PictureInPictureFrame);
+    }
+
+    [Fact]
     public void CloudReplacementNeverCarriesOrReplacesAppPreferences() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "lastActiveTab", ["futureChoice"] = 3 };

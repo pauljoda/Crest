@@ -4541,6 +4541,10 @@
     "imported-ip-address-passwords-fill": {
       "category": "fixed",
       "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "chromium-pip-floats-and-remembers-position": {
+      "category": "improved",
+      "message": "The Picture in Picture window on Chromium stays where you drop it, moves with a two-finger swipe, floats over full-screen apps, can be thrown into a corner (with a Low, Medium or High setting in Appearance), and reopens where you left it, even after relaunching Crest."
     }
   }
 }
