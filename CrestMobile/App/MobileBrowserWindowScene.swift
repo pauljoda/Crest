@@ -92,6 +92,10 @@ struct MobileBrowserWindowScene: View {
             .task {
                 await model.cleanupDeferredWebsiteDataStores()
             }
+            .task(id: scenePhase) {
+                guard scenePhase == .active else { return }
+                await model.pages.refreshContentBlockingWhileActive()
+            }
             // Tab cleanup follows the scene: it sweeps as soon as the scene becomes
             // active and then keeps sweeping on a low-frequency tick, and SwiftUI
             // cancels the loop whenever the phase changes so a backgrounded scene

@@ -11,13 +11,13 @@ Privacy decisions belong to the current Space. A permission granted to a work ac
 
 ## Content blocking
 
-Crest includes a small built-in ad and tracker ruleset that can be enabled or disabled per Space. It uses WebKit, so it applies on iPhone, iPad, and WebKit pages on Mac. Use the site controls or assign **Toggle Content Blocking** a shortcut when a site needs a quick exception.
+Crest includes EasyList and EasyPrivacy protection for ads and trackers, with native cosmetic rules that hide advertising containers. Protection can be enabled or disabled per Space. It uses WebKit, so it applies on iPhone, iPad, and WebKit pages on Mac. Use the site controls or assign **Toggle Content Blocking** a shortcut when a site needs a quick exception.
 
 To change it for a Space, turn **Block known ads and trackers** on or off in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space.
 
 Chromium pages on Mac have no built-in blocking. Install a content-blocking extension, such as uBlock Origin Lite, in each Space that needs it. Extensions do not run on WebKit pages.
 
-For broader filter-list coverage, install a content-blocking extension in the Space that needs it. Built-in protection and an extension can have different rule coverage, so check which layer is active before assuming the page itself is broken.
+WebKit protection checks for refreshed rules in the background once a day while Crest is active. Failed updates keep the last working rules. Some ads, cookie notices and anti-adblock walls can remain because WebKit does not support every advanced filter. On Chromium, an extension owns its own rules and updates.
 
 ## Malicious sites and downloads
 

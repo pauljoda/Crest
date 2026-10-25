@@ -43,6 +43,17 @@ final class WebKitContentRules {
         balancedRuleLists = nil
     }
 
+    /// A failed refresh keeps the compiled rules already protecting pages.
+    func refresh() async {
+        await prepare()
+        guard let provider else { return }
+        do {
+            balancedRuleLists = try await provider.refreshedRuleLists()
+        } catch {
+            // Refresh is best effort; prepare() owns errors that prevent blocking.
+        }
+    }
+
     /// The rules a Space with `policy` applies: none until they are compiled.
     func ruleLists(for policy: ContentBlockingPolicy) -> [WKContentRuleList] {
         policy.blocksContent ? balancedRuleLists ?? [] : []

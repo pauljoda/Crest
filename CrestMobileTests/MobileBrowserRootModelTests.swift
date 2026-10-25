@@ -118,6 +118,10 @@ private struct MobileBrowserRootFixture {
 private final class EmptyMobileRootContentRuleListProvider:
     BrowserContentRuleListProviding
 {
+    func refreshedRuleLists() async throws -> [WKContentRuleList] {
+        try await balancedRuleLists()
+    }
+
     func balancedRuleLists() async throws -> [WKContentRuleList] { [] }
 }
 

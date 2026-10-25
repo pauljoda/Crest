@@ -129,6 +129,23 @@ extension BrowserPageOwner {
         await contentBlocking.prepare()
     }
 
+    /// The scene cancels this loop when inactive. The shared provider limits
+    /// successful downloads to once a day and failed attempts to once an hour.
+    func refreshContentBlockingWhileActive() async {
+        while !Task.isCancelled {
+            if browser.spaceModels.contains(where: { $0.settings.browsingPreferences.contentBlocking.blocksContent }) {
+                await contentBlocking.refresh()
+                guard !Task.isCancelled else { return }
+                await reconcileContentBlocking()
+            }
+            do {
+                try await Task.sleep(for: .seconds(3600))
+            } catch {
+                return
+            }
+        }
+    }
+
     /// Gives every page its Space's content blocking in the window's
     /// workspace, reloading presented pages only when their Space's
     /// protection level changes.

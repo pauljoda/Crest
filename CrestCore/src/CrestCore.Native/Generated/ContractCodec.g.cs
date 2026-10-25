@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x2e, 0xd4, 0xbb, 0xcf, 0xf3, 0x7d, 0xf6, 0x2f, 0x29, 0x89, 0x33, 0xd5, 0x21, 0x69, 0x58, 0xb8, 0x9d, 0x7f, 0x2a, 0x12, 0x80, 0x3b, 0x72, 0x87, 0x99, 0x66, 0x36, 0xdf, 0x66, 0xed, 0x13, 0x70
+        0xb5, 0x02, 0x2a, 0xbb, 0xef, 0x62, 0x94, 0x7b, 0xf6, 0x7e, 0x3f, 0x38, 0xc3, 0xc5, 0x92, 0x77, 0x79, 0xcd, 0xda, 0xef, 0x04, 0xd8, 0xd4, 0x12, 0x50, 0x89, 0x5d, 0xdd, 0xa1, 0x6a, 0x50, 0x12
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -3242,6 +3242,7 @@ public static class ContractCodec {
 
     /// <summary>The most bytes one encoded query with this tag may take.</summary>
     public static int MaximumQueryBytes(int tag) => tag switch {
+        4 => 5242880,
         11 => 67108864,
         16 => 67108864,
         18 => 67108864,
@@ -4765,12 +4766,19 @@ public static class ContractCodec {
 
     public static BalancedProtectionRules ReadBalancedProtectionRules(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return new BalancedProtectionRules();
+        return new BalancedProtectionRules(
+            reader.ReadPresence() ? (byte[]?)reader.ReadBytes() : null);
     }
 
     public static void WriteBalancedProtectionRules(WireWriter writer, BalancedProtectionRules value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
+        if (value.Snapshot is { } presentSnapshot) {
+            writer.WritePresence(true);
+            writer.WriteBytes(presentSnapshot);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static BeforeUnloadAnswered ReadBeforeUnloadAnswered(WireReader reader) {
@@ -6119,7 +6127,8 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(reader);
         return new ContentRuleList(
             reader.ReadString(),
-            reader.ReadString());
+            reader.ReadString(),
+            reader.ReadInt64());
     }
 
     public static void WriteContentRuleList(WireWriter writer, ContentRuleList value) {
@@ -6127,6 +6136,7 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteString(value.Identifier);
         writer.WriteString(value.Source);
+        writer.WriteInt64(value.Version);
     }
 
     public static ContinueImport ReadContinueImport(WireReader reader) {

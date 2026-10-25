@@ -103,6 +103,10 @@ struct BrowserMacWindowScene: View {
         .task {
             await BrowserDeferredWebsiteDataStoreCleanup.cleanupPendingStores()
         }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await pages.refreshContentBlockingWhileActive()
+        }
         // Retention cleanup follows the scene: it sweeps as soon as this window becomes
         // active and then keeps sweeping on a low-frequency tick, and SwiftUI
         // cancels the loop whenever the phase changes so an inactive window stops

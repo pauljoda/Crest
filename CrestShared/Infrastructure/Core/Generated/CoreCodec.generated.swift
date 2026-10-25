@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x2e, 0xd4, 0xbb, 0xcf, 0xf3, 0x7d, 0xf6, 0x2f, 0x29, 0x89, 0x33, 0xd5, 0x21, 0x69, 0x58, 0xb8, 0x9d, 0x7f, 0x2a, 0x12, 0x80, 0x3b, 0x72, 0x87, 0x99, 0x66, 0x36, 0xdf, 0x66, 0xed, 0x13, 0x70
+        0xb5, 0x02, 0x2a, 0xbb, 0xef, 0x62, 0x94, 0x7b, 0xf6, 0x7e, 0x3f, 0x38, 0xc3, 0xc5, 0x92, 0x77, 0x79, 0xcd, 0xda, 0xef, 0x04, 0xd8, 0xd4, 0x12, 0x50, 0x89, 0x5d, 0xdd, 0xa1, 0x6a, 0x50, 0x12
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -3335,10 +3335,23 @@ extension AwaitDownloadApproval {
 
 extension BalancedProtectionRules {
     init(from reader: inout WireReader) throws(WireError) {
-        self.init()
+        let snapshot: Data?
+        if try reader.readPresence() {
+            let snapshotValue = try reader.readData()
+            snapshot = snapshotValue
+        } else {
+            snapshot = nil
+        }
+        self.init(snapshot: snapshot)
     }
 
     func encode(into writer: inout WireWriter) {
+        if let present0 = snapshot {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 
     func encodeQuery(into writer: inout WireWriter) {
@@ -5338,12 +5351,14 @@ extension ContentRuleList {
     init(from reader: inout WireReader) throws(WireError) {
         let identifier = try reader.readString()
         let source = try reader.readString()
-        self.init(identifier: identifier, source: source)
+        let version = try reader.readInt64()
+        self.init(identifier: identifier, source: source, version: version)
     }
 
     func encode(into writer: inout WireWriter) {
         writer.writeString(identifier)
         writer.writeString(source)
+        writer.writeInt64(version)
     }
 }
 

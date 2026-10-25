@@ -32,6 +32,24 @@
       "license": "MIT",
       "notice": "CrestShared/Resources/SFSymbolCatalog-LICENSE.txt",
       "source": "https://raw.githubusercontent.com/SFSafeSymbols/SFSafeSymbols/cb2e670a213ff42ae08528ee2c401bfb1d799675/SymbolsGenerator/Sources/SymbolsGenerator/Resources/symbol_names.txt"
+    },
+    {
+      "identity": "easylist",
+      "name": "EasyList native WebKit filters",
+      "version": "202610252211",
+      "license": "CC-BY-SA-3.0",
+      "notice": "CrestShared/Resources/EasyList-LICENSE.txt",
+      "source": "https://easylist-downloads.adblockplus.org/easylist.txt",
+      "transformation": "Native WebKit rules generated offline with SafariConverterLib v4.3.1; unsupported advanced filters omitted; top-level document blocking excluded."
+    },
+    {
+      "identity": "easyprivacy",
+      "name": "EasyPrivacy native WebKit filters",
+      "version": "202610252211",
+      "license": "CC-BY-SA-3.0",
+      "notice": "CrestShared/Resources/EasyList-LICENSE.txt",
+      "source": "https://easylist-downloads.adblockplus.org/easyprivacy.txt",
+      "transformation": "Native WebKit rules generated offline with SafariConverterLib v4.3.1; unsupported advanced filters omitted; top-level document blocking excluded."
     }
   ],
   "bundledComponents": [
@@ -56,7 +74,8 @@
   ],
   "developmentTools": {
     "Periphery": "MIT",
-    "XcodeGen": "MIT"
+    "XcodeGen": "MIT",
+    "SafariConverterLib": "GPL-3.0 (offline conversion only; no converter code is bundled or linked)"
   },
   "workflowActionRepositories": {
     "actions/attest": "MIT",

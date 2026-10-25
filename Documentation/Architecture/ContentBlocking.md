@@ -1,53 +1,57 @@
 # Content blocking
 
-Crest's Balanced protection is one bundled ruleset that WebKit applies through
-its native content-rule-list API. Each Space turns it on or off independently.
+Balanced protection applies EasyList and EasyPrivacy network rules, native CSS
+hiding and their exceptions through WebKit on Mac, iPhone and iPad. A generic
+third-party Funding Choices recovery-service block supplements those lists.
+Each Space keeps its own on/off policy; Chromium continues to use extensions.
 
-## Built-in protection
+## Native rules
 
-The bundled rules block a deliberately small set of well-known third-party ad
-and analytics hosts. They give a privacy baseline without downloading remote
-rule sources, parsing third-party filter syntax, or placing another project's
-converter inside Crest's trusted update path.
+The core embeds a compressed, versioned snapshot. `BalancedProtectionRules`
+validates it and returns the WebKit source and its SHA-256 cache identifier.
+Only block, CSS display-none and exception actions are accepted. Top-level
+document blocking is excluded. No remote JavaScript or scriptlets run.
 
-The portable core owns the rules. `ContentBlockingPolicy.Balanced` in
-`CrestCore` carries the blocked host suffixes and a versioned identifier, and
-the `BalancedProtectionRules` query returns them as a `ContentRuleList`: that
-identifier with the WebKit content-rule source. WebKit's binding compiles the
-source once, caches the resulting `WKContentRuleList` under the identifier, and
-builds each page in a Space where Balanced protection is on with it. If the core cannot answer, nothing
-is compiled. Turning protection on or off reloads the visible pages so the
-change takes effect without touching another Space.
+WebKit compiles the snapshot once per launch's rule store. Named isolated
+profiles use their own store; anonymous isolated launches use a temporary store.
+Isolation never disables protection. Removing Crest's active lists preserves
+extension-owned lists. Rule updates swap the lists on resident pages without
+reloading their documents; policy changes retain the existing reload behavior.
 
-## Extensions provide broader blocking
+## Refresh
 
-Crest does not ship a downloadable filter-list catalog or accept custom
-Adblock-style list URLs. People who want broader coverage, cosmetic filtering,
-regional lists or project-specific rules can install a content-blocking
-extension. Extensions keep their own source, update and licensing decisions,
-so Crest never redistributes or converts those lists.
+Active Mac and mobile scenes check for updates in the background. The shared
+provider downloads at most once a day from the snapshot in Crest's official
+`main` branch, retries failures at most once an hour, and cancels with the scene.
+Downloads use an ephemeral client with no cookies, credentials or browsing data.
+Isolated validation sessions use bundled rules without automatic downloads.
 
-The split is intentional:
+Archives are limited to 4 MiB, expanded data to 64 MiB and native rules to
+150,000. Core validation and WebKit compilation must both pass before an atomic
+cache replacement. Older snapshots are rejected. Offline, malformed, oversized
+or un-compilable updates leave the last working rules in use; the bundled
+snapshot is the fallback when no valid cache exists.
 
-- Crest owns a small first-party baseline that can be reviewed.
-- Extensions own advanced blocking and the list ecosystems people choose.
-- A failed extension cannot change Crest's bundled rules or another Space's
-  extension state.
+## Updating the snapshot
 
-## Chromium
+Build SafariConverterLib v4.3.1's `ConverterTool` outside the checkout, then run:
 
-Crest's built-in protection is a WebKit content-rule list, so it has no effect
-on Chromium. Chromium's own subresource filter depends on Safe Browsing list
-distribution that Crest does not run, and Crest does not convert its rules into
-a second format for one engine. The Chromium registration therefore declares
-`content-blocking` unavailable. The Privacy settings section shows no Balanced
-control and says instead that blocking comes from the extensions the person
-installs, and the page menu item is not installed. Blocking on Chromium comes
-from an extension such as uBlock Origin Lite.
+```sh
+python3 Scripts/update-content-blocking.py --converter /path/to/ConverterTool
+Scripts/control-plane/generate-contracts.sh
+Scripts/audit-licenses.py
+```
 
-## Compatibility
+Review and commit the resulting snapshot and dependency versions. Browsers
+receive that reviewed snapshot without an app release once it reaches `main`.
+The converter is an offline development tool; no converter code or foreign
+runtime is linked into Crest. Filter data and its modifications remain
+CC-BY-SA 3.0, with attribution in `EasyList-LICENSE.txt`.
 
-Balanced protection can occasionally break a site because it blocks known
-third-party hosts. On WebKit, the page and command menus let the person turn
-content blocking off for the current Space. An extension may add its own site
-controls.
+## Limits
+
+This is WebKit-native filtering, not the full uBlock engine. Unsupported
+procedural selectors, redirects and scriptlets are omitted. Some ads, reserved
+layout space, cookie notices or anti-adblock walls can remain. The generic
+recovery-service block addresses one common wall without site-specific fixes.
+The Space's existing protection control is the escape hatch for broken sites.

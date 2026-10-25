@@ -519,6 +519,7 @@ targets:
     platform: iOS
     sources:
       - path: CrestMobileTests
+      - path: CrestTests/BrowserContentRuleSnapshotTests.swift
     dependencies:
       - target: CrestMobile
     settings:

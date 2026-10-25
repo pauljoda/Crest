@@ -346,6 +346,10 @@ private final class StubContentRuleListProvider: BrowserContentRuleListProviding
         self.generations = generations
     }
 
+    func refreshedRuleLists() async throws -> [WKContentRuleList] {
+        try await balancedRuleLists()
+    }
+
     func balancedRuleLists() async throws -> [WKContentRuleList] {
         defer { requestCount += 1 }
         return generations[min(requestCount, generations.count - 1)]

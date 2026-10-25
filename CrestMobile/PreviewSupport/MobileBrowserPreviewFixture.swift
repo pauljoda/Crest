@@ -55,10 +55,13 @@ struct MobileBrowserPreviewFixture {
             seed: SessionState.Seed(spaces: [space, alternateSpace]), browsingMode: .privateBrowsing)
         guard let workSpace = browser.spaceModel(space.id), let personalSpace = browser.spaceModel(alternateSpace.id)
         else { preconditionFailure("The preview store must open both preview Spaces.") }
+        let previewEnvironment = BrowserLaunchEnvironment(
+            values: [:], isXCTestRuntime: false, isSwiftUIPreviewRuntime: true)
         browser.core.engines.register(
             WebKitEngineBinding(
                 keepsProfilesInMemory: true,
-                contentRuleLists: BrowserContentRuleListProvider(core: browser.core, ruleListStore: nil)),
+                contentRuleLists: BrowserContentRuleListProvider.forLaunch(
+                    core: browser.core, launchEnvironment: previewEnvironment)),
             isDefault: true)
         let pages = MobileBrowserPageStore(
             browser: browser,

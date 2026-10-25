@@ -1260,6 +1260,7 @@ struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
 struct BalancedProtectionRules: Query, Equatable, Sendable {
     typealias Answer = ContentRuleList
 
+    let snapshot: Data?
 }
 
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
@@ -1813,8 +1814,11 @@ struct ContentMessagePosted: Equatable, Sendable {
 }
 
 struct ContentRuleList: Equatable, Sendable {
+    static let maximumArchiveBytes: Int = 4194304
+
     let identifier: String
     let source: String
+    let version: Int64
 }
 
 struct ContentScriptEvaluated: Equatable, Sendable {
@@ -9325,7 +9329,6 @@ struct ContentBlockingPolicy: Hashable, Sendable {
     var title: LocalizedStringResource { facts.title }
     var switchTitle: LocalizedStringResource { facts.switchTitle }
     var identifier: String? { facts.identifier }
-    var blockedHostSuffixes: [String] { facts.blockedHostSuffixes }
     var blocksContent: Bool { facts.blocksContent }
     private let facts: Facts
 
@@ -9335,7 +9338,6 @@ struct ContentBlockingPolicy: Hashable, Sendable {
         title: LocalizedStringResource,
         switchTitle: LocalizedStringResource,
         identifier: String?,
-        blockedHostSuffixes: [String],
         blocksContent: Bool
     ) {
         self.tag = tag
@@ -9344,7 +9346,6 @@ struct ContentBlockingPolicy: Hashable, Sendable {
             title: title,
             switchTitle: switchTitle,
             identifier: identifier,
-            blockedHostSuffixes: blockedHostSuffixes,
             blocksContent: blocksContent
         )
     }
@@ -9354,28 +9355,7 @@ struct ContentBlockingPolicy: Hashable, Sendable {
         name: "balanced",
         title: LocalizedStringResource("Balanced"),
         switchTitle: LocalizedStringResource("Turn Off Content Blocking in This Space"),
-        identifier: "com.pauldavis.crest.content-blocking.balanced.v2",
-        blockedHostSuffixes: [
-            "doubleclick.net",
-            "googleadservices.com",
-            "googlesyndication.com",
-            "google-analytics.com",
-            "googletagmanager.com",
-            "ads-twitter.com",
-            "analytics.twitter.com",
-            "scorecardresearch.com",
-            "quantserve.com",
-            "hotjar.com",
-            "segment.io",
-            "segment.com",
-            "mixpanel.com",
-            "amplitude.com",
-            "clarity.ms",
-            "nr-data.net",
-            "taboola.com",
-            "outbrain.com",
-            "snap.licdn.com"
-        ],
+        identifier: "com.pauldavis.crest.content-blocking.balanced.v3.e90dd37efda5c5bafa1cc0301960dcd89eaf8a87290b47060aee2f07bc5224ba",
         blocksContent: true
     )
     static let off = ContentBlockingPolicy(
@@ -9384,7 +9364,6 @@ struct ContentBlockingPolicy: Hashable, Sendable {
         title: LocalizedStringResource("Off"),
         switchTitle: LocalizedStringResource("Turn On Balanced Content Blocking in This Space"),
         identifier: nil,
-        blockedHostSuffixes: [],
         blocksContent: false
     )
 
@@ -9407,7 +9386,6 @@ struct ContentBlockingPolicy: Hashable, Sendable {
         let title: LocalizedStringResource
         let switchTitle: LocalizedStringResource
         let identifier: String?
-        let blockedHostSuffixes: [String]
         let blocksContent: Bool
 
         init(
@@ -9415,14 +9393,12 @@ struct ContentBlockingPolicy: Hashable, Sendable {
             title: LocalizedStringResource,
             switchTitle: LocalizedStringResource,
             identifier: String?,
-            blockedHostSuffixes: [String],
             blocksContent: Bool
         ) {
             self.name = name
             self.title = title
             self.switchTitle = switchTitle
             self.identifier = identifier
-            self.blockedHostSuffixes = blockedHostSuffixes
             self.blocksContent = blocksContent
         }
     }

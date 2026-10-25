@@ -4,6 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Contracts/ContentBlocking/ContentBlockingRules.json.gz" LogicalName="CrestCore.ContentBlockingRules" />
     <!-- Storage tests read and fault the session file through the core's own
          connection, and history tests walk visits against a small history limit. -->
     <InternalsVisibleTo Include="CrestCore.Tests" />

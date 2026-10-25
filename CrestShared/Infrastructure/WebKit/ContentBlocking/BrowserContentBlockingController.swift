@@ -34,6 +34,10 @@ final class BrowserContentBlockingController {
         rules.invalidate()
     }
 
+    func refresh() async {
+        await rules.refresh()
+    }
+
     /// Prepares the rule lists any Space of `workspace` needs, and answers
     /// what changed since the last reconciliation.
     func reconcile(in workspace: WorkspaceModel?) async -> BrowserContentBlockingUpdate {
