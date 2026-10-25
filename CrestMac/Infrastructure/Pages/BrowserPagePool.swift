@@ -889,6 +889,10 @@ final class BrowserPagePool:
         {
             deactivatePagePresentation()
         }
+        // No picture of a locked Space's pages outlives its lock.
+        for runtime in tabRuntimes.values where runtime.page.spaceID == space.id {
+            runtime.departurePreview = nil
+        }
         host.tabState.removeStates(profileID: space.profileID)
     }
 

@@ -7,7 +7,8 @@ namespace CrestCore.Contracts;
 /// active unless its web page waits unloaded: a Start Page or native view needs
 /// no page, and a web page is active while a page holds it. A split the sidebar
 /// shows as one row is one stop, where its most recently used active member
-/// falls, and showing it shows that member. Empty when the window shows no tab.
+/// falls, and showing it shows that member. Empty when the window shows no tab,
+/// or shows a locked Space, whose tabs no switcher may name or picture.
 public sealed record RecentTabs(Guid WindowId) : Query<RecentTabOrder> {
     #region Actions - Answering
 
@@ -15,14 +16,16 @@ public sealed record RecentTabs(Guid WindowId) : Query<RecentTabOrder> {
     /// the most recently used, each split folded into its first stop.
     internal override RecentTabOrder Answer(CrestApp app) {
         var window = app.Device.Opened(WindowId);
-        var session = app.Device.Workspace(window.WorkspaceId).Current;
+        var workspace = app.Device.Workspace(window.WorkspaceId);
         Guid spaceId;
         Guid? shown;
         lock (app.Device.Gate) {
             spaceId = window.ShownSpaceId;
             shown = window.Tab(spaceId);
         }
-        if (Device.Available(session, spaceId) is not { } space || shown is not { } tabId) return new([]);
+        if (Device.Available(workspace.Current, spaceId) is not { } space || workspace.IsLocked(space)
+            || shown is not { } tabId)
+            return new([]);
         var splits = space.Sidebar.Lists.SelectMany(list => list.Rows).Where(row => row.Kind.GroupsTabs)
             .SelectMany(row => row.Members.Select(member => (Member: member, Row: row)))
             .ToDictionary(pair => pair.Member, pair => pair.Row);

@@ -4512,7 +4512,7 @@
     },
     "recent-tab-switcher": {
       "category": "new",
-      "message": "On Mac, holding Control and pressing Tab again walks back through your active tabs from the most recently used, with a preview of each page and each split shown together, Shift to step back and Escape to cancel. Let go of Control to switch to the highlighted tab; a quick Control-Tab still flips to your last tab."
+      "message": "On Mac, holding Control and pressing Tab again walks back through your active tabs from the most recently used, with a preview of each page and each split shown together. Add Shift to walk the other way, press Escape to cancel, and let go of Control to switch to the highlighted tab; a quick Control-Tab still flips to your last tab."
     }
   }
 }

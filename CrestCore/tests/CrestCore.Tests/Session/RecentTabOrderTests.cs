@@ -36,4 +36,21 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ShowTab(window, f.Space, null));
         Assert.Empty(device.Query(new RecentTabs(window)).Stops);
     }
+
+    /// A locked Space names and pictures none of its tabs to the switcher, until
+    /// it is unlocked and again once it locks.
+    [Fact]
+    public void RecentTabsShowNothingOfALockedSpace() {
+        var f = new OrderSpace();
+        f.Session["spaces"]![0]!["accessPolicy"] = "deviceOwnerAuthentication";
+        using var device = new TestDevice(f.Session);
+        var window = device.Open(f.Space, (f.Space, f.C1));
+        Assert.Empty(device.Query(new RecentTabs(window)).Stops);
+
+        Unlock(device.Send, device.Workspace, f.Space);
+        Assert.Equal(f.C1, device.Query(new RecentTabs(window)).Stops[0].TabId);
+
+        device.Send(new LockAllSpaces(SceneWentInactive: false));
+        Assert.Empty(device.Query(new RecentTabs(window)).Stops);
+    }
 }
