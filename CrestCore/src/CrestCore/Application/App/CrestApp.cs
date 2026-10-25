@@ -35,6 +35,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     private readonly ClosePreparations closePreparations;
     /// Erasing what every engine keeps for a profile.
     private readonly DataDeletions dataDeletions;
+    /// Listing the sites that keep data in a profile's engines.
+    private readonly SiteDataReads siteDataReads;
     /// Which Spaces this process may show.
     private readonly SpaceAccess access;
     /// The cloud transport's state on this device.
@@ -57,6 +59,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     internal EngineDownloads EngineDownloads => engineDownloads;
     internal ClosePreparations ClosePreparations => closePreparations;
     internal DataDeletions DataDeletions => dataDeletions;
+    internal SiteDataReads SiteDataReads => siteDataReads;
     internal SpaceAccess Access => access;
     internal CloudTransportStore CloudTransport => cloudTransport;
     internal CloudSyncControl CloudSync => cloudSync;
@@ -84,7 +87,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         this.clock = clock;
         this.ids = ids;
         portability = new(configuration.ImportNames, clock, ids);
-        dataDeletions = new(engines, ids);
+        dataDeletions = new(engines, ids, clock);
+        siteDataReads = new(engines, ids);
         // One grant authority for the process: every session the device shows
         // consults it, so a borrowed workspace unlocks with its source.
         var grants = new SpaceAccessAuthority();

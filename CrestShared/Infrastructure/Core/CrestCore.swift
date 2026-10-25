@@ -101,6 +101,8 @@ final class CrestCore {
     @ObservationIgnored private(set) var isQuitting = false
     /// What waits for each data deletion to end, by its request.
     @ObservationIgnored private var dataDeletionWaiters: [UUID: @MainActor (Bool) -> Void] = [:]
+    /// What waits for each website data reading to end, by its request.
+    @ObservationIgnored private var websiteDataWaiters: [UUID: @MainActor (WebsiteDataRead?) -> Void] = [:]
     #if DEBUG
         /// Hears each batch of changes once `state` has applied it, so a test
         /// can apply the same batch again.
@@ -211,6 +213,19 @@ final class CrestCore {
                 try send(request)
             } catch {
                 dataDeletionWaiters.removeValue(forKey: request.requestID)?(false)
+            }
+        }
+    }
+
+    /// The sites that keep data in a profile on every registered engine, as
+    /// `request` asks, or nil when the core refuses it.
+    func readWebsiteData(_ request: ReadWebsiteData) async -> WebsiteDataRead? {
+        await withCheckedContinuation { continuation in
+            websiteDataWaiters[request.requestID] = { continuation.resume(returning: $0) }
+            do {
+                try send(request)
+            } catch {
+                websiteDataWaiters.removeValue(forKey: request.requestID)?(nil)
             }
         }
     }
@@ -371,6 +386,7 @@ final class CrestCore {
         for deleted in batch.dataDeleted {
             dataDeletionWaiters.removeValue(forKey: deleted.requestID)?(deleted.deleted)
         }
+        for read in batch.websiteDataRead { websiteDataWaiters.removeValue(forKey: read.requestID)?(read) }
     }
 
     /// Calls `handler` with each site permission change once its batch is

@@ -76,7 +76,9 @@ public sealed class ShortcutCommand {
         FindNext,
         FindPrevious,
         CapturePage,
-        MostRecentTabBackward
+        MostRecentTabBackward,
+        ClearSiteCookies,
+        ClearSiteCache
     }
 
     #endregion
@@ -285,6 +287,13 @@ public sealed class ShortcutCommand {
         title: "Capture Page", symbol: "camera", searchTerms: "screenshot snapshot region selection image clipboard",
         shortcuts: [new(DevicePlatform.Desktop, Character("2", Command | Shift), YieldsToOverrides: true)],
         requiredCapability: EngineCapability.ViewportCapture, availableWhen: ShowingWebPage);
+    public static readonly ShortcutCommand ClearSiteCookies = new(Kinds.ClearSiteCookies, name: "clearSiteCookies",
+        ShortcutSection.Page, title: "Clear Cookies for This Site", symbol: "person.crop.circle.badge.xmark",
+        searchTerms: "site data storage local session indexeddb service workers sign out delete remove",
+        availableWhen: ShowingWebPage);
+    public static readonly ShortcutCommand ClearSiteCache = new(Kinds.ClearSiteCache, name: "clearSiteCache",
+        ShortcutSection.Page, title: "Clear Cache for This Site", symbol: "trash",
+        searchTerms: "cached images files empty delete remove", availableWhen: ShowingWebPage);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -296,7 +305,7 @@ public sealed class ShortcutCommand {
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious, CapturePage, MostRecentTabBackward
+        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache
     ];
 
     public Kinds Kind { get; }

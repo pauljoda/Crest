@@ -147,10 +147,27 @@ public sealed record SettleDownloadDestination(Guid PromptId, string? Path) : En
 /// binding answers with `DataErased` for `ErasureId`.
 public sealed record EraseProfileData(Guid ProfileId, bool Ephemeral, Guid ErasureId) : EngineCommand;
 
-/// Erases the cookies, storage and caches of the site at `Host` that the
-/// engine keeps for profile `ProfileId`, without creating a store the profile
-/// does not have; an `Ephemeral` one keeps them only while it is open. The
+/// Erases what the engine keeps for profile `ProfileId` in `Categories` for the
+/// site of each of `Hosts`, its registrable domain. Site data is its cookies,
+/// its third parties' cookies and storage partitioned under it, its storage
+/// and its service workers, which stop; the cache is the responses kept for
+/// it. It creates no store the profile does not have; an `Ephemeral` one keeps
+/// them only while it is open, and nothing on disk is touched. The binding
+/// answers with `DataErased` for `ErasureId`, erased once none of it is left,
+/// or nothing was there.
+public sealed record EraseSiteData(Guid ProfileId, bool Ephemeral, IReadOnlyList<string> Hosts,
+    IReadOnlyList<BrowsingDataCategory> Categories, Guid ErasureId) : EngineCommand;
+
+/// Erases what the engine keeps for profile `ProfileId` in `Categories` that
+/// changed since `Since`, or ever when it is nil. Web data only: what
+/// extensions store stays. It creates no store the profile does not have. The
 /// binding answers with `DataErased` for `ErasureId`.
-public sealed record EraseSiteData(Guid ProfileId, bool Ephemeral, string Host, Guid ErasureId) : EngineCommand;
+public sealed record EraseBrowsingData(Guid ProfileId, bool Ephemeral, DateTimeOffset? Since,
+    IReadOnlyList<BrowsingDataCategory> Categories, Guid ErasureId) : EngineCommand;
+
+/// Lists the sites that keep data the engine holds for profile `ProfileId`,
+/// without creating a store the profile does not have. The binding answers
+/// with `SiteDataRead` for `ReadingId`.
+public sealed record ReadSiteData(Guid ProfileId, bool Ephemeral, Guid ReadingId) : EngineCommand;
 
 #endregion

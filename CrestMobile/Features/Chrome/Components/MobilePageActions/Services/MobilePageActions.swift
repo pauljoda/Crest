@@ -24,7 +24,9 @@ protocol MobilePageActions {
     func reload()
     func stopLoading()
     func reloadFromOrigin()
-    func clearSiteDataAndReload() async
+    /// Clears what the page's site keeps in `category` in its Space, reloads
+    /// the page, and says how it went.
+    func clearSiteData(_ category: BrowsingDataCategory) async
     func togglePreferredContentMode()
     func toggleReaderMode()
     func presentFind()

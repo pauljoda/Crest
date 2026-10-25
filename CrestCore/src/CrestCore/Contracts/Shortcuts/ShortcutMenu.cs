@@ -45,7 +45,8 @@ public sealed class ShortcutMenu {
         [ShortcutCommand.FindInPage, ShortcutCommand.FindNext, ShortcutCommand.FindPrevious],
         [ShortcutCommand.ZoomIn, ShortcutCommand.ZoomOut, ShortcutCommand.ActualSize],
         [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF,
-            ShortcutCommand.SaveWebArchive, ShortcutCommand.CapturePage]
+            ShortcutCommand.SaveWebArchive, ShortcutCommand.CapturePage],
+        [ShortcutCommand.ClearSiteCookies, ShortcutCommand.ClearSiteCache]
     ]);
     public static readonly ShortcutMenu Develop = new(name: "develop", title: "Develop", groups: [
         [ShortcutCommand.ToggleDeveloperToolbar],

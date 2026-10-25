@@ -229,6 +229,11 @@ Crest can run more than one engine at a time.
 - A Space is one profile on every engine. The profile's Chromium directory and
   its WebKit website data store share the profile's identifier. Deleting the
   Space erases both, and the locked-Space gate covers both.
+- Clearing one site's data, or a time range's, asks every registered engine
+  for its part, started or not, and succeeds only when each erased all of it.
+  A site is its registrable domain, with what its third parties stored
+  partitioned under it. The website data list is the sites every engine
+  reports for the profile, merged by name.
 - `RehostPage` moves a page to another engine. The core closes the page on
   its current engine, creates it on the new one and loads the same URL. The
   page keeps its tab, and the UI re-hosts the view because `page.engine`

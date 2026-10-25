@@ -75,7 +75,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                 reloadOrStop: port.reloadOrStop,
                 reload: port.reload,
                 reloadFromOrigin: port.reloadFromOrigin,
-                clearSiteDataAndReload: port.clearSiteDataAndReload,
+                clearCookiesAndReload: port.clearCookiesAndReload,
                 isEnabled: port.hasActivePage(),
                 reloadControlSize: metrics.controlSize,
                 menuControlSize: metrics.reloadMenuControlSize,

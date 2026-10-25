@@ -187,6 +187,7 @@ extension MobileBrowserRootModel {
                 _ = pageActions?.copyPageLinkAsMarkdown()
             },
             printPage: { pageActions?.printPage() },
+            clearSiteData: { await pageActions?.clearSiteData($0) },
             toggleSidebar: toggleSidebar,
             presentHistory: presentHistory,
             presentArchive: presentArchive,

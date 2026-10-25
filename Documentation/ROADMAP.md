@@ -158,6 +158,7 @@ the live status for each issue.
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
 - [ ] [bug: Saved passwords: one bad item can break a Space, and other storage gaps](https://github.com/pauljoda/Crest/issues/649)
+- [ ] [Clear a single site's cookies, cache and website data, and manage website data in Settings](https://github.com/pauljoda/Crest/issues/686)
 
 #### Completed
 

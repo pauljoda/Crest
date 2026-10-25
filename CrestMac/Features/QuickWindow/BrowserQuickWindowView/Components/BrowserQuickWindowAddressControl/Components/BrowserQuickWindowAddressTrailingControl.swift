@@ -22,7 +22,7 @@ struct BrowserQuickWindowAddressTrailingControl: View {
                     reloadOrStop: reloadOrStop,
                     reload: { page.performReload(.standard) },
                     reloadFromOrigin: { page.performReload(.fromOrigin) },
-                    clearSiteDataAndReload: page.clearSiteDataAndReload
+                    clearCookiesAndReload: { await page.clearSiteData(.siteData) }
                 )
             }
         }

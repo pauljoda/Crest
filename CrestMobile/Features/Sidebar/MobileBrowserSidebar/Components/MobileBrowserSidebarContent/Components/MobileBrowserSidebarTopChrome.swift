@@ -98,8 +98,8 @@ struct MobileBrowserSidebarTopChrome: View {
                         systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
                         action: navigationPort.reloadFromOrigin
                     )
-                    Button("Clear Cookies, Storage, and Reload", systemImage: "trash") {
-                        Task { await navigationPort.clearSiteDataAndReload() }
+                    Button("Clear Cookies and Reload", systemImage: BrowsingDataCategory.siteData.symbol ?? "trash") {
+                        Task { await navigationPort.clearCookiesAndReload() }
                     }
                 }
             }

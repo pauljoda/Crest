@@ -1,14 +1,16 @@
 import SwiftUI
 
-struct MobilePageZoomFeedback: View {
-    let label: String
+/// A transient capsule at the top of the page that reports what an action
+/// did, such as a zoom change or a cleared site. It asks nothing of the person.
+struct MobilePageFeedbackCapsule: View {
+    let feedback: MobilePageFeedback
     let topPadding: CGFloat
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        Label(label, systemImage: "textformat.size")
+        Label(feedback.label, systemImage: feedback.systemImage)
             .font(.callout.weight(.semibold))
             .padding(
                 .horizontal,
@@ -25,7 +27,7 @@ struct MobilePageZoomFeedback: View {
             )
             .padding(.top, topPadding)
             .allowsHitTesting(false)
-            .accessibilityLabel("Page zoom (label)")
+            .accessibilityLabel(feedback.accessibilityLabel)
             .transition(
                 reduceMotion
                     ? .opacity
@@ -37,6 +39,6 @@ struct MobilePageZoomFeedback: View {
 
 #if DEBUG
     #Preview("Component") {
-        MobilePageZoomFeedback(label: "125%", topPadding: 16).frame(width: 390, height: 180)
+        MobilePageFeedbackCapsule(feedback: .pageZoom("125%"), topPadding: 16).frame(width: 390, height: 180)
     }
 #endif

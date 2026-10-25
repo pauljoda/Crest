@@ -3,6 +3,45 @@ import WebKit
 
 @MainActor
 enum BrowserWebsiteDataStore {
+    // MARK: - Static Variables
+
+    /// The data types WebKit keeps to load sites faster, which clearing the
+    /// cache removes and clearing site data leaves.
+    private static let cacheTypes: Set<String> = [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache]
+
+    /// What WebKit's types are, as the website data list names them. A type
+    /// that is not a site's own data, such as Screen Time's, names nothing.
+    private static let kinds: [String: WebsiteDataKind] = [
+        WKWebsiteDataTypeCookies: .cookies,
+        WKWebsiteDataTypeDiskCache: .cache,
+        WKWebsiteDataTypeMemoryCache: .cache,
+        WKWebsiteDataTypeFetchCache: .storage,
+        WKWebsiteDataTypeSessionStorage: .storage,
+        WKWebsiteDataTypeLocalStorage: .storage,
+        WKWebsiteDataTypeWebSQLDatabases: .storage,
+        WKWebsiteDataTypeIndexedDBDatabases: .storage,
+        WKWebsiteDataTypeServiceWorkerRegistrations: .storage,
+        WKWebsiteDataTypeFileSystem: .storage,
+        WKWebsiteDataTypeMediaKeys: .storage,
+        WKWebsiteDataTypeHashSalt: .storage,
+    ]
+
+    /// Where a cookie's properties name the top-level site it is partitioned
+    /// under, as `scheme://site`, for one a third party set while embedded in
+    /// that site. WebKit has no public constant for it; a cookie without it is
+    /// partitioned under no site.
+    private static let storagePartitionKey = HTTPCookiePropertyKey("StoragePartition")
+
+    /// The data types each category of browsing data covers in WebKit, which
+    /// keeps no record of visits.
+    private static let categoryTypes: [BrowsingDataCategory: Set<String>] = [
+        .history: [],
+        .siteData: WKWebsiteDataStore.allWebsiteDataTypes().subtracting(cacheTypes),
+        .cache: cacheTypes,
+    ]
+
+    // MARK: - Actions - Stores
+
     static func launchScoped(
         for profile: BrowsingProfile,
         environment: BrowserLaunchEnvironment = .current
@@ -24,47 +63,91 @@ enum BrowserWebsiteDataStore {
         WKWebsiteDataStore(forIdentifier: environment.websiteDataStoreIdentifier(forProfileID: profile.id))
     }
 
-    static func clearSiteData(
-        for pageURL: URL,
-        in dataStore: WKWebsiteDataStore
-    ) async {
-        await clearSiteDataInStore(for: pageURL, in: dataStore)
-        if let identifier = dataStore.identifier {
-            let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: identifier)
-            if await WKWebsiteDataStore.allDataStoreIdentifiers.contains(hostedID) {
-                await clearSiteDataInStore(for: pageURL, in: WKWebsiteDataStore(forIdentifier: hostedID))
+    /// `dataStore` and, for one on disk, the obsolete store that copied its
+    /// cookies for extensions, when that one still exists.
+    private static func storesClearing(_ dataStore: WKWebsiteDataStore) async -> [WKWebsiteDataStore] {
+        guard let identifier = dataStore.identifier else { return [dataStore] }
+        let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: identifier)
+        guard await WKWebsiteDataStore.allDataStoreIdentifiers.contains(hostedID) else { return [dataStore] }
+        return [dataStore, WKWebsiteDataStore(forIdentifier: hostedID)]
+    }
+
+    // MARK: - Actions - Clearing
+
+    /// Clears what the sites of `hosts` keep in `dataStore` in `categories`:
+    /// their cookies, storage and service workers, their cache, or both, by
+    /// the registrable domain WebKit groups them under. Answers whether the
+    /// cookies it removed are gone; WebKit reports nothing about the rest.
+    static func clearSites(
+        _ hosts: [String], _ categories: [BrowsingDataCategory], in dataStore: WKWebsiteDataStore
+    ) async -> Bool {
+        let hosts = hosts.map(normalizedHost).filter { !$0.isEmpty }
+        let dataTypes = types(of: categories)
+        guard !hosts.isEmpty, !dataTypes.isEmpty else { return false }
+        var cleared = true
+        for store in await storesClearing(dataStore) {
+            cleared = await clearSites(hosts, dataTypes, inStore: store) && cleared
+        }
+        return cleared
+    }
+
+    private static func clearSites(_ hosts: [String], _ dataTypes: Set<String>, inStore dataStore: WKWebsiteDataStore)
+        async -> Bool
+    {
+        let records = await dataRecords(ofTypes: dataTypes, in: dataStore).filter { record in
+            hosts.contains { matchesDataRecord(displayName: record.displayName, host: $0) }
+        }
+        // A record names the registrable domain, so its subdomains' cookies
+        // go with it, beside the cookies each host and its parents set, and
+        // those third parties set while embedded in one of them.
+        let sites = hosts + records.map(\.displayName)
+        let cookieStore = dataStore.httpCookieStore
+        let removed =
+            dataTypes.contains(WKWebsiteDataTypeCookies)
+            ? await allCookies(in: cookieStore).filter { cookie in
+                let partition = partitionHost(of: cookie)
+                return sites.contains { site in
+                    includesCookieDomainForRemoval(cookie.domain, host: site) || isSubdomain(cookie.domain, of: site)
+                        || partition.map { $0 == normalizedHost(site) || isSubdomain($0, of: site) } == true
+                }
+            } : []
+        for cookie in removed { await delete(cookie, from: cookieStore) }
+        if !records.isEmpty { await removeData(ofTypes: dataTypes, for: records, in: dataStore) }
+        guard !removed.isEmpty else { return true }
+        let remaining = Set(await allCookies(in: cookieStore).map(CookieIdentity.init))
+        return removed.allSatisfy { !remaining.contains(CookieIdentity($0)) }
+    }
+
+    /// Clears what changed in `dataStore` since `since`, or ever when it is
+    /// nil, in `categories`. WebKit hosts no extensions, so all of it is web data.
+    static func clear(_ categories: [BrowsingDataCategory], since: Date?, in dataStore: WKWebsiteDataStore) async {
+        let dataTypes = types(of: categories)
+        guard !dataTypes.isEmpty else { return }
+        for store in await storesClearing(dataStore) {
+            await withCheckedContinuation { continuation in
+                store.removeData(ofTypes: dataTypes, modifiedSince: since ?? .distantPast) { continuation.resume() }
             }
         }
     }
 
-    private static func clearSiteDataInStore(for pageURL: URL, in dataStore: WKWebsiteDataStore) async {
-        guard let host = pageURL.host()?.lowercased(), !host.isEmpty else { return }
-
-        let cookieStore = dataStore.httpCookieStore
-        let cookies = await allCookies(in: cookieStore)
-        for cookie in cookies
-        where includesCookieDomainForRemoval(
-            cookie.domain,
-            host: host
-        ) {
-            await delete(cookie, from: cookieStore)
-        }
-
-        let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
-        let records = await dataRecords(ofTypes: dataTypes, in: dataStore)
-        let matchingRecords = records.filter {
-            matchesDataRecord(
-                displayName: $0.displayName,
-                host: host
-            )
-        }
-        guard !matchingRecords.isEmpty else { return }
-        await removeData(
-            ofTypes: dataTypes,
-            for: matchingRecords,
-            in: dataStore
-        )
+    /// The WebKit data types `categories` cover.
+    private static func types(of categories: [BrowsingDataCategory]) -> Set<String> {
+        categories.reduce(into: Set<String>()) { $0.formUnion(categoryTypes[$1] ?? []) }
     }
+
+    // MARK: - Actions - Listing
+
+    /// The sites that keep data in `dataStore`, by the registrable domain
+    /// WebKit groups them under, with the kinds each keeps.
+    static func storedSites(in dataStore: WKWebsiteDataStore) async -> [StoredSite] {
+        await dataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), in: dataStore).compactMap { record in
+            let kept = Set(record.dataTypes.compactMap { kinds[$0] })
+            guard !kept.isEmpty else { return nil }
+            return StoredSite(site: record.displayName, kinds: WebsiteDataKind.all.filter(kept.contains))
+        }
+    }
+
+    // MARK: - Actions - Matching
 
     /// Whether a website data record named `displayName` belongs to `host`:
     /// the host itself, a parent of it, or a subdomain of it.
@@ -86,11 +169,29 @@ enum BrowserWebsiteDataStore {
         return domain == host || host.hasSuffix(".\(domain)")
     }
 
+    /// The host of the top-level site `cookie` is partitioned under, or nil
+    /// for a cookie that is not partitioned.
+    private static func partitionHost(of cookie: HTTPCookie) -> String? {
+        guard let partition = cookie.properties?[storagePartitionKey] as? String,
+            let host = URL(string: partition)?.host(), !host.isEmpty
+        else { return nil }
+        return normalizedHost(host)
+    }
+
+    /// Whether a cookie set on `domain` belongs to a subdomain of `site`.
+    private nonisolated static func isSubdomain(_ domain: String, of site: String) -> Bool {
+        let domain = normalizedHost(domain)
+        let site = normalizedHost(site)
+        return !site.isEmpty && domain.hasSuffix(".\(site)")
+    }
+
     private nonisolated static func normalizedHost(_ value: String) -> String {
         value.lowercased().trimmingCharacters(
             in: CharacterSet(charactersIn: ".")
         )
     }
+
+    // MARK: - Actions - WebKit
 
     private static func allCookies(
         in cookieStore: WKHTTPCookieStore
@@ -130,5 +231,21 @@ enum BrowserWebsiteDataStore {
                 continuation.resume()
             }
         }
+    }
+}
+
+/// One cookie as a store keeps it, so a cookie that survived its deletion is
+/// told apart from one a page set again since.
+private struct CookieIdentity: Hashable {
+    let name: String
+    let domain: String
+    let path: String
+    let value: String
+
+    init(_ cookie: HTTPCookie) {
+        name = cookie.name
+        domain = cookie.domain.lowercased()
+        path = cookie.path
+        value = cookie.value
     }
 }

@@ -339,10 +339,6 @@ extension BrowserPageOwner {
         activePage?.stopLoading()
     }
 
-    func clearSiteDataAndReload() async {
-        await activePage?.clearSiteDataAndReload()
-    }
-
     func presentFind() {
         activePage?.presentFind()
     }

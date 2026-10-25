@@ -9,3 +9,4 @@ protocol DataDeletionRequest: DataDeletionIntent {
 extension DeleteProfileData: DataDeletionRequest {}
 
 extension DeleteSiteData: DataDeletionRequest {}
+extension DeleteBrowsingData: DataDeletionRequest {}

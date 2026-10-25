@@ -49,6 +49,7 @@ const sidebars = {
       items: [
         'privacy/content-blocking-and-site-permissions',
         'privacy/history-archive-and-downloads',
+        'privacy/clear-website-data',
       ],
     },
     {

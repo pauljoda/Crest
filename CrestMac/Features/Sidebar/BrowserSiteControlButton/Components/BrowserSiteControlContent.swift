@@ -34,6 +34,10 @@ struct BrowserSiteControlContent: View {
                 reviewCertificate: reviewCertificate,
                 permissionsExpansion: $permissionsExpansion
             )
+            if configuration.page.live.displayURL?.host()?.isEmpty == false {
+                Divider()
+                BrowserSiteDataActions(page: configuration.page, dismiss: dismiss)
+            }
         }
         .padding(CrestSpacing.medium)
     }

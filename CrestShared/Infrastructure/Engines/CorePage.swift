@@ -60,12 +60,16 @@ final class CorePage {
 
     // MARK: - Actions - Data
 
-    /// Erases the site at `host` from every engine's store for profile
-    /// `profileID`, the page's, and answers whether each engine erased all of it.
-    func eraseSiteData(host: String, profileID: UUID) async -> Bool {
+    /// Erases what the sites of `hosts` keep in `categories` from every
+    /// engine's store for profile `profileID`, the page's, and answers whether
+    /// each engine erased all of it.
+    func eraseSiteData(
+        hosts: [String], categories: [BrowsingDataCategory], profileID: UUID, ephemeral: Bool
+    ) async -> Bool {
         guard let core else { return false }
         return await core.deleteData(
-            DeleteSiteData(requestID: UUID(), profileID: profileID, ephemeral: false, host: host))
+            DeleteSiteData(
+                requestID: UUID(), profileID: profileID, ephemeral: ephemeral, hosts: hosts, categories: categories))
     }
 
     // MARK: - Actions - Ownership

@@ -8,21 +8,16 @@
 #include "base/functional/bind.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/uuid.h"
-#include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
 #include "chrome/browser/permissions/system/system_permission_settings.h"
-#include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 #include "chrome/browser/ui/crest/crest_permission_prompt.h"
 #include "components/content_settings/core/common/content_settings_types.h"
 #include "components/permissions/permission_request.h"
 #include "components/permissions/request_type.h"
-#include "content/public/browser/browsing_data_filter_builder.h"
-#include "content/public/browser/browsing_data_remover.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/web_contents.h"
 #include "net/base/auth.h"
-#include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 
@@ -88,26 +83,6 @@ std::vector<ContentSettingsType> CaptureDevicesFor(permissions::PermissionPrompt
   return devices;
 }
 
-// Removes a site's data, then answers; it owns itself until the remover
-// reports back.
-class SiteDataClearance final : public content::BrowsingDataRemover::Observer {
- public:
-  SiteDataClearance(content::BrowsingDataRemover* remover, base::OnceCallback<void(bool)> done)
-      : remover_(remover), done_(std::move(done)) {
-    remover_->AddObserver(this);
-  }
-
-  void OnBrowsingDataRemoverDone(uint64_t failures) override {
-    remover_->RemoveObserver(this);
-    std::move(done_).Run(failures == 0);
-    delete this;
-  }
-
- private:
-  const raw_ptr<content::BrowsingDataRemover> remover_;
-  base::OnceCallback<void(bool)> done_;
-};
-
 // The origin a permission belongs to, as Crest's choices name it.
 engine::SiteOrigin SiteOriginOf(const GURL& url) {
   const url::Origin origin = url::Origin::Create(url);
@@ -118,26 +93,6 @@ engine::SiteOrigin SiteOriginOf(const GURL& url) {
 
 engine::Guid RandomGuid() {
   return *ParseGuid(base::Uuid::GenerateRandomV4().AsLowercaseString());
-}
-
-void ClearSiteData(Profile* profile, const GURL& url, base::OnceCallback<void(bool)> done) {
-  std::string domain = net::registry_controlled_domains::GetDomainAndRegistry(
-      url, net::registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES);
-  if (domain.empty()) {
-    domain = url.host();
-  }
-  if (domain.empty()) {
-    std::move(done).Run(false);
-    return;
-  }
-  auto filter = content::BrowsingDataFilterBuilder::Create(content::BrowsingDataFilterBuilder::Mode::kDelete);
-  filter->AddRegisterableDomain(domain);
-  auto* remover = profile->GetBrowsingDataRemover();
-  auto* clearance = new SiteDataClearance(remover, std::move(done));
-  remover->RemoveWithFilterAndReply(
-      base::Time(), base::Time::Max(),
-      chrome_browsing_data_remover::DATA_TYPE_SITE_DATA | content::BrowsingDataRemover::DATA_TYPE_CACHE,
-      content::BrowsingDataRemover::ORIGIN_TYPE_UNPROTECTED_WEB, std::move(filter), clearance);
 }
 
 // A request Crest's permission record covers, asked through the core so the

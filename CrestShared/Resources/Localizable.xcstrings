@@ -408,6 +408,9 @@
         }
       }
     },
+    "%@: %@. Other Spaces aren’t affected." : {
+
+    },
     "%@. Press Tab to enter a query." : {
 
     },
@@ -1979,6 +1982,9 @@
     "All tabs" : {
 
     },
+    "All Time" : {
+
+    },
     "Allow" : {
       "localizations" : {
         "ar" : {
@@ -2918,6 +2924,18 @@
     "Built on ungoogled-chromium, with Google integrations removed. Smooth browsing and extensions." : {
 
     },
+    "Cache" : {
+
+    },
+    "Cache Cleared" : {
+
+    },
+    "Cached Images and Files" : {
+
+    },
+    "cached images files empty delete remove" : {
+
+    },
     "Calculator" : {
 
     },
@@ -3336,6 +3354,27 @@
         }
       }
     },
+    "Clear browsing data" : {
+
+    },
+    "Clear browsing data in “%@”?" : {
+
+    },
+    "Clear Cache" : {
+
+    },
+    "Clear Cache for This Site" : {
+
+    },
+    "Clear Cookies" : {
+
+    },
+    "Clear Cookies and Reload" : {
+
+    },
+    "Clear Cookies for This Site" : {
+
+    },
     "Clear Cookies, Storage, and Reload" : {
       "localizations" : {
         "ar" : {
@@ -3344,7 +3383,8 @@
             "value" : "مسح ملفات تعريف الارتباط والتخزين وإعادة التحميل"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Clear History" : {
       "localizations" : {
@@ -3419,6 +3459,12 @@
       }
     },
     "Clear what the palette learned?" : {
+
+    },
+    "Clear…" : {
+
+    },
+    "Cleared" : {
 
     },
     "Click a shortcut, then press the new keys." : {
@@ -3861,7 +3907,11 @@
             "value" : "حظر المحتوى الإعلانات أدوات التتبع الكاميرا الميكروفون الوصول إلى المواقع السجل ملفات تعريف الارتباط البيانات"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
+    },
+    "content blocking ads trackers camera microphone site access history cookies data website cache clear browsing" : {
+
     },
     "Continue" : {
 
@@ -3879,7 +3929,16 @@
     "Control your browsing data" : {
 
     },
+    "Cookies" : {
+
+    },
+    "Cookies and Site Data" : {
+
+    },
     "Cookies and website data" : {
+
+    },
+    "Cookies Cleared" : {
 
     },
     "Copied" : {
@@ -3997,6 +4056,15 @@
           }
         }
       }
+    },
+    "Couldn’t Clear Cache" : {
+
+    },
+    "Couldn’t Clear Cookies" : {
+
+    },
+    "Couldn’t clear everything" : {
+
     },
     "Couldn’t Complete Extension Action" : {
       "localizations" : {
@@ -7656,6 +7724,15 @@
     "Large Phone" : {
 
     },
+    "Last 4 Weeks" : {
+
+    },
+    "Last 7 Days" : {
+
+    },
+    "Last 24 Hours" : {
+
+    },
     "Last attempt" : {
       "localizations" : {
         "ar" : {
@@ -7675,6 +7752,9 @@
           }
         }
       }
+    },
+    "Last Hour" : {
+
     },
     "Last successful sync" : {
       "localizations" : {
@@ -8719,6 +8799,9 @@
     "No username" : {
 
     },
+    "No website data" : {
+
+    },
     "No website rules" : {
 
     },
@@ -9166,6 +9249,9 @@
     "Opened in %@ for protected video" : {
 
     },
+    "Opened in Background Tab" : {
+
+    },
     "Opening %@…" : {
       "comment" : "Initial page loading status; the value is the destination host."
     },
@@ -9387,6 +9473,9 @@
           }
         }
       }
+    },
+    "Page zoom %@" : {
+
     },
     "Pale" : {
       "extractionState" : "stale",
@@ -10525,6 +10614,15 @@
     "Remove Accent Color" : {
 
     },
+    "Remove All" : {
+
+    },
+    "Remove all website data in “%@”?" : {
+
+    },
+    "Remove All…" : {
+
+    },
     "Remove Background Color" : {
       "localizations" : {
         "ar" : {
@@ -10534,6 +10632,9 @@
           }
         }
       }
+    },
+    "Remove data for %@" : {
+
     },
     "Remove Download" : {
       "localizations" : {
@@ -11701,6 +11802,9 @@
     "Search URL" : {
 
     },
+    "Search Websites" : {
+
+    },
     "Search with" : {
 
     },
@@ -12317,6 +12421,9 @@
     "Signed by %@." : {
 
     },
+    "Signs you out of most sites." : {
+
+    },
     "Silver" : {
 
     },
@@ -12342,6 +12449,9 @@
       }
     },
     "Site Controls" : {
+
+    },
+    "site data storage local session indexeddb service workers sign out delete remove" : {
 
     },
     "Site permissions" : {
@@ -12447,10 +12557,16 @@
     "Some content on this page was not delivered securely." : {
 
     },
+    "Some data couldn’t be removed" : {
+
+    },
     "Some iCloud records can’t be read. Update Crest on all your devices and try again." : {
 
     },
     "Some of this browsing session can’t be synced." : {
+
+    },
+    "Some sites may be missing." : {
 
     },
     "Songs" : {
@@ -12945,6 +13061,9 @@
 
     },
     "Stopping every agent disconnects it and keeps it out of the tabs it used until Crest quits." : {
+
+    },
+    "Storage" : {
 
     },
     "Store" : {
@@ -14103,6 +14222,9 @@
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
 
     },
+    "Time range" : {
+
+    },
     "Tint Folder Title" : {
 
     },
@@ -15194,6 +15316,9 @@
     "Website colors for pins" : {
 
     },
+    "Website data" : {
+
+    },
     "Website release" : {
 
     },
@@ -15369,6 +15494,9 @@
     "You chose this before" : {
 
     },
+    "You’ll be signed out of every site in this Space." : {
+
+    },
     "You’re offline" : {
       "localizations" : {
         "ar" : {
@@ -15432,9 +15560,6 @@
           }
         }
       }
-    },
-    "Opened in Background Tab" : {
-
     }
   },
   "version" : "1.3"

@@ -3,14 +3,15 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Erases what the engines keep for a profile: all of it, or one site's. Every
-/// registered engine is asked, whether or not it has started or shows any
-/// page, since a profile's store outlives the run that filled it. A deletion
-/// ends with `DataDeleted` once each engine asked has answered, deleted only
-/// when every one of them erased everything. A profile whose data this run
-/// erased may finish its Space's deletion; a relaunch erases it again before
-/// that deletion finishes. Nothing here is saved.
-internal sealed class DataDeletions(Engines engines, IIdSource ids) {
+/// Erases what the engines keep for a profile: all of it, some sites', or what
+/// changed in a time range. Every registered engine is asked, whether or not
+/// it has started or shows any page, since a profile's store outlives the run
+/// that filled it. A deletion ends with `DataDeleted` once each engine asked
+/// has answered, deleted only when every one of them erased everything. A
+/// profile whose data this run erased may finish its Space's deletion; a
+/// relaunch erases it again before that deletion finishes. Nothing here is
+/// saved.
+internal sealed class DataDeletions(Engines engines, IIdSource ids, IClock clock) {
     #region Static Variables
 
     /// The longest host a site can have.
@@ -43,6 +44,9 @@ internal sealed class DataDeletions(Engines engines, IIdSource ids) {
 
     /// The profiles whose data this run erased in full.
     internal HashSet<Guid> ErasedProfiles => erasedProfiles;
+
+    /// The time a deletion's range ends at.
+    internal IClock Clock => clock;
 
     #endregion
 

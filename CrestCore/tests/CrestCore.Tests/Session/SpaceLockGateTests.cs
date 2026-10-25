@@ -70,7 +70,7 @@ public sealed partial class BrowserContractsTests {
         // history is an edit the grant guards.
         device.Send(new SetSpaceAccess(device.Workspace, identity.Space, SpaceAccessPolicy.DeviceOwnerAuthentication));
         Assert.Equal(identity.Space, Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
-            device.Send(new ClearHistory(device.Workspace, identity.Space))).Rejection).SpaceId);
+            device.Send(new ClearHistory(device.Workspace, identity.Space, BrowsingDataRange.AllTime))).Rejection).SpaceId);
         device.Send(new SweepExpiredRecords(device.Workspace));
         device.Send(new CleanUpCurrentTabs(device.Workspace, identity.Space));
         Unlock(device.Send, device.Workspace, identity.Space);

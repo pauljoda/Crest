@@ -14,7 +14,6 @@
 #include "content/public/browser/javascript_dialog_manager.h"
 
 class GURL;
-class Profile;
 
 namespace content {
 class WebContents;
@@ -136,9 +135,6 @@ class EnginePrompts final : public content::JavaScriptDialogManager {
 
 // A fresh identity for something the binding asks the platform.
 engine::Guid RandomGuid();
-
-// Removes one site's cookies, storage and cache from `profile`, then answers.
-void ClearSiteData(Profile* profile, const GURL& url, base::OnceCallback<void(bool)> done);
 
 }  // namespace crest
 

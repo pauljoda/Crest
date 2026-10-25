@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -47,6 +48,8 @@ namespace crest {
 
 namespace {
 
+// Seconds from the Unix epoch to 1 January 2001, where the wire counts dates from.
+constexpr double kReferenceDateOffset = 978307200;
 // The longest link address the binding asks the core about or stages.
 constexpr size_t kLinkBytes = 8192;
 // The most links staged at once, and how long one waits for its Peek.
@@ -381,6 +384,14 @@ void EngineBinding::Handle(const engine::EraseProfileData& command) {
 
 void EngineBinding::Handle(const engine::EraseSiteData& command) {
   Erase(command);
+}
+
+void EngineBinding::Handle(const engine::EraseBrowsingData& command) {
+  Erase(command);
+}
+
+void EngineBinding::Handle(const engine::ReadSiteData& command) {
+  Read(command);
 }
 
 void EngineBinding::Handle(const engine::AdoptOfferedPage& command) {
@@ -1133,33 +1144,86 @@ void EngineBinding::Erase(const engine::EraseProfileData& erasing) {
 // A private profile keeps a site's data only while it is open; a regular one
 // on disk is loaded to clear it, and one never created has nothing to clear.
 void EngineBinding::Erase(const engine::EraseSiteData& erasing) {
-  const std::string id = GuidText(erasing.profile_id);
-  auto done = base::BindOnce(
+  WithStoredData(GuidText(erasing.profile_id), erasing.ephemeral,
+                 base::BindOnce(
+                     [](std::vector<std::string> hosts, std::vector<engine::BrowsingDataCategory> categories,
+                        base::OnceCallback<void(bool)> done, Profile* profile, bool kept) {
+                       if (!profile) {
+                         std::move(done).Run(!kept);
+                         return;
+                       }
+                       crest::SiteData::Clear(profile, hosts, categories, std::move(done));
+                     },
+                     erasing.hosts, erasing.categories, ErasureAnswer(erasing.erasure_id)));
+}
+
+// What changed in a time range goes the way a site's data does.
+void EngineBinding::Erase(const engine::EraseBrowsingData& erasing) {
+  std::optional<base::Time> since;
+  if (erasing.since) {
+    since = base::Time::FromSecondsSinceUnixEpoch(erasing.since->seconds_since_2001 + kReferenceDateOffset);
+  }
+  WithStoredData(GuidText(erasing.profile_id), erasing.ephemeral,
+                 base::BindOnce(
+                     [](std::optional<base::Time> since, std::vector<engine::BrowsingDataCategory> categories,
+                        base::OnceCallback<void(bool)> done, Profile* profile, bool kept) {
+                       if (!profile) {
+                         std::move(done).Run(!kept);
+                         return;
+                       }
+                       crest::SiteData::Clear(profile, since, categories, std::move(done));
+                     },
+                     since, erasing.categories, ErasureAnswer(erasing.erasure_id)));
+}
+
+// A profile that keeps nothing lists no site; one that would not load could
+// list none of its own.
+void EngineBinding::Read(const engine::ReadSiteData& reading) {
+  auto answer = base::BindOnce(
+      [](base::WeakPtr<EngineBinding> binding, engine::Guid id, bool read, std::vector<engine::StoredSite> sites) {
+        if (binding) {
+          binding->Report(engine::SiteDataRead{.reading_id = id, .sites = std::move(sites), .read = read});
+        }
+      },
+      weak_factory_.GetWeakPtr(), reading.reading_id);
+  WithStoredData(GuidText(reading.profile_id), reading.ephemeral,
+                 base::BindOnce(
+                     [](base::OnceCallback<void(bool, std::vector<engine::StoredSite>)> answer, Profile* profile,
+                        bool kept) {
+                       if (!profile) {
+                         std::move(answer).Run(!kept, {});
+                         return;
+                       }
+                       crest::SiteData::Read(profile, base::BindOnce(std::move(answer), true));
+                     },
+                     std::move(answer)));
+}
+
+void EngineBinding::WithStoredData(const std::string& id,
+                                   bool ephemeral,
+                                   base::OnceCallback<void(Profile*, bool)> use) {
+  if (Profile* loaded = Profiles().Find(id)) {
+    std::move(use).Run(loaded, true);
+    return;
+  }
+  if (ephemeral || !Profiles().HasStore(id)) {
+    std::move(use).Run(nullptr, false);
+    return;
+  }
+  Profiles().Load(id, /*is_private=*/false,
+                  base::BindOnce([](base::OnceCallback<void(Profile*, bool)> use,
+                                    Profile* profile) { std::move(use).Run(profile, true); },
+                                 std::move(use)));
+}
+
+base::OnceCallback<void(bool)> EngineBinding::ErasureAnswer(const engine::Guid& erasure) {
+  return base::BindOnce(
       [](base::WeakPtr<EngineBinding> binding, engine::Guid erasure, bool erased) {
         if (binding) {
           binding->Report(engine::DataErased{.erasure_id = erasure, .erased = erased});
         }
       },
-      weak_factory_.GetWeakPtr(), erasing.erasure_id);
-  const GURL site("https://" + erasing.host + "/");
-  if (Profile* loaded = Profiles().Find(id)) {
-    crest::ClearSiteData(loaded, site, std::move(done));
-    return;
-  }
-  if (erasing.ephemeral || !Profiles().HasStore(id)) {
-    std::move(done).Run(true);
-    return;
-  }
-  Profiles().Load(id, /*is_private=*/false,
-                  base::BindOnce(
-                      [](GURL site, base::OnceCallback<void(bool)> done, Profile* profile) {
-                        if (!profile) {
-                          std::move(done).Run(false);
-                          return;
-                        }
-                        crest::ClearSiteData(profile, site, std::move(done));
-                      },
-                      site, std::move(done)));
+      weak_factory_.GetWeakPtr(), erasure);
 }
 
 // Reports and presentations.

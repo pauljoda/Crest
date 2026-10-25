@@ -78,7 +78,7 @@ struct MobileCompactAddressBar: View {
                     reloadOrStop: performReloadOrStop,
                     reload: performReload,
                     reloadFromOrigin: performReloadFromOrigin,
-                    clearSiteDataAndReload: clearSiteDataAndReload,
+                    clearCookiesAndReload: clearCookiesAndReload,
                     isEnabled: pageActions?.isAvailable == true,
                     reloadControlSize: MobileCompactAddressBarLayout.reloadControlSize,
                     menuControlSize: MobileCompactAddressBarLayout.reloadMenuControlSize
@@ -150,7 +150,7 @@ struct MobileCompactAddressBar: View {
         pageActions?.reloadFromOrigin()
     }
 
-    private func clearSiteDataAndReload() async {
-        await pageActions?.clearSiteDataAndReload()
+    private func clearCookiesAndReload() async {
+        await pageActions?.clearSiteData(.siteData)
     }
 }

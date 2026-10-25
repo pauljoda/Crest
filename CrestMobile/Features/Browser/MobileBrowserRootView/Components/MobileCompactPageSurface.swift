@@ -10,7 +10,7 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
 
     let selectedTab: TabStateModel?
     let isURLCopiedFeedbackVisible: Bool
-    let pageZoomFeedbackLabel: String?
+    let pageFeedback: MobilePageFeedback?
     let reduceMotion: Bool
     let tabPromotionNamespace: Namespace.ID
     let completePagePresentation: () -> Void
@@ -32,9 +32,9 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
                 isVisible: isURLCopiedFeedbackVisible,
                 topPadding: MobileBrowserRootLayout.compactOverlayTopPadding
             )
-            if let pageZoomFeedbackLabel {
-                MobilePageZoomFeedback(
-                    label: pageZoomFeedbackLabel,
+            if let pageFeedback {
+                MobilePageFeedbackCapsule(
+                    feedback: pageFeedback,
                     topPadding: MobileBrowserRootLayout.compactOverlayTopPadding
                 )
             }

@@ -12,6 +12,7 @@ extension EngineCommand {
         case .closePage(let command): command.perform(on: binding)
         case .createPage(let command): command.perform(on: binding)
         case .dropStagedLink(let command): command.perform(on: binding)
+        case .eraseBrowsingData(let command): command.perform(on: binding)
         case .eraseProfileData(let command): command.perform(on: binding)
         case .eraseSiteData(let command): command.perform(on: binding)
         case .exitPictureInPicture(let command): command.perform(on: binding)
@@ -23,6 +24,7 @@ extension EngineCommand {
         case .pauseEngineDownload, .resumeEngineDownload:
             // WebKit downloads do not advertise these controls.
             break
+        case .readSiteData(let command): command.perform(on: binding)
         case .recoverPage(let command): command.perform(on: binding)
         case .rejectOfferedPage(let command): command.perform(on: binding)
         case .removeEngineDownload(let command): command.perform(on: binding)

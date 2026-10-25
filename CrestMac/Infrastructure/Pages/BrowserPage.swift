@@ -60,7 +60,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// What the page's engine is built with, which a new engine takes too.
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored private let allowsCredentialAccess: Bool
-    @ObservationIgnored private var isPrivateBrowsing = false
+    @ObservationIgnored private(set) var isPrivateBrowsing = false
 
     /// What the page shows as the core holds it: its address, title,
     /// loading, history, security, failure and media. Presentation that

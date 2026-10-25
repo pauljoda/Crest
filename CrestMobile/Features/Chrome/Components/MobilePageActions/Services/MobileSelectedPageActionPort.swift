@@ -121,8 +121,11 @@ struct MobileSelectedPageActionPort: MobilePageActions {
         activePage?.performReload(.fromOrigin)
     }
 
-    func clearSiteDataAndReload() async {
-        await activePage?.clearSiteDataAndReload()
+    func clearSiteData(_ category: BrowsingDataCategory) async {
+        guard let page = activePage,
+            let cleared = await page.clearSiteData([category], ephemeral: pages.usesEphemeralWebsiteDataStores)
+        else { return }
+        pages.showFeedback(.siteData(category, cleared: cleared))
     }
 
     func togglePreferredContentMode() {

@@ -110,6 +110,12 @@ struct BrowserMacCommand {
         .capturePage, actsOnPage: true, isAvailable: { $0.commandPageSupports(.viewportCapture) },
         isOn: { $0.commandPage?.isRegionCapturePresented == true },
         run: { $0.commandPage?.toggleRegionCapture() })
+    static let clearSiteCookies = BrowserMacCommand(
+        .clearSiteCookies, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
+        run: { $0.clearCommandPageSiteData(.siteData) })
+    static let clearSiteCache = BrowserMacCommand(
+        .clearSiteCache, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
+        run: { $0.clearCommandPageSiteData(.cache) })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
     static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
     static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
@@ -155,7 +161,7 @@ struct BrowserMacCommand {
         toggleReaderMode, toggleContentBlocking, findInPage, findNext, findPrevious, zoomIn, zoomOut, actualSize,
         copyPageLink,
         copyPageLinkAsMarkdown,
-        sharePage, exportPDF, saveWebArchive, printPage, capturePage,
+        sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
         toggleSidebar, showHistory, showArchive, showDownloads,
         showWebInspector,
         toggleTranslationToolbar, toggleDeveloperToolbar, selectNumbered,

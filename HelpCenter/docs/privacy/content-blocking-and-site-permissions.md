@@ -48,7 +48,7 @@ Remote Web Push delivery is not available in this Google-free Chromium build. Lo
 
 ## Reset a site
 
-If a site behaves as though an old choice still applies, first reset its saved permission rather than deleting the entire Space. Clearing all website data is broader: it can sign you out and remove local site state for that profile.
+If a site behaves as though an old choice still applies, first reset its saved permission rather than deleting the entire Space. [Clearing a site's data](./clear-website-data.md) is broader: it signs you out and removes what the site stored in that Space.
 
 ## Extension site access
 

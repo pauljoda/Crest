@@ -50,8 +50,9 @@ final class MobileBrowserPageStore:
     var presentedTabIDsAcrossWindows: Set<UUID> { Set(presentedTabIDs) }
     var residencyRevision: Int { host.revision }
     private(set) var urlCopyFeedbackRevision = 0
-    private(set) var pageZoomFeedbackLabel = "100%"
-    private(set) var pageZoomFeedbackRevision = 0
+    /// What the page's feedback capsule says last, which each new revision shows.
+    private(set) var pageFeedback = MobilePageFeedback.pageZoom("100%")
+    private(set) var pageFeedbackRevision = 0
     let downloadCenter: BrowserDownloadCenter
     let downloadRiskConfirmation: MobileDownloadRiskConfirmationCoordinator
     /// The answers to the core's questions about this mode's downloads, which
@@ -528,20 +529,23 @@ final class MobileBrowserPageStore:
 
     func zoomIn() {
         guard activePage?.zoomIn() == true else { return }
-        pageZoomFeedbackLabel = pageZoomLabel
-        pageZoomFeedbackRevision &+= 1
+        showFeedback(.pageZoom(pageZoomLabel))
     }
 
     func zoomOut() {
         guard activePage?.zoomOut() == true else { return }
-        pageZoomFeedbackLabel = pageZoomLabel
-        pageZoomFeedbackRevision &+= 1
+        showFeedback(.pageZoom(pageZoomLabel))
     }
 
     func resetZoom() {
         guard activePage?.resetZoom() == true else { return }
-        pageZoomFeedbackLabel = pageZoomLabel
-        pageZoomFeedbackRevision &+= 1
+        showFeedback(.pageZoom(pageZoomLabel))
+    }
+
+    /// Shows `feedback` in the page's capsule.
+    func showFeedback(_ feedback: MobilePageFeedback) {
+        pageFeedback = feedback
+        pageFeedbackRevision &+= 1
     }
 
     @discardableResult

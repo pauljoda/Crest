@@ -4541,6 +4541,14 @@
     "imported-ip-address-passwords-fill": {
       "category": "fixed",
       "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "clear-one-site-cookies-or-cache": {
+      "category": "new",
+      "message": "Site Controls can clear the open site's cookies or its cache. Clearing cookies signs you out of the site and removes everything it stored in that Space, including service workers and what sites embedded in it stored there. Both are also in the command palette and, on iPhone and iPad, the page menu."
+    },
+    "space-website-data-settings": {
+      "category": "new",
+      "message": "Each Space's Privacy settings list the sites that keep data, with Remove and Remove All, and can clear history, cookies and site data, and cached files from the last hour up to all time."
     }
   }
 }

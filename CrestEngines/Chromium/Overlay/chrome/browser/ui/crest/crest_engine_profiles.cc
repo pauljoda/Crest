@@ -1,5 +1,8 @@
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
 
+#include <map>
+#include <set>
+#include <string_view>
 #include <utility>
 
 #include "base/files/file_path.h"
@@ -10,6 +13,7 @@
 #include "base/task/sequenced_task_runner.h"
 #include "base/uuid.h"
 #include "chrome/browser/browser_process.h"
+#include "chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h"
 #include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
 #include "chrome/browser/profiles/delete_profile_helper.h"
 #include "chrome/browser/profiles/keep_alive/profile_keep_alive_types.h"
@@ -21,8 +25,16 @@
 #include "chrome/browser/profiles/profile_destroyer.h"
 #include "chrome/browser/profiles/profile_manager.h"
 #include "chrome/browser/profiles/profile_metrics.h"
+#include "components/browsing_data/content/browsing_data_model.h"
 #include "components/prefs/pref_service.h"
+#include "content/public/browser/browsing_data_filter_builder.h"
 #include "content/public/browser/browsing_data_remover.h"
+#include "net/base/registry_controlled_domains/registry_controlled_domain.h"
+#include "net/base/schemeful_site.h"
+#include "net/cookies/cookie_partition_key_collection.h"
+#include "url/gurl.h"
+#include "url/origin.h"
+#include "url/url_constants.h"
 
 namespace crest {
 
@@ -36,6 +48,106 @@ base::FilePath ProfilePath(ProfileManager* manager, const std::string& id) {
 bool IsProfileIdentity(const std::string& id) {
   return base::Uuid::ParseCaseInsensitive(id).is_valid();
 }
+
+// The web origins a site clear reaches: every one, including those an
+// installed app protects, but never an extension's.
+constexpr uint64_t kWebOrigins = content::BrowsingDataRemover::ORIGIN_TYPE_UNPROTECTED_WEB |
+                                 content::BrowsingDataRemover::ORIGIN_TYPE_PROTECTED_WEB;
+
+// What the remover removes for `category`.
+uint64_t RemovalMask(engine::BrowsingDataCategory category) {
+  switch (category) {
+    case engine::BrowsingDataCategory::kHistory:
+      return chrome_browsing_data_remover::DATA_TYPE_HISTORY;
+    case engine::BrowsingDataCategory::kSiteData:
+      return chrome_browsing_data_remover::DATA_TYPE_SITE_DATA;
+    case engine::BrowsingDataCategory::kCache:
+      return content::BrowsingDataRemover::DATA_TYPE_CACHE;
+  }
+  return 0;
+}
+
+// The registrable domain the engine groups `host` under, or the host itself
+// when it has none, such as localhost or an IP address, which an IPv6 one is
+// in brackets, as a URL spells it.
+std::string SiteOf(std::string_view host) {
+  while (!host.empty() && host.front() == '.') {
+    host.remove_prefix(1);
+  }
+  if (!host.empty() && host.front() != '[' && host.find(':') != std::string_view::npos) {
+    return "[" + std::string(host) + "]";
+  }
+  std::string domain = net::registry_controlled_domains::GetDomainAndRegistry(
+      host, net::registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES);
+  return domain.empty() ? std::string(host) : domain;
+}
+
+// The partition keys of cookies third parties set while embedded in `site`,
+// over either scheme.
+void AddPartitionKeys(const std::string& site, base::flat_set<net::CookiePartitionKey>& keys) {
+  for (const char* scheme : {url::kHttpsScheme, url::kHttpScheme}) {
+    const GURL url(std::string(scheme) + "://" + site + "/");
+    if (!url.is_valid()) {
+      continue;
+    }
+    const auto collection = net::CookiePartitionKeyCollection::MatchesSite(net::SchemefulSite(url));
+    keys.insert(collection.PartitionKeys().begin(), collection.PartitionKeys().end());
+  }
+}
+
+// Runs browsing data removals on a profile one after another, then answers
+// whether every one finished without a failure. It owns itself until the
+// last one reports back.
+class Removals final : public content::BrowsingDataRemover::Observer {
+ public:
+  struct Removal {
+    uint64_t mask = 0;
+    base::Time since;
+    // Which origins and cookies it covers, or every one when it is null.
+    std::unique_ptr<content::BrowsingDataFilterBuilder> filter;
+  };
+
+  static void Run(Profile* profile, std::vector<Removal> removals, base::OnceCallback<void(bool)> done) {
+    (new Removals(profile->GetBrowsingDataRemover(), std::move(removals), std::move(done)))->Next();
+  }
+
+  void OnBrowsingDataRemoverDone(uint64_t failed_data_types) override {
+    removed_ = removed_ && failed_data_types == 0;
+    Next();
+  }
+
+ private:
+  Removals(content::BrowsingDataRemover* remover, std::vector<Removal> removals, base::OnceCallback<void(bool)> done)
+      : remover_(remover), removals_(std::move(removals)), done_(std::move(done)) {
+    remover_->AddObserver(this);
+  }
+
+  void Next() {
+    while (!removals_.empty() && removals_.front().mask == 0) {
+      removals_.erase(removals_.begin());
+    }
+    if (removals_.empty()) {
+      remover_->RemoveObserver(this);
+      std::move(done_).Run(removed_);
+      delete this;
+      return;
+    }
+    Removal removal = std::move(removals_.front());
+    removals_.erase(removals_.begin());
+    if (removal.filter) {
+      remover_->RemoveWithFilterAndReply(removal.since, base::Time::Max(), removal.mask, kWebOrigins,
+                                         std::move(removal.filter), this);
+    } else {
+      remover_->RemoveAndReply(removal.since, base::Time::Max(), removal.mask,
+                               content::BrowsingDataRemover::ORIGIN_TYPE_UNPROTECTED_WEB, this);
+    }
+  }
+
+  const raw_ptr<content::BrowsingDataRemover> remover_;
+  std::vector<Removals::Removal> removals_;
+  base::OnceCallback<void(bool)> done_;
+  bool removed_ = true;
+};
 
 }  // namespace
 
@@ -343,6 +455,98 @@ void EngineProfiles::Finished(const std::string& id, bool may_retry) {
 
 void EngineProfiles::Dispose() {
   disposing_ = true;
+}
+
+void SiteData::Clear(Profile* profile,
+                     const std::vector<std::string>& hosts,
+                     const std::vector<engine::BrowsingDataCategory>& categories,
+                     base::OnceCallback<void(bool)> done) {
+  std::set<std::string> sites;
+  for (const std::string& host : hosts) {
+    if (std::string site = SiteOf(host); !site.empty()) {
+      sites.insert(std::move(site));
+    }
+  }
+  uint64_t mask = 0;
+  for (engine::BrowsingDataCategory category : categories) {
+    if (category != engine::BrowsingDataCategory::kHistory) {
+      mask |= RemovalMask(category);
+    }
+  }
+  if (sites.empty() || mask == 0) {
+    std::move(done).Run(false);
+    return;
+  }
+  std::vector<Removals::Removal> removals;
+  // The sites' own data, and what their third parties store partitioned
+  // under them; cookies match by their own domain only.
+  auto own = content::BrowsingDataFilterBuilder::Create(content::BrowsingDataFilterBuilder::Mode::kDelete);
+  for (const std::string& site : sites) {
+    own->AddRegisterableDomain(site);
+  }
+  removals.push_back({.mask = mask, .filter = std::move(own)});
+  // The cookies third parties set while embedded in the sites, which carry
+  // the sites as their partition.
+  if (mask & content::BrowsingDataRemover::DATA_TYPE_COOKIES) {
+    base::flat_set<net::CookiePartitionKey> keys;
+    for (const std::string& site : sites) {
+      AddPartitionKeys(site, keys);
+    }
+    auto partitioned = content::BrowsingDataFilterBuilder::Create(content::BrowsingDataFilterBuilder::Mode::kPreserve);
+    partitioned->SetCookiePartitionKeyCollection(net::CookiePartitionKeyCollection(std::move(keys)));
+    partitioned->SetPartitionedCookiesOnly(true);
+    removals.push_back({.mask = content::BrowsingDataRemover::DATA_TYPE_COOKIES, .filter = std::move(partitioned)});
+  }
+  Removals::Run(profile, std::move(removals), std::move(done));
+}
+
+void SiteData::Clear(Profile* profile,
+                     std::optional<base::Time> since,
+                     const std::vector<engine::BrowsingDataCategory>& categories,
+                     base::OnceCallback<void(bool)> done) {
+  uint64_t mask = 0;
+  for (engine::BrowsingDataCategory category : categories) {
+    mask |= RemovalMask(category);
+  }
+  std::vector<Removals::Removal> removals;
+  removals.push_back({.mask = mask, .since = since.value_or(base::Time())});
+  Removals::Run(profile, std::move(removals), std::move(done));
+}
+
+void SiteData::Read(Profile* profile, base::OnceCallback<void(std::vector<engine::StoredSite>)> done) {
+  BrowsingDataModel::BuildFromDisk(
+      profile, ChromeBrowsingDataModelDelegate::CreateForProfile(profile),
+      base::BindOnce(
+          [](base::OnceCallback<void(std::vector<engine::StoredSite>)> done,
+             std::unique_ptr<BrowsingDataModel> model) {
+            std::map<std::string, std::set<engine::WebsiteDataKind>> sites;
+            for (const BrowsingDataModel::BrowsingDataEntryView& entry : *model) {
+              std::string site;
+              if (std::optional<net::SchemefulSite> partition = entry.GetThirdPartyPartitioningSite()) {
+                site = SiteOf(partition->GetURL().host());
+              } else if (const auto* host = std::get_if<std::string>(&*entry.data_owner)) {
+                site = SiteOf(*host);
+              } else if (const auto& origin = std::get<url::Origin>(*entry.data_owner);
+                         origin.scheme() == url::kHttpsScheme || origin.scheme() == url::kHttpScheme) {
+                site = SiteOf(origin.host());
+              }
+              if (site.empty()) {
+                continue;
+              }
+              const bool cookies = entry.data_details->storage_types.Has(BrowsingDataModel::StorageType::kCookie);
+              auto& kinds = sites[site];
+              kinds.insert(cookies ? engine::WebsiteDataKind::kCookies : engine::WebsiteDataKind::kStorage);
+              if (cookies && entry.data_details->storage_types.size() > 1) {
+                kinds.insert(engine::WebsiteDataKind::kStorage);
+              }
+            }
+            std::vector<engine::StoredSite> stored;
+            for (auto& [site, kinds] : sites) {
+              stored.push_back({.site = site, .kinds = {kinds.begin(), kinds.end()}});
+            }
+            std::move(done).Run(std::move(stored));
+          },
+          std::move(done)));
 }
 
 }  // namespace crest
