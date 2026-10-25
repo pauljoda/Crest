@@ -11,6 +11,8 @@ struct BrowserSidebarHoverTracker: NSViewRepresentable {
     func updateNSView(_ view: BrowserSidebarHoverTrackingView, context: Context) {
         view.onHoverChange = onHoverChange
         view.isRevealedByPointer = isRevealedByPointer
+        view.edgeRestHideDelay = SidebarEdgeRestHidePreference.delay(
+            BrowserDeviceAppearanceStore.shared.sidebarEdgeRestHideDelay)
         view.schedulePointerRefresh()
     }
 }

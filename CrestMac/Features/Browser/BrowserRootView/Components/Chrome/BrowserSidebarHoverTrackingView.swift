@@ -19,6 +19,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
     /// field — a moment after it closes, and the sidebar that anchors it
     /// should still be there when it arrives.
     static let holdReleaseDelay: TimeInterval = 0.15
+    /// How often a pointer resting at the screen edge is sampled while
+    /// `edgeRestHideDelay` is set.
+    static let edgeRestCheckInterval: TimeInterval = 0.25
 
     // MARK: - Variables
 
@@ -36,6 +39,18 @@ final class BrowserSidebarHoverTrackingView: NSView {
             lastReportedHover = nil
         }
     }
+    /// How long the pointer may rest motionless at the screen edge before it
+    /// counts as gone, or zero to wait for it to move.
+    ///
+    /// Universal Control leaves this Mac's pointer parked at the screen edge
+    /// when it crosses to another Mac, over a sidebar it revealed there, and
+    /// reports nothing else until a click on the other Mac moves focus.
+    var edgeRestHideDelay: TimeInterval = 0 {
+        didSet {
+            guard edgeRestHideDelay != oldValue else { return }
+            scheduleEdgeRestCheck()
+        }
+    }
 
     private let notificationCenter: NotificationCenter
     private let pointerLocation: @MainActor () -> NSPoint
@@ -47,6 +62,8 @@ final class BrowserSidebarHoverTrackingView: NSView {
     private var holdReleaseRevision = 0
     private var isReleasingHold = false
     private var lastReportedHover: Bool?
+    private var edgeRestRevision = 0
+    private var edgeRest: (point: NSPoint, since: Date)?
 
     private var isPointerInside: Bool {
         guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
@@ -61,6 +78,13 @@ final class BrowserSidebarHoverTrackingView: NSView {
     private var hasRevealingPointerLeft: Bool {
         guard isRevealedByPointer, let window else { return false }
         return !window.isKeyWindow || !window.frame.contains(pointerLocation())
+    }
+
+    /// Whether the pointer has rested motionless at the edge of its screen for
+    /// longer than `edgeRestHideDelay`.
+    private var hasPointerRestedAtScreenEdge: Bool {
+        guard edgeRestHideDelay > 0, let edgeRest else { return false }
+        return Date().timeIntervalSince(edgeRest.since) >= edgeRestHideDelay
     }
 
     private var isHeldOpen: Bool {
@@ -125,6 +149,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
         holdReleaseRevision += 1
         isReleasingHold = false
         lastReportedHover = nil
+        scheduleEdgeRestCheck()
         guard let window else { return }
         let observations: [(Selector, Notification.Name, NSWindow?)] = [
             (#selector(menuTrackingBegan), NSMenu.didBeginTrackingNotification, nil),
@@ -173,13 +198,18 @@ final class BrowserSidebarHoverTrackingView: NSView {
     func refreshPointerHover() {
         guard window != nil else { return }
         releaseWindowsNoLongerShown()
-        let isHovering = isPointerInside || (lastReportedHover == true && isHeldOpen)
+        if let edgeRest, edgeRest.point != pointerLocation() {
+            self.edgeRest = nil
+        }
+        let isHovering =
+            (isPointerInside && !hasPointerRestedAtScreenEdge) || (lastReportedHover == true && isHeldOpen)
         // A newly revealed sidebar starts offscreen while it slides in.
         // Absence before its first entry is not a pointer exit, unless the
         // pointer that revealed it has already left the window.
         guard isHovering || lastReportedHover != nil || hasRevealingPointerLeft else { return }
         guard isHovering != lastReportedHover else { return }
         lastReportedHover = isHovering
+        scheduleEdgeRestCheck()
         onHoverChange(isHovering)
     }
 
@@ -189,6 +219,45 @@ final class BrowserSidebarHoverTrackingView: NSView {
         DispatchQueue.main.async { [weak self] in
             self?.refreshPointerHover()
         }
+    }
+
+    // MARK: - Actions - Edge Rest
+
+    /// Samples the pointer while the sidebar is hovered and a rest delay is
+    /// set. A pointer at rest produces no events, so only a sample can see
+    /// how long it has stayed put.
+    ///
+    /// A rest outlives the hover it ended. The region stays attached until
+    /// the sidebar is dismissed, and a refresh queued before then must not
+    /// take the same motionless pointer for a new hover.
+    private func scheduleEdgeRestCheck() {
+        edgeRestRevision += 1
+        let revision = edgeRestRevision
+        guard edgeRestHideDelay > 0, window != nil else {
+            edgeRest = nil
+            return
+        }
+        guard lastReportedHover == true else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.edgeRestCheckInterval) { [weak self] in
+            guard let self, self.edgeRestRevision == revision else { return }
+            self.sampleEdgeRest()
+            self.refreshPointerHover()
+            if self.edgeRestRevision == revision {
+                self.scheduleEdgeRestCheck()
+            }
+        }
+    }
+
+    private func sampleEdgeRest() {
+        let point = pointerLocation()
+        guard let screen = window?.screen,
+            point.x <= screen.frame.minX + 1 || point.x >= screen.frame.maxX - 1
+        else {
+            edgeRest = nil
+            return
+        }
+        guard edgeRest?.point != point else { return }
+        edgeRest = (point, Date())
     }
 
     // MARK: - Actions - Holds

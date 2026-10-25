@@ -4541,6 +4541,14 @@
     "imported-ip-address-passwords-fill": {
       "category": "fixed",
       "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "sidebar-edge-rest-hide-delay": {
+      "category": "new",
+      "message": "Choose to hide the sidebar when the pointer rests at the screen edge for a few seconds, for when Universal Control takes the pointer to another Mac. It's off by default, in Look and Feel settings."
+    },
+    "sidebar-edge-rest-hide-stays-hidden": {
+      "category": "internal",
+      "message": "A sidebar hidden because the pointer rested at the screen edge stays hidden while it slides away."
     }
   }
 }

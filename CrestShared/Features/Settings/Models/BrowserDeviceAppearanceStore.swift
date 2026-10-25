@@ -139,6 +139,7 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
+    static let sidebarEdgeRestHideDelayKey = "crest.appearance.sidebar-edge-rest-hide-delay"
     static let maximumCornerRadius: Double = 40
     /// How long the choices stay still before the store writes them out.
     static let settleDelay = Duration.milliseconds(300)
@@ -174,6 +175,12 @@ final class BrowserDeviceAppearanceStore {
     /// How wide, in points, the strip along the window's edge is that shows a
     /// hidden sidebar when the pointer rests on it. Only the Mac has one.
     var sidebarRevealWidth: Double {
+        didSet { saveSoon() }
+    }
+    /// How many seconds a pointer may rest motionless at the screen edge over
+    /// a revealed sidebar before the sidebar hides, or zero to keep it until
+    /// the pointer moves. Only the Mac has one.
+    var sidebarEdgeRestHideDelay: Double {
         didSet { saveSoon() }
     }
     /// How tabs look. Replaced only to reset it; otherwise its choices change
@@ -283,6 +290,7 @@ final class BrowserDeviceAppearanceStore {
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
+        sidebarEdgeRestHideDelay = chrome.object(forKey: Self.sidebarEdgeRestHideDelayKey) as? Double ?? 0
         if defaults.object(forKey: Self.cornerRadiusKey) != nil {
             cornerRadius = defaults.double(forKey: Self.cornerRadiusKey)
         } else {
@@ -392,6 +400,7 @@ final class BrowserDeviceAppearanceStore {
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
+        write(sidebarEdgeRestHideDelay, forKey: Self.sidebarEdgeRestHideDelayKey, in: chrome)
     }
 
     /// Writes the choices once they have stayed still for ``settleDelay``.

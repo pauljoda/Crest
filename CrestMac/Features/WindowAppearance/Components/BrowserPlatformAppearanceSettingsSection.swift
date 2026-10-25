@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The shared Window group, plus the window choices only the desktop has:
 /// light or dark, how far dark dims Space colors, Space page motion, the
-/// sidebar hover area and whether it stays live over a page in full screen.
+/// sidebar hover area, whether it stays live over a page in full screen, and
+/// whether a pointer resting at the screen edge hides it.
 struct BrowserPlatformAppearanceSettingsSection: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -24,6 +25,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             $appearance.sidebarRevealWidth, default: SidebarRevealWidthPreference.defaultValue)
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
+        let edgeRestHide = CrestSettingValue(
+            $appearance.sidebarEdgeRestHideDelay, default: SidebarEdgeRestHidePreference.defaultValue)
 
         return BrowserWindowAppearanceGroup(
             space: space,
@@ -34,6 +37,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 motion.resettable("Animate pages when switching Spaces"),
                 revealWidth.resettable("Sidebar hover area"),
                 fullscreenReveal.resettable("Show sidebar on hover in full screen"),
+                edgeRestHide.resettable("Hide sidebar when the pointer rests at the screen edge"),
             ]
         ) {
             CrestSettingRow("Appearance", setting: mode.resettable("Appearance")) {
@@ -82,6 +86,15 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-fullscreen-reveal")
             }
+
+            CrestSettingSlider(
+                "Hide sidebar when the pointer rests at the screen edge",
+                value: edgeRestHide,
+                range: SidebarEdgeRestHidePreference.range,
+                step: 1,
+                readout: .seconds(zero: "Off"),
+                identifier: "sidebar-edge-rest-hide-delay"
+            )
         }
     }
 }

@@ -12,6 +12,7 @@ struct BrowserPlatformLookAndFeelResetSection: View {
         BrowserLookAndFeelResetFooter {
             animatesSpacePages = SpacePageMotionPreference.defaultValue
             BrowserDeviceAppearanceStore.shared.sidebarRevealWidth = SidebarRevealWidthPreference.defaultValue
+            BrowserDeviceAppearanceStore.shared.sidebarEdgeRestHideDelay = SidebarEdgeRestHidePreference.defaultValue
             revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
             _ = BrowserMacDockTile.shared.select("")
         }
