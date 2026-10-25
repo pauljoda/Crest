@@ -268,12 +268,13 @@ final class BrowserMacApplication {
         )
         self.transientBrowsing = transientBrowsing
         self.windowCoordinator = BrowserMacWindowCoordinator(
-            browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts)
+            browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts,
+            utilityDefaults: utilityDefaults)
         self.privateBrowser = privateBrowser
+        // A private window keeps nothing past its session, and its Space is
+        // new each time it opens, so its lists choice stays in memory.
         self.privateChrome = BrowserChromeState(
-            utilityPresentation: BrowserUtilityPresentationState(
-                defaults: utilityDefaults
-            )
+            utilityPresentation: BrowserUtilityPresentationState(defaults: nil)
         )
         self.privateTransientBrowsing = privateTransientBrowsing
         self.spaceAccess = spaceAccess

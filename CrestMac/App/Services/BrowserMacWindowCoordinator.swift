@@ -15,6 +15,8 @@ final class BrowserMacWindowCoordinator {
     private let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     private let windowLayouts: BrowserWindowLayouts
+    /// Where every window's utility lists keep the person's choices.
+    private let utilityDefaults: UserDefaults?
     @ObservationIgnored private var windows: [UUID: BrowserMacWindowModel] = [:]
     /// Temporary windows that closed or whose transfer was canceled. They are
     /// never restored, so a scene that asks for one again once it went, as
@@ -26,12 +28,13 @@ final class BrowserMacWindowCoordinator {
 
     init(
         browser: BrowserStore, pages: BrowserPagePool, spaceAccess: BrowserSpaceAccessController,
-        windowLayouts: BrowserWindowLayouts
+        windowLayouts: BrowserWindowLayouts, utilityDefaults: UserDefaults?
     ) {
         self.browser = browser
         self.pages = pages
         self.spaceAccess = spaceAccess
         self.windowLayouts = windowLayouts
+        self.utilityDefaults = utilityDefaults
     }
 
     func existingModel(for id: UUID) -> BrowserMacWindowModel? { windows[id] }
@@ -102,7 +105,7 @@ final class BrowserMacWindowCoordinator {
             transientBrowsing: transient, spaceAccess: spaceAccess)
         let model = BrowserMacWindowModel(
             request: request, browser: windowBrowser, pages: windowPages,
-            transientBrowsing: transient, windowState: state)
+            transientBrowsing: transient, windowState: state, utilityDefaults: utilityDefaults)
         windows[request.id] = model
         return model
     }

@@ -163,14 +163,20 @@ struct BrowserSidebarLoadedContent: View {
     }
 
     private var switcherAccessories: BrowserSpaceSwitcherAccessories {
-        BrowserSpaceSwitcherAccessories(
+        let spaceID = context.browser.shownSpace?.id
+        return BrowserSpaceSwitcherAccessories(
             sidebarToggle: BrowserSpaceSwitcherSidebarToggle(
                 action: sidebarToggleAction,
                 toggle: toggleSidebar
             ),
             commonLists: BrowserSpaceSwitcherCommonLists(
                 isExpanded: context.utilityPresentation.isSwitcherExpanded,
+                surface: context.utilityPresentation.triggerSurface(for: spaceID),
                 toggle: context.toggleUtilitySwitcher,
+                choose: { surface in
+                    guard let spaceID else { return }
+                    context.utilityPresentation.chooseTriggerSurface(surface, for: spaceID)
+                },
                 recordTriggerFrame:
                     context.utilityPresentation.recordTriggerFrame
             )

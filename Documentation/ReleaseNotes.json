@@ -4566,6 +4566,14 @@
       "category": "fixed",
       "message": "Dragging across a Quick Window’s address field selects its text instead of moving the window. The space around the field still moves the window."
     },
+    "downloads-drag-out-as-files": {
+      "category": "new",
+      "message": "Finished downloads can be dragged out of the Downloads list and dropped into Finder or another app, like any file."
+    },
+    "sidebar-lists-button-choice": {
+      "category": "new",
+      "message": "Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in."
+    },
     "clear-one-site-cookies-or-cache": {
       "category": "new",
       "message": "Site Controls can clear the open site's cookies or its cache. Clearing cookies signs you out of the site and removes everything it stored in that Space, including service workers and what sites embedded in it stored there. Both are also in the command palette and, on iPhone and iPad, the page menu."
