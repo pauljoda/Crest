@@ -316,10 +316,12 @@ class ExtensionPopup final : public extensions::ExtensionView,
     [window_ setFrame:frame display:YES];
   }
 
-  // Transient like the popover it replaces: a click outside it, Escape, the
-  // window it belongs to moving, resizing or minimising, and Crest going to the
-  // background all dismiss it. The extension closing its own popup, the host
-  // being destroyed and the extension unloading come through the host.
+  // Transient like the popover it replaces: a click elsewhere in Crest, Escape,
+  // and the window it belongs to moving, resizing or minimising dismiss it.
+  // Crest going to the background does not, as in Chrome: the extension may be
+  // waiting on the system or another app, such as the Touch ID prompt its
+  // native host raised. The extension closing its own popup, the host being
+  // destroyed and the extension unloading come through the host.
   void Observe(NSWindow* parent) {
     auto weak = weak_factory_.GetWeakPtr();
     NSWindow* popup = window_;
@@ -336,9 +338,6 @@ class ExtensionPopup final : public extensions::ExtensionView,
         if (event.window != popup) weak->Close();
         return event;
       }],
-      [NSEvent addGlobalMonitorForEventsMatchingMask:clicks handler:^(NSEvent*) {
-        if (weak) weak->Close();
-      }],
     ];
     NSMutableArray* observations = [NSMutableArray array];
     auto dismiss = ^(NSNotification*) {
@@ -348,9 +347,6 @@ class ExtensionPopup final : public extensions::ExtensionView,
                                       NSWindowDidMiniaturizeNotification, NSWindowWillCloseNotification])
       [observations addObject:[[NSNotificationCenter defaultCenter] addObserverForName:name object:parent
           queue:NSOperationQueue.mainQueue usingBlock:dismiss]];
-    [observations addObject:[[NSNotificationCenter defaultCenter]
-        addObserverForName:NSApplicationDidResignActiveNotification object:NSApp
-                     queue:NSOperationQueue.mainQueue usingBlock:dismiss]];
     observations_ = observations;
   }
 
