@@ -38,4 +38,30 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(restored.tabs.hoverFill, 0.5)
     }
 
+    func testFolderSpacingStartsAtTheUsualSpacingAndSurvivesRelaunch() throws {
+        let name = "crest-test-folder-spacing-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+
+        // A device that never chose keeps the spacing folders always had.
+        let appearance = BrowserDeviceAppearanceStore(defaults: defaults)
+        XCTAssertEqual(appearance.foldersSpacing, BrowserLookAndFeelDefaults.foldersSpacing)
+        let spacing = appearance.foldersSpacing
+        XCTAssertEqual(BrowserSidebarMetrics.folderSpacing(spacing), BrowserSidebarMetrics.containerSpacing)
+        XCTAssertEqual(BrowserSidebarMetrics.folderPadding(spacing), BrowserSidebarMetrics.containerPadding)
+        XCTAssertEqual(BrowserSidebarMetrics.folderHeaderTrim(spacing), 0)
+
+        let compact = try XCTUnwrap(BrowserAppearancePresets.folderSpacing.first { $0.id == "compact" })
+        appearance.foldersSpacing = compact.value
+        appearance.saveNow()
+        XCTAssertEqual(BrowserDeviceAppearanceStore(defaults: defaults).foldersSpacing, compact.value)
+
+        // A stored value that is no choice the setting offers loads as the default.
+        for unknown in [-4.0, 10.0, .nan] {
+            defaults.set(unknown, forKey: BrowserFolderAppearancePreference.spacingKey)
+            XCTAssertEqual(
+                BrowserDeviceAppearanceStore(defaults: defaults).foldersSpacing,
+                BrowserLookAndFeelDefaults.foldersSpacing)
+        }
+    }
 }

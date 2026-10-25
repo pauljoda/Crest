@@ -12,12 +12,11 @@ extension View {
 private struct BrowserFolderHeaderDensityLayout: ViewModifier {
     let configuration: BrowserFolderGroupConfiguration
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     func body(content: Content) -> some View {
         let metrics = configuration.headerMetrics
-        let height = BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
-            base: CrestLayout.sidebarRowHeight, touch: !metrics.usesFixedRowHeight)
+        let height = BrowserSidebarMetrics.folderHeaderHeight(
+            touch: !metrics.usesFixedRowHeight, isAccessibilitySize: dynamicTypeSize.isAccessibilitySize)
         content.frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, configuration.headerLeadingInset)
             .padding(.trailing, metrics.contentTrailingInset)

@@ -19,11 +19,14 @@ struct BrowserFolderSectionSurface: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
     private var showsBorders: Bool { BrowserDeviceAppearanceStore.shared.foldersShowBorders }
+    private var padding: CGFloat {
+        BrowserSidebarMetrics.folderPadding(BrowserDeviceAppearanceStore.shared.foldersSpacing)
+    }
 
     func body(content: Content) -> some View {
         content
-            .padding(.top, BrowserSidebarMetrics.containerPadding)
-            .padding(.bottom, BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale))
+            .padding(.top, padding)
+            .padding(.bottom, BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale, padding: padding))
             .contentShape(.rect)
             .modifier(
                 BrowserFolderHighlightSurface(

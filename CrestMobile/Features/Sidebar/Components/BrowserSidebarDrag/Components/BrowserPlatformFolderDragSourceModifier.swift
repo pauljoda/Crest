@@ -12,6 +12,7 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
 
     @State private var sessionToken: BrowserDragSessionToken?
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.browserInteractionCapabilities) private var capabilities
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -60,7 +61,8 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                                 reorder.state.folderPreviewRows(for: .folder(item)),
                                 in: $0, rootFolderID: folder.id)
                         } ?? [],
-                        profileID: profileID
+                        profileID: profileID,
+                        touch: capabilities.supportsTouch
                     )
                     .environment(\.colorScheme, colorScheme)
                 }
@@ -87,7 +89,7 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                     typeIdentifier: UTType.json.identifier
                 )
             } preview: {
-                BrowserFolderDragPreview(folder: folder)
+                BrowserFolderDragPreview(folder: folder, touch: capabilities.supportsTouch)
                     .environment(\.colorScheme, colorScheme)
             }
 

@@ -142,7 +142,7 @@ struct BrowserFolderGroup: View {
                 cancel: clearUnavailableDeferredActions
             )
         )
-        .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
+        .padding(.vertical, BrowserSidebarMetrics.folderSpacing(BrowserDeviceAppearanceStore.shared.foldersSpacing))
     }
 
     /// Nested folders are children of the section they move with, so a parent's

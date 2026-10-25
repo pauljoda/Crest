@@ -30,6 +30,13 @@ struct BrowserTabAppearanceGroup: View {
                 tolerance: BrowserAppearancePresets.tabScaleTolerance,
                 identifier: "tab-scale"
             )
+            BrowserAppearancePresetPicker(
+                "Folder spacing",
+                value: folderSpacing,
+                presets: BrowserAppearancePresets.folderSpacing,
+                tolerance: BrowserAppearancePresets.folderSpacingTolerance,
+                identifier: "folder-spacing"
+            )
             CrestSettingRow("Pin layout", setting: columns.resettable("Pin layout")) {
                 Picker("Pin layout", selection: columns.binding) {
                     Text("Balanced rows").tag(0)
@@ -85,6 +92,10 @@ struct BrowserTabAppearanceGroup: View {
         CrestSettingValue($appearance.tabScale, default: BrowserLookAndFeelDefaults.tabScale)
     }
 
+    private var folderSpacing: CrestSettingValue<Double> {
+        CrestSettingValue($appearance.foldersSpacing, default: BrowserLookAndFeelDefaults.foldersSpacing)
+    }
+
     private var columns: CrestSettingValue<Int> {
         CrestSettingValue($appearance.pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
     }
@@ -131,6 +142,7 @@ struct BrowserTabAppearanceGroup: View {
         [
             cornerRadius.resettable("Corner radius"),
             scale.resettable("Tab scale"),
+            folderSpacing.resettable("Folder spacing"),
             columns.resettable("Pin layout"),
             fillsRow.resettable("Stretch pins to fill the row"),
             borders.resettable("Color borders"),

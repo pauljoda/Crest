@@ -15,6 +15,7 @@ struct BrowserAppearancePreset: Equatable, Identifiable, Sendable {
 enum BrowserAppearancePresets {
     static let cornerRadiusTolerance = 0.5
     static let tabScaleTolerance = 0.025
+    static let folderSpacingTolerance = 0.5
 
     static var cornerRadius: [BrowserAppearancePreset] {
         [
@@ -30,6 +31,15 @@ enum BrowserAppearancePresets {
             .init(id: "compact", title: String(localized: "Compact"), value: 0.85),
             .init(id: "default", title: String(localized: "Default"), value: BrowserLookAndFeelDefaults.tabScale),
             .init(id: "comfortable", title: String(localized: "Comfortable"), value: 1.15),
+        ]
+    }
+
+    /// Points taken from each side of a sidebar folder. Nothing looser than the
+    /// default is offered.
+    static var folderSpacing: [BrowserAppearancePreset] {
+        [
+            .init(id: "compact", title: String(localized: "Compact"), value: -10),
+            .init(id: "default", title: String(localized: "Default"), value: BrowserLookAndFeelDefaults.foldersSpacing),
         ]
     }
 

@@ -35,17 +35,65 @@ enum BrowserSidebarMetrics {
     /// beside it.
     static let containerSpacing = CrestSpacing.extraExtraSmall
 
+    /// The shortest a folder header gets, before the tab scale, when the
+    /// folder spacing setting takes its slack away: the smallest pointer
+    /// target a sidebar row keeps.
+    static let compactFolderHeaderHeight: CGFloat = 24
+
     // MARK: - Actions - Containers
 
     /// The padding a container keeps under its last row. A row already keeps
     /// half its separation around its own surface, so the container gives that
-    /// much less and the surface sits exactly ``containerPadding`` from the
-    /// edge, as it does at the sides.
+    /// much less and the surface sits exactly `padding` from the edge, as it
+    /// does at the sides.
     @MainActor
-    static func containerBottomPadding(tabScale: Double) -> CGFloat {
+    static func containerBottomPadding(tabScale: Double, padding: CGFloat = containerPadding) -> CGFloat {
         let separation = BrowserSidebarDensity(tabScale).rowSeparation(
             hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all)
-        return max(0, containerPadding - CGFloat(separation) / 2)
+        return max(0, padding - CGFloat(separation) / 2)
+    }
+
+    // MARK: - Actions - Folder Spacing
+
+    /// The space a folder keeps above and below itself for a folder spacing
+    /// setting of `setting` points, zero or less: ``containerSpacing``, less
+    /// what the setting takes away, which comes from here first.
+    static func folderSpacing(_ setting: Double) -> CGFloat {
+        max(0, containerSpacing - folderTightening(setting))
+    }
+
+    /// The padding a folder holds its header and rows in from its top and
+    /// bottom edges: ``containerPadding`` until the setting has taken all of
+    /// ``folderSpacing(_:)``, then less.
+    static func folderPadding(_ setting: Double) -> CGFloat {
+        max(0, containerPadding - max(0, folderTightening(setting) - containerSpacing))
+    }
+
+    /// How much shorter than a row a folder header gets above and below its
+    /// title once the setting has taken all of a folder's spacing and padding.
+    static func folderHeaderTrim(_ setting: Double) -> CGFloat {
+        max(0, folderTightening(setting) - containerSpacing - containerPadding)
+    }
+
+    /// The height of a folder header, the one place both the header and the
+    /// drag previews lifted from it take it from: a row at the device's tab
+    /// scale on a pointer or `touch` shell, less what the folder spacing
+    /// setting trims, never below the smallest target a row keeps. Accessible
+    /// text sizes never draw it smaller than the default scale.
+    @MainActor
+    static func folderHeaderHeight(touch: Bool, isAccessibilitySize: Bool = false) -> CGFloat {
+        let appearance = BrowserDeviceAppearanceStore.shared
+        let density = BrowserSidebarDensity(isAccessibilitySize ? max(1, appearance.tabScale) : appearance.tabScale)
+        return max(
+            density.rowHeight(base: compactFolderHeaderHeight, touch: touch),
+            density.rowHeight(base: CrestLayout.sidebarRowHeight, touch: touch)
+                - 2 * folderHeaderTrim(appearance.foldersSpacing))
+    }
+
+    /// The points the setting takes from each side of a folder; none for the
+    /// usual spacing or a value that is not a number.
+    private static func folderTightening(_ setting: Double) -> CGFloat {
+        setting.isFinite ? CGFloat(max(0, -setting)) : 0
     }
 
     // MARK: - Actions - Corners

@@ -4541,6 +4541,18 @@
     "imported-ip-address-passwords-fill": {
       "category": "fixed",
       "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "sidebar-folder-spacing-setting": {
+      "category": "new",
+      "message": "Folder spacing in Appearance under Tabs and pins can now be set to Compact, which packs sidebar folders closer together so more fits without scrolling."
+    },
+    "lifted-folder-keeps-header-height": {
+      "category": "internal",
+      "message": "A lifted folder's drag preview is never shorter than the folder header it draws."
+    },
+    "lifted-folder-header-follows-tab-scale": {
+      "category": "internal",
+      "message": "A lifted folder's drag preview draws its headers at the same height as the sidebar's, following tab scale, touch targets and folder spacing."
     }
   }
 }

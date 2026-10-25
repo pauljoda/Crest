@@ -256,6 +256,11 @@ final class BrowserDeviceAppearanceStore {
     var foldersTintTitle: Bool {
         didSet { saveSoon() }
     }
+    /// How many points folders take from the usual room above and below them:
+    /// the value of one of ``BrowserAppearancePresets/folderSpacing``.
+    var foldersSpacing: Double {
+        didSet { saveSoon() }
+    }
     /// The scheme the windows draw in now, as the platform reports it once
     /// ``mode`` and the system's own appearance are applied.
     var shownColorScheme = ColorScheme.light {
@@ -348,6 +353,12 @@ final class BrowserDeviceAppearanceStore {
         foldersTintTitle =
             defaults.object(forKey: BrowserFolderAppearancePreference.tintsTitleKey) as? Bool
             ?? BrowserLookAndFeelDefaults.foldersTintTitle
+        foldersSpacing =
+            (defaults.object(forKey: BrowserFolderAppearancePreference.spacingKey) as? Double).flatMap {
+                BrowserAppearancePresets.match(
+                    $0, in: BrowserAppearancePresets.folderSpacing,
+                    tolerance: BrowserAppearancePresets.folderSpacingTolerance)?.value
+            } ?? BrowserLookAndFeelDefaults.foldersSpacing
         dimsSpaceColors = Self.dims(in: shownColorScheme, by: darkSpaceDimming)
         observeChanges()
         // A choice made just before the app quits or steps aside, or leaves
@@ -389,6 +400,7 @@ final class BrowserDeviceAppearanceStore {
         write(foldersShowBorders, forKey: BrowserFolderAppearancePreference.showsBordersKey, in: defaults)
         write(foldersIconOnly, forKey: BrowserFolderAppearancePreference.iconOnlyKey, in: defaults)
         write(foldersTintTitle, forKey: BrowserFolderAppearancePreference.tintsTitleKey, in: defaults)
+        write(foldersSpacing, forKey: BrowserFolderAppearancePreference.spacingKey, in: defaults)
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)

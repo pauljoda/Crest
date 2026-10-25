@@ -18,10 +18,10 @@ struct BrowserFolderDragPreviewRow: Identifiable {
     let content: Content
 
     /// The height the row takes in the lifted folder's art: a folder header's
-    /// own, and any other row its measured one.
-    var previewHeight: CGFloat {
+    /// `folderHeaderHeight`, and any other row its measured one.
+    func previewHeight(folderHeaderHeight: CGFloat) -> CGFloat {
         switch content {
-        case .folder: BrowserFolderDragPreviewLayout.height
+        case .folder: folderHeaderHeight
         case .tab, .splitGroup: frame.height
         }
     }

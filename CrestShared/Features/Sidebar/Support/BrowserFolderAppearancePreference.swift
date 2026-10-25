@@ -9,6 +9,7 @@ enum BrowserFolderAppearancePreference {
     static let showsBordersKey = "crest.folders.showsBorders"
     static let iconOnlyKey = "crest.folders.iconOnly"
     static let tintsTitleKey = "crest.folders.tintsTitle"
+    static let spacingKey = "crest.folders.spacingPoints"
 
     static let defaults: UserDefaults = {
         let environment = BrowserLaunchEnvironment.current

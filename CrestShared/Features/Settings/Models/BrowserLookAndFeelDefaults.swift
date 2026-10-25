@@ -27,6 +27,7 @@ enum BrowserLookAndFeelDefaults {
     static let foldersShowBorders = true
     static let foldersIconOnly = false
     static let foldersTintTitle = false
+    static let foldersSpacing: Double = 0
 
     /// Puts every device-wide appearance choice this pane owns back.
     ///
@@ -53,6 +54,7 @@ enum BrowserLookAndFeelDefaults {
         appearance.foldersShowBorders = foldersShowBorders
         appearance.foldersIconOnly = foldersIconOnly
         appearance.foldersTintTitle = foldersTintTitle
+        appearance.foldersSpacing = foldersSpacing
         appearance.saveNow()
     }
 }
