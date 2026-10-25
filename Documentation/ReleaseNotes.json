@@ -4541,6 +4541,10 @@
     "imported-ip-address-passwords-fill": {
       "category": "fixed",
       "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "fullscreen-video-without-black-frames": {
+      "category": "fixed",
+      "message": "Videos and other pages go into and out of full screen without a few black frames on Chromium pages."
     }
   }
 }

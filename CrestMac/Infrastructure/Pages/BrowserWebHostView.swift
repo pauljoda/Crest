@@ -532,7 +532,13 @@ final class BrowserWebHostView: NSView {
         let removeInterval = Self.lifecycleSignposter.beginInterval(
             "Remove Page View From Parent"
         )
-        webView.removeFromSuperview()
+        // A view moving from another host in this window goes straight here:
+        // taking it out of the window first would hide its page from the
+        // engine, which then draws nothing for a few frames once it is shown
+        // again, as when a page goes fullscreen or comes back from it.
+        if webView.window !== window {
+            webView.removeFromSuperview()
+        }
         Self.lifecycleSignposter.endInterval(
             "Remove Page View From Parent",
             removeInterval
