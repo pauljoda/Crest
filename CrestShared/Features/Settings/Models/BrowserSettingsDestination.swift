@@ -43,7 +43,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let general = BrowserSettingsDestination(
         kind: .general, name: "general", title: "General", subtitle: "Browsing and startup",
         searchTerms:
-            "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar",
+            "browser startup quit quitting confirmation Command-Q default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar",
         symbol: "gearshape", tincture: .vigilAsh)
     static let tabs = BrowserSettingsDestination(
         kind: .tabs, name: "tabs", title: "Tabs", subtitle: "New, pinned and saved tabs",

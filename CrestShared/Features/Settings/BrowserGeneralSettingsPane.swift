@@ -69,6 +69,10 @@ struct BrowserGeneralSettingsPane: View {
                 )
             }
 
+            #if os(macOS)
+                BrowserQuitConfirmationSettingsSection()
+            #endif
+
             #if os(iOS)
                 Section("Sidebar") {
                     Toggle("Allow floating sidebar", isOn: $allowsFloatingSidebar)

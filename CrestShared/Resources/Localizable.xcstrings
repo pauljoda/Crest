@@ -2875,7 +2875,7 @@
     "Browser data found · Review it" : {
 
     },
-    "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar" : {
+    "browser startup quit quitting confirmation Command-Q default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar" : {
 
     },
     "Browser window preview" : {
@@ -2907,6 +2907,9 @@
 
     },
     "Camera & Microphone" : {
+
+    },
+    "Confirm before quitting" : {
 
     },
     "Cancel" : {
@@ -10198,6 +10201,9 @@
         }
       }
     },
+    "Quitting" : {
+
+    },
     "Quit" : {
 
     },
@@ -10208,6 +10214,12 @@
 
     },
     "Quit Crest" : {
+
+    },
+    "Quit Crest?" : {
+
+    },
+    "Quit, and don’t ask again" : {
 
     },
     "Ran a script" : {

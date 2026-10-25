@@ -121,6 +121,15 @@ final class BrowserMacShell {
 
     // MARK: - Actions - Application
 
+    /// An explicit keyboard or menu quit, confirmed before termination begins.
+    func confirmUserQuit() {
+        guard let running else {
+            NSApp.terminate(nil)
+            return
+        }
+        running.quit.confirmUserRequest()
+    }
+
     /// A quit the application was asked for, which `finish` completes once the
     /// core allowed it and every edit is saved, or with false when it did not.
     /// Answers false when there is nothing to hold, before the launch finished

@@ -4509,6 +4509,10 @@
     "sync-record-envelope": {
       "category": "internal",
       "message": "Read and write a sync record's envelope in one place."
+    },
+    "confirm-keyboard-quit": {
+      "category": "new",
+      "message": "Confirm before quitting Crest with Command-Q, and change the confirmation in General settings."
     }
   }
 }

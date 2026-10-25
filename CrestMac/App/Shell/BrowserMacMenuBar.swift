@@ -90,7 +90,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
             String(localized: "Show All"), #selector(NSApplication.unhideAllApplications(_:)), in: app, target: NSApp)
         app.addItem(.separator())
         standard(
-            String(localized: "Quit Crest"), #selector(NSApplication.terminate(_:)), key: "q", in: app, target: NSApp)
+            String(localized: "Quit Crest"), #selector(confirmQuit(_:)), key: "q", in: app, target: self)
     }
 
     private func editMenu(in bar: NSMenu) {
@@ -145,6 +145,10 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
             return BrowserPlainTextPaste(for: focusedResponder, validating: item) != nil
         }
         return true
+    }
+
+    @objc private func confirmQuit(_ item: NSMenuItem) {
+        shell.confirmUserQuit()
     }
 
     @objc private func runCommand(_ item: NSMenuItem) {
