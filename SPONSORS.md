@@ -13,7 +13,9 @@ _No public sponsors yet._
 _No public sustainers yet._
 
 ## Supporter — $3/month
-Patrick McCarron
+
+- Patrick McCarron
+- techfreaktwo
 
 ## How recognition works
 
