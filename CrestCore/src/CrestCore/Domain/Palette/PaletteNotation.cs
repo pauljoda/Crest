@@ -47,7 +47,11 @@ internal sealed class PaletteNotation {
     /// What `typed` enters: a sign, a word that names what its notation
     /// narrows to, then a space and whatever follows; null for anything else.
     public static PaletteEntry? Entry(PaletteContext context, string typed) {
+        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(typed);
+        // A palette over a Space it may not read offers only the address or
+        // search, the commands and the other Spaces.
+        if (context.Space is null) return null;
         string text = typed.TrimStart();
         int space = text.IndexOfAny([' ', '\t', ' ']);
         if (space < 1) return null;
