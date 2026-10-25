@@ -36,6 +36,14 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         isSelectedSpace && contentPresentation == .interactive
     }
 
+    /// Whether the pointer reaches these pages: while they are the person's,
+    /// and not while the recent tab switcher covers them. The pager hosts the
+    /// pages in views of their own, which hover reaches through anything the
+    /// shell draws over them, so the gate has to be here.
+    private var acceptsPointer: Bool {
+        isInteractive && !model.chrome.recentTabSwitcher.isRevealed
+    }
+
     /// How the window shows this Space's pages: as the person's, as the
     /// preview the pager draws while the person swipes to or from the Space,
     /// or not at all.
@@ -84,8 +92,8 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
             .environment(\.browserPagePresentationWindowID, model.windowState?.id)
             .environment(\.spaceContentIsInteractive, isInteractive)
             .environment(\.browserPagePresentation, pagePresentation)
-            .allowsHitTesting(isInteractive)
-            .accessibilityHidden(!isInteractive)
+            .allowsHitTesting(acceptsPointer)
+            .accessibilityHidden(!acceptsPointer)
             .browserSplitContentDropZone(
                 assignment: isSelectedSpace ? presentation.dropAssignment : nil,
                 state: model.sidebarInteraction.sidebarReorderState

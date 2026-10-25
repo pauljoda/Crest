@@ -400,9 +400,41 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         selectAdjacentTab(.next)
     }
 
+    /// Walks back through this window's active tabs by recency while the
+    /// shortcut's modifiers stay held, or, run any other way, shows the most
+    /// recent tab. A walk started over the launcher takes its place at once.
     func selectMostRecentTab() {
-        guard browser.showMostRecentTab() else { return }
+        let (browser, pages) = (browser, pages)
+        let replacesLauncher = chrome.isCommandPalettePresented
+        let walks = chrome.recentTabSwitcher.begin(
+            browser.recentTabStops, from: NSApp.currentEvent, preview: previewTab
+        ) { tabID in
+            browser.selectTab(tabID)
+            pages.select()
+        }
+        if walks, replacesLauncher {
+            chrome.dismissCommandPalette()
+            chrome.recentTabSwitcher.reveal()
+        }
+        guard !walks, browser.showMostRecentTab() else { return }
         pages.select()
+    }
+
+    /// Asks the engine for a picture of the page tab `tabID` of the shown Space
+    /// holds, without loading or showing it, and delivers nil when the tab
+    /// pictures no live page, such as a Start Page or a failed load. The
+    /// picture taken as the page last left the screen comes first, and a live
+    /// one replaces it when the engine draws one: Chromium cannot picture a
+    /// page it is not drawing, and only gives up on one after a timeout.
+    private func previewTab(_ tabID: UUID, then deliver: @escaping @MainActor (BrowserPageSnapshotImage?) -> Void) {
+        guard let space = browser.shownSpace, let tab = space.tabs.model(tabID) else { return deliver(nil) }
+        let page = pages.residentPage(
+            matching: BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
+        guard PagePresentation.of(tab.surface, page: page).picturesLivePage, let page else { return deliver(nil) }
+        if let departed = pages.departurePreview(ofTab: tabID) { deliver(departed) }
+        page.captureViewport(width: BrowserRecentTabSwitcherTile.previewCaptureWidth) { image in
+            if let image { deliver(image) }
+        }
     }
 
     func selectAdjacentTab(_ direction: AdjacentDirection) {

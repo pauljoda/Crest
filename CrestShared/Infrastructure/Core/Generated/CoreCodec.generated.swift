@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x78, 0xfa, 0x83, 0x41, 0x71, 0xf9, 0x99, 0x61, 0xbc, 0x66, 0xd7, 0x56, 0xf3, 0x80, 0xc1, 0xe7, 0x64, 0x8a, 0x1a, 0xd8, 0x35, 0xe5, 0x06, 0xf8, 0x39, 0xba, 0xdd, 0x79, 0x9a, 0x97, 0xf5, 0x14
+        0x8a, 0x51, 0x2c, 0x0c, 0x99, 0x17, 0x83, 0x45, 0x14, 0x58, 0x98, 0xcd, 0xec, 0xcb, 0xd0, 0xff, 0x33, 0xb8, 0x14, 0x39, 0x53, 0x27, 0x87, 0xb8, 0x4a, 0x5d, 0xee, 0x3f, 0x8b, 0x89, 0x47, 0x08
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -336,23 +336,24 @@ enum CoreCodec {
         case 62: return try ProfileNotificationDisplayCheck(from: &reader)
         case 63: return try ReadArchive(from: &reader)
         case 64: return try ReadImport(from: &reader)
-        case 65: return try RecordsToUpload(from: &reader)
-        case 66: return try ResolveAddress(from: &reader)
-        case 67: return try RouteExternalLink(from: &reader)
-        case 68: return try RouteLocalDocument(from: &reader)
-        case 69: return try SamePage(from: &reader)
-        case 70: return try SchemeHandling(from: &reader)
-        case 71: return try SecureOriginCheck(from: &reader)
-        case 72: return try SelectionPreview(from: &reader)
-        case 73: return try SelectionSearch(from: &reader)
-        case 74: return try SiteDecision(from: &reader)
-        case 75: return try SplitJoinCandidate(from: &reader)
-        case 76: return try StrongPassword(from: &reader)
-        case 77: return try SwipeNeighbors(from: &reader)
-        case 78: return try SystemPasswordOffer(from: &reader)
-        case 79: return try SystemPasswordWriteThrough(from: &reader)
-        case 80: return try TranslationChoice(from: &reader)
-        case 81: return try WindowToReopen(from: &reader)
+        case 65: return try RecentTabs(from: &reader)
+        case 66: return try RecordsToUpload(from: &reader)
+        case 67: return try ResolveAddress(from: &reader)
+        case 68: return try RouteExternalLink(from: &reader)
+        case 69: return try RouteLocalDocument(from: &reader)
+        case 70: return try SamePage(from: &reader)
+        case 71: return try SchemeHandling(from: &reader)
+        case 72: return try SecureOriginCheck(from: &reader)
+        case 73: return try SelectionPreview(from: &reader)
+        case 74: return try SelectionSearch(from: &reader)
+        case 75: return try SiteDecision(from: &reader)
+        case 76: return try SplitJoinCandidate(from: &reader)
+        case 77: return try StrongPassword(from: &reader)
+        case 78: return try SwipeNeighbors(from: &reader)
+        case 79: return try SystemPasswordOffer(from: &reader)
+        case 80: return try SystemPasswordWriteThrough(from: &reader)
+        case 81: return try TranslationChoice(from: &reader)
+        case 82: return try WindowToReopen(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -16734,6 +16735,82 @@ extension ReassignShortcut {
     }
 }
 
+extension RecentTabOrder {
+    init(from reader: inout WireReader) throws(WireError) {
+        let stopsCount = try reader.readCount()
+        var stops: [RecentTabStop] = []
+        stops.reserveCapacity(stopsCount)
+        for _ in 0..<stopsCount {
+            let stopsElement = try RecentTabStop(from: &reader)
+            stops.append(stopsElement)
+        }
+        self.init(stops: stops)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(stops.count)
+        for element0 in stops {
+            element0.encode(into: &writer)
+        }
+    }
+}
+
+extension RecentTabStop {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tabID = try reader.readUUID()
+        let splitGroupID: UUID?
+        if try reader.readPresence() {
+            let splitGroupIDValue = try reader.readUUID()
+            splitGroupID = splitGroupIDValue
+        } else {
+            splitGroupID = nil
+        }
+        let membersCount = try reader.readCount()
+        var members: [UUID] = []
+        members.reserveCapacity(membersCount)
+        for _ in 0..<membersCount {
+            let membersElement = try reader.readUUID()
+            members.append(membersElement)
+        }
+        self.init(tabID: tabID, splitGroupID: splitGroupID, members: members)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(tabID)
+        if let present0 = splitGroupID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeCount(members.count)
+        for element0 in members {
+            writer.writeUUID(element0)
+        }
+    }
+}
+
+extension RecentTabs {
+    init(from reader: inout WireReader) throws(WireError) {
+        let windowID = try reader.readUUID()
+        self.init(windowID: windowID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(windowID)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(65)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> RecentTabOrder {
+        let answer = try RecentTabOrder(from: &reader)
+        return answer
+    }
+}
+
 extension RecordCloudFields {
     init(from reader: inout WireReader) throws(WireError) {
         let updatedCount = try reader.readCount()
@@ -16830,7 +16907,7 @@ extension RecordsToUpload {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(65)
+        writer.writeTag(66)
         encode(into: &writer)
     }
 
@@ -17550,7 +17627,7 @@ extension ResolveAddress {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(66)
+        writer.writeTag(67)
         encode(into: &writer)
     }
 
@@ -17914,7 +17991,7 @@ extension RouteExternalLink {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(67)
+        writer.writeTag(68)
         encode(into: &writer)
     }
 
@@ -17944,7 +18021,7 @@ extension RouteLocalDocument {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(68)
+        writer.writeTag(69)
         encode(into: &writer)
     }
 
@@ -17967,7 +18044,7 @@ extension SamePage {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(69)
+        writer.writeTag(70)
         encode(into: &writer)
     }
 
@@ -18098,7 +18175,7 @@ extension SchemeHandling {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(70)
+        writer.writeTag(71)
         encode(into: &writer)
     }
 
@@ -18621,7 +18698,7 @@ extension SecureOriginCheck {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(71)
+        writer.writeTag(72)
         encode(into: &writer)
     }
 
@@ -18818,7 +18895,7 @@ extension SelectionPreview {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(72)
+        writer.writeTag(73)
         encode(into: &writer)
     }
 
@@ -18843,7 +18920,7 @@ extension SelectionSearch {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(73)
+        writer.writeTag(74)
         encode(into: &writer)
     }
 
@@ -20978,7 +21055,7 @@ extension SiteDecision {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(74)
+        writer.writeTag(75)
         encode(into: &writer)
     }
 
@@ -22111,7 +22188,7 @@ extension SplitJoinCandidate {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(75)
+        writer.writeTag(76)
         encode(into: &writer)
     }
 
@@ -22574,7 +22651,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(76)
+        writer.writeTag(77)
         encode(into: &writer)
     }
 
@@ -22668,7 +22745,7 @@ extension SwipeNeighbors {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(77)
+        writer.writeTag(78)
         encode(into: &writer)
     }
 
@@ -22794,7 +22871,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(78)
+        writer.writeTag(79)
         encode(into: &writer)
     }
 
@@ -22832,7 +22909,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(79)
+        writer.writeTag(80)
         encode(into: &writer)
     }
 
@@ -23682,7 +23759,7 @@ extension TranslationChoice {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(80)
+        writer.writeTag(81)
         encode(into: &writer)
     }
 
@@ -24302,7 +24379,7 @@ extension WindowToReopen {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(81)
+        writer.writeTag(82)
         encode(into: &writer)
     }
 

@@ -4879,6 +4879,22 @@ struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
     let keys: KeyCombination
 }
 
+struct RecentTabOrder: Equatable, Sendable {
+    let stops: [RecentTabStop]
+}
+
+struct RecentTabStop: Equatable, Sendable {
+    let tabID: UUID
+    let splitGroupID: UUID?
+    let members: [UUID]
+}
+
+struct RecentTabs: Query, Equatable, Sendable {
+    typealias Answer = RecentTabOrder
+
+    let windowID: UUID
+}
+
 struct RecordCloudFields: Intent, CloudTransportIntent, Equatable, Sendable {
     let updated: [CloudRecordFields]
     let removed: [String]
@@ -17887,8 +17903,8 @@ struct ShortcutCommand: Hashable, Sendable {
         kind: .mostRecentTab,
         name: "mostRecentTab",
         section: ShortcutSection.tabs,
-        title: LocalizedStringResource("Most Recent Tab"),
-        searchTerms: LocalizedStringResource("toggle recent switch tabs"),
+        title: LocalizedStringResource("Switch Recent Tabs"),
+        searchTerms: LocalizedStringResource("most recent last toggle switcher switch tabs preview"),
         menuTitle: nil,
         symbol: "arrow.left.arrow.right",
         requiredCapability: nil,

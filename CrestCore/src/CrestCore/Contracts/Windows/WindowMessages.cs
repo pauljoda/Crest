@@ -29,6 +29,15 @@ public sealed record SplitJoinCandidateTab(Guid? TabId);
 /// past that end.
 public sealed record SwipeNeighborTabs(Guid? PreviousTabId, Guid? NextTabId);
 
+/// The stops of the Space a window shows, the one it shows first and the rest
+/// from the most recently used.
+public sealed record RecentTabOrder(IReadOnlyList<RecentTabStop> Stops);
+
+/// One stop of a recent tab walk: a tab, or a split the sidebar shows as one
+/// row, with `TabId` the tab that showing the stop shows and `Members` the
+/// tabs it shows, in the sidebar's order.
+public sealed record RecentTabStop(Guid TabId, Guid? SplitGroupId, IReadOnlyList<Guid> Members);
+
 /// What the Dock icon's menu shows: its window commands, then the Spaces a
 /// window can show, in order. `WindowId` is the window a chosen Space shows
 /// in and the commands act from, the frontmost over the persistent session,

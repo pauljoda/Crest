@@ -41,6 +41,10 @@ final class BrowserTabRuntime: BrowserStoreFirstObservable {
             }
         }
         @ObservationIgnored private var snapshotStorage: BrowserPageSnapshotImage?
+        /// A small picture of the page as it last left the screen, which the
+        /// recent tab switcher shows where an engine cannot picture a page it
+        /// is not drawing.
+        @ObservationIgnored var departurePreview: BrowserPageSnapshotImage?
     #endif
 
     var allPages: [BrowserPlatformPage] { [page] }

@@ -23,6 +23,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         BrowserChromeAppearance.sidebarEdge(onRight: sidebarOnRight, in: layoutDirection)
     }
 
+    /// Whether a surface over the shell takes the pointer and VoiceOver from
+    /// what it covers: the launcher, or the recent tab switcher on screen.
+    private var coversShell: Bool {
+        model.chrome.isCommandPalettePresented || model.chrome.recentTabSwitcher.isRevealed
+    }
+
     var body: some View {
         ZStack(alignment: .leading) {
             BrowserRootFullscreenContent(
@@ -33,12 +39,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 standardContent
             } sidebar: {
                 sidebarSurface
-                    .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-                    .accessibilityHidden(model.chrome.isCommandPalettePresented)
+                    .allowsHitTesting(!coversShell)
+                    .accessibilityHidden(coversShell)
             } controls: {
                 shellControls
-                    .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-                    .accessibilityHidden(model.chrome.isCommandPalettePresented)
+                    .allowsHitTesting(!coversShell)
+                    .accessibilityHidden(coversShell)
             }
 
             // Window focus gates the edge reveal in the shell and over a page
@@ -64,6 +70,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // Notices show over a fullscreen page too, so one posted there
             // is never lost.
             BrowserNoticeLayer(chrome: model.chrome)
+
+            BrowserRecentTabSwitcher(switcher: model.chrome.recentTabSwitcher, browser: model.browser)
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -77,6 +85,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                         for: rect, in: proxy.size, direction: layoutDirection
                     )
                 )
+                .allowsHitTesting(!model.chrome.recentTabSwitcher.isRevealed)
+                .accessibilityHidden(model.chrome.recentTabSwitcher.isRevealed)
             }
         }
         // One per-window host answers for every row and tile in this shell,
@@ -171,8 +181,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             } controls: {
                 shellControls
             }
-            .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-            .accessibilityHidden(model.chrome.isCommandPalettePresented)
+            .allowsHitTesting(!coversShell)
+            .accessibilityHidden(coversShell)
 
             BrowserRootUtilityFanLayer(model: model, sidebarOnRight: sidebarOnRight)
                 .zIndex(BrowserRootMetrics.utilityFanZIndex)

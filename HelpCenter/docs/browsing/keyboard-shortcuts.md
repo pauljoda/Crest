@@ -40,7 +40,7 @@ On Mac, **Command-L** opens the address editor while keeping a collapsed sidebar
 | Archive Tab | Command-E |
 | Previous Tab | Option-Command-Up Arrow |
 | Next Tab | Option-Command-Down Arrow |
-| Most Recent Tab | Control-Tab |
+| Switch Recent Tabs | Control-Tab |
 | Select Tab 1–9 | Command-1 through Command-9 |
 | Previous Space | Option-Command-Left Arrow |
 | Next Space | Option-Command-Right Arrow |

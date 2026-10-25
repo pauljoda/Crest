@@ -432,6 +432,13 @@ extension BrowserStore {
         (try? core.query(SwipeNeighbors(windowID: windowID))) ?? SwipeNeighborTabs(previousTabID: nil, nextTabID: nil)
     }
 
+    /// The active tabs of the Space this window shows, each split as one stop,
+    /// the one it shows first and the rest from the most recently used, as the
+    /// core answers it. Empty when the window shows no tab.
+    var recentTabStops: [RecentTabStop] {
+        (try? core.query(RecentTabs(windowID: windowID)))?.stops ?? []
+    }
+
     /// Whether the tab-list menu's "Split with Current Tab" would do anything:
     /// the core accepts joining the menu's subject to the selected tab's group
     /// in the Space this window shows.
