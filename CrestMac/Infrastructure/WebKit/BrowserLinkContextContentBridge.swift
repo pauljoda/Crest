@@ -24,8 +24,8 @@ enum BrowserLinkContextContentBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
-    ) -> BrowserLinkContextScriptMessageProxy {
-        let proxy = BrowserLinkContextScriptMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy(receive: receive)
         userContentController.add(
             proxy,
             contentWorld: contentWorld,

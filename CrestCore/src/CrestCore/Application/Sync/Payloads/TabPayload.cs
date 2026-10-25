@@ -27,8 +27,16 @@ internal sealed record TabPayload(
     bool KeepsPageLoaded) : SyncPayload {
     #region Static Variables
 
-    private const int MaximumTitleBytes = 2_048;
-    private const int MaximumSymbolBytes = 128;
+    /// The members a tab's value carries; a record keeps what a newer build
+    /// writes beside them.
+    public static IReadOnlyList<string> Members { get; } = [
+        StoredSessionCodec.Key.Id, StoredSessionCodec.Key.SpaceId, StoredSessionCodec.Key.Title, StoredSessionCodec.Key.NativeContent,
+        StoredSessionCodec.Key.Url, StoredSessionCodec.Key.SavedUrl, StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.Placement,
+        StoredSessionCodec.Key.FolderId, StoredSessionCodec.Key.SplitGroupId, SyncPayload.Key.OrderToken, StoredSessionCodec.Key.LastActivatedAt,
+        StoredSessionCodec.Key.PositionModifiedAt, StoredSessionCodec.Key.CustomTitle, StoredSessionCodec.Key.TitleModifiedAt,
+        StoredSessionCodec.Key.KeepsPageLoaded
+    ];
+
     private const int MaximumNativeKindBytes = 128;
 
     /// The blank page older builds synced, whose records stay readable so
@@ -55,39 +63,41 @@ internal sealed record TabPayload(
 
     /// The tab `value` holds. One that does not say keeps its page loaded
     /// only while the app decides to.
-    public static TabPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity("id"), value.WrappedIdentity("spaceID"),
-        value.Text("title"),
-        value.OptionalNested("nativeContent") is { } native ? new(native.Text("kind"), native.OptionalIdentity("resourceID")) : null,
-        value.OptionalText("url") is { } url ? new SyncedAddress(url) : null,
-        value.OptionalText("savedURL") is { } saved ? new SyncedAddress(saved) : null,
-        value.Text("symbol"), value.Named("placement", TabPlacement.Named),
-        value.OptionalWrappedIdentity("folderID"), value.OptionalWrappedIdentity("splitGroupID"), value.Text("orderToken"),
-        value.Time("lastActivatedAt"), value.OptionalTime("positionModifiedAt"), value.OptionalText("customTitle"),
-        value.OptionalTime("titleModifiedAt"), value.OptionalFlag("keepsPageLoaded") ?? false);
+    public static TabPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity(StoredSessionCodec.Key.Id),
+        value.WrappedIdentity(StoredSessionCodec.Key.SpaceId), value.Text(StoredSessionCodec.Key.Title),
+        value.OptionalNested(StoredSessionCodec.Key.NativeContent) is { } native
+            ? new(native.Text(StoredSessionCodec.Key.Kind), native.OptionalIdentity(StoredSessionCodec.Key.ResourceId)) : null,
+        value.OptionalText(StoredSessionCodec.Key.Url) is { } url ? new SyncedAddress(url) : null,
+        value.OptionalText(StoredSessionCodec.Key.SavedUrl) is { } saved ? new SyncedAddress(saved) : null,
+        value.Text(StoredSessionCodec.Key.Symbol), value.Named(StoredSessionCodec.Key.Placement, TabPlacement.Named),
+        value.OptionalWrappedIdentity(StoredSessionCodec.Key.FolderId), value.OptionalWrappedIdentity(StoredSessionCodec.Key.SplitGroupId),
+        value.Text(Key.OrderToken), value.Time(StoredSessionCodec.Key.LastActivatedAt),
+        value.OptionalTime(StoredSessionCodec.Key.PositionModifiedAt), value.OptionalText(StoredSessionCodec.Key.CustomTitle),
+        value.OptionalTime(StoredSessionCodec.Key.TitleModifiedAt), value.OptionalFlag(StoredSessionCodec.Key.KeepsPageLoaded) ?? false);
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
         var value = new JsonObject {
-            ["id"] = StoredSessionCodec.WrappedIdentity(Id),
-            ["spaceID"] = StoredSessionCodec.WrappedIdentity(SpaceId),
-            ["title"] = Title
+            [StoredSessionCodec.Key.Id] = StoredSessionCodec.WrappedIdentity(Id),
+            [StoredSessionCodec.Key.SpaceId] = StoredSessionCodec.WrappedIdentity(SpaceId),
+            [StoredSessionCodec.Key.Title] = Title
         };
-        Put(value, "url", Url is { } url ? url.Spelled ?? url.Text : null);
+        Put(value, StoredSessionCodec.Key.Url, Url is { } url ? url.Spelled ?? url.Text : null);
         if (NativeContent is { } native) {
-            var content = new JsonObject { ["kind"] = native.Kind };
-            if (native.ResourceId is { } resource) content["resourceID"] = StoredSessionCodec.BareIdentity(resource);
-            value["nativeContent"] = content;
+            var content = new JsonObject { [StoredSessionCodec.Key.Kind] = native.Kind };
+            if (native.ResourceId is { } resource) content[StoredSessionCodec.Key.ResourceId] = StoredSessionCodec.BareIdentity(resource);
+            value[StoredSessionCodec.Key.NativeContent] = content;
         }
-        Put(value, "savedURL", SavedUrl is { } saved ? saved.Spelled ?? saved.Text : null);
-        value["symbol"] = Symbol;
-        value["placement"] = Placement.Name;
-        PutWrapped(value, "folderID", FolderId);
-        PutWrapped(value, "splitGroupID", SplitGroupId);
-        value["orderToken"] = OrderToken;
-        value["lastActivatedAt"] = form.Seconds(LastActivatedAt);
-        Put(value, "positionModifiedAt", PositionModifiedAt, form);
-        Put(value, "customTitle", CustomTitle);
-        Put(value, "titleModifiedAt", TitleModifiedAt, form);
-        value["keepsPageLoaded"] = KeepsPageLoaded;
+        Put(value, StoredSessionCodec.Key.SavedUrl, SavedUrl is { } saved ? saved.Spelled ?? saved.Text : null);
+        value[StoredSessionCodec.Key.Symbol] = Symbol;
+        value[StoredSessionCodec.Key.Placement] = Placement.Name;
+        PutWrapped(value, StoredSessionCodec.Key.FolderId, FolderId);
+        PutWrapped(value, StoredSessionCodec.Key.SplitGroupId, SplitGroupId);
+        value[Key.OrderToken] = OrderToken;
+        value[StoredSessionCodec.Key.LastActivatedAt] = form.Seconds(LastActivatedAt);
+        Put(value, StoredSessionCodec.Key.PositionModifiedAt, PositionModifiedAt, form);
+        Put(value, StoredSessionCodec.Key.CustomTitle, CustomTitle);
+        Put(value, StoredSessionCodec.Key.TitleModifiedAt, TitleModifiedAt, form);
+        value[StoredSessionCodec.Key.KeepsPageLoaded] = KeepsPageLoaded;
         return value;
     }
 
@@ -100,9 +110,9 @@ internal sealed record TabPayload(
             RequireText(native.Kind, MaximumNativeKindBytes);
             if (Url is not null || SavedUrl is not null) throw new UnreadableSyncPayloadException();
         }
-        RequireText(Title, MaximumTitleBytes);
-        if (CustomTitle is { } rename) RequireText(rename, MaximumTitleBytes);
-        RequireText(Symbol, MaximumSymbolBytes);
+        RequireText(Title, SyncedText.TabTitle.Limit);
+        if (CustomTitle is { } rename) RequireText(rename, SyncedText.TabCustomTitle.Limit);
+        RequireText(Symbol, SyncedText.TabSymbol.Limit);
         RequireOrderToken(OrderToken);
         if (Url is { } url && url.Text != BlankPage) RequireWebAddress(url);
         if (!Placement.HoldsFolders && FolderId is not null) throw new UnreadableSyncPayloadException();

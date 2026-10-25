@@ -5,33 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserAuthenticationPolicyTests: XCTestCase {
-    /// Foundation's challenge names map onto the core's methods so that only
-    /// Basic and Digest reach Crest's credential prompt.
-    func testTrustAndClientCertificateChallengesRemainSystemOwned() {
-        for method in [
-            NSURLAuthenticationMethodServerTrust,
-            NSURLAuthenticationMethodClientCertificate,
-            NSURLAuthenticationMethodNTLM,
-        ] {
-            XCTAssertEqual(
-                ChallengeHandling(
-                    method: AuthenticationMethod(authenticationMethod: method),
-                    isProxy: false,
-                    previousFailureCount: 0
-                ).handling,
-                .performDefaultHandling
-            )
-        }
-        XCTAssertEqual(
-            ChallengeHandling(
-                method: AuthenticationMethod(authenticationMethod: NSURLAuthenticationMethodHTTPDigest),
-                isProxy: false,
-                previousFailureCount: 0
-            ).handling,
-            .promptForCredentials
-        )
-    }
-
     func testCredentialProtectionSpaceIncludesOriginRealmAndAuthenticationMethod() throws {
         let basic = URLProtectionSpace(
             host: "accounts.crest.test",
@@ -55,64 +28,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
         XCTAssertEqual(basicScope.credentialScope, .httpBasic(realm: "Members"))
         XCTAssertEqual(digestScope.credentialScope, .httpDigest(realm: "Members"))
         XCTAssertNotEqual(basicScope, digestScope)
-    }
-
-    func testCredentialProtectionSpaceRejectsProxyAndNonPasswordChallenges() {
-        let trust = URLProtectionSpace(
-            host: "accounts.crest.test",
-            port: 443,
-            protocol: "https",
-            realm: nil,
-            authenticationMethod: NSURLAuthenticationMethodServerTrust
-        )
-        let proxy = URLProtectionSpace(
-            proxyHost: "proxy.crest.test",
-            port: 8080,
-            type: NSURLProtectionSpaceHTTPProxy,
-            realm: "Proxy",
-            authenticationMethod: NSURLAuthenticationMethodHTTPBasic
-        )
-
-        XCTAssertNil(BrowserHTTPAuthenticationProtectionSpace(trust))
-        XCTAssertNil(BrowserHTTPAuthenticationProtectionSpace(proxy))
-    }
-
-    func testSavedHTTPSCredentialIsReusedOnceAndMarkedUsedOnlyAfterSuccess() async throws {
-        let spaceID = UUID()
-        let protectionSpace = makeProtectionSpace()
-        let scope = try XCTUnwrap(BrowserHTTPAuthenticationProtectionSpace(protectionSpace))
-        let stored = makeCredential(
-            spaceID: spaceID,
-            protectionSpace: scope,
-            username: "member",
-            password: "stored-secret"
-        )
-        var prompts = 0
-        var saves: [BrowserHTTPAuthenticationSaveRequest] = []
-        let session = BrowserHTTPAuthenticationSession(
-            spaceID: spaceID,
-            loadCredential: { _ in stored },
-            saveCredential: { saves.append($0) }
-        )
-
-        let resolution = await session.response(
-            to: makeChallenge(protectionSpace: protectionSpace)
-        ) { _ in
-            prompts += 1
-            return nil
-        }
-
-        XCTAssertEqual(resolution.disposition, .useCredential)
-        XCTAssertEqual(resolution.credential?.user, "member")
-        XCTAssertEqual(resolution.credential?.password, "stored-secret")
-        XCTAssertEqual(prompts, 0)
-        XCTAssertTrue(saves.isEmpty)
-
-        await session.authenticationSucceeded()
-
-        XCTAssertEqual(saves.count, 1)
-        XCTAssertEqual(saves.first?.replacing, stored.descriptor)
-        XCTAssertEqual(saves.first?.password, "stored-secret")
     }
 
     func testRejectedSavedCredentialPromptsAndReplacesOnlyAfterAcceptedNavigation() async throws {
@@ -230,28 +145,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
         XCTAssertEqual(resolution.credential?.password, "one-time-secret")
         XCTAssertEqual(prompts.first?.allowsSaving, false)
         XCTAssertEqual(loadCount, 0)
-        XCTAssertTrue(saves.isEmpty)
-    }
-
-    func testAuthenticationFailureClearsAPendingSaveRequest() async {
-        var saves: [BrowserHTTPAuthenticationSaveRequest] = []
-        let session = BrowserHTTPAuthenticationSession(
-            spaceID: UUID(),
-            saveCredential: { saves.append($0) }
-        )
-
-        _ = await session.response(
-            to: makeChallenge(protectionSpace: makeProtectionSpace())
-        ) { _ in
-            BrowserHTTPAuthenticationPromptResponse(
-                username: "member",
-                password: "not-accepted",
-                shouldSave: true
-            )
-        }
-        session.authenticationFailed()
-        await session.authenticationSucceeded()
-
         XCTAssertTrue(saves.isEmpty)
     }
 

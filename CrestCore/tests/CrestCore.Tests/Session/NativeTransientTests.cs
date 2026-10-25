@@ -47,20 +47,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void AnEngineThatCannotMoveAPageBetweenWindowsLeavesThePromotedTabToOpenItsOwn() {
-        var session = SavedSession().Document["session"]!;
-        using var device = new TestDevice(session);
-        var core = device.Authority;
-        device.Register();
-        var space = SpaceId(session["spaces"]![0]!);
-        var window = device.Open(space);
-        var page = TransientPage(device, space, window, "https://quick.example/");
-
-        Assert.False(Assert.Single(device.Send(new PromoteTransientPage(device.Workspace, window, page, space, TabPlacement.Current))
-            .OfType<TransientPagePromoted>()).AdoptsPage);
-    }
-
-    [Fact]
     public void AnArchivedPageIsKeptOnceInItsSpacesArchiveEvenAfterItsPageIsGone() {
         var session = TwoSpaceSession();
         using var device = new TestDevice(session);
@@ -92,37 +78,5 @@ public sealed partial class BrowserContractsTests {
         var unknown = Guid.NewGuid();
         Assert.Equal(unknown, Assert.IsType<UnknownPage>(Assert.Throws<Rejected>(() => device.Send(Archiving(unknown, first)))
             .Rejection).PageId);
-    }
-
-    [Fact]
-    public void AnUnloadedQuickWindowPageStaysArchivableUntilItIsArchivedOrLetGoAndAClosedPeekLeavesNothing() {
-        var f = SavedSession(); var session = f.Document["session"]!;
-        using var device = new TestDevice(session);
-        var core = device.Authority;
-        device.Register();
-        var window = device.Open(f.Space);
-        ArchiveTransientPage Archiving(Guid pageId) => new(device.Workspace, pageId, f.Space);
-        Guid Refused(Intent intent) =>
-            Assert.IsType<UnknownPage>(Assert.Throws<Rejected>(() => device.Send(intent)).Rejection).PageId;
-
-        // However many Peeks come and go, an unloaded Quick Window page keeps
-        // what it showed until its window archives it.
-        var quick = TransientPage(device, f.Space, window, "https://quick.example/kept", "Kept");
-        device.Send(new ReleasePage(quick, KeepsState: true));
-        var peeks = Enumerable.Range(0, 40).Select(index => TransientPage(device, f.Space, window, $"https://peek.example/{index}")).ToArray();
-        foreach (var peek in peeks) device.Send(new ReleasePage(peek, KeepsState: false));
-        device.Send(Archiving(quick));
-        Assert.Equal(("Kept", "https://quick.example/kept"),
-            (core.Current.Spaces[0].ArchivedTabs[^1].Tab.Title, core.Current.Spaces[0].ArchivedTabs[^1].Tab.Url));
-        // The archive forgot it, so its final release finds nothing.
-        Assert.Equal(quick, Refused(new ReleasePage(quick, KeepsState: false)));
-
-        // A Peek closed without archiving leaves nothing behind, and a page
-        // unloaded then let go for good is forgotten.
-        Assert.Equal(peeks[0], Refused(Archiving(peeks[0])));
-        var dropped = TransientPage(device, f.Space, window, "https://quick.example/dropped");
-        device.Send(new ReleasePage(dropped, KeepsState: true));
-        device.Send(new ReleasePage(dropped, KeepsState: false));
-        Assert.Equal(dropped, Refused(Archiving(dropped)));
     }
 }

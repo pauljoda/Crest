@@ -138,7 +138,7 @@ public sealed partial class Palette {
     /// What accepting `match` leaves in the field: its text, with the scheme
     /// when the address is not https.
     private static string Accepted(AddressMatch match) =>
-        match.Text.Contains("://", StringComparison.Ordinal) || match.Candidate.Scheme == "https"
+        match.Text.Contains("://", StringComparison.Ordinal) || match.Candidate.Scheme == WebScheme.Https.Name
             ? match.Text : $"{match.Candidate.Scheme}://{match.Text}";
 
     /// Whether `candidate` may complete inline: a tab's address always, and

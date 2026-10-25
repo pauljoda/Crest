@@ -86,9 +86,9 @@
         func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool {
             guard !created, !disposed, let engine,
                 navigation.implementation == registration.implementationId,
-                let stagedLinkID = UUID(uuidString: navigation.token), let sourcePageID = navigation.sourcePageID
+                let sourcePageID = navigation.sourcePageID
             else { return false }
-            return engine.stage(stagedLinkID, from: sourcePageID, into: pageID, expecting: url)
+            return engine.stage(navigation.linkID, from: sourcePageID, into: pageID, expecting: url)
         }
         var currentURL: URL?
         /// The binding presents the page's loading and failures, so the page

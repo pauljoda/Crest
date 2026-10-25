@@ -138,7 +138,7 @@ internal sealed class PageGroup {
             Detach();
             return Persists;
         }
-        if (workspace.Current.Spaces.FirstOrDefault(space => space.Id == SpaceId) is not { } space || workspace.IsDeleting(SpaceId))
+        if (workspace.Current.Space(SpaceId) is not { } space || workspace.IsDeleting(SpaceId))
             return false;
         if (workspace.IsLocked(space)) return true;
         var live = Live(pages);
@@ -206,21 +206,21 @@ internal sealed class PageGroup {
         if (WorkspaceId is not null) return true;
         if (!Persists) return false;
         if (pages.Device.Persistent() is not { } persistent) return true;
-        if (!persistent.Authority.Current.Spaces.Any(space => space.Id == SpaceId)) return false;
+        if (persistent.Authority.Current.Space(SpaceId) is null) return false;
         WorkspaceId = persistent.WorkspaceId;
         return true;
     }
 
     /// The Space the group's folder lives in, while this process may edit it.
     private SpaceState? Editable(NativeSessionAuthority workspace) =>
-        workspace.Current.Spaces.FirstOrDefault(space => space.Id == SpaceId) is { } space && !workspace.IsDeleting(SpaceId)
+        workspace.Current.Space(SpaceId) is { } space && !workspace.IsDeleting(SpaceId)
             && !workspace.IsLocked(space)
             ? space : null;
 
     /// The tabs the group's folder holds now.
     private HashSet<Guid> FolderTabs(Pages pages) =>
         WorkspaceId is { } workspaceId
-            && pages.Device.Attached(workspaceId)?.Current.Spaces.FirstOrDefault(space => space.Id == SpaceId) is { } space
+            && pages.Device.Attached(workspaceId)?.Current.Space(SpaceId) is { } space
             ? [.. space.Tabs.Where(tab => tab.FolderId == Id).Select(tab => tab.Id)]
             : [];
 

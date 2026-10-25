@@ -44,7 +44,7 @@ private struct BrowserCurrentTabsSeam: View {
         BrowserCurrentTabsDivider(
             capabilities: context.capabilities,
             hasSavedTabsEndBand: isSavedTabsExpanded
-                && (context.capabilities.showsRowDropIndicators || !sidebar.section(.saved).holdsTabRows),
+                && (context.capabilities.reservesReorderSectionZones || !sidebar.section(.saved).holdsTabRows),
             showsClearAction: showsClearAction,
             canClear: holdsCurrentTabs,
             clear: { _ = context.tabActions.clearCurrentTabs() }

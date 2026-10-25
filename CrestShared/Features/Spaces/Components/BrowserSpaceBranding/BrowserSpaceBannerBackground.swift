@@ -29,7 +29,7 @@ struct BrowserSpaceBannerBackground: View {
         GeometryReader { geometry in
             let colors = resolvedColors
             ZStack {
-                BrowserPlatformSpaceBrandingStyle.backgroundColor
+                CrestColor.windowBackground
                 BrowserSpaceThemeField(
                     themeMode: branding.themeMode,
                     bannerPattern: branding.bannerPattern,

@@ -28,7 +28,7 @@ public sealed record MoveTabToWindow(Guid WorkspaceId, Guid WindowId, Guid Space
         if (space.Tabs.All(tab => tab.Id != TabId)) throw new Rejected(new UnknownTab(TabId));
         var followUp = new WindowFollowUp(workspace.IssuingWindow(DestinationWindowId)).ShowTab(space.Id, TabId).ShowSpace(space.Id);
         var used = space with { Tabs = [.. space.Tabs.Select(tab => tab.Id == TabId ? tab with { LastActivatedAt = turn.Now } : tab)] };
-        return new(NativeSessionAuthority.Replacing(turn.Basis, used), SyncStaging.TabUse, followUp);
+        return new(turn.Basis.Replacing(used), SyncStaging.TabUse, followUp);
     }
 
     /// When the window it moves to shows another workspace, the tab leaves

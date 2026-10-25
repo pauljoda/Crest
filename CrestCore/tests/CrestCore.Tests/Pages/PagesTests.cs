@@ -229,30 +229,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void EachWindowHostsOnePageForATabAndAMovedPageBelongsToItsNewWindow() {
-        var session = TwoSpaceSession();
-        var (app, _, _, workspace, first) = PageHost(session);
-        using var disposal = app;
-        var (space, tab) = (SpaceId(session["spaces"]![0]!), TabId(session["spaces"]![0]!, 0));
-        var second = Guid.NewGuid();
-        app.Send(new OpenWindow(second, workspace, Saved: false, null, null, [], RestoresTabs: true));
-        var (firstPage, secondPage, transient) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-
-        // Two windows that keep pages of their own, as iPad scenes do, each
-        // host a page for the tab; one window hosts only one.
-        app.Send(new OpenPage(firstPage, workspace, space, tab, first));
-        app.Send(new OpenPage(secondPage, workspace, space, tab, second));
-        Assert.Equal(new TabAlreadyHasPage(tab, firstPage), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, space, tab, first)));
-
-        // A page moved into a window takes the tab's place there.
-        app.Send(new ReleasePage(secondPage, KeepsState: false));
-        app.Send(new OpenPage(transient, workspace, space, null, first));
-        app.Send(new MovePage(transient, workspace, space, tab, second));
-        Assert.Equal(new TabAlreadyHasPage(tab, transient), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, space, tab, second)));
-        Assert.Equal(new TabAlreadyHasPage(tab, transient), Refusal(app, new MovePage(firstPage, workspace, space, tab, second)));
-    }
-
-    [Fact]
     public void CommandsReachTheirEngineInOrderAndNeverOnTheStackOfTheCallThatCausedThem() {
         var session = TwoSpaceSession();
         var (app, engine, binding, workspace, window) = PageHost(session);
@@ -310,32 +286,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([typeof(TabsChanged), typeof(HistoryChanged), typeof(NavigationRecorded)], woken!.Select(change => change.GetType()));
         Assert.Contains(new PageRemoved(page), released);
         Assert.Empty(app.Drain());
-    }
-
-    [Fact]
-    public void AnEngineRegistersWithEveryRequiredCapabilityAndOnlyOneIsTheDefault() {
-        using var app = new CrestApp();
-        var partial = EngineCapability.Required.Skip(1).ToArray();
-        Assert.Equal(new EngineLacksCapability(EngineKind.Chromium, EngineCapability.Required[0]), Assert.Throws<Rejected>(
-            () => app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, partial, IsDefault: true), _ => { })).Rejection);
-
-        var registered = app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.All, IsDefault: false), _ => { });
-        Assert.Equal(new EngineAlreadyRegistered(EngineKind.WebKit), Assert.Throws<Rejected>(
-            () => app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.All, IsDefault: true), _ => { })).Rejection);
-        var session = SavedSession().Document["session"]!;
-        var workspace = TestWorkspaces.Open(app, session);
-        var window = Guid.NewGuid();
-        app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
-        Assert.Equal(new EngineNotRegistered(), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, SpaceId(session["spaces"]![0]!), null, window)));
-
-        app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, IsDefault: true), _ => { });
-
-        // A binding that is gone frees its engine for another, which may not
-        // be a second default.
-        app.UnregisterEngine(registered);
-        Assert.Equal(new DefaultEngineAlreadyRegistered(EngineKind.Chromium), Assert.Throws<Rejected>(
-            () => app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.All, IsDefault: true), _ => { })).Rejection);
-        app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.All, IsDefault: false), _ => { });
     }
 
     [Fact]

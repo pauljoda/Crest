@@ -98,7 +98,7 @@ extension BrowserStore {
             FolderTabs(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
                 selection: request.selection,
-                placement: placement),
+                placement: placement, title: Self.newFolderTitle),
             reselection: .items)
     }
 
@@ -109,7 +109,7 @@ extension BrowserStore {
             FolderTabsAround(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
                 selection: request.selection,
-                tabID: tabID),
+                tabID: tabID, title: Self.newFolderTitle),
             reselection: .items)
     }
 

@@ -494,7 +494,7 @@ internal sealed class NativeWorkspaceImport {
 
     /// Throws `Rejected` with `SpaceBeingDeleted` when `id` is going away.
     private void Available(Guid id) {
-        if (session.SpaceDeletions.Any(deletion => deletion.SpaceId == id)) throw new Rejected(new SpaceBeingDeleted(id));
+        if (session.PendingDeletion(id) is not null) throw new Rejected(new SpaceBeingDeleted(id));
     }
 
     #endregion

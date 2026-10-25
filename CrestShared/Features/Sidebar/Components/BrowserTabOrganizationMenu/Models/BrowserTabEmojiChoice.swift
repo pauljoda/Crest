@@ -144,9 +144,12 @@ enum BrowserTabEmojiChoices {
             .filter { $0.matches(query) }
     }
 
+    /// The catalog `Scripts/generate-emoji-catalog.py` bundles, read once.
     private static let catalog: BrowserEmojiCatalogDocument = {
-        guard let data = generatedCatalogJSONString.data(using: .utf8) else {
-            assertionFailure("The generated emoji catalog is not UTF-8.")
+        guard let url = Bundle.main.url(forResource: "EmojiCatalog", withExtension: "json"),
+            let data = try? Data(contentsOf: url)
+        else {
+            assertionFailure("The app bundles no emoji catalog.")
             return .empty
         }
         do {

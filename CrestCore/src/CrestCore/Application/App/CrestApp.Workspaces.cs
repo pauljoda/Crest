@@ -43,17 +43,7 @@ public sealed partial class CrestApp {
     /// Throws `Rejected` with `InvalidSession` naming the first rule it breaks
     /// that the repair cannot mend.
     private (SessionState Session, IReadOnlyList<(Guid Source, Guid Copy)> Copies) Seeded(SessionState session) {
-        var now = StoredSessionCodec.Date(StoredSessionCodec.Seconds(clock.Now));
-        SessionState repaired;
-        IReadOnlyList<NativeSessionMaintenance.TabOrigin> origins;
-        try {
-            repaired = NativeSessionMaintenance.Repair(session, now, null, ids, out origins);
-        } catch (BrowserRuleException) {
-            // A Space whose deletion is under way keeps its identities, so one
-            // another Space shares is the seed's to fix.
-            throw new Rejected(new InvalidSession(SessionIdentities.Flaw(session) ?? SessionFlaw.Unreadable));
-        }
-        if (SessionIdentities.Flaw(repaired) is { } flaw) throw new Rejected(new InvalidSession(flaw));
+        var repaired = NativeSessionMaintenance.RepairSeed(session, clock.Now, ids, out var origins);
         return (repaired, NativeSessionMaintenance.Copies(repaired, origins));
     }
 

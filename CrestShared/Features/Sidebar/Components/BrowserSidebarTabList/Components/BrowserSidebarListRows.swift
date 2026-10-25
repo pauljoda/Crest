@@ -14,12 +14,11 @@ struct BrowserSidebarListRows<Trailing: View>: View {
     let list: SidebarListModel
     let context: BrowserSidebarListContext
     /// What the list shows after its rows, given the rows it holds, such as
-    /// the band an empty run draws its insertion line in.
+    /// the band an empty run keeps.
     @ViewBuilder var trailing: ([BrowserSidebarListItem]) -> Trailing
 
     var body: some View {
-        let items = BrowserSidebarListItem.items(
-            of: list, in: context.space, namesFollowingTabs: context.capabilities.showsRowDropIndicators)
+        let items = BrowserSidebarListItem.items(of: list, in: context.space)
         LazyVStack(spacing: 0) {
             ForEach(items) { item in
                 BrowserSidebarListRow(item: item, context: context).equatable()
@@ -64,7 +63,7 @@ struct BrowserSidebarListRow: View {
     private var content: some View {
         switch item.content {
         case .tab(let tab):
-            BrowserSidebarTabRow(tab: tab, context: context, followingTabID: item.followingTabID)
+            BrowserSidebarTabRow(tab: tab, context: context)
                 .equatable()
                 .modifier(BrowserSidebarFolderRowIndent(depth: item.depth))
                 #if os(macOS)
@@ -75,14 +74,12 @@ struct BrowserSidebarListRow: View {
                 // Keep the identity used when revealing the shown tab.
                 .id(tab.id)
         case .split(let groupID, let members):
-            BrowserSidebarSplitGroupRow(
-                groupID: groupID, members: members, context: context, followingTabID: item.followingTabID
-            )
-            .equatable()
-            .modifier(BrowserSidebarFolderRowIndent(depth: item.depth))
-            #if os(macOS)
-                .geometryGroup()
-            #endif
+            BrowserSidebarSplitGroupRow(groupID: groupID, members: members, context: context)
+                .equatable()
+                .modifier(BrowserSidebarFolderRowIndent(depth: item.depth))
+                #if os(macOS)
+                    .geometryGroup()
+                #endif
         case .folder(let folder):
             BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabID: keptTabID)
                 .equatable()

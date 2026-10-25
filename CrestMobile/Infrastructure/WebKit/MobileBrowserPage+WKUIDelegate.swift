@@ -164,19 +164,6 @@ extension MobileBrowserPage: WKUIDelegate {
         }
     }
 
-    /// Asks the core the script dialog `frame`'s document opened, which this
-    /// page shows once the core asks the person.
-    private func askScriptDialog(
-        _ kind: JavaScriptDialogKind, message: String, defaultText: String?, frame: WKFrameInfo,
-        answer: @escaping @MainActor (Bool, String?) -> Void
-    ) {
-        webKitPage.ask(
-            ScriptDialogQuestion(
-                kind: kind, message: message, defaultText: defaultText ?? "",
-                sourceURL: frame.request.url?.absoluteString ?? ""),
-            answer: answer)
-    }
-
     // Leave runOpenPanelWith unimplemented on iOS. WebKit's native upload flow
     // offers Photos, camera and Files using the input's accept/capture/multiple
     // attributes, owns presentation for this web view, and retains upload copies
@@ -189,15 +176,7 @@ extension MobileBrowserPage: WKUIDelegate {
         type: WKMediaCaptureType,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        guard webView === self.webView,
-            let topLevelOrigin = webView.url.flatMap(SiteOrigin.init(url:))
-        else {
-            decisionHandler(.deny)
-            return
-        }
-        answerPermission(
-            SitePermission(type), origin: SiteOrigin(origin), topLevelOrigin: topLevelOrigin, from: webKitPage,
-            decisionHandler: decisionHandler)
+        answerMediaCapture(type, origin: origin, in: webView, decisionHandler: decisionHandler)
     }
 
     @available(iOS 27.0, *)
@@ -207,14 +186,6 @@ extension MobileBrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        guard frame.webView === webView,
-            let topLevelOrigin = webView.url.flatMap(SiteOrigin.init(url:))
-        else {
-            decisionHandler(.deny)
-            return
-        }
-        answerPermission(
-            .location, origin: SiteOrigin(origin), topLevelOrigin: topLevelOrigin, from: webKitPage,
-            decisionHandler: decisionHandler)
+        answerLocation(origin: origin, frame: frame, in: webView, decisionHandler: decisionHandler)
     }
 }

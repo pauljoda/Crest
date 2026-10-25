@@ -43,6 +43,87 @@ extension BrowserPlatformPage {
         return scheme == "file"
     }
 
+    /// Lets the core judge the link `navigationAction` follows, once WebKit may
+    /// load it, and answers WebKit. Each platform says where the person
+    /// activated the link and opens a modified click's tab.
+    func decideLinkPolicy(
+        for navigationAction: WKNavigationAction,
+        in webView: WKWebView,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+    ) {
+        let sourcePresentation = linkSourcePresentation(for: navigationAction, in: webView)
+        // The core decides what the link does, as it does for Chromium's.
+        let webKitPage = webKitEnginePage
+        let decision =
+            webKitPage?.linkActivation(to: navigationAction.request.url, gesture: navigationAction.linkGesture)
+            ?? .navigate
+        // A modified click keeps its initiator's referrer through a staged
+        // request; a saved-site Peek starts afresh, as it does on Chromium.
+        let engineNavigation = decision.stagesLink ? webKitPage?.stageLink(navigationAction.request) : nil
+        if let request = decision.peekRequest(
+            destinationURL: navigationAction.request.url,
+            context: navigationContext, sourcePresentation: sourcePresentation,
+            engineNavigation: engineNavigation)
+        {
+            openPeek(request)
+            decisionHandler(.cancel)
+            return
+        }
+        if let engineNavigation { corePage.discardStagedLink(engineNavigation) }
+        if decision.opensTab {
+            routeModifiedLink(navigationAction.request, selecting: decision.selectsTab)
+            decisionHandler(.cancel)
+            return
+        }
+        if navigationAction.targetFrame?.isMainFrame == true {
+            if navigationAction.navigationType == .linkActivated {
+                navigationHistory.recordLink(to: navigationAction.request.url, in: webView.backForwardList)
+            }
+            prepareForNavigation(to: navigationAction.request.url)
+        }
+        decisionHandler(.allow)
+    }
+
+    /// Answers WebKit for a navigation's response: a media file the page opened
+    /// directly plays in a document of its own, and anything else loads when
+    /// WebKit can show it.
+    func decideResponsePolicy(
+        for navigationResponse: WKNavigationResponse,
+        in webView: WKWebView,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
+    ) {
+        if let mediaNavigation = BrowserDirectMediaNavigation.classify(
+            canShowMIMEType: navigationResponse.canShowMIMEType,
+            isForMainFrame: navigationResponse.isForMainFrame,
+            response: navigationResponse.response
+        ) {
+            decisionHandler(.cancel)
+            Task { @MainActor [weak webView] in
+                webView?.loadSimulatedRequest(
+                    mediaNavigation.request,
+                    responseHTML: mediaNavigation.responseHTML
+                )
+            }
+            return
+        }
+        decisionHandler(
+            BrowserNavigationDecider.decidePolicy(
+                canShowMIMEType: navigationResponse.canShowMIMEType,
+                response: navigationResponse.response
+            )
+        )
+    }
+
+    /// Lets the page's host retire the page when its first navigation became
+    /// a download, leaving it with nothing to show.
+    func discardDownloadOnlySurfaceIfNeeded() {
+        guard committedNavigationCount == 0 else { return }
+        Task { @MainActor [weak self] in
+            guard let self, committedNavigationCount == 0 else { return }
+            host?.discardDownloadOnlyPage(self)
+        }
+    }
+
     func isCurrentNavigation(_ navigation: WKNavigation?) -> Bool {
         // WebKit can deliver a callback late, after its navigation finished or
         // was replaced. An identified navigation is only current while it is

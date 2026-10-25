@@ -33,10 +33,6 @@ public sealed partial class NativeSessionAuthority {
     /// What kind of workspace this session is.
     internal WorkspaceKind Kind => workspaceKind;
 
-    /// The identities the accepted session holds, which each edit is checked
-    /// against. Read it under the gate.
-    internal SessionIdentities Identities => identities;
-
     #endregion
 
     #region Constructors
@@ -85,10 +81,6 @@ public sealed partial class NativeSessionAuthority {
     private void Index(SessionState value) {
         if (identities.Index(value) is { } flaw) throw new Rejected(new InvalidSession(flaw));
     }
-
-    internal static SessionState Replacing(SessionState session, params SpaceState[] edited) => session with {
-        Spaces = [.. session.Spaces.Select(space => edited.FirstOrDefault(value => value.Id == space.Id) ?? space)]
-    };
 
     #endregion
 

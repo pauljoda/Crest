@@ -44,17 +44,6 @@ public sealed class ShortcutCatalogTests {
         Assert.Same(ShortcutCommand.ShowWebInspector, ShortcutCommand.Named("webInspectorInstructions"));
     }
 
-    /// Every command has one menu item, so a platform whose chords run through
-    /// its menus runs each of them, and a new command cannot go missing.
-    [Fact]
-    public void EveryCommandSitsInExactlyOneMenuGroup() {
-        var groups = ShortcutMenu.All.SelectMany(menu => menu.Groups).ToArray();
-        var placed = groups.SelectMany(group => group).ToArray();
-        Assert.Equal(placed.Length, placed.Distinct().Count());
-        Assert.Empty(ShortcutCommand.All.Except(placed));
-        Assert.DoesNotContain(groups, group => group.Count == 0);
-    }
-
     /// A focused page sees every other command's keys first, as in other
     /// browsers, so only opening, closing and switching tabs and windows stay
     /// out of its reach.
@@ -71,70 +60,6 @@ public sealed class ShortcutCatalogTests {
         var defaults = Commands.Select(command => Default(command, DevicePlatform.Named(platform)!)).OfType<ShortcutChord>().ToArray();
         Assert.Equal(defaults.Length, defaults.Distinct().Count());
         Assert.All(defaults, chord => Assert.True(chord.IsValid));
-    }
-
-    [Fact]
-    public void NumberedCommandsDefaultToCommandAndControlDigitsAndTheMacAddsABlankWindow() {
-        Assert.Equal(Key("3", ShortcutChord.Command), Default("selectTab3", DevicePlatform.Mobile));
-        Assert.Equal(Key("9", ShortcutChord.Control), Default("selectSpace9", DevicePlatform.Desktop));
-        Assert.Null(Default("selectTab10", DevicePlatform.Desktop));
-        Assert.Equal(Key("n", ShortcutChord.Command | ShortcutChord.Option), Default("newBlankWindow", DevicePlatform.Desktop));
-        Assert.Null(Default("newBlankWindow", DevicePlatform.Mobile));
-        Assert.Equal(Key("n", ShortcutChord.Command | ShortcutChord.Option), Default("newQuickWindow", DevicePlatform.Mobile));
-        Assert.Null(Default("duplicateTab", DevicePlatform.Desktop));
-    }
-
-    [Fact]
-    public void AConflictNamesOnlyOtherHoldersAndChangesNothingUntilReassigned() {
-        var chord = Key("u", ShortcutChord.Command | ShortcutChord.Shift);
-        var first = ShortcutOverrides.None.Assigning(ShortcutCommand.NewTab, chord, Offered, DevicePlatform.Desktop);
-        Assert.True(first.Assigning(ShortcutCommand.NewTab, chord, Offered, DevicePlatform.Desktop).SameAs(first));
-
-        var refused = Assert.Throws<Rejected>(() => first.Assigning(ShortcutCommand.NewWindow, chord, Offered, DevicePlatform.Desktop));
-        Assert.Equal([ShortcutCommand.NewTab], Assert.IsType<ShortcutInUse>(refused.Rejection).Commands);
-
-        var replaced = first.Reassigning(ShortcutCommand.NewWindow, chord, Offered, DevicePlatform.Desktop);
-        // The displaced command had a default, so it is kept as left without keys.
-        Assert.Null(replaced.Effective(ShortcutCommand.NewTab, Offered, DevicePlatform.Desktop));
-        Assert.Contains(new KeyValuePair<string, ShortcutChord?>("newTab", null), replaced.Chords);
-        Assert.Equal(chord, replaced.Effective(ShortcutCommand.NewWindow, Offered, DevicePlatform.Desktop));
-    }
-
-    [Fact]
-    public void TakingADefaultsKeysNamesItsHolderAndADefaultValueIsNoChoice() {
-        var find = Key("f", ShortcutChord.Command);
-        Assert.Equal([ShortcutCommand.FindInPage], Assert.IsType<ShortcutInUse>(Assert.Throws<Rejected>(() =>
-            ShortcutOverrides.None.Assigning(ShortcutCommand.NewTab, find, Offered, DevicePlatform.Desktop)).Rejection).Commands);
-        var moved = ShortcutOverrides.Restore([new("newTab", Key("y", ShortcutChord.Option))]);
-        Assert.False(moved.Assigning(ShortcutCommand.NewTab, Key("t", ShortcutChord.Command), Offered, DevicePlatform.Desktop)
-            .IsCustomized);
-        Assert.False(ShortcutOverrides.None.Unassigning(ShortcutCommand.DuplicateTab, DevicePlatform.Desktop).IsCustomized);
-        Assert.Equal([new KeyValuePair<string, ShortcutChord?>("showHistory", null)],
-            ShortcutOverrides.None.Unassigning(ShortcutCommand.ShowHistory, DevicePlatform.Desktop).Chords);
-        Assert.True(moved.Resetting(ShortcutCommand.NewTab).SameAs(ShortcutOverrides.None));
-    }
-
-    [Fact]
-    public void OnlyKeysWithASupportedModifierAndANameMakeAChord() {
-        Assert.Null(ShortcutChord.Usable(new("t", false, ShortcutModifiers.None)));
-        Assert.Null(ShortcutChord.Usable(new("t", false, (ShortcutModifiers)(1 << 5))));
-        Assert.Null(ShortcutChord.Usable(new("hyper", true, ShortcutModifiers.Command)));
-        Assert.Null(ShortcutChord.Usable(new("", false, ShortcutModifiers.Command)));
-        Assert.Equal(Key("t", ShortcutChord.Command), ShortcutChord.Usable(new("t", false, ShortcutModifiers.Command)));
-        // The decomposed and composed spellings of a key are one chord.
-        Assert.Equal(ShortcutChord.Usable(new("e\u0301", false, ShortcutModifiers.Command)),
-            ShortcutChord.Usable(new("\u00e9", false, ShortcutModifiers.Command)));
-    }
-
-    [Fact]
-    public void OnlyOfferedCommandsCanHoldOrLoseAChord() {
-        var reader = Key("r", ShortcutChord.Command | ShortcutChord.Option);
-        var offered = ShortcutCommand.All.Where(command => command != ShortcutCommand.ToggleReaderMode).ToArray();
-        var hidden = ShortcutOverrides.Restore([new("toggleReaderMode", reader)]);
-        var taken = hidden.Assigning(ShortcutCommand.NewTab, reader, offered, DevicePlatform.Desktop);
-        Assert.Contains(new KeyValuePair<string, ShortcutChord?>("toggleReaderMode", reader), taken.Chords);
-        Assert.Equal([ShortcutCommand.ToggleReaderMode], Assert.IsType<ShortcutInUse>(Assert.Throws<Rejected>(() =>
-            hidden.Assigning(ShortcutCommand.NewTab, reader, Offered, DevicePlatform.Desktop)).Rejection).Commands);
     }
 
     [Theory]

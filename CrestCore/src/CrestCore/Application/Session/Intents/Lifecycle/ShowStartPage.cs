@@ -28,7 +28,7 @@ public sealed record ShowStartPage(Guid WorkspaceId, Guid WindowId, Guid SpaceId
         followUp.ShowTab(space.Id, draft.Id).ShowSpace(space.Id);
         var used = StoredSessionCodec.Date(StoredSessionCodec.Seconds(turn.Now));
         var tabs = space.Tabs.Select(tab => tab.Id == draft.Id ? tab with { LastActivatedAt = used } : tab);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, space with { Tabs = [.. tabs] }),
+        return new(turn.Basis.Replacing(space with { Tabs = [.. tabs] }),
             SyncStaging.TabUse, followUp);
     }
 

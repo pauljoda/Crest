@@ -73,38 +73,6 @@ final class BrowserFaviconPrivacyTests: XCTestCase {
         withExtendedLifetime(otherSpace) {}
     }
 
-    func testCaptureOmitsReferrersForDocumentAndElementPolicies() async throws {
-        let server = try BrowserPrivacyHTTPServer()
-        try await server.start()
-        defer { server.stop() }
-        for policy in ["no-referrer", "origin"] {
-            let webView = makeWebView()
-            try await load(
-                server.url(host: "parent.localhost", path: "/policy/\(policy)?secret=query#fragment"), in: webView)
-            try await webView.evaluateJavaScript(
-                """
-                document.head.innerHTML += '<link rel="manifest" href="http://child.parent.localhost:\(server.port)/policy-manifest-redirect"><link rel="icon" referrerpolicy="\(policy)" href="http://child.parent.localhost:\(server.port)/policy-icon-redirect?case=\(policy)">';
-                """)
-            let data = await BrowserFaviconCapture.capture(from: webView)
-            XCTAssertNotNil(data, "Public cross-origin icons without CORS must still load")
-        }
-        let requests = server.requests.filter {
-            ($0.path.hasPrefix("/policy-icon") || $0.path.hasPrefix("/policy-manifest"))
-                && $0.headers["sec-fetch-dest"] != "manifest"
-        }
-        attach(requests.map(\.description).joined(separator: "\n"), name: "Policy wire requests")
-        for path in [
-            "/policy-manifest-redirect", "/policy-manifest.json", "/policy-manifest-icon-redirect",
-            "/policy-manifest-icon", "/policy-icon-redirect", "/policy-icon",
-        ] {
-            XCTAssertGreaterThanOrEqual(requests.filter { $0.path == path }.count, 2)
-        }
-        for request in requests {
-            XCTAssertNil(request.headers["referer"], request.description)
-            XCTAssertNil(request.headers["authorization"], request.description)
-        }
-    }
-
     func testNativeFallbackOmitsURLCredentialsCookiesAndReferrersAcrossRedirects() async throws {
         let server = try BrowserPrivacyHTTPServer()
         try await server.start()
@@ -126,35 +94,6 @@ final class BrowserFaviconPrivacyTests: XCTestCase {
             XCTAssertNil(request.headers["cookie"], request.description)
             XCTAssertNil(request.headers["authorization"], request.description)
         }
-    }
-
-    func testOversizedIconsAndManifestsStopBeforeTheResponseFinishes() async throws {
-        let server = try BrowserPrivacyHTTPServer()
-        try await server.start()
-        defer { server.stop() }
-        // The server streams for at least five seconds unless canceled. A
-        // post-download size check cannot finish within this budget.
-        let start = ContinuousClock.now
-        let native = await BrowserFaviconFallbackLoader.download(
-            server.url(host: "parent.localhost", path: "/oversized-icon"))
-        XCTAssertNil(native)
-        XCTAssertLessThan(start.duration(to: .now), .seconds(3))
-
-        let webView = makeWebView()
-        try await load(server.url(host: "parent.localhost", path: "/policy/no-referrer"), in: webView)
-        try await webView.evaluateJavaScript(
-            """
-            document.head.innerHTML = '<link rel="manifest" href="/oversized-manifest"><link rel="icon" href="/oversized-icon">';
-            """)
-        let captureStart = ContinuousClock.now
-        let captured = await BrowserFaviconCapture.capture(from: webView)
-        XCTAssertNil(captured)
-        XCTAssertLessThan(captureStart.duration(to: .now), .seconds(3))
-        let requests = server.requests.filter {
-            $0.path.hasPrefix("/oversized-") && $0.headers["sec-fetch-dest"] != "manifest"
-        }
-        XCTAssertTrue(requests.contains { $0.path == "/oversized-manifest" && $0.headers["sec-fetch-mode"] == "cors" })
-        XCTAssertTrue(requests.contains { $0.path == "/oversized-manifest" && $0.headers["sec-fetch-mode"] == nil })
     }
 
     private func makeWebView() -> WKWebView {

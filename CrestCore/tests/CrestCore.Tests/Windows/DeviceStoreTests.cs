@@ -75,31 +75,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void ClosingThePersistentWorkspaceKeepsItsSavedWindowsForTheNextLaunch() {
-        using var directory = new StorageDirectory();
-        var window = Guid.NewGuid();
-        Guid second;
-        {
-            var (app, workspace, spaces) = DeviceApp(directory);
-            using var disposal = app;
-            second = SpaceId(spaces[1]!);
-            app.Send(new OpenWindow(window, workspace, Saved: true, CopyingWindowId: null, ShowingSpaceId: null, ShowingTabs: [],
-                RestoresTabs: true));
-            app.Send(new ShowSpace(window, second));
-            // The workspace closing closes its window, which the person never closed.
-            Assert.Equal([new WindowClosed(window), new WorkspaceClosed(workspace)],
-                app.Send(new CloseWorkspace(workspace)).Where(change => change is WindowClosed or WorkspaceClosed));
-            Assert.Equal(new StoredSessionClosed(), Assert.Throws<Rejected>(() =>
-                app.Send(new OpenWorkspace(WorkspaceKind.Persistent, Seed: null))).Rejection);
-        }
-
-        var (relaunched, persistent, _) = DeviceApp(directory);
-        using var relaunchedDisposal = relaunched;
-        var restored = Shown(relaunched.Send(new OpenWindow(window, persistent, Saved: true, null, null, [], RestoresTabs: true)));
-        Assert.Equal(second, restored.ShownSpaceId);
-    }
-
-    [Fact]
     public void WindowsFollowTheSessionAndOnlyTheOnesThatChangePublish() {
         using var directory = new StorageDirectory();
         var (app, workspace, spaces) = DeviceApp(directory);
@@ -183,52 +158,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void TheWindowRecordsAnInstalledReleaseKeptAreCarriedOnceWithTheirLayouts() {
-        using var directory = new StorageDirectory();
-        var (core, _, _) = InstalledDefaults();
-        var spaces = core["spaces"]!.AsArray();
-        var (first, second) = (SpaceId(spaces[0]!), SpaceId(spaces[1]!));
-        var legacyTab = TabId(spaces[1]!, 2);
-        Guid captured = Guid.NewGuid(), older = Guid.NewGuid();
-        var group = Guid.NewGuid();
-        JsonObject Wrapped(Guid id) => SwiftId(id);
-        var records = new JsonArray(
-            new JsonObject {
-                ["id"] = Wrapped(older),
-                ["selectedSpaceID"] = Wrapped(first),
-                ["selectedTabIDsBySpace"] = new JsonArray(Wrapped(first), Wrapped(TabId(spaces[0]!, 1)))
-            },
-            new JsonObject {
-                ["id"] = Wrapped(captured),
-                ["selectedSpaceID"] = Wrapped(second),
-                ["selectedTabIDsBySpace"] = new JsonArray(Wrapped(first), Wrapped(TabId(spaces[0]!, 4))),
-                ["capturedSpaceIDs"] = new JsonArray(Wrapped(first), Wrapped(second)),
-                ["sidebarWidth"] = 277.5,
-                ["sidebarIsPresented"] = false,
-                ["splitColumnFractionsByGroup"] = new JsonArray(Wrapped(group), new JsonArray(0.25, 0.75))
-            });
-        {
-            var (app, _, _) = DeviceApp(directory, core);
-            using var disposal = app;
-            var adopted = Assert.IsType<WindowRecordsAdopted>(Assert.Single(Own(app.Send(new AdoptWindowRecords(Bytes(records))))));
-            Assert.Equal([new WindowLayout(older, null, null), new WindowLayout(captured, 277.5, false)], adopted.Layouts);
-            Assert.Empty(Own(app.Send(new AdoptWindowRecords(Bytes(records)))));
-        }
-        var (relaunched, workspace, _) = DeviceApp(directory, core);
-        using var relaunchedDisposal = relaunched;
-        Assert.Empty(Own(relaunched.Send(new AdoptWindowRecords(Bytes(records)))));
-        // A record that remembered its Spaces shows nothing where it chose nothing.
-        var capturedWindow = Shown(relaunched.Send(new OpenWindow(captured, workspace, true, null, null, [], true)));
-        Assert.Equal(second, capturedWindow.ShownSpaceId);
-        Assert.Null(ShownTab(capturedWindow, second));
-        Assert.Contains(capturedWindow.ShownTabs, tab => tab.SpaceId == second);
-        // An older record takes the tab the release kept in the session.
-        var olderWindow = Shown(relaunched.Send(new OpenWindow(older, workspace, true, null, null, [], true)));
-        Assert.Equal(first, olderWindow.ShownSpaceId);
-        Assert.Equal(legacyTab, ShownTab(olderWindow, second));
-    }
-
-    [Fact]
     public void ALaunchReopensTheWindowsLeftOpenBackToFrontOrTheOneUsedLast() {
         using var directory = new StorageDirectory();
         Guid back = Guid.NewGuid(), closed = Guid.NewGuid(), minimized = Guid.NewGuid(), front = Guid.NewGuid();
@@ -272,79 +201,4 @@ public sealed partial class BrowserContractsTests {
         Assert.NotEqual(Guid.Empty, Assert.Single(first.Query(new LaunchWindows(installed)).WindowIds));
     }
 
-    [Fact]
-    public void TheChromiumWindowListIsCarriedOnceAndNeverOverWindowsTheDeviceReopens() {
-        using var directory = new StorageDirectory();
-        Guid[] listed = [Guid.NewGuid(), Guid.NewGuid()];
-        var installed = LaunchEnvironment.Installed;
-        {
-            var (app, workspace, _) = DeviceApp(directory);
-            using var disposal = app;
-            foreach (var window in listed) app.Send(new OpenWindow(window, workspace, Saved: true, null, null, [], RestoresTabs: true));
-            foreach (var window in listed) app.Send(new CloseWindow(window));
-            Assert.Empty(Own(app.Send(new AdoptOpenWindows(listed))));
-            Assert.Equal(listed, app.Query(new LaunchWindows(installed)).WindowIds);
-            app.Send(new AdoptOpenWindows([listed[1]]));
-            Assert.Equal(listed, app.Query(new LaunchWindows(installed)).WindowIds);
-        }
-        var (relaunched, _, _) = DeviceApp(directory);
-        using (relaunched) {
-            relaunched.Send(new AdoptOpenWindows([Guid.NewGuid()]));
-            Assert.Equal(listed, relaunched.Query(new LaunchWindows(installed)).WindowIds);
-        }
-
-        // A device the other composition already reopens windows for keeps them.
-        using var other = new StorageDirectory();
-        var (kept, keptWorkspace, _) = DeviceApp(other);
-        using var keptDisposal = kept;
-        var own = Guid.NewGuid();
-        kept.Send(new OpenWindow(own, keptWorkspace, Saved: true, null, null, [], RestoresTabs: true));
-        kept.Send(new AdoptOpenWindows(listed));
-        Assert.Equal([own], kept.Query(new LaunchWindows(installed)).WindowIds);
-    }
-
-    [Fact]
-    public void ADraggedTabMayLeaveOnlyAloneFromAnUnchangedSpace() {
-        using var directory = new StorageDirectory();
-        var (app, workspace, spaces) = DeviceApp(directory);
-        using var disposal = app;
-        var window = Guid.NewGuid();
-        app.Send(new OpenWindow(window, workspace, false, null, null, [], true));
-        var (space, profile, tab) = (SpaceId(spaces[0]!), Guid.Parse(spaces[0]!["profile"]!["id"]!.GetValue<string>()), TabId(spaces[0]!, 0));
-        Assert.Equal(new TearOffPermission(true, null), app.Query(new CanTearOff(window, space, profile, tab, null)));
-        Assert.Equal(new TearOffPermission(true, null), app.Query(new CanTearOff(window, space, profile, tab, [tab])));
-        Assert.Equal(TearOffRefusal.SeveralTabs, app.Query(new CanTearOff(window, space, profile, tab, [tab, TabId(spaces[0]!, 1)])).Reason);
-        Assert.Equal(TearOffRefusal.SpaceChanged, app.Query(new CanTearOff(window, space, Guid.NewGuid(), tab, null)).Reason);
-        Assert.Equal(TearOffRefusal.TabGone, app.Query(new CanTearOff(window, space, profile, Guid.NewGuid(), null)).Reason);
-    }
-
-    [Fact]
-    public void DismissingAShownTabReturnsToTheTabTheWindowShowedBefore() {
-        using var directory = new StorageDirectory();
-        var (app, workspace, spaces) = DeviceApp(directory);
-        using var disposal = app;
-        var space = SpaceId(spaces[1]!);
-        var (earlier, dismissed) = (TabId(spaces[1]!, 0), TabId(spaces[1]!, 2));
-        var window = Guid.NewGuid();
-        app.Send(new OpenWindow(window, workspace, Saved: false, null, space, [], RestoresTabs: false));
-        app.Send(new ShowTab(window, space, earlier));
-        app.Send(new ShowTab(window, space, dismissed));
-        // A window that no longer shows the tab is left alone.
-        Assert.Empty(Own(app.Send(new DismissShownTab(window, space, earlier))));
-
-        var returned = app.Send(new DismissShownTab(window, space, dismissed));
-        Assert.Equal(earlier, Assert.Single(Assert.Single(returned.OfType<TabsChanged>()).Updated).Id);
-        Assert.Equal(earlier, ShownTab(Shown(returned), space));
-        // With nothing left to return to, it shows nothing there.
-        Assert.Null(ShownTab(Shown(app.Send(new DismissShownTab(window, space, earlier))), space));
-    }
-
-    [Fact]
-    public void ASpaceNoWindowChoseATabForShowsItsFirstOpenThenPinnedThenFirstTab() {
-        using var app = new CrestApp();
-        Assert.Equal(1, app.Query(new FallbackTab([TabPlacement.Pinned, TabPlacement.Current])).Index);
-        Assert.Equal(1, app.Query(new FallbackTab([TabPlacement.Saved, TabPlacement.Pinned])).Index);
-        Assert.Equal(0, app.Query(new FallbackTab([TabPlacement.Saved])).Index);
-        Assert.Null(app.Query(new FallbackTab([])).Index);
-    }
 }

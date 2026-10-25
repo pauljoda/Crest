@@ -31,7 +31,7 @@ public sealed partial class NativeSessionAuthority {
     /// with `UnknownSpace` for one it does not hold.
     internal SearchProvider Searches(Guid spaceId) {
         SpaceState space;
-        lock (Gate) space = session.Spaces.FirstOrDefault(candidate => candidate.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
+        lock (Gate) space = session.KnownSpace(spaceId);
         return SearchCatalog.For(space.Settings.BrowsingPreferences, Kind.IsPrivate);
     }
 

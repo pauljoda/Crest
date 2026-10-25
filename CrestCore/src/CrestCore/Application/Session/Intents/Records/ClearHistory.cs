@@ -11,8 +11,7 @@ public sealed record ClearHistory(Guid WorkspaceId, Guid? SpaceId) : SessionInte
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         IEnumerable<SpaceState> spaces = SpaceId is { } spaceId
             ? [workspace.Editable(turn.Basis, spaceId)] : workspace.EditableSpaces(turn.Basis);
-        return new(NativeSessionAuthority.Replacing(turn.Basis,
-                [.. spaces.Select(space => space.History.Count == 0 ? space : space with { History = [] })]),
+        return new(turn.Basis.Replacing([.. spaces.Select(space => space.History.Count == 0 ? space : space with { History = [] })]),
             SyncStaging.Deletion);
     }
 

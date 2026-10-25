@@ -94,13 +94,6 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                     && configuration.capabilities.supportsOrganization,
                 requiresSelectedSpace: true
             )
-            .modifier(
-                BrowserSidebarTabRowDropIndicators(
-                    configuration: configuration,
-                    isDropTargeted: interaction.isDropTargeted.wrappedValue,
-                    dropTargetHeight: interaction.dropTargetHeight
-                )
-            )
             .browserSidebarReorderZone(
                 .currentTab(configuration.tab.id),
                 state: sidebarInteraction.sidebarReorderState,

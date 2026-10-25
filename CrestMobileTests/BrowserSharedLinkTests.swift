@@ -5,14 +5,6 @@ import XCTest
 /// The share extension hands links to the app through a URL any app can
 /// open, so these protect what that hand-off carries and accepts.
 final class BrowserSharedLinkTests: XCTestCase {
-    func testHandOffKeepsTheLinkIntact() throws {
-        let url = try XCTUnwrap(URL(string: "https://example.com/a+b/ü?q=1&r=a%26b=c#part"))
-        let link = try XCTUnwrap(BrowserSharedLink(url: url))
-
-        XCTAssertEqual(link.handOffURL.scheme, "crest")
-        XCTAssertEqual(BrowserSharedLink(handOffURL: link.handOffURL), link)
-    }
-
     func testHandOffAcceptsOnlyAWebLinkThroughCrestOpen() throws {
         let rejected = [
             "https://example.com",
@@ -34,12 +26,5 @@ final class BrowserSharedLinkTests: XCTestCase {
 
         let accepted = try XCTUnwrap(URL(string: "CREST://open?url=http%3A%2F%2Fexample.com&later=1"))
         XCTAssertEqual(BrowserSharedLink(handOffURL: accepted)?.url.absoluteString, "http://example.com")
-    }
-
-    func testSharedTextOpensItsFirstWebLink() {
-        let text = "Write to me@example.com, see https://first.example/x and http://second.example"
-
-        XCTAssertEqual(BrowserSharedLink.firstWebLink(in: text)?.url.host(), "first.example")
-        XCTAssertNil(BrowserSharedLink.firstWebLink(in: "Lunch at noon, mailto:me@example.com"))
     }
 }

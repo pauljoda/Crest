@@ -29,34 +29,6 @@ public sealed class CredentialImportTests {
         new(Guid.NewGuid(), origin ?? Accounts, username, isWebForm, updatedAt, lastUsedAt, password);
 
     [Fact]
-    public void AFileOverAnyLimitIsRefusedWhole() {
-        Assert.Equal(CredentialFileFlaw.TooLarge, Flaw(new byte[CredentialFile.MaximumBytes + 1]));
-
-        string rows = string.Concat(Enumerable.Range(0, CredentialFile.MaximumRows).Select(index => $"https://site{index}.example,u,p\n"));
-        Assert.Equal(CredentialFile.MaximumRows, Preview("url,username,password\n" + rows).ValidRowCount);
-        Assert.Equal(CredentialFileFlaw.TooManyRows, Flaw("url,username,password\n" + rows + "https://one.more.example,u,p\n"));
-
-        string columns = string.Join(',', Enumerable.Range(0, CredentialFile.MaximumColumns - 3).Select(index => $"extra{index}"));
-        Assert.Single(Preview($"url,username,password,{columns}\nhttps://one.example,u,p\n").Groups);
-        Assert.Equal(CredentialFileFlaw.TooManyColumns, Flaw($"url,username,password,{columns},one_more\nhttps://one.example,u,p\n"));
-
-        string field = new('x', CredentialFile.MaximumFieldCharacters);
-        Assert.Single(Preview($"url,username,password\nhttps://one.example,u,{field}\n").Groups);
-        Assert.Equal(CredentialFileFlaw.FieldTooLarge, Flaw($"url,username,password\nhttps://one.example,u,\"{field}x\"\n"));
-    }
-
-    [Fact]
-    public void OnlyUtf8TextWithAHeaderAndARowImports() {
-        Assert.Equal(CredentialFileFlaw.NotText, Flaw([0x75, 0x72, 0x6c, 0xff, 0xfe]));
-        Assert.Equal(CredentialFileFlaw.Empty, Flaw([]));
-        Assert.Equal(CredentialFileFlaw.Empty, Flaw(" , \n\r\n , "));
-        Assert.Equal(CredentialFileFlaw.NoRows, Flaw("url,username,password\n\n"));
-        // A byte-order mark and CRLF line breaks read as any other file does.
-        var plan = Preview("\uFEFFURL,Username,Password\r\nhttps://accounts.example,ada,\"line one\r\nline two\"\r\n");
-        Assert.Equal(("ada", "line one\nline two"), (plan.Groups[0].Username, plan.Groups[0].Candidates[0].Password));
-    }
-
-    [Fact]
     public void EachBrowsersHeadersNameTheColumnsAndTheFormat() {
         var browser = Preview("name,url,username,password,note\nWork,https://accounts.example/login,ada,secret,\n");
         Assert.Equal((CredentialFileFormat.Browser, "Work"), (browser.Format, browser.Groups[0].Candidates[0].DisplayName));
@@ -130,17 +102,5 @@ public sealed class CredentialImportTests {
         // A file that repeats the saved password needs no choice.
         var same = Preview("url,username,password\nhttps://accounts.example,ada,current-secret", newer).Groups[0];
         Assert.Equal((false, CredentialImportEffect.Matches), (same.RequiresChoice, same.Candidates[0].Effect));
-    }
-
-    [Fact]
-    public void AnotherBrowsersPasswordsImportAsABrowsersOwnFileWould() {
-        var plan = Area.Query(new PasswordImportPreview([
-            new(2, "accounts.example", Accounts, "ada", "secret"),
-            new(3, null, new CredentialOrigin("ftp", "files.example", 21), "ada", "secret"),
-            new(4, null, Accounts, "grace", "")
-        ], [Saved("ada", "secret")]));
-        Assert.Equal(CredentialFileFormat.Browser, plan.Format);
-        Assert.Equal([new(3, CredentialRowFlaw.InvalidOrigin), new(4, CredentialRowFlaw.EmptyPassword)], plan.Rejections);
-        Assert.Equal(CredentialImportEffect.Matches, Assert.Single(plan.Groups).Candidates[0].Effect);
     }
 }

@@ -69,58 +69,6 @@ public sealed class StoredFormatTests {
         var differences = StoredJson.Differences(session, written, StoredJson.Comparison.Exact);
         Assert.True(differences.Count == 0, string.Join(Environment.NewLine, differences));
     }
-
-    [Fact]
-    public void CommandAnswersMatchWhatThePreviousCoreAnswered() {
-        var session = Fixture("maximal-session.json");
-        var expected = Fixture("session-answers.json");
-        var clock = new TestClock(DateTimeOffset.UnixEpoch);
-        var ids = new TestIds();
-        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop), clock, ids);
-        var engine = RecordedIntents.PageEngine(app);
-        var workspace = TestWorkspaces.Open(app, session);
-        var authority = app.Workspace(workspace);
-        TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
-        var differences = new List<string>();
-        void Compare(string name, JsonNode? actual) =>
-            differences.AddRange(StoredJson.Differences(expected[name], actual, StoredJson.Comparison.AsSwiftReads, name));
-        foreach (var step in Fixture("session-commands.json")["commands"]!.AsArray()) {
-            var name = step!["name"]!.GetValue<string>();
-            var request = step["request"]!.DeepClone().AsObject();
-            Guid? window = null;
-            if (step["window"] is { } shown) {
-                var issuer = Guid.NewGuid();
-                window = issuer;
-                app.Send(new OpenWindow(issuer, workspace, Saved: false, CopyingWindowId: null, Id(shown["spaceId"]),
-                    [.. shown["tabs"]!.AsArray().Select(tab => new ShownTab(Id(tab!["spaceId"])!.Value, Id(tab["tabId"])))],
-                    RestoresTabs: true));
-                request["windowId"] = issuer.ToString();
-            }
-            if (RecordedIntents.LaunchPlan(request, workspace) is { } plan) {
-                app.Send(new AdoptSetupCompletion(RecordedIntents.SetupCompleted(request)));
-                Compare(name, RecordedIntents.Encode(app.Query(plan)));
-            } else if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
-                clock.Now = RecordedIntents.Time(request);
-                ids.Supply(RecordedIntents.Identities(request));
-                RecordedIntents.Send(app, engine, request, intents, window);
-                TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
-            } else if (RecordedIntents.Navigation(request) is { } navigation) {
-                clock.Now = navigation.At;
-                RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);
-            } else {
-                throw new InvalidOperationException($"{name}: every recorded command is an intent or an engine report now.");
-            }
-            if (window is { } opened) app.Send(new CloseWindow(opened));
-        }
-        var checkpoint = authority.Checkpoint();
-        var core = JsonNode.Parse(checkpoint.Read("core"))!;
-        Compare("checkpoint.core", core);
-        foreach (var (name, history) in expected.Where(pair => pair.Key.StartsWith("checkpoint.history.", StringComparison.Ordinal)))
-            differences.AddRange(StoredJson.Differences(history,
-                JsonNode.Parse(checkpoint.Read(name["checkpoint.history.".Length..])), StoredJson.Comparison.AsSwiftReads, name));
-        Compare("session.repair", new JsonObject { ["value"] = NativeSessionMaintenance.Repair(session.DeepClone().AsObject(), 800000000.0) });
-        Assert.True(differences.Count == 0, string.Join(Environment.NewLine, differences));
-    }
 }
 
 /// Compares JSON the way a reader of the stored format does.

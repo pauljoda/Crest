@@ -9,6 +9,10 @@ public sealed partial class NativeSessionAuthority {
     /// What a folder created without a title is called.
     internal const string NewFolderTitle = "New Folder";
 
+    /// The name a new folder takes: `title`, which the app sends in its own
+    /// language, or "New Folder" when it sends none.
+    internal static string FolderTitle(string? title) => string.IsNullOrWhiteSpace(title) ? NewFolderTitle : title;
+
     #endregion
 
     #region Actions - Splits
@@ -29,7 +33,7 @@ public sealed partial class NativeSessionAuthority {
             edited.CopySplitMetadata(copied, copy, now);
         edited.PruneSplitMetadata();
         var followUp = new WindowFollowUp(IssuingWindow(windowId)).ShowTab(space.Id, joined.SelectedTab).ShowSpace(space.Id);
-        return new(Replacing(basis, edited.Capture(space)), SyncStaging.Edit, followUp,
+        return new(basis.Replacing(edited.Capture(space)), SyncStaging.Edit, followUp,
             new([.. joined.Copies.Select(pair => new SessionTabCopy(pair.Source, pair.Copy))], null));
     }
 
@@ -38,7 +42,7 @@ public sealed partial class NativeSessionAuthority {
         var space = Editable(basis, spaceId);
         var edited = BrowserTabCollection.Restore(space);
         edit(edited);
-        return new(Replacing(basis, edited.Capture(space)), staging);
+        return new(basis.Replacing(edited.Capture(space)), staging);
     }
 
     #endregion
@@ -60,7 +64,7 @@ public sealed partial class NativeSessionAuthority {
         var edited = stamp(chosen, BrowserEditTimestamp.Normalize(now));
         IReadOnlyList<SplitGroupState> groups = existing is null ? [.. space.SplitGroups, edited]
             : [.. space.SplitGroups.Select(candidate => candidate.Id == groupId ? edited : candidate)];
-        return new(Replacing(basis, space with { SplitGroups = groups }), SyncStaging.Edit);
+        return new(basis.Replacing(space with { SplitGroups = groups }), SyncStaging.Edit);
     }
 
     #endregion

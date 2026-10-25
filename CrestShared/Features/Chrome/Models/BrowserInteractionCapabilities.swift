@@ -8,10 +8,8 @@ struct BrowserInteractionCapabilities: Equatable, Sendable {
     /// Keeps touch-sized targets available, including when a pointer is attached.
     var supportsTouch = false
 
-    /// Shows insertion feedback on individual rows instead of section zones alone.
-    var showsRowDropIndicators = false
-
-    /// Reserves drop targets at section boundaries for imprecise input.
+    /// Reserves drop targets at section boundaries for imprecise input, with a
+    /// landing band at the end of each run.
     var reservesReorderSectionZones = false
 
     /// Uses the system navigation transition when a row pushes a page.

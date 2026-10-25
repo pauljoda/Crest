@@ -16,7 +16,11 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private static readonly DateTimeOffset ReferenceEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    /// Seconds from 1970 to 2001, where the stored dates count from, as Apple
+    /// platforms' dates do.
+    internal const double ReferenceEpochUnixSeconds = 978_307_200;
+
+    private static readonly DateTimeOffset ReferenceEpoch = DateTimeOffset.UnixEpoch.AddSeconds(ReferenceEpochUnixSeconds);
 
     /// The stored member names, shared by every record that uses one.
     internal static class Key {

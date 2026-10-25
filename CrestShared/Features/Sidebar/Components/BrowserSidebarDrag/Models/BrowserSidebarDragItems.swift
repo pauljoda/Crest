@@ -19,32 +19,6 @@ struct BrowserDragSessionToken: Equatable, Sendable {
     }
 }
 
-enum BrowserTabDragSessionLifecyclePhase: Equatable, Sendable {
-    case active
-    case ended
-    case dataTransferCompleted
-
-    // MARK: - Static Variables
-
-    /// iOS 27 finally exposes the native drag session's terminal phase to
-    /// SwiftUI. It is the source-side completion signal that still fires when
-    /// a drag is cancelled or released outside every DropDelegate.
-    static let nativeCompletionRuntimeMajorVersion = 27
-
-    // MARK: - Variables
-
-    /// Whether the drag session is over once it reaches this phase.
-    var endsSession: Bool {
-        self == .ended || self == .dataTransferCompleted
-    }
-
-    // MARK: - Actions - Runtime
-
-    static func usesNativeCompletion(runtimeMajorVersion: Int) -> Bool {
-        runtimeMajorVersion >= nativeCompletionRuntimeMajorVersion
-    }
-}
-
 struct BrowserFolderDragItem: Codable, Equatable, Transferable, Sendable {
     let folderID: UUID
     let spaceID: UUID

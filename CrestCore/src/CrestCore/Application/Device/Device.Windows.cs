@@ -103,7 +103,7 @@ internal sealed partial class Device {
     /// member of the tab's split.
     internal bool Shows(Guid workspaceId, Guid spaceId, Guid tabId) {
         lock (gate) {
-            if (workspaces.GetValueOrDefault(workspaceId)?.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) is not { } space)
+            if (workspaces.GetValueOrDefault(workspaceId)?.Current.Space(spaceId) is not { } space)
                 return false;
             var split = space.Tabs.FirstOrDefault(tab => tab.Id == tabId)?.SplitGroupId;
             return open.Values.Any(window => window.WorkspaceId == workspaceId && window.ShownSpaceId == spaceId
@@ -163,7 +163,7 @@ internal sealed partial class Device {
 
     /// The Space a window may show: one the session holds that is not being deleted.
     internal static SpaceState? Available(SessionState session, Guid spaceId) =>
-        session.SpaceDeletions.Any(deletion => deletion.SpaceId == spaceId) ? null : session.Spaces.FirstOrDefault(space => space.Id == spaceId);
+        session.PendingDeletion(spaceId) is not null ? null : session.Space(spaceId);
 
     #endregion
 }

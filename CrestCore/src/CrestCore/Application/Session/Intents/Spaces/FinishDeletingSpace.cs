@@ -39,7 +39,7 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
     /// the session's to refuse. A deleted Space leaves nothing in this device's
     /// link or agent preferences.
     internal override void Commit(CrestApp app, ChangeFeed changes) {
-        if (app.Device.Workspace(WorkspaceId).Current.Spaces.FirstOrDefault(space => space.Id == SpaceId) is { } space
+        if (app.Device.Workspace(WorkspaceId).Current.Space(SpaceId) is { } space
             && !app.DataDeletions.Erased(space.ProfileId))
             throw new Rejected(new SpaceDataNotErased(space.Id));
         base.Commit(app, changes);

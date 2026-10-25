@@ -36,13 +36,13 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     private let recoverGeolocationSystemAuthorization: BrowserGeolocationCoordinator.RecoverSystemAuthorization?
     private weak var page: BrowserPage?
     private var observations: Set<AnyCancellable> = []
-    private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
-    private var linkContextMessageProxy: BrowserLinkContextScriptMessageProxy?
-    private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
-    private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
-    private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
-    private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
-    private var hostedNotificationMessageProxy: BrowserHostedWebNotificationScriptMessageProxy?
+    private var credentialMessageProxy: BrowserScriptMessageProxy?
+    private var linkContextMessageProxy: BrowserScriptMessageProxy?
+    private var userActivityMessageProxy: BrowserScriptMessageProxy?
+    private var geolocationMessageProxy: BrowserScriptMessageProxy?
+    private var blockedPopupMessageProxy: BrowserScriptMessageProxy?
+    private var mediaSessionMessageProxy: BrowserScriptMessageProxy?
+    private var hostedNotificationMessageProxy: BrowserScriptMessageProxy?
     /// Names the document the hosted notification bridge answers; a new one
     /// begins with each navigation.
     var hostedNotificationDocumentIdentifier = UUID().uuidString
@@ -275,8 +275,6 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     func styleVisitedLinks(history: [HistoryEntryState]) async {
         await BrowserVisitedLinkStyler.apply(history: history, to: webView)
     }
-
-    func prepareForNavigation() {}
 
     /// WebKit geolocation observes the permission centre itself; the hosted
     /// notification bridge is told so the document sees the new permission.

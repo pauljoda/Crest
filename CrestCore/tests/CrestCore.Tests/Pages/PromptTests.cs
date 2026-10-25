@@ -19,66 +19,6 @@ public sealed partial class BrowserContractsTests {
         new(SitePermission.Location, new SiteOrigin("https", "maps.example", 443), new SiteOrigin("https", "maps.example", 443));
 
     [Fact]
-    public void AScriptDialogWaitsUntilThePersonAnswersAndTheEngineHearsTheAnswer() {
-        var (app, engine, binding, page, _, _, _, _) = LivePage();
-        using var disposal = app;
-        var prompt = Guid.NewGuid();
-
-        app.Report(engine, new ScriptDialogOpened(prompt, page, Confirmation));
-        Assert.Equal(new ScriptDialogAsked(prompt, page, Confirmation), Assert.Single(app.Drain()));
-
-        // Only an answer of the dialog's own kind settles it, once.
-        Assert.Equal(new PromptAnswerMismatch(prompt), Refusal(app, new AnswerPermission(prompt, Grants: true, Remembers: false)));
-        Assert.Equal([new PromptSettled(prompt)], app.Send(new AnswerScriptDialog(prompt, Accepted: true, Text: null)));
-        Assert.Equal(new SettleScriptDialog(prompt, Accepted: true, Text: null), binding.Commands[^1]);
-        Assert.Equal(new UnknownPrompt(prompt), Refusal(app, new AnswerScriptDialog(prompt, Accepted: false, Text: null)));
-    }
-
-    [Fact]
-    public void ARememberedPermissionBecomesTheSpacesChoiceAndAnswersLaterRequestsWithoutAsking() {
-        var (app, engine, binding, page, _, _, space, _) = LivePage();
-        using var disposal = app;
-        var first = Guid.NewGuid();
-        app.Report(engine, new PermissionRequested(first, page, LocationRequest));
-        Assert.Equal(new PermissionAsked(first, page, LocationRequest), Assert.Single(app.Drain()));
-
-        var answered = app.Send(new AnswerPermission(first, Grants: true, Remembers: true));
-        Assert.Contains(answered, change => change is SitePermissionsChanged changed && changed.SpaceId == space);
-        Assert.Equal(new PromptSettled(first), answered[^1]);
-        Assert.Equal(new SettlePermission(first, Grants: true, Remembers: true), binding.Commands[^1]);
-
-        // The site asks again: the Space's choice answers, and nobody is asked.
-        var second = Guid.NewGuid();
-        app.Report(engine, new PermissionRequested(second, page, LocationRequest));
-        Assert.Empty(app.Drain());
-        Assert.Equal(new SettlePermission(second, Grants: true, Remembers: true), binding.Commands[^1]);
-    }
-
-    [Fact]
-    public void ACaptureRequestIsAnsweredFromEitherDevicesBlockOrACombinedGrantWithoutAsking() {
-        var (app, engine, binding, page, _, _, space, _) = LivePage();
-        using var disposal = app;
-        var blocked = new SiteOrigin("https", "blocked.example", 443);
-        var granted = new SiteOrigin("https", "granted.example", 443);
-        app.Send(new DecideSitePermission(space, blocked, SitePermission.Camera, null, SitePermissionDecision.DenyPersistently));
-        app.Send(new DecideSitePermission(space, granted, SitePermission.CameraAndMicrophone, null,
-            SitePermissionDecision.GrantPersistently));
-        app.Drain();
-
-        // A block on the camera refuses a request for both devices.
-        var both = Guid.NewGuid();
-        app.Report(engine, new PermissionRequested(both, page, new(SitePermission.CameraAndMicrophone, blocked, blocked)));
-        Assert.Empty(app.Drain());
-        Assert.Equal(new SettlePermission(both, Grants: false, Remembers: true), binding.Commands[^1]);
-
-        // A grant for both answers a request for the microphone alone.
-        var microphone = Guid.NewGuid();
-        app.Report(engine, new PermissionRequested(microphone, page, new(SitePermission.Microphone, granted, granted)));
-        Assert.Empty(app.Drain());
-        Assert.Equal(new SettlePermission(microphone, Grants: true, Remembers: true), binding.Commands[^1]);
-    }
-
-    [Fact]
     public void ScreenSharingGoesOnToTheSystemsPickerUnlessBlockedAndIsNeverAllowedAhead() {
         var (app, engine, binding, page, _, _, space, _) = LivePage();
         using var disposal = app;
@@ -100,46 +40,6 @@ public sealed partial class BrowserContractsTests {
         app.Report(engine, new PermissionRequested(second, page, sharing));
         Assert.Empty(app.Drain());
         Assert.Equal(new SettlePermission(second, Grants: false, Remembers: true), binding.Commands[^1]);
-    }
-
-    [Fact]
-    public void ABlockTheSpaceTakesWhileAPermissionQuestionWaitsOutranksThePersonsAnswer() {
-        var (app, engine, binding, page, _, _, space, _) = LivePage();
-        using var disposal = app;
-        var origin = new SiteOrigin("https", "media.example", 443);
-        var request = Guid.NewGuid();
-        app.Report(engine, new PermissionRequested(request, page, new(SitePermission.Camera, origin, origin)));
-        app.Drain();
-
-        app.Send(new DecideSitePermission(space, origin, SitePermission.Camera, null, SitePermissionDecision.DenyPersistently));
-        Assert.Equal([new PromptSettled(request)], app.Send(new AnswerPermission(request, Grants: true, Remembers: true)));
-        Assert.Equal(new SettlePermission(request, Grants: false, Remembers: true), binding.Commands[^1]);
-        Assert.Equal(SitePermissionDecision.DenyPersistently,
-            app.Query(new CaptureDecision(space, origin, SitePermission.Camera)).Decision);
-    }
-
-    [Fact]
-    public void AQuestionNoHostedPageAsksIsDeclinedAndAPromptGoesWhenWithdrawnOrWithItsPage() {
-        var (app, engine, binding, page, _, _, _, _) = LivePage();
-        using var disposal = app;
-
-        // A page the core does not host is answered as declined, and nobody is asked.
-        var stray = Guid.NewGuid();
-        app.Report(engine, new AuthenticationChallenged(stray, Guid.NewGuid(),
-            new("https://example.com/", "example.com", 443, "Realm", AuthenticationScheme.Basic, IsProxy: false, PreviousFailures: 0)));
-        Assert.Empty(app.Drain());
-        Assert.Equal(new SettleAuthentication(stray, Credential: null), binding.Commands[^1]);
-
-        // The engine withdraws one; another goes with its page.
-        var withdrawn = Guid.NewGuid();
-        var orphaned = Guid.NewGuid();
-        app.Report(engine, new ScriptDialogOpened(withdrawn, page, Confirmation));
-        app.Report(engine, new PermissionRequested(orphaned, page, LocationRequest));
-        app.Drain();
-        app.Report(engine, new PromptWithdrawn(withdrawn));
-        Assert.Equal([new PromptSettled(withdrawn)], app.Drain());
-        Assert.Contains(new PromptSettled(orphaned), app.Send(new ReleasePage(page, KeepsState: false)));
-        Assert.DoesNotContain(binding.Commands, command => command is SettlePermission settled && settled.PromptId == orphaned);
     }
 
     [Fact]

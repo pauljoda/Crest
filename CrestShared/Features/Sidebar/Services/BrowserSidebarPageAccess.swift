@@ -5,9 +5,8 @@ import Foundation
 /// The two shells keep their own page stores — one pools windowed cards, the
 /// other owns a single compact stack — but the sidebar only ever asks the same
 /// handful of questions and issues the same handful of commands. Those live
-/// here as closures rather than behind a protocol: there is no second
-/// implementation to swap in, only two concrete stores whose matching members
-/// each shell binds in its own convenience initializer.
+/// here as closures, which one initializer binds over either store as a
+/// `BrowserPageOwner`; the Mac adds a tab's sharing and the audio a row draws.
 ///
 /// Every closure reads through its store at call time rather than capturing a
 /// snapshot, so Observation still tracks what a row touched — `residencyRevision`
@@ -76,4 +75,56 @@ struct BrowserSidebarPageAccess {
     /// The engine's measure of the sound a tab's page plays, band by band, or
     /// nil where its engine does not measure it.
     var audioSpectrum: @MainActor (BrowserTabRuntimeAssignment) -> BrowserAudioSpectrumFeed? = { _ in nil }
+}
+
+extension BrowserSidebarPageAccess {
+    /// Binds the sidebar's page seam to a window's page owner, which
+    /// `selectPages` brings forward; by default the owner shows its selected
+    /// tab.
+    ///
+    /// The owner is captured rather than read once: every closure goes back to
+    /// it at call time, which is what keeps a row's residency and favicon
+    /// reads inside Observation's tracking.
+    init(
+        pages: some BrowserPageOwner, browser: BrowserStore, spaceAccess: BrowserSpaceAccessController,
+        selectPages: (@MainActor () -> Void)? = nil
+    ) {
+        self.init(
+            containsResidentPage: { tabID in
+                pages.containsResidentPage(for: tabID) || pages.nativeTabs.tabIDs.contains(tabID)
+            },
+            containsResidentPageMatching: { assignment in
+                pages.containsResidentPage(matching: assignment) || pages.nativeTabs.contains(assignment)
+            },
+            siteThemeIconAccent: { assignment in
+                pages.siteThemeIconAccent(matching: assignment)
+            },
+            residencyRevision: { pages.residencyRevision &+ pages.nativeTabs.residencyRevision },
+            selectPages: selectPages ?? { pages.select(at: .now) },
+            deactivatePagePresentation: { pages.deactivatePagePresentation() },
+            unloadPage: { tabID, assignment in
+                guard let tab = browser.spaceModel(matching: assignment)?.tabs.model(tabID)
+                else { return }
+                if !tab.placement.isDurable {
+                    pages.unloadPage(for: tabID, matching: assignment)
+                } else if BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(
+                    BrowserTabRuntimeAssignment(
+                        tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID
+                    ))
+                {
+                    pages.select(at: .now)
+                }
+            },
+            pullFavicon: { tabID, assignment in
+                await pages.pullFavicon(for: tabID, matching: assignment)
+            },
+            downloadCenter: pages.downloadCenter,
+            mediaSession: { assignment in
+                pages.mediaSession(matching: assignment)
+            },
+            setMuted: { muted, assignment in
+                pages.setMuted(muted, matching: assignment)
+            }
+        )
+    }
 }

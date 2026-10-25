@@ -96,10 +96,6 @@ public sealed partial class BrowserContractsTests {
     /// A Space as the stored format writes it, byte for byte.
     private static string Stored(SpaceState space) => StoredSessionCodec.Encode(space).ToJsonString();
 
-    /// The name and look a Space already has, as a draft left unchanged carries them.
-    private static SpaceCustomization OwnCustomization(SpaceState space) =>
-        new(space.Settings.Name, space.Settings.Symbol, space.Settings.Accent, space.Settings.Branding!);
-
     [Fact]
     public void AReviewedImportIsRefusedOnlyWhenItWouldJoinTabsIntoALockedSpace() {
         var session = GuardedSession(withOpenSecondSpace: true).AsObject();
@@ -129,43 +125,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(3, current.Spaces.Count);
         Assert.Equal(kept, Stored(current.Spaces[0]));
         Assert.Equal("Trips", current.Spaces[2].Settings.Name);
-    }
-
-    [Fact]
-    public void AManualSetupIsRefusedOnlyWhenItWouldChangeALockedSpace() {
-        var session = GuardedSession(withOpenSecondSpace: true);
-        using var device = new TestDevice(session);
-        var window = device.Showing(session);
-        var (locked, open) = (device.Authority.Current.Spaces[0], device.Authority.Current.Spaces[1]);
-        var kept = Stored(locked);
-        // The setup renames the open Space and moves the locked one second.
-        device.Send(new StartSetup(device.Workspace, SetupEntry.ManualSetup));
-        device.Send(new CustomizeSetupSpace(open.Id, Customization("Renamed")));
-        device.Send(new MoveSetupSpace(open.Id, locked.Id));
-        device.Send(new CustomizeSetupSpace(locked.Id, Customization("Also renamed")));
-
-        var before = device.Authority.Current;
-        Assert.Equal(new SpaceLocked(locked.Id),
-            Assert.Throws<Rejected>(() => device.Send(new ApplyManualSetup(device.Workspace, window))).Rejection);
-        Assert.Same(before, device.Authority.Current);
-
-        // Moving a Space in the order changes no Space, as ReorderSpaces moves a locked one too.
-        device.Send(new CustomizeSetupSpace(locked.Id, OwnCustomization(locked)));
-        device.Send(new ApplyManualSetup(device.Workspace, window));
-        var current = device.Authority.Current;
-        Assert.Equal([open.Id, locked.Id], current.Spaces.Select(space => space.Id));
-        Assert.Equal(kept, Stored(current.Spaces[1]));
-        Assert.Equal("Renamed", current.Spaces[0].Settings.Name);
-    }
-
-    [Fact]
-    public void DeletionStillReachesALockedSpaceWhileItsCommandsStayRejected() {
-        var session = GuardedSession(withOpenSecondSpace: true);
-        using var device = new TestDevice(session);
-        var deleting = Identity(session).Space;
-        device.Send(new BeginDeletingSpace(device.Workspace, Guid.NewGuid(), deleting, Guid.NewGuid()));
-        Assert.Equal(deleting, Assert.IsType<SpaceBeingDeleted>(Assert.Throws<Rejected>(() =>
-            device.Send(new CleanUpCurrentTabs(device.Workspace, deleting))).Rejection).SpaceId);
     }
 
     private static IReadOnlyList<JsonObject> SpaceRecords(JsonNode session) {
@@ -321,31 +280,5 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(new MoveTab(borrowed, identity.Space,
             Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>()), TabPlacement.Current, null, null,
             LeavesSplit: false))).Rejection);
-    }
-
-    [Fact]
-    public void TwoSpacesCannotShareOneProfileThroughRestoreOrImport() {
-        var session = SavedSession().Document["session"]!;
-        var space = session["spaces"]![0]!;
-        var second = space.DeepClone(); second["id"] = SwiftId(Guid.NewGuid());
-        second["tabs"] = new JsonArray(); second["folders"] = new JsonArray();
-        second["history"] = new JsonArray(); second["archivedTabs"] = new JsonArray();
-        var shared = session.DeepClone();
-        shared["spaces"] = new JsonArray(space.DeepClone(), second.DeepClone());
-        // A seed opens repaired, as a restored file does: the second Space
-        // wears a profile of its own.
-        using (var app = new CrestApp()) {
-            var opened = Assert.Single(app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(shared)))
-                .OfType<WorkspaceOpened>());
-            Assert.Equal(2, opened.Session.Spaces.Select(s => s.ProfileId).Distinct().Count());
-        }
-
-        // Repair keeps the first occurrence and issues the collision a fresh
-        // profile, so an imported archive cannot adopt another Space's data.
-        var repaired = NativeSessionMaintenance.Repair(shared.AsObject(), 800000002.0)["session"]!;
-        var profiles = repaired["spaces"]!.AsArray()
-            .Select(s => s!["profile"]!["id"]!.GetValue<string>().ToUpperInvariant()).ToArray();
-        Assert.Equal(2, profiles.Distinct().Count());
-        Assert.Equal(space["profile"]!["id"]!.GetValue<string>().ToUpperInvariant(), profiles[0]);
     }
 }

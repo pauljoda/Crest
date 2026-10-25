@@ -184,7 +184,7 @@ final class WebKitEngineBinding: EngineBinding {
             request: replay, sourcePageID: page.id, dataStore: page.webView.configuration.websiteDataStore,
             stagedAt: now)
         return BrowserEngineNavigation(
-            implementation: integration.implementationId, token: linkID.uuidString, sourcePageID: page.id)
+            implementation: integration.implementationId, linkID: linkID, sourcePageID: page.id)
     }
 
     /// Asks the core to make the link `navigation` names the first load of
@@ -192,9 +192,8 @@ final class WebKitEngineBinding: EngineBinding {
     /// longer applies: it is gone, heads elsewhere, was followed in another
     /// store, or the page has loaded something; or when the core refuses it.
     func stage(_ navigation: BrowserEngineNavigation, into page: WebKitEnginePage, expecting url: URL) -> Bool {
-        guard navigation.implementation == integration.implementationId,
-            let linkID = UUID(uuidString: navigation.token)
-        else { return false }
+        guard navigation.implementation == integration.implementationId else { return false }
+        let linkID = navigation.linkID
         guard let link = stagedLinks[linkID], link.request.url == url,
             link.dataStore === page.webView.configuration.websiteDataStore, page.webView.url == nil, let core
         else {

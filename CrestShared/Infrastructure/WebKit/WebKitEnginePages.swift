@@ -77,7 +77,7 @@ final class WebKitEnginePages: EnginePages {
     func export(_ exporting: ExportPage) -> Bool {
         #if os(macOS)
             guard let page = page(exporting.pageID) else { return false }
-            return exporting.format.export(exporting, from: page, using: self)
+            return export(exporting, from: page)
         #else
             return false
         #endif
@@ -245,23 +245,34 @@ final class WebKitEnginePages: EnginePages {
 }
 
 #if os(macOS)
-    extension WebKitEnginePages: WebKitPageExporting {
-        func exportPDF(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+    extension WebKitEnginePages {
+        /// Makes `page`'s document in the export's format. Answers whether
+        /// the export began; WebKit makes no MHTML.
+        private func export(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+            switch exporting.format {
+            case .pdf: exportPDF(exporting, from: page)
+            case .png: exportPNG(exporting, from: page)
+            case .mhtml: exportMHTML(exporting, from: page)
+            case .webArchive: exportWebArchive(exporting, from: page)
+            }
+        }
+
+        private func exportPDF(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
             let webView = page.webView
             return export(exporting) { try? await webView.pdf(configuration: WKPDFConfiguration()) }
         }
 
-        func exportPNG(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        private func exportPNG(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
             let webView = page.webView
             return export(exporting) { await Self.fullPage(of: webView, width: exporting.width) }
         }
 
         /// WebKit keeps its archives as web archives, never as MHTML.
-        func exportMHTML(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        private func exportMHTML(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
             false
         }
 
-        func exportWebArchive(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        private func exportWebArchive(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
             let webView = page.webView
             return export(exporting) { try? await Self.webArchive(of: webView) }
         }

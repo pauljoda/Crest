@@ -32,7 +32,7 @@ public sealed record PromoteTransientPage(Guid WorkspaceId, Guid WindowId, Guid 
         edited.InsertTab(tab, followUp.Window?.Tab(destination.Id) is { } shown ? edited.InsertionIndexAfter(shown) : null);
         followUp.ShowTab(destination.Id, tab.Id).ShowSpace(destination.Id);
         var adopts = page.MovesBetweenWindows && page.SpaceId == destination.Id && page.ProfileId == destination.ProfileId;
-        return new(NativeSessionAuthority.Replacing(turn.Basis, edited.Capture(destination)), SyncStaging.Creation, followUp,
+        return new(turn.Basis.Replacing(edited.Capture(destination)), SyncStaging.Creation, followUp,
             new([], null, new SessionTransientPromotion(page.Id, tab.Id, adopts)), Completes: page.Id);
     }
 

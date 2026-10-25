@@ -76,50 +76,18 @@ extension BrowserPage: WKNavigationDelegate {
         ).apply(to: self, for: navigationAction, in: webView, decisionHandler: decisionHandler)
     }
 
-    /// Lets the core judge the link `navigationAction` follows, once WebKit may
-    /// load it, and answers WebKit.
-    func decideLinkPolicy(
-        for navigationAction: WKNavigationAction,
-        in webView: WKWebView,
-        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
-    ) {
-        let sourcePresentation =
-            navigationAction.navigationType == .linkActivated
-            ? peekSourcePresentation(
-                for: navigationAction.request.url,
-                in: webView
-            )
-            : nil
-        // The core decides what the link does, as it does for Chromium's.
-        let webKitPage = webKitAdapter?.webKitPage
-        let decision =
-            webKitPage?.linkActivation(to: navigationAction.request.url, gesture: navigationAction.linkGesture)
-            ?? .navigate
-        // A modified click keeps its initiator's referrer through a staged
-        // request; a saved-site Peek starts afresh, as it does on Chromium.
-        let engineNavigation = decision.stagesLink ? webKitPage?.stageLink(navigationAction.request) : nil
-        if let request = decision.peekRequest(
-            destinationURL: navigationAction.request.url,
-            context: navigationContext, sourcePresentation: sourcePresentation,
-            engineNavigation: engineNavigation)
-        {
-            openPeek(request)
-            decisionHandler(.cancel)
-            return
-        }
-        if let engineNavigation { corePage.discardStagedLink(engineNavigation) }
-        if decision.opensTab {
-            openModifiedLink(navigationAction.request, spaceID, decision.selectsTab)
-            decisionHandler(.cancel)
-            return
-        }
-        if navigationAction.targetFrame?.isMainFrame == true {
-            if navigationAction.navigationType == .linkActivated {
-                navigationHistory.recordLink(to: navigationAction.request.url, in: webView.backForwardList)
-            }
-            prepareForNavigation(to: navigationAction.request.url)
-        }
-        decisionHandler(.allow)
+    /// Where the pointer clicked the link `navigationAction` follows, for a
+    /// link the person activated, which a Peek grows from.
+    func linkSourcePresentation(
+        for navigationAction: WKNavigationAction, in webView: WKWebView
+    ) -> BrowserPeekSourcePresentation? {
+        navigationAction.navigationType == .linkActivated
+            ? peekSourcePresentation(for: navigationAction.request.url, in: webView) : nil
+    }
+
+    /// Opens a modified click's link in a new tab of the page's Space.
+    func routeModifiedLink(_ request: URLRequest, selecting: Bool) {
+        openModifiedLink(request, spaceID, selecting)
     }
 
     private func peekSourcePresentation(
@@ -182,26 +150,7 @@ extension BrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
-        if let mediaNavigation = BrowserDirectMediaNavigation.classify(
-            canShowMIMEType: navigationResponse.canShowMIMEType,
-            isForMainFrame: navigationResponse.isForMainFrame,
-            response: navigationResponse.response
-        ) {
-            decisionHandler(.cancel)
-            Task { @MainActor [weak webView] in
-                webView?.loadSimulatedRequest(
-                    mediaNavigation.request,
-                    responseHTML: mediaNavigation.responseHTML
-                )
-            }
-            return
-        }
-        decisionHandler(
-            BrowserNavigationDecider.decidePolicy(
-                canShowMIMEType: navigationResponse.canShowMIMEType,
-                response: navigationResponse.response
-            )
-        )
+        decideResponsePolicy(for: navigationResponse, in: webView, decisionHandler: decisionHandler)
     }
 
     func webView(
@@ -256,14 +205,6 @@ extension BrowserPage: WKNavigationDelegate {
         webKitPage.startDownload(download, isUserInitiated: isUserInitiated)
     }
 
-    func discardDownloadOnlySurfaceIfNeeded() {
-        guard committedNavigationCount == 0 else { return }
-        Task { @MainActor [weak self] in
-            guard let self, committedNavigationCount == 0 else { return }
-            host?.discardDownloadOnlyPage(self)
-        }
-    }
-
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         faviconSession?.invalidate()
         translation.reset()
@@ -287,27 +228,10 @@ extension BrowserPage: WKNavigationDelegate {
                 URLCredential?
             ) -> Void
     ) {
-        if let identity = BrowserServerTrustIdentity.challengeIdentity(
-            for: challenge
-        ) {
-            if serverTrustOverrides.isApproved(identity, for: profileID),
-                let trust = challenge.protectionSpace.serverTrust
-            {
-                pendingServerTrustIdentity = nil
-                completionHandler(.useCredential, URLCredential(trust: trust))
-            } else {
-                pendingServerTrustIdentity = identity
-                completionHandler(.performDefaultHandling, nil)
-            }
-            return
-        }
-        answerSignIn(challenge, from: webKitAdapter?.webKitPage, completionHandler: completionHandler)
+        answerChallenge(challenge, completionHandler: completionHandler)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
-        #if CREST_PERFORMANCE_HARNESS
-            BrowserPerformanceProcessReporter.report(webView: webView)
-        #endif
         guard isCurrentNavigation(navigation) else { return }
         activeNavigation = nil
         let committedNavigation = committedNavigationCount
@@ -323,9 +247,11 @@ extension BrowserPage: WKNavigationDelegate {
             else { return }
             let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
             self.completedNavigationCount += 1
+            // The page keeps a clear under-page colour until its first load
+            // finishes, so it follows the count once the count has moved.
+            self.updateUnderPageBackground()
             self.webKitAdapter?.reporter?.finished(finishedURL, title: title)
         }
-        updateUnderPageBackground()
         mediaSessionCoordinator?.didFinishNavigation()
         refreshFavicon()
         Task { [weak self] in

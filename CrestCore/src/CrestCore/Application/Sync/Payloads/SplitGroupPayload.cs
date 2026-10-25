@@ -17,8 +17,13 @@ internal sealed record SplitGroupPayload(
     SyncTime? TintModifiedAt) {
     #region Static Variables
 
-    private const int MaximumTitleBytes = 2_048;
-    private const int MaximumIconBytes = 128;
+    /// The members a split's metadata carries; a record keeps what a newer
+    /// build writes beside them.
+    public static IReadOnlyList<string> Members { get; } = [
+        StoredSessionCodec.Key.Id, StoredSessionCodec.Key.CustomTitle, StoredSessionCodec.Key.TitleModifiedAt,
+        StoredSessionCodec.Key.CustomIconSymbol, StoredSessionCodec.Key.IconModifiedAt, StoredSessionCodec.Key.Tint,
+        StoredSessionCodec.Key.TintModifiedAt
+    ];
 
     #endregion
 
@@ -44,23 +49,24 @@ internal sealed record SplitGroupPayload(
 
     /// One split as every client reads it; see `Normalized`.
     private static SplitGroupPayload Read(SyncPayloadReader value) {
-        string? title = value.OptionalText("customTitle")?.Trim();
-        return new(value.WrappedIdentity("id"), string.IsNullOrEmpty(title) ? null : title,
-            value.OptionalTime("titleModifiedAt")?.ToWholeMilliseconds(),
-            EmojiIcon.Parse(value.OptionalText("customIconSymbol")) is { } icon ? TabIconMode.EmojiPrefix + icon.Emoji : null,
-            value.OptionalTime("iconModifiedAt")?.ToWholeMilliseconds(),
-            value.Value["tint"] is { } tint ? SpacePayload.Color(tint) : null,
-            value.OptionalTime("tintModifiedAt")?.ToWholeMilliseconds());
+        string? title = value.OptionalText(StoredSessionCodec.Key.CustomTitle)?.Trim();
+        return new(value.WrappedIdentity(StoredSessionCodec.Key.Id), string.IsNullOrEmpty(title) ? null : title,
+            value.OptionalTime(StoredSessionCodec.Key.TitleModifiedAt)?.ToWholeMilliseconds(),
+            EmojiIcon.Parse(value.OptionalText(StoredSessionCodec.Key.CustomIconSymbol)) is { } icon
+                ? TabIconMode.EmojiPrefix + icon.Emoji : null,
+            value.OptionalTime(StoredSessionCodec.Key.IconModifiedAt)?.ToWholeMilliseconds(),
+            value.Value[StoredSessionCodec.Key.Tint] is { } tint ? SpacePayload.Color(tint) : null,
+            value.OptionalTime(StoredSessionCodec.Key.TintModifiedAt)?.ToWholeMilliseconds());
     }
 
     public JsonObject Encode(SyncPayloadForm form) {
-        var value = new JsonObject { ["id"] = StoredSessionCodec.WrappedIdentity(Id) };
-        if (CustomTitle is not null) value["customTitle"] = CustomTitle;
-        if (TitleModifiedAt is { } titled) value["titleModifiedAt"] = form.Seconds(titled);
-        if (CustomIconSymbol is not null) value["customIconSymbol"] = CustomIconSymbol;
-        if (IconModifiedAt is { } iconed) value["iconModifiedAt"] = form.Seconds(iconed);
-        if (Tint is { } tint) value["tint"] = StoredSessionCodec.Encode(tint);
-        if (TintModifiedAt is { } tinted) value["tintModifiedAt"] = form.Seconds(tinted);
+        var value = new JsonObject { [StoredSessionCodec.Key.Id] = StoredSessionCodec.WrappedIdentity(Id) };
+        if (CustomTitle is not null) value[StoredSessionCodec.Key.CustomTitle] = CustomTitle;
+        if (TitleModifiedAt is { } titled) value[StoredSessionCodec.Key.TitleModifiedAt] = form.Seconds(titled);
+        if (CustomIconSymbol is not null) value[StoredSessionCodec.Key.CustomIconSymbol] = CustomIconSymbol;
+        if (IconModifiedAt is { } iconed) value[StoredSessionCodec.Key.IconModifiedAt] = form.Seconds(iconed);
+        if (Tint is { } tint) value[StoredSessionCodec.Key.Tint] = StoredSessionCodec.Encode(tint);
+        if (TintModifiedAt is { } tinted) value[StoredSessionCodec.Key.TintModifiedAt] = form.Seconds(tinted);
         return value;
     }
 
@@ -90,9 +96,10 @@ internal sealed record SplitGroupPayload(
 
     /// Throws `UnreadableSyncPayloadException` when a client would not take the split.
     public void Validate() {
-        if (CustomTitle is { } title && (title.Length == 0 || System.Text.Encoding.UTF8.GetByteCount(title) > MaximumTitleBytes))
+        if (CustomTitle is { } title
+            && (title.Length == 0 || System.Text.Encoding.UTF8.GetByteCount(title) > SyncedText.SplitTitle.Limit))
             throw new UnreadableSyncPayloadException();
-        if (CustomIconSymbol is { } icon && (icon.Length == 0 || System.Text.Encoding.UTF8.GetByteCount(icon) > MaximumIconBytes
+        if (CustomIconSymbol is { } icon && (icon.Length == 0 || System.Text.Encoding.UTF8.GetByteCount(icon) > SyncedText.SplitIcon.Limit
             || EmojiIcon.Parse(icon) is null)) throw new UnreadableSyncPayloadException();
     }
 

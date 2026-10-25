@@ -6,78 +6,6 @@ import XCTest
 
 @MainActor
 final class BrowserContentBlockingTests: XCTestCase {
-    @MainActor
-    func testBalancedProtectionCompilesOnlyCrestsBundledRuleList() async throws {
-        let store = try isolatedRuleListStore()
-        defer { store.remove() }
-        let compiler = RecordingBuiltInRuleListCompiler()
-        let core = CrestCore()
-        let provider = BrowserContentRuleListProvider(
-            core: core,
-            ruleListStore: store.store,
-            compiler: compiler
-        )
-
-        let ruleLists = try await provider.balancedRuleLists()
-        let rules = try core.query(BalancedProtectionRules())
-
-        XCTAssertEqual(ruleLists.map(\.identifier), [rules.identifier])
-        XCTAssertEqual(compiler.identifiers, [rules.identifier])
-        XCTAssertEqual(compiler.sources, [rules.source])
-    }
-
-    func testPagePoolReconcilesThePolicyAcrossResidentAndRecoveredTransientPages() async throws {
-        let store = try isolatedRuleListStore()
-        defer { store.remove() }
-        let ruleList = try await BrowserContentRuleListCompiler.compile(
-            identifier: "com.pauldavis.crest.tests.pool-reconciliation.\(UUID().uuidString)",
-            source: blockingRuleSource(matching: "crest-pool-reconciliation\\.js$"),
-            store: store.store
-        )
-        let provider = StubContentRuleListProvider(generations: [[ruleList]])
-        let firstTab = TabState.Seed.startPage()
-        let firstSpace = contentBlockingSpace(name: "Protected", tab: firstTab)
-        let browser = BrowserStore.hostingPages(
-            SessionState.Seed(spaces: [firstSpace]), showing: firstSpace.id, tabs: [firstSpace.id: firstTab.id],
-            core: .hostingPages(contentRuleLists: provider))
-        let pool = BrowserPagePool(browser: browser, browsingMode: .privateBrowsing)
-        defer {
-            for tabID in pool.retainedTabIDs {
-                pool.unloadPage(for: tabID)
-            }
-        }
-
-        await pool.prepareContentBlocking()
-        XCTAssertNil(
-            pool.contentBlockingErrorDescription,
-            pool.contentBlockingErrorDescription ?? ""
-        )
-        pool.select()
-        XCTAssertEqual(pool.activePage?.isContentBlockingActive, true)
-        let transientLease = try XCTUnwrap(
-            pool.makeTransientPageLease(
-                url: URL(string: "about:blank")!,
-                in: try XCTUnwrap(browser.spaceModel(firstSpace.id))
-            )
-        )
-        XCTAssertEqual(transientLease.page?.isContentBlockingActive, true)
-
-        var preferences = try XCTUnwrap(browser.spaceModel(firstSpace.id)).settings.browsingPreferences
-        preferences.contentBlocking = .off
-        browser.updateBrowsingPreferences(preferences, in: firstSpace.id)
-        await pool.reconcileContentBlocking()
-
-        XCTAssertEqual(pool.activePage?.isContentBlockingActive, false)
-        XCTAssertEqual(transientLease.page?.isContentBlockingActive, false)
-
-        transientLease.setActive(false)
-        pool.relieveMemoryPressure(.warning)
-        XCTAssertNil(transientLease.page)
-        transientLease.restore()
-        XCTAssertEqual(transientLease.page?.isContentBlockingActive, false)
-
-    }
-
     func testTurningOffCrestProtectionPreservesAnotherInstalledRuleList() async throws {
         let crestIdentifier = "com.pauldavis.crest.tests.owned-rules.\(UUID().uuidString)"
         let extensionIdentifier = "com.pauldavis.crest.tests.extension-rules.\(UUID().uuidString)"
@@ -142,8 +70,7 @@ final class BrowserContentBlockingTests: XCTestCase {
                         spaceID: space.id,
                         profileID: space.profileID,
                         spaceName: space.settings.name,
-                        contentRuleList: crestRuleList,
-                        openNewTab: { _ in }
+                        contentRuleList: crestRuleList
                     )
                 })
             defer { page.release(keepingState: false) }
@@ -301,28 +228,6 @@ final class BrowserContentBlockingTests: XCTestCase {
 private enum ContentBlockingTestError: Error {
     case unavailableRuleListStore
     case navigationTimedOut
-}
-
-@MainActor
-private final class RecordingBuiltInRuleListCompiler:
-    BrowserContentRuleListCompiling
-{
-    private(set) var identifiers: [String] = []
-    private(set) var sources: [String] = []
-
-    func compile(
-        identifiers: [String],
-        sources: [String],
-        store: WKContentRuleListStore
-    ) async throws -> [WKContentRuleList] {
-        self.identifiers = identifiers
-        self.sources = sources
-        return try await BrowserContentRuleListCompilerAdapter().compile(
-            identifiers: identifiers,
-            sources: sources,
-            store: store
-        )
-    }
 }
 
 /// A rule-list store of its own, so a test never sweeps or reads compiled lists

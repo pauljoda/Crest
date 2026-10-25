@@ -117,7 +117,7 @@ internal sealed partial class Device {
     /// person's own session that is not being deleted. Called without the
     /// device lock, since it reads the session.
     internal bool OffersToAgents(Guid spaceId) =>
-        Persistent() is (_, var authority) && authority.Current.Spaces.Any(space => space.Id == spaceId) && !authority.IsDeleting(spaceId);
+        Persistent() is (_, var authority) && authority.Current.Space(spaceId) is not null && !authority.IsDeleting(spaceId);
 
     /// Whether an agent may use `tab`: one that shows a web page or none yet,
     /// never Crest's own view, a browser or extension page, or a file.

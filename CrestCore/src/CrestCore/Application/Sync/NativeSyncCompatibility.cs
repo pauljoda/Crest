@@ -12,6 +12,13 @@ internal static class NativeSyncCompatibility {
     #region Variables
 
     private sealed record Shape(string Names, Dictionary<string, Shape>? Children = null, Shape? Element = null, bool ById = false) {
+        #region Constructors
+
+        public Shape(IEnumerable<string> names, Dictionary<string, Shape>? children = null) : this(string.Join(' ', names), children) {
+        }
+
+        #endregion
+
         #region Variables
 
         public HashSet<string> Fields { get; } = Names.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
@@ -37,21 +44,33 @@ internal static class NativeSyncCompatibility {
         "searchProvider selectedSearchProviderID customSearchProviders searchSuggestionsEnabled searchFollowsDefault suggestionsFollowDefault currentTabCleanupPolicy contentBlockingPolicy dataRetention",
         new() { ["customSearchProviders"] = List(SearchProvider, true), ["dataRetention"] = new("history archive downloads") });
 
-    private static readonly Shape Group = new("id customTitle titleModifiedAt customIconSymbol iconModifiedAt tint tintModifiedAt",
-        new() { ["id"] = Identity, ["tint"] = Color });
+    private static readonly Shape Group = new(SplitGroupPayload.Members,
+        new() { [StoredSessionCodec.Key.Id] = Identity, [StoredSessionCodec.Key.Tint] = Color });
 
-    private static readonly Shape Tab = new(
-        "id spaceID title nativeContent url savedURL symbol placement folderID splitGroupID orderToken lastActivatedAt positionModifiedAt customTitle titleModifiedAt keepsPageLoaded",
-        new() { ["id"] = Identity, ["spaceID"] = Identity, ["folderID"] = Identity, ["splitGroupID"] = Identity });
+    private static readonly Shape Tab = new(TabPayload.Members, new() {
+        [StoredSessionCodec.Key.Id] = Identity,
+        [StoredSessionCodec.Key.SpaceId] = Identity,
+        [StoredSessionCodec.Key.FolderId] = Identity,
+        [StoredSessionCodec.Key.SplitGroupId] = Identity
+    });
 
     private static readonly Dictionary<string, Shape> Values = new() {
-        [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy accessPolicyModifiedAt credentialsEnabled credentialsEnabledModifiedAt isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
-            new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
-        [SyncRecordKind.Folder.Name] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
-            new() { ["id"] = Identity, ["spaceID"] = Identity, ["parentID"] = Identity, ["orderAnchorTabID"] = Identity, ["color"] = Color }),
+        [SyncRecordKind.Space.Name] = new(SpacePayload.Members, new() {
+            [StoredSessionCodec.Key.Id] = Identity,
+            [StoredSessionCodec.Key.Branding] = Branding,
+            [StoredSessionCodec.Key.BrowsingPreferences] = Browsing,
+            [StoredSessionCodec.Key.SplitGroups] = List(Group, true)
+        }),
+        [SyncRecordKind.Folder.Name] = new(FolderPayload.Members, new() {
+            [StoredSessionCodec.Key.Id] = Identity,
+            [StoredSessionCodec.Key.SpaceId] = Identity,
+            [StoredSessionCodec.Key.ParentId] = Identity,
+            [StoredSessionCodec.Key.OrderAnchorTabId] = Identity,
+            [StoredSessionCodec.Key.Color] = Color
+        }),
         [SyncRecordKind.Tab.Name] = Tab,
-        [SyncRecordKind.History.Name] = new("id spaceID url title firstVisitedAt lastVisitedAt visitCount", new() { ["spaceID"] = Identity }),
-        [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab })
+        [SyncRecordKind.History.Name] = new(HistoryPayload.Members, new() { [StoredSessionCodec.Key.SpaceId] = Identity }),
+        [SyncRecordKind.Archive.Name] = new(ArchivePayload.Members, new() { [StoredSessionCodec.Key.Tab] = Tab })
     };
 
     #endregion
@@ -61,9 +80,10 @@ internal static class NativeSyncCompatibility {
     private static Shape List(Shape element, bool byId = false) => new("", Element: element, ById: byId);
 
     internal static JsonObject Preserve(JsonObject current, JsonObject? previous) {
-        string kind = current["type"]!.GetValue<string>();
-        if (previous?["type"]?.GetValue<string>() != kind) return current;
-        return Merge(new("type value", new() { ["value"] = Values[kind] }), current, previous).AsObject();
+        string kind = current[SyncPayload.Key.Type]!.GetValue<string>();
+        if (previous?[SyncPayload.Key.Type]?.GetValue<string>() != kind) return current;
+        return Merge(new([SyncPayload.Key.Type, SyncPayload.Key.Value], new() { [SyncPayload.Key.Value] = Values[kind] }), current, previous)
+            .AsObject();
     }
 
     private static string? MemberId(JsonNode? value) {

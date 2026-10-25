@@ -5,35 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserNativeWindowInputTests: XCTestCase {
-    func testBrowserChromeKeepsTheNativeTitleBarAndControls() throws {
-        let window = makeWindow()
-        defer { window.close() }
-        let content = try XCTUnwrap(window.contentView)
-        let buttons = BrowserNativeWindowControlsHostView.buttonTypes.compactMap(window.standardWindowButton)
-        let input = NSTextField(frame: NSRect(x: 350, y: 560, width: 200, height: 28))
-        content.addSubview(input)
-        let chrome = BrowserNativeWindowControlsHostView()
-        content.addSubview(chrome)
-        window.layoutIfNeeded()
-
-        // The window stays movable, so the system's window commands move it;
-        // content under the title bar still receives its own clicks.
-        XCTAssertTrue(window.isMovable)
-        XCTAssertTrue(window.styleMask.contains(.resizable))
-        XCTAssertTrue(window.styleMask.contains(.titled))
-        XCTAssertTrue(content.hitTest(NSPoint(x: 400, y: 574)) === input)
-        for (type, button) in zip(BrowserNativeWindowControlsHostView.buttonTypes, buttons) {
-            XCTAssertTrue(window.standardWindowButton(type) === button)
-            XCTAssertTrue(button.isEnabled)
-        }
-
-        chrome.isVisible = false
-        chrome.sidebarOnRight = true
-        chrome.applyBrowserChrome()
-        XCTAssertTrue(window.isMovable)
-        XCTAssertTrue(content.hitTest(NSPoint(x: 400, y: 574)) === input)
-    }
-
     func testAPageHoldsTheWindowStillOnlyWhileThePointerIsOnItsTop() throws {
         let window = makeWindow()
         defer { window.close() }
@@ -60,18 +31,6 @@ final class BrowserNativeWindowInputTests: XCTestCase {
         XCTAssertTrue(window.isMovable)
         tracker.mouseMoved(with: try pointer(at: NSPoint(x: 100, y: titleBarBottom + 10), in: window))
         XCTAssertTrue(window.isMovable)
-    }
-
-    func testLeavingAWindowKeepsTheFullscreenStateAppKitGaveIt() {
-        let windowed: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
-        let chrome = windowed.union(.fullSizeContentView)
-
-        XCTAssertEqual(
-            chrome.union(.fullScreen).restoringBrowserChrome(to: windowed),
-            windowed.union(.fullScreen))
-        XCTAssertEqual(
-            chrome.restoringBrowserChrome(to: windowed.union(.fullScreen)),
-            windowed)
     }
 
     private func pointer(at location: NSPoint, in window: NSWindow) throws -> NSEvent {

@@ -12,7 +12,7 @@ public sealed record CreateSpace(Guid WorkspaceId, Guid WindowId, Guid SpaceId) 
 
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         workspace.RequireOwnedSpaces();
-        if (turn.Basis.Spaces.Any(space => space.Id == SpaceId)) throw new Rejected(new SpaceAlreadyExists(SpaceId));
+        if (turn.Basis.Space(SpaceId) is not null) throw new Rejected(new SpaceAlreadyExists(SpaceId));
         if (turn.Basis.Spaces.Count >= SessionState.MaximumSpaces) throw new Rejected(new SpaceLimitReached(SessionState.MaximumSpaces));
         var space = SpaceTemplate.For(workspace.Kind.IsPrivate)
             .Make(SpaceId, turn.Ids.Next(), turn.Ids.Next, turn.Basis.Spaces.Count + 1, turn.Now);

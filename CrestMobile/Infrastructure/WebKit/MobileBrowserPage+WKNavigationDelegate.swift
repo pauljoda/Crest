@@ -99,47 +99,14 @@ extension MobileBrowserPage: WKNavigationDelegate {
         ).apply(to: self, for: navigationAction, in: webView, decisionHandler: decisionHandler)
     }
 
-    /// Lets the core judge the link `navigationAction` follows, once WebKit may
-    /// load it, and answers WebKit.
-    func decideLinkPolicy(
-        for navigationAction: WKNavigationAction,
-        in webView: WKWebView,
-        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
-    ) {
+    /// Where the person touched the link `navigationAction` follows, for a
+    /// link they activated at the top level, which a Peek grows from.
+    func linkSourcePresentation(
+        for navigationAction: WKNavigationAction, in webView: WKWebView
+    ) -> BrowserPeekSourcePresentation? {
         let gesture = navigationAction.linkGesture
-        let sourcePresentation =
-            gesture.userActivated && gesture.topLevel
-            ? linkActivationSourceStore.consume(
-                destinationURL: navigationAction.request.url
-            )
-            : nil
-        // The core decides what the link does, as it does for Chromium's.
-        let decision = webKitPage.linkActivation(to: navigationAction.request.url, gesture: gesture)
-        // A modified click keeps its initiator's referrer through a staged
-        // request; a saved-site Peek starts afresh, as it does on Chromium.
-        let engineNavigation = decision.stagesLink ? webKitPage.stageLink(navigationAction.request) : nil
-        if let request = decision.peekRequest(
-            destinationURL: navigationAction.request.url,
-            context: navigationContext, sourcePresentation: sourcePresentation,
-            engineNavigation: engineNavigation)
-        {
-            openPeek(request)
-            decisionHandler(.cancel)
-            return
-        }
-        if let engineNavigation { corePage.discardStagedLink(engineNavigation) }
-        if decision.opensTab {
-            routeModifiedLink(navigationAction.request, selecting: decision.selectsTab)
-            decisionHandler(.cancel)
-            return
-        }
-        if navigationAction.targetFrame?.isMainFrame == true {
-            if navigationAction.navigationType == .linkActivated {
-                navigationHistory.recordLink(to: navigationAction.request.url, in: webView.backForwardList)
-            }
-            prepareForNavigation(to: navigationAction.request.url)
-        }
-        decisionHandler(.allow)
+        return gesture.userActivated && gesture.topLevel
+            ? linkActivationSourceStore.consume(destinationURL: navigationAction.request.url) : nil
     }
 
     func webView(
@@ -147,26 +114,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
-        if let mediaNavigation = BrowserDirectMediaNavigation.classify(
-            canShowMIMEType: navigationResponse.canShowMIMEType,
-            isForMainFrame: navigationResponse.isForMainFrame,
-            response: navigationResponse.response
-        ) {
-            decisionHandler(.cancel)
-            Task { @MainActor [weak webView] in
-                webView?.loadSimulatedRequest(
-                    mediaNavigation.request,
-                    responseHTML: mediaNavigation.responseHTML
-                )
-            }
-            return
-        }
-        decisionHandler(
-            BrowserNavigationDecider.decidePolicy(
-                canShowMIMEType: navigationResponse.canShowMIMEType,
-                response: navigationResponse.response
-            )
-        )
+        decideResponsePolicy(for: navigationResponse, in: webView, decisionHandler: decisionHandler)
     }
 
     func webView(
@@ -213,14 +161,6 @@ extension MobileBrowserPage: WKNavigationDelegate {
             isUserInitiated: feedbackSource != nil)
     }
 
-    func discardDownloadOnlySurfaceIfNeeded() {
-        guard committedNavigationCount == 0 else { return }
-        Task { @MainActor [weak self] in
-            guard let self, committedNavigationCount == 0 else { return }
-            host?.discardDownloadOnlyPage(self)
-        }
-    }
-
     func webView(
         _ webView: WKWebView,
         didReceive challenge: URLAuthenticationChallenge,
@@ -230,21 +170,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
                 URLCredential?
             ) -> Void
     ) {
-        if let identity = BrowserServerTrustIdentity.challengeIdentity(
-            for: challenge
-        ) {
-            if serverTrustOverrides.isApproved(identity, for: profileID),
-                let trust = challenge.protectionSpace.serverTrust
-            {
-                pendingServerTrustIdentity = nil
-                completionHandler(.useCredential, URLCredential(trust: trust))
-            } else {
-                pendingServerTrustIdentity = identity
-                completionHandler(.performDefaultHandling, nil)
-            }
-            return
-        }
-        answerSignIn(challenge, from: webKitPage, completionHandler: completionHandler)
+        answerChallenge(challenge, completionHandler: completionHandler)
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

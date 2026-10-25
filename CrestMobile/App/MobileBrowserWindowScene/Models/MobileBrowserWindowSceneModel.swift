@@ -49,7 +49,6 @@ final class MobileBrowserWindowSceneModel {
         tabStateArchive: (any BrowserTabStateArchiving)?,
         windowLayouts: BrowserWindowLayouts,
         startupBehavior: StartupBehavior,
-        monitorsMemoryPressure: Bool,
         usesEphemeralWebsiteDataStores: Bool = false,
         mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloads: MobileBrowserDownloads? = nil,
@@ -66,37 +65,10 @@ final class MobileBrowserWindowSceneModel {
         )
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(
-            browser: browser,
-            // The window's own store is where a tab's web view actually lives, so
-            // this is the residency a squeeze has to reach.
-            monitorsMemoryPressure: monitorsMemoryPressure,
-            usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
+            window: browser, usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             permissionCenter: permissionCenter,
-            mediaSessionStore: mediaSessionStore,
-            downloads: downloads,
-            loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
-                try await browser.httpAuthenticationCredential(
-                    for: protectionSpace,
-                    in: spaceID
-                )
-            },
-            saveHTTPAuthenticationCredential: { request, spaceID in
-                try await browser.saveHTTPAuthenticationCredential(
-                    username: request.username,
-                    password: request.password,
-                    protectionSpace: request.protectionSpace,
-                    in: spaceID,
-                    replacing: request.replacing
-                )
-            },
-            tabStateArchive: tabStateArchive,
-            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
-            openNewTab: { url in browser.openNewTab(url: url) },
-            openModifiedLink: { url, spaceID, selecting in
-                browser.openModifiedLink(url, in: spaceID, selecting: selecting)
-            },
-            openPeek: { request in transientBrowsing.presentPeek(request) }
-        )
+            mediaSessionStore: mediaSessionStore, downloads: downloads, tabStateArchive: tabStateArchive,
+            spaceAccess: spaceAccess, transientBrowsing: transientBrowsing)
         browser.tabLinkProvider = pages
         browser.tabCopying = pages
         self.browser = browser
@@ -133,6 +105,7 @@ final class MobileBrowserWindowSceneModel {
     func activateWindow() {
         reopenIfClosed()
         pageStoreRegistry.register(pages)
+        pageStoreRegistry.registerPrivateBrowsing(privatePages)
     }
 
     func cleanupDeferredWebsiteDataStores() async {
@@ -143,11 +116,6 @@ final class MobileBrowserWindowSceneModel {
         await browser.sweepExpiredBrowsingDataWhileSceneIsActive {
             pages.downloadCenter.sweepExpiredRecords(in: browser.spaceModels)
         }
-    }
-
-    func handleMemoryPressure() {
-        pages.handleMemoryPressure(.critical)
-        privatePages.handleMemoryPressure(.critical)
     }
 
     func prepareForInactiveScene() {
@@ -169,6 +137,7 @@ final class MobileBrowserWindowSceneModel {
         isClosed = true
         closePrivateWorkspace()
         pageStoreRegistry.unregister(pages)
+        pageStoreRegistry.unregister(privatePages)
         flushPendingPersistence()
     }
 
@@ -237,7 +206,6 @@ final class MobileBrowserWindowSceneModel {
             permissionCenter: downloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
             downloads: downloads,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess),
-            openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 privateBrowser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },

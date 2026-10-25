@@ -26,7 +26,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let pageEngine: BrowserWebKitPageEngine
 
     /// The store that owns this page. Weak because the store owns the page.
-    weak var host: (any MobileBrowserPageHosting)?
+    weak var host: MobileBrowserPageStore?
 
     /// True when web content opened this page through `window.open()`. WebKit
     /// drives such a page's history, so it neither restores nor archives any.
@@ -77,12 +77,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// screen. Selecting the tab again is what brings the page back.
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
-    var hasActiveLinkActivationBridge: Bool { linkActivationMessageProxy != nil }
 
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let pullToRefreshControl = UIRefreshControl()
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
-    @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: MobileBrowserPageStore.ModifiedLinkOpener
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
@@ -104,7 +102,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The URL Crest asked this page to load, as opposed to one web content
     /// asked for. Only an app-initiated load may reach a `file:` URL.
     @ObservationIgnored var appInitiatedURL: URL?
-    @ObservationIgnored private(set) var appInitiatedNavigationCount = 0
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored var contextMenuPreviewCommit: (() -> Void)?
     @ObservationIgnored var navigationContext: BrowserPageNavigationContext?
@@ -138,14 +135,14 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
-    @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
+    @ObservationIgnored private var credentialMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored private var linkActivationMessageProxy: MobileLinkActivationScriptMessageProxy?
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
-    @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
-    @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
-    @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
-    @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
+    @ObservationIgnored private var userActivityMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var geolocationMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var blockedPopupMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var mediaSessionMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     /// The system's consent the page asks before it sends the person's Allow
@@ -190,7 +187,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         saveHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.SaveCredential = { _ in },
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
-        openNewTab: @escaping (URL) -> Void,
         openModifiedLink: @escaping MobileBrowserPageStore.ModifiedLinkOpener = {
             _, _, _ in nil
         },
@@ -206,7 +202,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.permissionCenter = permissionCenter
         self.serverTrustOverrides = serverTrustOverrides
         self.linkDestinationHost = linkDestinationHost
-        self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         contentRuleSession = BrowserPageContentRuleSession(
@@ -394,7 +389,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         if let url = request.url {
             prepareToLoad(url)
         } else {
-            appInitiatedNavigationCount &+= 1
             appInitiatedURL = nil
             prepareForNavigation(to: nil)
         }
@@ -404,7 +398,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The page shows itself heading to `url`, which only an app-initiated
     /// load may reach when it is a local file.
     func prepareToLoad(_ url: URL) {
-        appInitiatedNavigationCount &+= 1
         appInitiatedURL = url
         prepareForNavigation(to: url)
     }
@@ -416,6 +409,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func historyMayHaveChanged() {
         reporter.reportHistoryAgain()
     }
+
+    /// The page WebKit's binding built for this page, which hosts every page
+    /// on iPhone and iPad.
+    var webKitEnginePage: WebKitEnginePage? { webKitPage }
 
     func routeModifiedLink(_ url: URL, selecting: Bool) {
         routeModifiedLink(URLRequest(url: url), selecting: selecting)

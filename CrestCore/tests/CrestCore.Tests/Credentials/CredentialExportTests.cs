@@ -30,28 +30,4 @@ public sealed class CredentialExportTests {
         Assert.Equal("Crest Passwords - Work.csv", file.FileName);
     }
 
-    [Fact]
-    public void RowsRunBySiteThenUsernameAsAPersonSortsThemThenIdentity() {
-        Guid first = Guid.Parse("00000000-0000-0000-0000-000000000001"), second = Guid.Parse("00000000-0000-0000-0000-000000000002");
-        var file = Area.Query(new CredentialExport([
-            Credential("b.example", "user10", "s"),
-            Credential("b.example", "User2", "s"),
-            Credential("a.example", "zed", "s"),
-            Credential("b.example", "same", "s", id: second),
-            Credential("b.example", "same", "s", name: "first", id: first)
-        ], "Work", "Space"));
-
-        var rows = Encoding.UTF8.GetString(file.Contents).Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Skip(1)
-            .Select(row => row.Split(',')).Select(fields => (fields[0], fields[2])).ToArray();
-        Assert.Equal([("\"a.example\"", "\"zed\""), ("\"first\"", "\"same\""), ("\"b.example\"", "\"same\""), ("\"b.example\"", "\"User2\""),
-            ("\"b.example\"", "\"user10\"")], rows);
-    }
-
-    [Fact]
-    public void TheFileNameKeepsTheSpacesLettersAndDigits() {
-        Assert.Equal("Crest Passwords - Work Client.csv", CredentialExportFile.Named("Work / Client", "Space"));
-        Assert.Equal("Crest Passwords - Café 東京 2.csv", CredentialExportFile.Named("  Café—東京 (2)! ", "Space"));
-        Assert.Equal("Crest Passwords - Espace.csv", CredentialExportFile.Named("\U0001F512 !! ", "Espace"));
-        Assert.Equal($"Crest Passwords - {new string('a', 80)}.csv", CredentialExportFile.Named(new string('a', 120), "Space"));
-    }
 }

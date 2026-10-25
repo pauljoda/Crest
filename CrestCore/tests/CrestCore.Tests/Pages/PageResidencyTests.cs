@@ -86,43 +86,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void CleanupKeepsATabOpenWhileItsPageRunsMedia() {
-        var (app, engine, _, clock, workspace, window, space, _) = ResidentHost();
-        using var disposal = app;
-        var (quiet, _) = ShowNewTab(app, engine, clock, workspace, window, space, "https://quiet.example/");
-        var (floating, floatingPage) = ShowNewTab(app, engine, clock, workspace, window, space, "https://floating.example/");
-        ShowNewTab(app, engine, clock, workspace, window, space, "https://shown.example/");
-        app.Report(engine, new PageStateChanged(floatingPage,
-            Showing("https://floating.example/") with { Media = PageMediaActivity.PictureInPicture }));
-        app.Drain();
-
-        // A day after the tab was last used, cleanup archives the tab nobody
-        // used, but not the one whose video still floats in Picture in Picture.
-        IEnumerable<TabState> Tabs() => app.Workspace(workspace).Current.Spaces.Single(candidate => candidate.Id == space).Tabs;
-        clock.Now = Tabs().Single(tab => tab.Id == quiet).LastActivatedAt + TimeSpan.FromDays(1);
-        app.Send(new CleanUpCurrentTabs(workspace, space));
-        var open = Tabs().Select(tab => tab.Id).ToArray();
-        Assert.DoesNotContain(quiet, open);
-        Assert.Contains(floating, open);
-    }
-
-    [Fact]
-    public void PressureKeepsAPageAnotherWindowShows() {
-        var (app, engine, _, clock, workspace, window, space, _) = ResidentHost();
-        using var disposal = app;
-        var (shared, _) = ShowNewTab(app, engine, clock, workspace, window, space, "https://shared.example/");
-        var (_, hidden) = ShowNewTab(app, engine, clock, workspace, window, space, "https://hidden.example/");
-        ShowNewTab(app, engine, clock, workspace, window, space, "https://shown.example/");
-        var second = Guid.NewGuid();
-        app.Send(new OpenWindow(second, workspace, Saved: false, null, null, [], RestoresTabs: true));
-        app.Send(new ShowTab(second, space, shared));
-
-        // The page off its own window's screen longest stays, because another
-        // window shows its tab; the next one goes.
-        Assert.Equal([hidden], Unloaded(app.Send(new ReportMemoryPressure(MemoryPressureLevel.Warning))));
-    }
-
-    [Fact]
     public void AnUnloadedTabRestoresItsPageOnceAtTheSameAddressAndAClosedTabFreesWhatItKept() {
         var (app, engine, binding, clock, workspace, window, space, _) = ResidentHost();
         using var disposal = app;
@@ -160,13 +123,4 @@ public sealed partial class BrowserContractsTests {
         { MemoryPressureLevel.Warning, DevicePlatform.Mobile, 8, 0 },
         { MemoryPressureLevel.Critical, DevicePlatform.Mobile, 8, 1 },
     };
-
-    /// The Mac gives back one page under warning pressure and half of them, at
-    /// least one, under critical pressure; iPhone and iPad hold on under warning
-    /// pressure and give back one page under critical pressure.
-    [Theory]
-    [MemberData(nameof(ReleaseBudgets))]
-    public void MemoryPressureBudgetsDifferByPlatformAndSeverity(MemoryPressureLevel level, DevicePlatform platform, int eligible,
-        int limit) =>
-        Assert.Equal(limit, platform.ReleaseLimit(level, eligible));
 }

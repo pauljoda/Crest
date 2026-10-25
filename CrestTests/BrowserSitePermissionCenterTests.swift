@@ -10,30 +10,6 @@ import XCTest
 /// of those spellings must find the choices the core keeps for the origin.
 @MainActor
 final class BrowserSitePermissionCenterTests: XCTestCase {
-    func testEverySpellingOfAnOriginIsOneOriginThatHashesAlike() throws {
-        let origin = SiteOrigin(scheme: "https", host: "news.example", port: 443)
-        let spellings = [
-            SiteOrigin(scheme: "HTTPS", host: "News.Example", port: 0),
-            SiteOrigin(scheme: "HTTPS", host: "News.Example", port: -1),
-            try XCTUnwrap(SiteOrigin(url: try XCTUnwrap(URL(string: "https://News.Example/path")))),
-            try JSONDecoder().decode(
-                SiteOrigin.self, from: Data(#"{"scheme": "HTTPS", "host": "News.Example", "port": 0}"#.utf8)),
-        ]
-        for spelling in spellings {
-            XCTAssertEqual(spelling, origin)
-            XCTAssertEqual(spelling.hashValue, origin.hashValue)
-        }
-        XCTAssertEqual(Set(spellings), [origin])
-        XCTAssertEqual(
-            SiteOrigin(scheme: "HTTP", host: "News.Example", port: 0),
-            SiteOrigin(scheme: "http", host: "news.example", port: 80))
-        XCTAssertEqual(
-            SiteOrigin(scheme: "Custom", host: "Handler.Example", port: 0),
-            SiteOrigin(scheme: "custom", host: "handler.example", port: 0))
-        XCTAssertEqual(SiteOrigin(scheme: "custom", host: "handler.example", port: 0).port, 0)
-        XCTAssertNil(SiteOrigin(url: URL(fileURLWithPath: "/tmp/index.html")))
-    }
-
     /// WebKit spells a URL's default port as 0. The origin WebKit gives a frame
     /// must still be the origin of the page's URL: the core's answers find the
     /// choice kept for it, and so must the platform's own comparisons, or

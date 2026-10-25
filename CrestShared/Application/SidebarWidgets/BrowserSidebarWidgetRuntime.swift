@@ -28,7 +28,6 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
     let registry: BrowserSidebarWidgetRegistry
 
     private(set) var publishedInstances: [BrowserSidebarWidgetInstance] = []
-    private(set) var visibilityRevision = 0
     private(set) var disabledKindIdentifiers: Set<String>
     /// One deck, one centred card, shared by every Space of every profile.
     private(set) var carouselSelection: BrowserSidebarWidgetID?
@@ -208,10 +207,6 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
         setCarouselSelection(instanceID)
     }
 
-    func isWorkerRunning(for kindID: BrowserSidebarWidgetKindID) -> Bool {
-        workerTasks[kindID] != nil
-    }
-
     private func reconcileWorkers() {
         for registration in registry.registrations {
             guard let source = sourcesByKindID[registration.id] else {
@@ -303,7 +298,6 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
             self.carouselSelection = nil
         }
         publishedInstances = next
-        visibilityRevision &+= 1
     }
 
     private func setCarouselSelection(

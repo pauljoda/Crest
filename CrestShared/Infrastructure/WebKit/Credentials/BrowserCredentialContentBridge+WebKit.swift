@@ -9,8 +9,8 @@ extension BrowserCredentialContentBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
-    ) -> BrowserCredentialScriptMessageProxy {
-        let proxy = BrowserCredentialScriptMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy(receive: receive)
         userContentController.add(
             proxy,
             contentWorld: contentWorld,

@@ -62,7 +62,14 @@ struct BrowserAddressContent: View {
         )
         .textFieldStyle(.plain)
         .multilineTextAlignment(.center)
-        .modifier(BrowserPlatformAddressInputModifier())
+        #if os(iOS)
+            // A combined search and address field keeps the ordinary space
+            // bar, which URL keyboards remove.
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .keyboardType(.default)
+            .submitLabel(.go)
+        #endif
         .focused($isFocused)
         .onSubmit(submit)
         // Escape puts the address away without opening it, as a click

@@ -86,51 +86,23 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                     spaceID: spaceID,
                     profileID: profileID
                 )
-                sessionToken = dragState.begin(
-                    item: item,
-                    placement: tab.placement
-                )
+                sessionToken = dragState.begin(item: item)
                 let data = (try? JSONEncoder().encode(item)) ?? Data()
                 return NSItemProvider(
                     item: data as NSData,
                     typeIdentifier: UTType.json.identifier
                 )
             } preview: {
-                BrowserTabReactiveDragPreview(
+                BrowserTabDragPreview(
                     tab: tab,
                     favicons: favicons,
                     profileID: profileID,
-                    dragState: dragState
+                    progress: BrowserTabDragPreviewLayout.progress(for: tab.placement),
+                    rowMetrics: .touch
                 )
                 .environment(\.colorScheme, colorScheme)
             }
 
-        #if compiler(>=6.4)
-            if #available(iOS 27.0, *) {
-                draggableContent
-                    .onDragSessionUpdated { session in
-                        let lifecyclePhase: BrowserTabDragSessionLifecyclePhase =
-                            switch session.phase {
-                            case .ended:
-                                .ended
-                            case .dataTransferCompleted:
-                                .dataTransferCompleted
-                            default:
-                                .active
-                            }
-                        guard
-                            lifecyclePhase.endsSession
-                        else { return }
-                        Task { @MainActor in
-                            guard let sessionToken else { return }
-                            dragState.end(session: sessionToken)
-                        }
-                    }
-            } else {
-                draggableContent
-            }
-        #else
-            draggableContent
-        #endif
+        draggableContent.endingSidebarDrag({ sessionToken }, in: dragState)
     }
 }

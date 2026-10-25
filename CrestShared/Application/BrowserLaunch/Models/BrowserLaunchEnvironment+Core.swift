@@ -9,7 +9,7 @@ extension BrowserLaunchEnvironment {
             requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession,
             presentsShowcase: presentsShowcaseSession, usesInMemoryCredentials: usesInMemoryCredentialVault,
             forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesMacOnboardingSetup,
-            forcesMobileSetup: forcesMobileOnboardingSetup, runsPerformanceHarness: performanceBaseURLString != nil,
+            forcesMobileSetup: forcesMobileOnboardingSetup,
             usesUpdateTestFeed: isolatedSoftwareUpdateFeedURL != nil)
     }
 }

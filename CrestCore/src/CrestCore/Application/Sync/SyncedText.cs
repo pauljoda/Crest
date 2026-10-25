@@ -17,24 +17,24 @@ internal sealed class SyncedText {
     #region Static Variables
 
     /// A Space's name. A Space the session holds unnamed is shown as this.
-    public static readonly SyncedText SpaceName = new(field: "name", limit: 128, standIn: _ => "Your Space");
-    public static readonly SyncedText SpaceSymbol = new(field: "symbol", limit: 128, standIn: _ => SpaceTemplate.Ordinary.Symbol);
+    public static readonly SyncedText SpaceName = new(field: StoredSessionCodec.Key.Name, limit: 128, standIn: _ => "Your Space");
+    public static readonly SyncedText SpaceSymbol = new(field: StoredSessionCodec.Key.Symbol, limit: 128, standIn: _ => SpaceTemplate.Ordinary.Symbol);
     /// A split's name; a split without one shows its default name.
-    public static readonly SyncedText SplitTitle = new(field: "customTitle", limit: 2_048, standIn: _ => null);
+    public static readonly SyncedText SplitTitle = new(field: StoredSessionCodec.Key.CustomTitle, limit: 2_048, standIn: _ => null);
     /// A split's icon, which is an emoji or none.
-    public static readonly SyncedText SplitIcon = new(field: "customIconSymbol", limit: 128, standIn: _ => null,
+    public static readonly SyncedText SplitIcon = new(field: StoredSessionCodec.Key.CustomIconSymbol, limit: 128, standIn: _ => null,
         reads: symbol => EmojiIcon.Parse(symbol) is not null);
     /// A folder's title. A folder the session holds untitled is shown as this.
-    public static readonly SyncedText FolderTitle = new(field: "title", limit: 512, standIn: _ => StoredSessionCodec.UntitledFolder);
+    public static readonly SyncedText FolderTitle = new(field: StoredSessionCodec.Key.Title, limit: 512, standIn: _ => StoredSessionCodec.UntitledFolder);
     /// A folder's symbol; a folder without one wears the folder symbol.
-    public static readonly SyncedText FolderSymbol = new(field: "symbol", limit: 128, standIn: _ => null);
+    public static readonly SyncedText FolderSymbol = new(field: StoredSessionCodec.Key.Symbol, limit: 128, standIn: _ => null);
     /// A tab's page title. A page that named itself nothing is shown by its host.
-    public static readonly SyncedText TabTitle = new(field: "title", limit: 2_048, standIn: Host);
+    public static readonly SyncedText TabTitle = new(field: StoredSessionCodec.Key.Title, limit: 2_048, standIn: Host);
     /// A tab's rename; a blank one is none, and the tab shows its page title.
-    public static readonly SyncedText TabCustomTitle = new(field: "customTitle", limit: 2_048, standIn: _ => null);
-    public static readonly SyncedText TabSymbol = new(field: "symbol", limit: 128, standIn: _ => TabIconMode.WebSymbol);
+    public static readonly SyncedText TabCustomTitle = new(field: StoredSessionCodec.Key.CustomTitle, limit: 2_048, standIn: _ => null);
+    public static readonly SyncedText TabSymbol = new(field: StoredSessionCodec.Key.Symbol, limit: 128, standIn: _ => TabIconMode.WebSymbol);
     /// A visit's page title. A page that named itself nothing is shown by its host.
-    public static readonly SyncedText HistoryTitle = new(field: "title", limit: 2_048, standIn: Host);
+    public static readonly SyncedText HistoryTitle = new(field: StoredSessionCodec.Key.Title, limit: 2_048, standIn: Host);
 
     public static IReadOnlyList<SyncedText> All { get; } = [
         SpaceName, SpaceSymbol, SplitTitle, SplitIcon, FolderTitle, FolderSymbol, TabTitle, TabCustomTitle, TabSymbol, HistoryTitle
@@ -102,7 +102,7 @@ internal sealed class SyncedText {
 
     /// The host of the record's address, or the address when it names none.
     private static string? Host(JsonObject value) {
-        if (value["url"] is not JsonValue address || !address.TryGetValue<string>(out var url)) return null;
+        if (value[StoredSessionCodec.Key.Url] is not JsonValue address || !address.TryGetValue<string>(out var url)) return null;
         return Uri.TryCreate(url, UriKind.Absolute, out var parsed) && parsed.Host.Length > 0 ? parsed.Host : url;
     }
 

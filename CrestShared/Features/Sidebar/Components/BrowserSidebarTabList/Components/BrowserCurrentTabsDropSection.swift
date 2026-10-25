@@ -21,13 +21,13 @@ struct BrowserCurrentTabsDropSection: View {
         VStack(spacing: 0) {
             BrowserNewTabRow(capabilities: context.capabilities, action: openNewTab)
 
-            if context.capabilities.showsRowDropIndicators {
+            if context.capabilities.reservesReorderSectionZones {
                 BrowserSidebarListRows(list: list, context: context).equatable()
 
                 // Also the band a cleared list draws its insertion line in: it
                 // sits directly below the new-tab row, where the first current
                 // tab would appear.
-                BrowserCurrentTabsEndDropTarget(list: list, context: context)
+                BrowserCurrentTabsEndDropTarget(context: context)
                     .browserSidebarReorderSectionIndicator(
                         section,
                         state: sidebarInteraction.sidebarReorderState

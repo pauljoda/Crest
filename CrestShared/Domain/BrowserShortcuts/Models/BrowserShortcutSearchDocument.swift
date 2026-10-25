@@ -27,13 +27,4 @@ struct BrowserShortcutSearchDocument: Equatable, Sendable {
             return haystackTerms.contains(term)
         }
     }
-
-    /// Whether the fields contain `query`, trimmed, as one phrase.
-    func containsTrimmedPhrase(_ query: String) -> Bool {
-        let phrase = query.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        ).lowercased()
-        guard !phrase.isEmpty else { return true }
-        return fields.joined(separator: " ").lowercased().contains(phrase)
-    }
 }

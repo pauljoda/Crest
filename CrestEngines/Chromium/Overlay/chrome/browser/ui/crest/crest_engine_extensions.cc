@@ -274,8 +274,7 @@ engine::ExtensionActionList EngineExtensions::PageActions(content::WebContents* 
   auto& state = For(profile, profile_id);
   auto* model = ToolbarActionsModel::Get(profile);
   for (const auto& extension : registry->enabled_extensions()) {
-    if (!Listed(*extension) ||
-        (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(extension->id(), profile))) {
+    if (!Listed(*extension) || !RunsIn(profile, *extension)) {
       continue;
     }
     auto* action = actions->GetExtensionAction(*extension);
@@ -300,7 +299,6 @@ engine::ExtensionActionList EngineExtensions::PageActions(content::WebContents* 
 // original profile owns this off-the-record profile.
 engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std::string& profile_id) {
   engine::ExtensionActionList list;
-  const bool private_mode = profile->IsOffTheRecord();
   Profile* owner = profile->GetOriginalProfile();
   auto* registry = extensions::ExtensionRegistry::Get(owner);
   auto* actions = extensions::ExtensionActionManager::Get(owner);
@@ -322,8 +320,7 @@ engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std
   auto& state = For(profile, profile_id);
   const int tab = extensions::ExtensionAction::kDefaultTabId;
   for (const auto& extension : registry->enabled_extensions()) {
-    if (!Listed(*extension) || !pinned.contains(extension->id()) ||
-        (private_mode && !extensions::util::IsIncognitoEnabled(extension->id(), owner))) {
+    if (!Listed(*extension) || !pinned.contains(extension->id()) || !RunsIn(profile, *extension)) {
       continue;
     }
     auto* action = actions->GetExtensionAction(*extension);
@@ -415,6 +412,17 @@ bool EngineExtensions::Change(Profile* profile, const std::string& extension_id,
   return false;
 }
 
+// static
+bool EngineExtensions::RunsIn(Profile* profile, const extensions::Extension& extension) {
+  return !profile->IsOffTheRecord() || extensions::util::IsIncognitoEnabled(extension.id(), profile);
+}
+
+// static
+const extensions::Extension* EngineExtensions::Usable(Profile* profile, const std::string& extension_id) {
+  const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(extension_id);
+  return extension && RunsIn(profile, *extension) ? extension : nullptr;
+}
+
 // Crest resolves the panel itself: the engine's own side panel service drives
 // Chrome's Views side-panel UI, which this build never creates. An explicit
 // `chrome.sidePanel.open()` needs only an enabled panel for the tab, not the
@@ -427,8 +435,8 @@ const extensions::Extension* EngineExtensions::SidePanelExtension(content::WebCo
     return nullptr;
   }
   Profile* profile = Profile::FromBrowserContext(contents->GetBrowserContext());
-  const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(extension_id);
-  if (!extension || (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(extension_id, profile))) {
+  const auto* extension = Usable(profile, extension_id);
+  if (!extension) {
     return nullptr;
   }
   auto* service = extensions::SidePanelService::Get(profile);

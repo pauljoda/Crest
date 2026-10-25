@@ -1,81 +1,13 @@
-import AppKit
 import Foundation
 import WebKit
 
 /// The page's WebKit-only state, read by its WebKit delegate conformances and
 /// bridges. Each is empty when another engine hosts the page.
 extension BrowserPage {
-    /// A page hosting the desktop `WKWebView` WebKit's binding built as
-    /// `webKitPage`, for a page the core opened on WebKit.
-    convenience init(
-        corePage: CorePage,
-        webKitPage: WebKitEnginePage,
-        dialogPresenter: BrowserDialogPresenter,
-        downloadCenter: BrowserDownloadCenter,
-        permissionCenter: BrowserSitePermissionCenter,
-        geolocationService: any BrowserGeolocationServicing =
-            BrowserGeolocationSystemService(),
-        recoverGeolocationSystemAuthorization:
-            BrowserGeolocationCoordinator.RecoverSystemAuthorization? = nil,
-        hostedNotificationCenter:
-            (any BrowserHostedWebNotificationCentering)? = nil,
-        recoverNotificationSystemAuthorization:
-            (@MainActor () async -> Void)? = nil,
-        serverTrustOverrides: BrowserServerTrustOverrideStore = BrowserServerTrustOverrideStore(),
-        mediaSessionStore: BrowserMediaSessionStore? = nil,
-        spaceID: UUID,
-        profileID: UUID,
-        spaceName: String,
-        contentRuleList: WKContentRuleList? = nil,
-        allowsCredentialAccess: Bool = true,
-        isCredentialAccessEnabled: Bool = true,
-        defaultPageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel,
-        loadHTTPAuthenticationCredential:
-            @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
-        saveHTTPAuthenticationCredential:
-            @escaping BrowserHTTPAuthenticationSession.SaveCredential = { _ in },
-        openNewTab: @escaping (URL) -> Void,
-        openModifiedLink: @escaping (URLRequest, UUID, Bool) -> Void = { _, _, _ in },
-        openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
-        handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
-        splitLinkHost: BrowserSplitLinkHost = .unavailable,
-        linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
-        opensExternalURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
-    ) {
-        self.init(
-            corePage: corePage,
-            engine: BrowserWebKitPageAdapter(
-                page: webKitPage,
-                contentRuleList: contentRuleList,
-                geolocationService: geolocationService,
-                recoverGeolocationSystemAuthorization: recoverGeolocationSystemAuthorization
-            ),
-            dialogPresenter: dialogPresenter,
-            downloadCenter: downloadCenter,
-            permissionCenter: permissionCenter,
-            hostedNotificationCenter: hostedNotificationCenter,
-            recoverNotificationSystemAuthorization: recoverNotificationSystemAuthorization,
-            serverTrustOverrides: serverTrustOverrides,
-            mediaSessionStore: mediaSessionStore,
-            spaceID: spaceID,
-            profileID: profileID,
-            spaceName: spaceName,
-            allowsCredentialAccess: allowsCredentialAccess,
-            isCredentialAccessEnabled: isCredentialAccessEnabled,
-            defaultPageZoom: defaultPageZoom,
-            loadHTTPAuthenticationCredential: loadHTTPAuthenticationCredential,
-            saveHTTPAuthenticationCredential: saveHTTPAuthenticationCredential,
-            openNewTab: openNewTab,
-            openModifiedLink: openModifiedLink,
-            openPeek: openPeek,
-            handleLinkDrag: handleLinkDrag,
-            splitLinkHost: splitLinkHost,
-            linkDestinationHost: linkDestinationHost,
-            opensExternalURL: opensExternalURL
-        )
-    }
-
     var webKitAdapter: BrowserWebKitPageAdapter? { engineAdapter as? BrowserWebKitPageAdapter }
+    /// The page WebKit's binding built for this page, or nil when another
+    /// engine hosts it.
+    var webKitEnginePage: WebKitEnginePage? { webKitAdapter?.webKitPage }
     var webKitView: WKWebView? { webKitAdapter?.webView }
 
     var activeNavigation: WKNavigation? {

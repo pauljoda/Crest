@@ -419,18 +419,12 @@ internal sealed class SqliteConnection : IDisposable {
             Checked(Sqlite.sqlite3_bind_int64(statement, 1, preferences.IsOn ? 1 : 0));
             Checked(Sqlite.sqlite3_bind_int64(statement, 2, preferences.RunsScripts ? 1 : 0));
         });
-        for (int position = 0; position < preferences.SpaceIds.Count; position++) {
-            var space = preferences.SpaceIds[position];
-            int index = position;
-            Insert("INSERT INTO device_agent_space(space, position) VALUES(?,?)", statement => {
-                Bind(statement, 1, Spelling(space));
-                Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
-            });
-        }
-        for (int position = 0; position < preferences.Agents.Count; position++) {
-            var agent = preferences.Agents[position];
-            int index = position;
-            Insert("INSERT INTO device_agent(position, team, signing, path, client, name) VALUES(?,?,?,?,?,?)", statement => {
+        InsertInOrder("INSERT INTO device_agent_space(space, position) VALUES(?,?)", preferences.SpaceIds, (statement, space, index) => {
+            Bind(statement, 1, Spelling(space));
+            Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
+        });
+        InsertInOrder("INSERT INTO device_agent(position, team, signing, path, client, name) VALUES(?,?,?,?,?,?)",
+            preferences.Agents, (statement, agent, index) => {
                 Checked(Sqlite.sqlite3_bind_int64(statement, 1, index));
                 Bind(statement, 2, agent.Identity.TeamId);
                 Bind(statement, 3, agent.Identity.SigningId);
@@ -438,16 +432,13 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 5, agent.Identity.Client);
                 Bind(statement, 6, agent.Name);
             });
-        }
     }
 
     /// The tab groups in order, each engine and color by its `Name`.
     private void WriteTabGroups(IReadOnlyList<TabGroupRecord> groups) {
         Execute("DELETE FROM device_tab_group");
-        for (int position = 0; position < groups.Count; position++) {
-            var group = groups[position];
-            int index = position;
-            Insert("INSERT INTO device_tab_group(id, space, engine, title, color, position) VALUES(?,?,?,?,?,?)", statement => {
+        InsertInOrder("INSERT INTO device_tab_group(id, space, engine, title, color, position) VALUES(?,?,?,?,?,?)",
+            groups, (statement, group, index) => {
                 Bind(statement, 1, Spelling(group.Id));
                 Bind(statement, 2, Spelling(group.SpaceId));
                 Bind(statement, 3, group.Engine.Name);
@@ -455,7 +446,6 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 5, group.Color.Name);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 6, index));
             });
-        }
     }
 
     private void WriteWindows(IReadOnlyList<SavedWindow> windows) {
@@ -488,14 +478,10 @@ internal sealed class SqliteConnection : IDisposable {
     /// The saved windows the next launch reopens, in order, back to front.
     private void WriteReopening(IReadOnlyList<Guid> windows) {
         Execute("DELETE FROM device_window_reopen");
-        for (int position = 0; position < windows.Count; position++) {
-            var window = windows[position];
-            int index = position;
-            Insert("INSERT INTO device_window_reopen(id, position) VALUES(?,?)", statement => {
-                Bind(statement, 1, Spelling(window));
-                Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
-            });
-        }
+        InsertInOrder("INSERT INTO device_window_reopen(id, position) VALUES(?,?)", windows, (statement, window, index) => {
+            Bind(statement, 1, Spelling(window));
+            Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
+        });
     }
 
     /// The choices in storage order, with every value exactly as the record
@@ -503,23 +489,20 @@ internal sealed class SqliteConnection : IDisposable {
     /// it was.
     private void WriteSitePermissions(IReadOnlyList<SitePermissionRecord> records) {
         Execute("DELETE FROM device_site_permission");
-        for (int position = 0; position < records.Count; position++) {
-            var record = records[position];
-            int index = position;
-            Insert("INSERT INTO device_site_permission(id, space, scheme, host, port, permission, detail, decision, modified_at, position) "
-                + "VALUES(?,?,?,?,?,?,?,?,?,?)", statement => {
-                    Bind(statement, 1, Spelling(record.Id));
-                    Bind(statement, 2, Spelling(record.Space));
-                    Bind(statement, 3, record.Origin.Scheme);
-                    Bind(statement, 4, record.Origin.Host);
-                    Checked(Sqlite.sqlite3_bind_int64(statement, 5, record.Origin.Port));
-                    Bind(statement, 6, record.Permission.Name);
-                    Bind(statement, 7, record.Detail);
-                    Bind(statement, 8, record.Decision.Name);
-                    Checked(Sqlite.sqlite3_bind_double(statement, 9, record.ModifiedAt));
-                    Checked(Sqlite.sqlite3_bind_int64(statement, 10, index));
-                });
-        }
+        InsertInOrder("INSERT INTO device_site_permission(id, space, scheme, host, port, permission, detail, decision, modified_at, position) "
+            + "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            records, (statement, record, index) => {
+                Bind(statement, 1, Spelling(record.Id));
+                Bind(statement, 2, Spelling(record.Space));
+                Bind(statement, 3, record.Origin.Scheme);
+                Bind(statement, 4, record.Origin.Host);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 5, record.Origin.Port));
+                Bind(statement, 6, record.Permission.Name);
+                Bind(statement, 7, record.Detail);
+                Bind(statement, 8, record.Decision.Name);
+                Checked(Sqlite.sqlite3_bind_double(statement, 9, record.ModifiedAt));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 10, index));
+            });
     }
 
     /// The person's explicit default, absent while following the composition.
@@ -532,17 +515,14 @@ internal sealed class SqliteConnection : IDisposable {
     /// The site engine choices, least recent first, each engine by `Name`.
     private void WriteSiteEngines(IReadOnlyList<SiteEngineChoice> choices) {
         Execute("DELETE FROM device_site_engine");
-        for (int position = 0; position < choices.Count; position++) {
-            var choice = choices[position];
-            int index = position;
-            Insert("INSERT INTO device_site_engine(scheme, host, port, engine, position) VALUES(?,?,?,?,?)", statement => {
+        InsertInOrder("INSERT INTO device_site_engine(scheme, host, port, engine, position) VALUES(?,?,?,?,?)",
+            choices, (statement, choice, index) => {
                 Bind(statement, 1, choice.Origin.Scheme);
                 Bind(statement, 2, choice.Origin.Host);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 3, choice.Origin.Port));
                 Bind(statement, 4, choice.Engine.Name);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
             });
-        }
     }
 
     /// Each command's choice, with the modifier mask's every bit; a command
@@ -575,10 +555,8 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 1, behavior.Name);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 2, behavior.IsOn(links) ? 1 : 0));
             });
-        for (int position = 0; position < links.Routes.Count; position++) {
-            var route = links.Routes[position];
-            int index = position;
-            Insert("INSERT INTO device_link_route(id, enabled, match, pattern, space, position) VALUES(?,?,?,?,?,?)", statement => {
+        InsertInOrder("INSERT INTO device_link_route(id, enabled, match, pattern, space, position) VALUES(?,?,?,?,?,?)",
+            links.Routes, (statement, route, index) => {
                 Bind(statement, 1, Spelling(route.Id));
                 Checked(Sqlite.sqlite3_bind_int64(statement, 2, route.IsEnabled ? 1 : 0));
                 Bind(statement, 3, route.Match.Name);
@@ -586,16 +564,12 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 5, Spelling(route.DestinationSpaceId));
                 Checked(Sqlite.sqlite3_bind_int64(statement, 6, index));
             });
-        }
-        for (int position = 0; position < links.RememberedSites.Count; position++) {
-            var remembered = links.RememberedSites[position];
-            int index = position;
-            Insert("INSERT INTO device_link_site(site, space, position) VALUES(?,?,?)", statement => {
+        InsertInOrder("INSERT INTO device_link_site(site, space, position) VALUES(?,?,?)",
+            links.RememberedSites, (statement, remembered, index) => {
                 Bind(statement, 1, remembered.Site);
                 Bind(statement, 2, Spelling(remembered.SpaceId));
                 Checked(Sqlite.sqlite3_bind_int64(statement, 3, index));
             });
-        }
     }
 
     /// The unfinished manual setup as its one document, or no row for none.
@@ -698,6 +672,16 @@ internal sealed class SqliteConnection : IDisposable {
             row(statement);
         }
     });
+
+    /// Inserts one row per item of `items` with `sql`, each bound by `bind`
+    /// with the item and its position in the list.
+    private void InsertInOrder<T>(string sql, IReadOnlyList<T> items, Action<nint, T, int> bind) {
+        for (int position = 0; position < items.Count; position++) {
+            var item = items[position];
+            int index = position;
+            Insert(sql, statement => bind(statement, item, index));
+        }
+    }
 
     private void Insert(string sql, Action<nint> bind) => Query(sql, statement => {
         bind(statement);

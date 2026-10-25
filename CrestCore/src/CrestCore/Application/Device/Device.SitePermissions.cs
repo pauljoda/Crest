@@ -62,7 +62,7 @@ internal sealed partial class Device {
             attached = [.. workspaces.OrderByDescending(entry => entry.Key == persistent)];
         }
         foreach (var (workspaceId, authority) in attached) {
-            if (authority.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) is not { } space) continue;
+            if (authority.Current.Space(spaceId) is not { } space) continue;
             return (storage is not null && workspaceId == persistent, authority.IsLocked(space));
         }
         return (false, false);
@@ -74,7 +74,7 @@ internal sealed partial class Device {
         NativeSessionAuthority[] attached;
         lock (gate)
             attached = [.. workspaces.Values];
-        return attached.Any(authority => authority.IsPrivateBrowsing && authority.Current.Spaces.Any(space => space.Id == spaceId));
+        return attached.Any(authority => authority.IsPrivateBrowsing && authority.Current.Space(spaceId) is not null);
     }
 
     /// Publishes each Space `outcome` touched with the choices it keeps now.

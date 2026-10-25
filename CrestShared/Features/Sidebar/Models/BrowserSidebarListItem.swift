@@ -46,9 +46,6 @@ struct BrowserSidebarListItem: Identifiable, Equatable {
     let content: Content
     /// How many folders hold the row.
     let depth: Int
-    /// The first tab of the row after this one in its list, which a shell that
-    /// draws insertion lines on the rows aims a drop below this row at.
-    let followingTabID: UUID?
 
     /// The identity collection motion animates this row's arrival and
     /// departure under, spelled as the sidebar always spelled it.
@@ -67,13 +64,9 @@ struct BrowserSidebarListItem: Identifiable, Equatable {
 
     /// The rows `list` shows, with the objects each stands for. A row whose
     /// object the read model does not hold yet is left out until it does.
-    /// Only a shell that draws insertion lines on the rows learns which tab
-    /// follows each row, so elsewhere a move hands no row new inputs.
     /// Reading it observes the list and each looked-up record's membership.
     @MainActor
-    static func items(
-        of list: SidebarListModel, in space: SpaceModel, namesFollowingTabs: Bool = false
-    ) -> [BrowserSidebarListItem] {
+    static func items(of list: SidebarListModel, in space: SpaceModel) -> [BrowserSidebarListItem] {
         var items: [BrowserSidebarListItem] = []
         for row in list.rows {
             let content: Content?
@@ -87,16 +80,7 @@ struct BrowserSidebarListItem: Identifiable, Equatable {
             }
             guard let content else { continue }
             items.append(
-                BrowserSidebarListItem(
-                    id: BrowserSidebarReorderItemID(row), content: content, depth: row.depth, followingTabID: nil))
-        }
-        guard namesFollowingTabs else { return items }
-        var following: UUID?
-        for index in items.indices.reversed() {
-            let item = items[index]
-            items[index] = BrowserSidebarListItem(
-                id: item.id, content: item.content, depth: item.depth, followingTabID: following)
-            if let first = item.firstTabID { following = first }
+                BrowserSidebarListItem(id: BrowserSidebarReorderItemID(row), content: content, depth: row.depth))
         }
         return items
     }

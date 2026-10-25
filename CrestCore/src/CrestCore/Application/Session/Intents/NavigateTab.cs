@@ -29,7 +29,7 @@ public sealed record NavigateTab(Guid WorkspaceId, Guid SpaceId, Guid TabId, str
         var address = new Uri(url);
         tab.ObserveAppearance(url, address.Host.Length > 0 ? address.Host : url);
         var tabs = space.Tabs.Select(candidate => candidate.Id == TabId ? tab.State : candidate);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, space with { Tabs = [.. tabs] }), SyncStaging.PageReport);
+        return new(turn.Basis.Replacing(space with { Tabs = [.. tabs] }), SyncStaging.PageReport);
     }
 
     #endregion

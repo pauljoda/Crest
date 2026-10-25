@@ -38,8 +38,23 @@ public sealed record SessionState(
     #region Actions - Spaces
 
     /// The Spaces of the session that are not going away.
-    internal IReadOnlyList<SpaceState> StayingSpaces =>
-        [.. Spaces.Where(space => SpaceDeletions.All(deletion => deletion.SpaceId != space.Id))];
+    internal IReadOnlyList<SpaceState> StayingSpaces => [.. Spaces.Where(space => PendingDeletion(space.Id) is null)];
+
+    /// The Space `id` names, or null when the session holds none.
+    internal SpaceState? Space(Guid id) => Spaces.FirstOrDefault(space => space.Id == id);
+
+    /// The Space `id` names. Throws `Rejected` with `UnknownSpace` when the
+    /// session holds none.
+    internal SpaceState KnownSpace(Guid id) => Space(id) ?? throw new Rejected(new UnknownSpace(id));
+
+    /// The deletion under way of the Space `spaceId` names, or null while it stays.
+    internal SpaceDeletionState? PendingDeletion(Guid spaceId) =>
+        SpaceDeletions.FirstOrDefault(deletion => deletion.SpaceId == spaceId);
+
+    /// The session with each of `edited` in place of the Space of its id.
+    internal SessionState Replacing(params SpaceState[] edited) => this with {
+        Spaces = [.. Spaces.Select(space => edited.FirstOrDefault(value => value.Id == space.Id) ?? space)]
+    };
 
     /// The Spaces an import may join: none over a first launch's disposable
     /// Spaces, and never one going away.

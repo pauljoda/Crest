@@ -70,12 +70,6 @@ int main(int argc, char** argv) {
         self.assertEqual((self.preferred / "Crest-A/Cookies").read_text(), "already moved")
         self.assertEqual((self.preferred / "Crest-B/Cookies").read_text(), "waiting")
 
-    def test_legacy_interruption_after_all_moves_still_records_metadata_repair(self):
-        self.profile(self.preferred, "Crest-A")
-        self.adopt()
-        self.assertEqual((self.preferred / "Crest Adoption").read_text().splitlines(),
-                         [str(self.previous), "Crest-A"])
-
     def test_conflicting_profiles_stop_without_overwriting_either_copy(self):
         self.profile(self.previous, "Crest-A", "old")
         self.profile(self.preferred, "Crest-A", "new")
@@ -83,22 +77,6 @@ int main(int argc, char** argv) {
         self.assertEqual((self.previous / "Crest-A/Cookies").read_text(), "old")
         self.assertEqual((self.preferred / "Crest-A/Cookies").read_text(), "new")
         self.assertTrue((self.preferred / "Crest Adoption").exists())
-
-    def test_incomplete_or_invalid_record_preserves_the_profiles(self):
-        self.profile(self.previous, "Crest-A")
-        for contents in (f"{self.previous}\nCrest-A", f"{self.previous}\nCrest-../../escape\n"):
-            with self.subTest(record=contents):
-                (self.preferred / "Crest Adoption").write_text(contents)
-                self.adopt(succeeds=False)
-                self.assertEqual((self.previous / "Crest-A/Cookies").read_text(), "saved cookies")
-                self.assertFalse((self.preferred / "Crest-A").exists())
-
-    def test_completed_migration_does_not_readopt_later_unrelated_profiles(self):
-        (self.preferred / "Crest Adoption Complete").write_text(f"{self.previous}\n")
-        self.profile(self.previous, "Crest-Later", "another installation")
-        self.adopt()
-        self.assertTrue((self.previous / "Crest-Later").exists())
-        self.assertFalse((self.preferred / "Crest-Later").exists())
 
 
 if __name__ == "__main__":

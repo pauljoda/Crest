@@ -32,7 +32,7 @@ struct BrowserCredentialDetailView: View {
                 dismiss: dismiss.callAsFunction
             )
         }
-        .browserCredentialDetailSizing()
+        .crestSheetSize(minWidth: 380, idealWidth: 440, minHeight: 330, idealHeight: 390)
         .task(id: model.revealExpiration) {
             guard let expiration = model.revealExpiration else { return }
             await model.expireReveal(at: expiration)

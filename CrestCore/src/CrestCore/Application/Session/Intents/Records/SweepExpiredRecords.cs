@@ -20,8 +20,8 @@ public sealed record SweepExpiredRecords(Guid WorkspaceId) : SessionIntent(Works
         if (workspace.LastSweep?.Covers(turn.Now, turn.Basis) == true) return null;
         var kept = workspace.TabsCleanupKeeps(turn);
         var swept = workspace.EditableSpaces(turn.Basis, maintains: true)
-            .Select(space => workspace.Expired(workspace.CleanedUp(space, turn.Now, kept), turn.Now)).ToArray();
-        return new(NativeSessionAuthority.Replacing(turn.Basis, swept), SyncStaging.Expiry,
+            .Select(space => space.CleanedUp(turn.Now, kept).Retained(turn.Now)).ToArray();
+        return new(turn.Basis.Replacing(swept), SyncStaging.Expiry,
             Sweep: new(turn.Now, NativeSessionAuthority.SpaceRetention.Of(turn.Basis)));
     }
 

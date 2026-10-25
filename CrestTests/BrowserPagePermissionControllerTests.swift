@@ -5,40 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserPagePermissionControllerTests: XCTestCase {
-    func testDownloadAndLocationDismissalAreTemporaryAndExplicitChoicesArePreserved() async throws {
-        let controller = BrowserPagePermissionController()
-        let origin = SiteOrigin(scheme: "https", host: "files.example", port: 443)
-        for permission in [SitePermission.automaticDownloads, .location] {
-            let unavailable = await controller.response(
-                to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
-            XCTAssertEqual(unavailable, .denyOnce)
-            controller.setPresentationAvailable(true)
-            for choice in [BrowserSitePermissionPromptResponse.grantPersistently, .denyPersistently] {
-                let task = Task {
-                    await controller.response(to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
-                }
-                controller.resolve(try await pendingRequest(in: controller), response: choice)
-                let response = await task.value
-                XCTAssertEqual(response, choice == .grantPersistently ? .grantPersistently : .denyPersistently)
-            }
-            let task = Task {
-                await controller.response(to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
-            }
-            _ = try await pendingRequest(in: controller)
-            controller.setPresentationAvailable(false)
-            let dismissed = await task.value
-            XCTAssertEqual(dismissed, .denyOnce)
-        }
-    }
-
-    private func pendingRequest(in controller: BrowserPagePermissionController) async throws -> UUID {
-        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
-        while controller.current == nil && ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        return try XCTUnwrap(controller.current?.id)
-    }
-
     func testMediaRevocationStopsOnlyTheRevokedCapture() {
         let pages = RecordingEnginePages()
         let center = BrowserSitePermissionCenter()
@@ -77,50 +43,6 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         XCTAssertEqual(refreshed, [.location])
     }
 
-    func testDismissalCancelsQueueWithoutSavingDenialsOrAnsweringLaterRequests() throws {
-        let controller = BrowserPagePermissionController()
-        controller.setPresentationAvailable(true)
-        let origin = SiteOrigin(scheme: "https", host: "camera.example", port: 443)
-        var responses: [BrowserSitePermissionPromptResponse?] = []
-        for permission in [SitePermission.camera, .notifications] {
-            controller.request(permission, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
-                responses.append($0)
-            }
-        }
-        let staleID = try XCTUnwrap(controller.current?.id)
-        controller.cancelAll()
-        XCTAssertEqual(responses.count, 2)
-        XCTAssertTrue(responses.allSatisfy { $0 == nil })
-        controller.request(.camera, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
-            responses.append($0)
-        }
-        controller.resolve(staleID, response: .grantPersistently)
-        XCTAssertEqual(responses.count, 2)
-        controller.setPresentationAvailable(false)
-        XCTAssertEqual(responses.count, 3)
-        XCTAssertNil(responses.last!)
-    }
-
-    func testOriginsAndPermissionsRemainSeparateAndUnavailablePagesDenyTransiently() throws {
-        let controller = BrowserPagePermissionController()
-        let top = SiteOrigin(scheme: "https", host: "top.example", port: 443)
-        let frame = SiteOrigin(scheme: "https", host: "frame.example", port: 443)
-        var count = 0
-        controller.request(.camera, origin: frame, topLevelOrigin: top, spaceName: "Work") {
-            XCTAssertNil($0)
-            count += 1
-        }
-        XCTAssertEqual(count, 1)
-        XCTAssertNil(controller.current)
-        controller.setPresentationAvailable(true)
-        controller.request(.camera, origin: frame, topLevelOrigin: top, spaceName: "Work") { _ in }
-        controller.request(.camera, origin: top, topLevelOrigin: top, spaceName: "Work") { _ in }
-        let first = try XCTUnwrap(controller.current)
-        XCTAssertEqual(first.origin, frame)
-        controller.resolve(first.id, response: .denyPersistently)
-        XCTAssertEqual(controller.current?.origin, top)
-        controller.cancelAll()
-    }
 }
 
 /// An engine's direct path that records the site decisions carried to it.

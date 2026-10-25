@@ -23,12 +23,12 @@ public sealed record SetBrowsingPreferences(Guid WorkspaceId, Guid SpaceId, Curr
             ContentBlocking = ContentBlocking,
             DataRetention = DataRetention
         };
-        var configured = workspace.Configured(space, space.Settings with { BrowsingPreferences = preferences });
+        var configured = space.Configured(space.Settings with { BrowsingPreferences = preferences });
         if (before.CurrentTabCleanup == preferences.CurrentTabCleanup && before.DataRetention == preferences.DataRetention)
-            return new(NativeSessionAuthority.Replacing(turn.Basis, configured), SyncStaging.Edit);
+            return new(turn.Basis.Replacing(configured), SyncStaging.Edit);
         var kept = workspace.TabsCleanupKeeps(turn);
-        var swept = workspace.Expired(workspace.CleanedUp(configured, turn.Now, kept), turn.Now);
-        return new(NativeSessionAuthority.Replacing(turn.Basis, swept),
+        var swept = configured.CleanedUp(turn.Now, kept).Retained(turn.Now);
+        return new(turn.Basis.Replacing(swept),
             workspace.SameRecords(configured, swept) ? SyncStaging.Edit : SyncStaging.Expiry);
     }
 

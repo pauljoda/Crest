@@ -963,6 +963,21 @@ void CREST_CALL EngineBinding::PresentTo(void* context, crest_engine_present_t p
   binding->ui_ = ui;
 }
 
+// The page answers a request about it, or its agent what an agent asks. An
+// agent's requests reach only pages of the persistent profiles the core let
+// it use; the core and the platform decide which, never the page.
+template <typename Request>
+typename engine::PageRequestAnswer<Request>::Type EngineBinding::Handle(const Request& request) {
+  using Nothing = typename engine::PageRequestAnswer<Request>::Type;
+  EnginePage* page = Find(GuidText(request.page_id));
+  if constexpr (requires(PageAgent& agent) { agent.Answer(request); }) {
+    PageAgent* agent = page ? page->Agent() : nullptr;
+    return agent ? agent->Answer(request) : Nothing{};
+  } else {
+    return page ? page->Answer(request) : Nothing{};
+  }
+}
+
 // Hands each request to its own handler, which answers with the type the
 // contract names for it.
 std::vector<uint8_t> EngineBinding::Answer(const engine::PageRequest& request) {
@@ -977,46 +992,6 @@ std::vector<uint8_t> EngineBinding::Answer(const engine::PageRequest& request) {
       request);
 }
 
-bool EngineBinding::Handle(const engine::ReloadPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Reload(request.bypasses_cache);
-}
-
-bool EngineBinding::Handle(const engine::StopLoading& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->StopLoading();
-}
-
-bool EngineBinding::Handle(const engine::ZoomPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Zoom(request.factor);
-}
-
-bool EngineBinding::Handle(const engine::FindInPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Find(request.query, request.backwards, request.case_sensitive);
-}
-
-bool EngineBinding::Handle(const engine::CapturePage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Capture(request.capture_id, request.area, request.width);
-}
-
-bool EngineBinding::Handle(const engine::ExportPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Export(request.export_id, request.format, request.width);
-}
-
-engine::InteractionState EngineBinding::Handle(const engine::SaveInteractionState& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return engine::InteractionState{.state = page ? page->SaveInteractionState() : std::nullopt};
-}
-
-bool EngineBinding::Handle(const engine::RestoreInteractionState& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Restore(request.state, request.expected_url);
-}
-
 bool EngineBinding::Handle(const engine::MovePageToWindow& request) {
   const std::string key = GuidText(request.page_id);
   EnginePage* page = Find(key);
@@ -1027,21 +1002,6 @@ bool EngineBinding::Handle(const engine::MovePageToWindow& request) {
   }
   page->set_window(window);
   return true;
-}
-
-bool EngineBinding::Handle(const engine::ShowPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Show();
-}
-
-bool EngineBinding::Handle(const engine::HidePage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Hide();
-}
-
-engine::PageIconImage EngineBinding::Handle(const engine::PageIcon& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return engine::PageIconImage{.image = page ? page->icon() : std::nullopt};
 }
 
 // A page the platform comes to after the engine made it, or failed to,
@@ -1057,147 +1017,6 @@ bool EngineBinding::Handle(const engine::WatchPage& request) {
     return true;
   }
   return false;
-}
-
-engine::PageMediaState EngineBinding::Handle(const engine::PageMedia& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return engine::PageMediaState{.activity = page ? page->MediaActivity() : engine::PageMediaActivity::kNone};
-}
-
-bool EngineBinding::Handle(const engine::EnterPictureInPicture& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->EnterPictureInPicture();
-}
-
-bool EngineBinding::Handle(const engine::ActivateMediaSession& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->ActivateMediaSession(request.document);
-}
-
-bool EngineBinding::Handle(const engine::PerformMediaAction& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->PerformMediaAction(request.document, request.action);
-}
-
-bool EngineBinding::Handle(const engine::MuteMediaSession& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->MuteMediaSession(request.document, request.muted);
-}
-
-bool EngineBinding::Handle(const engine::ObserveAudioSpectrum& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->ObserveAudioSpectrum(request.observed);
-}
-
-bool EngineBinding::Handle(const engine::AnswerInfoBar& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->AnswerInfoBar(request.info_bar_id, request.answer);
-}
-
-bool EngineBinding::Handle(const engine::RefreshPageIcon& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->RefreshIcon();
-}
-
-bool EngineBinding::Handle(const engine::ShowBlockedPopups& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->ShowBlockedPopups();
-}
-
-bool EngineBinding::Handle(const engine::AddContentScript& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->AddContentScript(request.source, request.main_frame_only);
-}
-
-bool EngineBinding::Handle(const engine::EvaluateContentScript& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->EvaluateContentScript(request.evaluation_id, request.source, request.frame_id);
-}
-
-// An agent's requests reach only pages of the persistent profiles the core
-// let it use; the core and the platform decide which, never the page.
-bool EngineBinding::Handle(const engine::EvaluatePageScript& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->Evaluate(request.evaluation_id, request.source, request.world);
-}
-
-bool EngineBinding::Handle(const engine::ClickPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->Click(request.input_id, request.point, request.button, request.count, request.modifiers);
-}
-
-bool EngineBinding::Handle(const engine::HoverPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->Hover(request.input_id, request.point);
-}
-
-bool EngineBinding::Handle(const engine::ScrollPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->Scroll(request.input_id, request.point, request.delta_x, request.delta_y);
-}
-
-bool EngineBinding::Handle(const engine::TypeInPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->Type(request.input_id, request.text);
-}
-
-bool EngineBinding::Handle(const engine::PressKeyInPage& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->PressKey(request.input_id, request.key, request.modifiers);
-}
-
-bool EngineBinding::Handle(const engine::ObservePageActivity& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->ObserveActivity(request.observing);
-}
-
-engine::PageConsoleLog EngineBinding::Handle(const engine::ReadPageConsole& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent ? agent->Console(request.after) : engine::PageConsoleLog{};
-}
-
-engine::PageNetworkLog EngineBinding::Handle(const engine::ReadPageNetwork& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent ? agent->Network(request.after) : engine::PageNetworkLog{};
-}
-
-bool EngineBinding::Handle(const engine::HoldPageRendering& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  PageAgent* agent = page ? page->Agent() : nullptr;
-  return agent && agent->HoldRendering(request.held, request.width, request.height);
-}
-
-bool EngineBinding::Handle(const engine::RefreshStoreListing& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->FinishStoreRequest();
-}
-
-bool EngineBinding::Handle(const engine::OpenInspector& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->OpenInspector(request.panel);
-}
-
-bool EngineBinding::Handle(const engine::CloseInspector& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->CloseInspector();
-}
-
-bool EngineBinding::Handle(const engine::PageInspected& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->Inspected();
-}
-
-engine::InspectorLayout EngineBinding::Handle(const engine::LayoutInspector& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page ? page->LayoutInspector(request.width, request.height) : engine::InspectorLayout{};
 }
 
 // The toolbar's actions for a page's own tab, and a Space's pinned ones with
@@ -1231,16 +1050,6 @@ engine::SidePanelScope EngineBinding::Handle(const engine::HasSidePanel& request
   EnginePage* page = Find(GuidText(request.page_id));
   return page ? EngineExtensions::SidePanelScopeFor(page->web_contents(), request.extension_id)
               : engine::SidePanelScope::kUnavailable;
-}
-
-engine::CertificateChain EngineBinding::Handle(const engine::PageCertificates& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page ? page->CertificateChain() : engine::CertificateChain{};
-}
-
-bool EngineBinding::Handle(const engine::SetSitePermission& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->SetSitePermission(request.permission, request.allowed);
 }
 
 // Chromium enforces capture permissions itself: the SetSitePermission that

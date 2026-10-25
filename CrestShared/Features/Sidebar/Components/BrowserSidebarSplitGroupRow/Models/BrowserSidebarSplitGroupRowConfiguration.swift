@@ -22,10 +22,6 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     /// The member the window shows, and the only row that takes the selection
     /// accent. `nil` while the group is not presented at all.
     let focusedMemberID: UUID?
-    /// The tab following the group's *last* member, or `nil` at the end of the
-    /// section. The group is one row, so its trailing drop anchor skips past
-    /// every member rather than landing between two of them.
-    let followingTabID: UUID?
     var spacePresentation: SidebarSpacePresentation? = nil
 
     var spaceID: UUID { assignment.spaceID }
@@ -33,7 +29,6 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     var browser: BrowserStore { context.browser }
     var spaceAccess: BrowserSpaceAccessController { context.spaceAccess }
     var capabilities: BrowserInteractionCapabilities { context.capabilities }
-    var hasVisibleFollowingRow: Bool { followingTabID != nil }
 
     var metrics: BrowserSidebarSplitGroupRowMetrics {
         capabilities.splitGroupRowMetrics
@@ -92,27 +87,6 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     /// A split of open tabs closes; one the session keeps does not.
     var canClose: Bool { !placement.isDurable }
 
-    /// Where a row dropped above this group lands: in front of its first member.
-    var beforeDropLocation: BrowserTabDropLocation {
-        BrowserTabDropLocation(
-            placement: placement,
-            folderID: folderID,
-            beforeTabID: members.first?.id,
-            destinationAssignment: assignment
-        )
-    }
-
-    /// Where a row dropped below this group lands. The group is one row, so the
-    /// anchor is the tab following its *last* member, never a member itself.
-    var afterDropLocation: BrowserTabDropLocation {
-        BrowserTabDropLocation(
-            placement: placement,
-            folderID: folderID,
-            beforeTabID: followingTabID,
-            destinationAssignment: assignment
-        )
-    }
-
     var dragItem: BrowserSplitGroupDragItem {
         BrowserSplitGroupDragItem(
             groupID: groupID,
@@ -152,7 +126,7 @@ struct BrowserSidebarSplitGroupRowConfiguration {
 
     init(
         sidebarInteraction: BrowserSidebarInteractionState, groupID: UUID, members: [TabStateModel],
-        context: BrowserSidebarListContext, followingTabID: UUID?, spacePresentation: SidebarSpacePresentation?
+        context: BrowserSidebarListContext, spacePresentation: SidebarSpacePresentation?
     ) {
         self.sidebarInteraction = sidebarInteraction
         self.groupID = groupID
@@ -160,7 +134,6 @@ struct BrowserSidebarSplitGroupRowConfiguration {
         self.context = context
         assignment = context.assignment
         focusedMemberID = members.first { context.window.shownTabIDs.contains($0.id) }?.id
-        self.followingTabID = followingTabID
         self.spacePresentation = spacePresentation
     }
 }

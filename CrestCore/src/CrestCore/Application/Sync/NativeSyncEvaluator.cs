@@ -21,34 +21,30 @@ public static class NativeSyncEvaluator {
 
     private static Guid Id(JsonNode? value) => SyncJson.Identity(value);
 
-    private static SyncVersion Version(JsonNode value)
-        => new(SyncJson.ULong(value["version"]!["logicalClock"]!), Id(value["version"]!["deviceID"]));
+    /// The value of `record`'s payload, or null for a tombstone or a payload
+    /// without one.
+    private static JsonObject? PayloadValue(SyncJournalRecord record) => record.Payload?[SyncPayload.Key.Value]?.AsObject();
 
-    private static string Kind(JsonNode value) => Text(value["id"]!, "kind");
-
-    private static string Name(JsonNode value) => Kind(value) + ":" + Id(value["id"]!["value"]).ToString("D");
-
-    private static JsonObject? Payload(JsonNode value) => value["payload"]?["value"]?.AsObject();
-
-    private static SyncRecordStamp Stamp(JsonNode record) {
-        var type = SyncPayloadType.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncKind);
-        var payload = Payload(record);
-        var tombstone = record["tombstone"];
+    private static SyncRecordStamp Stamp(SyncJournalRecord record) {
+        var type = SyncPayloadType.Named(record.KindName) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncKind);
+        var payload = PayloadValue(record);
+        var tombstone = record.Tombstone;
         if ((payload is null) == (tombstone is null)) throw new BrowserRuleException(BrowserRule.InvalidSyncRecord);
-        if (payload is not null && Text(record["payload"]!, "type") != type.Kind.Name)
+        if (payload is not null && Text(record.Payload!, SyncPayload.Key.Type) != type.Kind.Name)
             throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
-        var recordId = Id(record["id"]!["value"]);
-        var spaceId = Id(record["spaceID"]);
+        var recordId = record.Id;
+        var spaceId = record.SpaceId;
         if (type.Kind.NamesItsSpace && recordId != spaceId) throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
-        if (payload is not null && (Id(type.Subject(payload)["id"]) != recordId || Id(type.SpaceIdentity(payload)) != spaceId))
+        if (payload is not null
+            && (Id(type.Subject(payload)[StoredSessionCodec.Key.Id]) != recordId || Id(type.SpaceIdentity(payload)) != spaceId))
             throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
-        var reason = tombstone is null ? null : SyncDeletionReason.Named(tombstone["reason"]?.GetValue<string>())
+        var reason = tombstone is null ? null : SyncDeletionReason.Named(tombstone[SyncJournalRecord.Key.Reason]?.GetValue<string>())
             ?? throw new BrowserRuleException(BrowserRule.InvalidSyncDeletion);
-        return new(type.Kind, recordId, spaceId, Version(record), reason,
-            tombstone is null ? null : Date(tombstone, "deletedAt"), payload is null ? null : type.ActivatedAt(payload));
+        return new(type.Kind, recordId, spaceId, record.Version, reason,
+            tombstone is null ? null : Date(tombstone, SyncJournalRecord.Key.DeletedAt), payload is null ? null : type.ActivatedAt(payload));
     }
 
-    internal static void ValidateRecord(JsonObject record) => _ = Stamp(record);
+    internal static void ValidateRecord(JsonObject record) => _ = Stamp(new(record));
 
     // Wire identities are UUID values, independent of the writer's letter case.
     // Keep ordinary strings (including UUID-looking titles) case-sensitive.
@@ -58,7 +54,8 @@ public static class NativeSyncEvaluator {
     private static bool Equivalent(JsonNode? first, JsonNode? second, string? field) {
         if (first is JsonObject a && second is JsonObject b)
             return a.Select(p => p.Key).Union(b.Select(p => p.Key)).All(key =>
-                Equivalent(a[key], b[key], key == "value" && a["kind"] is not null ? "id" : key));
+                Equivalent(a[key], b[key],
+                    key == SyncJournalRecord.Key.Value && a[SyncJournalRecord.Key.Kind] is not null ? SyncJournalRecord.Key.Id : key));
         if (first is JsonArray x && second is JsonArray y)
             return x.Count == y.Count && x.Zip(y).All(pair => Equivalent(pair.First, pair.Second, field));
         var kind = SyncWireField.Named(field)?.Kind;
@@ -73,38 +70,42 @@ public static class NativeSyncEvaluator {
     }
 
     internal static TabPlacement Placement(JsonNode payload)
-        => TabPlacement.Named(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
+        => TabPlacement.Named(Text(payload, StoredSessionCodec.Key.Placement)) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
 
     /// The record `first` and `second`, two versions of one record, resolve
     /// to: the winner's, with the fields each side last changed. Versions in
     /// different Spaces resolve to the winner's whole, since a field the
     /// other changed, such as a folder, belongs to the Space it left.
     public static JsonObject Resolve(JsonObject first, JsonObject second) {
-        var aStamp = Stamp(first); var bStamp = Stamp(second);
+        var aStamp = Stamp(new(first)); var bStamp = Stamp(new(second));
         int winner = SyncRecordStamp.Winner(aStamp, bStamp);
         var result = (winner == 0 ? first : second).DeepClone().AsObject();
-        var a = Payload(first); var b = Payload(second);
+        var a = PayloadValue(new(first)); var b = PayloadValue(new(second));
         if (a is null || b is null || aStamp.Space != bStamp.Space) return result;
-        SyncPayloadType.Of(first["payload"]!).MergeFields(Payload(result)!, a, b, winner);
+        SyncPayloadType.Of(new SyncJournalRecord(first).Payload!).MergeFields(PayloadValue(new(result))!, a, b, winner);
         return result;
     }
 
     /// `records` with each tab that also stands archived kept on the side that
     /// wins: the open tab, or its archive record.
     internal static JsonArray Reconcile(IEnumerable<JsonObject> records) {
-        var byId = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
-        foreach (var node in records) { _ = Stamp(node!); byId[Name(node!)] = node!.AsObject(); }
-        var tabs = SyncPayloadType.Tab;
-        foreach (var tab in byId.Values.Where(r => Kind(r) == tabs.Kind.Name && Payload(r) is not null).ToArray()) {
-            string archiveName = tabs.Counterpart!.Kind.RecordName(Id(tab["id"]!["value"]));
-            if (!byId.TryGetValue(archiveName, out var archiveRecord) || Payload(archiveRecord) is not { } archive) continue;
-            var payload = Payload(tab)!;
-            bool active = Placement(payload).KeepsTabOverArchive(Date(payload, "lastActivatedAt")!.Value,
-                Version(tab), ArchiveReason.Named(Text(archive, "reason")) ?? ArchiveReason.Closed, Date(archive, "archivedAt")!.Value,
-                Version(archiveRecord));
-            byId.Remove(active ? archiveName : Name(tab));
+        var byId = new Dictionary<string, SyncJournalRecord>(StringComparer.Ordinal);
+        foreach (var node in records) {
+            var record = new SyncJournalRecord(node);
+            _ = Stamp(record);
+            byId[record.Name] = record;
         }
-        return new JsonArray(byId.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
+        var tabs = SyncPayloadType.Tab;
+        foreach (var tab in byId.Values.Where(r => r.KindName == tabs.Kind.Name && PayloadValue(r) is not null).ToArray()) {
+            string archiveName = tabs.Counterpart!.Kind.RecordName(tab.Id);
+            if (!byId.TryGetValue(archiveName, out var archiveRecord) || PayloadValue(archiveRecord) is not { } archive) continue;
+            var payload = PayloadValue(tab)!;
+            bool active = Placement(payload).KeepsTabOverArchive(Date(payload, StoredSessionCodec.Key.LastActivatedAt)!.Value,
+                tab.Version, ArchiveReason.Named(Text(archive, StoredSessionCodec.Key.Reason)) ?? ArchiveReason.Closed,
+                Date(archive, StoredSessionCodec.Key.ArchivedAt)!.Value, archiveRecord.Version);
+            byId.Remove(active ? archiveName : tab.Name);
+        }
+        return new JsonArray(byId.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.Json.DeepClone()).ToArray());
     }
 
     #endregion

@@ -197,7 +197,7 @@ internal static class RecordedIntents {
 
     /// The query a recorded `launch.plan` read became, or null for any other
     /// request. Whether setup held the launch back is the device's to say now,
-    /// from whether it completed setup, which `SetupCompleted` answers.
+    /// from whether it completed setup.
     public static LaunchPlan? LaunchPlan(JsonObject request, Guid workspace) {
         if (request["operation"]!.GetValue<string>() != "launch.plan") return null;
         var environment = request["environment"]!.AsObject();
@@ -205,20 +205,8 @@ internal static class RecordedIntents {
         return new(workspace, DevicePlatform.Named(request["platform"]!.GetValue<string>())!, new(Flag("testRuntime"),
             Flag("previewRuntime"), Flag("isolatedSession"), Flag("namedProfile"), Flag("isolatedCloudSync"), Flag("resetSession"),
             Flag("showcase"), Flag("inMemoryCredentials"), Flag("onboardingWelcome"), Flag("desktopSetup"), Flag("mobileSetup"),
-            Flag("performanceHarness"), Flag("updateTestFeed")));
+            Flag("updateTestFeed")));
     }
-
-    /// Whether the device a recorded `launch.plan` read asked about had
-    /// completed setup: it had unless setup held that launch back.
-    public static bool SetupCompleted(JsonObject request) => !request["hasActiveLaunchGate"]!.GetValue<bool>();
-
-    /// A launch plan in the spelling the recorded answers compare against.
-    public static JsonObject Encode(LaunchDecision plan) => new() {
-        ["requiresIsolation"] = plan.RequiresIsolation,
-        ["usesEphemeralProfileStorage"] = plan.UsesEphemeralProfileStorage,
-        ["presentsInstalledApplicationUI"] = plan.PresentsInstalledApplicationUI,
-        ["startupBehavior"] = plan.Startup.Name
-    };
 
     /// `current` with the one preference a recorded `preferences.set` named
     /// set to the value it recorded, in its stored spelling.

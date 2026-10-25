@@ -44,7 +44,10 @@ struct BrowserSitePermissionRecordRow: View {
                 .crestMenuActionLabelStyle()
             }
             .crestMenuActionLabelStyle()
-            .modifier(BrowserPlatformSitePermissionMenuModifier())
+            #if os(macOS)
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            #endif
             .accessibilityLabel(
                 "\(record.displayLabel) for \(record.siteName)"
             )

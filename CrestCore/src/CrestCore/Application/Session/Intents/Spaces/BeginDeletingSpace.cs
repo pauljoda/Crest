@@ -27,7 +27,7 @@ public sealed record BeginDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid Sp
         var next = turn.Basis with { SpaceDeletions = [.. turn.Basis.SpaceDeletions, new(OperationId, space.Id, space.ProfileId)] };
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (followUp.Window?.ShownSpaceId == space.Id)
-            followUp.ShowSpace(next.Spaces.First(candidate => workspace.PendingDeletion(next, candidate.Id) is null).Id);
+            followUp.ShowSpace(next.Spaces.First(candidate => next.PendingDeletion(candidate.Id) is null).Id);
         return new(next, SyncStaging.Withdrawal, followUp);
     }
 

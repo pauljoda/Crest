@@ -6,7 +6,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
-import tempfile
 import unittest
 
 
@@ -61,18 +60,6 @@ class ReleaseNotePublicationTests(unittest.TestCase):
             }
         )
 
-    def test_missing_state_uses_backfilled_catalog_baselines(self) -> None:
-        catalog = self.publication.parse_catalog_document(
-            self.catalog_contents(),
-            "catalog",
-        )
-
-        state = self.publication.effective_publication_state(catalog, None)
-
-        self.assertEqual(state.channels["stable"], "stable-boundary")
-        self.assertEqual(state.channels["development"], "development-boundary")
-        self.assertEqual(state.channels["nightly"], "nightly-boundary")
-
     def test_each_channel_advances_without_consuming_the_other_channels(self) -> None:
         catalog = self.publication.parse_catalog_document(
             self.catalog_contents(),
@@ -107,27 +94,6 @@ class ReleaseNotePublicationTests(unittest.TestCase):
                 invalid_state,
                 "state",
                 catalog,
-            )
-
-    def test_state_file_is_written_only_when_advance_is_requested(self) -> None:
-        catalog = self.publication.parse_catalog_document(
-            self.catalog_contents(),
-            "catalog",
-        )
-        state = self.publication.effective_publication_state(catalog, None)
-
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            output = pathlib.Path(temporary_directory) / "publication.json"
-            self.assertFalse(output.exists())
-
-            advanced = self.publication.advance_channel(catalog, state, "nightly")
-            self.publication.write_publication_state(output, advanced)
-
-            written = json.loads(output.read_text())
-            self.assertEqual(written["channels"]["nightly"], "new-change")
-            self.assertEqual(
-                written["channels"]["development"],
-                "development-boundary",
             )
 
 

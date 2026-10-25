@@ -1,23 +1,6 @@
 import Foundation
 import WebKit
 
-/// Hears the media activity bridge of the pages WebKit's binding built.
-@MainActor
-final class WebKitMediaActivityMessageProxy: NSObject, WKScriptMessageHandler {
-    private let receive: @MainActor (WKScriptMessage) -> Void
-
-    init(receive: @escaping @MainActor (WKScriptMessage) -> Void) {
-        self.receive = receive
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage
-    ) {
-        receive(message)
-    }
-}
-
 /// Tells WebKit's binding each time media in one of its pages, in any frame,
 /// starts, stops or ends, so the page reports the media it runs to the core as
 /// it changes. The message carries nothing: WebKit itself answers what the
@@ -66,8 +49,8 @@ enum WebKitMediaActivityBridge {
     static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
-    ) -> WebKitMediaActivityMessageProxy {
-        let proxy = WebKitMediaActivityMessageProxy(receive: receive)
+    ) -> BrowserScriptMessageProxy {
+        let proxy = BrowserScriptMessageProxy(receive: receive)
         userContentController.add(proxy, contentWorld: contentWorld, name: messageHandlerName)
         userContentController.addUserScript(
             WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: contentWorld))

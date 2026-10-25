@@ -7,7 +7,6 @@ import os
 @MainActor
 final class BrowserPagePool:
     BrowserPageOwner,
-    BrowserPageHosting,
     BrowserDefaultPageZoomObserving
 {
 
@@ -109,7 +108,6 @@ final class BrowserPagePool:
     @ObservationIgnored var isPeekOpen: (BrowserPeekRequest) -> Bool = { _ in false }
     /// Closes a Peek the window shows; the window's transient browsing does.
     @ObservationIgnored var dismissPeek: (BrowserPeekRequest) -> Void = { _ in }
-    @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let handleLinkDrag: (BrowserPeekInteractionEvent) -> Void
@@ -145,7 +143,6 @@ final class BrowserPagePool:
         saveHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
-        openNewTab: @escaping (URL) -> Void = { _ in },
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
@@ -176,7 +173,6 @@ final class BrowserPagePool:
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         contentBlocking = BrowserContentBlockingController(rules: core.engines.webKit?.contentRules)
-        self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         self.handleLinkDrag = handleLinkDrag
@@ -354,7 +350,6 @@ final class BrowserPagePool:
                     username: request.username, password: request.password, protectionSpace: request.protectionSpace,
                     in: spaceID, replacing: request.replacing)
             },
-            openNewTab: { [weak browser] url in browser?.openNewTab(url: url) },
             openModifiedLink: { [weak browser] url, spaceID, selecting in
                 browser?.openModifiedLink(url, in: spaceID, selecting: selecting)
             },
@@ -841,6 +836,9 @@ final class BrowserPagePool:
         return lease
     }
 
+    /// Retires an empty surface whose initial navigation became a download:
+    /// a transient one closes, and a tab's page asks the core to close it as
+    /// its own script would.
     func discardDownloadOnlyPage(_ page: BrowserPage) {
         guard !host.discardDownloadOnlyTransientPage(page) else { return }
         page.corePage.report(PageCloseRequested(pageID: page.corePage.id))
@@ -860,6 +858,7 @@ final class BrowserPagePool:
         NSApp.activate()
     }
 
+    /// Brings the live tab that authored a clicked system notification forward.
     func activateNotificationSourcePage(_ page: BrowserPage) {
         guard let tabID = tabID(for: page) else { return }
         activateHostedNotificationSource(page.spaceID, tabID)
@@ -905,12 +904,6 @@ final class BrowserPagePool:
 
     func reloadFromOrigin() {
         reload(.fromOrigin)
-    }
-
-    /// Releases what memory pressure takes back that the core does not
-    /// decide; see `BrowserPageHost.relieveMemoryPressure`.
-    func relieveMemoryPressure(_ level: MemoryPressureLevel) {
-        host.relieveMemoryPressure(level, presenting: Array(runtimeStore.presentedTabIDs))
     }
 
     /// Hosts `opened`, a page an engine opened by itself that the core
@@ -1010,7 +1003,6 @@ final class BrowserPagePool:
             saveHTTPAuthenticationCredential: { [weak routing] request in
                 try await routing?.pool?.saveHTTPAuthenticationCredential(request, space.id)
             },
-            openNewTab: { [weak routing] url in routing?.pool?.openNewTab(url) },
             openModifiedLink: { [weak routing, pageID = opened.page.id] url, spaceID, selecting in
                 routing?.pool?.openModifiedLink(url, in: spaceID, selecting: selecting, opener: pageID)
             },

@@ -1,9 +1,8 @@
 namespace CrestCore.Contracts;
 
 /// What the platform read from its launch environment. Each flag is already
-/// parsed: a fixture flag is on only for its exact enabled marker, a
-/// performance harness is present when its base address is supplied at all,
-/// and an update test feed only when it is a loopback address.
+/// parsed: a fixture flag is on only for its exact enabled marker, and an
+/// update test feed only when it is a loopback address.
 /// `HasNamedProfile` marks a named isolated profile, which persists its own
 /// state across relaunches. These facts decide which launches must stay out
 /// of the installed profile, and what a window opens with.
@@ -19,23 +18,22 @@ public sealed record LaunchEnvironment(
     bool ForcesOnboardingWelcome,
     bool ForcesDesktopSetup,
     bool ForcesMobileSetup,
-    bool RunsPerformanceHarness,
     bool UsesUpdateTestFeed) {
     #region Static Variables
 
     /// An installed launch that asks for nothing special.
     public static LaunchEnvironment Installed { get; } = new(false, false, false, false, false, false, false, false, false, false,
-        false, false, false);
+        false, false);
 
     #endregion
 
     #region Variables
 
-    /// Every test, preview, fixture, review and performance launch is isolated.
+    /// Every test, preview, fixture and review launch is isolated.
     internal bool RequiresIsolation => IsTestRuntime || IsPreviewRuntime || RequestsIsolatedSession
         || RequestsIsolatedCloudSync || ResetsSession || PresentsShowcase
         || UsesInMemoryCredentials || ForcesOnboardingWelcome || ForcesDesktopSetup
-        || ForcesMobileSetup || RunsPerformanceHarness || UsesUpdateTestFeed;
+        || ForcesMobileSetup || UsesUpdateTestFeed;
 
     #endregion
 

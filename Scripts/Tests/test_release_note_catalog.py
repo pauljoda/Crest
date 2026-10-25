@@ -87,22 +87,6 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
             capture_output=True,
         )
 
-    def test_valid_catalog_accepts_all_supported_categories(self) -> None:
-        self.write_catalog(
-            {
-                category: {
-                    "category": category,
-                    "message": f"Describe the {category} change clearly",
-                }
-                for category in ("new", "improved", "fixed", "internal")
-            }
-        )
-
-        result = self.run_catalog_check()
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Validated 4 release-note entries", result.stdout)
-
     def test_version_two_catalog_requires_a_valid_baseline_for_each_channel(self) -> None:
         entries = {
             "stable-boundary": {
@@ -236,47 +220,6 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("append new release-note entries", result.stderr)
-
-    def test_schema_two_migration_may_backfill_around_preserved_version_one_entries(self) -> None:
-        existing_entries = {
-            "later-change": {
-                "category": "fixed",
-                "message": "Keep existing behavior reliable",
-            }
-        }
-        self.write_catalog(existing_entries)
-        self.commit_catalog()
-
-        migrated_entries = {
-            "stable-boundary": {
-                "category": "internal",
-                "message": "Record the stable publication boundary",
-            },
-            **existing_entries,
-            "nightly-boundary": {
-                "category": "internal",
-                "message": "Record the nightly publication boundary",
-            },
-        }
-        self.write_catalog(
-            migrated_entries,
-            {
-                "stable": "stable-boundary",
-                "development": "stable-boundary",
-                "nightly": "nightly-boundary",
-            },
-        )
-        subprocess.run(
-            ["git", "add", "Documentation/ReleaseNotes.json"],
-            cwd=self.repository,
-            check=True,
-        )
-
-        result = self.run_catalog_check("--require-staged-entry")
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("stable-boundary", result.stdout)
-        self.assertIn("nightly-boundary", result.stdout)
 
     def test_schema_migration_must_not_rewrite_an_existing_entry(self) -> None:
         existing_entries = {

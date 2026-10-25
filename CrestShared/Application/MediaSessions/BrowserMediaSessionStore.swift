@@ -124,7 +124,6 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
     let kindID = BrowserSidebarWidgetKindID.nowPlaying
     /// Published sessions in the core's display order.
     private(set) var sessions: [BrowserMediaSessionSnapshot] = []
-    var retainedEventIdentityCount: Int { lastSequenceByID.count }
 
     @ObservationIgnored private var snapshotsByID: [BrowserMediaSessionID: BrowserMediaSessionSnapshot] = [:]
     @ObservationIgnored private var endpointsByID: [BrowserMediaSessionID: WeakEndpoint] = [:]

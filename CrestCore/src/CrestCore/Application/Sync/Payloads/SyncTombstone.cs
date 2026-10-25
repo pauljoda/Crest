@@ -12,10 +12,11 @@ internal sealed record SyncTombstone(SyncDeletionReason Reason, SyncTime Deleted
     /// `UnreadableSyncPayloadException` for one no client reads.
     public static SyncTombstone Decode(JsonNode? value, SyncPayloadForm form) {
         var reader = new SyncPayloadReader(value, form);
-        return new(reader.Named("reason", SyncDeletionReason.Named), reader.Time("deletedAt"));
+        return new(reader.Named(SyncJournalRecord.Key.Reason, SyncDeletionReason.Named), reader.Time(SyncJournalRecord.Key.DeletedAt));
     }
 
-    public JsonObject Encode(SyncPayloadForm form) => new() { ["reason"] = Reason.Name, ["deletedAt"] = form.Seconds(DeletedAt) };
+    public JsonObject Encode(SyncPayloadForm form) =>
+        new() { [SyncJournalRecord.Key.Reason] = Reason.Name, [SyncJournalRecord.Key.DeletedAt] = form.Seconds(DeletedAt) };
 
     #endregion
 }

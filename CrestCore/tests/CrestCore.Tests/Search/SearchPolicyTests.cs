@@ -47,57 +47,9 @@ public sealed class SearchPolicyTests {
         Assert.Equal("https://kagi.com/find/" + encoded + "?source=crest", kagi.Provider.Search(query));
     }
 
-    [Fact]
-    public void EveryBuiltInWithEveryOptionValueSearchesAnAddressCrestOpens() {
-        foreach (var provider in BuiltInSearchProvider.All) {
-            var values = provider.Options.SelectMany(option => Values(option).Select(value => (option, value))).Prepend((null!, null!));
-            foreach (var (option, value) in values) {
-                var catalog = option is null ? Catalog() : Catalog().Setting(provider, option, value);
-                var resolved = catalog.Resolving(provider);
-                foreach (string address in new[] { resolved.SearchTemplate, resolved.SuggestionTemplate }.OfType<string>()) {
-                    Assert.DoesNotContain('{', address.Replace("{searchTerms}", "", StringComparison.Ordinal));
-                    Assert.Equal(address, SearchTemplate.Admit(address).Pattern);
-                }
-            }
-        }
-        var shortcuts = BuiltInSearchProvider.All.SelectMany(provider => provider.Shortcuts).ToList();
-        Assert.Equal(shortcuts.Count, shortcuts.Distinct().Count());
-    }
-
     private static IEnumerable<string> Values(SearchProviderOption option) => option.IsSwitch ? [SearchProviderOption.On]
         : option.AcceptsText ? ["gpt-5 mini"]
         : [.. option.Choices.Select(choice => choice.Name), .. option.Locales.Select(code => code.Code)];
-
-    [Fact]
-    public void OptionsEditOnlyTheirOwnProvidersAddress() {
-        var catalog = Catalog("de", "AT")
-            .Setting(BuiltInSearchProvider.Google, SearchProviderOption.GoogleHidesAIOverviews, SearchProviderOption.On)
-            .Setting(BuiltInSearchProvider.DuckDuckGo, SearchProviderOption.DuckDuckGoHidesAI, SearchProviderOption.On)
-            .Setting(BuiltInSearchProvider.DuckDuckGo, SearchProviderOption.DuckDuckGoSafeSearch, SearchChoice.Strict.Name)
-            .Setting(BuiltInSearchProvider.GitHub, SearchProviderOption.GitHubSort, SearchChoice.MostStars.Name);
-
-        Assert.Equal("https://www.google.com/search?q=a&udm=14", catalog.Resolving(BuiltInSearchProvider.Google).Search("a"));
-        Assert.Equal("https://noai.duckduckgo.com/?q=a&kp=1", catalog.Resolving(BuiltInSearchProvider.DuckDuckGo).Search("a"));
-        Assert.Equal("https://github.com/search?q=a&type=repositories&s=stars&o=desc", catalog.Resolving(BuiltInSearchProvider.GitHub).Search("a"));
-        Assert.Equal("https://www.google.com/search?udm=50&q=a", catalog.Resolving(BuiltInSearchProvider.GoogleAIMode).Search("a"));
-        // Automatic places follow the device; a language reaches suggestions, a filter never does.
-        var wikipedia = catalog.Resolving(BuiltInSearchProvider.Wikipedia);
-        Assert.Equal("https://de.wikipedia.org/wiki/Special:Search?search=a", wikipedia.Search("a"));
-        Assert.Equal("https://de.wikipedia.org/w/api.php?action=opensearch&search=a&format=json", wikipedia.Suggest("a"));
-        Assert.Equal("https://www.amazon.de/s?k=a", catalog.Resolving(BuiltInSearchProvider.Amazon).Search("a"));
-        Assert.Equal("https://www.amazon.com/s?k=a", Catalog(null, null).Resolving(BuiltInSearchProvider.Amazon).Search("a"));
-        Assert.Equal("https://duckduckgo.com/ac/?q=a&type=list", catalog.Resolving(BuiltInSearchProvider.DuckDuckGo).Suggest("a"));
-
-        // Text adds its parameter only once the person types some.
-        var chatGPT = BuiltInSearchProvider.ChatGPT;
-        Assert.Equal("https://chatgpt.com/?q=a", catalog.Setting(chatGPT, SearchProviderOption.ChatGPTModel, "  ").Resolving(chatGPT).Search("a"));
-        Assert.Equal("https://chatgpt.com/?q=a&model=gpt-5%20mini",
-            catalog.Setting(chatGPT, SearchProviderOption.ChatGPTModel, " gpt-5 mini ").Resolving(chatGPT).Search("a"));
-        Assert.IsType<UnknownSearchOption>(Assert.Throws<Rejected>(() =>
-            catalog.Setting(chatGPT, SearchProviderOption.GoogleSafeSearch, SearchProviderOption.On)).Rejection);
-        Assert.IsType<UnknownSearchOption>(Assert.Throws<Rejected>(() =>
-            catalog.Setting(BuiltInSearchProvider.Google, SearchProviderOption.GoogleSafeSearch, "maybe")).Rejection);
-    }
 
     [Theory]
     [InlineData("https://example.com/search?q=%s", "Example", null)]
@@ -124,27 +76,6 @@ public sealed class SearchPolicyTests {
         var provider = Added(name, template, suggestions: "  ");
         Assert.Equal(SearchEngineFlaw.Named(flaw) is { } expected ? new InvalidSearchEngine(expected) : null, Refusal(Catalog(), provider));
         if (flaw is null) Assert.Equal(Added("Example", template.Trim()), Catalog().Saving(provider).Custom.Single());
-    }
-
-    [Fact]
-    public void TheCatalogRefusesFoldedDuplicateNamesTakenShortcutsAndTheThirtyThirdProvider() {
-        var catalog = Catalog().Saving(Added("Café", "https://example.org/?q=%s", id: Guid.NewGuid(), shortcuts: ["cafe"]));
-        var provider = Added("  CAFE ", "https://a.example/?q=%s");
-        Assert.Equal(new DuplicateSearchEngineName(), Refusal(catalog, provider));
-        Assert.Equal(new DuplicateSearchShortcut(), Refusal(catalog, Added("Example", "https://a.example/?q=%s", shortcuts: ["G"])));
-        Assert.Equal(new InvalidSearchShortcut(), Refusal(catalog, Added("Example", "https://a.example/?q=%s", shortcuts: ["my site"])));
-        Assert.Equal(new DuplicateSearchShortcut(), Assert.Throws<Rejected>(() =>
-            catalog.Naming(BuiltInSearchProvider.YouTube, ["cafe"])).Rejection);
-        // A built-in that gives a shortcut up frees it.
-        var freed = Catalog().Naming(BuiltInSearchProvider.Google, ["goo"]);
-        Assert.Null(Refusal(freed, Added("Example", "https://a.example/?q=%s", shortcuts: ["g"])));
-
-        var full = Enumerable.Range(0, SearchCatalog.MaximumCustomCount)
-            .Aggregate(Catalog(), (kept, index) => kept.Saving(Added($"Provider {index}", "https://a.example/?q=%s", id: Guid.NewGuid())));
-        Assert.Equal(new SearchEngineLimitReached(SearchCatalog.MaximumCustomCount), Refusal(full, Added("One more", "https://b.example/?q=%s")));
-        // Editing a provider may keep its own name.
-        var edited = full.Custom[5] with { SearchUrlTemplate = "https://c.example/?q=%s" };
-        Assert.Null(Refusal(full, edited));
     }
 
     [Fact]

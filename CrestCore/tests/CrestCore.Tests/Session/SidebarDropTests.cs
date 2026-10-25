@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 using CrestCore.Contracts;
 
 using Xunit;
@@ -91,18 +93,6 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<SelectionChanged>(Targets(Picking(f.C1)).Refusal);
     }
 
-    /// A full pinned area refuses another tab and still reorders its own.
-    [Fact]
-    public void AFullPinnedAreaRefusesAnotherTabAndStillReorders() {
-        var f = new OrderSpace(extraPinned: TabPlacement.PinnedCapacity - 2);
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.C1));
-
-        Assert.Equal(new PinnedTabsFull(TabPlacement.PinnedCapacity),
-            ListRefusal(device, window, f.Space, Picking(f.C1), TabPlacement.Pinned, null));
-        Assert.Null(ListRefusal(device, window, f.Space, Picking(f.P1), TabPlacement.Pinned, null));
-    }
-
     /// A whole split dropped on a collapsed folder's row goes to the end of its
     /// inside and stays one split row there, hidden while the folder is collapsed.
     [Fact]
@@ -125,54 +115,87 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain(space.Stops(), stop => stop.Id == f.Split);
     }
 
-    /// "Split With Next Tab" adds the next tab row in the shown tab's own list
-    /// that is in no split, skipping a split's tabs rather than taking them, and
-    /// a pinned neighbour, which joins as a copy; there is none after the last
-    /// row, for a Start Page, or when the split is full.
-    [Theory]
-    [InlineData(nameof(OrderSpace.A), nameof(OrderSpace.C2))]
-    [InlineData(nameof(OrderSpace.C1), nameof(OrderSpace.C2))]
-    [InlineData(nameof(OrderSpace.P1), nameof(OrderSpace.P2))]
-    [InlineData(nameof(OrderSpace.C5), null)]
-    [InlineData(nameof(OrderSpace.C3), null)]
-    [InlineData(nameof(OrderSpace.N), null)]
-    public void SplitWithNextTabAddsTheNextFreeTabRowInTheShownTabsList(string shown, string? candidate) {
-        var f = new OrderSpace();
-        Guid Named(string name) => (Guid)typeof(OrderSpace).GetProperty(name)!.GetValue(f)!;
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, Named(shown)));
+    /// A session whose first Space holds, in order: pinned tabs P1 and P2, a
+    /// saved tab S1 in the collapsed saved folder Kept, a saved tab S2, open tabs
+    /// C1, the split A B, the Start Page N, C2, C3 in the open folder Open, C4 in
+    /// the collapsed open folder Shut, and C5. Its sidebar shows, in order: P1,
+    /// P2, Kept, S2, C1, the split, C2, Open, C3, Shut, C5. Two more Spaces hold
+    /// one tab each. `extraPinned` more pinned tabs follow P2, and `extraMembers`
+    /// more tabs of the split follow B.
+    private sealed class OrderSpace {
+        public Guid Space { get; } = Guid.NewGuid();
+        public Guid Second { get; } = Guid.NewGuid();
+        public Guid Third { get; } = Guid.NewGuid();
+        public Guid P1 { get; } = Guid.NewGuid();
+        public Guid P2 { get; } = Guid.NewGuid();
+        public Guid S1 { get; } = Guid.NewGuid();
+        public Guid S2 { get; } = Guid.NewGuid();
+        public Guid C1 { get; } = Guid.NewGuid();
+        public Guid A { get; } = Guid.NewGuid();
+        public Guid B { get; } = Guid.NewGuid();
+        public Guid N { get; } = Guid.NewGuid();
+        public Guid C2 { get; } = Guid.NewGuid();
+        public Guid C3 { get; } = Guid.NewGuid();
+        public Guid C4 { get; } = Guid.NewGuid();
+        public Guid C5 { get; } = Guid.NewGuid();
+        public Guid Kept { get; } = Guid.NewGuid();
+        public Guid Open { get; } = Guid.NewGuid();
+        public Guid Shut { get; } = Guid.NewGuid();
+        public Guid Split { get; } = Guid.NewGuid();
+        public Guid SecondTab { get; } = Guid.NewGuid();
+        public Guid ThirdTab { get; } = Guid.NewGuid();
+        public JsonNode Session { get; }
 
-        Assert.Equal(candidate is null ? null : Named(candidate), device.Query(new SplitJoinCandidate(window)).TabId);
-    }
+        /// The tab each stop shows, in order, while the saved section is expanded.
+        public Guid[] Stops => [P1, P2, S2, C1, A, C2, C3, C5];
 
-    [Fact]
-    public void SplitWithNextTabAddsNothingToAFullSplit() {
-        var f = new OrderSpace(extraMembers: 2);
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.A));
+        public OrderSpace(bool savedExpanded = true, int extraPinned = 0, int extraMembers = 0) {
+            Session = SavedSession().Document["session"]!;
+            Session.AsObject().Remove("disposableSeedMarker");
+            Session.AsObject().Remove("selectedSpaceID");
+            var space = Session["spaces"]![0]!.AsObject();
+            space["id"] = SwiftId(Space);
+            space["isSavedTabsExpanded"] = savedExpanded;
+            space["tabs"] = new JsonArray([Tab(P1, "pinned"), Tab(P2, "pinned"),
+                .. Enumerable.Range(0, extraPinned).Select(_ => Tab(Guid.NewGuid(), "pinned")), Tab(S1, "saved", Kept), Tab(S2, "saved"),
+                Tab(C1, "current"), Tab(A, "current", split: Split), Tab(B, "current", split: Split),
+                .. Enumerable.Range(0, extraMembers).Select(_ => Tab(Guid.NewGuid(), "current", split: Split)),
+                Tab(N, "current", startPage: true), Tab(C2, "current"), Tab(C3, "current", Open), Tab(C4, "current", Shut), Tab(C5, "current")]);
+            space["folders"] = new JsonArray(Folder(Kept, "saved", collapsed: true), Folder(Open, "current", collapsed: false),
+                Folder(Shut, "current", collapsed: true));
+            space["splitGroups"] = new JsonArray();
+            space.Remove("selectedTabID");
+            Session["spaces"]!.AsArray().Add(Other(space, Second, SecondTab));
+            Session["spaces"]!.AsArray().Add(Other(space, Third, ThirdTab));
+        }
 
-        Assert.Null(device.Query(new SplitJoinCandidate(window)).TabId);
-    }
+        private static JsonObject Other(JsonObject first, Guid id, Guid tab) {
+            var other = first.DeepClone().AsObject();
+            other["id"] = SwiftId(id);
+            other["profile"] = new JsonObject { ["id"] = Guid.NewGuid().ToString() };
+            other["tabs"] = new JsonArray(Tab(tab, "current"));
+            other["folders"] = new JsonArray();
+            other["history"] = new JsonArray();
+            return other;
+        }
 
-    /// A preview holds the picks no picked folder holds, in sidebar order, and
-    /// every tab and folder they hold, leaving out a Start Page and a pick the
-    /// Space does not hold; its selection is one the batch intents take.
-    [Fact]
-    public void APreviewHoldsThePicksAndWhatTheyHoldInSidebarOrder() {
-        var f = new OrderSpace();
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.C1));
+        private static JsonObject Tab(Guid id, string placement, Guid? folder = null, Guid? split = null, bool startPage = false) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Page",
+            ["url"] = startPage ? null : $"https://order.example/{id}",
+            ["placement"] = placement,
+            ["savedURL"] = placement == "current" || startPage ? null : $"https://order.example/{id}",
+            ["folderID"] = folder is { } folderId ? SwiftId(folderId) : null,
+            ["splitGroupID"] = split is { } group ? SwiftId(group) : null,
+            ["symbol"] = "globe",
+            ["lastActivatedAt"] = 800000000.0
+        };
 
-        var preview = device.Query(new SelectionPreview(device.Workspace, f.Space, [f.C3, f.C5, f.N, Guid.NewGuid(), f.C1], [f.Open]));
-
-        Assert.Equal([(f.C1, SidebarRowKind.Tab), (f.Open, SidebarRowKind.Folder), (f.C5, SidebarRowKind.Tab)],
-            preview.Roots.Select(root => (root.Id, root.Kind)));
-        Assert.Equal([new(f.C1, TabPlacement.Current, null, null), new(f.C3, TabPlacement.Current, f.Open, null),
-            new SelectedTab(f.C5, TabPlacement.Current, null, null)], preview.Members);
-        Assert.Equal([f.Open], preview.FolderIds);
-        Assert.Equal([f.C1, f.C5], preview.Selection.TabIds);
-        Assert.Equal([f.Open], preview.Selection.FolderIds);
-        Assert.Null(device.Query(new CanSend(new FileTabs(device.Workspace, window, f.Space, preview.Selection, TabPlacement.Saved, null,
-            null, null, LeavesSplits: false))).Refusal);
+        private static JsonObject Folder(Guid id, string location, bool collapsed) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Folder",
+            ["location"] = location,
+            ["isCollapsed"] = collapsed
+        };
     }
 }

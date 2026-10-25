@@ -28,33 +28,19 @@ extension BrowserPage {
             return webNotificationGeneration == generation && isPosted()
                 && permissionCenter.showsNotification(from: origin, in: spaceID)
         }
-        guard isShowable(), let hostedNotificationCenter,
-            await hostedNotificationCenter.currentAuthorization() == .authorized, isShowable()
-        else { return false }
-        do {
-            try await hostedNotificationCenter.add(
-                BrowserHostedWebNotificationDelivery(
-                    identifier: identifier, title: String(delivery.title.prefix(200)),
-                    body: String(delivery.body.prefix(1_000)), origin: origin, isSilent: delivery.isSilent)
-            ) { [weak self] event in
-                guard let self, webNotificationGeneration == generation, isPosted() else { return }
-                switch event {
-                case .clicked:
-                    webNotificationIdentifiers.remove(identifier)
-                    host?.activateNotificationSourcePage(self)
-                    NSApp.activate()
-                    clicked()
-                }
+        guard let hostedNotificationCenter else { return false }
+        let shown = await hostedNotificationCenter.show(delivery, while: isShowable) { [weak self] event in
+            guard let self, webNotificationGeneration == generation, isPosted() else { return }
+            switch event {
+            case .clicked:
+                webNotificationIdentifiers.remove(identifier)
+                host?.activateNotificationSourcePage(self)
+                NSApp.activate()
+                clicked()
             }
-        } catch {
-            return false
         }
-        guard isShowable() else {
-            await hostedNotificationCenter.remove(identifier: identifier)
-            return false
-        }
-        webNotificationIdentifiers.insert(identifier)
-        return true
+        if shown { webNotificationIdentifiers.insert(identifier) }
+        return shown
     }
 
     /// Takes down a notification the document that posted it closed.

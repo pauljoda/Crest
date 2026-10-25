@@ -65,38 +65,37 @@ public static class NativeSessionMaintenance {
         return source with { Spaces = repaired, DefaultSpaceId = launch };
     }
 
-    /// Removes history and archive records older than each Space keeps them;
-    /// a Space that is being deleted keeps everything. `{"session", "changed"}`.
-    public static JsonObject Retain(JsonObject source, double now) {
-        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
-        var retained = Retain(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now), out var changed);
-        return new() { ["session"] = StoredSessionCodec.Encode(retained), ["changed"] = changed };
+    /// `seed` repaired as a stored session is when it loads, stamped as the
+    /// session stores `now`, with the tabs the repair gave new identities.
+    /// Throws `Rejected` with `InvalidSession` naming the first rule it
+    /// breaks that the repair cannot mend.
+    internal static SessionState RepairSeed(SessionState seed, DateTimeOffset now, IIdSource ids, out IReadOnlyList<TabOrigin> origins) {
+        var stamped = StoredSessionCodec.Date(StoredSessionCodec.Seconds(now));
+        SessionState repaired;
+        try {
+            repaired = Repair(seed, stamped, null, ids, out origins);
+        } catch (BrowserRuleException) {
+            // A Space whose deletion is under way keeps its identities, so one
+            // another Space shares is the seed's to fix.
+            throw new Rejected(new InvalidSession(SessionIdentities.Flaw(seed) ?? SessionFlaw.Unreadable));
+        }
+        return SessionIdentities.Flaw(repaired) is { } flaw ? throw new Rejected(new InvalidSession(flaw)) : repaired;
     }
 
+    /// Removes history and archive records older than each Space keeps them;
+    /// a Space that is being deleted keeps everything.
     internal static SessionState Retain(SessionState session, DateTimeOffset at, out bool removed) {
-        var now = StoredSessionCodec.Seconds(at);
         var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
         bool changed = false;
         IReadOnlyList<SpaceState> spaces = [.. session.Spaces.Select(space => {
             if (pending.Contains(space.Id)) return space;
-            var retention = space.Settings.BrowsingPreferences.DataRetention;
-            var history = Retained(space.History, entry => entry.LastVisitedAt, Lifetime(retention.History), now);
-            var archive = Retained(space.ArchivedTabs, archived => archived.ArchivedAt, Lifetime(retention.Archive), now);
-            changed |= history.Count != space.History.Count || archive.Count != space.ArchivedTabs.Count;
-            return space with { History = history, ArchivedTabs = archive };
+            var retained = space.Retained(at);
+            changed |= !ReferenceEquals(retained, space);
+            return retained;
         })];
         removed = changed;
         return session with { Spaces = spaces };
     }
-
-    private static IReadOnlyList<T> Retained<T>(IReadOnlyList<T> records, Func<T, DateTimeOffset> date, double? lifetime, double now) {
-        if (lifetime is not { } seconds) return records;
-        var expired = DataRetention.Expired(records.Select(record => StoredSessionCodec.Seconds(date(record))).ToArray(), now, seconds)
-            .ToHashSet();
-        return [.. records.Where((_, index) => !expired.Contains(index))];
-    }
-
-    private static double? Lifetime(DataRetention retention) => retention.Lifetime?.TotalSeconds;
 
     #endregion
 }

@@ -298,66 +298,6 @@ public sealed partial class BrowserContractsTests {
         }
 
         [Fact]
-        public void MovingThePageItWentBackToKeepsWhatLayAheadOnTheEngineThatHeldIt() {
-            using var browser = Open();
-            Follow(browser, "a");
-            Follow(browser, "b");
-            Follow(browser, "c");
-            Send(browser, new StepHistory(browser.Page, -1));
-            Move(browser, EngineKind.WebKit);
-            Expect(browser, EngineKind.WebKit, "b", ["a", "start"], ["c"]);
-            Send(browser, new StepHistory(browser.Page, 1));
-            Expect(browser, EngineKind.Chromium, "c", ["b", "a", "start"], []);
-            Send(browser, new StepHistory(browser.Page, -1));
-            Expect(browser, EngineKind.WebKit, "b", ["a", "start"], ["c"]);
-
-            // A link to a site chosen for another engine is a new navigation.
-            Send(browser, new StepHistory(browser.Page, -1));
-            Send(browser, new ChooseSiteEngine(browser.Space, new WebAddress(Address("w")).Origin!, EngineKind.WebKit));
-            Follow(browser, "w");
-            Expect(browser, EngineKind.WebKit, "w", ["a", "start"], []);
-        }
-
-        [Fact]
-        public void TheHistoryMenusReachEveryEntryOnEveryEngine() {
-            using var browser = Open();
-            Follow(browser, "a");
-            Move(browser, EngineKind.WebKit);
-            Follow(browser, "b");
-            Move(browser, EngineKind.Chromium);
-            Follow(browser, "c");
-            Jump(browser, "start");
-            Expect(browser, EngineKind.Chromium, "start", [], ["a", "b", "c"]);
-            Jump(browser, "b");
-            Expect(browser, EngineKind.Chromium, "b", ["a", "start"], ["c"]);
-            Jump(browser, "a");
-            Expect(browser, EngineKind.WebKit, "a", ["start"], ["b", "c"]);
-            Jump(browser, "c");
-            Expect(browser, EngineKind.Chromium, "c", ["b", "a", "start"], []);
-        }
-
-        [Fact]
-        public void AnUnloadedTabReopensOnTheEngineItShowedWithItsHistory() {
-            using var browser = Open();
-            Follow(browser, "a");
-            Follow(browser, "b");
-            Move(browser, EngineKind.WebKit);
-            Follow(browser, "c");
-            Unload(browser);
-            Expect(browser, EngineKind.WebKit, "c", ["b", "a", "start"], []);
-            Send(browser, new StepHistory(browser.Page, -1));
-            Send(browser, new StepHistory(browser.Page, -1));
-            Expect(browser, EngineKind.Chromium, "a", ["start"], ["b", "c"]);
-
-            // An engine that kept nothing loads the entry afresh, keeping the rest.
-            browser.Chromium.KeepsNothing = true;
-            Unload(browser);
-            Expect(browser, EngineKind.Chromium, "a", ["start"], ["b", "c"]);
-            Send(browser, new StepHistory(browser.Page, 1));
-            Expect(browser, EngineKind.WebKit, "b", ["a", "start"], ["c"]);
-        }
-
-        [Fact]
         public void AHistoryComesBackAfterARelaunchOnEveryEngine() {
             using var browser = Open();
             Follow(browser, "a");

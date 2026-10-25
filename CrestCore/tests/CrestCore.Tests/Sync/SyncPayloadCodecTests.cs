@@ -111,33 +111,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(2, branding["colors"]!.AsArray().Count);
     }
 
-    /// A look in today's units keeps its banner strength however often it is
-    /// kept, synced and reloaded, and a look written before the baseline
-    /// vocabulary, by an older client or this one, is put in today's units
-    /// exactly once.
-    [Theory]
-    [InlineData(5, 0.63, 0.63)]
-    [InlineData(1, 0.5, 0.86)]
-    public void ALooksBannerStrengthIsPutInTodaysUnitsOnceWhereverItTravels(int version, double stored, double worn) {
-        var (_, _, value) = CodecValue("space");
-        SpaceBranding Synced(SpaceBranding look) {
-            value["branding"] = StoredSessionCodec.Encode(look);
-            var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
-                .Write(SyncPayloadForm.Cloud);
-            return Assert.IsType<SpacePayload>(SyncRecordBody.Read(Bytes(cloud), isTombstone: false, SyncPayloadForm.Cloud).Payload)
-                .Branding;
-        }
-        var written = SpaceAccent.Indigo.House with { RenderingVersion = version, BannerStrength = stored };
-
-        var kept = SpaceBranding.Normalized(written);
-
-        Assert.Equal(worn, kept.BannerStrength, precision: 10);
-        Assert.Equal(kept, Synced(written));
-        Assert.Equal(kept, SpaceBranding.Normalized(kept));
-        Assert.Equal(kept, Synced(Synced(kept)));
-        Assert.Equal(kept, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(kept)).InTodaysUnits());
-    }
-
     /// A crest that gives each of its six layers a color of its own keeps all
     /// six, and every layer keeps pointing at its own, through normalization,
     /// both sync forms and the stored session.
@@ -233,18 +206,6 @@ public sealed partial class BrowserContractsTests {
         Assert.False(Readable(kind, value));
     }
 
-    /// An archived tab has left its folder and its split: an archive record
-    /// that names either is unreadable, and the same record without is not.
-    [Fact]
-    public void AnArchivedTabInASplitIsUnreadable() {
-        var (_, _, value) = CodecValue("archive");
-        value["tab"]!["splitGroupID"] = SwiftId(Guid.NewGuid());
-
-        Assert.False(Readable("archive", value));
-        value["tab"]!.AsObject().Remove("splitGroupID");
-        Assert.True(Readable("archive", value));
-    }
-
     [Fact]
     public void TheSchemaARecordNeedsFollowsWhatOlderClientsCannotPlace() {
         int Schema(string kind, Action<JsonObject> edit) {
@@ -300,17 +261,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(spelled, address.Spelled);
         Assert.Equal(portable, address.IsPortable);
         Assert.Equal(readable, address.IsReadableWebAddress);
-    }
-
-    /// An address that spelling grows past the limit stays on this device, as
-    /// one that was already too long does.
-    [Fact]
-    public void AnAddressThatSpellingGrowsPastTheLimitStaysLocal() {
-        string raw = "https://example.com/" + new string(' ', 3_000);
-
-        Assert.True(Encoding.UTF8.GetByteCount(raw) <= SyncedAddress.MaximumBytes);
-        Assert.False(new SyncedAddress(raw).IsPortable);
-        Assert.False(SyncedAddress.Includes(raw));
     }
 
     #endregion

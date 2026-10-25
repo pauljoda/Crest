@@ -851,8 +851,8 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   if (!browser || !anchorView.window || anchorView.window != crest::WindowForBrowser(browser)) return NO;
   Profile* profile = browser->GetProfile();
   const auto id = base::SysNSStringToUTF8(extensionID);
-  const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(id);
-  if (!extension || (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile))) return NO;
+  const auto* extension = crest::EngineExtensions::Usable(profile, id);
+  if (!extension) return NO;
   // Declined rather than navigated: an extension whose files are gone would
   // otherwise show Chromium's own ERR_FILE_NOT_FOUND page inside Crest's
   // popup window. The core states this as an unavailable action instead.
@@ -891,10 +891,8 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   Profile* profile = crest::EngineBinding::Get().Profiles().Find(profile_id);
   if (!profile) return NO;
   Profile* owner = profile->GetOriginalProfile();
-  const auto id = base::SysNSStringToUTF8(extensionID);
-  const auto* extension = extensions::ExtensionRegistry::Get(owner)->enabled_extensions().GetByID(id);
+  const auto* extension = crest::EngineExtensions::Usable(profile, base::SysNSStringToUTF8(extensionID));
   if (!extension) return NO;
-  if (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, owner)) return NO;
   auto* action = extensions::ExtensionActionManager::Get(owner)->GetExtensionAction(*extension);
   if (!action || !crest::EngineBinding::Get().Extensions().For(profile, profile_id).IsAvailable(*extension, action))
     return NO;
@@ -948,8 +946,8 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   auto* commands = extensions::CommandService::Get(profile);
   if (!commands) return nil;
   for (const auto& extension : extensions::ExtensionRegistry::Get(profile)->enabled_extensions()) {
+    if (!crest::EngineExtensions::RunsIn(profile, *extension)) continue;
     const auto& id = extension->id();
-    if (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile)) continue;
     // `_execute_action` is the action itself, so the core runs it through the
     // same path as a click on the extension's own button.
     extensions::Command action;

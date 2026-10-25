@@ -28,7 +28,6 @@ final class BrowserTabMultiSelection {
         _ = revision
         return members.members
     }
-    var selectedIDs: Set<UUID> { Set(selectedItems.compactMap(\.tabID)) }
     private(set) var anchorItem: BrowserSelectionItemID? {
         get { observed(\.anchorItemStorage, as: \.anchorItem) }
         set { publish(newValue, into: \.anchorItemStorage, as: \.anchorItem) }

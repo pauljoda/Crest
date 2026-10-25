@@ -24,12 +24,6 @@ extension LegacyAppPreferences {
     static let savedTabFaviconKey = "crest.tabs.saved.returnToRootOnFaviconClick"
     static let splitFocusKey = "crest.split-view.focus-follows-mouse"
 
-    /// Settings that were never saved, which import as the defaults.
-    static let unsaved = LegacyAppPreferences(
-        startupBehavior: nil, offersTranslation: nil, automaticallyTranslates: nil, translationRules: nil,
-        checksSpelling: nil, automaticallyEntersPictureInPicture: nil, savedTabClosePolicy: nil,
-        savedTabFaviconReturnsToSavedURL: nil, splitFocusFollowsMouse: nil)
-
     // MARK: - Actions - Reading
 
     static func read(

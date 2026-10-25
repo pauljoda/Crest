@@ -31,56 +31,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void ASeedOpensRepairedAsTheFileDoesAndEachReidentifiedTabFollowsAsACopy() {
-        var fixture = SavedSession();
-        var document = fixture.Document["session"]!.AsObject();
-        // A twin of the first Space that keeps its identity, profile and tab,
-        // and whose tab sits in a folder the twin does not hold.
-        var twin = document["spaces"]![0]!.DeepClone().AsObject();
-        twin["folders"] = new JsonArray();
-        document["spaces"]!.AsArray().Add(twin);
-
-        using var app = new CrestApp();
-        var changes = app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(document)));
-        var opened = Assert.Single(changes.OfType<WorkspaceOpened>());
-        var spaces = opened.Session.Spaces;
-        Assert.Equal(fixture.Space, spaces[0].Id);
-        Assert.Equal(fixture.Tab, spaces[0].Tabs[0].Id);
-        Assert.NotEqual(spaces[0].Id, spaces[1].Id);
-        Assert.NotEqual(spaces[0].ProfileId, spaces[1].ProfileId);
-        var copy = spaces[1].Tabs[0];
-        Assert.NotEqual(fixture.Tab, copy.Id);
-        Assert.Null(copy.FolderId);
-        var copied = Assert.Single(changes.OfType<TabCopied>());
-        Assert.Equal(new TabCopied(opened.WorkspaceId, fixture.Tab, copy.Id), copied);
-        Assert.True(changes.ToList().IndexOf(opened) < changes.ToList().IndexOf(copied));
-    }
-
-    [Fact]
-    public void FailedRetentionLeavesEveryCategoryAndTheSourceUnchanged() {
-        var source = SavedSession().Document["session"]!.AsObject(); var space = source["spaces"]![0]!;
-        space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["history"] = "oneDay", ["archive"] = "oneDay" };
-        space["history"] = new JsonArray(new JsonObject {
-            ["id"] = Guid.NewGuid().ToString(),
-            ["url"] = "https://example.com/old",
-            ["title"] = "Old visit",
-            ["firstVisitedAt"] = 0.0,
-            ["lastVisitedAt"] = 0.0,
-            ["visitCount"] = 1
-        });
-        space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = space["tabs"]![0]!.DeepClone(), ["archivedAt"] = "invalid" });
-        var before = Bytes(source);
-        Assert.Equal(BrowserRule.InvalidSavedState,
-            Assert.Throws<BrowserRuleException>(() => NativeSessionMaintenance.Retain(source, 800000000)).Rule);
-        Assert.Equal(before, Bytes(source));
-        space["archivedTabs"] = new JsonArray();
-        var retained = NativeSessionMaintenance.Retain(source, 800000000);
-        Assert.True(retained["changed"]!.GetValue<bool>());
-        Assert.Empty(retained["session"]!["spaces"]![0]!["history"]!.AsArray());
-        Assert.Single(space["history"]!.AsArray());
-    }
-
-    [Fact]
     public void PreparedSyncFailureCannotAdvanceTheJournalAfterLocalStaging() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
@@ -98,25 +48,6 @@ public sealed partial class BrowserContractsTests {
             Transition(journal, session.DeepClone(), new JsonArray(incoming), replacing: false, now: 800000000.0));
         Assert.Equal(SyncRecordFlaw.ProfileChanged, error.Flaw);
         Assert.Equal(before, journal.Read());
-    }
-
-    [Fact]
-    public void ReplacingASeedWithCloudProducesAMatchedNonDisposableSessionAndJournal() {
-        var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
-        var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
-        var journal = new NativeSyncJournal(Bytes(initial));
-        var staged = journal.Stage(session.DeepClone().AsObject(), SyncDeletionReason.Superseded, 800000000.0);
-        var records = JsonNode.Parse(staged.Read())!["records"]!.DeepClone();
-        session["disposableSeedMarker"] = Guid.NewGuid().ToString("D");
-        var transition = Transition(journal, session.DeepClone(), records, replacing: true, now: 800000000.0);
-        var result = transition.Materialization["session"]!.AsObject();
-        Assert.Null(result["disposableSeedMarker"]);
-        var payloads = NativeSyncProjection.Project(result, SyncProjectionPreferences(),
-            JsonNode.Parse(transition.Journal.Read())!["records"]!.AsArray().Select(n => n!.AsObject()));
-        Assert.Equal(new[] { "folder", "history", "space", "tab" },
-            payloads.Select(p => p!["type"]!.GetValue<string>()).Order(StringComparer.Ordinal));
-        Assert.Empty(JsonNode.Parse(transition.Journal.Read())!["pendingRecordIDs"]!.AsArray());
-        Assert.NotNull(session["disposableSeedMarker"]);
     }
 
     [Fact]

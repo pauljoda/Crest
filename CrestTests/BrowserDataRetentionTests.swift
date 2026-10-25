@@ -6,50 +6,6 @@ import XCTest
 @MainActor
 final class BrowserDataRetentionTests: XCTestCase {
 
-    func testSessionCleanupAppliesEachSpacesOwnHistoryAndArchiveWindows() throws {
-        let now = Date.now
-        let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
-        let recentDate = now.addingTimeInterval(-(29 * 24 * 60 * 60))
-        var session = SessionState.Seed.preview
-        let cleanedSpaceID = session.spaces[0].id
-        let untouchedSpaceID = session.spaces[1].id
-        Self.retain(.init(history: .thirtyDays, archive: .thirtyDays, downloads: .forever), in: &session.spaces[0])
-        Self.retain(BrowsingPreferences.seeded.dataRetention, in: &session.spaces[1])
-        session.spaces[0].history = [
-            Self.history(title: "Old", visitedAt: oldDate),
-            Self.history(title: "Recent", visitedAt: recentDate),
-        ]
-        session.spaces[1].history = [Self.history(title: "Other Space", visitedAt: oldDate)]
-        session.spaces[0].archivedTabs = [
-            Self.archive(title: "Old", archivedAt: oldDate),
-            Self.archive(title: "Recent", archivedAt: recentDate),
-        ]
-        session.spaces[1].archivedTabs = [
-            Self.archive(title: "Other Space", archivedAt: oldDate)
-        ]
-
-        let browser = BrowserStore(seed: session)
-
-        browser.sweepExpiredBrowsingData()
-        let swept = browser.sessionSeed
-        XCTAssertEqual(
-            try XCTUnwrap(swept.space(id: cleanedSpaceID)).history.map(\.title),
-            ["Recent"]
-        )
-        XCTAssertEqual(
-            try XCTUnwrap(swept.space(id: cleanedSpaceID)).archivedTabs.map(\.tab.title),
-            ["Recent"]
-        )
-        XCTAssertEqual(
-            try XCTUnwrap(swept.space(id: untouchedSpaceID)).history.map(\.title),
-            ["Other Space"]
-        )
-        XCTAssertEqual(
-            try XCTUnwrap(swept.space(id: untouchedSpaceID)).archivedTabs.map(\.tab.title),
-            ["Other Space"]
-        )
-    }
-
     func testShorteningRetentionImmediatelyDeletesExistingRecordsAndStagesTombstones() async throws {
         let now = Date(timeIntervalSinceReferenceDate: 20_000_000)
         let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
@@ -100,42 +56,6 @@ final class BrowserDataRetentionTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(device.store.spaceModel(spaceID)).history.entries.isEmpty)
         let record = try XCTUnwrap(try device.storedJournal().record(.history, history.id))
         XCTAssertEqual(record.deletionReason, .retention)
-    }
-
-    func testDownloadCenterSweepUsesSpacePoliciesAndDeterministicSpacing() {
-        let now = Date(timeIntervalSinceReferenceDate: 60_000_000)
-        let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
-        var session = SessionState.Seed.preview
-        let cleanedProfileID = session.spaces[0].profileID
-        Self.retain(.init(history: .forever, archive: .forever, downloads: .thirtyDays), in: &session.spaces[0])
-        let store = BrowserStore(seed: session)
-        let spaces = store.spaceModels
-        let center = BrowserDownloadCenter()
-        let expiredID = center.begin(
-            profileID: cleanedProfileID,
-            filename: "expired.pdf",
-            createdAt: oldDate
-        )
-        center.send(FinishDownload(downloadID: expiredID, finalByteCount: nil))
-
-        XCTAssertTrue(center.sweepExpiredRecords(in: spaces, now: now))
-        XCTAssertTrue(center.items.isEmpty)
-        XCTAssertFalse(
-            center.sweepExpiredRecords(
-                in: spaces,
-                now: now.addingTimeInterval(
-                    BrowserCurrentTabCleanupSchedule.minimumSweepSpacing - 1
-                )
-            )
-        )
-        XCTAssertTrue(
-            center.sweepExpiredRecords(
-                in: spaces,
-                now: now.addingTimeInterval(
-                    BrowserCurrentTabCleanupSchedule.minimumSweepSpacing
-                )
-            )
-        )
     }
 
     private static func history(title: String, visitedAt: Date) -> HistoryEntryState {

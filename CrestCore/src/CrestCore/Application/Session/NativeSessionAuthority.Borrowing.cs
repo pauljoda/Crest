@@ -40,8 +40,8 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) {
             if (released) throw new Rejected(new UnknownWorkspace(workspaceId));
             if (!workspaceKind.OwnsSpaces) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
-            var original = session.Spaces.FirstOrDefault(space => space.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
-            if (PendingDeletion(session, spaceId) is not null) throw new Rejected(new SpaceBeingDeleted(spaceId));
+            var original = session.KnownSpace(spaceId);
+            if (session.PendingDeletion(spaceId) is not null) throw new Rejected(new SpaceBeingDeleted(spaceId));
             if (original.ProfileId != profileId) throw new Rejected(new SpaceProfileChanged(spaceId));
             if (IsLockedUnderGate(original)) throw new Rejected(new SpaceLocked(spaceId));
             var borrowed = original with { Folders = [], Tabs = [], SplitGroups = [], ArchivedTabs = [], History = [] };
@@ -80,9 +80,9 @@ public sealed partial class NativeSessionAuthority {
     /// it closed, holds no such Space, holds it with another profile or is
     /// deleting it. The caller holds the gate.
     private SpaceState? Lent(NativeSessionAuthority source) {
-        var original = source.session.Spaces.SingleOrDefault(space => space.Id == borrowedSpace);
+        var original = source.session.Space(borrowedSpace);
         return source.released || original is null || original.ProfileId != borrowedProfile
-            || PendingDeletion(source.session, borrowedSpace) is not null ? null : original;
+            || source.session.PendingDeletion(borrowedSpace) is not null ? null : original;
     }
 
 
@@ -110,9 +110,9 @@ public sealed partial class NativeSessionAuthority {
     /// it never replaces it. Any other session always passes.
     private void ValidateBorrowedSession(SessionState value) {
         if (borrowedSource is not { } source) return;
-        if (source.released || source.session.Spaces.SingleOrDefault(space => space.Id == borrowedSpace) is not { } original
+        if (source.released || source.session.Space(borrowedSpace) is not { } original
             || original.ProfileId != borrowedProfile) throw new Rejected(new UnknownSpace(borrowedSpace));
-        if (PendingDeletion(source.session, borrowedSpace) is not null) throw new Rejected(new SpaceBeingDeleted(borrowedSpace));
+        if (source.session.PendingDeletion(borrowedSpace) is not null) throw new Rejected(new SpaceBeingDeleted(borrowedSpace));
         if (!ShowsCurrent(original, value)) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
     }
 

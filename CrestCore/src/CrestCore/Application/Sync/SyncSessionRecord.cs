@@ -10,13 +10,14 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
     bool SuppliesBranding, bool SuppliesFolderColor) {
     #region Actions - Coding
 
-    public static SyncSessionRecord Read(JsonObject record) {
-        var payload = record["payload"];
-        return new(SyncRecordKind.Named(record["id"]!["kind"]!.GetValue<string>())!,
-            StoredSessionCodec.Identity(record["id"]!["value"]), StoredSessionCodec.Identity(record["spaceID"]),
+    public static SyncSessionRecord Read(JsonObject json) {
+        var record = new SyncJournalRecord(json);
+        var payload = record.Payload;
+        var value = payload?[SyncPayload.Key.Value];
+        return new(SyncRecordKind.Named(record.KindName)!, record.Id, record.SpaceId,
             payload is null ? null : ReadPayload(payload),
-            record["tombstone"] is { } tombstone ? SyncTombstone.Decode(tombstone, SyncPayloadForm.Journal) : null,
-            payload?["value"]?["branding"] is not null, payload?["value"]?["color"] is not null);
+            record.Tombstone is { } tombstone ? SyncTombstone.Decode(tombstone, SyncPayloadForm.Journal) : null,
+            value?[StoredSessionCodec.Key.Branding] is not null, value?[StoredSessionCodec.Key.Color] is not null);
     }
 
     /// Stored journals predate the cloud's strict readers. Supply the same
@@ -24,24 +25,26 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
     /// the journal or the cloud reader's validation.
     private static SyncPayload ReadPayload(JsonNode payload) {
         var type = SyncPayloadType.Of(payload);
-        var value = payload["value"]!.AsObject();
+        var value = SyncPayload.ValueOf(payload);
         var prepared = value.DeepClone().AsObject();
         if (type == SyncPayloadType.Tab) prepared = ReadTab(value);
         else if (type == SyncPayloadType.Folder) {
-            prepared = StoredSessionCodec.Encode(StoredSessionCodec.DecodeFolder(value));
-            prepared["spaceID"] = value["spaceID"]!.DeepClone();
-            prepared["orderToken"] = value["orderToken"]?.DeepClone() ?? JsonValue.Create("");
+            prepared = Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeFolder(value)), value);
         } else if (type == SyncPayloadType.Archive) {
-            prepared["tab"] = ReadTab(value["tab"]!.AsObject());
-            prepared["reason"] = ArchiveReason.Named(value["reason"]?.GetValue<string>())?.Name ?? ArchiveReason.Closed.Name;
+            prepared[StoredSessionCodec.Key.Tab] = ReadTab(value[StoredSessionCodec.Key.Tab]!.AsObject());
+            prepared[StoredSessionCodec.Key.Reason] =
+                ArchiveReason.Named(value[StoredSessionCodec.Key.Reason]?.GetValue<string>())?.Name ?? ArchiveReason.Closed.Name;
         }
-        return SyncPayload.Decode(new JsonObject { ["type"] = type.Kind.Name, ["value"] = prepared }, SyncPayloadForm.Journal);
+        return type.Read(new SyncPayloadReader(prepared, SyncPayloadForm.Journal));
     }
 
-    private static JsonObject ReadTab(JsonObject value) {
-        var prepared = StoredSessionCodec.Encode(StoredSessionCodec.DecodeTab(value));
-        prepared["spaceID"] = value["spaceID"]!.DeepClone();
-        prepared["orderToken"] = value["orderToken"]?.DeepClone() ?? JsonValue.Create("");
+    private static JsonObject ReadTab(JsonObject value) => Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeTab(value)), value);
+
+    /// `prepared` with the Space and position `value` names, which the stored
+    /// folder and tab codecs leave out; an empty position when it names none.
+    private static JsonObject Placed(JsonObject prepared, JsonObject value) {
+        prepared[StoredSessionCodec.Key.SpaceId] = value[StoredSessionCodec.Key.SpaceId]!.DeepClone();
+        prepared[SyncPayload.Key.OrderToken] = value[SyncPayload.Key.OrderToken]?.DeepClone() ?? JsonValue.Create("");
         return prepared;
     }
 

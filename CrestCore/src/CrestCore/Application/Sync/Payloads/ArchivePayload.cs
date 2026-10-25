@@ -8,6 +8,15 @@ namespace CrestCore.Application;
 /// was archived, and why. An archived tab shares the identity of the tab it
 /// was.
 internal sealed record ArchivePayload(TabPayload Tab, SyncTime ArchivedAt, ArchiveReason Reason) : SyncPayload {
+    #region Static Variables
+
+    /// The members an archived tab's value carries; a record keeps what a newer
+    /// build writes beside them.
+    public static IReadOnlyList<string> Members { get; } =
+        [StoredSessionCodec.Key.Tab, StoredSessionCodec.Key.ArchivedAt, StoredSessionCodec.Key.Reason];
+
+    #endregion
+
     #region Variables
 
     public override SyncRecordKind Kind => SyncRecordKind.Archive;
@@ -23,13 +32,13 @@ internal sealed record ArchivePayload(TabPayload Tab, SyncTime ArchivedAt, Archi
 
     #region Actions - Coding
 
-    public static ArchivePayload Read(SyncPayloadReader value) =>
-        new(TabPayload.Read(value.Nested("tab")), value.Time("archivedAt"), value.Named("reason", ArchiveReason.Named));
+    public static ArchivePayload Read(SyncPayloadReader value) => new(TabPayload.Read(value.Nested(StoredSessionCodec.Key.Tab)),
+        value.Time(StoredSessionCodec.Key.ArchivedAt), value.Named(StoredSessionCodec.Key.Reason, ArchiveReason.Named));
 
     public override JsonObject EncodeValue(SyncPayloadForm form) => new() {
-        ["tab"] = Tab.EncodeValue(form),
-        ["archivedAt"] = form.Seconds(ArchivedAt),
-        ["reason"] = Reason.Name
+        [StoredSessionCodec.Key.Tab] = Tab.EncodeValue(form),
+        [StoredSessionCodec.Key.ArchivedAt] = form.Seconds(ArchivedAt),
+        [StoredSessionCodec.Key.Reason] = Reason.Name
     };
 
     #endregion

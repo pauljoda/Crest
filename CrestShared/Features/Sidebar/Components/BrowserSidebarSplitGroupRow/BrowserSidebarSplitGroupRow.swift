@@ -20,10 +20,6 @@ struct BrowserSidebarSplitGroupRow: View {
     /// The members the sidebar shows in the row, in order.
     let members: [TabStateModel]
     let context: BrowserSidebarListContext
-    /// The row a drop below this group would land in front of, skipping past
-    /// the whole run. Only read where the shell draws its insertion line on the
-    /// rows themselves.
-    var followingTabID: UUID? = nil
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var renameRequest: BrowserSplitGroupRuntimeAssignment?
@@ -72,7 +68,6 @@ struct BrowserSidebarSplitGroupRow: View {
             groupID: groupID,
             members: members,
             context: context,
-            followingTabID: followingTabID,
             spacePresentation: spacePresentation
         )
     }
@@ -244,6 +239,5 @@ extension BrowserSidebarSplitGroupRow: @MainActor Equatable {
     /// as SwiftUI compares a view's inputs: a list that redraws leaves them be.
     static func == (lhs: BrowserSidebarSplitGroupRow, rhs: BrowserSidebarSplitGroupRow) -> Bool {
         lhs.groupID == rhs.groupID && lhs.members.elementsEqual(rhs.members, by: ===) && lhs.context == rhs.context
-            && lhs.followingTabID == rhs.followingTabID
     }
 }

@@ -7,6 +7,8 @@ import WebKit
 extension BrowserPagePool {
     // MARK: - Actions - Script message routing
 
+    /// Routes a message received by a shared popup content controller to the
+    /// page whose web view actually authored it.
     func routeHostedWebNotificationMessage(_ message: WKScriptMessage) {
         residentPage(sending: message)?.receiveHostedWebNotificationMessage(message)
     }

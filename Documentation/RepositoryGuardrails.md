@@ -81,24 +81,16 @@ The Xcode 27 patterns follow Apple's [TN3211](https://developer.apple.com/docume
 
 An exemption is not precedent for another file: add new debt only with a focused review and a written reason, and prefer removing entries as ownership improves.
 
-## Vertical feature organization
+## Feature organization
 
-Run:
-
-```sh
-Scripts/check-vertical-structure.py
-```
-
-The guard applies Crest's deliberately small organization contract across `CrestShared`, `CrestMac`, and `CrestMobile`:
+Review applies Crest's deliberately small organization contract across `CrestShared`, `CrestMac`, and `CrestMobile`:
 
 - Organize code by user-visible feature or runtime capability. Folder names describe the behavior a developer is looking for; `Components`, `Models`, `Services`, and `Support` are available vocabulary, not mandatory layers.
 - A file holds one cohesive concept. Name it for either its primary owner or the role of a tightly related group; small single-use values, private helpers, related global declarations, and nested types should live with that concept. Multiple extensions may share a file when they extend that same owner. Use `// MARK:` sections named for the behavior they contain, rather than generic labels such as `Utilities` or `Animation`.
 - Split a type only at a boundary that improves comprehension: a meaningful subview, a distinct lifecycle, a protocol conformance with real platform value, a large independently testable policy, or a cross-target/framework constraint. File count and line count are evidence, not goals; roughly 100–400 lines is a comfortable range and larger cohesive owners are acceptable.
 - A protocol needs at least two production implementations or a genuine system boundary that cannot run in tests, previews, or the current process. Prefer a concrete store configured with disposable dependencies over paired production/in-memory protocols whose only second conformer is a test double.
-- Root screens compose meaningful, narrowly scoped `View` types. Large root `body` implementations and large computed view builders remain guarded, but small owner-scoped subviews and values may stay in the same file.
+- Root screens compose meaningful, narrowly scoped `View` types. Keep root `body` implementations and computed view builders small; small owner-scoped subviews and values may stay in the same file.
 - Put previews beside the components that own editable UI: controls, rows, cards, artwork, and meaningful content sections. A view that only arranges other components does not need another preview; use the children's canvases when tweaking their appearance. Keep the existing screen previews for integration review. Use named `#Preview` blocks inside `#if DEBUG`, representative states, realistic dimensions, and `@Previewable @State` bindings for interactive controls. Preview a button style through a real button in the style's source file. Any preview that exists must remain deterministic and reject known live persistence, network, Keychain, filesystem, WebKit-store, default-web-view, asynchronous remote-image, and production-composition dependencies. Reuse the feature's preview fixtures, keep identities and dates fixed, and separate saved preferences from the visual content before previewing a view that owns `@AppStorage` state.
-
-`Config/VerticalStructureDebt.json` remains the exact ledger for the few machine-enforced rules. A new violation must be fixed or recorded with a focused reason; resolving one removes the stale entry in the same change.
 
 Tests lock behavior whose regression would break a user workflow, persistence or migration contract, security boundary, data transformation, platform integration, or other costly invariant. Do not add tests merely to pin localization copy, design-token values, accessibility identifier strings, previews, file paths, declaration placement, or a mechanical refactor. Repository scripts may keep a small focused suite for their durable failure modes.
 
@@ -114,9 +106,9 @@ Use `CREST_ISOLATED_PERSISTENCE_ID=<name>` when a validation profile needs to su
 
 ## Focused guard tests
 
-The general architecture and vertical checks above are the supported
-repository-wide gates. Run all retained script tests, including release,
-version, isolation, and measurement contracts, with:
+The architecture check above is the supported repository-wide gate. Run all
+retained script tests, including release, version and isolation contracts,
+with:
 
 ```sh
 python3 -m unittest discover -s Scripts/Tests

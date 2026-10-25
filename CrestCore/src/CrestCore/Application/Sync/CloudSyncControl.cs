@@ -187,8 +187,8 @@ internal sealed class CloudSyncControl {
         try {
             Transport.Reset(overwritesCloud);
             return true;
-        } catch (Rejected rejected) {
-            if (Current(start)) Fail(rejected.Rejection is SaveFailed failed ? failed.Message : rejected.Rejection.GetType().Name);
+        } catch (Rejected rejected) when (rejected.Rejection is SaveFailed failed) {
+            if (Current(start)) Fail(failed.Message);
             return false;
         }
     }

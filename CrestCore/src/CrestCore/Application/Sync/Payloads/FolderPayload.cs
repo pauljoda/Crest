@@ -20,8 +20,13 @@ internal sealed record FolderPayload(
     string OrderToken) : SyncPayload {
     #region Static Variables
 
-    private const int MaximumTitleBytes = 512;
-    private const int MaximumSymbolBytes = 128;
+    /// The members a folder's value carries; a record keeps what a newer build
+    /// writes beside them.
+    public static IReadOnlyList<string> Members { get; } = [
+        StoredSessionCodec.Key.Id, StoredSessionCodec.Key.SpaceId, StoredSessionCodec.Key.Title, StoredSessionCodec.Key.Location,
+        StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.Color, StoredSessionCodec.Key.ParentId, StoredSessionCodec.Key.IsCollapsed,
+        StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.OrderAnchorTabId, SyncPayload.Key.OrderToken
+    ];
 
     #endregion
 
@@ -44,27 +49,29 @@ internal sealed record FolderPayload(
     /// symbol keeps none of its own and is drawn with the folder symbol,
     /// without a color takes the folder color, and without a disclosure is
     /// expanded.
-    public static FolderPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity("id"), value.WrappedIdentity("spaceID"),
-        value.OptionalText("location") is { } location ? Placement(location) : TabPlacement.Saved,
-        value.Text("title"), value.OptionalText("symbol"),
-        value.Value["color"] is { } color ? SpacePayload.Color(color) : FolderState.DefaultColor,
-        value.OptionalWrappedIdentity("parentID"), value.OptionalFlag("isCollapsed") ?? false, value.OptionalTime("collapseModifiedAt"),
-        value.OptionalWrappedIdentity("orderAnchorTabID"), value.Text("orderToken"));
+    public static FolderPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity(StoredSessionCodec.Key.Id),
+        value.WrappedIdentity(StoredSessionCodec.Key.SpaceId),
+        value.OptionalText(StoredSessionCodec.Key.Location) is { } location ? Placement(location) : TabPlacement.Saved,
+        value.Text(StoredSessionCodec.Key.Title), value.OptionalText(StoredSessionCodec.Key.Symbol),
+        value.Value[StoredSessionCodec.Key.Color] is { } color ? SpacePayload.Color(color) : FolderState.DefaultColor,
+        value.OptionalWrappedIdentity(StoredSessionCodec.Key.ParentId), value.OptionalFlag(StoredSessionCodec.Key.IsCollapsed) ?? false,
+        value.OptionalTime(StoredSessionCodec.Key.CollapseModifiedAt), value.OptionalWrappedIdentity(StoredSessionCodec.Key.OrderAnchorTabId),
+        value.Text(Key.OrderToken));
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
         var value = new JsonObject {
-            ["id"] = StoredSessionCodec.WrappedIdentity(Id),
-            ["spaceID"] = StoredSessionCodec.WrappedIdentity(SpaceId),
-            ["location"] = Location.Name,
-            ["title"] = Title,
-            ["color"] = StoredSessionCodec.Encode(Color)
+            [StoredSessionCodec.Key.Id] = StoredSessionCodec.WrappedIdentity(Id),
+            [StoredSessionCodec.Key.SpaceId] = StoredSessionCodec.WrappedIdentity(SpaceId),
+            [StoredSessionCodec.Key.Location] = Location.Name,
+            [StoredSessionCodec.Key.Title] = Title,
+            [StoredSessionCodec.Key.Color] = StoredSessionCodec.Encode(Color)
         };
-        if (Symbol is { } symbol) value["symbol"] = symbol;
-        PutWrapped(value, "parentID", ParentId);
-        value["isCollapsed"] = IsCollapsed;
-        Put(value, "collapseModifiedAt", CollapseModifiedAt, form);
-        PutWrapped(value, "orderAnchorTabID", OrderAnchorTabId);
-        value["orderToken"] = OrderToken;
+        Put(value, StoredSessionCodec.Key.Symbol, Symbol);
+        PutWrapped(value, StoredSessionCodec.Key.ParentId, ParentId);
+        value[StoredSessionCodec.Key.IsCollapsed] = IsCollapsed;
+        Put(value, StoredSessionCodec.Key.CollapseModifiedAt, CollapseModifiedAt, form);
+        PutWrapped(value, StoredSessionCodec.Key.OrderAnchorTabId, OrderAnchorTabId);
+        value[Key.OrderToken] = OrderToken;
         return value;
     }
 
@@ -77,8 +84,8 @@ internal sealed record FolderPayload(
     #region Actions - Validation
 
     public override void Validate() {
-        RequireText(Title, MaximumTitleBytes);
-        if (Symbol is { } symbol) RequireText(symbol, MaximumSymbolBytes);
+        RequireText(Title, SyncedText.FolderTitle.Limit);
+        if (Symbol is { } symbol) RequireText(symbol, SyncedText.FolderSymbol.Limit);
         RequireOrderToken(OrderToken);
         if (ParentId == Id) throw new UnreadableSyncPayloadException();
     }

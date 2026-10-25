@@ -159,8 +159,8 @@ final class CorePage {
     /// Tells the core no page will load a link the page's engine staged, so
     /// the engine forgets it. A link its engine keeps itself needs nothing.
     func discardStagedLink(_ link: BrowserEngineNavigation) {
-        guard link.sourcePageID == id, let stagedLinkID = UUID(uuidString: link.token) else { return }
-        _ = try? core?.send(DiscardStagedLink(sourcePageID: id, stagedLinkID: stagedLinkID))
+        guard link.sourcePageID == id else { return }
+        _ = try? core?.send(DiscardStagedLink(sourcePageID: id, stagedLinkID: link.linkID))
     }
 
     /// Sends the person's answer to a question the core asked about the page.

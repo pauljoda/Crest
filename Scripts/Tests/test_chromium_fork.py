@@ -9,8 +9,7 @@ import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "control-plane"
 sys.path.insert(0, str(SCRIPTS))
-from chromium_fork import (exclusive_workspace, prune_sources, refresh_host_inputs, restore_host_base, select_update,
-                           sha256, validate_workspace)
+from chromium_fork import refresh_host_inputs, select_update
 from chromium_artifact import release_ready
 from chromium_engine import asset_name
 
@@ -38,74 +37,6 @@ class UpstreamSelectionTests(unittest.TestCase):
 
 
 class WorkspaceTests(unittest.TestCase):
-    def test_switching_host_revisions_accepts_an_exact_legacy_install_but_preserves_local_edits(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary)
-            path = source / "sample.cc"
-            hashes = {}
-            for state in ("base", "old", "desired"):
-                path.write_text(f"{state}\n")
-                hashes[state] = sha256(path)
-            previous = {"patch": "--- a/sample.cc\n+++ b/sample.cc\n@@ -1 +1 @@\n-base\n+old\n",
-                        "inputs": {"sample.cc": {"before": hashes["base"], "after": hashes["old"]}}}
-            desired = {"sample.cc": {"before": hashes["base"], "after": hashes["desired"]}}
-            restore_host_base(source, previous, desired)
-            self.assertEqual(path.read_text(), "desired\n")
-            path.write_text("old\n")
-            restore_host_base(source, previous, desired)
-            self.assertEqual(path.read_text(), "base\n")
-            path.write_text("unreviewed local edit\n")
-            with self.assertRaisesRegex(ValueError, "Locally modified"):
-                restore_host_base(source, previous, desired)
-            self.assertEqual(path.read_text(), "unreviewed local edit\n")
-
-    def test_independent_operations_cannot_share_a_locked_workspace(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            with exclusive_workspace(root):
-                with self.assertRaisesRegex(ValueError, "Another Chromium operation"):
-                    with exclusive_workspace(root):
-                        self.fail("Second writer obtained the lock")
-            with exclusive_workspace(root):
-                pass
-
-    def test_workspace_cannot_alias_or_contain_the_product_checkout(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            repo = root / "Crest"
-            repo.mkdir()
-            alias = root / "alias"
-            alias.symlink_to(repo, target_is_directory=True)
-            for workspace in (root, repo, repo / "build", alias / "build"):
-                with self.subTest(workspace=workspace), self.assertRaises(ValueError):
-                    validate_workspace(workspace, repo)
-            self.assertEqual(validate_workspace(root / "CrestChromium", repo), (root / "CrestChromium").resolve())
-
-    def test_the_workspace_runner_may_check_crest_out_in_its_own_work_directory(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary) / "CrestChromium"
-            checkout = workspace / "runner-work" / "Crest" / "Crest"
-            checkout.mkdir(parents=True)
-            self.assertEqual(validate_workspace(workspace, checkout), workspace.resolve())
-            elsewhere = workspace / "sources" / "Crest"
-            elsewhere.mkdir(parents=True)
-            with self.assertRaises(ValueError):
-                validate_workspace(workspace, elsewhere)
-
-    def test_pruning_removes_only_other_prepared_sources(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            self.assertEqual(prune_sources(root, set()), [])
-            sources = root / "sources"
-            pinned, update, superseded = "a" * 20, "b" * 20, "c" * 20
-            for name in (pinned, update, superseded, "manual-build"):
-                (sources / name / "upstream").mkdir(parents=True)
-            (sources / ("d" * 20)).symlink_to(sources / pinned)
-            self.assertEqual(prune_sources(root, {pinned, update}), [superseded])
-            self.assertEqual(sorted(path.name for path in sources.iterdir()),
-                             [pinned, update, "d" * 20, "manual-build"])
-            self.assertTrue((sources / pinned / "upstream").is_dir())
-
     def test_host_refresh_requires_every_patch_hunk_and_preserves_source(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

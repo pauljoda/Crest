@@ -35,7 +35,13 @@ struct BrowserFloatingSidebarCardBackground: View {
         .accessibilityHidden(true)
     }
 
+    /// The Mac grounds the card in the window's own color; touch layers it on
+    /// the secondary system background.
     private var platformBackground: Color {
-        BrowserPlatformFloatingSidebarCardStyle.backgroundColor
+        #if os(macOS)
+            CrestColor.windowBackground
+        #else
+            Color(uiColor: .secondarySystemBackground)
+        #endif
     }
 }

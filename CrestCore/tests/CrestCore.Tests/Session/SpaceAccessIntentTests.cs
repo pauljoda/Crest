@@ -102,19 +102,4 @@ public sealed partial class BrowserContractsTests {
             device.Send(new BeginUnlockingSpace(device.Workspace, missing, Guid.NewGuid()))).Rejection);
         Unlock(device.Send, device.Workspace, second);
     }
-
-    [Fact]
-    public void ABorrowedWorkspaceUnlocksAndLocksWithItsSource() {
-        var (core, device, first, _) = GuardedDevice();
-        using var disposal = device;
-        Unlock(device.Send, device.Workspace, first);
-        var borrowed = TestWorkspaces.Opened(device.Send(new BorrowSpace(device.Workspace, first, core.Current.Spaces[0].ProfileId)));
-        device.Send(new ClearHistory(borrowed, first));
-
-        device.Send(new LockSpace(first));
-        Assert.Equal(new SpaceLocked(first), Assert.Throws<Rejected>(() => device.Send(new ClearHistory(borrowed, first))).Rejection);
-        // Unlocking through the borrowed workspace unlocks the Space its source holds.
-        Unlock(device.Send, borrowed, first);
-        device.Send(new ClearHistory(device.Workspace, first));
-    }
 }

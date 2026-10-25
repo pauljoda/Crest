@@ -113,12 +113,6 @@ public sealed partial class BrowserTabCollection {
         return members.Length > 0;
     }
 
-    public void MoveSplitGroup(Guid id, TabPlacement placement, Guid? folder, Guid? before, DateTimeOffset now) {
-        var members = tabs.Where(t => t.SplitGroupId == id).Select(t => t.Id).ToArray();
-        if (members.Length == 0) throw new Rejected(new UnknownSplitGroup(id));
-        FileTabs(members, placement, folder, now, before);
-    }
-
     internal void RepairSplitMembership() {
         var groups = SplitMember.Repair(tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
         for (int index = 0; index < tabs.Count; index++) tabs[index].SetSplit(groups[index]);

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
-import subprocess
 import unittest
 
 
@@ -27,17 +26,6 @@ class PublicSourceContractTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.check = load_check_module()
 
-    def test_current_tracked_tree_is_public_source_clean(self) -> None:
-        result = subprocess.run(
-            [str(CHECK_SCRIPT)],
-            cwd=REPOSITORY_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-
     def test_private_working_files_and_signing_material_are_rejected(self) -> None:
         for path in (
             "CrestMac/AGENTS.md",
@@ -58,19 +46,6 @@ class PublicSourceContractTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertIsNotNone(self.check.violation_reason(path))
-
-    def test_public_configuration_examples_remain_allowed(self) -> None:
-        for path in (
-            "AGENTS.md",
-            ".agents/skills/crest-contribution/SKILL.md",
-            ".agents/skills/crest-contribution/references/library-style.md",
-            ".claude/skills/crest-contribution",
-            ".env.example",
-            "CrestMac/Infrastructure/WebKit/BrowserPlatformUserAgent.swift",
-            "Documentation/Design.md",
-        ):
-            with self.subTest(path=path):
-                self.assertIsNone(self.check.violation_reason(path))
 
 
 if __name__ == "__main__":

@@ -17,8 +17,6 @@ final class BrowserTransientBrowsingCoordinator {
     @ObservationIgnored private var peeksStorage = [PeekPresentation]()
     var peekRequests: [BrowserPeekRequest] { peeks.map(\.request) }
     var peekRequest: BrowserPeekRequest? { peeks.last?.request }
-    var peekPresentationPhase: BrowserPeekPresentationPhase? { peeks.last?.phase }
-    var peekMotionState: BrowserPeekMotionState? { peeks.last?.motion }
     private(set) var quickWindowRequest: BrowserQuickWindowRequest?
 
     func presentationPhase(for request: BrowserPeekRequest) -> BrowserPeekPresentationPhase? {

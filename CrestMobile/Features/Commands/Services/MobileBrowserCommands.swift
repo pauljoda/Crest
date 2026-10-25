@@ -34,14 +34,7 @@ struct MobileBrowserCommands: Commands {
             .keyboardShortcut(shortcut(.newPrivateWindow))
             .disabled(context == nil)
 
-            Button(
-                "Close Tab",
-                systemImage: ShortcutCommand.closeTabOrWindow.symbol
-            ) {
-                context?.dismissSelectedTab()
-            }
-            .keyboardShortcut(shortcut(.closeTabOrWindow))
-            .disabled(context?.canDismissSelectedTab != true)
+            button(.closeTabOrWindow)
         }
 
         CommandMenu("Navigate") {
@@ -56,232 +49,44 @@ struct MobileBrowserCommands: Commands {
 
             Divider()
 
-            Button(
-                "Back",
-                systemImage: ShortcutCommand.back.symbol
-            ) {
-                context?.goBack()
-            }
-            .keyboardShortcut(shortcut(.back))
-            .disabled(context?.canGoBack != true)
-
-            // The arrow and bracket aliases below are second chords for commands
-            // the table already carries, and the store holds exactly one binding
-            // per command. They stay literal on purpose: a hardware keyboard on
+            // The arrow aliases are second chords for commands the table
+            // already carries, and the store holds exactly one binding per
+            // command. They stay literal on purpose: a hardware keyboard on
             // iPad expects ⌘←/→ for history the way Safari does, and rebinding
             // "Back" should not take that away.
-            Button(
-                "Back (Arrow)",
-                systemImage: ShortcutCommand.back.symbol
-            ) {
-                context?.goBack()
-            }
-            .keyboardShortcut(.leftArrow, modifiers: .command)
-            .disabled(context?.canGoBack != true)
-
-            Button(
-                "Forward",
-                systemImage: ShortcutCommand.forward.symbol
-            ) {
-                context?.goForward()
-            }
-            .keyboardShortcut(shortcut(.forward))
-            .disabled(context?.canGoForward != true)
-
-            Button(
-                "Forward (Arrow)",
-                systemImage: ShortcutCommand.forward.symbol
-            ) {
-                context?.goForward()
-            }
-            .keyboardShortcut(.rightArrow, modifiers: .command)
-            .disabled(context?.canGoForward != true)
-
-            Button(
-                "Reload Page",
-                systemImage: ShortcutCommand.reloadPage.symbol
-            ) {
-                context?.reloadOrStop()
-            }
-            .keyboardShortcut(shortcut(.reloadPage))
-            .disabled(context?.hasActivePage != true)
-
-            Button(
-                "Stop Loading",
-                systemImage: ShortcutCommand.stopLoading.symbol
-            ) {
-                context?.stopLoading()
-            }
-            .keyboardShortcut(shortcut(.stopLoading))
-            .disabled(context?.isLoading != true)
-
-            Button(
-                "Reload from Origin",
-                systemImage: ShortcutCommand.reloadFromOrigin.symbol
-            ) {
-                context?.reloadFromOrigin()
-            }
-            .keyboardShortcut(shortcut(.reloadFromOrigin))
-            .disabled(context?.hasActivePage != true)
+            button(.back)
+            alias(.back, "Back (Arrow)", .leftArrow, modifiers: .command)
+            button(.forward)
+            alias(.forward, "Forward (Arrow)", .rightArrow, modifiers: .command)
+            button(.reloadPage)
+            button(.stopLoading)
+            button(.reloadFromOrigin)
         }
 
         CommandMenu("Tabs") {
-            Button(
-                "Pin or Unpin Tab",
-                systemImage: ShortcutCommand.toggleSelectedTabPinned.symbol
-            ) {
-                context?.toggleSelectedTabPinned()
-            }
-            .keyboardShortcut(shortcut(.toggleSelectedTabPinned))
-            .disabled(context?.hasSelectedTab != true)
-
-            Button(
-                "Duplicate Tab",
-                systemImage: ShortcutCommand.duplicateTab.symbol
-            ) {
-                context?.duplicateSelectedTab()
-            }
-            .keyboardShortcut(shortcut(.duplicateTab))
-            .disabled(context?.canDuplicateSelectedTab != true)
-
-            Button(
-                "Reopen Closed Tab",
-                systemImage: ShortcutCommand.reopenClosedTab.symbol
-            ) {
-                context?.reopenClosedTab()
-            }
-            .keyboardShortcut(shortcut(.reopenClosedTab))
-            .disabled(context?.canReopenClosedTab != true)
-
-            Button(
-                "Clear Unpinned Tabs",
-                systemImage: ShortcutCommand.clearUnpinnedTabs.symbol
-            ) {
-                context?.cleanupCurrentTabs()
-            }
-            .keyboardShortcut(shortcut(.clearUnpinnedTabs))
-            .disabled(context == nil)
-
-            Button(
-                "Archive Tab",
-                systemImage: ShortcutCommand.archiveTab.symbol
-            ) {
-                context?.archiveSelectedTab()
-            }
-            .keyboardShortcut(shortcut(.archiveTab))
-            .disabled(context?.canArchiveSelectedTab != true)
+            button(.toggleSelectedTabPinned)
+            button(.duplicateTab)
+            button(.reopenClosedTab)
+            button(.clearUnpinnedTabs)
+            button(.archiveTab)
 
             Divider()
 
-            Button(
-                "Previous Tab",
-                systemImage: ShortcutCommand.previousTab.symbol
-            ) {
-                context?.selectPreviousTab()
-            }
-            .keyboardShortcut(shortcut(.previousTab))
-            .disabled((context?.tabCount ?? 0) < 2)
-
-            Button(
-                "Next Tab",
-                systemImage: ShortcutCommand.nextTab.symbol
-            ) {
-                context?.selectNextTab()
-            }
-            .keyboardShortcut(shortcut(.nextTab))
-            .disabled((context?.tabCount ?? 0) < 2)
-
-            Button(
-                "Previous Tab (Bracket)",
-                systemImage: ShortcutCommand.previousTab.symbol
-            ) {
-                context?.selectPreviousTab()
-            }
-            .keyboardShortcut("[", modifiers: [.command, .shift])
-            .disabled((context?.tabCount ?? 0) < 2)
-
-            Button(
-                "Next Tab (Bracket)",
-                systemImage: ShortcutCommand.nextTab.symbol
-            ) {
-                context?.selectNextTab()
-            }
-            .keyboardShortcut("]", modifiers: [.command, .shift])
-            .disabled((context?.tabCount ?? 0) < 2)
-
-            Button(
-                "Most Recent Tab",
-                systemImage: ShortcutCommand.mostRecentTab.symbol
-            ) {
-                context?.selectMostRecentTab()
-            }
-            .keyboardShortcut(shortcut(.mostRecentTab))
-            .disabled((context?.tabCount ?? 0) < 2)
+            button(.previousTab)
+            button(.nextTab)
+            alias(.previousTab, "Previous Tab (Bracket)", "[", modifiers: [.command, .shift])
+            alias(.nextTab, "Next Tab (Bracket)", "]", modifiers: [.command, .shift])
+            button(.mostRecentTab)
 
             Divider()
 
-            Button(
-                "Split With Next Tab",
-                systemImage: ShortcutCommand.splitWithNextTab.symbol
-            ) {
-                context?.splitWithNextTab()
-            }
-            .keyboardShortcut(shortcut(.splitWithNextTab))
-            .disabled(context?.canSplitWithNextTab != true)
-
-            Button(
-                "Focus Next Split Card",
-                systemImage: ShortcutCommand.focusNextSplitCard.symbol
-            ) {
-                context?.focusNextSplitCard()
-            }
-            .keyboardShortcut(shortcut(.focusNextSplitCard))
-            .disabled(context?.isSelectedTabInSplit != true)
-
-            Button(
-                "Focus Previous Split Card",
-                systemImage: ShortcutCommand.focusPreviousSplitCard.symbol
-            ) {
-                context?.focusPreviousSplitCard()
-            }
-            .keyboardShortcut(shortcut(.focusPreviousSplitCard))
-            .disabled(context?.isSelectedTabInSplit != true)
-
-            Button(
-                "Move Split Card Left",
-                systemImage: ShortcutCommand.moveSplitCardLeft.symbol
-            ) {
-                context?.moveFocusedSplitCard(.left)
-            }
-            .keyboardShortcut(shortcut(.moveSplitCardLeft))
-            .disabled(context?.canMoveFocusedSplitCard(.left) != true)
-
-            Button(
-                "Move Split Card Right",
-                systemImage: ShortcutCommand.moveSplitCardRight.symbol
-            ) {
-                context?.moveFocusedSplitCard(.right)
-            }
-            .keyboardShortcut(shortcut(.moveSplitCardRight))
-            .disabled(context?.canMoveFocusedSplitCard(.right) != true)
-
-            Button(
-                "Remove Tab From Split",
-                systemImage: ShortcutCommand.removeTabFromSplit.symbol
-            ) {
-                context?.removeTabFromSplit()
-            }
-            .keyboardShortcut(shortcut(.removeTabFromSplit))
-            .disabled(context?.isSelectedTabInSplit != true)
-
-            Button(
-                "Separate All Tabs",
-                systemImage: ShortcutCommand.separateSplitTabs.symbol
-            ) {
-                context?.separateSplitTabs()
-            }
-            .keyboardShortcut(shortcut(.separateSplitTabs))
-            .disabled(context?.isSelectedTabInSplit != true)
+            button(.splitWithNextTab)
+            button(.focusNextSplitCard)
+            button(.focusPreviousSplitCard)
+            button(.moveSplitCardLeft)
+            button(.moveSplitCardRight)
+            button(.removeTabFromSplit)
+            button(.separateSplitTabs)
 
             Divider()
 
@@ -299,23 +104,8 @@ struct MobileBrowserCommands: Commands {
         }
 
         CommandMenu("Spaces") {
-            Button(
-                "Previous Space",
-                systemImage: ShortcutCommand.previousSpace.symbol
-            ) {
-                context?.selectPreviousSpace()
-            }
-            .keyboardShortcut(shortcut(.previousSpace))
-            .disabled((context?.spaceCount ?? 0) < 2)
-
-            Button(
-                "Next Space",
-                systemImage: ShortcutCommand.nextSpace.symbol
-            ) {
-                context?.selectNextSpace()
-            }
-            .keyboardShortcut(shortcut(.nextSpace))
-            .disabled((context?.spaceCount ?? 0) < 2)
+            button(.previousSpace)
+            button(.nextSpace)
 
             Divider()
 
@@ -333,94 +123,27 @@ struct MobileBrowserCommands: Commands {
         }
 
         CommandMenu("Page") {
-            Button(
-                context?.readerModeActionTitle ?? "Show Reader",
-                systemImage: ShortcutCommand.toggleReaderMode.symbol
-            ) {
-                context?.toggleReaderMode()
-            }
-            .keyboardShortcut(shortcut(.toggleReaderMode))
-            .disabled(context?.canToggleReaderMode != true)
-
-            Button(
-                context?.contentBlockingActionTitle ?? "Content Blocking",
-                systemImage: ShortcutCommand.toggleContentBlocking.symbol
-            ) {
-                Task { await context?.toggleContentBlocking() }
-            }
-            .keyboardShortcut(shortcut(.toggleContentBlocking))
-            .disabled(context?.hasActivePage != true)
+            button(.toggleReaderMode)
+            button(.toggleContentBlocking)
 
             Divider()
 
-            Button(
-                "Find in Page",
-                systemImage: ShortcutCommand.findInPage.symbol
-            ) {
-                context?.presentFind()
-            }
-            .keyboardShortcut(shortcut(.findInPage))
-            .disabled(context?.hasActivePage != true)
+            button(.findInPage)
 
             Divider()
 
-            Button(
-                "Zoom In",
-                systemImage: ShortcutCommand.zoomIn.symbol
-            ) {
-                context?.zoomIn()
-            }
-            .keyboardShortcut(shortcut(.zoomIn))
-            .disabled(context?.hasActivePage != true)
-
-            Button(
-                "Zoom Out",
-                systemImage: ShortcutCommand.zoomOut.symbol
-            ) {
-                context?.zoomOut()
-            }
-            .keyboardShortcut(shortcut(.zoomOut))
-            .disabled(context?.hasActivePage != true)
-
-            Button(
-                "Actual Size",
-                systemImage: ShortcutCommand.actualSize.symbol
-            ) {
-                context?.resetZoom()
-            }
-            .keyboardShortcut(shortcut(.actualSize))
-            .disabled(context?.hasActivePage != true)
+            button(.zoomIn)
+            button(.zoomOut)
+            button(.actualSize)
 
             Divider()
 
-            Button(
-                "Copy Page Link",
-                systemImage: ShortcutCommand.copyPageLink.symbol
-            ) {
-                context?.copyPageLink()
-            }
-            .keyboardShortcut(shortcut(.copyPageLink))
-            .disabled(context?.hasActivePage != true)
-
-            Button(
-                "Copy Page Link as Markdown",
-                systemImage: ShortcutCommand.copyPageLinkAsMarkdown.symbol
-            ) {
-                context?.copyPageLinkAsMarkdown()
-            }
-            .keyboardShortcut(shortcut(.copyPageLinkAsMarkdown))
-            .disabled(context?.hasActivePage != true)
+            button(.copyPageLink)
+            button(.copyPageLinkAsMarkdown)
         }
 
         CommandGroup(replacing: .printItem) {
-            Button(
-                "Print…",
-                systemImage: ShortcutCommand.printPage.symbol
-            ) {
-                context?.printPage()
-            }
-            .keyboardShortcut(shortcut(.printPage))
-            .disabled(context?.hasActivePage != true)
+            button(.printPage)
         }
 
         CommandGroup(after: .sidebar) {
@@ -437,41 +160,43 @@ struct MobileBrowserCommands: Commands {
             .keyboardShortcut(shortcut(.toggleTranslationToolbar))
             .disabled(context?.canToggleTranslationToolbar != true)
 
-            Button(
-                "Toggle Sidebar",
-                systemImage: ShortcutCommand.toggleSidebar.symbol
-            ) {
-                context?.toggleSidebar()
-            }
-            .keyboardShortcut(shortcut(.toggleSidebar))
-            .disabled(context == nil)
+            button(.toggleSidebar)
+            button(.showHistory)
+            button(.showArchive)
+            button(.showDownloads)
+        }
+    }
 
+    /// The menu's item for `command`: its title and symbol, the window's
+    /// action from the platform's command table and the person's chord,
+    /// enabled while the window can run it.
+    @ViewBuilder
+    private func button(_ command: ShortcutCommand) -> some View {
+        if let action = MobileBrowserCommand.of(command) {
             Button(
-                "Show History",
-                systemImage: ShortcutCommand.showHistory.symbol
+                action.menuTitle(context) ?? command.menuTitle ?? command.title,
+                systemImage: command.symbol
             ) {
-                context?.presentHistory()
+                if let context { action.run(context) }
             }
-            .keyboardShortcut(shortcut(.showHistory))
-            .disabled(context == nil)
+            .keyboardShortcut(shortcut(command))
+            .disabled(context.map(action.isEnabled) != true)
+        }
+    }
 
-            Button(
-                "Show Archive",
-                systemImage: ShortcutCommand.showArchive.symbol
-            ) {
-                context?.presentArchive()
+    /// A second chord for `command`, which runs and enables as the command's
+    /// own item does.
+    @ViewBuilder
+    private func alias(
+        _ command: ShortcutCommand, _ title: LocalizedStringResource, _ key: KeyEquivalent,
+        modifiers: EventModifiers
+    ) -> some View {
+        if let action = MobileBrowserCommand.of(command) {
+            Button(title, systemImage: command.symbol) {
+                if let context { action.run(context) }
             }
-            .keyboardShortcut(shortcut(.showArchive))
-            .disabled(context == nil)
-
-            Button(
-                "Show Downloads",
-                systemImage: ShortcutCommand.showDownloads.symbol
-            ) {
-                context?.presentDownloads()
-            }
-            .keyboardShortcut(shortcut(.showDownloads))
-            .disabled(context == nil)
+            .keyboardShortcut(key, modifiers: modifiers)
+            .disabled(context.map(action.isEnabled) != true)
         }
     }
 

@@ -4382,6 +4382,86 @@
       "category": "fixed",
       "message": "Mouse Back and Forward buttons set up as swipes in Logitech Options+ switch Spaces when the pointer is over the sidebar, as other mice do."
     },
+    "webkit-first-page-under-page-colour": {
+      "category": "fixed",
+      "message": "On Mac, a page shown in WebKit now uses its own background colour when you scroll past its edges, starting with the first page a tab loads."
+    },
+    "memory-warning-unloads-one-tab": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, running low on memory now unloads one background tab instead of several, so fewer tabs reload when you go back to them."
+    },
+    "remove-dead-sidebar-drop-indicators": {
+      "category": "internal",
+      "message": "Remove the sidebar's drop-indicator code, which never drew anything since the in-place reorder replaced it."
+    },
+    "slim-test-suite": {
+      "category": "internal",
+      "message": "Trim the test suites to the contracts that can break silently: persistence, sync, privacy, security, extensions, input routing and shared session rules."
+    },
+    "fold-one-sided-platform-seams": {
+      "category": "internal",
+      "message": "Share the window colour, sheet sizing and text field settings between Mac and iPhone, and drop platform stand-ins that did nothing."
+    },
+    "session-rules-on-session-state": {
+      "category": "internal",
+      "message": "Keep the core's Space lookups, history expiry and seed repair in one place each, on the session and its Spaces."
+    },
+    "remove-unsent-core-intents": {
+      "category": "internal",
+      "message": "Remove core commands the app never sends: cancelling a close check, moving a whole split and removing history by date range."
+    },
+    "remove-page-layer-leftovers": {
+      "category": "internal",
+      "message": "Remove page plumbing nothing used: a new-tab callback no page called, an empty navigation hook and stand-in protocols with a single implementation."
+    },
+    "emoji-catalog-resource": {
+      "category": "internal",
+      "message": "Bundle the emoji picker's catalog as a data file instead of compiling it into the app, which speeds up builds."
+    },
+    "core-single-spellings": {
+      "category": "internal",
+      "message": "Keep one definition each in the core for the stored-date epoch, ordered device-store writes and known URL schemes, and show a sync save failure's own message."
+    },
+    "shared-notification-delivery": {
+      "category": "internal",
+      "message": "Show web and extension notifications through one shared path that checks permission, trims long text and withdraws stale ones."
+    },
+    "layer-direction-moves": {
+      "category": "internal",
+      "message": "Move the Space selector out of the design system into Spaces, settings layout into the design system and page state models next to the page."
+    },
+    "remove-test-orphans": {
+      "category": "internal",
+      "message": "Remove the in-app performance harness and other code only retired tests and tools used."
+    },
+    "shared-webkit-page-handling": {
+      "category": "internal",
+      "message": "Share WebKit link decisions, sign-in and certificate challenges, permission requests and script dialogs between Mac and iPhone pages."
+    },
+    "ipad-menu-from-command-table": {
+      "category": "internal",
+      "message": "Build the iPad keyboard menu from the same command table the command palette uses, with the same items, shortcuts and enabled states."
+    },
+    "shared-sidebar-page-binding": {
+      "category": "internal",
+      "message": "Bind the sidebar to a window's pages once for Mac and iPhone, with the Mac adding tab sharing and audio."
+    },
+    "mobile-window-page-store": {
+      "category": "internal",
+      "message": "Set up an iPhone or iPad window's pages in one place, so the app and each window wire sign-ins, links and Peeks the same way."
+    },
+    "shared-script-message-proxy": {
+      "category": "internal",
+      "message": "Use one message proxy for every page script bridge instead of a copy per bridge."
+    },
+    "shared-sidebar-drag-state": {
+      "category": "internal",
+      "message": "Track a dragged sidebar folder or tab with one drag session type instead of two copies."
+    },
+    "shared-drag-session-end": {
+      "category": "internal",
+      "message": "End an iPhone or iPad sidebar drag through one shared step once the system reports it finished."
+    },
     "background-link-opening-notice": {
       "category": "improved",
       "message": "Opening a link in a background tab now shows a brief confirmation at the top of the window."
@@ -4389,6 +4469,46 @@
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
+    "menus-use-command-names": {
+      "category": "improved",
+      "message": "The Space menu and the iPhone page menu now name and show commands the way the menu bar does, such as Clear Unpinned Tabs and Show History."
+    },
+    "localized-new-folder-name": {
+      "category": "fixed",
+      "message": "A folder you make without naming it is called New Folder in the app's language, not always in English."
+    },
+    "engine-page-answers-requests": {
+      "category": "internal",
+      "message": "The Chromium engine's pages answer the app's page requests themselves, through one path instead of a forwarding handler each."
+    },
+    "engine-extension-profile-check": {
+      "category": "internal",
+      "message": "Decide in one place whether a Chromium extension may run in a private window's profile."
+    },
+    "staged-link-uuid": {
+      "category": "internal",
+      "message": "Carry a staged link's identity as a UUID rather than as text both engines parse back."
+    },
+    "synced-visit-field-names": {
+      "category": "internal",
+      "message": "Synced visits spell their fields from the one table the stored session uses."
+    },
+    "synced-folder-field-names": {
+      "category": "internal",
+      "message": "Synced folders spell their fields from one table."
+    },
+    "synced-tab-field-names": {
+      "category": "internal",
+      "message": "Synced tabs and archived tabs spell their fields from one table."
+    },
+    "synced-space-field-names": {
+      "category": "internal",
+      "message": "Synced Spaces and splits spell their fields from one table."
+    },
+    "sync-record-envelope": {
+      "category": "internal",
+      "message": "Read and write a sync record's envelope in one place."
     },
     "independent-search-provider-triggers": {
       "category": "improved",

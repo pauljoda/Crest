@@ -119,11 +119,10 @@ Its browsing, records, deletion, transfer, residency and content-blocking rules
 are now owned by the synchronous session, sync and app entry points above.
 `Documentation/Architecture/ControlPlane.md` describes that live path.
 
-History visits, range removal and retention are session edits: the core
-records a visit when a page's document finishes loading, and the
-`RemoveHistoryRange` and `SweepExpiredRecords` intents remove visits; retention
-uses a strict age cutoff and explicit history ranges include their start and
-exclude their end. The
+History visits, removal and retention are session edits: the core records a
+visit when a page's document finishes loading, the `RemoveHistoryAddress` and
+`ClearHistory` intents remove visits, and `SweepExpiredRecords` applies
+retention with a strict age cutoff. The
 `AddSearchEngine`, `UpdateSearchEngine`, `RemoveSearchEngine` and
 `SelectSearchEngine` intents edit a Space's engines and its choice, refusing with
 `DuplicateSearchEngineName`, `SearchEngineLimitReached`, `InvalidSearchEngine` or

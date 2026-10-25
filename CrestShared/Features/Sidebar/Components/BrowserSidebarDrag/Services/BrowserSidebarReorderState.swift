@@ -305,10 +305,6 @@ final class BrowserSidebarReorderState {
         geometry.rows[id]?.row.frame
     }
 
-    var orderedSplitCardFrames: [CGRect] {
-        BrowserSplitColumnLayout.orderedCardFrames(geometry.splitCards.values.map(\.frame))
-    }
-
     // MARK: - Drag lifecycle
     func stage(
         item: BrowserSidebarReorderItem,

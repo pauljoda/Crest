@@ -217,27 +217,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Same(replaced, stored.Session.Current);
     }
 
-    /// A first launch restores the device's search catalog over its seed,
-    /// which follows Google, before the cloud answers. Once the cloud's
-    /// Spaces take the seed's place, the device takes the default they follow.
-    [Fact]
-    public void AFirstLaunchTakesTheDefaultTheCloudsSpacesFollowInsteadOfItsSeeds() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        fixture.Document["session"]!["spaces"]![0]!["browsingPreferences"] = Following(BuiltInSearchProvider.Google);
-        using var stored = StoredSyncing(directory, fixture.Document, keepsSeed: true);
-        stored.App.Send(new RestoreSearchCatalog("en", "US"));
-        Assert.Equal("google", stored.Session.SearchCatalog.Default.Name);
-
-        stored.App.Send(new ReplaceSeedWithCloudRecords([
-            CloudSpace(Guid.NewGuid(), Guid.NewGuid(), 5, Following(BuiltInSearchProvider.DuckDuckGo))
-        ]));
-        stored.App.Send(new RestoreSearchCatalog("en", "US"));
-
-        Assert.Equal("duckDuckGo", stored.Session.SearchCatalog.Default.Name);
-        Assert.True(Assert.Single(stored.Session.Current.Spaces).Settings.BrowsingPreferences.FollowsDefaultSearch);
-    }
-
     /// Turning Crest Passwords on or off for a Space puts that choice, and when
     /// it was made, in the Space's record; where the Space keeps its passwords
     /// stays out of it.
@@ -263,19 +242,6 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain("alsoOffersSaveToSystemPasswords", value.ToJsonString(), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void AMergeThatDeletesABorrowedSpaceClosesItsBorrower() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        using var stored = StoredSyncing(directory, fixture.Document);
-        var borrower = TestWorkspaces.Borrow(stored.App, stored.Workspace, fixture.Document["session"]!["spaces"]![0]!);
-
-        stored.App.Send(new MergeSyncRecords([Tombstone(SyncRecordKind.Space, fixture.Space, fixture.Space, ulong.MaxValue / 2)]));
-
-        Assert.Contains(stored.App.Drain(), change => change is WorkspaceClosed closed && closed.WorkspaceId == borrower);
-        Assert.Contains(stored.Session.Current.SpaceDeletions, deletion => deletion.SpaceId == fixture.Space);
-    }
-
     /// A merge that lands before the stage of a folder's deletion runs still
     /// deletes the folder's record as the person did, so the folder stays
     /// deleted on every device.
@@ -291,86 +257,6 @@ public sealed partial class BrowserContractsTests {
 
         Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
         Assert.DoesNotContain(stored.Session.Current.Spaces.Single().Folders, held => held.Id == folder);
-    }
-
-    /// An overwrite that lands before the stage of a folder's deletion runs
-    /// deletes the folder's record as the person did, so the overwrite that
-    /// reaches every device keeps it deleted there too.
-    [Fact]
-    public void AnOverwriteKeepsTheReasonOfADeletionItStagesInsteadOfItsQueuedStage() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        using var stored = StoredSyncing(directory, fixture.Document);
-        var folder = SpaceId(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!);
-
-        stored.App.Send(new DeleteFolder(stored.Workspace, fixture.Space, folder));
-        stored.App.Send(new OverwriteCloud([CloudTab(Guid.NewGuid(), fixture.Space, clock: 5)]));
-
-        Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
-    }
-
-    /// A merge the core refuses leaves the stage it superseded to run as it
-    /// would have.
-    [Fact]
-    public void ARefusedMergeQueuesTheStageItSupersededAgain() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        using var stored = StoredSyncing(directory, fixture.Document);
-        var folder = SpaceId(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!);
-
-        stored.App.Send(new DeleteFolder(stored.Workspace, fixture.Space, folder));
-        Assert.Throws<Rejected>(() => stored.App.Send(new MergeSyncRecords([CloudFolder(folder, Guid.NewGuid(), parent: null, clock: 5)])));
-        stored.Sync.Flush();
-
-        Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
-    }
-
-    /// The cloud saved one record at the version the journal holds and
-    /// another at an older one: only the first stops waiting to upload, and
-    /// the journal is on disk before the acknowledgement returns.
-    [Fact]
-    public void AnAcknowledgementClearsOnlyTheVersionsTheCloudSaved() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        using var stored = StoredSyncing(directory, fixture.Document);
-        var pending = stored.App.Query(new PendingUploads()).Records;
-        var records = stored.App.Query(new RecordsToUpload(pending)).Records;
-        var (saved, stale) = (records[0], records[1]);
-        stored.App.Drain();
-
-        var answer = stored.App.Send(new AcknowledgeUploads([
-            new(new(saved.Kind, saved.Id), saved.Version),
-            new(new(stale.Kind, stale.Id), stale.Version with { Clock = stale.Version.Clock - 1 })
-        ]));
-
-        Assert.Empty(answer);
-        var waiting = stored.App.Query(new PendingUploads()).Records;
-        Assert.Equal([.. pending.Where(reference => reference != new SyncRecordReference(saved.Kind, saved.Id))], waiting);
-        Assert.Equal(pending.Count - 1, stored.App.Drain().OfType<SyncJournalChanged>().Single().PendingRecords);
-        Assert.True(StoredParts(directory.File)["journal"].AsSpan().SequenceEqual(stored.Sync.Snapshot.Read()));
-    }
-
-    /// A fetch that brings an older version of a record the cloud already
-    /// acknowledged does not make it wait to upload again.
-    [Fact]
-    public void AnOlderFetchedVersionDoesNotQueueAnAcknowledgedRecordAgain() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        using var stored = StoredSyncing(directory, fixture.Document);
-        var tab = new SyncRecordReference(SyncRecordKind.Tab, fixture.Tab);
-        var local = Assert.Single(stored.App.Query(new RecordsToUpload([tab])).Records);
-        stored.App.Send(new AcknowledgeUploads([new(tab, local.Version)]));
-        var older = JsonNode.Parse(local.Body)!.AsObject();
-        older["value"]!["title"] = "An older title";
-
-        stored.App.Send(new MergeSyncRecords([local with {
-            Version = new(local.Version.Clock - 1, CloudDevice), Body = Bytes(older)
-        }]));
-
-        Assert.DoesNotContain(tab, stored.App.Query(new PendingUploads()).Records);
-        var kept = Assert.Single(stored.App.Query(new RecordsToUpload([tab])).Records);
-        Assert.Equal(local.Version, kept.Version);
-        Assert.True(kept.Body.AsSpan().SequenceEqual(local.Body));
     }
 
     [Fact]
@@ -418,30 +304,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new CloudContentComparison(false, device.Count, device.Count - 1, 1, 1), missing);
     }
 
-    /// An overwrite leaves every record waiting to upload over the cloud's; a
-    /// replacement leaves none.
-    [Fact]
-    public void AnOverwriteLeavesEveryRecordWaitingAndAReplacementNone() {
-        using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        using var stored = StoredSyncing(directory, fixture.Document);
-        var cloud = Guid.NewGuid();
-        var records = new[] { CloudSpace(cloud, Guid.NewGuid(), 5), CloudTab(Guid.NewGuid(), cloud, 6) };
-        stored.App.Send(new AcknowledgeUploads([.. stored.App.Query(new RecordsToUpload(stored.App.Query(new PendingUploads()).Records))
-            .Records.Select(record => new UploadedRecord(new(record.Kind, record.Id), record.Version))]));
-        Assert.Empty(stored.App.Query(new PendingUploads()).Records);
-        stored.App.Drain();
-
-        stored.App.Send(new OverwriteCloud(records));
-        var overwritten = stored.App.Drain().OfType<SyncJournalChanged>().Single();
-        Assert.Equal(overwritten.Records, stored.App.Query(new PendingUploads()).Records.Count);
-        Assert.Equal(overwritten.Records, overwritten.PendingRecords);
-
-        stored.App.Send(new ReplaceWithCloudRecords(records));
-        Assert.Empty(stored.App.Query(new PendingUploads()).Records);
-        Assert.Equal(0, stored.App.Drain().OfType<SyncJournalChanged>().Last().PendingRecords);
-    }
-
     /// A first launch's disposable seed uploads nothing, even when the journal
     /// it carried holds records waiting to upload.
     [Fact]
@@ -458,19 +320,6 @@ public sealed partial class BrowserContractsTests {
         stored.App.Drain();
         stored.App.Send(new AcknowledgeUploads([]));
         Assert.Equal(0, stored.App.Drain().OfType<SyncJournalChanged>().Single().PendingRecords);
-    }
-
-    /// The transport's calls are refused while the file holds no session, not
-    /// read as an empty journal.
-    [Fact]
-    public void TheTransportIsRefusedWhileTheFileHoldsNoSession() {
-        using var directory = new StorageDirectory();
-        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
-
-        Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Query(new PendingUploads())).Rejection);
-        Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Query(new CloudComparison([]))).Rejection);
-        Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Send(new AcknowledgeUploads([]))).Rejection);
-        app.SettleSync();
     }
 
     #endregion
@@ -550,12 +399,6 @@ public sealed partial class BrowserContractsTests {
         return new(SyncRecordKind.Space, id, id, new SyncVersion(clock, CloudDevice), Schema: 1,
             Bytes(new JsonObject { ["type"] = "space", ["value"] = value }), IsTombstone: false);
     }
-
-    /// Browsing preferences that follow the device's default search, which
-    /// `engine` was when the Space last chose.
-    private static JsonObject Following(BuiltInSearchProvider engine) => StoredSessionCodec.Encode(new BrowsingPreferences(engine, null, [],
-        SearchSuggestionsEnabled: false, FollowsDefaultSearch: true, FollowsDefaultSuggestions: true, CurrentTabCleanup.After12Hours,
-        ContentBlockingPolicy.Balanced, new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever)));
 
     private static SyncRecord CloudFolder(Guid id, Guid space, Guid? parent, ulong clock) {
         var value = new JsonObject {

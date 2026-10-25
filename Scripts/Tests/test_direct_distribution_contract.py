@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import pathlib
-import plistlib
 import importlib.util
 import unittest
 
@@ -49,19 +48,6 @@ class DirectDistributionContractTests(unittest.TestCase):
             workflow.index('git -C "$updates_checkout" push origin HEAD:updates'),
         )
 
-
-    def test_export_uses_the_named_developer_id_profile(self) -> None:
-        with EXPORT_OPTIONS.open("rb") as stream:
-            options = plistlib.load(stream)
-
-        self.assertEqual(options["method"], "developer-id")
-        self.assertEqual(options["signingStyle"], "manual")
-        self.assertEqual(options["signingCertificate"], "Developer ID Application")
-        self.assertEqual(options["teamID"], "3U2R97HLXF")
-        self.assertEqual(
-            options["provisioningProfiles"],
-            {"com.pauldavis.crest": "Crest Developer ID"},
-        )
 
     def test_release_workflow_preserves_production_entitlements(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()

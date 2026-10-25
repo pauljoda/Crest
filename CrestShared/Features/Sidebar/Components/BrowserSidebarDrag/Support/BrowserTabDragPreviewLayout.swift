@@ -115,12 +115,6 @@ enum BrowserTabDragPreviewLayout {
         return clamped + ((0.5 - clamped) * min(max(progress, 0), 1))
     }
 
-    static func outsidePinnedPlacement(
-        for sourcePlacement: TabPlacement
-    ) -> TabPlacement {
-        sourcePlacement == .pinned ? .saved : sourcePlacement
-    }
-
     private static func lerp(
         _ start: CGFloat,
         _ end: CGFloat,

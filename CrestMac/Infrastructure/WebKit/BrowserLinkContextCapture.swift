@@ -31,15 +31,6 @@ struct BrowserLinkContextCapture: Equatable, Sendable {
     private var pendingToken = 0
     private var consumedToken = 0
 
-    /// The link a menu opening right now would carry, without consuming it.
-    var pendingLink: URL? {
-        pendingContextValue?.linkURL
-    }
-
-    var pendingImage: URL? {
-        pendingContextValue?.imageURL
-    }
-
     /// Records one `contextmenu` report from the content bridge.
     ///
     /// A malformed payload, a report over plain content, and a destination
