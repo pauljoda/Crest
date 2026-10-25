@@ -7,6 +7,9 @@ final class BrowserChromeState {
     // MARK: - Variables
 
     let utilityPresentation: BrowserUtilityPresentationState
+    /// The walk back through this window's tabs by recency that the most
+    /// recent tab's shortcut starts while its modifiers stay held.
+    let recentTabSwitcher = BrowserRecentTabSwitcherModel()
     var columnVisibility: NavigationSplitViewVisibility {
         get { observed(\.columnVisibilityStorage, as: \.columnVisibility) }
         set { publish(newValue, into: \.columnVisibilityStorage, as: \.columnVisibility) }

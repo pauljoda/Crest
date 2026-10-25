@@ -504,6 +504,11 @@ final class BrowserPagePool:
         tabRuntimes[tabID]?.page
     }
 
+    /// The picture of tab `tabID`'s page as it last left the screen, if any.
+    func departurePreview(ofTab tabID: UUID) -> BrowserPageSnapshotImage? {
+        tabRuntimes[tabID]?.departurePreview
+    }
+
     /// The live page of `tab` in `space` for an agent the person allowed: the
     /// tab's resident page, or one made and loaded at the tab's address
     /// without this window showing it. Nil when the core refuses the tab a
@@ -1091,12 +1096,26 @@ final class BrowserPagePool:
             tabID.flatMap { tabRuntimes[$0]?.page }?.awaitInputSincePresented()
         }
         prepareFocusTransition(to: tabID.flatMap { tabRuntimes[$0]?.page })
+        captureDeparturePreviews(before: presentedTabIDs)
         requestAutomaticPictureInPicture(forDeparturesBefore: presentedTabIDs)
         for arrivingTabID in presentedTabIDs where !self.presentedTabIDs.contains(arrivingTabID) {
             tabRuntimes[arrivingTabID]?.page.pictureInPicture?.returnToTab()
         }
         activeTabID = tabID
         self.presentedTabIDs = presentedTabIDs
+    }
+
+    /// Pictures each page leaving the screen while it is still drawn, for the
+    /// recent tab switcher: an engine such as Chromium pictures only the pages
+    /// it is drawing.
+    private func captureDeparturePreviews(before arriving: [UUID]) {
+        for tabID in Set(presentedTabIDs).subtracting(arriving) {
+            guard let runtime = tabRuntimes[tabID] else { continue }
+            runtime.page.captureViewport(width: BrowserRecentTabSwitcherTile.previewCaptureWidth) {
+                [weak runtime] image in
+                if let image { runtime?.departurePreview = image }
+            }
+        }
     }
 
     private func requestAutomaticPictureInPicture(forDeparturesBefore arriving: [UUID]) {

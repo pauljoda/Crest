@@ -35,6 +35,10 @@ extension BrowserMacShell {
     /// such as the location field or the sidebar, get every Crest shortcut
     /// before they see the key.
     func handleShortcut(_ event: NSEvent, pageSeesFirst: Bool) -> Bool {
+        // A recent tab walk takes every key until it ends.
+        if let switcher = activeActions?.chrome.recentTabSwitcher, switcher.isWalking {
+            return switcher.handle(event)
+        }
         guard let windows, let application, event.type == .keyDown,
             NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil,
             (NSApp.keyWindow?.firstResponder as? ShortcutRecorderButton)?.isRecording != true,

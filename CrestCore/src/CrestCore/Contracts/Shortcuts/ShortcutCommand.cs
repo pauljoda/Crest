@@ -146,8 +146,9 @@ public sealed class ShortcutCommand {
         title: "Next Tab", symbol: "chevron.down", shortcuts: Everywhere(Special(ShortcutSpecialKey.DownArrow, Command | Option)),
         searchTerms: "switch cycle tabs up down arrow", reservedFromPages: true);
     public static readonly ShortcutCommand MostRecentTab = new(Kinds.MostRecentTab, name: "mostRecentTab",
-        ShortcutSection.Tabs, title: "Most Recent Tab", symbol: "arrow.left.arrow.right",
-        shortcuts: Everywhere(Special(ShortcutSpecialKey.Tab, Control)), searchTerms: "toggle recent switch tabs",
+        ShortcutSection.Tabs, title: "Switch Recent Tabs", symbol: "arrow.left.arrow.right",
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.Tab, Control)),
+        searchTerms: "most recent last toggle switcher switch tabs preview",
         reservedFromPages: true);
     public static readonly ShortcutCommand SelectTab1 = SelectingTab(name: "selectTab1", number: 1);
     public static readonly ShortcutCommand SelectTab2 = SelectingTab(name: "selectTab2", number: 2);
