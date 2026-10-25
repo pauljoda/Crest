@@ -357,7 +357,7 @@ final class BrowserWebHostView: NSView {
     /// out of the window on its way to being dismantled.
     private weak var lastWindow: NSWindow?
     /// Keeps the window server from dragging the window by this page's top.
-    private lazy var titleBarTracker = BrowserPageTitleBarTracker(page: self)
+    private lazy var titleBarTracker = BrowserTitleBarPointerTracker(view: self, region: .page)
     private var titleBarTrackingArea: NSTrackingArea?
     private var focusRestorationGate = BrowserWebFocusRestorationGate.suppressed
     private var isPageActive = false

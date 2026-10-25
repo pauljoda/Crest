@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserQuickWindowSpacePickerRow: View {
     let space: BrowserSpaceIdentity
     let isSelected: Bool
+    var purpose = BrowserQuickWindowSpacePicker.Purpose.destination
     let select: () -> Void
 
     @State private var isHovering = false
@@ -34,7 +35,7 @@ struct BrowserQuickWindowSpacePickerRow: View {
         .onHover { isHovering = $0 }
         .accessibilityLabel(space.name)
         .accessibilityValue(
-            isSelected ? "Current destination" : "Available destination"
+            Text(isSelected ? purpose.selectedValue : purpose.availableValue)
         )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

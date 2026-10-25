@@ -124,6 +124,10 @@ final class BrowserChromeState {
     }
 
     func openNewTab(isStartPageSelected: Bool) {
+        if isCommandPalettePresented {
+            dismissCommandPalette()
+            return
+        }
         guard isStartPageSelected else {
             presentCommandPalette()
             return

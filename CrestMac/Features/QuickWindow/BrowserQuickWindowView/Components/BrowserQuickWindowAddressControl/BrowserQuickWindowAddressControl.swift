@@ -1,6 +1,14 @@
 import SwiftUI
 
 struct BrowserQuickWindowAddressControl: View {
+    // MARK: - Static Variables
+
+    /// The whole field, Space chip included, which the address centers its
+    /// text in.
+    private static let field = NamedCoordinateSpace.named("crest.quick-window.address-field")
+
+    // MARK: - Variables
+
     let model: BrowserQuickWindowModel
     @Binding var addressText: String
     @Binding var isAddressEditing: Bool
@@ -10,7 +18,11 @@ struct BrowserQuickWindowAddressControl: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            BrowserQuickWindowSourceSpaceIndicator(space: model.spaceModel?.identity)
+            BrowserQuickWindowSourceSpaceIndicator(
+                space: model.spaceModel?.identity,
+                spaces: model.availableSpaceModels.map(\.identity),
+                selectSpace: model.selectSpace
+            )
             Divider().frame(height: 16)
             BrowserQuickWindowAddressSecurityIcon(
                 isSecure: model.page?.live.security.isSecure == true
@@ -24,6 +36,7 @@ struct BrowserQuickWindowAddressControl: View {
                 editorAccessibilityIdentifier: "quick-window-address",
                 summaryAccessibilityIdentifier: "quick-window-address-display",
                 prompt: "Search or enter a website",
+                centeringField: Self.field,
                 submit: openAddress
             )
             .padding(.vertical, BrowserQuickWindowLayout.addressVerticalPadding)
@@ -40,11 +53,14 @@ struct BrowserQuickWindowAddressControl: View {
             isLoading: model.page?.live.isLoading == true,
             isEditing: isAddressEditing
         )
+        .coordinateSpace(Self.field)
         .frame(
             minWidth: BrowserQuickWindowLayout.addressMinimumWidth,
             maxWidth: .infinity
         )
     }
+
+    // MARK: - Actions - Page
 
     private func openAddress() {
         guard let space = model.spaceModel,

@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct BrowserAddressContent: View {
+    // MARK: - Static Variables
+
+    /// The room a text field keeps around its text, which the centered text
+    /// needs beyond its own width.
+    private static let textInset: CGFloat = 8
+
     // MARK: - Variables
 
     @Binding var text: String
@@ -12,10 +18,19 @@ struct BrowserAddressContent: View {
     var editorAccessibilityIdentifier = "address-field"
     var summaryAccessibilityIdentifier = "address-display"
     var prompt: LocalizedStringKey = "Search or enter website"
+    /// The field the address centers its text in, when controls on one side
+    /// of the address outweigh those on the other. Without it the text centers
+    /// between the controls beside it.
+    var centeringField: NamedCoordinateSpace?
     let submit: () -> Void
 
     @FocusState private var isFocused: Bool
     @State private var selection: TextSelection?
+    /// How much farther the field reaches past the address's leading edge
+    /// than past its trailing edge.
+    @State private var fieldImbalance: CGFloat = 0
+    @State private var width: CGFloat = 0
+    @State private var textWidth: CGFloat = 0
 
     var body: some View {
         Group {
@@ -26,6 +41,19 @@ struct BrowserAddressContent: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            guard let centeringField, let field = proxy.bounds(of: centeringField) else { return 0 }
+            return proxy.size.width - field.minX - field.maxX
+        } action: {
+            fieldImbalance = $0
+        }
+        // Only an address that centers in a field measures itself; the others
+        // keep their layout free of width and text-width state.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            centeringField == nil ? 0 : proxy.size.width
+        } action: {
+            width = $0
+        }
         .onChange(of: isFocused, initial: true) { _, focused in
             if focused { selectAllOnceFocused() }
             guard isEditing != focused else { return }
@@ -55,13 +83,16 @@ struct BrowserAddressContent: View {
     }
 
     private var addressEditor: some View {
-        TextField(
-            prompt,
-            text: $text,
-            selection: $selection
+        centeredInField(
+            TextField(
+                prompt,
+                text: $text,
+                selection: $selection
+            )
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.center),
+            measuring: text.isEmpty ? Text(prompt) : Text(verbatim: text)
         )
-        .textFieldStyle(.plain)
-        .multilineTextAlignment(.center)
         #if os(iOS)
             // A combined search and address field keeps the ordinary space
             // bar, which URL keyboards remove.
@@ -125,24 +156,68 @@ struct BrowserAddressContent: View {
                 focusAndSelectAll()
             }
         } label: {
-            VStack(spacing: -1) {
-                Text(presentation.domain)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(text.isEmpty ? .secondary : .primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                if let route = presentation.route {
-                    Text(route)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-            }
+            centeredInField(
+                addressSummaryLabel(presentation),
+                measuring: addressSummaryLabel(presentation)
+            )
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
         }
+    }
+
+    private func addressSummaryLabel(
+        _ presentation: BrowserAddressPresentation
+    ) -> some View {
+        VStack(spacing: -1) {
+            Text(presentation.domain)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(text.isEmpty ? .secondary : .primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            if let route = presentation.route {
+                Text(route)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+        }
+    }
+
+    // MARK: - Actions - Centering
+
+    /// Gives the field's imbalance back on the address's shorter side, so the
+    /// text, measured from `label`, sits at the center of the field rather
+    /// than of the space between the controls. Text too wide for that keeps
+    /// the room it needs.
+    @ViewBuilder
+    private func centeredInField(
+        _ content: some View,
+        measuring label: some View
+    ) -> some View {
+        if centeringField == nil {
+            content
+        } else {
+            content
+                .padding(.leading, max(0, -centeringOffset))
+                .padding(.trailing, max(0, centeringOffset))
+                .background {
+                    label
+                        .fixedSize()
+                        .hidden()
+                        .accessibilityHidden(true)
+                        .onGeometryChange(for: CGFloat.self, of: \.size.width) { textWidth = $0 }
+                }
+        }
+    }
+
+    /// The padding that centers the text in the field: positive on the
+    /// trailing side, negative on the leading side.
+    private var centeringOffset: CGFloat {
+        let room = max(0, width - textWidth - Self.textInset)
+        let offset = min(abs(fieldImbalance), room)
+        return fieldImbalance < 0 ? -offset : offset
     }
 
     // MARK: - Actions - Selection

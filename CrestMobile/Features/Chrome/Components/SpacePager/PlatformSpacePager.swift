@@ -2,7 +2,11 @@ import SwiftUI
 
 /// Touch follows the native scroll view continuously. The shared sidebar still
 /// owns selection and page activation; neither is changed for every drag frame.
+/// Only a scroll a person drives settles on another Space: a hardware keyboard's
+/// focus also scrolls this view, and the pager then returns to the selected one.
 struct PlatformSpacePager<Content: View>: View {
+    // MARK: - Variables
+
     let spaces: [SpaceModel]
     let selectedSpaceID: UUID
     let isInteractionLocked: Bool
@@ -13,6 +17,8 @@ struct PlatformSpacePager<Content: View>: View {
     @Environment(\.spacePagerPresentation) private var presentation
     @State private var progress = TouchSpacePagerProgress()
     @State private var visibleSpaceID: UUID?
+
+    // MARK: - Initializers
 
     init(
         spaces: [SpaceModel],
@@ -28,6 +34,8 @@ struct PlatformSpacePager<Content: View>: View {
         self.content = content
         _visibleSpaceID = State(initialValue: selectedSpaceID)
     }
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         GeometryReader { viewport in
@@ -59,13 +67,14 @@ struct PlatformSpacePager<Content: View>: View {
                 .onScrollPhaseChange { _, phase in
                     progress.update(phase: phase, ids: spaces.map(\.id), presentation: presentation)
                     guard phase == .idle else { return }
-                    commitVisibleSpace()
+                    if progress.isPersonDriven {
+                        commitVisibleSpace()
+                    } else {
+                        show(selectedSpaceID)
+                    }
                 }
                 .onChange(of: selectedSpaceID) { _, spaceID in
-                    guard visibleSpaceID != spaceID else { return }
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
-                        visibleSpaceID = spaceID
-                    }
+                    show(spaceID)
                 }
                 .onChange(of: isInteractionLocked) { _, _ in
                     recenter(using: proxy)
@@ -90,12 +99,21 @@ struct PlatformSpacePager<Content: View>: View {
         }
     }
 
+    // MARK: - Actions - Selection
+
     private func commitVisibleSpace() {
         guard !isInteractionLocked, let spaceID = visibleSpaceID,
             spaces.contains(where: { $0.id == spaceID })
         else { return }
         let accepted = selectSpace(spaceID)
         if accepted != spaceID { visibleSpaceID = accepted }
+    }
+
+    private func show(_ spaceID: UUID) {
+        guard visibleSpaceID != spaceID else { return }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
+            visibleSpaceID = spaceID
+        }
     }
 
     private func recenter(using proxy: ScrollViewProxy) {
