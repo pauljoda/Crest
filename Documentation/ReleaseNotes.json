@@ -4574,6 +4574,10 @@
       "category": "new",
       "message": "Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in."
     },
+    "start-page-command-t-focus": {
+      "category": "fixed",
+      "message": "On a Start Page, Command-T closes an open command bar and puts the cursor back in the Start Page field."
+    },
     "clear-one-site-cookies-or-cache": {
       "category": "new",
       "message": "Site Controls can clear the open site's cookies or its cache. Clearing cookies signs you out of the site and removes everything it stored in that Space, including service workers and what sites embedded in it stored there. Both are also in the command palette and, on iPhone and iPad, the page menu."
