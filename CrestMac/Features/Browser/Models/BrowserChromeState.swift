@@ -124,7 +124,8 @@ final class BrowserChromeState {
     }
 
     func openNewTab(isStartPageSelected: Bool) {
-        if isCommandPalettePresented {
+        // A Start Page closes the command bar into its own field below.
+        if isCommandPalettePresented, !isStartPageSelected {
             dismissCommandPalette()
             return
         }
