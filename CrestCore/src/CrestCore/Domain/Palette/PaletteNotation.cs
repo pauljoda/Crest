@@ -11,7 +11,8 @@ internal sealed class PaletteNotation {
     #region Static Variables
 
     public static readonly PaletteNotation Provider = new(sign: '$', entering: (context, word, text) =>
-        context.Preferences.ProviderSpaceTrigger.IsEnabled && context.Catalog.NamedBy(word) is { } provider
+        context.Space is not null && context.Preferences.ProviderSpaceTrigger.IsEnabled
+            && context.Catalog.NamedBy(word) is { } provider
             ? new(provider, null, text) : null);
     public static readonly PaletteNotation Scope = new(sign: '@', entering: (context, word, text) =>
         context.Preferences.Offers(PaletteSource.Scopes) && PaletteScope.Keyed($"@{word}") is { } scope
@@ -49,16 +50,16 @@ internal sealed class PaletteNotation {
     public static PaletteEntry? Entry(PaletteContext context, string typed) {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(typed);
-        // A palette over a Space it may not read offers only the address or
-        // search, the commands and the other Spaces.
-        if (context.Space is null) return null;
         string text = typed.TrimStart();
         int space = text.IndexOfAny([' ', '\t', ' ']);
         if (space < 1) return null;
         var query = text[(space + 1)..].TrimStart();
         if (All.FirstOrDefault(notation => notation.Sign == text[0]) is { } notation)
             return space < 2 ? null : notation.entering(context, text[1..space], query);
-        return context.Preferences.ProviderSpaceTrigger.ShortcutFrom(text[..space], Provider.Sign) is { } word
+        // A palette over a Space it may not read enters no search provider; its
+        // scopes still list the commands and the other Spaces.
+        return context.Space is not null
+            && context.Preferences.ProviderSpaceTrigger.ShortcutFrom(text[..space], Provider.Sign) is { } word
             && context.Catalog.Enabled.FirstOrDefault(provider => provider.HasShortcut(word)) is { } provider
             ? new(provider, null, query) : null;
     }
