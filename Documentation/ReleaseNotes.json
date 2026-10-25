@@ -4575,8 +4575,8 @@
       "message": "Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in."
     },
     "start-page-command-t-focus": {
-      "category": "internal",
-      "message": "Command-T on a Start Page closes the command bar and puts the cursor back in the Start Page field."
+      "category": "fixed",
+      "message": "On a Start Page, Command-T closes an open command bar and puts the cursor back in the Start Page field."
     }
   }
 }
