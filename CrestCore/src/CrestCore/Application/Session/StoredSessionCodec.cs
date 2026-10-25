@@ -106,6 +106,7 @@ internal static partial class StoredSessionCodec {
         public const string Placement = "placement";
         public const string PositionModifiedAt = "positionModifiedAt";
         public const string PrefersOpenTabs = "prefersOpenTabs";
+        public const string ProviderSpaceTrigger = "providerSpaceTrigger";
         public const string Profile = "profile";
         public const string ProfileId = "profileID";
         public const string RawValue = "rawValue";

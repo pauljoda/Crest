@@ -155,7 +155,8 @@ internal static partial class StoredSessionCodec {
 
     /// The palette preferences. A value this build cannot read keeps its
     /// default, a kind of result it cannot name is left out, and a number of
-    /// rows it cannot read is the kind's own.
+    /// rows it cannot read is the kind's own. A record from before the Space
+    /// trigger existed keeps the Space entry its Tab setting gave it.
     internal static PalettePreferences DecodePalettePreferences(JsonNode? node) {
         var value = node as JsonObject ?? [];
         var defaults = PalettePreferences.Default;
@@ -168,7 +169,11 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.ShowsTopHit]) ?? defaults.ShowsTopHit, TolerantFlag(value[Key.PrefersOpenTabs]) ?? defaults.PrefersOpenTabs,
             TolerantFlag(value[Key.CompletesInline]) ?? defaults.CompletesInline, TolerantFlag(value[Key.LearnsChoices]) ?? defaults.LearnsChoices,
             TolerantFlag(value[Key.SearchesSitesWithTab]) ?? defaults.SearchesSitesWithTab,
-            TolerantFlag(value[Key.ShowsReasons]) ?? defaults.ShowsReasons).Restored();
+            TolerantFlag(value[Key.ShowsReasons]) ?? defaults.ShowsReasons,
+            value.ContainsKey(Key.ProviderSpaceTrigger)
+                ? SearchProviderSpaceTrigger.Named(TolerantText(value[Key.ProviderSpaceTrigger])) ?? defaults.ProviderSpaceTrigger
+                : (TolerantFlag(value[Key.SearchesSitesWithTab]) ?? defaults.SearchesSitesWithTab)
+                    ? SearchProviderSpaceTrigger.PrefixedShortcut : SearchProviderSpaceTrigger.Off).Restored();
     }
 
     private static JsonNode Encode(PaletteSourceChoice choice) {
@@ -185,6 +190,7 @@ internal static partial class StoredSessionCodec {
         [Key.CompletesInline] = preferences.CompletesInline,
         [Key.LearnsChoices] = preferences.LearnsChoices,
         [Key.SearchesSitesWithTab] = preferences.SearchesSitesWithTab,
+        [Key.ProviderSpaceTrigger] = preferences.ProviderSpaceTrigger.Name,
         [Key.ShowsReasons] = preferences.ShowsReasons
     };
 

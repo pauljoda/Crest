@@ -45,6 +45,9 @@ public sealed partial class BrowserContractsTests {
             Assert.Null(locked.Completion);
             Assert.Null(locked.SuggestionAddress);
         }
+        Assert.Null(Asked("$yt cats").Entry);
+        Assert.Empty(Asked("yt").MatchingProviders);
+        Assert.NotNull(Asked("@spaces work").Entry?.Scope);
 
         Unlock(device.Send, device.Workspace, identity.Space);
         Assert.Contains(Asked("reading").Groups, group => group.Section == PaletteSection.Saved);
