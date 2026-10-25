@@ -422,17 +422,18 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Asks the engine for a picture of the page tab `tabID` of the shown Space
     /// holds, without loading or showing it, and delivers nil when the tab
-    /// pictures no live page, such as a Start Page or a failed load. An engine
-    /// that cannot picture a page it is not drawing, as Chromium cannot, is
-    /// answered by the picture taken as the page last left the screen.
+    /// pictures no live page, such as a Start Page or a failed load. The
+    /// picture taken as the page last left the screen comes first, and a live
+    /// one replaces it when the engine draws one: Chromium cannot picture a
+    /// page it is not drawing, and only gives up on one after a timeout.
     private func previewTab(_ tabID: UUID, then deliver: @escaping @MainActor (BrowserPageSnapshotImage?) -> Void) {
         guard let space = browser.shownSpace, let tab = space.tabs.model(tabID) else { return deliver(nil) }
         let page = pages.residentPage(
             matching: BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
         guard PagePresentation.of(tab.surface, page: page).picturesLivePage, let page else { return deliver(nil) }
-        let pages = pages
+        if let departed = pages.departurePreview(ofTab: tabID) { deliver(departed) }
         page.captureViewport(width: BrowserRecentTabSwitcherTile.previewCaptureWidth) { image in
-            deliver(image ?? pages.departurePreview(ofTab: tabID))
+            if let image { deliver(image) }
         }
     }
 
