@@ -55,8 +55,7 @@ final class BrowserMacLaunchRecovery {
         menu.addItem(item)
         NSApp.mainMenu = menu
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-                event.charactersIgnoringModifiers == "q"
+            guard BrowserShortcut(event: event) == BrowserShortcut(key: .character("q"), modifiers: .command)
             else { return event }
             NSApp.terminate(nil)
             return nil

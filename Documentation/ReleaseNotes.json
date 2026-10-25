@@ -4509,6 +4509,10 @@
     "sync-record-envelope": {
       "category": "internal",
       "message": "Read and write a sync record's envelope in one place."
+    },
+    "shortcuts-follow-command-keyboard-layout": {
+      "category": "fixed",
+      "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak – QWERTY ⌘, Russian and Greek, so Command-X cuts instead of quitting Crest."
     }
   }
 }

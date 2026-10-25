@@ -173,7 +173,8 @@ struct BrowserTabSelectionMonitor: View {
                 selection.clear()
                 return nil
             }
-            if command, event.charactersIgnoringModifiers?.lowercased() == "a" {
+            let key = BrowserShortcutKey(event: event)
+            if command, key == .character("a") {
                 if shift { selection.clear() } else { selection.selectAll(units: units) }
                 return nil
             }
@@ -182,14 +183,14 @@ struct BrowserTabSelectionMonitor: View {
                 let request = BrowserSidebarSelection.capture(for: id, in: browser), let spaceAccess
             {
                 let actions = BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess)
-                switch event.charactersIgnoringModifiers?.lowercased() {
-                case "c":
+                switch key {
+                case .character("c"):
                     actions.copyLinks(request)
                     return nil
-                case "d":
+                case .character("d"):
                     actions.perform(browser.duplicating(request), for: request)
                     return nil
-                case "w":
+                case .character("w"):
                     actions.perform(browser.closing(request), for: request)
                     return nil
                 default: break
