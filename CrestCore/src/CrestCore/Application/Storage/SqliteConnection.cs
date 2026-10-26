@@ -144,6 +144,9 @@ internal sealed class SqliteConnection : IDisposable {
             + "modifiers INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_link (id INTEGER PRIMARY KEY CHECK (id = 0), destination TEXT NOT NULL, "
             + "destination_space TEXT, peek_modifier TEXT NOT NULL, archive_policy TEXT NOT NULL)");
+        // A store that predates the placements gains their columns, which read as the default until chosen.
+        AddColumnIfMissing("device_link", "new_tab_placement");
+        AddColumnIfMissing("device_link", "linked_tab_placement");
         Execute("CREATE TABLE IF NOT EXISTS device_link_behavior (name TEXT PRIMARY KEY, is_on INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_link_route (id TEXT PRIMARY KEY, enabled INTEGER NOT NULL, match TEXT NOT NULL, "
             + "pattern TEXT NOT NULL, space TEXT NOT NULL, position INTEGER NOT NULL)");
@@ -163,6 +166,13 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_agent_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_agent (position INTEGER PRIMARY KEY, team TEXT, signing TEXT, path TEXT, "
             + "client TEXT, name TEXT NOT NULL)");
+    }
+
+    /// Adds the nullable text column `column` to `table` when it lacks it.
+    private void AddColumnIfMissing(string table, string column) {
+        bool present = false;
+        Rows($"PRAGMA table_info({table})", statement => present |= Sqlite.ColumnText(statement, 1) == column);
+        if (!present) Execute($"ALTER TABLE {table} ADD COLUMN {column} TEXT");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -294,12 +304,15 @@ internal sealed class SqliteConnection : IDisposable {
     /// default: a device that never chose any holds no rows.
     private LinkPreferences ReadLinks() {
         var links = LinkPreferences.Default;
-        Rows("SELECT destination, destination_space, peek_modifier, archive_policy FROM device_link", statement => links = links with {
-            Destination = ExternalLinkDestination.Named(Sqlite.ColumnText(statement, 0)) ?? links.Destination,
-            DestinationSpaceId = Identity(statement, 1),
-            PeekModifier = LinkPeekModifier.Named(Sqlite.ColumnText(statement, 2)) ?? links.PeekModifier,
-            ArchivePolicy = QuickWindowArchivePolicy.Named(Sqlite.ColumnText(statement, 3)) ?? links.ArchivePolicy
-        });
+        Rows("SELECT destination, destination_space, peek_modifier, archive_policy, new_tab_placement, linked_tab_placement "
+            + "FROM device_link", statement => links = links with {
+                Destination = ExternalLinkDestination.Named(Sqlite.ColumnText(statement, 0)) ?? links.Destination,
+                DestinationSpaceId = Identity(statement, 1),
+                PeekModifier = LinkPeekModifier.Named(Sqlite.ColumnText(statement, 2)) ?? links.PeekModifier,
+                ArchivePolicy = QuickWindowArchivePolicy.Named(Sqlite.ColumnText(statement, 3)) ?? links.ArchivePolicy,
+                NewTabPlacement = NewTabPlacement.Named(Sqlite.ColumnText(statement, 4)) ?? links.NewTabPlacement,
+                LinkedTabPlacement = NewTabPlacement.Named(Sqlite.ColumnText(statement, 5)) ?? links.LinkedTabPlacement
+            });
         Rows("SELECT name, is_on FROM device_link_behavior", statement => {
             if (LinkBehavior.Named(Sqlite.ColumnText(statement, 0)) is { } behavior)
                 links = behavior.Setting(links, Sqlite.sqlite3_column_int(statement, 1) != 0);
@@ -544,12 +557,15 @@ internal sealed class SqliteConnection : IDisposable {
     private void WriteLinks(LinkPreferences links) {
         foreach (var table in new[] { "device_link", "device_link_behavior", "device_link_route", "device_link_site" })
             Execute($"DELETE FROM {table}");
-        Insert("INSERT INTO device_link(id, destination, destination_space, peek_modifier, archive_policy) VALUES(0,?,?,?,?)", statement => {
-            Bind(statement, 1, links.Destination.Name);
-            Bind(statement, 2, links.DestinationSpaceId is { } space ? Spelling(space) : null);
-            Bind(statement, 3, links.PeekModifier.Name);
-            Bind(statement, 4, links.ArchivePolicy.Name);
-        });
+        Insert("INSERT INTO device_link(id, destination, destination_space, peek_modifier, archive_policy, new_tab_placement, "
+            + "linked_tab_placement) VALUES(0,?,?,?,?,?,?)", statement => {
+                Bind(statement, 1, links.Destination.Name);
+                Bind(statement, 2, links.DestinationSpaceId is { } space ? Spelling(space) : null);
+                Bind(statement, 3, links.PeekModifier.Name);
+                Bind(statement, 4, links.ArchivePolicy.Name);
+                Bind(statement, 5, links.NewTabPlacement.Name);
+                Bind(statement, 6, links.LinkedTabPlacement.Name);
+            });
         foreach (var behavior in LinkBehavior.All)
             Insert("INSERT INTO device_link_behavior(name, is_on) VALUES(?,?)", statement => {
                 Bind(statement, 1, behavior.Name);

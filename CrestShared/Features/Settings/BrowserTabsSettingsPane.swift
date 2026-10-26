@@ -26,11 +26,27 @@ struct BrowserTabsSettingsPane: View {
 struct BrowserNewTabSettingsSection: View {
     static let controlIdentifier =
         "focus-new-tabs-opened-from-links-toggle"
+    static let newTabPlacementIdentifier = "new-tab-placement-picker"
+    static let linkedTabPlacementIdentifier = "linked-tab-placement-picker"
 
     let preferences: BrowserLinkPreferenceStore
 
     var body: some View {
         Section {
+            Picker("New tab opens", selection: newTabPlacementBinding) {
+                ForEach(NewTabPlacement.all, id: \.self) { placement in
+                    Text(placement.title).tag(placement)
+                }
+            }
+            .accessibilityIdentifier(Self.newTabPlacementIdentifier)
+
+            Picker("Tabs from links open", selection: linkedTabPlacementBinding) {
+                ForEach(NewTabPlacement.all, id: \.self) { placement in
+                    Text(placement.title).tag(placement)
+                }
+            }
+            .accessibilityIdentifier(Self.linkedTabPlacementIdentifier)
+
             Toggle(
                 "Switch to tabs opened from links",
                 isOn: preferences.binding(.focusesNewTabs, reading: \.focusesNewTabs)
@@ -46,6 +62,22 @@ struct BrowserNewTabSettingsSection: View {
             Text("New tabs")
         } footer: {
             CrestFormFootnote("Hold Shift as you open a link to do the opposite.")
+        }
+    }
+
+    private var newTabPlacementBinding: Binding<NewTabPlacement> {
+        Binding {
+            preferences.preferences.newTabPlacement
+        } set: { placement in
+            preferences.chooseNewTabPlacement(placement)
+        }
+    }
+
+    private var linkedTabPlacementBinding: Binding<NewTabPlacement> {
+        Binding {
+            preferences.preferences.linkedTabPlacement
+        } set: { placement in
+            preferences.chooseLinkedTabPlacement(placement)
         }
     }
 }

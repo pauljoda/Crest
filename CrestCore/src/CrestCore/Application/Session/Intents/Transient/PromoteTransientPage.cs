@@ -22,6 +22,7 @@ public sealed record PromoteTransientPage(Guid WorkspaceId, Guid WindowId, Guid 
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         workspace.RequirePendingTransient(PageId);
         var page = workspace.Known(PageId, turn.Pages);
+        var opening = page.Presentation.KeptAs;
         var source = workspace.Editable(turn.Basis, page.SpaceId);
         if (source.ProfileId != page.ProfileId) throw new Rejected(new PageProfileMismatch(page.Id, source.Id));
         var destination = workspace.Editable(turn.Basis, SpaceId);
@@ -29,7 +30,8 @@ public sealed record PromoteTransientPage(Guid WorkspaceId, Guid WindowId, Guid 
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         var tab = BrowserTab.Restore(workspace.NewTab(turn.Ids.Next(), new TabContent(page.Address, View: null, page.Title),
             Placement, turn.Now));
-        edited.InsertTab(tab, followUp.Window?.Tab(destination.Id) is { } shown ? edited.InsertionIndexAfter(shown) : null);
+        edited.InsertTab(tab, opening.PlacementUnder(workspace.LinkPreferences)
+            .InsertionIndex(edited, followUp.Window?.Tab(destination.Id)));
         followUp.ShowTab(destination.Id, tab.Id).ShowSpace(destination.Id);
         var adopts = page.MovesBetweenWindows && page.SpaceId == destination.Id && page.ProfileId == destination.ProfileId;
         return new(turn.Basis.Replacing(edited.Capture(destination)), SyncStaging.Creation, followUp,

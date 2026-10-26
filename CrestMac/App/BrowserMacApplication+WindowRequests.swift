@@ -52,7 +52,7 @@ extension BrowserMacApplication {
     /// Opens a link another app sent in `space`, in `window`.
     @discardableResult
     func openExternalLink(_ url: URL, in space: BrowserSpaceRuntimeAssignment, window: UUID) -> Bool {
-        guard let host = hostWindow(window), host.browser.openNewTab(url: url, matching: space) != nil
+        guard let host = hostWindow(window), host.browser.openNewTab(url: url, matching: space, opening: .newTab) != nil
         else { return false }
         host.pages.select()
         host.pages.load(url)

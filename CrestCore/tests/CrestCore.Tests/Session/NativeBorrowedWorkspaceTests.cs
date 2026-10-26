@@ -47,7 +47,7 @@ public sealed partial class BrowserContractsTests {
         // A tab the borrowed workspace opens stays with it.
         var tab = Guid.NewGuid();
         device.Send(new OpenTab(borrowed, window, space, tab, new TabContent("https://example.org/", null, "Opened here"),
-            TabPlacement.Current, null, false));
+            TabPlacement.Current, null, false, TabOpening.Programmatic, OpenerId: null));
         Assert.Contains(child.Current.Spaces[0].Tabs, opened => opened.Id == tab);
         Assert.DoesNotContain(owner.Current.Spaces[0].Tabs, opened => opened.Id == tab);
 

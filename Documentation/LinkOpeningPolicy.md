@@ -31,6 +31,30 @@ engine choice. The engine loads the page it made for a new window, so opener
 identity, writable blank windows, request bodies and the source profile
 survive.
 
+## Where new tabs open
+
+Two device-local settings in Settings > Tabs choose where a new open tab goes:
+**After current tab** (the default), **At the top** or **At the bottom**. They
+live in the device store's link preferences (`LinkPreferences.NewTabPlacement`
+and `LinkedTabPlacement`), are never synced, and the core applies them when it
+opens the tab (`OpenTab`, `TabOpening`).
+
+| Setting | Applies to |
+| --- | --- |
+| **New tab opens** (`TabOpening.NewTab`) | Command-T and the New Tab button, an address typed in the command bar, a link another app hands Crest, and keeping a Quick Window |
+| **Tabs from links open** (`TabOpening.Link`) | Command-click, middle-click, `target=_blank`, `window.open`, the context menu's new tab, and keeping a Peek |
+
+Top and bottom mean the top and bottom of the open tabs. A tab never goes above
+pinned or saved tabs, and never inside a split; after the current tab means
+after its whole split. Opening several links in a row at the top reverses their
+order.
+
+Software that opens tabs, such as an agent or the sidebar, ignores both
+settings (`TabOpening.Programmatic`). Its tabs cluster: each goes after the last
+tab the same opener opened, starting after the current tab. The core remembers
+that tab only while it runs, and falls back to after the current tab when the
+opener has none or the tab is gone.
+
 ## Loading and residency
 
 Intentionally opened background links start immediately. Selecting the new tab

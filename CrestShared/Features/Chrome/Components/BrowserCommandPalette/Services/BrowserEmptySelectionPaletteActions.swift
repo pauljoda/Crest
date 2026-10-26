@@ -29,7 +29,7 @@ struct BrowserEmptySelectionPaletteActions {
 
     func openURL(_ url: URL) -> Bool {
         guard isAvailable,
-            browser.openNewTab(url: url, matching: source) != nil
+            browser.openNewTab(url: url, matching: source, opening: .newTab) != nil
         else { return false }
         didSelectTab()
         return true

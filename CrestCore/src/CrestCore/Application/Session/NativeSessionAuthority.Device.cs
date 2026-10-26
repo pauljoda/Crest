@@ -16,6 +16,10 @@ public sealed partial class NativeSessionAuthority {
     /// The device whose windows show this session; null until attached.
     internal Device? Device => device;
 
+    /// The link preferences of the device that shows this session, or the
+    /// defaults before one does.
+    internal LinkPreferences LinkPreferences => device?.CurrentLinks() ?? LinkPreferences.Default;
+
     /// The workspace the device gave this session.
     internal Guid WorkspaceId => workspaceId;
 

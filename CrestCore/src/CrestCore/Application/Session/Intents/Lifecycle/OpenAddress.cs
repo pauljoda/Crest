@@ -21,7 +21,7 @@ public sealed record OpenAddress(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
         if (shown is not { IsStartPage: true })
             return new OpenTab(WorkspaceId, WindowId, space.Id, TabId,
                 new TabContent(Address, View: null, Title: null), TabPlacement.Current, AfterTabId: shown?.Id,
-                Shows: true).Edit(workspace, turn);
+                Shows: true, TabOpening.NewTab, OpenerId: null).Edit(workspace, turn);
         // Navigating a tab always edits the session.
         var navigated = new NavigateTab(WorkspaceId, space.Id, shown.Id, Address).Edit(workspace, turn)!;
         followUp.ShowTab(space.Id, shown.Id).ShowSpace(space.Id);

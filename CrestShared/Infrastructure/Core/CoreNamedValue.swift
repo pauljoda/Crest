@@ -89,6 +89,8 @@ extension LinkRouteMatch: CoreNamedValue {}
 
 extension MemoryPressureLevel: CoreNamedValue {}
 
+extension NewTabPlacement: CoreNamedValue {}
+
 extension NumberedSelectionTarget: CoreNamedValue {}
 
 extension QuickWindowArchivePolicy: CoreNamedValue {}
@@ -108,5 +110,7 @@ extension SpaceAccent: CoreNamedValue {}
 extension SyncDeletionReason: CoreNamedValue {}
 
 extension TabIconMode: CoreNamedValue {}
+
+extension TabOpening: CoreNamedValue {}
 
 extension TabPlacement: CoreNamedValue {}

@@ -209,7 +209,7 @@ extension MobileBrowserRootModel {
     }
 
     func openURL(_ url: URL) {
-        browser.openNewTab(url: url)
+        browser.openNewTab(url: url, opener: browser.windowID)
         pages.select()
         address = url.absoluteString
         navigation.selectTab()

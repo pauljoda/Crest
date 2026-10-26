@@ -309,7 +309,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     ) {
         var selected: URL?
         for url in urls where ExternalLocalDocument.accepts(url) {
-            guard browser.openNewTab(url: url, matching: assignment) != nil else { continue }
+            guard browser.openNewTab(url: url, matching: assignment, opener: browser.windowID) != nil else { continue }
             selected = url
         }
         guard let selected else { return }

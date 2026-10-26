@@ -8,9 +8,14 @@ namespace CrestCore.Application;
 /// What one session intent changes: the next session, how it stages (null
 /// for an edit no journal ever reads), what the window that issued it
 /// shows next, what it did that the two states cannot tell, the sweep it
-/// records, and the Quick Window or Peek page it kept or archived.
+/// records, the Quick Window or Peek page it kept or archived, and the tab it
+/// opened for an opener that clusters its tabs.
 internal sealed record SessionEdit(SessionState Next, SyncStaging? Staging, WindowFollowUp? FollowUp = null,
-    SessionTabEvents? Events = null, NativeSessionAuthority.SweepMark? Sweep = null, Guid? Completes = null);
+    SessionTabEvents? Events = null, NativeSessionAuthority.SweepMark? Sweep = null, Guid? Completes = null,
+    OpenedTab? Opened = null);
+
+/// The tab `TabId`, which the opener `OpenerId` opened last.
+internal sealed record OpenedTab(Guid OpenerId, Guid TabId);
 
 /// What one session intent's edit reads: the accepted session it edits, the
 /// time it is stamped with, where new identities come from, what the device's
@@ -49,6 +54,7 @@ public sealed partial class NativeSessionAuthority {
             edit = Edit(intent, Stamp(now), ids, pages);
             if (edit is null) return;
             if (edit.Sweep is { } sweep) lastSweep = sweep;
+            if (edit.Opened is { } opened) RememberOpened(opened, edit.Next);
             previous = session;
             if (edit.Next.Equals(previous)) {
                 if (edit.Events is null && edit.FollowUp is null) return;

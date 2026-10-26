@@ -130,7 +130,8 @@ internal static class RecordedIntents {
     private static OpenTab Opening(Guid workspace, Guid window, Guid space, JsonObject arguments) {
         var tab = StoredSessionCodec.DecodeTab(arguments["tab"]);
         return new(workspace, window, space, tab.Id, new TabContent(tab.Url, tab.NativeView, tab.Title), tab.Placement,
-            arguments["after"] is { } after ? Guid.Parse(after.GetValue<string>()) : null, arguments["select"]?.GetValue<bool>() == true);
+            arguments["after"] is { } after ? Guid.Parse(after.GetValue<string>()) : null, arguments["select"]?.GetValue<bool>() == true,
+            TabOpening.Programmatic, OpenerId: null);
     }
 
     /// The navigation a recorded `history.visit` stands for, or null for any

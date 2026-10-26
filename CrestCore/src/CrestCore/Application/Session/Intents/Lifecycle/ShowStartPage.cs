@@ -24,7 +24,7 @@ public sealed record ShowStartPage(Guid WorkspaceId, Guid WindowId, Guid SpaceId
         if (draft is null)
             return new OpenTab(WorkspaceId, WindowId, space.Id, TabId,
                 new TabContent(Address: null, View: null, Title: null), TabPlacement.Current,
-                AfterTabId: followUp.Window?.Tab(space.Id), Shows: true).Edit(workspace, turn);
+                AfterTabId: followUp.Window?.Tab(space.Id), Shows: true, TabOpening.NewTab, OpenerId: null).Edit(workspace, turn);
         followUp.ShowTab(space.Id, draft.Id).ShowSpace(space.Id);
         var used = StoredSessionCodec.Date(StoredSessionCodec.Seconds(turn.Now));
         var tabs = space.Tabs.Select(tab => tab.Id == draft.Id ? tab with { LastActivatedAt = used } : tab);
