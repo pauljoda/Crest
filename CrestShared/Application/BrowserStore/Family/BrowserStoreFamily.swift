@@ -174,6 +174,7 @@ final class BrowserStoreFamily {
         failure: String = "Core command failed"
     ) -> (changes: [Change], changed: Bool)? {
         let before = workspace?.sessionRevision
+        let openTabIDs = workspace?.openTabIDs
         let changes: [Change]
         let favicons = source.core.state.favicons
         if let image { favicons.offer(FaviconAssets.Offer(assigned: image), in: workspaceID) }
@@ -184,7 +185,9 @@ final class BrowserStoreFamily {
             source.localSyncErrorDescription = "\(failure): \(error)"
             return nil
         }
-        return (changes, workspace?.sessionRevision != before)
+        let changed = workspace?.sessionRevision != before
+        if changed, let openTabIDs { source.announceTabsOpened(since: openTabIDs) }
+        return (changes, changed)
     }
 
     /// Runs one session intent as `send` does, and answers the changes the

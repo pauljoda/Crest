@@ -14,6 +14,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
     let browser: BrowserStore
+    let space: SpaceModel
     @ViewBuilder let background: () -> Background
     @ViewBuilder let content: () -> Content
 
@@ -45,7 +46,15 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 }
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
-            .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
+            .modifier(
+                SidebarScrollAffordance(
+                    isDragging: sidebarInteraction.sidebarReorderState.isDragging,
+                    revealing: sidebarInteraction.revealRequest?.reveal(in: space),
+                    didTakeReveal: { sidebarInteraction.revealRequest = nil },
+                    holdsStill: sidebarInteraction.tabDragState.item != nil
+                        || sidebarInteraction.folderDragState.item != nil
+                        || sidebarInteraction.editingFolderRequest != nil)
+            )
             .scrollClipDisabled(
                 !BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle
             )

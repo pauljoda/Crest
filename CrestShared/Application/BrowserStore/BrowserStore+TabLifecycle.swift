@@ -82,6 +82,24 @@ extension BrowserStore {
         return tabID
     }
 
+    /// Tells the window's sidebar which tab an intent of this window opened
+    /// in a workspace that held `before` open: the one the window now shows,
+    /// or else the last one opened.
+    func announceTabsOpened(since before: Set<UUID>) {
+        guard let opened = workspaceModel?.tabsOpened(since: before), !opened.isEmpty else { return }
+        let shown = windowModel?.shownTabIDs
+        guard let tab = opened.last(where: { shown?.contains($0.tabID) == true }) ?? opened.last else { return }
+        announceTabOpened(tab.tabID, in: tab.spaceID)
+    }
+
+    /// Tells the window's sidebar that this window opened `tabID`, when the
+    /// window shows its Space. A tab opened in a Space the window does not
+    /// show is not revealed when that Space appears later.
+    func announceTabOpened(_ tabID: UUID, in spaceID: UUID) {
+        guard windowModel?.shownSpaceID == spaceID else { return }
+        interactionObserver?.browserDidOpenTab(tabID, in: spaceID)
+    }
+
     /// Opens `url` in a new tab of Space `spaceID` for a modified link,
     /// selected when `selecting`, and answers the tab with its Space.
     func openModifiedLink(_ url: URL, in spaceID: UUID, selecting: Bool) -> BrowserModifiedLinkRegistration? {

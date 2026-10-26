@@ -75,6 +75,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                 .onHover(perform: hoverChanged)
             #endif
             .offset(x: hiddenOffset)
+            .environment(\.sidebarIsShown, presentation.showsSidebar)
             .allowsHitTesting(presentation.showsSidebar)
             .accessibilityHidden(!presentation.showsSidebar)
             .zIndex(

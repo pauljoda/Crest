@@ -84,6 +84,20 @@ final class WorkspaceModel: Identifiable {
         spaces.models.contains { $0.tabs.contains(tabID) }
     }
 
+    /// Every tab the workspace holds open.
+    var openTabIDs: Set<UUID> {
+        Set(spaces.models.lazy.flatMap { $0.tabs.models.lazy.map(\.id) })
+    }
+
+    /// The tabs held open now that `before` did not hold, in each Space's
+    /// order, with their Space: tabs opened or reopened since, never tabs
+    /// that only moved.
+    func tabsOpened(since before: Set<UUID>) -> [(tabID: UUID, spaceID: UUID)] {
+        spaces.models.flatMap { space in
+            space.tabs.models.lazy.filter { !before.contains($0.id) }.map { (tabID: $0.id, spaceID: space.id) }
+        }
+    }
+
     // MARK: - Actions - Batches
 
     /// A change of the batch being applied changed the session.
