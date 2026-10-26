@@ -155,7 +155,13 @@ private struct SidebarScrollIndicator: View {
                             width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget,
                             alignment: .bottom
                         )
-                        .contentShape(.circle)
+                        // The bubble sits at the foot of its hit frame; the hit
+                        // circle centers on the bubble, so a touch just below
+                        // it scrolls rather than reaching the row behind.
+                        .contentShape(
+                            Circle().offset(
+                                y: (CrestLayout.minimumHitTarget - CrestLayout.glassIconButtonDiameter / 2) / 2)
+                        )
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.plain)

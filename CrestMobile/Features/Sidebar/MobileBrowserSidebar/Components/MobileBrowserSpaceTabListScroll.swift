@@ -39,6 +39,12 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: geometry.size.height, alignment: .top)
                 }
+                // Named before the scroll affordance, so its "Show more tabs"
+                // button keeps its own label and identifier.
+                .accessibilityLabel("Saved and current tabs")
+                .accessibilityIdentifier(
+                    BrowserSpaceAccessibilityID.tabs(context.space.id)
+                )
                 .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
                 .scrollClipDisabled(
                     !BrowserSidebarReorderVisuals.clipsScrollableRegion(
@@ -50,10 +56,6 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     TapGesture().onEnded {
                         BrowserAddressFocusDismissal.dismiss()
                     }
-                )
-                .accessibilityLabel("Saved and current tabs")
-                .accessibilityIdentifier(
-                    BrowserSpaceAccessibilityID.tabs(context.space.id)
                 )
                 .onChange(of: selectedPromotionTarget) { previous, current in
                     guard compactPageIsFullyPresented, let current, previous != current
