@@ -15,7 +15,7 @@ struct BrowserMacWindowKind: Hashable {
     ]
     /// The size a browser window opens at, and the smallest its content may be.
     static let browserContentSize = CGSize(width: 1440, height: 900)
-    static let browserMinimumContentSize = CGSize(width: 900, height: 600)
+    static let browserMinimumContentSize = CGSize(width: 700, height: 600)
 
     /// A browser window over the person's own Spaces, which keeps its frame
     /// under its identity and cascades from the window the person is using.
