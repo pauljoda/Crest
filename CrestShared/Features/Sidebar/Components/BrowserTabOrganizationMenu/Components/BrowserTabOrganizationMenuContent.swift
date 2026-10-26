@@ -59,6 +59,7 @@ struct BrowserTabOrganizationMenuContent: View {
                 tab: tab,
                 favicons: context.favicons,
                 isLoaded: isLoaded,
+                canReturnToSavedAddress: context.canReturnToSavedAddress(tab.id),
                 pullNewIcon: { context.pullNewIcon(tab.id) },
                 restoreSavedLocation: context.restoreSavedLocation.map { restore in { restore(tab.id) } },
                 performIfCurrent: performIfCurrent,

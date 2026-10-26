@@ -10,7 +10,6 @@ struct BrowserSidebarTabLabelContent: View {
     let isLoaded: Bool
     let metrics: BrowserSidebarTabRowMetrics
     var leadingInset: CGFloat = 0
-    var restoreSavedLocation: (() -> Void)?
     var faviconPrimaryClick: (() -> Void)?
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
@@ -29,23 +28,17 @@ struct BrowserSidebarTabLabelContent: View {
                 .browserTabResidency(isLoaded: isLoaded)
                 .opacity(titleOpacity)
         } icon: {
-            HStack(spacing: 3) {
-                BrowserSidebarTabFaviconContent(
-                    tab: tab, favicons: favicons, profileID: profileID, metrics: metrics,
-                    isProminent: isSelected, isLoaded: isLoaded,
-                    iconScale: textScale
+            BrowserSidebarTabFaviconContent(
+                tab: tab, favicons: favicons, profileID: profileID, metrics: metrics,
+                isProminent: isSelected, isLoaded: isLoaded,
+                iconScale: textScale
+            )
+            #if os(macOS)
+                .simultaneousGesture(
+                    TapGesture().onEnded { faviconPrimaryClick?() },
+                    including: faviconPrimaryClick == nil ? .none : .all
                 )
-                #if os(macOS)
-                    .simultaneousGesture(
-                        TapGesture().onEnded { faviconPrimaryClick?() },
-                        including: faviconPrimaryClick == nil ? .none : .all
-                    )
-                #endif
-                if tab.placement == .saved, tab.isAwayFromSavedAddress, let restoreSavedLocation {
-                    BrowserTabSavedLocationIndicator(restore: restoreSavedLocation)
-                        .browserTabResidency(isLoaded: isLoaded)
-                }
-            }
+            #endif
             .offset(x: iconOffset)
         }
         .padding(.leading, leadingInset)

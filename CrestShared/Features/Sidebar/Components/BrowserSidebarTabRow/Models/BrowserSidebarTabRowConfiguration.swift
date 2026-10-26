@@ -36,6 +36,8 @@ struct BrowserSidebarTabRowConfiguration {
     /// A tab the session keeps closes; one it outlives only unloads.
     var canClose: Bool { !tab.placement.isDurable }
 
+    var canReturnToSavedAddress: Bool { context.canReturnToSavedAddress(tab.id) }
+
     var promotionNamespace: Namespace.ID? {
         context.promotionNamespace(for: tab.placement)
     }

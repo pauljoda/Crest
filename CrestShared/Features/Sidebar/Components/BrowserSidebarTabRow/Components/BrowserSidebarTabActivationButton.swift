@@ -27,7 +27,7 @@ struct BrowserSidebarTabActivationButton: View {
             BrowserSidebarTabLabel(
                 tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                 isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
-                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick)
+                faviconPrimaryClick: faviconPrimaryClick)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)

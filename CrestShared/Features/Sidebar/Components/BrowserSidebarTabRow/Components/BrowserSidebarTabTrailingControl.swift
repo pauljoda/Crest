@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The one control a tab row carries: close for a tab that belongs to the
-/// session, unload for one that outlives it and only has a page to put away.
+/// A current tab closes; a saved tab returns home before putting its page away.
 struct BrowserSidebarTabTrailingControl: View {
     let configuration: BrowserSidebarTabRowConfiguration
     @Binding var isHovering: Bool
@@ -9,9 +8,11 @@ struct BrowserSidebarTabTrailingControl: View {
     @ViewBuilder
     var body: some View {
         if configuration.tab.placement == .saved {
-            BrowserSidebarTabUnloadButton(
+            let canReturn = configuration.canReturnToSavedAddress
+            BrowserSidebarTabSavedActionButton(
                 configuration: configuration,
-                isVisible: configuration.isLoaded && isRevealed
+                canReturnToSavedAddress: canReturn,
+                isVisible: (configuration.isLoaded || canReturn) && isRevealed
             )
         } else {
             BrowserSidebarTabCloseButton(
@@ -65,28 +66,33 @@ private struct BrowserSidebarTabCloseButton: View {
     }
 }
 
-private struct BrowserSidebarTabUnloadButton: View {
-    @Environment(CrestCore.self) private var core: CrestCore?
+private struct BrowserSidebarTabSavedActionButton: View {
     let configuration: BrowserSidebarTabRowConfiguration
+    let canReturnToSavedAddress: Bool
     let isVisible: Bool
 
     var body: some View {
         Button {
             guard configuration.isCurrentAndUnlocked else { return }
-            configuration.context.unload(configuration.tab.id)
+            configuration.context.performSavedTabAction(configuration.tab.id)
         } label: {
             BrowserSidebarTabTrailingControlLabel(
-                systemName: "minus",
+                systemName: canReturnToSavedAddress ? "arrow.uturn.backward" : "minus",
                 metrics: metrics
             )
         }
         .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
         .contentShape(.rect)
         .opacity(isVisible ? 1 : 0)
-        .disabled(!configuration.isLoaded || !configuration.isAvailableForDisplay)
+        .disabled(
+            !configuration.isAvailableForDisplay
+                || (canReturnToSavedAddress
+                    ? configuration.context.restoreSavedLocation == nil : !configuration.isLoaded)
+        )
         .allowsHitTesting(isVisible)
-        .accessibilityLabel("Unload \(configuration.tab.shownTitle(in: configuration.isLoaded ? core?.state : nil))")
-        .help("Unload Tab")
+        .accessibilityLabel(canReturnToSavedAddress ? "Return to Saved URL" : "Put Tab to Sleep")
+        .accessibilityIdentifier(canReturnToSavedAddress ? "return-tab-to-saved-url" : "sleep-saved-tab")
+        .help(canReturnToSavedAddress ? "Return to Saved URL" : "Put Tab to Sleep")
     }
 
     private var metrics: BrowserTabTrailingControlMetrics {

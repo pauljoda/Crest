@@ -40,6 +40,8 @@ struct PinnedTabTile: View {
                 grid.select(runtimeAssignment)
             },
             isMultiSelected: context.map { BrowserSidebarSelection.showsSelected(.tab(tab.id), in: $0) } ?? false,
+            returnsToSavedAddress: context?.canReturnToSavedAddress(tab.id) ?? false,
+            savedTabAction: context.map { context in { context.performSavedTabAction(tab.id) } },
             branding: context.map(\.space.settings.look),
             statusSource: statusSource,
             iconCustomization: iconCustomization
@@ -53,6 +55,7 @@ struct PinnedTabTile: View {
                 capabilities: grid.capabilities
             )
         )
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(tab.shownTitle)
         .accessibilityValue(
             isShared

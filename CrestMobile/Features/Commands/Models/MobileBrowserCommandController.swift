@@ -49,14 +49,22 @@ struct MobileBrowserCommandController {
     @discardableResult
     func dismissSelectedTab() -> UUID? {
         guard let selectedTab = browser.shownTab, canDismissSelectedTab else { return nil }
-        // A saved or pinned tab puts its page away, which the page host
-        // follows once the core records it.
+        // A saved or pinned tab returns home first, then puts its page away.
         if selectedTab.placement.isDurable {
-            guard let space = browser.shownSpace,
-                BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(
-                    BrowserTabRuntimeAssignment(
-                        tabID: selectedTab.id, spaceID: space.id, profileID: space.profileID
-                    ))
+            guard let space = browser.shownSpace else { return nil }
+            let assignment = BrowserTabRuntimeAssignment(
+                tabID: selectedTab.id, spaceID: space.id, profileID: space.profileID)
+            if browser.returnsToSavedAddress(selectedTab.id, in: space.id) {
+                return MobileSavedLocationRestoreAction(
+                    browser: browser, pages: pages,
+                    selectTab: {
+                        browser.selectTab($0)
+                        synchronizePages()
+                    }, spaceAccess: spaceAccess
+                ).perform(assignment) ? selectedTab.id : nil
+            }
+            guard
+                BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(assignment)
             else { return nil }
             synchronizePages()
             return selectedTab.id

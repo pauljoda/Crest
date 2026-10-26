@@ -39,6 +39,21 @@ struct BrowserSidebarListContext {
 
     @MainActor var profileID: UUID { space.profileID }
 
+    // MARK: - Actions - Saved tabs
+
+    @MainActor func canReturnToSavedAddress(_ tabID: UUID) -> Bool {
+        guard let tab = space.tabs.model(tabID), tab.placement.isDurable else { return false }
+        let storedAddressIsAway = tab.isAwayFromSavedAddress
+        guard pageAccess.liveState(runtimeAssignment(of: tabID)) != nil else { return storedAddressIsAway }
+        return browser.returnsToSavedAddress(tabID, in: space.id)
+    }
+
+    /// The same primary action for saved rows and pinned tiles.
+    @MainActor func performSavedTabAction(_ tabID: UUID) {
+        guard isCurrent(assignment), let tab = space.tabs.model(tabID), tab.placement.isDurable else { return }
+        if canReturnToSavedAddress(tabID) { restoreSavedLocation?(tabID) } else if isLoaded(tabID) { unload(tabID) }
+    }
+
     // MARK: - Actions - Reading
 
     /// The namespace the rows of `section` anchor their pages in.

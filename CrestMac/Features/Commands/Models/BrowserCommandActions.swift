@@ -228,14 +228,16 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
             closeKeyWindow()
             return
         }
-        // A saved or pinned tab puts its page away, which the page host
-        // follows once the core records it.
+        // A saved or pinned tab returns home first, then puts its page away.
         if selectedTab.placement.isDurable {
-            if BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(
-                BrowserTabRuntimeAssignment(
-                    tabID: selectedTab.id, spaceID: space.id, profileID: space.profileID
-                ))
-            {
+            let assignment = BrowserTabRuntimeAssignment(
+                tabID: selectedTab.id, spaceID: space.id, profileID: space.profileID)
+            if browser.returnsToSavedAddress(selectedTab.id, in: space.id) {
+                BrowserSavedLocationRestoreAction(browser: browser, pages: pages, spaceAccess: spaceAccess).perform(
+                    assignment)
+                return
+            }
+            if BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(assignment) {
                 pages.select()
             }
         } else if selectedTab.surface == .startPage {

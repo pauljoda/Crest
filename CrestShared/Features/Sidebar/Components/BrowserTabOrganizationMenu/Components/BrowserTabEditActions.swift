@@ -4,6 +4,7 @@ struct BrowserTabEditActions: View {
     let tab: TabStateModel
     let favicons: FaviconAssets
     let isLoaded: Bool
+    let canReturnToSavedAddress: Bool
     let pullNewIcon: (() -> Void)?
     let restoreSavedLocation: (() -> Void)?
     let performIfCurrent: (() -> Void) -> Void
@@ -30,7 +31,7 @@ struct BrowserTabEditActions: View {
                         performIfCurrent { restoreSavedLocation?() }
                     }
                     .disabled(
-                        !tab.isAwayFromSavedAddress
+                        !canReturnToSavedAddress
                             || restoreSavedLocation == nil
                     )
 

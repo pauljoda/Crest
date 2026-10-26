@@ -30,6 +30,42 @@ public sealed partial class BrowserContractsTests {
     private static PageLiveState Live(IReadOnlyList<Change> changes) => Assert.IsType<PageChanged>(Assert.Single(changes)).Page.Live;
 
     [Fact]
+    public void ASavedTabReturnsHomeWhenItOrItsPageHasLeftIt() {
+        var (app, engine, _, page, workspace, window, space, tab) = LivePage();
+        using var disposal = app;
+        bool Returns() => app.Query(new CanReturnToSavedAddress(workspace, window, space, tab)).ChangesPage;
+
+        // The fixture's saved tab shows another page than the one it was saved at.
+        Assert.True(Returns());
+        app.Send(new ReturnToSavedAddress(workspace, space, tab));
+        Assert.False(Returns());
+
+        // Its page heading within the saved page is still home; heading elsewhere is not.
+        app.Report(engine, new PageStateChanged(page, PageSnapshot.Blank with { PendingUrl = "https://example.com/#top" }));
+        app.Drain();
+        Assert.False(Returns());
+        app.Report(engine, new PageStateChanged(page, PageSnapshot.Blank with { PendingUrl = "https://elsewhere.example/" }));
+        app.Drain();
+        Assert.True(Returns());
+
+        // Commit clears the pending URL before the document finishes. The
+        // live address still differs even though the saved tab has not updated.
+        app.Report(engine, new PageStateChanged(page, PageSnapshot.Blank with { Url = "https://elsewhere.example/", IsLoading = true }));
+        app.Report(engine, new NavigationCommitted(page, "https://elsewhere.example/", SameDocument: false));
+        app.Drain();
+        Assert.True(Returns());
+
+        // Returning home takes effect immediately, even if the stored tab
+        // still describes a completed navigation away from home.
+        app.Report(engine, new NavigationFinished(page, "https://elsewhere.example/", "Elsewhere"));
+        app.Drain();
+        app.Report(engine, new PageStateChanged(page, PageSnapshot.Blank with { Url = "https://elsewhere.example/", PendingUrl = "https://example.com/", IsLoading = true }));
+        app.Drain();
+        Assert.False(Returns());
+        Assert.False(app.Query(new CanReturnToSavedAddress(workspace, window, space, Guid.NewGuid())).ChangesPage);
+    }
+
+    [Fact]
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;
         var space = SpaceId(session["spaces"]![0]!);

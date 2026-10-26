@@ -85,6 +85,15 @@ The core decides navigation, download, content-blocking, authentication, permiss
 
 Shared page operations own common navigation and media behavior. `BrowserPageContentRuleSession` tracks only Crest's WebKit content rules, and `BrowserTabStateCoordinator` owns archive eligibility and pending copies without retaining pages. Platform stores apply a shared reconciliation plan and retain their own presentation and memory-pressure policies. On macOS, each `BrowserTabRuntime` owns one live page. Releasing the tab releases that page and its native history.
 
+Saved and pinned tabs share a primary return-or-sleep action. Away from the saved
+address, the trailing arrow and Command-W return the tab home; at home they put
+its page away using the existing durable-tab close path. Current tabs still close
+normally. The return query prefers a live pending or committed URL over the saved
+session snapshot, and sidebar controls observe that live state so loading pages
+show the action immediately. Native content, close-policy preferences, explicit
+unload controls, before-unload handling and the window's fallback selection keep
+their existing behavior.
+
 ## Platform shape
 
 Regular-width layouts share a persistent sidebar, page surface, Space switcher, pinned sites, saved tabs, current tabs, and archive. Compact-width layouts present the same data through compact navigation and sheets. Settings belongs in the browsing canvas at regular width and uses a sheet only at compact width; the current layout determines presentation, including after a window resize.

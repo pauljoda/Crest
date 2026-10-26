@@ -75,6 +75,8 @@ struct BrowserSidebarPageAccess {
     /// The engine's measure of the sound a tab's page plays, band by band, or
     /// nil where its engine does not measure it.
     var audioSpectrum: @MainActor (BrowserTabRuntimeAssignment) -> BrowserAudioSpectrumFeed? = { _ in nil }
+    /// Reading the owned page observes pending and committed navigation before load completion.
+    var liveState: @MainActor (BrowserTabRuntimeAssignment) -> PageLiveState? = { _ in nil }
 }
 
 extension BrowserSidebarPageAccess {
@@ -124,7 +126,8 @@ extension BrowserSidebarPageAccess {
             },
             setMuted: { muted, assignment in
                 pages.setMuted(muted, matching: assignment)
-            }
+            },
+            liveState: { assignment in pages.host.page(matching: assignment)?.corePage.state?.live }
         )
     }
 }

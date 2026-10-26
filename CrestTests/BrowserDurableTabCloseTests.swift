@@ -19,6 +19,39 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertTrue(context.browser.shownSpace!.archive.contains(tabID: context.tab.id))
     }
 
+    func testCommandWReturnsSavedAndPinnedTabsHomeBeforeSleepingAfterApproval() throws {
+        for placement in [TabPlacement.saved, .pinned] {
+            let context = try makeContext(placement: placement, hostingPages: true)
+            let browser = context.browser
+            let pages = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
+            browser.selectTab(context.copy.id)
+            pages.select()
+            browser.selectTab(context.tab.id)
+            pages.select()
+            let gate = DeferredDismissal()
+            browser.family.pageDismissalAuthorizer = gate
+            let commands = BrowserCommandActions(
+                browser: browser, pages: pages, chrome: BrowserChromeState(), windows: nil)
+
+            commands.closeTabOrWindow()
+            XCTAssertEqual(browser.shownTab?.id, context.tab.id)
+            XCTAssertEqual(browser.shownTab?.url, context.tab.savedURL)
+            XCTAssertTrue(pages.containsResidentPage(for: context.tab.id))
+            XCTAssertNil(gate.pending, "Returning home does not put the page away")
+
+            commands.closeTabOrWindow()
+            XCTAssertNotNil(gate.pending)
+            XCTAssertFalse(gate.resolve(false))
+            XCTAssertEqual(browser.shownTab?.id, context.tab.id)
+            commands.closeTabOrWindow()
+            XCTAssertTrue(gate.resolve(true))
+            XCTAssertEqual(browser.shownTab?.id, context.copy.id)
+            XCTAssertFalse(pages.containsResidentPage(for: context.tab.id))
+            XCTAssertTrue(browser.shownSpace?.tabs.contains(context.tab.id) == true)
+            XCTAssertFalse(browser.shownSpace?.archive.contains(tabID: context.tab.id) == true)
+        }
+    }
+
     private final class DeferredDismissal: BrowserPageDismissalAuthorizing {
         var pending: (@MainActor () -> Bool)?
         func performDismissal(
@@ -35,9 +68,9 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         }
     }
 
-    private func makeContext(placement: TabPlacement) throws -> Context {
-        let root = try XCTUnwrap(URL(string: "https://example.com/root"))
-        let child = try XCTUnwrap(URL(string: "https://example.com/child"))
+    private func makeContext(placement: TabPlacement, hostingPages: Bool = false) throws -> Context {
+        let root = try XCTUnwrap(URL(string: "http://127.0.0.1:1/root"))
+        let child = try XCTUnwrap(URL(string: "http://127.0.0.1:1/child"))
         let tab = TabState.Seed(title: "Durable", url: child, savedURL: root, placement: placement)
         let copy = TabState.Seed(title: "Independent copy", url: child, placement: .current)
         let archived = [
@@ -49,10 +82,11 @@ final class BrowserDurableTabCloseTests: XCTestCase {
             name: "Test", symbol: "circle", accent: .indigo,
             folders: [], tabs: [tab, copy], archivedTabs: archived
         )
-        let browser = BrowserStore(
-            seed: SessionState.Seed(spaces: [space]),
-            showing: space.id, tabs: [space.id: tab.id]
-        )
+        let seed = SessionState.Seed(spaces: [space])
+        let browser =
+            hostingPages
+            ? BrowserStore.hostingPages(seed, showing: space.id, tabs: [space.id: tab.id])
+            : BrowserStore(seed: seed, showing: space.id, tabs: [space.id: tab.id])
         return Context(
             browser: browser, tab: tab, copy: copy, archived: archived,
             assignment: BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profileID)

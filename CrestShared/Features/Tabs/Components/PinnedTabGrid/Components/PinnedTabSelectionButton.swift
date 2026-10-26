@@ -9,6 +9,8 @@ struct PinnedTabSelectionButton: View {
     let siteTheme: BrowserTabIconAccent?
     let select: () -> Void
     var isMultiSelected = false
+    var returnsToSavedAddress = false
+    var savedTabAction: (() -> Void)? = nil
     var branding: SpaceBranding? = nil
     /// The tab's page, whose statuses dress the tile while they last.
     var statusSource: BrowserTabStatusSource? = nil
@@ -20,34 +22,46 @@ struct PinnedTabSelectionButton: View {
     private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
-        Button(action: select) {
-            icon
-                .opacity(isIconReplaced ? 0 : 1)
-                .font(.system(size: 17 * BrowserSidebarDensity(iconScale).scale, weight: .medium))
-                .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
-                .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
-                .overlay(alignment: .bottomTrailing) {
-                    TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensity(iconScale).scale)
+        HStack(spacing: 0) {
+            Button(action: select) {
+                icon
+                    .opacity(isIconReplaced ? 0 : 1)
+                    .font(.system(size: 17 * BrowserSidebarDensity(iconScale).scale, weight: .medium))
+                    .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
+                    .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
+                    .overlay(alignment: .bottomTrailing) {
+                        TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensity(iconScale).scale)
+                    }
+                    .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(tab.shownTitle)
+            if isSelected, let savedTabAction {
+                Button(action: savedTabAction) {
+                    Image(systemName: returnsToSavedAddress ? "arrow.uturn.backward" : "minus")
+                        .font(
+                            .system(
+                                size: capabilities.trailingControlMetrics.glyphSize,
+                                weight: capabilities.trailingControlMetrics.glyphWeight))
                 }
-                .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
-                .frame(maxWidth: .infinity)
-                .frame(
-                    height: BrowserSidebarDensity(iconScale).pinHeight(touch: capabilities.supportsTouch)
-                )
-                .contentShape(.rect)
-                .modifier(
-                    PinnedTabInteractionSurface(
-                        favicon: tab.iconMode.showsFavicon ? favicons.icon(of: tab.id) : nil,
-                        siteTheme: siteTheme,
-                        isSelected: isSelected,
-                        isHovering: isHovering || isMultiSelected,
-                        isMultiSelected: isMultiSelected,
-                        branding: branding,
-                        statusSource: statusSource
-                    )
-                )
+                .buttonStyle(CrestChromeButtonStyle(controlSize: capabilities.trailingControlMetrics.controlSize))
+                .disabled(!returnsToSavedAddress && !isLoaded)
+                .accessibilityLabel(returnsToSavedAddress ? "Return to Saved URL" : "Put Tab to Sleep")
+                .accessibilityIdentifier(returnsToSavedAddress ? "return-tab-to-saved-url" : "sleep-saved-tab")
+                .help(returnsToSavedAddress ? "Return to Saved URL" : "Put Tab to Sleep")
+            }
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .frame(height: BrowserSidebarDensity(iconScale).pinHeight(touch: capabilities.supportsTouch))
+        .contentShape(.rect)
+        .modifier(
+            PinnedTabInteractionSurface(
+                favicon: tab.iconMode.showsFavicon ? favicons.icon(of: tab.id) : nil,
+                siteTheme: siteTheme, isSelected: isSelected, isHovering: isHovering || isMultiSelected,
+                isMultiSelected: isMultiSelected, branding: branding, statusSource: statusSource)
+        )
         .onHover { isHovering = $0 }
     }
 
