@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The one control a tab row carries: close for a tab that belongs to the
-/// session, unload for one that outlives it and only has a page to put away.
+/// session, unload for a saved tab with a page to put away, or delete for an
+/// unloaded saved tab.
 struct BrowserSidebarTabTrailingControl: View {
     let configuration: BrowserSidebarTabRowConfiguration
     @Binding var isHovering: Bool
@@ -9,10 +10,17 @@ struct BrowserSidebarTabTrailingControl: View {
     @ViewBuilder
     var body: some View {
         if configuration.tab.placement == .saved {
-            BrowserSidebarTabUnloadButton(
-                configuration: configuration,
-                isVisible: configuration.isLoaded && isRevealed
-            )
+            if configuration.isLoaded {
+                BrowserSidebarTabUnloadButton(
+                    configuration: configuration,
+                    isVisible: isRevealed
+                )
+            } else {
+                BrowserSidebarTabDeleteButton(
+                    configuration: configuration,
+                    isVisible: configuration.canDelete && isRevealed
+                )
+            }
         } else {
             BrowserSidebarTabCloseButton(
                 configuration: configuration,
@@ -87,6 +95,43 @@ private struct BrowserSidebarTabUnloadButton: View {
         .allowsHitTesting(isVisible)
         .accessibilityLabel("Unload \(configuration.tab.shownTitle(in: configuration.isLoaded ? core?.state : nil))")
         .help("Unload Tab")
+    }
+
+    private var metrics: BrowserTabTrailingControlMetrics {
+        configuration.trailingControlMetrics
+    }
+}
+
+private struct BrowserSidebarTabDeleteButton: View {
+    @Environment(CrestCore.self) private var core: CrestCore?
+    let configuration: BrowserSidebarTabRowConfiguration
+    let isVisible: Bool
+
+    var body: some View {
+        Button {
+            guard configuration.isCurrentAndUnlocked else { return }
+            configuration.browser.deleteTab(
+                configuration.tab.id,
+                matching: configuration.assignment
+            )
+        } label: {
+            BrowserSidebarTabTrailingControlLabel(
+                systemName: "xmark",
+                metrics: metrics
+            )
+        }
+        .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
+        .contentShape(.rect)
+        .foregroundStyle(Color.primary)
+        .opacity(
+            isVisible
+                ? metrics.closeOpacity(isSelected: configuration.isSelected)
+                : 0
+        )
+        .disabled(!configuration.canDelete || !configuration.isAvailableForDisplay)
+        .allowsHitTesting(isVisible)
+        .accessibilityLabel("Delete \(configuration.tab.shownTitle(in: configuration.isLoaded ? core?.state : nil))")
+        .help("Delete Tab")
     }
 
     private var metrics: BrowserTabTrailingControlMetrics {

@@ -410,7 +410,10 @@ enum SidebarReads {
             tab: tab, context: context, isSelected: context.window.shownTabIDs.contains(tab.id),
             isLoaded: context.isLoaded(tab.id), isSplitGroupMember: isSplitGroupMember)
         _ = (tab.displayTitle, tab.placement, tab.folderID, tab.splitGroupID, tab.isAwayFromSavedAddress)
-        _ = (tab.emojiIcon, tab.iconMode, configuration.isPromotionSource, configuration.canClose)
+        _ = (
+            tab.emojiIcon, tab.iconMode, configuration.isPromotionSource, configuration.canClose,
+            configuration.canDelete
+        )
         _ = BrowserTabFaviconSubject(tab: tab, image: context.favicons.icon(of: tab.id))
         _ = configuration.isAvailableForDisplay
         _ = context.space.settings.look

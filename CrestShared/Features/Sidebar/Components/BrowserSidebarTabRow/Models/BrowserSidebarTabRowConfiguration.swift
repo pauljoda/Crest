@@ -36,6 +36,9 @@ struct BrowserSidebarTabRowConfiguration {
     /// A tab the session keeps closes; one it outlives only unloads.
     var canClose: Bool { !tab.placement.isDurable }
 
+    /// An unloaded saved tab can be deleted directly from its trailing control.
+    var canDelete: Bool { tab.placement == .saved && !isLoaded }
+
     var promotionNamespace: Namespace.ID? {
         context.promotionNamespace(for: tab.placement)
     }

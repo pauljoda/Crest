@@ -4,7 +4,7 @@ A native tab is a tab (`TabState`) with a native content descriptor (`NativeTabC
 
 `BrowserNativeTabHost` resolves the descriptor into a SwiftUI view inside the same card surface used by single pages and Split View. Layout and focus remain owned by the surrounding browser. The host receives a captured tab/Space/profile assignment. Outbound links pass through `BrowserNativeTabActions`, which checks that assignment, the current descriptor, and access to the Space before opening a website in a new tab.
 
-The Mac and mobile page stores recognize native selection without allocating a `WKWebView`, including mixed native/website splits, extension preparation, and session reconciliation. Only website members receive pages. Assigning a website URL to a native tab explicitly converts that tab into a website. Unloading a Saved native view dismisses its presentation and retains the tab. The sidebar uses a minus control for Saved and a close control for Current. Deleting a Saved tab, or closing a Current copy, uses normal tab lifecycle rules.
+The Mac and mobile page stores recognize native selection without allocating a `WKWebView`, including mixed native/website splits, extension preparation, and session reconciliation. Only website members receive pages. Assigning a website URL to a native tab explicitly converts that tab into a website. Unloading a Saved native view dismisses its presentation and retains the tab. The sidebar uses a minus control to unload a loaded Saved tab, a delete control to remove an unloaded Saved tab, and a close control for Current. Deleting a Saved tab, or closing a Current copy, uses normal tab lifecycle rules.
 
 ## Loaded state
 
