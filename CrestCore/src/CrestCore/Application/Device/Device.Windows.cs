@@ -118,14 +118,15 @@ internal sealed partial class Device {
     /// screen: the Space is the one it shows, and it shows the tab or another
     /// member of the tab's split.
     internal bool Shows(Guid workspaceId, Guid spaceId, Guid tabId) {
-        lock (gate) {
-            if (workspaces.GetValueOrDefault(workspaceId)?.Current.Space(spaceId) is not { } space)
-                return false;
-            var split = space.Tabs.FirstOrDefault(tab => tab.Id == tabId)?.SplitGroupId;
+        // The session is read outside the device lock, so the two locks are not nested here.
+        NativeSessionAuthority? workspace;
+        lock (gate) workspace = workspaces.GetValueOrDefault(workspaceId);
+        if (workspace?.Current.Space(spaceId) is not { } space) return false;
+        var split = space.Tabs.FirstOrDefault(tab => tab.Id == tabId)?.SplitGroupId;
+        lock (gate)
             return open.Values.Any(window => window.WorkspaceId == workspaceId && window.ShownSpaceId == spaceId
                 && window.Tab(spaceId) is { } shown
                 && (shown == tabId || split is not null && space.Tabs.Any(tab => tab.Id == shown && tab.SplitGroupId == split)));
-        }
     }
 
     /// The one Space of `profileId` the person may see: held by an attached

@@ -88,7 +88,9 @@ public sealed partial class NativeSessionAuthority {
     /// for a sweep the last one makes unnecessary. `pages` are what the
     /// device's windows show, which a copy of a tab starts from. An import
     /// `previewed` reads Spaces this process has not unlocked, as a person
-    /// sees them before they import. The caller holds the gate.
+    /// sees them before they import. The caller holds the gate. Read device
+    /// state (`IssuingWindow`, `PersistentPreferences`) before taking it: the
+    /// device takes its own lock and reads the session.
     private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages, bool previewed = false) {
         var basis = IntentBasis();
         var edit = intent.Edit(this, new SessionTurn(basis, now, ids, pages, previewed));
