@@ -20,7 +20,11 @@ struct BrowserMacCommand {
     static let openFile = BrowserMacCommand(
         .openFile, isAvailable: { $0.supportsEngineCapability(.localFiles) },
         run: { $0.openFile() })
-    static let newQuickWindow = BrowserMacCommand(.newQuickWindow) { $0.openQuickWindow() }
+    static let newQuickWindow = BrowserMacCommand(
+        .newQuickWindow,
+        withoutWindow: BrowserMacWindowlessCommand(
+            isAvailable: { $0.isQuickWindowKey }, run: { $0.openQuickWindowFromKeyQuickWindow() }),
+        run: { $0.openQuickWindow() })
     static let newPrivateWindow = BrowserMacCommand(
         .newPrivateWindow, withoutWindow: .always { $0.openPrivateWindow() },
         run: { $0.openPrivateWindow() })
@@ -205,6 +209,8 @@ struct BrowserMacCommand {
 
     // MARK: - Initializers
 
+    /// Adapts actions that need only the current window to the common command
+    /// signature while retaining their availability and presentation metadata.
     private init(
         _ kind: ShortcutCommand.Kinds,
         actsOnPage: Bool = false,
@@ -223,6 +229,8 @@ struct BrowserMacCommand {
             run: { actions, _ in run(actions) })
     }
 
+    /// Defines a command whose availability and action also inspect the exact
+    /// shortcut command, including parameterized commands such as numbered selections.
     private init(
         _ kind: ShortcutCommand.Kinds,
         actsOnPage: Bool = false,

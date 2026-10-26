@@ -372,6 +372,16 @@ final class BrowserMacWindows {
         return request.id
     }
 
+    /// Opens another empty Quick Window in the focused Quick Window's Space,
+    /// keeping its destination for promotion even when no browser window is open.
+    func openQuickWindowFromKeyQuickWindow() {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID]
+        else { return }
+        let request = quickWindow.request.value
+        openQuickWindow(.empty(spaceAssignment: request.assignment, targetWindowID: request.targetWindowID))
+    }
+
     /// The Quick Window named `id`, while it is open.
     func quickWindow(_ id: UUID) -> NSWindow? {
         controller(.quick, id: id)?.window

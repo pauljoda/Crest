@@ -4589,6 +4589,14 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "quick-window-remembers-size-and-position": {
+      "category": "improved",
+      "message": "New Quick Windows remember the size and position you last chose, including after restarting Crest."
+    },
+    "new-quick-window-from-quick-window": {
+      "category": "improved",
+      "message": "Open another Quick Window from a Quick Window using File > New Quick Window or its keyboard shortcut. The new window uses the same Space."
     }
   }
 }
