@@ -24,7 +24,7 @@ public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid
         var edited = BrowserTabCollection.Restore(space);
         var tab = BrowserTab.Restore(workspace.NewTab(TabId, Content, Placement, turn.Now));
         var origin = Opening.Origin(workspace, OpenerId, space, Placement, AfterTabId);
-        edited.InsertTab(tab, Opening.PlacementUnder(workspace.LinkPreferences).InsertionIndex(edited, origin));
+        edited.InsertTab(tab, Opening.PlacementUnder(turn.Links).InsertionIndex(edited, origin));
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, tab.Id).ShowSpace(space.Id);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp,

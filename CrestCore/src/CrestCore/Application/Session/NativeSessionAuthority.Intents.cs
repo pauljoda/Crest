@@ -19,9 +19,11 @@ internal sealed record OpenedTab(Guid OpenerId, Guid TabId);
 
 /// What one session intent's edit reads: the accepted session it edits, the
 /// time it is stamped with, where new identities come from, what the device's
-/// pages show, and whether an import is only previewed, which reads Spaces
-/// this process has not unlocked.
-internal sealed record SessionTurn(SessionState Basis, DateTimeOffset Now, IIdSource Ids, Pages? Pages, bool Previewed);
+/// pages show, the link preferences the device held before the edit took the
+/// gate, and whether an import is only previewed, which reads Spaces this
+/// process has not unlocked.
+internal sealed record SessionTurn(SessionState Basis, DateTimeOffset Now, IIdSource Ids, Pages? Pages, LinkPreferences Links,
+    bool Previewed);
 
 #endregion
 
@@ -45,13 +47,14 @@ public sealed partial class NativeSessionAuthority {
         } catch (StorageException error) {
             throw new Rejected(new SaveFailed(error.Reason));
         }
+        var links = LinksOutsideGate();
         SessionEdit? edit;
         SessionState previous;
         NativeSessionReplacement? reserved = null;
         // The edit is accepted, or reserved while it is saved, under the lock
         // that computed it, so nothing else can commit in between.
         lock (Gate) {
-            edit = Edit(intent, Stamp(now), ids, pages);
+            edit = Edit(intent, Stamp(now), ids, pages, links);
             if (edit is null) return;
             if (edit.Sweep is { } sweep) lastSweep = sweep;
             if (edit.Opened is { } opened) RememberOpened(opened, edit.Next);
@@ -87,17 +90,20 @@ public sealed partial class NativeSessionAuthority {
     internal void Check(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages = null) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
-        if (!intent.MovedAcross(this, Stamp(now), commits: false)) lock (Gate) _ = Edit(intent, Stamp(now), ids, pages);
+        if (intent.MovedAcross(this, Stamp(now), commits: false)) return;
+        var links = LinksOutsideGate();
+        lock (Gate) _ = Edit(intent, Stamp(now), ids, pages, links);
     }
 
     /// The edit an intent makes to the accepted session, validated, or null
     /// for a sweep the last one makes unnecessary. `pages` are what the
-    /// device's windows show, which a copy of a tab starts from. An import
+    /// device's windows show, which a copy of a tab starts from. `links` are
+    /// the device's link preferences, read before the gate. An import
     /// `previewed` reads Spaces this process has not unlocked, as a person
     /// sees them before they import. The caller holds the gate.
-    private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages, bool previewed = false) {
+    private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages, LinkPreferences links, bool previewed = false) {
         var basis = IntentBasis();
-        var edit = intent.Edit(this, new SessionTurn(basis, now, ids, pages, previewed));
+        var edit = intent.Edit(this, new SessionTurn(basis, now, ids, pages, links, previewed));
         if (edit is null) return null;
         if (intent.ValidatesWholeSession) Validate(edit.Next);
         else Validate(basis, edit.Next);

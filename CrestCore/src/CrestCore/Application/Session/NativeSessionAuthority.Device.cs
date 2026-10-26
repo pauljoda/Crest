@@ -17,8 +17,9 @@ public sealed partial class NativeSessionAuthority {
     internal Device? Device => device;
 
     /// The link preferences of the device that shows this session, or the
-    /// defaults before one does.
-    internal LinkPreferences LinkPreferences => device?.CurrentLinks() ?? LinkPreferences.Default;
+    /// defaults before one does. The read takes the device's lock, so it must not
+    /// be made while holding the gate.
+    private LinkPreferences LinksOutsideGate() => device?.CurrentLinks() ?? LinkPreferences.Default;
 
     /// The workspace the device gave this session.
     internal Guid WorkspaceId => workspaceId;

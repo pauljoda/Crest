@@ -30,7 +30,7 @@ public sealed record PromoteTransientPage(Guid WorkspaceId, Guid WindowId, Guid 
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         var tab = BrowserTab.Restore(workspace.NewTab(turn.Ids.Next(), new TabContent(page.Address, View: null, page.Title),
             Placement, turn.Now));
-        edited.InsertTab(tab, opening.PlacementUnder(workspace.LinkPreferences)
+        edited.InsertTab(tab, opening.PlacementUnder(turn.Links)
             .InsertionIndex(edited, followUp.Window?.Tab(destination.Id)));
         followUp.ShowTab(destination.Id, tab.Id).ShowSpace(destination.Id);
         var adopts = page.MovesBetweenWindows && page.SpaceId == destination.Id && page.ProfileId == destination.ProfileId;
