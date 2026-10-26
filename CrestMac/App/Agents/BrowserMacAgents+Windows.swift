@@ -42,7 +42,7 @@ extension BrowserMacAgents {
         // The person may have opened private browsing while asked.
         try refuseAddressInOpenPrivateBrowsing(url)
         windows.openPrivateWindow()
-        if let url, application.privateBrowser.openNewTab(url: url) == nil {
+        if let url, application.privateBrowser.openNewTab(url: url, opener: call.sessionID) == nil {
             throw .refused("Crest could not open the private address.")
         }
         note(.openedPrivateWindow, url?.absoluteString ?? "", call)
@@ -57,7 +57,10 @@ extension BrowserMacAgents {
         let window = try openWindow(over: space)
         var tabID: UUID?
         if let url {
-            guard let opened = window.browser.openNewTab(url: url, in: space.id, selecting: true) else {
+            guard
+                let opened = window.browser.openNewTab(
+                    url: url, in: space.id, selecting: true, opener: call.sessionID)
+            else {
                 throw .refused("Crest could not open the address in this Space.")
             }
             _ = try claim(opened, call)

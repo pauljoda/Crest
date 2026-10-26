@@ -1933,6 +1933,9 @@
         }
       }
     },
+    "After current tab" : {
+
+    },
     "Agents" : {
 
     },
@@ -2283,6 +2286,12 @@
 
     },
     "Ask where to save each download" : {
+
+    },
+    "At the bottom" : {
+
+    },
+    "At the top" : {
 
     },
     "Audio visualizer" : {
@@ -8525,6 +8534,9 @@
         }
       }
     },
+    "New tab opens" : {
+
+    },
     "New tabs" : {
 
     },
@@ -13504,6 +13516,9 @@
 
     },
     "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay." : {
+
+    },
+    "Tabs from links open" : {
 
     },
     "Tap for options. Touch and hold to translate now." : {

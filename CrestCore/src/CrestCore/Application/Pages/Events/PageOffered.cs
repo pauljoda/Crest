@@ -71,7 +71,8 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         var tabId = pages.Ids.Next();
         try {
             workspace.Handle(new OpenTab(workspaceId, windowId, space.Id, tabId,
-                new TabContent(Url, View: null, Title: null), TabPlacement.Current, afterTabId, Foreground),
+                new TabContent(Url, View: null, Title: null), TabPlacement.Current, afterTabId, Foreground,
+                TabOpening.Link, OpenerId: null),
                 pages.Clock.Now, pages.Ids, pages);
         } catch (Rejected) {
             // The Space's tabs are full, or the address is one no tab shows.

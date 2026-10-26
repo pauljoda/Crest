@@ -1516,6 +1516,14 @@ struct ChooseImportDestination: Intent, SetupFlowIntent, Equatable, Sendable {
     let destinationSpaceID: UUID?
 }
 
+struct ChooseLinkedTabPlacement: Intent, LinkIntent, Equatable, Sendable {
+    let placement: NewTabPlacement
+}
+
+struct ChooseNewTabPlacement: Intent, LinkIntent, Equatable, Sendable {
+    let placement: NewTabPlacement
+}
+
 struct ChoosePeekModifier: Intent, LinkIntent, Equatable, Sendable {
     let modifier: LinkPeekModifier
 }
@@ -3613,6 +3621,8 @@ struct LinkPreferences: Equatable, Sendable {
     let dragsLinksToPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
+    let newTabPlacement: NewTabPlacement
+    let linkedTabPlacement: NewTabPlacement
     let routes: [LinkRoute]
     let rememberedSites: [RememberedSite]
 }
@@ -4109,6 +4119,8 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement
     let afterTabID: UUID?
     let shows: Bool
+    let opening: TabOpening
+    let openerID: UUID?
 }
 
 struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
@@ -14380,6 +14392,52 @@ struct NavigationError: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `NewTabPlacement`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `index`.
+struct NewTabPlacement: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let afterCurrent = NewTabPlacement(
+        tag: 0,
+        name: "afterCurrent",
+        title: LocalizedStringResource("After current tab")
+    )
+    static let top = NewTabPlacement(tag: 1, name: "top", title: LocalizedStringResource("At the top"))
+    static let bottom = NewTabPlacement(tag: 2, name: "bottom", title: LocalizedStringResource("At the bottom"))
+
+    static let all: [NewTabPlacement] = [afterCurrent, top, bottom]
+
+    static func named(_ name: String?) -> NewTabPlacement? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: NewTabPlacement, rhs: NewTabPlacement) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `choosing`.
 struct NumberedSelectionTarget: Hashable, Sendable {
@@ -22643,6 +22701,48 @@ struct TabIconMode: Hashable, Sendable {
             self.followsPage = followsPage
             self.requiresFavicon = requiresFavicon
             self.showsFavicon = showsFavicon
+        }
+    }
+}
+
+/// The members of the core's `TabOpening`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `placement`.
+struct TabOpening: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var clusters: Bool { facts.clusters }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, clusters: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, clusters: clusters)
+    }
+
+    static let newTab = TabOpening(tag: 0, name: "newTab", clusters: false)
+    static let link = TabOpening(tag: 1, name: "link", clusters: false)
+    static let programmatic = TabOpening(tag: 2, name: "programmatic", clusters: true)
+
+    static let all: [TabOpening] = [newTab, link, programmatic]
+
+    static func named(_ name: String?) -> TabOpening? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: TabOpening, rhs: TabOpening) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let clusters: Bool
+
+        init(name: String, clusters: Bool) {
+            self.name = name
+            self.clusters = clusters
         }
     }
 }

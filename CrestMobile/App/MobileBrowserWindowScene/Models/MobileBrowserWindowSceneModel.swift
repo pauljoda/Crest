@@ -181,7 +181,7 @@ final class MobileBrowserWindowSceneModel {
             transientBrowsing.presentQuickWindow(BrowserQuickWindowRequest(url: url, spaceAssignment: assignment))
             return true
         }
-        guard browser.openNewTab(url: url, matching: assignment) != nil else { return false }
+        guard browser.openNewTab(url: url, matching: assignment, opening: .newTab) != nil else { return false }
         pages.selectAndNavigate(to: url.absoluteString)
         navigation.selectTab()
         return true

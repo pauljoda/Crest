@@ -54,7 +54,7 @@ struct BrowserLinkDestinationHost {
             canOpenLink(from: source), let browser, let spaceAccess,
             browser.unlockedSpace(matching: destination, accessController: spaceAccess) != nil
         else { return false }
-        guard let tabID = browser.openNewTab(url: url, matching: destination) else { return false }
+        guard let tabID = browser.openNewTab(url: url, matching: destination, opening: .link) else { return false }
         if destination.spaceID != source.spaceID {
             // Space entry must show this explicit opening, even before its page is resident.
             browser.pendingMovedTabActivation = BrowserTabRuntimeAssignment(

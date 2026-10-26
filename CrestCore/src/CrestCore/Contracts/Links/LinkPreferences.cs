@@ -10,20 +10,21 @@ internal readonly record struct LinkRoutingDecision(bool OpensQuickWindow, Guid 
 #endregion
 
 /// How links behave on this device: where a link from another app opens, what
-/// a clicked link does, how long a Quick Window lives, and the routes that send
-/// matching links to a Space. The device store keeps them and never syncs
-/// them. Each edit answers the revised preferences, or throws the rule that
-/// refuses it.
+/// a clicked link does, how long a Quick Window lives, where new tabs and tabs
+/// from links open, and the routes that send matching links to a Space. The
+/// device store keeps them and never syncs them. Each edit answers the revised
+/// preferences, or throws the rule that refuses it.
 public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? DestinationSpaceId, bool FocusesNewTabs,
     bool FollowsMovedTabs, bool OpensPeekAutomatically, LinkPeekModifier PeekModifier, bool DragsLinksToPeek,
-    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, IReadOnlyList<LinkRoute> Routes,
-    IReadOnlyList<RememberedSite> RememberedSites) {
+    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, NewTabPlacement NewTabPlacement,
+    NewTabPlacement LinkedTabPlacement, IReadOnlyList<LinkRoute> Routes, IReadOnlyList<RememberedSite> RememberedSites) {
     #region Static Variables
 
     /// The preferences of a device that never chose any.
     internal static readonly LinkPreferences Default = new(ExternalLinkDestination.QuickWindow, DestinationSpaceId: null,
         FocusesNewTabs: false, FollowsMovedTabs: true, OpensPeekAutomatically: true, LinkPeekModifier.Option,
-        DragsLinksToPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true, [], []);
+        DragsLinksToPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true, NewTabPlacement.AfterCurrent,
+        NewTabPlacement.AfterCurrent, [], []);
 
     #endregion
 
@@ -149,7 +150,8 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
         && FocusesNewTabs == other.FocusesNewTabs && FollowsMovedTabs == other.FollowsMovedTabs
         && OpensPeekAutomatically == other.OpensPeekAutomatically && PeekModifier == other.PeekModifier
         && DragsLinksToPeek == other.DragsLinksToPeek && ArchivePolicy == other.ArchivePolicy
-        && RemembersSpaceBySite == other.RemembersSpaceBySite && Routes.SequenceEqual(other.Routes)
+        && RemembersSpaceBySite == other.RemembersSpaceBySite && NewTabPlacement == other.NewTabPlacement
+        && LinkedTabPlacement == other.LinkedTabPlacement && Routes.SequenceEqual(other.Routes)
         && RememberedSites.SequenceEqual(other.RememberedSites);
 
     public override int GetHashCode() => HashCode.Combine(Destination, DestinationSpaceId, Routes.Count, RememberedSites.Count);

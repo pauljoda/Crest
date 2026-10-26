@@ -17,7 +17,7 @@ public sealed partial class BrowserContractsTests {
         string url = "https://source.example/") {
         var (tab, page) = (Guid.NewGuid(), Guid.NewGuid());
         app.Send(new OpenTab(workspace, window, space, tab, new TabContent(url, View: null, Title: null),
-            TabPlacement.Current, AfterTabId: null, Shows: true));
+            TabPlacement.Current, AfterTabId: null, Shows: true, TabOpening.Programmatic, OpenerId: null));
         app.Send(new OpenPage(page, workspace, space, tab, window));
         app.Report(engine, new PageCreated(page));
         return (tab, page);

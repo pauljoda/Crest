@@ -61,7 +61,7 @@ struct BrowserNativeTabActions {
                 space.tabs.model(source.tabID)?.nativeTabContent == content,
                 ["https", "http"].contains(url.scheme?.lowercased() ?? "")
             else { return }
-            browser.openNewTab(url: url, in: space.id)
+            browser.openNewTab(url: url, in: space.id, opening: .link)
             didOpenURL()
         }
     }

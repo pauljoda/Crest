@@ -66,19 +66,24 @@ extension BrowserStore {
     }
 
     /// Opens a tab showing `content` in `placement`'s section and answers its
-    /// identity, or nil when the core refused it. The core places a tab
-    /// opened from `origin` after it and outside its split, resolves its
-    /// address and names a page it was given no title for.
+    /// identity, or nil when the core refused it. `origin` is the tab it
+    /// opens from, and `opening` says why it opens: the core places a new tab
+    /// or a tab from a link where the device's link preferences say, and a
+    /// programmatic one after the last tab `opener` opened, else after
+    /// `origin`, outside its split. The core also resolves its address and
+    /// names a page it was given no title for.
     @discardableResult
     func openSessionTab(
         _ content: TabContent, in spaceID: UUID, placement: TabPlacement = .current,
-        insertingAfter origin: UUID? = nil, shouldSelect: Bool = true
+        insertingAfter origin: UUID? = nil, shouldSelect: Bool = true,
+        opening: TabOpening = .programmatic, opener: UUID? = nil
     ) -> UUID? {
         let id = UUID()
-        let opening = OpenTab(
+        let intent = OpenTab(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id,
-            content: content, placement: placement, afterTabID: origin, shows: shouldSelect)
-        return family.perform(opening, from: self) == nil ? nil : id
+            content: content, placement: placement, afterTabID: origin, shows: shouldSelect,
+            opening: opening, openerID: opener)
+        return family.perform(intent, from: self) == nil ? nil : id
     }
 
     /// Closes a tab the way its section closes one: the core archives an open

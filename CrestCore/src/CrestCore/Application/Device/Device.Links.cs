@@ -18,6 +18,11 @@ internal sealed partial class Device {
     /// Runs one link intent, publishing the preferences when they changed.
     public void Handle(LinkIntent intent, DeviceTurn turn) => intent.Apply(this, turn);
 
+    /// The preferences as they are now.
+    internal LinkPreferences CurrentLinks() {
+        lock (gate) return links;
+    }
+
     /// Keeps the preferences `revise` makes of the device's own, and publishes
     /// them when they changed.
     internal void ReviseLinks(ChangeFeed changes, Func<LinkPreferences, LinkPreferences> revise) {

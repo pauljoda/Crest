@@ -36,39 +36,52 @@ extension BrowserStore {
         return selectedTabID(in: space.id)
     }
 
+    /// Opens `url` after the tab shown in the Space this window shows. `opening`
+    /// says why it opens, as `openSessionTab` describes: callers that act for
+    /// the person, such as a link or a typed address, name their kind, and
+    /// anyone else, such as an agent, is programmatic and passes the `opener`
+    /// whose tabs should cluster.
     @discardableResult
-    func openNewTab(url: URL) -> UUID? {
+    func openNewTab(url: URL, opening: TabOpening = .programmatic, opener: UUID? = nil) -> UUID? {
         guard let space = shownSpace else { return nil }
-        return openSessionTab(.page(url), in: space.id, insertingAfter: selectedTabID(in: space.id))
+        return openSessionTab(
+            .page(url), in: space.id, insertingAfter: selectedTabID(in: space.id), opening: opening, opener: opener)
     }
 
     @discardableResult
-    func openNewTab(url: URL, in spaceID: UUID) -> UUID? {
-        openNewTab(url: url, in: spaceID, selecting: true)
+    func openNewTab(url: URL, in spaceID: UUID, opening: TabOpening = .programmatic, opener: UUID? = nil) -> UUID? {
+        openNewTab(url: url, in: spaceID, selecting: true, opening: opening, opener: opener)
     }
 
     @discardableResult
     func openNewTab(
         url: URL,
         in spaceID: UUID,
-        selecting: Bool
+        selecting: Bool,
+        opening: TabOpening = .programmatic,
+        opener: UUID? = nil
     ) -> UUID? {
         guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
         return openSessionTab(
-            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
+            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting,
+            opening: opening, opener: opener)
     }
 
     @discardableResult
     func openNewTab(
         url: URL,
         matching assignment: BrowserSpaceRuntimeAssignment,
-        selecting: Bool = true
+        selecting: Bool = true,
+        opening: TabOpening = .programmatic,
+        opener: UUID? = nil
     ) -> UUID? {
         guard spaceModel(matching: assignment) != nil else { return nil }
         return openNewTab(
             url: url,
             in: assignment.spaceID,
-            selecting: selecting
+            selecting: selecting,
+            opening: opening,
+            opener: opener
         )
     }
 
@@ -77,7 +90,7 @@ extension BrowserStore {
     /// for anyone else, such as an agent, use `openNewTab`.
     @discardableResult
     func openBackgroundTab(url: URL, in spaceID: UUID) -> UUID? {
-        guard let tabID = openNewTab(url: url, in: spaceID, selecting: false) else { return nil }
+        guard let tabID = openNewTab(url: url, in: spaceID, selecting: false, opening: .link) else { return nil }
         interactionObserver?.browserDidOpenBackgroundTab()
         return tabID
     }
@@ -86,7 +99,9 @@ extension BrowserStore {
     /// selected when `selecting`, and answers the tab with its Space.
     func openModifiedLink(_ url: URL, in spaceID: UUID, selecting: Bool) -> BrowserModifiedLinkRegistration? {
         let opened =
-            selecting ? openNewTab(url: url, in: spaceID, selecting: true) : openBackgroundTab(url: url, in: spaceID)
+            selecting
+            ? openNewTab(url: url, in: spaceID, selecting: true, opening: .link)
+            : openBackgroundTab(url: url, in: spaceID)
         guard let tabID = opened,
             let space = spaceModel(spaceID),
             let tab = space.tabs.model(tabID)

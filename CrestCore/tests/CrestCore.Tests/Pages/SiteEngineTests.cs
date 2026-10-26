@@ -73,7 +73,7 @@ public sealed partial class BrowserContractsTests {
         // A tab, Peek or window the page opens runs on WebKit, though the site it heads to chose Chromium.
         var tab = Guid.NewGuid();
         app.Send(new OpenTab(workspace, window, space, tab, new TabContent(signIn, View: null, Title: null), TabPlacement.Current,
-            AfterTabId: null, Shows: true));
+            AfterTabId: null, Shows: true, TabOpening.Programmatic, OpenerId: null));
         var opened = Guid.NewGuid();
         app.Send(new OpenPage(opened, workspace, space, tab, window, OpenerPageId: opener));
         var peek = Guid.NewGuid();

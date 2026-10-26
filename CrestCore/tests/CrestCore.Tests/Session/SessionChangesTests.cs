@@ -224,7 +224,7 @@ public sealed partial class BrowserContractsTests {
             RestoresTabs: true));
         var opened = Guid.NewGuid();
         authority.Handle(new OpenTab(workspace, window, space.Id, opened, new TabContent("https://opened.example/", null, "Opened"),
-            TabPlacement.Current, AfterTabId: null, Shows: true), DateTimeOffset.UtcNow, new TestIds());
+            TabPlacement.Current, AfterTabId: null, Shows: true, TabOpening.Programmatic, OpenerId: null), DateTimeOffset.UtcNow, new TestIds());
 
         var answered = app.Send(new ShowTab(window, space.Id, space.Tabs[0].Id));
 

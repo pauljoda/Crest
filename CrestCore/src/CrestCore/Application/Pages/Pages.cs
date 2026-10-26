@@ -548,9 +548,11 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     public void ForgetUnloaded(Guid pageId) => unloaded.Remove(pageId);
 
     /// What a Quick Window's or Peek's page shows, as its window keeps or
-    /// archives it.
+    /// archives it. A page with no presentation of its own presents as a
+    /// Quick Window.
     internal TransientPage Transient(Page page) => new(page.Id, page.WorkspaceId, page.SpaceId, page.ProfileId,
-        page.Engine.Supports(EngineCapability.WorkspaceTransfer), page.Live.Address, page.Live.Title);
+        page.Engine.Supports(EngineCapability.WorkspaceTransfer), page.Live.Address, page.Live.Title,
+        page.Transient ?? TransientPresentation.QuickWindow);
 
     /// The Space a page may live in: one the workspace holds, that is not
     /// being deleted, here or in the workspace a borrowed one borrows from, and
