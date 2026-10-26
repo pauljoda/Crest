@@ -1110,7 +1110,16 @@ final class BrowserPagePool:
         where requested.insert(tabID).inserted
             && !runtimeStore.isPresented(tabID, outside: windowID)
         {
-            guard let pictureInPicture = tabRuntimes[tabID]?.page.pictureInPicture else { continue }
+            guard let page = tabRuntimes[tabID]?.page, let pictureInPicture = page.pictureInPicture else { continue }
+            // Floating the video ends its full screen. With the sidebar
+            // reveal on, a full-screen page keeps it across a Space switch and
+            // takes over again when the person returns. A tab switch inside
+            // the Space still ends full screen in the engine, so it floats.
+            if page.isContentFullscreen, SidebarFullscreenRevealPreference.isEnabled,
+                browser.shownSpace.map { $0.id != page.spaceID } ?? false
+            {
+                continue
+            }
             DiagnosticLog.pages.notice(
                 "Tab \(tabID) leaves window \(windowID); its video may float in Picture in Picture")
             pictureInPicture.leaveTab()

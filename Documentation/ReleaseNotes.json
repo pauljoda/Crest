@@ -4589,6 +4589,10 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "fullscreen-page-survives-space-swipe": {
+      "category": "improved",
+      "message": "A full-screen page stays full screen when you swipe to another Space, and takes over the window again when you swipe back."
     }
   }
 }
