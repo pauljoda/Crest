@@ -36,6 +36,7 @@ extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
         if let url = webView.url { webKitAdapter?.reporter?.committed(url) }
+        zoomSession.committed(webView.url)
         linkHover?.didCommitNavigation()
         linkDrag?.didFinishNavigation()
         mediaSessionCoordinator?.didCommitNavigation()

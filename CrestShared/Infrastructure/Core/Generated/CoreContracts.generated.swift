@@ -159,6 +159,7 @@ enum Change: Equatable, Sendable {
     case shortcutsChanged(ShortcutsChanged)
     case sidebarChanged(SidebarChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
+    case siteZoomChanged(SiteZoomChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
     case spacesChanged(SpacesChanged)
@@ -256,6 +257,8 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSiteOrigin(InvalidSiteOrigin)
     case invalidSitePermissionDetail(InvalidSitePermissionDetail)
     case invalidSitePermissionGrant(InvalidSitePermissionGrant)
+    case invalidSiteZoom(InvalidSiteZoom)
+    case invalidSiteZoomAddress(InvalidSiteZoomAddress)
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidSplitIcon(InvalidSplitIcon)
@@ -585,6 +588,7 @@ extension Change {
         case .shortcutsChanged(let change): change.apply(to: state)
         case .sidebarChanged(let change): change.apply(to: state)
         case .sitePermissionsChanged(let change): change.apply(to: state)
+        case .siteZoomChanged(let change): change.apply(to: state)
         case .spaceLockChanged(let change): change.apply(to: state)
         case .spaceSettingsChanged(let change): change.apply(to: state)
         case .spacesChanged(let change): change.apply(to: state)
@@ -658,6 +662,7 @@ extension Change {
         case .shortcutsChanged(let change): change.apply(to: core, in: &batch)
         case .sidebarChanged(let change): change.apply(to: core, in: &batch)
         case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
+        case .siteZoomChanged(let change): change.apply(to: core, in: &batch)
         case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
         case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
         case .spacesChanged(let change): change.apply(to: core, in: &batch)
@@ -731,6 +736,7 @@ extension Change {
         case .shortcutsChanged(let change): change.note(in: &receipts)
         case .sidebarChanged(let change): change.note(in: &receipts)
         case .sitePermissionsChanged(let change): change.note(in: &receipts)
+        case .siteZoomChanged(let change): change.note(in: &receipts)
         case .spaceLockChanged(let change): change.note(in: &receipts)
         case .spaceSettingsChanged(let change): change.note(in: &receipts)
         case .spacesChanged(let change): change.note(in: &receipts)
@@ -2965,6 +2971,13 @@ struct GetEnginePreferences: Query, Equatable, Sendable {
 
 }
 
+struct GetSiteZoom: Query, Equatable, Sendable {
+    typealias Answer = SiteZoomPreference
+
+    let pageID: UUID
+    let url: String
+}
+
 struct GoToHistoryEntry: Equatable, Sendable {
     let pageID: UUID
     let entryID: UUID
@@ -3367,6 +3380,14 @@ struct InvalidSitePermissionDetail: Equatable, Sendable {
 
 struct InvalidSitePermissionGrant: Equatable, Sendable {
     let permission: SitePermission
+}
+
+struct InvalidSiteZoom: Equatable, Sendable {
+    let factor: Double
+}
+
+struct InvalidSiteZoomAddress: Equatable, Sendable {
+    let url: String
 }
 
 struct InvalidSpaceOrder: Equatable, Sendable {
@@ -5643,6 +5664,12 @@ struct SetSitePermission: PageRequest, Equatable, Sendable {
     let allowed: Bool?
 }
 
+struct SetSiteZoom: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
+    let factor: Double?
+}
+
 struct SetSpaceAccess: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6042,6 +6069,16 @@ struct SitePermissionsChanged: CoreChange, Equatable, Sendable {
     let spaceID: UUID
     let records: [SitePermissionRecordState]
     let touched: [SitePermissionScope]
+}
+
+struct SiteZoomChanged: CoreChange, Equatable, Sendable {
+    let profileID: UUID
+    let host: String
+}
+
+struct SiteZoomPreference: Equatable, Sendable {
+    let host: String?
+    let factor: Double?
 }
 
 struct SpaceAlreadyExists: Equatable, Sendable {

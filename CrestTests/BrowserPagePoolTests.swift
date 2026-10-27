@@ -7,6 +7,37 @@ import XCTest
 @MainActor
 final class BrowserPagePoolTests: XCTestCase {
 
+    func testHostZoomFollowsNavigationAndOtherPagesWithoutReplacingTheGlobalDefault() throws {
+        let first = TabState.Seed(title: "First", url: URL(string: "https://example.com/first"), placement: .current)
+        let second = TabState.Seed(title: "Second", url: URL(string: "https://example.com/second"), placement: .current)
+        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let preferences = BrowserDefaultPageZoomStore(persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.1))
+        let browser = BrowserStore.hostingPages(SessionState.Seed(spaces: [space]))
+        let pool = BrowserPagePool(browser: browser, pageZoomPreferences: preferences)
+        pool.present(tab: first.id, in: space.id)
+        let firstPage = try XCTUnwrap(pool.activePage)
+        pool.present(tab: second.id, in: space.id)
+        let secondPage = try XCTUnwrap(pool.activePage)
+        XCTAssertTrue(firstPage.zoomIn())
+        XCTAssertEqual(firstPage.pageZoom, 1.25)
+        XCTAssertEqual(secondPage.pageZoom, 1.25)
+        XCTAssertEqual(secondPage.webView.pageZoom, 1.25)
+        firstPage.zoomSession.committed(URL(string: "https://elsewhere.example/"))
+        XCTAssertEqual(firstPage.pageZoom, 1.1)
+        firstPage.zoomSession.committed(URL(string: "https://example.com/redirected"))
+        XCTAssertEqual(firstPage.pageZoom, 1.25)
+        preferences.defaultZoom = 1.25
+        preferences.defaultZoom = 1.5
+        XCTAssertEqual(firstPage.pageZoom, 1.25, "An explicit host preference survives an equal global baseline.")
+        XCTAssertTrue(firstPage.resetZoom())
+        XCTAssertEqual(firstPage.pageZoom, 1.5)
+        XCTAssertEqual(secondPage.pageZoom, 1.5)
+        firstPage.zoomOut()
+        pool.unloadPage(for: first.id)
+        pool.present(tab: first.id, in: space.id)
+        XCTAssertEqual(pool.activePage?.pageZoom, 1.25)
+    }
+
     func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
         let browser = BrowserStore.hostingPages(.preview)
         let pool = BrowserPagePool(browser: browser)

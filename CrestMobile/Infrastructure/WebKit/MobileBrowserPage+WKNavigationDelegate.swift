@@ -57,6 +57,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
         if let url = webView.url { reporter.committed(url) }
+        zoomSession.committed(webView.url)
         mediaSessionCoordinator?.didCommitNavigation()
         committedNavigationCount &+= 1
         // A new document drops the supplements that described the old one; a

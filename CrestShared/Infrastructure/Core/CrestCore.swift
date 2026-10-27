@@ -65,6 +65,7 @@ final class CrestCore {
     /// (e) moves live revocation into engine commands, the pages' permission
     /// plumbing learns this way what a change covered.
     @ObservationIgnored private var sitePermissionFollowers: [Follower<SitePermissionsChanged>] = []
+    @ObservationIgnored private var siteZoomFollowers: [Follower<SiteZoomChanged>] = []
     @ObservationIgnored private var notificationAccessFollowers: [Follower<Void>] = []
     /// Who hears the questions the core asks the person and those that no
     /// longer wait, once their batch is applied.
@@ -366,6 +367,13 @@ final class CrestCore {
         }
         if !batch.pageRecords.isEmpty { engines.recordsApplied(batch.pageRecords) }
         if !batch.permissionChanges.isEmpty { sitePermissionsChanged(batch.permissionChanges) }
+        if !batch.siteZoomChanges.isEmpty {
+            siteZoomFollowers.removeAll { $0.owner == nil }
+            let followers = siteZoomFollowers
+            for change in batch.siteZoomChanges {
+                for follower in followers { follower.handler(change) }
+            }
+        }
         if !batch.prompts.isEmpty { promptsChanged(batch.prompts) }
         if !batch.downloads.isEmpty { downloadsChanged(batch.downloads) }
         if !batch.startedDownloads.isEmpty { downloadsStarted(batch.startedDownloads) }
@@ -395,6 +403,11 @@ final class CrestCore {
     func followSitePermissions(_ owner: AnyObject, _ handler: @escaping @MainActor (SitePermissionsChanged) -> Void) {
         sitePermissionFollowers.removeAll { $0.owner == nil }
         sitePermissionFollowers.append(Follower(owner: owner, handler: handler))
+    }
+
+    func followSiteZoom(_ owner: AnyObject, _ handler: @escaping @MainActor (SiteZoomChanged) -> Void) {
+        siteZoomFollowers.removeAll { $0.owner == nil }
+        siteZoomFollowers.append(Follower(owner: owner, handler: handler))
     }
 
     func followNotificationAccess(_ owner: AnyObject, _ handler: @escaping @MainActor () -> Void) {
