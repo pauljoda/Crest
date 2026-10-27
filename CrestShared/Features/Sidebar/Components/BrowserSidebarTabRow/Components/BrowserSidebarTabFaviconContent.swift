@@ -17,7 +17,7 @@ struct BrowserSidebarTabFaviconContent: View {
     var body: some View {
         TabStateFaviconView(
             tab: tab, favicons: favicons, profileID: profileID,
-            size: TabFaviconMetrics.defaultSize * BrowserSidebarDensity(iconScale).scale
+            size: metrics.faviconSize * BrowserSidebarDensity(iconScale).scale
         )
         .opacity(isReplaced ? 0 : 1)
         .browserTabResidency(isLoaded: isLoaded)

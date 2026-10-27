@@ -30,6 +30,11 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
     /// lets the favicon's own 18pt box do that work.
     let faviconSlot: BrowserSidebarTabFaviconSlot?
 
+    /// The square a favicon is drawn in at the default density. A pointer row
+    /// keeps it to the 16pt a desktop sidebar reads at; a touch row keeps the
+    /// larger shared default.
+    let faviconSize: CGFloat
+
     /// Whether the activation area stretches to the row's full height.
     ///
     /// A pointer row is a fixed band, so filling it is what makes the whole
@@ -45,6 +50,7 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
         contentTrailingInset: (CrestLayout.sidebarRowHeight
             - BrowserTabTrailingControlMetrics.pointer.controlSize.height) / 2,
         faviconSlot: nil,
+        faviconSize: 16,
         fillsRowHeight: true
     )
 
@@ -59,6 +65,7 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
             glyphSize: 17,
             glyphWeight: .medium
         ),
+        faviconSize: TabFaviconMetrics.defaultSize,
         fillsRowHeight: false
     )
 }

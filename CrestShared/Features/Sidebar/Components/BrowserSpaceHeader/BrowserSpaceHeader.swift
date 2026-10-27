@@ -15,6 +15,8 @@ struct BrowserSpaceHeader: View {
     let actions: BrowserSpaceHeaderActions
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovering = false
+    @FocusState private var isActionsMenuFocused: Bool
 
     init(
         space: some BrowserSpaceIdentifying, isPrivateBrowsing: Bool, isSavedTabsExpanded: Binding<Bool>,
@@ -37,24 +39,35 @@ struct BrowserSpaceHeader: View {
                     metrics: metrics,
                     actions: actions
                 )
+                .focused($isActionsMenuFocused)
+                .allowsHitTesting(revealsActionsMenu)
+                .opacity(revealsActionsMenu ? 1 : 0)
             }
-            .padding(.leading, CrestSpacing.small)
+            .padding(.leading, capabilities.tabRowMetrics.contentLeadingInset)
             .padding(.trailing, CrestSpacing.extraSmall)
         )
         .crestHoverSurface(
             cornerRadius: CrestLayout.sidebarControlCornerRadius
         )
-        .padding(.horizontal, CrestSpacing.small)
+        .onHover { isHovering = $0 }
+        .animation(CrestMotion.surface.unlessReducingMotion(reduceMotion), value: isHovering)
+        .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+    }
+
+    /// A pointer finds the menu where it rests and a keyboard where focus
+    /// lands; a finger has no hover to reveal it with.
+    private var revealsActionsMenu: Bool {
+        isHovering || isActionsMenuFocused || capabilities.supportsTouch
     }
 
     private var title: some View {
         Button(action: toggleSavedTabs) {
-            HStack(spacing: CrestSpacing.small) {
+            HStack(spacing: metrics.titleSpacing) {
                 identity
 
                 Text(space.name)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
 
                 if space.requiresAuthentication {

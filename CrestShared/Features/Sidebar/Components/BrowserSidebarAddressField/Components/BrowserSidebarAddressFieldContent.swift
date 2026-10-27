@@ -36,6 +36,7 @@ struct BrowserSidebarAddressFieldContent<
                 summaryAccessibilityIdentifier: configuration
                     .addressDisplayAccessibilityIdentifier,
                 prompt: configuration.prompt,
+                textAlignment: .leading,
                 submit: configuration.submit
             )
 

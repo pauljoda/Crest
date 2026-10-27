@@ -22,11 +22,11 @@ struct BrowserCurrentTabsDivider: View {
     var body: some View {
         Group {
             if revealsOnHoverOnly {
-                ZStack(alignment: .trailing) {
-                    line
-                    clearButton
-                }
-                .padding(.vertical, metrics.dividerVerticalInset)
+                // The control floats over the seam, so only the inset sets
+                // the air around the line.
+                line
+                    .overlay(alignment: .trailing) { clearButton }
+                    .padding(.vertical, metrics.dividerVerticalInset)
             } else {
                 line
                     .overlay(alignment: .trailing) { clearButton }
@@ -61,6 +61,9 @@ struct BrowserCurrentTabsDivider: View {
         .foregroundStyle(.secondary)
         .fixedSize()
         .opacity(showsClearButton ? 1 : 0)
+        // On a pointer shell the control overhangs the rows beside the seam,
+        // so it takes no clicks from them while it is hidden.
+        .allowsHitTesting(showsClearButton)
         .disabled(!canClear || !showsClearButton)
         .accessibilityHidden(!showsClearButton)
         .accessibilityLabel("Clear Open Tabs")

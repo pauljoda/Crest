@@ -102,6 +102,10 @@ struct BrowserFolderGroup: View {
         let configuration = self.configuration
         let interaction = self.interaction
         let showsContents = configuration.showsContents
+        // A closed folder with nothing kept beneath it is one row, so it keeps
+        // a row's rhythm rather than a container's padding.
+        let holdsRows =
+            showsContents || configuration.keptItem(for: interaction.collapsedTabVisibility.wrappedValue) != nil
         VStack(spacing: 0) {
             BrowserFolderGroupSurface(configuration: configuration, interaction: interaction)
             if showsContents {
@@ -115,6 +119,7 @@ struct BrowserFolderGroup: View {
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
                 depth: depth,
+                holdsRows: holdsRows,
                 isSelected: BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context),
                 folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)
         )
@@ -142,7 +147,7 @@ struct BrowserFolderGroup: View {
                 cancel: clearUnavailableDeferredActions
             )
         )
-        .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
+        .padding(.vertical, holdsRows ? BrowserSidebarMetrics.containerSpacing : 0)
     }
 
     /// Nested folders are children of the section they move with, so a parent's

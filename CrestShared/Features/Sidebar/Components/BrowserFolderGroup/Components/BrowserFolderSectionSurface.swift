@@ -8,6 +8,9 @@ struct BrowserFolderSectionSurface: ViewModifier {
     var textColorMode: SpaceTextColorMode = .automatic
     /// How many folders hold this one.
     var depth = 0
+    /// Whether the folder shows rows beneath its header. A closed folder is a
+    /// single row and keeps none of a container's padding.
+    var holdsRows = true
     var isSelected = false
     let folderID: UUID
     let reorder: BrowserSidebarReorderState
@@ -22,8 +25,8 @@ struct BrowserFolderSectionSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.top, BrowserSidebarMetrics.containerPadding)
-            .padding(.bottom, BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale))
+            .padding(.top, holdsRows ? BrowserSidebarMetrics.containerPadding : 0)
+            .padding(.bottom, holdsRows ? BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale) : 0)
             .contentShape(.rect)
             .modifier(
                 BrowserFolderHighlightSurface(

@@ -20,6 +20,8 @@ struct BrowserSidebarAddressFieldConfiguration {
     /// that has an address but no page behind it keeps the placeholder glyph
     /// away, so a restored-but-unloaded tab does not read as a live site.
     var hasResidentPage = true
+    /// Whether the resting field shows the search glyph while it is empty.
+    var showsGlyphWhileEmpty = false
     /// Whether a live site is offering the field its own controls.
     var hasActiveSite = false
     let capabilities: BrowserInteractionCapabilities
@@ -55,7 +57,8 @@ struct BrowserSidebarAddressFieldConfiguration {
     /// Whether the lock-or-search glyph stands in the leading slot instead.
     var showsPlaceholderGlyph: Bool {
         guard !showsLeadingAccessory else { return false }
-        return isEditing.wrappedValue || (hasResidentPage && !text.wrappedValue.isEmpty)
+        if text.wrappedValue.isEmpty { return isEditing.wrappedValue || showsGlyphWhileEmpty }
+        return isEditing.wrappedValue || hasResidentPage
     }
 
     /// Whether the live site's settings control takes the trailing slot.

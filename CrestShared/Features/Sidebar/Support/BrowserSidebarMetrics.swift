@@ -99,4 +99,8 @@ extension EnvironmentValues {
     /// drawn. A list row sets it from where the core places the row, and a
     /// Split View adds one for its members.
     @Entry var sidebarLayerDepth = 0
+
+    /// How many folders hold the row being drawn, which steps its content in
+    /// by ``BrowserFolderLayout/contentIndent`` per folder.
+    @Entry var sidebarFolderDepth = 0
 }

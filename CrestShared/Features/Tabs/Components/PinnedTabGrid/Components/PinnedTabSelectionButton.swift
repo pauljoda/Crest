@@ -53,7 +53,7 @@ struct PinnedTabSelectionButton: View {
 
     private var icon: some View {
         TabStateFaviconView(
-            tab: tab, favicons: favicons, profileID: profileID, size: 19 * BrowserSidebarDensity(iconScale).scale)
+            tab: tab, favicons: favicons, profileID: profileID, size: 18 * BrowserSidebarDensity(iconScale).scale)
     }
 
     private var iconPickerArrowEdge: Edge? {

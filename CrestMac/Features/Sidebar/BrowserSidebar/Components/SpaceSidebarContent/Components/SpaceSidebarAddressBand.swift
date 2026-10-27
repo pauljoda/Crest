@@ -54,6 +54,7 @@ struct SpaceSidebarAddressBand: View {
             progress: displayedPage?.estimatedProgress ?? 0,
             isLoading: displayedPage?.live.isLoading == true,
             hasResidentPage: displayedPage != nil,
+            showsGlyphWhileEmpty: true,
             hasActiveSite: siteControl != nil,
             capabilities: capabilities,
             activate: activateAddress,

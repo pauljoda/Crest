@@ -4589,6 +4589,26 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "arc-style-sidebar-pass": {
+      "category": "improved",
+      "message": "The sidebar is tighter and calmer: rows and closed folders share one height, folders use an outlined icon with titles lined up under the tabs, tabs inside folders are indented, the address field reads left to right with a search glyph, and the Space switcher drops its track and dims the Spaces you are not in."
+    },
+    "arc-style-sidebar-review-fixes": {
+      "category": "internal",
+      "message": "The Space header's actions menu shows while it has keyboard focus, and iPhone and iPad pins keep their height."
+    },
+    "arc-style-sidebar-hidden-menu-clicks": {
+      "category": "internal",
+      "message": "Clicks pass through the Space header's actions menu while it is hidden."
+    },
+    "arc-style-sidebar-mobile-address-glyph": {
+      "category": "internal",
+      "message": "The iPhone address field keeps its search glyph for editing only."
+    },
+    "arc-style-sidebar-hidden-clear-clicks": {
+      "category": "internal",
+      "message": "Clicks pass through the hidden Clear control beside the open tabs divider."
     }
   }
 }

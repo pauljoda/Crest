@@ -98,7 +98,7 @@ private struct BrowserFolderHeaderTitle: View, @MainActor Equatable {
                     ? folder.displayColor.folderTitleColor(onDarkBackground: colorScheme == .dark).color
                     : .primary
             )
-            .fontWeight(tintsTitle || holdsShownTab ? .semibold : .regular)
+            .fontWeight(tintsTitle || holdsShownTab ? .bold : .semibold)
             .lineLimit(1)
             .modifier(BrowserFolderTitlePressFeedback())
     }

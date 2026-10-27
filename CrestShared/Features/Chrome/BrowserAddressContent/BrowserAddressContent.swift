@@ -22,6 +22,8 @@ struct BrowserAddressContent: View {
     /// of the address outweigh those on the other. Without it the text centers
     /// between the controls beside it.
     var centeringField: NamedCoordinateSpace?
+    /// Where the address and its prompt sit across the field.
+    var textAlignment: TextAlignment = .center
     let submit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -40,7 +42,7 @@ struct BrowserAddressContent: View {
                 addressSummary
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: frameAlignment)
         .onGeometryChange(for: CGFloat.self) { proxy in
             guard let centeringField, let field = proxy.bounds(of: centeringField) else { return 0 }
             return proxy.size.width - field.minX - field.maxX
@@ -90,7 +92,7 @@ struct BrowserAddressContent: View {
                 selection: $selection
             )
             .textFieldStyle(.plain)
-            .multilineTextAlignment(.center),
+            .multilineTextAlignment(textAlignment),
             measuring: text.isEmpty ? Text(prompt) : Text(verbatim: text)
         )
         #if os(iOS)
@@ -160,7 +162,7 @@ struct BrowserAddressContent: View {
                 addressSummaryLabel(presentation),
                 measuring: addressSummaryLabel(presentation)
             )
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: frameAlignment)
             .contentShape(.rect)
         }
     }
@@ -168,9 +170,9 @@ struct BrowserAddressContent: View {
     private func addressSummaryLabel(
         _ presentation: BrowserAddressPresentation
     ) -> some View {
-        VStack(spacing: -1) {
+        VStack(alignment: stackAlignment, spacing: -1) {
             Text(presentation.domain)
-                .font(.callout.weight(.semibold))
+                .font(text.isEmpty ? .callout : .callout.weight(.semibold))
                 .foregroundStyle(text.isEmpty ? .secondary : .primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -183,6 +185,16 @@ struct BrowserAddressContent: View {
                     .truncationMode(.middle)
             }
         }
+    }
+
+    // MARK: - Actions - Alignment
+
+    private var frameAlignment: Alignment {
+        textAlignment == .leading ? .leading : textAlignment == .trailing ? .trailing : .center
+    }
+
+    private var stackAlignment: HorizontalAlignment {
+        frameAlignment.horizontal
     }
 
     // MARK: - Actions - Centering

@@ -112,6 +112,7 @@ private struct BrowserSidebarFolderRowIndent: ViewModifier {
                 .padding(.leading, BrowserFolderLayout.rowLeadingInset(depth: depth - 1))
                 .padding(.trailing, BrowserFolderLayout.nestingIndent)
                 .frame(maxWidth: .infinity)
+                .environment(\.sidebarFolderDepth, depth)
                 .transition(.opacity.combined(with: .move(edge: .top)))
         } else {
             content

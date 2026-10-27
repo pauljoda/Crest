@@ -20,6 +20,9 @@ struct BrowserSpaceHeaderMetrics: Equatable, Sendable {
     /// drawn into.
     let iconSize: CGFloat
 
+    /// The gap between the identity icon and the Space's name.
+    let titleSpacing: CGFloat
+
     /// The square the actions menu's ellipsis claims.
     let actionsControlSize: CGFloat
 
@@ -43,11 +46,12 @@ struct BrowserSpaceHeaderMetrics: Equatable, Sendable {
     /// menu's own chrome decide the rest.
     let expandsActionsHitArea: Bool
 
-    /// A pointer shell: a small icon, a small ellipsis at the ambient size, and
-    /// a row held to one exact height.
+    /// A pointer shell: an icon the size of a favicon, a small ellipsis at the
+    /// ambient size, and a row held to one exact height.
     static let pointer = BrowserSpaceHeaderMetrics(
         disclosureGlyphSize: 9,
-        iconSize: 20,
+        iconSize: 16,
+        titleSpacing: 7,
         actionsControlSize: 24,
         actionsGlyph: nil,
         fillsRowHeight: true,
@@ -59,6 +63,7 @@ struct BrowserSpaceHeaderMetrics: Equatable, Sendable {
     static let touch = BrowserSpaceHeaderMetrics(
         disclosureGlyphSize: 10,
         iconSize: 22,
+        titleSpacing: CrestSpacing.small,
         actionsControlSize: 44,
         actionsGlyph: BrowserSpaceHeaderActionsGlyph(size: 17, weight: .medium),
         fillsRowHeight: false,

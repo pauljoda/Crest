@@ -28,11 +28,11 @@ struct BrowserFolderHeaderMetrics: Equatable, Sendable {
     /// instead, for the same reason its tab rows do.
     let usesFixedRowHeight: Bool
 
-    /// A pointer shell: the symbol at the ambient text size in an 18pt column,
-    /// content tight against the trailing edge, one fixed row height.
+    /// A pointer shell: the symbol in the 16pt favicon column, content tight
+    /// against the trailing edge, one fixed row height.
     static let pointer = BrowserFolderHeaderMetrics(
-        iconWidth: 18,
-        iconGlyphSize: nil,
+        iconWidth: 16,
+        iconGlyphSize: 13,
         iconGlyphWeight: .regular,
         contentTrailingInset: 9,
         usesFixedRowHeight: true
@@ -42,8 +42,8 @@ struct BrowserFolderHeaderMetrics: Equatable, Sendable {
     /// arm's length, room at the trailing edge for the reader's own thumb, and
     /// a row that grows with its title.
     static let touch = BrowserFolderHeaderMetrics(
-        iconWidth: 20,
-        iconGlyphSize: 17,
+        iconWidth: 26,
+        iconGlyphSize: 19,
         iconGlyphWeight: .medium,
         contentTrailingInset: 18,
         usesFixedRowHeight: false

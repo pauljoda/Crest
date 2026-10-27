@@ -59,13 +59,18 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 selectionPresentation: moveSpace == nil ? spacePagerPresentation : nil,
                 segmentSize: CGSize(width: segmentWidth, height: style.segmentHeight)
             ) { space in
-                if let reorderState {
-                    BrowserSpacePickerSegment(
-                        space: space, reorderState: reorderState, metrics: metrics
-                    )
-                } else {
-                    BrowserSpacePickerIcon(space: space, metrics: metrics)
+                let isSelected = space.id == selectedSpaceID
+                Group {
+                    if let reorderState {
+                        BrowserSpacePickerSegment(
+                            space: space, reorderState: reorderState, metrics: metrics
+                        )
+                    } else {
+                        BrowserSpacePickerIcon(space: space, metrics: metrics)
+                    }
                 }
+                .saturation(isSelected ? 1 : CrestSpaceIconPickerMetrics.unselectedSaturation)
+                .opacity(isSelected ? 1 : CrestSpaceIconPickerMetrics.unselectedOpacity)
             }
             .frame(minWidth: allocation.scrollViewportWidth, alignment: .center)
         }

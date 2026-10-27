@@ -2,12 +2,17 @@ import CoreGraphics
 
 /// Shared measurements for the compact Space icon picker.
 enum CrestSpaceIconPickerMetrics {
-    static let segmentWidth: CGFloat = 40
+    static let segmentWidth: CGFloat = 36
     static let segmentHeight: CGFloat = 30
     static let cornerRadius: CGFloat = CrestRadius.compact
     static let trackPadding: CGFloat = 3
-    static let trackFillOpacity = CrestOpacity.hover
-    static let trackBorderOpacity = CrestOpacity.border
+    /// The compact picker sits straight on the sidebar, with no track behind
+    /// its Spaces; only the selected Space is marked.
+    static let trackFillOpacity = 0.0
+    static let trackBorderOpacity = 0.0
+    /// How strongly a Space that is not shown keeps its own colors.
+    static let unselectedSaturation = 0.0
+    static let unselectedOpacity = 0.6
     static let selectionFillOpacity = 0.20
     static let overflowButtonWidth: CGFloat = 28
 }

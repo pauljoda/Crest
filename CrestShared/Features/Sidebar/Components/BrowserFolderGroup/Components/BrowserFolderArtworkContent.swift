@@ -26,7 +26,6 @@ struct BrowserFolderArtworkContent: View {
             .transaction { $0.animation = nil }
         } else {
             BrowserFolderFaces(glyph: Self.customGlyph(for: symbol), color: color, isExpanded: isExpanded)
-                .foregroundStyle(faceForeground)
         }
     }
 
@@ -38,11 +37,6 @@ struct BrowserFolderArtworkContent: View {
                 for: symbol, tintsTitle: tintsTitle, onDarkBackground: colorScheme == .dark)
         else { return AnyShapeStyle(.primary) }
         return AnyShapeStyle(tint.color)
-    }
-
-    private var faceForeground: Color {
-        let scheme = color.foregroundTone.colorScheme
-        return scheme == .dark ? .white : .black
     }
 
     static func customGlyph(for symbol: String) -> Text? {
@@ -63,6 +57,8 @@ private enum BrowserFolderGeometry {
     static let tabStart = 0.42
     static let tabEnd = 0.58
     static let cornerDivisor = 7.0
+    static let lineWidthDivisor = 12.0
+    static let frontTintOpacity = 0.22
 }
 
 private struct BrowserFolderFaces: View {
@@ -79,7 +75,7 @@ private struct BrowserFolderFaces: View {
                 let radius = size.width / BrowserFolderGeometry.cornerDivisor
                 ZStack(alignment: .bottomLeading) {
                     Canvas { context, size in
-                        let edgeInset: CGFloat = 0.5
+                        let edgeInset = lineWidth(for: size) / 2
                         context.translateBy(x: edgeInset, y: edgeInset)
                         let w = size.width - edgeInset * 2
                         let h = size.height - edgeInset * 2
@@ -105,24 +101,24 @@ private struct BrowserFolderFaces: View {
                             center: CGPoint(x: radius, y: radius), radius: radius,
                             startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
                         path.closeSubpath()
-                        context.fill(path, with: .color(faceColor))
-                        context.fill(path, with: .color(.black.opacity(0.22)))
+                        context.stroke(
+                            path, with: .color(faceColor),
+                            style: StrokeStyle(lineWidth: lineWidth(for: size), lineJoin: .round))
                     }
                     .modifier(
                         BrowserFolderFaceProjection(front: false, openness: isExpanded ? 1 : 0)
                     )
                     Canvas { context, size in
-                        let edgeInset: CGFloat = 0.5
+                        let width = lineWidth(for: proxy.size)
                         let path = Path(
-                            roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: edgeInset, dy: edgeInset),
-                            cornerRadius: max(0, radius - edgeInset))
-                        context.fill(path, with: .color(faceColor))
-                        var tint = context
-                        tint.opacity = BrandColor.folderFrontHighlightOpacity
-                        tint.fill(path, with: .color(.white))
+                            roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: width / 2, dy: width / 2),
+                            cornerRadius: max(0, radius - width / 2))
+                        context.fill(path, with: .color(faceColor.opacity(BrowserFolderGeometry.frontTintOpacity)))
+                        context.stroke(path, with: .color(faceColor), lineWidth: width)
                         if let glyph {
                             context.draw(
-                                glyph.font(.system(size: size.height * 0.5, weight: .semibold)),
+                                glyph.font(.system(size: size.height * 0.5, weight: .semibold))
+                                    .foregroundStyle(faceColor),
                                 at: CGPoint(x: size.width / 2, y: size.height / 2))
                         }
                     }
@@ -137,6 +133,12 @@ private struct BrowserFolderFaces: View {
 
     private var faceColor: Color {
         color.color
+    }
+
+    /// The outline's weight, in step with the folder's drawn size so the
+    /// glyph keeps the stroke of an SF Symbol at the same point size.
+    private func lineWidth(for size: CGSize) -> CGFloat {
+        max(1, size.width / BrowserFolderGeometry.lineWidthDivisor)
     }
 }
 

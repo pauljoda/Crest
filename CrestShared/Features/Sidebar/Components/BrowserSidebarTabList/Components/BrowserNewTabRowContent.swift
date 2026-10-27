@@ -32,7 +32,7 @@ struct BrowserNewTabRowContent: View {
             } icon: {
                 Image(systemName: "plus")
                     .font(tabMetrics.faviconSlot.map { .system(size: $0.glyphSize, weight: $0.glyphWeight) })
-                    .frame(width: tabMetrics.faviconSlot?.width ?? 18)
+                    .frame(width: tabMetrics.faviconSlot?.width ?? tabMetrics.faviconSize)
             }
             .labelStyle(.titleAndIcon)
             .padding(.horizontal, metrics.labelHorizontalInset)
