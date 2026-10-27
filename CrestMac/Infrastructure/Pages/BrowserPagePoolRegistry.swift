@@ -96,8 +96,11 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
 }
 
 extension BrowserPagePoolRegistry: BrowserPageDismissalAuthorizing {
+    // MARK: - Actions - Dismissal
+
     func performDismissal(
         of assignments: [BrowserTabRuntimeAssignment], in browser: BrowserStore,
+        completion: @escaping @MainActor (Bool) -> Void,
         operation: @escaping @MainActor () -> Bool
     ) -> Bool {
         func ownedPages() -> [BrowserPage] {
@@ -115,26 +118,40 @@ extension BrowserPagePoolRegistry: BrowserPageDismissalAuthorizing {
                 return spaceAccess?.isLocked(space) != true
             }
         }
-        guard isAvailable() else { return false }
+        guard isAvailable() else {
+            completion(false)
+            return false
+        }
         let pages = ownedPages()
-        guard !pages.isEmpty else { return operation() }
+        guard !pages.isEmpty else {
+            let closed = operation()
+            completion(closed)
+            return closed
+        }
         let identities = Set(pages.map { ObjectIdentifier($0) })
         var committed = false
         // The core asks each page in turn whether it may go. A page that needs
-        // no answer lets the core finish at once, so the dismissal commits
-        // before this returns; one that asks the person commits later.
+        // no answer may still finish asynchronously. Completion, rather than
+        // the immediate return value, reports the final dismissal result.
         let request = PrepareToClosePages(requestID: UUID(), pageIDs: pages.map(\.corePage.id))
         browser.core.prepareToClose(request) { [weak self, weak browser] allowed in
             guard let self, let browser, allowed, isAvailable(),
                 Set(ownedPages().map { ObjectIdentifier($0) }) == identities
-            else { return }
+            else {
+                completion(false)
+                return
+            }
             committed = operation()
-            guard committed else { return }
+            guard committed else {
+                completion(false)
+                return
+            }
             for runtime in self.windowRuntimes.values where runtime.browser?.family === browser.family {
                 guard runtime.browser != nil, let pool = runtime.pages else { continue }
                 pool.reconcile()
                 pool.select()
             }
+            completion(true)
         }
         return committed
     }

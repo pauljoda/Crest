@@ -4593,6 +4593,10 @@
     "recent-tab-switcher-close-highlighted-tab": {
       "category": "new",
       "message": "Control-W closes the highlighted tab while the recent tab switcher is open, keeping saved and pinned tabs and respecting unsaved changes."
+    },
+    "recent-tab-switcher-stays-open-while-closing": {
+      "category": "fixed",
+      "message": "Closing a tab in the recent tab switcher keeps it open and highlights the next preview. Closing the final preview leaves the browser window open with no tab selected."
     }
   }
 }
