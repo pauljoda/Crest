@@ -2011,7 +2011,17 @@
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
  #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"
  #include "chrome/browser/ui/color/chrome_color_id.h"
-@@ -590,6 +591,13 @@
+@@ -369,6 +370,9 @@
+ 
+   overlay_window->Init(std::move(params));
+   overlay_window->OnRootViewReady();
++#if BUILDFLAG(IS_MAC)
++  crest::TrackPictureInPictureWindow(overlay_window.get());
++#endif
+ 
+ #if BUILDFLAG(IS_WIN)
+   std::wstring app_user_model_id;
+@@ -590,6 +594,13 @@
    views::Widget::OnNativeWidgetMove();
  }
  

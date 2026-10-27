@@ -6,6 +6,20 @@ Chromium's own Picture in Picture window. Automatic entry is enabled by default
 and can be disabled in Settings → General → Video. Manual entry remains
 available when automatic entry is disabled.
 
+## Resizing with a pinch
+
+Chromium's Picture in Picture window resizes with a trackpad pinch. Chromium's
+Mac content view ignores magnify events, so the host keeps a weak set of video
+Picture in Picture windows, registered as each is created, and one local
+magnify monitor. A pinch over one of them scales it from the size it had when
+the pinch began, keeping the video's shape and the screen corner it sits in,
+within the content size limits Chromium sets for it; when the pinch ends the
+window snaps to that corner, as it does after a drag. Document Picture in
+Picture windows are browser windows and are not included.
+
+WebKit's Picture in Picture window belongs to the system's PIPAgent process,
+so Crest receives no events from it and it keeps the system's own behavior.
+
 ## WebKit integration
 
 Desktop WebKit exposes the JavaScript PiP API while separately disabling PiP
