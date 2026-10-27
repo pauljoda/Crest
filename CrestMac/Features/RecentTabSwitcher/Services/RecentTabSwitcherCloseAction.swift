@@ -1,8 +1,7 @@
 import Foundation
 
-/// Closes the highlighted item's focused tab without selecting it first or
-/// closing the window. A split keeps its other pages; the core decides how
-/// current, saved and pinned tabs close after their pages agree to go.
+/// Closes the highlighted tab immediately after its page permits dismissal.
+/// Splits keep their other tabs, and the core preserves saved and pinned tabs.
 @MainActor
 struct RecentTabSwitcherCloseAction {
     // MARK: - Variables
@@ -12,19 +11,37 @@ struct RecentTabSwitcherCloseAction {
 
     // MARK: - Actions - Closing
 
-    /// False includes a deferred decision, which must receive input instead
-    /// of the switcher. The captured Space is checked again after approval.
-    func perform(_ item: RecentTabItem, in space: BrowserSpaceRuntimeAssignment) -> Bool {
-        guard browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess) != nil,
-            browser.recentTabItems().contains(item)
-        else { return false }
+    /// A false return can mean a deferred decision. Completion reports the
+    /// final result, with the originating Space checked again after approval.
+    func perform(
+        _ item: RecentTabItem, in space: BrowserSpaceRuntimeAssignment, clearsSelection: Bool = false,
+        completion: @escaping @MainActor (Bool) -> Void = { _ in }
+    ) -> Bool {
+        guard browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess) != nil
+        else {
+            completion(false)
+            return false
+        }
+        guard browser.recentTabItems().contains(item) else {
+            completion(false)
+            return false
+        }
         let assignment = BrowserTabRuntimeAssignment(
             tabID: item.focusedTabID, spaceID: space.spaceID, profileID: space.profileID)
-        return browser.performPageDismissal(of: [assignment]) {
+        return browser.performPageDismissal(of: [assignment], completion: completion) {
             guard browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess) != nil else {
                 return false
             }
-            return browser.closeSessionTab(assignment.tabID, in: assignment.spaceID)
+            // A sole Start Page stays in the core, but this window can
+            // leave it unselected instead of closing the window itself.
+            let keepsStartPage =
+                clearsSelection
+                && browser.closingLeavesOnlyTheWindow(assignment.tabID, in: assignment.spaceID)
+            guard keepsStartPage || browser.closeSessionTab(assignment.tabID, in: assignment.spaceID) else {
+                return false
+            }
+            if clearsSelection { browser.clearPresentedTabSelection(in: space.spaceID) }
+            return true
         }
     }
 }
