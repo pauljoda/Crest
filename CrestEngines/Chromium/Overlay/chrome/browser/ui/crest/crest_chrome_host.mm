@@ -497,6 +497,13 @@ class NativePermissionPrompt final : public permissions::PermissionPrompt {
   base::WeakPtrFactory<NativePermissionPrompt> weak_factory_{this};
 };
 struct PageViews;
+// A pinch resizing a Picture in Picture window: its content size when the
+// pinch began, and how far the pinch has scaled it since.
+struct PictureInPicturePinch {
+  NSWindow* __weak window = nil;
+  NSSize size = NSZeroSize;
+  CGFloat scale = 1;
+};
 struct HostState {
   const base::Time started_at = base::Time::Now();
   // Crest's own UI, which the framework attaches when it starts.
@@ -516,6 +523,11 @@ struct HostState {
   std::vector<ASWebAuthenticationSessionRequest*> pending_authentication_sessions;
   // The permission requests taking a Crest prompt's answer, while they do.
   raw_ptr<const permissions::PermissionPrompt::Delegate> answering_permission = nullptr;
+  // Video Picture in Picture windows, which a trackpad pinch resizes, and the
+  // one monitor that watches for the pinch while any has been shown.
+  NSHashTable<NSWindow*>* picture_in_picture_windows = [NSHashTable weakObjectsHashTable];
+  id picture_in_picture_pinch_monitor = nil;
+  PictureInPicturePinch picture_in_picture_pinch;
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
 
@@ -1071,6 +1083,58 @@ void SnapPictureInPictureWindow(views::Widget* widget) {
     context.duration = 0.22;
     [[window animator] setFrame:target display:YES];
   } completionHandler:nil];
+}
+
+namespace {
+// Scales a Picture in Picture window by one step of a pinch, keeping the
+// video's shape and the corner nearest the screen's matching corner in place.
+// Each step scales the size the pinch began at, so rounding never accumulates.
+// Cocoa checks the content size limits Chromium sets only for live resizes,
+// so the scale is clamped to them here.
+void PinchPictureInPictureWindow(NSWindow* window, NSEvent* event) {
+  NSScreen* screen = window.screen;
+  if (!screen) return;
+  const NSRect frame = window.frame;
+  auto& pinch = State().picture_in_picture_pinch;
+  if (event.phase == NSEventPhaseBegan || pinch.window != window)
+    pinch = {window, [window contentRectForFrameRect:frame].size, 1};
+  if (pinch.size.width <= 0 || pinch.size.height <= 0) return;
+  const NSSize minimum = window.contentMinSize;
+  const NSSize maximum = window.contentMaxSize;
+  const CGFloat lower = std::max(minimum.width / pinch.size.width, minimum.height / pinch.size.height);
+  const CGFloat upper = std::min(maximum.width / pinch.size.width, maximum.height / pinch.size.height);
+  pinch.scale = std::clamp(pinch.scale * (1 + event.magnification), std::min<CGFloat>(lower, 1),
+                           std::max<CGFloat>(upper, 1));
+  NSRect target = [window frameRectForContentRect:NSMakeRect(0, 0,
+      std::max<CGFloat>(1, std::round(pinch.size.width * pinch.scale)),
+      std::max<CGFloat>(1, std::round(pinch.size.height * pinch.scale)))];
+  if (NSEqualSizes(target.size, frame.size)) return;
+  const NSRect work = screen.visibleFrame;
+  target.origin.x = NSMidX(frame) < NSMidX(work) ? NSMinX(frame) : NSMaxX(frame) - NSWidth(target);
+  target.origin.y = NSMidY(frame) < NSMidY(work) ? NSMinY(frame) : NSMaxY(frame) - NSHeight(target);
+  target.origin.x = std::clamp(target.origin.x, NSMinX(work), std::max(NSMinX(work), NSMaxX(work) - NSWidth(target)));
+  target.origin.y = std::clamp(target.origin.y, NSMinY(work), std::max(NSMinY(work), NSMaxY(work) - NSHeight(target)));
+  [window setFrame:target display:YES];
+}
+}  // namespace
+
+void TrackPictureInPictureWindow(views::Widget* widget) {
+  if (!IsEnabled() || !widget) return;
+  auto& state = State();
+  [state.picture_in_picture_windows addObject:widget->GetNativeWindow().GetNativeNSWindow()];
+  if (state.picture_in_picture_pinch_monitor) return;
+  NSHashTable<NSWindow*>* windows = state.picture_in_picture_windows;
+  state.picture_in_picture_pinch_monitor =
+      [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMagnify handler:^NSEvent*(NSEvent* event) {
+        NSWindow* window = event.window;
+        if (!window || ![windows containsObject:window]) return event;
+        PinchPictureInPictureWindow(window, event);
+        if (event.phase & (NSEventPhaseEnded | NSEventPhaseCancelled)) {
+          State().picture_in_picture_pinch = {};
+          SnapPictureInPictureWindow(views::Widget::GetWidgetForNativeWindow(gfx::NativeWindow(window)));
+        }
+        return nil;
+      }];
 }
 
 namespace {

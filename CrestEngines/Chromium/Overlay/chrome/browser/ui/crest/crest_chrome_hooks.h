@@ -81,6 +81,10 @@ bool PresentHTTPAuthentication(content::WebContents* contents, const net::AuthCh
 // fullscreen; the renderer still owns Escape and the fullscreen lifecycle.
 void ReportContentFullscreen(content::WebContents* contents, bool active);
 void SnapPictureInPictureWindow(views::Widget* window);
+// A video Picture in Picture window was created. Pinching on the trackpad over
+// it scales it about the screen corner it sits in, within Chromium's size
+// limits, and it snaps to that corner when the pinch ends.
+void TrackPictureInPictureWindow(views::Widget* window);
 // Chromium asks for `contents`' window after making it its Browser's active
 // tab, as a Picture in Picture window's return control does. Answers whether
 // the page returns from Picture in Picture, which the core then shows in its
