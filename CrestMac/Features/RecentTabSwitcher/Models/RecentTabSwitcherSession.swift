@@ -5,6 +5,11 @@ import Foundation
 /// yet, and what each key, release or change of the list does. The shell turns
 /// events into these calls and acts on what they answer.
 struct RecentTabSwitcherSession: Equatable {
+    // MARK: - Static Variables
+
+    /// How many items the switcher lists, and the most 1-5 can reach.
+    static let maximumItems = 5
+
     // MARK: - Types
 
     /// What a key means while the switcher is held.
@@ -12,6 +17,7 @@ struct RecentTabSwitcherSession: Equatable {
         case move(RecentTabSwitchDirection)
         case highlight(index: Int)
         case commit
+        case close
         case cancel
         case other
     }
@@ -25,28 +31,25 @@ struct RecentTabSwitcherSession: Equatable {
     /// What a key or release did: whether the switcher took the key from the
     /// page, and the end of the session when it was one.
     struct Response: Equatable {
+        // MARK: - Variables
+
         let isConsumed: Bool
         let outcome: Outcome?
-    }
+        let itemToClose: RecentTabItem?
 
-    // MARK: - Static Variables
+        // MARK: - Initializers
 
-    /// How many items the switcher lists, and the most 1-5 can reach.
-    static let maximumItems = 5
-
-    /// The keys that move, choose or cancel. Left and Right follow the cards,
-    /// which run the other way in a right-to-left layout.
-    private static func specialKeys(rightToLeft: Bool) -> [ShortcutSpecialKey: Key] {
-        [
-            .leftArrow: .move(rightToLeft ? .forward : .backward), .upArrow: .move(.backward),
-            .rightArrow: .move(rightToLeft ? .backward : .forward), .downArrow: .move(.forward),
-            .returnKey: .commit, .escape: .cancel,
-        ]
+        init(isConsumed: Bool, outcome: Outcome? = nil, itemToClose: RecentTabItem? = nil) {
+            self.isConsumed = isConsumed
+            self.outcome = outcome
+            self.itemToClose = itemToClose
+        }
     }
 
     // MARK: - Variables
 
     private(set) var items: [RecentTabItem]
+    private var closedTabIDs: Set<UUID> = []
     private(set) var highlightedIndex: Int
     private(set) var isShowing = false
     /// The modifiers whose release ends the hold: the binding's, but Shift.
@@ -105,6 +108,8 @@ struct RecentTabSwitcherSession: Equatable {
             return Response(isConsumed: true, outcome: nil)
         case .commit:
             return Response(isConsumed: true, outcome: finish())
+        case .close:
+            return Response(isConsumed: true, itemToClose: highlightedItem)
         case .cancel:
             return Response(isConsumed: true, outcome: .cancel)
         case .other:
@@ -136,7 +141,8 @@ struct RecentTabSwitcherSession: Equatable {
     /// highlight stays on the same tab when it is still listed. Answers a
     /// cancel when nothing is left to choose.
     mutating func refresh(items newItems: [RecentTabItem]) -> Outcome? {
-        let newItems = Array(newItems.prefix(Self.maximumItems))
+        let newItems = Array(
+            newItems.filter { closedTabIDs.isDisjoint(with: $0.tabIDs) }.prefix(Self.maximumItems))
         guard !newItems.isEmpty else { return .cancel }
         guard newItems != items else { return nil }
         let highlighted = highlightedItem
@@ -146,6 +152,13 @@ struct RecentTabSwitcherSession: Equatable {
         }
         highlightedIndex = kept ?? min(highlightedIndex, newItems.count - 1)
         return nil
+    }
+
+    /// Saved tabs remain in the core's list. Keep a successfully closed page
+    /// (and any split that would reopen it) out for the rest of this hold.
+    mutating func didCloseTab(_ id: UUID, items: [RecentTabItem]) -> Outcome? {
+        closedTabIDs.insert(id)
+        return refresh(items: items)
     }
 
     // MARK: - Actions - Ending
@@ -159,7 +172,22 @@ struct RecentTabSwitcherSession: Equatable {
 
     // MARK: - Actions - Keys
 
+    /// The keys that move, choose or cancel. Left and Right follow the cards,
+    /// which run the other way in a right-to-left layout.
+    private static func specialKeys(rightToLeft: Bool) -> [ShortcutSpecialKey: Key] {
+        [
+            .leftArrow: .move(rightToLeft ? .forward : .backward), .upArrow: .move(.backward),
+            .rightArrow: .move(rightToLeft ? .backward : .forward), .downArrow: .move(.forward),
+            .returnKey: .commit, .escape: .cancel,
+        ]
+    }
+
     private func key(for shortcut: BrowserShortcut) -> Key {
+        if isShowing, heldModifiers == .control,
+            shortcut == BrowserShortcut(key: .character("w"), modifiers: .control)
+        {
+            return .close
+        }
         if let direction = bindings[shortcut.key] {
             return .move(shortcut.modifiers.contains(.shift) ? direction.reversed : direction)
         }

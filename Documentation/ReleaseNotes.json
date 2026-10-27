@@ -5193,6 +5193,10 @@
     "sidebar-slides-as-one": {
       "category": "improved",
       "message": "On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn’t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window’s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge."
+    },
+    "recent-tab-switcher-close-highlighted-tab": {
+      "category": "new",
+      "message": "Control-W closes the highlighted tab while the recent tab switcher is open, keeping saved and pinned tabs and respecting unsaved changes."
     }
   }
 }
