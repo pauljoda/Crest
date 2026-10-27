@@ -58,6 +58,7 @@
 
 #include "extensions/browser/install/crx_install_error.h"
 #include "base/memory/raw_ptr.h"
+#include "base/memory/scoped_refptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/escape.h"
 #include "base/task/thread_pool.h"
@@ -65,7 +66,9 @@
 #include "components/update_client/update_query_params.h"
 #include "components/version_info/version_info.h"
 #include "content/public/browser/storage_partition.h"
+#include "net/cookies/site_for_cookies.h"
 #include "net/http/http_response_headers.h"
+#include "net/http/http_status_code.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
@@ -721,11 +724,15 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   extensions::EventRouter::Get(profile)->DispatchEventToExtension(extension.id(), std::move(event));
 }
 
-// One Chrome Web Store package download, made by the Space's own profile with
-// the request Chromium's Web Store installer sends. The ungoogled baseline
-// empties that installer and rewrites Google's hosts in its sources, so the
-// update service is named here. Chromium's CrxInstaller judges the package;
-// nothing here limits or inspects it. Deletes itself once it has reported.
+// One Chrome Web Store package download, made by the Space's own profile. The
+// ungoogled baseline empties Chromium's installer and rewrites Google's hosts
+// in its sources, so the update service is named here. A public item needs no
+// account, and that request omits cookies. A private or trusted-tester item is
+// served only to an account that can see it: when the service answers 401 or
+// 403, the same download is retried once with the Space's cookies, which is
+// how Chromium's extension downloader recovers an authenticated CRX fetch.
+// Chromium's CrxInstaller judges the package; nothing here limits or inspects
+// it. Deletes itself once it has reported.
 class WebStoreDownload {
  public:
   WebStoreDownload(void (^progress)(double), void (^completion)(NSString*, NSString*))
@@ -742,24 +749,9 @@ class WebStoreDownload {
   }
 
   void Start(Profile* profile, const std::string& extension_id) {
-    auto request = std::make_unique<network::ResourceRequest>();
-    request->url = GURL("https://clients2.google.com/service/update2/crx?response=redirect&" +
-        update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
-        base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
-    request->credentials_mode = network::mojom::CredentialsMode::kOmit;
-    // Someone is waiting on this download, as on Chromium's own foreground
-    // extension fetches. At the default idle priority the loader writes the
-    // package on best-effort tasks, which Chromium holds until it counts
-    // startup as complete: up to three minutes when no page has loaded.
-    request->priority = net::MEDIUM;
-    loader_ = network::SimpleURLLoader::Create(std::move(request), kAnnotation);
-    loader_->SetOnResponseStartedCallback(
-        base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));
-    loader_->SetOnDownloadProgressCallback(
-        base::BindRepeating(&WebStoreDownload::Progressed, base::Unretained(this)));
-    loader_->DownloadToTempFile(
-        profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess().get(),
-        base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
+    url_loader_factory_ = profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess();
+    extension_id_ = extension_id;
+    Begin(false);
   }
 
  private:
@@ -767,15 +759,58 @@ class WebStoreDownload {
       net::DefineNetworkTrafficAnnotation("crest_web_store_download", R"(
         semantics {
           sender: "Crest Web Store install"
-          description: "Downloads a Chrome Web Store extension package for installation."
+          description:
+            "Downloads a Chrome Web Store extension package for installation. "
+            "The first request is anonymous. If the update service refuses it, "
+            "one retry sends the Space's cookies for that Google host."
           trigger: "The person installs an extension from a Chrome Web Store listing."
-          data: "The extension's ID and Chromium's version, platform and language."
+          data:
+            "The extension's ID and Chromium's version, platform and language. "
+            "On a retry after an authorization failure, the Space's cookies "
+            "for the Google update service."
           destination: GOOGLE_OWNED_SERVICE
         }
         policy {
-          cookies_allowed: NO
-          setting: "Only runs when the person installs an extension."
+          cookies_allowed: YES
+          cookies_store: "user"
+          setting:
+            "Only runs when the person installs an extension. Cookies are sent "
+            "only after the update service refuses the anonymous download."
         })");
+
+  GURL DownloadURL() const {
+    return GURL("https://clients2.google.com/service/update2/crx?response=redirect&" +
+        update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
+        base::EscapeQueryParamValue("id=" + extension_id_ + "&installsource=ondemand&uc", true));
+  }
+
+  void Begin(bool with_cookies) {
+    with_cookies_ = with_cookies;
+    length_ = -1;
+    auto request = std::make_unique<network::ResourceRequest>();
+    request->url = DownloadURL();
+    // Someone is waiting on this download, as on Chromium's own foreground
+    // extension fetches. At the default idle priority the loader writes the
+    // package on best-effort tasks, which Chromium holds until it counts
+    // startup as complete: up to three minutes when no page has loaded.
+    request->priority = net::MEDIUM;
+    if (with_cookies) {
+      // SameSite=Lax session cookies for .google.com are attached only when
+      // the request is same-site with the update service.
+      request->credentials_mode = network::mojom::CredentialsMode::kInclude;
+      request->site_for_cookies = net::SiteForCookies::FromUrl(request->url);
+    } else {
+      request->credentials_mode = network::mojom::CredentialsMode::kOmit;
+    }
+    loader_ = network::SimpleURLLoader::Create(std::move(request), kAnnotation);
+    loader_->SetOnResponseStartedCallback(
+        base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));
+    loader_->SetOnDownloadProgressCallback(
+        base::BindRepeating(&WebStoreDownload::Progressed, base::Unretained(this)));
+    loader_->DownloadToTempFile(
+        url_loader_factory_.get(),
+        base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
+  }
 
   void Started(const GURL&, const network::mojom::URLResponseHead& head) { length_ = head.content_length; }
 
@@ -784,24 +819,40 @@ class WebStoreDownload {
   }
 
   void Finished(base::FilePath path) {
-    weak_factory_.InvalidateWeakPtrs();
     const network::mojom::URLResponseHead* head = loader_->ResponseInfo();
     const int status = head && head->headers ? head->headers->response_code() : 0;
+    const int net_error = loader_->NetError();
     if (!path.empty() && status == 200) {
+      weak_factory_.InvalidateWeakPtrs();
       completion_(base::apple::FilePathToNSString(path), @"");
-    } else {
-      // A successful status other than 200 carries no package: the service
-      // answers 204 for an extension it will not serve to this browser.
-      if (!path.empty()) {
-        base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(path));
-      }
-      completion_(nil, status && status != 200 ? base::SysUTF8ToNSString("HTTP " + base::NumberToString(status))
-                                               : base::SysUTF8ToNSString(net::ErrorToString(loader_->NetError())));
+      delete this;
+      return;
     }
+    // A successful status other than 200 carries no package: the service
+    // answers 204 for an extension it will not serve to this browser.
+    if (!path.empty()) {
+      base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(path));
+    }
+    // Match ExtensionDownloader::IterateFetchCredentialsAfterFailure: an
+    // anonymous CRX fetch that the update service refuses is retried once
+    // with cookies. The handle stays live so cancelling still stops the retry.
+    if (!with_cookies_ &&
+        (status == net::HTTP_UNAUTHORIZED || status == net::HTTP_FORBIDDEN)) {
+      loader_.reset();
+      progress_(0);
+      Begin(true);
+      return;
+    }
+    weak_factory_.InvalidateWeakPtrs();
+    completion_(nil, status && status != 200 ? base::SysUTF8ToNSString("HTTP " + base::NumberToString(status))
+                                             : base::SysUTF8ToNSString(net::ErrorToString(net_error)));
     delete this;
   }
 
+  scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory_;
   std::unique_ptr<network::SimpleURLLoader> loader_;
+  std::string extension_id_;
+  bool with_cookies_ = false;
   int64_t length_ = -1;
   void (^progress_)(double);
   void (^completion_)(NSString*, NSString*);
