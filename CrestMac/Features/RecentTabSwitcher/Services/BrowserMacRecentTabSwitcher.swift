@@ -8,6 +8,13 @@ import SwiftUI
 /// it leaves.
 @MainActor
 final class BrowserMacRecentTabSwitcher {
+    // MARK: - Static Variables
+
+    /// How long the modifier is held before the panel shows.
+    private static let showDelay: Duration = .milliseconds(100)
+    /// How often the open panel reads the window's list again.
+    private static let refreshInterval: Duration = .milliseconds(250)
+
     // MARK: - Types
 
     /// A hold in progress.
@@ -16,16 +23,10 @@ final class BrowserMacRecentTabSwitcher {
         let window: NSWindow
         let chrome: BrowserChromeState
         let actions: BrowserCommandActions
+        let space: BrowserSpaceRuntimeAssignment
         var isPresented = false
         var tasks: [Task<Void, Never>] = []
     }
-
-    // MARK: - Static Variables
-
-    /// How long the modifier is held before the panel shows.
-    private static let showDelay: Duration = .milliseconds(100)
-    /// How often the open panel reads the window's list again.
-    private static let refreshInterval: Duration = .milliseconds(250)
 
     // MARK: - Variables
 
@@ -115,6 +116,7 @@ final class BrowserMacRecentTabSwitcher {
         let isForward = direction == .forward
         guard let binding = isForward ? forward : backward else { return false }
         let other = isForward ? backward : forward
+        guard let space = context.browser.shownSpace else { return false }
         let items = context.browser.recentTabItems()
         guard !items.isEmpty,
             let session = RecentTabSwitcherSession(
@@ -125,7 +127,9 @@ final class BrowserMacRecentTabSwitcher {
             session: session, browser: context.browser, snapshots: snapshots(for: context))
         model.commit = { [weak self] index in self?.commit(index: index) }
         model.announce = { [weak self] text in self?.announce(text) }
-        hold = Hold(model: model, window: window, chrome: context.chrome, actions: actions)
+        hold = Hold(
+            model: model, window: window, chrome: context.chrome, actions: actions,
+            space: BrowserSpaceRuntimeAssignment(space: space))
         hold?.tasks = [
             Task { [weak self] in
                 try? await Task.sleep(for: Self.showDelay)
@@ -146,22 +150,50 @@ final class BrowserMacRecentTabSwitcher {
     /// Takes a key down while a hold is on, and answers whether the switcher
     /// took it from the page.
     func handleKeyDown(_ event: NSEvent) -> Bool {
-        guard let hold else { return false }
+        guard let hold, NSApp.modalWindow == nil, hold.window.attachedSheet == nil else { return false }
         guard let shortcut = BrowserShortcut(event: event) else { return hold.model.session.isShowing }
-        let response = hold.model.session.keyDown(shortcut)
-        if let outcome = response.outcome {
+        let response = hold.model.session.keyDown(shortcut, isRepeat: event.isARepeat)
+        if let item = response.itemToClose {
+            close(item, in: hold)
+        } else if let outcome = response.outcome {
             end(outcome)
         } else {
-            presentIfDue()
+            updatePresentation()
         }
         return response.isConsumed
+    }
+
+    // MARK: - Actions - Closing
+
+    private func close(_ item: RecentTabItem, in current: Hold) {
+        let action = RecentTabSwitcherCloseAction(
+            browser: current.model.browser, spaceAccess: current.actions.spaceAccess)
+        _ = action.perform(
+            item, in: current.space, clearsSelection: current.model.session.items.count == 1
+        ) { [weak self] closed in
+            if closed {
+                current.actions.pages.reconcile()
+                current.actions.pages.select()
+            }
+            guard let self, self.hold?.model === current.model else { return }
+            if let outcome = current.model.session.closeCompleted(item, succeeded: closed) {
+                self.end(outcome)
+            } else {
+                self.updatePresentation()
+            }
+        }
+
     }
 
     // MARK: - Actions - Events
 
     private func modifiersChanged(_ modifiers: ShortcutModifiers) {
-        guard let hold, let outcome = hold.model.session.modifiersChanged(to: modifiers) else { return }
-        end(outcome)
+        guard let hold else { return }
+        if let outcome = hold.model.session.modifiersChanged(to: modifiers) {
+            end(outcome)
+        } else {
+            updatePresentation()
+        }
     }
 
     private func showDelayElapsed() {
@@ -170,13 +202,13 @@ final class BrowserMacRecentTabSwitcher {
         if let outcome = hold.model.session.showDelayElapsed(modifiers: modifiers) {
             end(outcome)
         } else {
-            presentIfDue()
+            updatePresentation()
         }
     }
 
     /// Clicks outside the open panel close it and go no further.
     private func mouseDown(_ event: NSEvent) -> Bool {
-        guard let hold else { return false }
+        guard let hold, NSApp.modalWindow == nil, hold.window.attachedSheet == nil else { return false }
         if hold.isPresented, event.window === hold.window, let content = hold.window.contentView {
             var point = content.convert(event.locationInWindow, from: nil)
             if !content.isFlipped { point.y = content.bounds.height - point.y }
@@ -188,7 +220,8 @@ final class BrowserMacRecentTabSwitcher {
     }
 
     private func commit(index: Int) {
-        guard let hold, hold.model.session.items.indices.contains(index) else { return }
+        guard let hold, hold.model.session.pendingCloseItem == nil, hold.model.session.items.indices.contains(index)
+        else { return }
         hold.model.session.highlight(index: index)
         end(hold.model.session.finish())
     }
@@ -196,8 +229,17 @@ final class BrowserMacRecentTabSwitcher {
     /// Reads the window's list again, so a closed tab leaves the panel.
     private func refresh() {
         guard let hold else { return }
+        guard
+            hold.model.browser.selectedUnlockedSpace(
+                matching: hold.space, accessController: hold.actions.spaceAccess) != nil
+        else {
+            end(.cancel)
+            return
+        }
         if let outcome = hold.model.session.refresh(items: hold.model.browser.recentTabItems()) {
             end(outcome)
+        } else {
+            updatePresentation()
         }
     }
 
@@ -214,8 +256,17 @@ final class BrowserMacRecentTabSwitcher {
 
     // MARK: - Actions - Panel
 
-    private func presentIfDue() {
-        guard var current = hold, current.model.session.isShowing, !current.isPresented else { return }
+    private func updatePresentation() {
+        guard var current = hold else { return }
+        guard current.model.session.presentsPanel else {
+            if current.isPresented {
+                current.chrome.recentTabs = nil
+                current.isPresented = false
+                hold = current
+            }
+            return
+        }
+        guard !current.isPresented else { return }
         if let item = current.model.session.items.first {
             current.model.snapshots.capture(item.tabIDs, refreshing: true)
         }

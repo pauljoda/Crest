@@ -10,7 +10,10 @@ final class RecentTabSwitcherModel {
 
     var session: RecentTabSwitcherSession {
         didSet {
-            guard session.isShowing, oldValue.highlightedIndex != session.highlightedIndex else { return }
+            guard session.isShowing,
+                oldValue.highlightedIndex != session.highlightedIndex
+                    || oldValue.highlightedItem != session.highlightedItem
+            else { return }
             announce(spokenTitle(at: session.highlightedIndex))
         }
     }
