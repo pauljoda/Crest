@@ -66,6 +66,14 @@ final class BrowserMacDockMenu: NSObject {
         return menu
     }
 
+    /// Runs `command` from the window the core names now, as choosing it
+    /// from the menu would, and brings Crest forward from the app in front.
+    func run(_ command: DockMenuCommand) {
+        let content = try? application.browser.core.query(DockMenu(windowIDs: application.stackedWindowIDs))
+        NSApp.activate(ignoringOtherApps: true)
+        actions(from: content?.windowID).perform(command.command)
+    }
+
     // MARK: - Actions - Choices
 
     @objc private func runCommand(_ item: NSMenuItem) {
