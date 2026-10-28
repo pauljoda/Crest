@@ -23,6 +23,21 @@ name the files and documents to load and the ones to skip. When a change adds,
 moves or removes something a folder's `CONTEXT.md` lists, update that file in
 the same commit.
 
+### Finish the context files (one-time setup)
+
+Only `CrestCore`, `CrestShared`, `CrestMac` and `CrestEngines/Chromium` have a
+`CONTEXT.md` so far. If `CrestMobile/CONTEXT.md`, `Scripts/CONTEXT.md` or
+`Documentation/CONTEXT.md` is missing, the setup is unfinished: before your
+task, tell the maintainer and offer to complete it as its own
+documentation-only pull request, separate from the task. To complete it, add a
+`CONTEXT.md` to every other folder that groups work, following the existing
+ones (what it is, Goal, Contents with every child in one line, Depends on,
+Rules pointing to where each rule is written, Read next; under 80 lines;
+lasting behavior only; every named path verified). Add the `ROUTING.md` rows
+the new files make reachable and link each new file from its parent's
+Contents table. In that same pull request, delete this "Finish the context
+files" section, so the setup removes itself once done.
+
 ## Versioning completed work
 
 - Every committed app-code change advances `MARKETING_VERSION` with
