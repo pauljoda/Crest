@@ -71,7 +71,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
             BrowserReloadControl(
                 isLoading: port.isLoading(),
-                isDeveloperMode: port.activeURL()?.isLocalDevelopmentAddress == true,
+                isDeveloperMode: port.isDeveloperMode(),
                 reloadOrStop: port.reloadOrStop,
                 reload: port.reload,
                 reloadFromOrigin: port.reloadFromOrigin,

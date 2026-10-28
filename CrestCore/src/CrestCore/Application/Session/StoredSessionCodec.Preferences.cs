@@ -129,10 +129,21 @@ internal static partial class StoredSessionCodec {
             SavedTabClosePolicy.Named(TolerantText(value[Key.SavedTabClosePolicy])) ?? defaults.SavedTabClose,
             TolerantFlag(value[Key.SavedTabFaviconReturnsToSavedUrl]) ?? defaults.SavedTabFaviconReturnsToSavedUrl,
             TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
-            TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar,
+            DecodeDeveloperToolbar(value, defaults),
             TolerantFlag(value[Key.ShowsRecentTabs]) ?? defaults.ShowsRecentTabs,
             DecodePalettePreferences(value[Key.Palette]));
     }
+
+    /// The developer toolbar mode. A record from before the mode existed holds
+    /// only the old switch, which read on as local pages and off as off.
+    private static DeveloperToolbarMode DecodeDeveloperToolbar(JsonObject value, AppPreferences defaults) =>
+        value.ContainsKey(Key.DeveloperToolbarMode)
+            ? DeveloperToolbarMode.Named(TolerantText(value[Key.DeveloperToolbarMode])) ?? defaults.DeveloperToolbar
+            : TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) switch {
+                true => DeveloperToolbarMode.LocalPages,
+                false => DeveloperToolbarMode.Off,
+                null => defaults.DeveloperToolbar
+            };
 
     /// The app-wide preferences. The palette's are written only once they
     /// differ from the defaults, so a release that never stored them reads
@@ -148,7 +159,7 @@ internal static partial class StoredSessionCodec {
             [Key.SavedTabClosePolicy] = preferences.SavedTabClose.Name,
             [Key.SavedTabFaviconReturnsToSavedUrl] = preferences.SavedTabFaviconReturnsToSavedUrl,
             [Key.SplitFocusFollowsMouse] = preferences.SplitFocusFollowsMouse,
-            [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar,
+            [Key.DeveloperToolbarMode] = preferences.DeveloperToolbar.Name,
             [Key.ShowsRecentTabs] = preferences.ShowsRecentTabs
         };
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);

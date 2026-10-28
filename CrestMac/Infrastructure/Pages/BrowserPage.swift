@@ -214,11 +214,26 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         developerToolbarVisibilityOverride ?? (developerViewport != nil || isDeveloperModeAutomatic)
     }
 
-    /// Whether this page's address turns the developer toolbar on by itself:
-    /// a local development address, while the person keeps that preference on.
+    /// Whether Developer Mode is on only because the address qualifies, with
+    /// no choice made on this page. An explicit toggle makes it a manual
+    /// choice; a viewport preset alone does not change that.
+    var isDeveloperModeEnabledAutomatically: Bool {
+        developerToolbarVisibilityOverride == nil && isDeveloperModeAutomatic
+    }
+
+    /// Whether this page's address turns the developer toolbar on by itself,
+    /// as the person's developer toolbar setting decides: never, for a local
+    /// development address, or for any http or https page.
     var isDeveloperModeAutomatic: Bool {
-        BrowserAppPreferenceStore.shared.automaticallyShowsDeveloperToolbar
-            && live.displayURL?.isLocalDevelopmentAddress == true
+        guard let url = live.displayURL else { return false }
+        switch BrowserAppPreferenceStore.shared.developerToolbar {
+        case .localPages:
+            return url.isLocalDevelopmentAddress
+        case .allWebsites:
+            return ["http", "https"].contains(url.scheme?.lowercased())
+        default:
+            return false
+        }
     }
 
     /// The tab that owns this page's Media Session, read when the session

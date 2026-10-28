@@ -61,6 +61,7 @@ internal static partial class StoredSessionCodec {
         public const string DefaultSpaceId = "defaultSpaceID";
         public const string DeletionOrigin = "deletionOrigin";
         public const string Depth = "depth";
+        public const string DeveloperToolbarMode = "developerToolbarMode";
         public const string DisposableSeedMarker = "disposableSeedMarker";
         public const string Downloads = "downloads";
         public const string EdgeColorIndex = "edgeColorIndex";

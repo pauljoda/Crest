@@ -56,9 +56,12 @@ struct BrowserSidebarNavigationPort {
     /// menus is disabled while there is not.
     let hasActivePage: () -> Bool
 
-    /// What the current page is showing, read only to decide whether the
-    /// developer reload menu belongs beside the reload control.
+    /// What the current page is showing.
     let activeURL: () -> URL?
+
+    /// Whether the current page has Developer Mode on, which decides whether
+    /// the developer reload menu belongs beside the reload control.
+    let isDeveloperMode: () -> Bool
 
     /// Reloads, or stops a load already in flight.
     let reloadOrStop: () -> Void

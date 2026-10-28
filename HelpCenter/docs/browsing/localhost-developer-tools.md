@@ -7,9 +7,17 @@ keywords: [localhost, developer mode, viewport, responsive, Web Inspector, DevTo
 
 # Localhost and developer tools
 
-On Mac, Crest automatically shows its developer toolbar for local development addresses. This includes `localhost`, loopback and private-network addresses, single-label hosts, common local suffixes such as `.local` and `.test`, and file URLs.
+On Mac, with **Developer toolbar** on its default **On local pages** setting, Crest shows its developer toolbar by itself for local development addresses. With the setting **Off** it never does. Local addresses include `localhost`, loopback and private-network addresses, single-label hosts, common local suffixes such as `.local` and `.test`, and file URLs.
 
-Use **Shift-Command-I** to show or hide the toolbar on any website. To stop the toolbar opening by itself on local addresses, turn off **Developer toolbar on local pages** in **Settings > General**. The shortcut still shows it whenever you want it.
+Use **Shift-Command-I**, or click **Developer Mode** in a page's site settings, to show or hide the toolbar on any website. Your choice applies to that page until you change it again.
+
+Choose when the toolbar opens by itself with **Developer toolbar** in **Settings > General**:
+
+- **Off** never opens it by itself.
+- **On local pages** opens it for the local addresses above. This is the default.
+- **On all websites** opens it for every http and https web page, but not file URLs. Internal pages such as the start page and Settings stay without it.
+
+The shortcut and the site settings row still show or hide it whenever you want, in every mode.
 
 ## Preview a different viewport
 
@@ -25,7 +33,7 @@ This previews the page’s layout at the chosen dimensions; it does not reproduc
 - Use **Capture in Portrait Mode**, **Copy Full Page Capture**, or drag a region to copy it.
 - Toggle the inspector's Console, Network panel, or element inspection.
 
-Automatic localhost tools follow the focused address. The manual toolbar toggle lets you inspect other sites too.
+Automatic tools follow the focused address and your **Developer toolbar** setting. The manual toggle lets you inspect any other site too.
 
 ## Open the inspector directly
 

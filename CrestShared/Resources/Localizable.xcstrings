@@ -5147,7 +5147,7 @@
     "Developer Toolbar" : {
 
     },
-    "Developer toolbar on local pages" : {
+    "Developer toolbar" : {
 
     },
     "developer toolbar viewport preview responsive custom size" : {
@@ -8959,6 +8959,12 @@
           }
         }
       }
+    },
+    "On all websites" : {
+
+    },
+    "On local pages" : {
+
     },
     "On-device Translation" : {
 

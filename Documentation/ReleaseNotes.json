@@ -4589,6 +4589,14 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "site-popover-developer-mode-toggle": {
+      "category": "fixed",
+      "message": "Clicking Developer Mode in a page's site settings now turns the developer toolbar on or off for that page."
+    },
+    "developer-toolbar-mode-setting": {
+      "category": "improved",
+      "message": "Choose in Settings whether the developer toolbar opens by itself never, on local pages or on all websites, and the reload menu's developer options follow it."
     }
   }
 }

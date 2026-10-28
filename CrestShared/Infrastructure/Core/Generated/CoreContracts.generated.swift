@@ -1064,7 +1064,7 @@ struct AppPreferences: Equatable, Sendable {
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
         splitFocusFollowsMouse: false,
-        automaticallyShowsDeveloperToolbar: true,
+        developerToolbar: DeveloperToolbarMode.localPages,
         showsRecentTabs: true,
         palette: PalettePreferences(
             layout: PaletteLayout.sections,
@@ -1101,7 +1101,7 @@ struct AppPreferences: Equatable, Sendable {
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
     var splitFocusFollowsMouse: Bool
-    var automaticallyShowsDeveloperToolbar: Bool
+    var developerToolbar: DeveloperToolbarMode
     var showsRecentTabs: Bool
     var palette: PalettePreferences
 }
@@ -11957,6 +11957,55 @@ struct DataRetention: Hashable, Sendable {
             self.name = name
             self.title = title
             self.lifetime = lifetime
+        }
+    }
+}
+
+/// The members of the core's `DeveloperToolbarMode`. A member's wire tag is its index in `all`.
+struct DeveloperToolbarMode: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let off = DeveloperToolbarMode(tag: 0, name: "off", title: LocalizedStringResource("Off"))
+    static let localPages = DeveloperToolbarMode(
+        tag: 1,
+        name: "localPages",
+        title: LocalizedStringResource("On local pages")
+    )
+    static let allWebsites = DeveloperToolbarMode(
+        tag: 2,
+        name: "allWebsites",
+        title: LocalizedStringResource("On all websites")
+    )
+
+    static let all: [DeveloperToolbarMode] = [off, localPages, allWebsites]
+
+    static func named(_ name: String?) -> DeveloperToolbarMode? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DeveloperToolbarMode, rhs: DeveloperToolbarMode) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }

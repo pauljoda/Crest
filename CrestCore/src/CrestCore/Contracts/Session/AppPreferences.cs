@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// The app-wide behavior preferences of one installation: what a window opens with,
 /// page translation and its per-language rules, spelling, automatic Picture in
 /// Picture, what closing a saved tab does, whether Split View focus follows the
-/// pointer, whether local pages open with the developer toolbar, whether holding
+/// pointer, which pages open with the developer toolbar, whether holding
 /// a Most Recent Tab shortcut shows the recent tabs, and how the command palette
 /// ranks and arranges what it offers. Translation rules are in
 /// ordinal order of their source language. They stay on this device and never
@@ -15,7 +15,7 @@ namespace CrestCore.Contracts;
 public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslation, bool AutomaticallyTranslates,
     IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
     SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl, bool SplitFocusFollowsMouse,
-    bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs, PalettePreferences Palette) {
+    DeveloperToolbarMode DeveloperToolbar, bool ShowsRecentTabs, PalettePreferences Palette) {
     #region Static Variables
 
     /// The documented defaults for a person who never chose, which a platform
@@ -23,7 +23,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
     public static AppPreferences Default { get; } = new(StartupBehavior.ShowStartPage, OffersTranslation: true,
         AutomaticallyTranslates: false, TranslationRules: [], ChecksSpelling: false, AutomaticallyEntersPictureInPicture: true,
         SavedTabClosePolicy.ResumeLastLocation, SavedTabFaviconReturnsToSavedUrl: false, SplitFocusFollowsMouse: false,
-        AutomaticallyShowsDeveloperToolbar: true, ShowsRecentTabs: true, PalettePreferences.Default);
+        DeveloperToolbarMode.LocalPages, ShowsRecentTabs: true, PalettePreferences.Default);
 
     #endregion
 
@@ -58,13 +58,13 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && SavedTabClose == other.SavedTabClose
         && SavedTabFaviconReturnsToSavedUrl == other.SavedTabFaviconReturnsToSavedUrl
         && SplitFocusFollowsMouse == other.SplitFocusFollowsMouse
-        && AutomaticallyShowsDeveloperToolbar == other.AutomaticallyShowsDeveloperToolbar
+        && DeveloperToolbar == other.DeveloperToolbar
         && ShowsRecentTabs == other.ShowsRecentTabs
         && Palette.Equals(other.Palette);
 
     public override int GetHashCode() => HashCode.Combine(Startup, OffersTranslation, AutomaticallyTranslates,
         TranslationRules.Count, ChecksSpelling, AutomaticallyEntersPictureInPicture, SavedTabClose,
-        HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, SplitFocusFollowsMouse, AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs,
+        HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, SplitFocusFollowsMouse, DeveloperToolbar, ShowsRecentTabs,
             Palette));
 
     #endregion

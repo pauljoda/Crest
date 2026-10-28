@@ -29,6 +29,7 @@ extension BrowserSidebarNavigationPort {
             isLoading: { pageActions?.activePage?.live.isLoading == true },
             hasActivePage: { pageActions?.isAvailable == true },
             activeURL: { pageActions?.activeURL },
+            isDeveloperMode: { pageActions?.activeURL?.isLocalDevelopmentAddress == true },
             reloadOrStop: { pageActions?.reloadOrStop() },
             reload: { pageActions?.reload() },
             reloadFromOrigin: { pageActions?.reloadFromOrigin() },

@@ -52,6 +52,14 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(StartupBehavior.LastActiveTab, relaunched.Query(LaunchPlan(relaunched.Workspace)).Startup);
     }
 
+    [Theory]
+    [InlineData("""{"automaticallyShowsDeveloperToolbar":false}""", "off")]
+    [InlineData("""{"automaticallyShowsDeveloperToolbar":true}""", "localPages")]
+    [InlineData("""{}""", "localPages")]
+    [InlineData("""{"automaticallyShowsDeveloperToolbar":false,"developerToolbarMode":"allWebsites"}""", "allWebsites")]
+    public void DeveloperToolbarModeMigratesFromTheLegacyFlag(string stored, string expected) =>
+        Assert.Equal(expected, StoredSessionCodec.DecodeAppPreferences(JsonNode.Parse(stored)).DeveloperToolbar.Name);
+
     [Fact]
     public void CloudReplacementNeverCarriesOrReplacesAppPreferences() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();

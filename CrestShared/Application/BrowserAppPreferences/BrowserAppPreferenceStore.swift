@@ -71,9 +71,9 @@ final class BrowserAppPreferenceStore {
         set { set { $0.splitFocusFollowsMouse = newValue } }
     }
 
-    var automaticallyShowsDeveloperToolbar: Bool {
-        get { preferences.automaticallyShowsDeveloperToolbar }
-        set { set { $0.automaticallyShowsDeveloperToolbar = newValue } }
+    var developerToolbar: DeveloperToolbarMode {
+        get { preferences.developerToolbar }
+        set { set { $0.developerToolbar = newValue } }
     }
 
     /// Whether holding a Most Recent Tab shortcut shows the recent tabs, on

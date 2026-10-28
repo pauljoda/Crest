@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x2e, 0xd4, 0xbb, 0xcf, 0xf3, 0x7d, 0xf6, 0x2f, 0x29, 0x89, 0x33, 0xd5, 0x21, 0x69, 0x58, 0xb8, 0x9d, 0x7f, 0x2a, 0x12, 0x80, 0x3b, 0x72, 0x87, 0x99, 0x66, 0x36, 0xdf, 0x66, 0xed, 0x13, 0x70
+        0x33, 0xb0, 0x4d, 0x55, 0x0e, 0x5e, 0x49, 0xc9, 0xc5, 0x50, 0xf7, 0xc5, 0x06, 0x84, 0x35, 0x5f, 0x89, 0xee, 0x7c, 0x64, 0xaa, 0x54, 0xe9, 0xdd, 0x51, 0x5c, 0x22, 0x27, 0x55, 0xd9, 0x4b, 0x57
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -4354,7 +4354,7 @@ public static class ContractCodec {
             ReadSavedTabClosePolicy(reader),
             reader.ReadBool(),
             reader.ReadBool(),
-            reader.ReadBool(),
+            ReadDeveloperToolbarMode(reader),
             reader.ReadBool(),
             ReadPalettePreferences(reader));
     }
@@ -4374,7 +4374,7 @@ public static class ContractCodec {
         WriteSavedTabClosePolicy(writer, value.SavedTabClose);
         writer.WriteBool(value.SavedTabFaviconReturnsToSavedUrl);
         writer.WriteBool(value.SplitFocusFollowsMouse);
-        writer.WriteBool(value.AutomaticallyShowsDeveloperToolbar);
+        WriteDeveloperToolbarMode(writer, value.DeveloperToolbar);
         writer.WriteBool(value.ShowsRecentTabs);
         WritePalettePreferences(writer, value.Palette);
     }
@@ -19841,6 +19841,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(DataRetention.All, value));
+    }
+
+    public static DeveloperToolbarMode ReadDeveloperToolbarMode(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DeveloperToolbarMode.All[reader.ReadEnum(DeveloperToolbarMode.All.Count)];
+    }
+
+    public static void WriteDeveloperToolbarMode(WireWriter writer, DeveloperToolbarMode value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DeveloperToolbarMode.All, value));
     }
 
     public static DevicePlatform ReadDevicePlatform(WireReader reader) {

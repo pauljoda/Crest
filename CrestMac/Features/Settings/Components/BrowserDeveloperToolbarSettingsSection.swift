@@ -5,8 +5,12 @@ struct BrowserDeveloperToolbarSettingsSection: View {
 
     var body: some View {
         Section {
-            Toggle("Developer toolbar on local pages", isOn: $preferences.automaticallyShowsDeveloperToolbar)
-                .accessibilityIdentifier("automatic-developer-toolbar-toggle")
+            Picker("Developer toolbar", selection: $preferences.developerToolbar) {
+                ForEach(DeveloperToolbarMode.all, id: \.self) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .accessibilityIdentifier("developer-toolbar-mode")
         } header: {
             Text("Developer")
         } footer: {
