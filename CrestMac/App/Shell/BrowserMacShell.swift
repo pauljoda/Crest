@@ -43,6 +43,8 @@ final class BrowserMacShell {
     /// does, so this is where Crest's shortcuts go ahead of a page when the
     /// core reserves them from pages, and ahead of Crest's own views always.
     private var keyMonitor: Any?
+    /// The New Quick Window keys, which reach Crest from other apps.
+    private var quickWindowShortcut: BrowserMacGlobalShortcut?
     /// Takes a mouse's Back and Forward clicks whole in every window, ahead of
     /// any view.
     private let mouseButtons = BrowserMacMouseButtons()
@@ -103,6 +105,10 @@ final class BrowserMacShell {
             let pageSeesFirst = BrowserWebHostView.isPageContent(NSApp.keyWindow?.firstResponder)
             return self?.handleShortcut(event, pageSeesFirst: pageSeesFirst) == true ? nil : event
         }
+        quickWindowShortcut = BrowserMacGlobalShortcut(
+            binding: { application.shortcuts.shortcut(for: .newQuickWindow) },
+            pressed: { [weak self] in self?.quickWindowShortcutPressed() })
+        quickWindowShortcut?.start()
         mouseButtons.start()
         recentTabSwitcher.start(in: self)
         running?.agents.start()
@@ -164,6 +170,13 @@ final class BrowserMacShell {
     func dockMenu() -> NSMenu? {
         guard let running, !running.quit.isQuitting else { return nil }
         return running.dockMenu.menu()
+    }
+
+    /// The New Quick Window keys, pressed in another app. No Crest window is
+    /// key there, so they run as the Dock menu does.
+    private func quickWindowShortcutPressed() {
+        guard let running, !running.quit.isQuitting else { return }
+        running.dockMenu.run(.newQuickWindow)
     }
 
     // MARK: - Actions - External opens

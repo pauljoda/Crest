@@ -4697,6 +4697,10 @@
     "selection-split-other-space": {
       "category": "fixed",
       "message": "Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them."
+    },
+    "quick-window-shortcut-from-any-app": {
+      "category": "new",
+      "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts."
     }
   }
 }
