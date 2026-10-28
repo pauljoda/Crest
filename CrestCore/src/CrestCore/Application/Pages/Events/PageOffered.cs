@@ -22,10 +22,12 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
     /// - A window a page asked for, which the engine made a window of its
     ///   own, opens as a Quick Window in its opener's Space and window, so a
     ///   sign-in popup stays one window whose redirects stay in it, keeps its
-    ///   opener, and closes itself when it is done.
-    /// - A Quick Window's or Peek's page keeps the other pages it opens. The engine
-    ///   closes the offered page, and the page that opened it loads its web
-    ///   address, as a popup there does on every engine.
+    ///   opener, and closes itself when it is done. So does any page a Quick
+    ///   Window's page opens, a `target="_blank"` link's or a `window.open`
+    ///   one's, which leaves the Quick Window that opened it as it was.
+    /// - A Peek's page keeps the other pages it opens. The engine closes the
+    ///   offered page, and the page that opened it loads its web address, as
+    ///   a popup there does on every engine.
     /// - A tab's page opens a tab after its own, in its Space and window.
     /// - Any other page joins the window that holds it: the Space its engine
     ///   window was reserved for, or else the Space the window shows, after
@@ -40,7 +42,7 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
             && ReferenceEquals(opener.Engine, engine) && opener.ProfileId == ProfileId
                 ? opener
                 : null;
-        if (source is not null && SpaceId is not null) {
+        if (source is not null && (SpaceId is not null || source.Transient?.OpensPagesAsWindows == true)) {
             if (!AdoptedAsWindow(pages, engine, source, turn)) turn.Issue(engine, new RejectOfferedPage(OfferId));
             return;
         }
@@ -105,8 +107,9 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         return true;
     }
 
-    /// A Quick Window's or Peek's page loads the address a page it opened was
-    /// heading to: a web address, or the empty document at a fragment its
+    /// A Peek's page, or any other page without a tab that opens no window of
+    /// its own, loads the address a page it opened was heading to: a web
+    /// address, or the empty document at a fragment its
     /// opener named, which is an address on every engine. One whose engine
     /// holds no page, whose Space may not show it now, or any other address
     /// loads nothing, as the bare empty document an engine reports for a

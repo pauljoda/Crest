@@ -12,8 +12,10 @@ public sealed class TransientPresentation {
     public static readonly TransientPresentation Peek = new(name: "peek", opensNewTabsInFront: true);
 
     /// A link a Quick Window opens in a new tab follows the person's link
-    /// preferences.
-    public static readonly TransientPresentation QuickWindow = new(name: "quickWindow", opensNewTabsInFront: false);
+    /// preferences, and a page it opens in a new window opens a Quick Window
+    /// of its own.
+    public static readonly TransientPresentation QuickWindow = new(name: "quickWindow", opensNewTabsInFront: false,
+        opensPagesAsWindows: true);
 
     /// A link an engine's own page in Settings opens in a new tab follows the
     /// person's link preferences.
@@ -26,13 +28,19 @@ public sealed class TransientPresentation {
     /// A link the page opens in a new tab always comes to the front.
     public bool OpensNewTabsInFront { get; }
 
+    /// A page the page opens in a new window, as a `target="_blank"` link or
+    /// `window.open` does, opens as a Quick Window of its own beside it rather
+    /// than loading in the page. Only the core reads it.
+    internal bool OpensPagesAsWindows { get; }
+
     #endregion
 
     #region Constructors
 
-    private TransientPresentation(string name, bool opensNewTabsInFront) {
+    private TransientPresentation(string name, bool opensNewTabsInFront, bool opensPagesAsWindows = false) {
         Name = name;
         OpensNewTabsInFront = opensNewTabsInFront;
+        OpensPagesAsWindows = opensPagesAsWindows;
     }
 
     #endregion

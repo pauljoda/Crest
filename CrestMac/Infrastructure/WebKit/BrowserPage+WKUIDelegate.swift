@@ -69,7 +69,8 @@ extension BrowserPage: WKUIDelegate {
     /// is what keeps `window.open()` non-null, `window.opener` connected, and
     /// `about:blank` popups writable. The page offers the popup to the core,
     /// which decides where it shows, a Quick Window for one that asked for a
-    /// window of its own and a tab beside this one otherwise, and keeps it on
+    /// window of its own or that a Quick Window opened, and a tab beside this
+    /// one otherwise, and keeps it on
     /// WebKit, this page's engine; Crest never loads that web view itself:
     /// WebKit drives the navigation it already scheduled. A popup the core
     /// refuses gets no window, and never a tab of its own.

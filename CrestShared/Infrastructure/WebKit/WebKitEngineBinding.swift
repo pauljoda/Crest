@@ -217,8 +217,9 @@ final class WebKitEngineBinding: EngineBinding {
     /// to load `request`, as `PageOffered` from its opener, and answers the
     /// page the core adopted it as, or nil when the core refused it. The core
     /// decides where the page shows, and it runs on WebKit, its opener's
-    /// engine; one the core keeps in the opener instead, as a Quick Window or
-    /// Peek keeps what it opens, loads `request` there. A window asked for
+    /// engine; one the core keeps in the opener instead, as a Peek keeps what
+    /// it opens, loads `request` there, while a Quick Window's page opens
+    /// every page it opens as a Quick Window of its own. A window asked for
     /// with no address heads to the empty document. A popup that wants a
     /// window of its own is offered as one, in
     /// its opener's Space, on the Mac, whose Quick Windows show it; iPhone and

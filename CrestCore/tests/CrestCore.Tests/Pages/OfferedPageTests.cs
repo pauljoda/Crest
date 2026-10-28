@@ -67,6 +67,43 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void APageAQuickWindowOpensOpensAQuickWindowOfItsOwnAndOneAPeekOpensLoadsInIt() {
+        var session = TwoSpaceSession();
+        var (space, profile) = (SpaceId(session["spaces"]![0]!), ProfileId(session["spaces"]![0]!));
+        var (app, engine, binding, workspace, window) = PageHost(session);
+        using var disposal = app;
+        var (quick, peek) = (Guid.NewGuid(), Guid.NewGuid());
+        app.Send(new OpenPage(quick, workspace, space, null, window, TransientPresentation.QuickWindow));
+        app.Send(new OpenPage(peek, workspace, space, null, window, TransientPresentation.Peek));
+        app.Report(engine, new PageCreated(quick));
+        app.Report(engine, new PageCreated(peek));
+        app.Drain();
+        int tabs = CurrentTabs(app, workspace, space).Count;
+
+        // A `target="_blank"` link or `window.open` asks for no window of its
+        // own, yet a Quick Window's page opens it as a Quick Window beside it,
+        // in its Space and window, and loads nothing in itself.
+        var offer = Guid.NewGuid();
+        const string linked = "https://linked.example/";
+        app.Report(engine, new PageOffered(offer, profile, quick, window, SpaceId: null, linked, Foreground: true));
+        var changes = app.Drain();
+        var adopted = Assert.Single(changes.OfType<OfferedWindowAdopted>());
+        Assert.Equal((quick, workspace, window, space, linked),
+            (adopted.SourcePageId, adopted.WorkspaceId, adopted.WindowId, adopted.SpaceId, adopted.Url));
+        var opened = Assert.Single(changes.OfType<PageOpened>()).Page;
+        Assert.Equal((adopted.PageId, (Guid?)null), (opened.Id, opened.TabId));
+        Assert.Equal(new AdoptOfferedPage(adopted.PageId, offer, profile, IsPrivate: false, window), binding.Commands[^1]);
+        Assert.DoesNotContain(binding.Commands, command => command is LoadPage load && load.PageId == quick);
+
+        // A Peek keeps what it opens: the page that opened it loads it.
+        var kept = Guid.NewGuid();
+        app.Report(engine, new PageOffered(kept, profile, peek, window, SpaceId: null, linked, Foreground: true));
+        Assert.Equal([new RejectOfferedPage(kept), new LoadPage(peek, linked)], binding.Commands[^2..]);
+        Assert.Empty(app.Drain().OfType<OfferedWindowAdopted>());
+        Assert.Equal(tabs, CurrentTabs(app, workspace, space).Count);
+    }
+
+    [Fact]
     public void AStagedLinkLoadsOnlyInANewPageOfItsSourcesEngineAndProfile() {
         var session = TwoSpaceSession();
         var (first, second) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
