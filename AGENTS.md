@@ -15,6 +15,14 @@ and the pull request template asks the author to confirm that it did.
 `CONTRIBUTING.md` and `Documentation/RepositoryGuardrails.md` remain the base
 contract for setup, validation and change discipline.
 
+## Find the code before reading it
+
+Start each task at `ROUTING.md`: find the row for the kind of change, then
+read the root `CONTEXT.md` and the `CONTEXT.md` of each folder you touch. They
+name the files and documents to load and the ones to skip. When a change adds,
+moves or removes something a folder's `CONTEXT.md` lists, update that file in
+the same commit.
+
 ## Versioning completed work
 
 - Every committed app-code change advances `MARKETING_VERSION` with
