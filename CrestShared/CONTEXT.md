@@ -14,15 +14,12 @@ One implementation of every feature, reading what its environment can do from
 
 | Folder | What it is |
 | --- | --- |
-| `Domain/` | Value types, policies and state transitions per browser concept; imports Foundation only |
-| `Application/` | Cross-platform coordination and stores, including `BrowserStore`; Foundation, Observation and Dispatch only |
-| `DesignSystem/` | Tokens, components, modifiers, accessibility and animation; search here before writing a control or fill |
-| `Features/` | Shared feature UI by user purpose: Sidebar, Tabs, Spaces, Settings, Chrome, Credentials, SplitView, ... |
-| `Infrastructure/Core/` | The Swift side of the core: read models, changes, commands; `Generated/` is written by the contract generator |
-| `Infrastructure/Engines/` | The engine port: `BrowserPageEngine`, engine registration, page reporting |
-| `Infrastructure/WebKit/` | The shared WebKit adapter |
-| `Infrastructure/` (others) | Keychain credentials, sync transport, downloads, favicons, launch, page actions, ... |
-| `Resources/` | Localizations (`Localizable.xcstrings`), privacy manifest, asset catalogs, app icon |
+| `Domain/` | Value types, policies and state transitions per browser concept; imports Foundation only ([CONTEXT](Domain/CONTEXT.md)) |
+| `Application/` | Cross-platform coordination and stores, including `BrowserStore`; no UI or system frameworks ([CONTEXT](Application/CONTEXT.md)) |
+| `DesignSystem/` | Tokens, components, modifiers, accessibility and animation; search here before writing a control or fill ([CONTEXT](DesignSystem/CONTEXT.md)) |
+| `Features/` | Shared feature UI by user purpose: Browser, BrowserShortcuts, Chrome, Credentials, DataPortability, GettingStarted, NativeTabs, Navigation, Onboarding, PageTranslation, ReaderMode, SearchProvider, Settings, Sidebar, SidebarWidgets, SitePermissions, Spaces, SplitView, StartPage, Tabs, TransientBrowsing, Utilities ([CONTEXT](Features/CONTEXT.md)) |
+| `Infrastructure/` | Adapters: Core (the Swift side of the core; `Core/Generated/` is written by the contract generator), Engines (the `BrowserPageEngine` port), WebKit (the shared WebKit adapter), Authentication, ControlPlane, Credentials, Diagnostics, Downloads, Favicons, Geolocation, HostedWebNotifications, Launch, Links, MediaSessions, PageActions, Pages, Popups, Preferences, Session, SitePermissions, Sync, Tabs ([CONTEXT](Infrastructure/CONTEXT.md)) |
+| `Resources/` | Localizations (`Localizable.xcstrings`), privacy manifest, asset catalogs, app icon, emoji and SF Symbol catalogs ([CONTEXT](Resources/CONTEXT.md)) |
 | `PreviewSupport/` | Shared preview fixtures |
 
 ## Depends on
@@ -32,7 +29,7 @@ One implementation of every feature, reading what its environment can do from
 
 ## Rules
 
-- Never mutate `BrowserStore.session` or other shared state from Swift; send a core intent (skill, "Architecture").
+- Never change shared state from Swift; send a core intent (skill, "Architecture").
 - Layer imports are checked by `Scripts/check-architecture.py`; SwiftUI stays out of Infrastructure (`Documentation/RepositoryGuardrails.md`).
 - No `ObservableObject`, `@Published` or `AnyView` in production code (same).
 - Reuse `crestInteractiveSurface`, `CrestChromeButtonStyle` and the tokens; no ad-hoc fills (skill, "Windows and UI").

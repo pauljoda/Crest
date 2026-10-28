@@ -15,12 +15,12 @@ behave the same way.
 
 | Path | What it is |
 | --- | --- |
-| `src/CrestCore/Contracts/` | Typed contract records: intents, changes, rejections, queries, engine commands and events, read models |
-| `src/CrestCore/Domain/` | Tab and Space behavior, durable state, navigation, sync policy; no JSON or native dependencies |
-| `src/CrestCore/Application/` | Session commands, the session file (SQLite), imports, sync transitions, one folder per browser area |
-| `src/CrestCore.Native/` | C exports for native callers and the generated wire codec (`Generated/`) |
-| `tools/CrestCore.Generator/` | Writes the C# codec, the Swift models and codec, the C header and the C++ engine codec from the contract records |
-| `tests/CrestCore.Tests/` | Behavioral contracts for the source areas |
+| `src/CrestCore/Contracts/` | Typed contract records: intents, changes, rejections, queries, engine commands and events, read models; the generator's one schema ([CONTEXT](src/CrestCore/Contracts/CONTEXT.md)) |
+| `src/CrestCore/Domain/` | Tab, Space, navigation, palette, search, permission, download and sync-ordering rules as typed objects; no JSON or native dependencies ([CONTEXT](src/CrestCore/Domain/CONTEXT.md)) |
+| `src/CrestCore/Application/` | `CrestApp` and one folder per browser area: session, device, pages, sync, storage (SQLite), portability, downloads, credentials ([CONTEXT](src/CrestCore/Application/CONTEXT.md)) |
+| `src/CrestCore.Native/` | NativeAOT C exports (`crest_app_*`, `crest_engine_*`), the wire reader and writer, and the generated codec (`Generated/`) ([CONTEXT](src/CrestCore.Native/CONTEXT.md)) |
+| `tools/CrestCore.Generator/` | Writes the C# codec, the Swift models and codec, the C tag header and the C++ engine codec; `--check` fails on stale output ([CONTEXT](tools/CrestCore.Generator/CONTEXT.md)) |
+| `tests/CrestCore.Tests/` | The xUnit suite, one folder per area, with session, storage and portability fixtures ([CONTEXT](tests/CrestCore.Tests/CONTEXT.md)) |
 
 The layout and namespace rules in full: [`README.md`](README.md).
 

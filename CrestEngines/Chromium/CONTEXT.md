@@ -17,9 +17,9 @@ WebKit, with every engine change reviewed beside its Swift caller.
 | --- | --- |
 | `fork.json`, `source.lock.json`, `host-inputs.json` | The upstream repository and channel, the pinned recipe, the host patch's inputs and outputs |
 | `Patches/` | Crest's patches over upstream (`native-host.patch` selects the Crest window) |
-| `Overlay/` | The BrowserWindow and engine implementation added to the source tree |
-| `Apple/` | The Swift adapter: `ChromiumEngine`, `ChromiumPageAdapter`, runtime, extensions, presentations; `CrestChromiumHost.h` |
-| `Composition/` | How the Mac app composes the engine |
+| `Overlay/` | C++ and Objective-C++ added to the Chromium tree: the engine binding, the Crest `BrowserWindow`, user-data-directory adoption ([CONTEXT](Overlay/CONTEXT.md)) |
+| `Apple/` | The Swift adapter: `ChromiumEngine`, `ChromiumPageAdapter`, runtime, extensions, presentations; `CrestChromiumHost.h` ([CONTEXT](Apple/CONTEXT.md)) |
+| `Composition/` | The `Crest-Native-Host` resource marker bundled with the Chromium UI product |
 | `ThirdParty/` | Provenance and retained licenses for adapted code |
 | `README.md`, `ForkMaintenance.md` | The engine definition and releasing; workspace commands, CI, upstream updates |
 
