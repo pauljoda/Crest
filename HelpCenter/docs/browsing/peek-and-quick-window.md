@@ -29,7 +29,7 @@ On iPhone and iPad, touch and hold webpage links for the native link preview and
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
 
-Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+Open a blank Quick Window with **Option-Shift-Command-N** on Mac, from any app while Crest is open. While Crest is in the background, that shortcut opens a Quick Window instead of acting in the app in front; change or clear it in **Settings → Shortcuts**. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
 ### Sign-in and other popup windows
 
