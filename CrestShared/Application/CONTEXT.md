@@ -51,10 +51,10 @@ also supply the ports declared here.
 
 ## Rules
 
-- Application imports only the frameworks `Scripts/check-architecture.py` allows: no SwiftUI, AppKit, UIKit, WebKit (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
+- Application imports only Foundation, Observation, Dispatch and Synchronization, so no SwiftUI, AppKit, UIKit or WebKit (`Scripts/check-architecture.py`, `LAYER_IMPORT_POLICIES`; `Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 - Never mutate shared state from Swift; send a core intent and apply the change it returns (skill, "Architecture").
-- Observable workflow controllers stay here; system bridges stay in Infrastructure (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
-- Use `@Observable` and store before announcing (`BrowserStoreFirstObservable`); no `ObservableObject` or `@Published` (`Documentation/Architecture/ControlPlane.md`, "The read model").
+- Default-browser and passkey workflow controllers stay here; their system bridges stay in Infrastructure (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
+- No `ObservableObject` or `@Published` (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility"); store before announcing (`BrowserStoreFirstObservable`, `Documentation/Architecture/ControlPlane.md`, "The read model").
 - A protocol needs two production implementations or a real system boundary (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Launch flags are parsed by `BrowserLaunchEnvironment` and only read from the process in Infrastructure (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
 

@@ -32,16 +32,17 @@ intent that needs it applies the same rule.
 
 ## Depends on
 
-`Contracts/` only (same assembly). Used by `Application/`; tests reach it
+`Contracts/` only (same assembly). Used by `Application/` and by contract records
+that carry behavior; tests reach it
 through `CrestCore/tests/CrestCore.Tests/Domain/` and the area folders.
 
 ## Rules
 
 - Domain uses only the contracts: no JSON, no native or storage dependency (`CrestCore/README.md`).
 - Inside the core, methods take the objects, not their identifiers; identities are plain `Guid` properties, no one-field wrappers (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
-- A type owns its data and every behavior that depends on it: no sibling `*Policy`, `*Rules` or `*Helper` types (skill, "Code style").
-- Fixed sets carry their behavior on their instances; methods never switch on a member (same).
-- Members follow the section layout with `#region`; a large purpose moves to `Type.Purpose.cs` (skill, "Code style").
+- A type owns its data and every behavior that depends on it: no sibling `*Policy`, `*Rules` or `*Helper` types (`.agents/skills/crest-contribution/SKILL.md`, "Code style"; `Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
+- Fixed sets carry their behavior on their instances; methods never switch on a member (`.agents/skills/crest-contribution/SKILL.md`, "Code style").
+- Members follow the section layout with `#region`; a large purpose moves to `Type.Purpose.cs` (`.agents/skills/crest-contribution/SKILL.md`, "Code style").
 
 ## Read next
 

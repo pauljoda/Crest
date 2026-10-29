@@ -25,16 +25,19 @@ WebKit, with every engine change reviewed beside its Swift caller.
 
 ## Depends on
 
-`CrestContracts/include` (C ABI), the core's generated engine codec,
-`Scripts/control-plane/` (prepare, apply, configure, build, publish).
+`CrestContracts/include` (the C ABI and the generated C++ engine codec
+`crest_engine_contract.h`), `Scripts/control-plane/` (prepare, apply,
+configure, build, publish; `chromium_engine.py` names the engine), and the
+engine port in `CrestShared/Infrastructure/Engines/`. The `CrestChromiumUI`
+and `CrestChromiumUIProduct` targets in `project.yml` compile `Apple/`.
 
 ## Rules
 
-- The engine key (`Scripts/control-plane/chromium_engine.py`, `INPUTS`) covers `source.lock.json`, `host-inputs.json`, `Patches/`, `Overlay/`, `Apple/CrestChromiumHost.h`, four `CrestContracts/include` headers and four control-plane scripts. Changing any of them needs a maintainer-published engine; say so in the pull request (`AGENTS.md`).
-- `crest_engine_contract.h` is generated from the core's engine contracts, so an engine command or event change is an engine-input change too.
-- Swift adapter files other than `CrestChromiumHost.h` reuse the published engine.
+- The engine key (`Scripts/control-plane/chromium_engine.py`, `INPUTS`) covers `source.lock.json`, `host-inputs.json`, `Patches/`, `Overlay/`, `Apple/CrestChromiumHost.h`, four `CrestContracts/include` headers and four control-plane scripts. Changing any of them needs a maintainer-published engine; say so in the pull request (`AGENTS.md`, "Published Chromium engine").
+- `crest_engine_contract.h` is generated from the core's C# contract records, so an engine command or event change is an engine-input change too (the header's own comment; `Scripts/control-plane/chromium_engine.py`, `INPUTS`).
+- Swift adapter files other than `CrestChromiumHost.h` reuse the published engine (`AGENTS.md`, "Published Chromium engine").
 - A new upstream release must apply every hunk without fuzz; milestones need `--allow-major` and review (`README.md`, "Maintained fork").
-- Extensions run only in Chromium; a page opened by another page stays in the opener's engine (`Documentation/ARCHITECTURE.md`).
+- Extensions run only in Chromium (`Documentation/ARCHITECTURE.md`, introduction); a page opened by another page stays on its opener's engine (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
 
 ## Read next
 

@@ -40,7 +40,8 @@ never a second copy of its behavior.
 ## Depends on
 
 The `CrestShared/Features/` folder of the same name where one exists, `CrestShared/DesignSystem/`
-and `CrestMac/DesignSystem/`, the page pool in `CrestMac/Infrastructure/Pages/`.
+and `CrestMac/DesignSystem/`, the page pool in `CrestMac/Infrastructure/Pages/`,
+the core through `BrowserStore`, and the Sparkle package (`SoftwareUpdates/`).
 Composed by `CrestMac/App/`.
 
 ## Rules

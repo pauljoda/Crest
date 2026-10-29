@@ -24,16 +24,17 @@ core holding the setup flow and committing the import.
 
 `CrestShared/Features/Onboarding/` and `CrestShared/Features/DataPortability/`
 for shared pages and previews, and `BrowserStore` for the core's setup and
-import intents and queries and each Space's Keychain credential inventory.
+import intents and queries and each Space's Keychain credential inventory;
+Security, SQLite and CommonCrypto to read other browsers' saved passwords.
 Opened by `CrestMac/App/Shell/BrowserMacWindows.swift`.
 
 ## Rules
 
 - The core holds setup (step, queue, review, finishing) and reads other browsers' bookmarks and sessions; an import is one core intent (`Documentation/ARCHITECTURE.md`, "Data and synchronization"; `CrestMac/Features/Onboarding/BrowserOnboardingWindow/Models/BrowserOnboardingFlow.swift`).
-- Imported passwords go to each Space's Keychain inventory, routed by the core's `ImportPasswordDestinations` query (`Documentation/ARCHITECTURE.md`, "Credentials and privacy"; `CrestMac/Features/Onboarding/Services/BrowserPasswordImport/BrowserPasswordImportCommitter.swift`).
-- Import sources, persistence and Keychain access are contracts worth a test; page layout and copy are not (skill, "Tests").
+- Imported passwords go to each Space's Keychain inventory, routed by the core's `ImportPasswordDestinations` query (`CrestMac/Features/Onboarding/Services/BrowserPasswordImport/BrowserPasswordImportCommitter.swift`).
+- Import persistence and Keychain access are contracts worth a test; page layout and copy are not (skill, "Tests").
 - Forced-onboarding launches use `CREST_ISOLATED_SESSION=1` so setup never touches real data (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").
-- Previews use the `BrowserOnboardingPreview*` services in `BrowserOnboardingWindow/Support/`, never live discovery, Keychain or filesystem (`Documentation/RepositoryGuardrails.md`, "Feature organization").
+- Previews reuse the preview services and fixture in `CrestMac/Features/Onboarding/BrowserOnboardingWindow/Support/` and stay deterministic, never live discovery, Keychain or filesystem (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 
 ## Read next
 

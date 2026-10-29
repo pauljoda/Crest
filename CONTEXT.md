@@ -39,16 +39,18 @@ whose engines are interchangeable behind one adapter boundary.
 ## Depends on
 
 Xcode with SDKs supporting the macOS 26.1 and iOS 26.1 deployment targets,
-XcodeGen, the .NET SDK in `CrestCore/global.json`, Python 3.11+ (`CONTRIBUTING.md`, "Local setup").
+XcodeGen, the .NET SDK in `CrestCore/global.json`, Python 3.11+ for the
+Chromium and release tools, ripgrep for the script tests, and Node.js 20+ for
+`HelpCenter/` (`CONTRIBUTING.md`, "Local setup").
 
 ## Rules
 
 - The core owns shared state; Swift sends intents (skill, "Architecture").
 - Shared code never calls WebKit or Chromium directly (skill, "Architecture").
-- `project.yml` is authoritative; never hand-edit the Xcode project (`CONTRIBUTING.md`).
-- App-code commits bump the patch version and add a release note (`AGENTS.md`).
-- Engine-input changes need a maintainer-published engine (`AGENTS.md`).
-- No task reports, screenshots or logs in the tree (`AGENTS.md`, "Test retention").
+- `project.yml` is authoritative; edit it and run `xcodegen generate`, never hand-edit the Xcode project (`CONTRIBUTING.md`, "Local setup"; skill, "Pull request").
+- App-code commits bump the patch version and add a release note (`AGENTS.md`, "Versioning completed work", "Explicit release notes").
+- Engine-input changes need a maintainer-published engine (`AGENTS.md`, "Published Chromium engine").
+- No task reports, screenshots or logs in the tree (`AGENTS.md`, "Test retention and cleanup").
 
 ## Read next
 

@@ -17,15 +17,17 @@ core recorded rather than from an engine's error.
 
 ## Depends on
 
-The page's state in the core (`CoreState.pages`) through `BrowserStore`.
-Shown by `CrestMac/Features/Browser/` (the web page failure overlay) and by
+The core's `PageFailure` and `SpaceBranding` (generated in
+`CrestShared/Infrastructure/Core/`), handed in by the host with its retry,
+back and proceed actions; `DesignSystem/`. Shown by
+`CrestMac/Features/Browser/` (the web page failure overlay) and by
 `CrestMobile/Features/Browser/` and `CrestMobile/Features/SplitView/`.
 
 ## Rules
 
 - The core decides failure-recovery rules; the view presents them (`Documentation/ARCHITECTURE.md`, "Engine boundary").
-- A retry or new address goes through the core's `Navigate` (same).
-- Shared code never reads WebKit or Chromium errors directly (skill, "Architecture").
+- An address the person types or chooses goes through the core's `Navigate` (`Documentation/ARCHITECTURE.md`, "Engine boundary").
+- Shared code never calls WebKit or Chromium APIs (skill, "Architecture").
 - No tests for copy or layout; review the page in the running app (skill, "Tests").
 
 ## Read next

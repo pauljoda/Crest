@@ -26,18 +26,20 @@ The layout and namespace rules in full: [`README.md`](README.md).
 
 ## Depends on
 
-The .NET SDK in `global.json`. Consumers: `CrestShared/Infrastructure/Core/`
-(Swift), `CrestContracts/` (C ABI), the Chromium host (C++ engine codec).
+The .NET SDK in `global.json`; the system SQLite (`libsqlite3`, linked by
+`CrestCore.Native.csproj`). Consumers: `CrestShared/Infrastructure/Core/`
+(Swift), `CrestContracts/` (C ABI), the Chromium host in `CrestEngines/Chromium/`
+(C++ engine codec).
 
 ## Rules
 
-- Contracts use neither Domain nor Application; Domain uses only Contracts (`README.md`).
-- Decode JSON at an input boundary, apply typed domain objects, encode at the output (`README.md`).
-- Messages carry their own behavior; no type switches or operation strings (skill, "Code style").
+- Contracts use neither Domain nor Application, except a message that carries its own behavior; Domain uses only Contracts (`CrestCore/README.md`).
+- Decode JSON at an input boundary, apply typed domain objects, encode at the output (`CrestCore/README.md`).
+- Messages carry their own behavior; no type switches or operation strings (`.agents/skills/crest-contribution/SKILL.md`, "Code style").
 - After changing a contract, run `Scripts/control-plane/generate-contracts.sh`; the lint and the Apple core build fail while generated files are stale (`Documentation/Architecture/ControlPlane.md`).
-- An engine command or event change regenerates `CrestContracts/include/crest_engine_contract.h`, which is in the Chromium engine key: it needs a published engine (`../CrestEngines/Chromium/CONTEXT.md`).
-- Preserve the protocol and C ABI when moving files; namespaces stay stable (`README.md`).
-- Before committing: `Scripts/control-plane/lint-dotnet.sh` and the .NET tests.
+- An engine command or event change regenerates `CrestContracts/include/crest_engine_contract.h`, which is in the Chromium engine key: it needs a published engine (`Scripts/control-plane/chromium_engine.py`, its input list; `AGENTS.md`, "Published Chromium engine").
+- Preserve the protocol and C ABI when moving files; namespaces stay stable (`CrestCore/README.md`).
+- Before committing: `Scripts/control-plane/lint-dotnet.sh` and the .NET tests (`CrestCore/README.md`).
 
 ## Read next
 

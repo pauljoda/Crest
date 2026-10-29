@@ -31,10 +31,10 @@ exports in `CrestCore/src/CrestCore.Native/Exports/` and by the tests'
 
 ## Rules
 
-- `CrestApp` only routes: an intent's logic lives in its own file beside the area that owns it (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- Each area handles its own messages: an intent routes itself to the area that owns its family, and each case's logic lives in its own file beside that area (`CrestCore/src/CrestCore/Application/App/CrestApp.cs`; `Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - An intent answers the pending changes first, then its own; self-started changes wait for the host's drain after its wake callback (`Documentation/Architecture/ControlPlane.md`, "The read model").
-- A query answers itself under the app's lock unless it reads nothing the app holds (`AnsweredUnderLock`); a `StandaloneQuery` reads no state at all (same, "The typed contract").
-- The cloud transport's intents compute on its thread and take the lock only to commit (`CrestApp.cs`, `Documentation/Architecture/ControlPlane.md`, "Sync").
+- A query answers itself under the app's lock unless it reads nothing the app holds (`AnsweredUnderLock`); a `StandaloneQuery` answers from the question alone (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- The cloud transport's intents compute on its thread and take the lock only to commit (`CrestCore/src/CrestCore/Application/App/CrestApp.cs`, its doc comment; `Documentation/Architecture/ControlPlane.md`, "Sync").
 - A new area reached from here gets its own folder under `Application/` (`CrestCore/README.md`).
 
 ## Read next

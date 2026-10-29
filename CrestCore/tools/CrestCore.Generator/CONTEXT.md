@@ -34,11 +34,11 @@ with `--check` by `Scripts/control-plane/lint-dotnet.sh`; covered by
 ## Rules
 
 - Outputs are never edited by hand; change the contract or the emitter and regenerate (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
-- The lint and the Apple core build fail while generated files are stale (same).
-- A fixed set's tag is its index in `All`; an `[OpenSet]` never crosses by tag (same).
+- The lint and the Apple core build fail while generated files are stale (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- A fixed set's tag is its index in `All`; an `[OpenSet]` never crosses by tag (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - The generator never defines a stored or synced key (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
-- `crest_engine_contract.h` is a Chromium engine input, so an emitter change that alters it needs a published engine (`CrestEngines/Chromium/CONTEXT.md`).
-- Attributes such as `[NormalizedOnConstruction]` and `[Observed]` change no wire bytes and stay out of the fingerprint (`CrestCore/src/CrestCore/Contracts/Core/ContractAttributes.cs`).
+- `crest_engine_contract.h` is a Chromium engine input, so an emitter change that alters it needs a published engine (`Scripts/control-plane/chromium_engine.py`, its input list; `AGENTS.md`, "Published Chromium engine").
+- Attributes such as `[NormalizedOnConstruction]` and `[Observed]` change no wire bytes and stay out of the fingerprint (`CrestCore/src/CrestCore/Contracts/Core/ContractAttributes.cs`, their doc comments).
 
 ## Read next
 

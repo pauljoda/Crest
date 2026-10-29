@@ -41,7 +41,7 @@ through `CrestMac/Features/NativeTabs/BrowserMacSettingsTabContent.swift`.
 - Per-site and default engine rules apply only to navigations a person starts (skill, "Architecture").
 - Settings opens in the browsing canvas, not a separate window or sheet, on the Mac (`Documentation/ARCHITECTURE.md`, "Platform shape"; `Documentation/NativeTabs.md`, "Loaded state").
 - Settings in a temporary window edits the source workspace's profile (`Documentation/NativeTabs.md`, "Loaded state").
-- A Mac file pairs with a shared one by name (`BrowserPlatform*`) or is a Mac-only pane; never a forked shared pane (`Documentation/RepositoryGuardrails.md`, "Feature organization").
+- A Mac file here is a genuine platform seam, such as a `BrowserPlatform*` same-name pair or a system adapter; never a fork of a shared pane (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Copy is minimal and native; no tests for settings-pane structure or copy (skill, "Writing", "Tests").
 
 ## Read next

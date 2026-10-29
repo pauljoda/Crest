@@ -27,7 +27,7 @@ expected scheme and version.
 ## Rules
 
 - Xcode Cloud owns distributed build numbers; never change `CURRENT_PROJECT_VERSION` in the repository (`Documentation/RepositoryGuardrails.md`, "Fix commit versions").
-- Mac releases ship through GitHub Releases and Sparkle, iPhone and iPad through TestFlight and the App Store (`Documentation/Distribution.md`).
+- Mac releases ship through GitHub Releases (and the Homebrew cask) with Sparkle updates, iPhone and iPad through TestFlight and the App Store (`Documentation/Distribution.md`, introduction).
 
 ## Read next
 

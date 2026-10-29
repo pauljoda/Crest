@@ -37,7 +37,7 @@ Space access). Consumed by every feature view and the platform shells.
 - The store sends intents and answers what a window shows; it holds no browser state of its own (`Documentation/Architecture/ControlPlane.md`, "The read model").
 - Make a core intent and a direct engine call visibly different at the call site (skill, "Architecture").
 - Report session reset and tab relocation through the weak, domain-only observer; never construct or retain feature presentation (`Documentation/ARCHITECTURE.md`, "Platform shape").
-- A new purpose goes in its own `BrowserStore+Purpose.swift` (skill, "Code style").
+- A large purpose moves to its own `BrowserStore+<Purpose>.swift` (skill, "Code style").
 - Tests and previews build sessions as typed seeds (`SessionState.Seed`), not by editing the store (`Documentation/Architecture/ControlPlane.md`, "The read model").
 - Imports follow the Application policy in `Scripts/check-architecture.py`.
 

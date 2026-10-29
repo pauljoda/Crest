@@ -25,7 +25,9 @@ components never branch on a device.
 
 ## Depends on
 
-`BrowserStore`, `SearchProvider/`, `Settings/Models/` (device appearance),
+`BrowserStore`, `BrowserSpaceAccessController`, the core's models through
+`CrestShared/Infrastructure/Core/`, `CrestShared/Domain/` (runtime
+assignments), `SearchProvider/`, `Settings/Models/` (device appearance),
 `DesignSystem/`. Read by nearly every feature folder; hosted by the browser
 roots in `CrestMac/Features/Browser/` and `CrestMobile/Features/Browser/`.
 

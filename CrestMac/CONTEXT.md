@@ -22,18 +22,23 @@ macOS require; behavior stays shared.
 
 ## Depends on
 
-`CrestShared`, `CrestCore` (through CrestShared), `CrestEngines/Chromium`,
-`CrestAgents`. AppKit, CoreServices and SecurityInterface are allowed only in
-this tree (`Scripts/check-architecture.py`).
+Compiled as source with `CrestShared` and `CrestAgents` into the Mac targets
+in `project.yml` (`Crest`, `CrestNativeCore` and the Chromium host
+framework), with the Sparkle package. It reaches `CrestCore` through
+CrestShared's core adapters (`CrestShared/Infrastructure/Core/`).
+`CrestEngines/Chromium/Apple/` is compiled beside it in the Chromium host
+framework and plugs into the shell through `BrowserMacEngineHost`. Of the
+Swift source roots, only this one may import AppKit, CoreServices and
+SecurityInterface (`Scripts/check-architecture.py`).
 
 ## Rules
 
 - Never create a window the person did not ask for; page and extension popups open as a Quick Window in the opener's engine and Space (skill, "Windows and UI").
-- Informational feedback goes through `BrowserChromeState.showNotice` (`Features/Browser/Models/`), not alerts or sheets (skill, "Windows and UI").
+- Informational feedback goes through `BrowserChromeState.showNotice` (`CrestMac/Features/Browser/Models/`), not alerts or sheets (skill, "Windows and UI").
 - A platform file exists only for a genuine seam; never fork a shared component's behavior (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Validation launches use `CREST_ISOLATED_SESSION=1` (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").
 - Quit, unregister and delete every test copy of Crest before handing off (skill, "Verification and reporting").
-- Visual changes are checked in the running app and shown in the pull request, never tested (skill).
+- Visual changes are checked in the running app and shown in the pull request, never tested (skill, "Tests", "Verification and reporting").
 
 ## Read next
 

@@ -28,7 +28,8 @@ sanitation, so an import behaves the same on every platform.
 
 ## Depends on
 
-`Contracts/Portability/` and `Contracts/Setup/`, `Domain/Errors/`; the
+`Contracts/Portability/` and `Contracts/Setup/`, `Domain/Errors/`; held by
+`CrestApp`, and `ExportWorkspace` writes through it; the
 import intents in `Application/Session/Intents/Imports/` and the setup flow in
 `Application/Device/Intents/Setup/` apply what it reads. Password files are
 `Application/Credentials/`.
@@ -36,11 +37,11 @@ import intents in `Application/Session/Intents/Imports/` and the setup flow in
 ## Rules
 
 - Import readers share URL and whitespace sanitation and keep their own title limits, fallbacks and errors; an import is one core intent saved with its sync journal (`Documentation/ARCHITECTURE.md`, "Data and synchronization").
-- Archive readers validate identifiers and relationships before applying imported state (same).
-- An export never carries passwords, cookies, website storage, permissions, downloads, favicons or extensions (`Application/App/Queries/ExportWorkspace.cs`).
-- The browser-data file reads every schema version since the first (`BrowserDataFile.cs`).
-- Image bytes never reach the core; the platform matches imported tabs to their images (`Application/Session/NativeWorkspaceImport.cs`).
-- A new import format's fixtures go in `CrestCore/tests/CrestCore.Tests/Portability/Fixtures/`; keep only those that protect a durable contract (`AGENTS.md`, "Test retention and cleanup").
+- Archive readers validate identifiers and relationships before applying imported state (`Documentation/ARCHITECTURE.md`, "Data and synchronization").
+- An export never carries passwords, cookies, website storage, permissions, downloads, favicons or extensions (`CrestCore/src/CrestCore/Application/App/Queries/ExportWorkspace.cs`, its doc comment).
+- The browser-data file reads every schema version since the first (`CrestCore/src/CrestCore/Application/Portability/BrowserDataFile.cs`, its doc comment).
+- Image bytes never reach the core; the platform matches imported tabs to their images (`CrestCore/src/CrestCore/Application/Session/NativeWorkspaceImport.cs`, its doc comment).
+- Import fixtures live in `CrestCore/tests/CrestCore.Tests/Portability/Fixtures/`, copied by `CrestCore.Tests.csproj`; consolidate them and keep only those that protect a durable contract (`AGENTS.md`, "Test retention and cleanup").
 
 ## Read next
 

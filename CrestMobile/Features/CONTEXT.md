@@ -38,10 +38,10 @@ Consumed by `CrestMobile/App/MobileBrowserWindowScene.swift`.
 ## Rules
 
 - UI components are canonical in `CrestShared`; a file here exists only for a genuine platform seam, and a divergence uses a capability bit, shell input, optional action or accessory slot, in that order (`Documentation/RepositoryGuardrails.md`, "Feature organization").
-- Organize by user-visible feature; `Components`, `Models`, `Services`, `Support` are vocabulary, not layers (same).
+- Organize by user-visible feature; `Components`, `Models`, `Services`, `Support` are vocabulary, not layers (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Shared state changes go through core intents (skill, "Architecture").
 - Reuse `crestInteractiveSurface`, `CrestChromeButtonStyle` and the tokens; no ad-hoc fills (skill, "Windows and UI").
-- Strings go through `String(localized:)`; a regenerated `CrestShared/Resources/Localizable.xcstrings` belongs to the change (skill, "Writing"; `AGENTS.md`).
+- Strings go through `String(localized:)`; a regenerated `CrestShared/Resources/Localizable.xcstrings` belongs to the change (skill, "Writing"; `AGENTS.md`, "Generated localization catalog").
 - Previews sit beside the components that own editable UI, deterministic and inside `#if DEBUG` (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 
 ## Read next

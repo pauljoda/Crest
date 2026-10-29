@@ -30,7 +30,8 @@ engine touches its binding and registration only.
 
 ## Depends on
 
-`Core/` (engine commands, presentations, reports) and `Domain/`. Implemented
+`Core/` (engine commands, presentations, reports), `Domain/`, and
+`CrestCoreABI` for the native engine binding (`NativeEngineBinding`). Implemented
 by `../WebKit/` and the Chromium adapter
 (`CrestEngines/Chromium/Apple/`). Consumed by the platform page hosts and
 the features.
@@ -39,10 +40,10 @@ the features.
 
 - Shared code never calls WebKit or Chromium APIs; it talks to this port (skill, "Architecture").
 - No engine types or engine `#if` flags outside engine code; UI gates on what the core offers, never on build flags (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
-- Capabilities declared in `BrowserEngineRegistration` describe what the binding really does; a missing capability has explicit product behavior (same section; `Documentation/Architecture/ControlPlane.md`, "Registration, capabilities and offering").
-- Registration is selected by the process composition, never by synced Space records (`BrowserEngineRegistration+Composition.swift`; `project.yml` excludes it from the Chromium framework).
+- Capabilities declared in `BrowserEngineRegistration` describe what the binding really does; a missing capability has explicit product behavior (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership"; `Documentation/Architecture/ControlPlane.md`, "Registration, capabilities and offering").
+- Registration is local to the process, selected by its composition and never saved or synced (`Documentation/Architecture/ControlPlane.md`, "Registration, capabilities and offering"; doc comment in `BrowserEngineRegistration+Composition.swift`, which `project.yml` excludes from the Chromium framework).
 - A page another page opens stays on its opener's engine (skill, "Architecture").
-- A change to the engine command or event contract changes the Chromium engine key (`AGENTS.md`, "Published Chromium engine").
+- A change to the engine command or event contract regenerates `crest_engine_contract.h`, which changes the Chromium engine key (`Scripts/control-plane/chromium_engine.py`; `AGENTS.md`, "Published Chromium engine").
 
 ## Read next
 

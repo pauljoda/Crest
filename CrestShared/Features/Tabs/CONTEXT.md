@@ -25,15 +25,20 @@ onboarding, so a tab looks and acts the same everywhere.
 
 ## Depends on
 
-The core's tab read model, `Infrastructure/Favicons/`, `DesignSystem/`. Used
-by `Sidebar/`, `Settings/`, `Spaces/`, `Onboarding/`, `Utilities/` and
-the platform `Tabs/` folders.
+The core's `TabStateModel` and favicon assets through
+`CrestShared/Infrastructure/Core/`, `CrestShared/Infrastructure/Favicons/`,
+`CrestShared/Application/BrowserFaviconPalette/`,
+`CrestShared/Application/MediaSessions/` (the equalizer's audio feed),
+`Sidebar/` (density, metrics, reorder), `Settings/` (tab appearance),
+`BrowserStore`, `DesignSystem/`. Used by `Sidebar/`, `Settings/`, `Spaces/`,
+`Onboarding/`, `Utilities/`, `GettingStarted/` and the platform `Tabs/`,
+`Onboarding/` and `SplitView/` folders.
 
 ## Rules
 
-- Closing, pinning and moving tabs are core intents; the core decides whether a page may go (skill, "Architecture").
-- Favicon fetching stays inside the Space's profile, credential-free for public fallback (`Documentation/ARCHITECTURE.md`, "Engine boundary").
-- Native tabs share every tab path; see `Documentation/NativeTabs.md`.
+- Closing, pinning and moving tabs are core intents (skill, "Architecture"); closing a saved or pinned tab asks the page whether it may go first (`CrestShared/Features/Tabs/Services/BrowserDurableTabCloseAction.swift`).
+- Authenticated icon discovery stays in the live WebKit context; public fallback is credential-free and profile-scoped (`Documentation/ARCHITECTURE.md`, "Engine boundary").
+- Native tabs use the same session, Space, folder, split, archive and persistence paths as website tabs (`Documentation/NativeTabs.md`, opening section).
 - No tests for symbols, tints or layout (skill, "Tests").
 
 ## Read next

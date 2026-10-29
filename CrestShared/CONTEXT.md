@@ -24,17 +24,19 @@ One implementation of every feature, reading what its environment can do from
 
 ## Depends on
 
-`CrestCore` through `Infrastructure/Core/`. Consumed by `CrestMac`,
-`CrestMobile` and the Chromium adapter.
+`CrestCore` through `Infrastructure/Core/` (`CrestCoreABI`). Not a module of
+its own: `project.yml` compiles it into each app target beside `CrestMac` or
+`CrestMobile`, and into the Chromium host framework beside
+`CrestEngines/Chromium/Apple/`.
 
 ## Rules
 
 - Never change shared state from Swift; send a core intent (skill, "Architecture").
-- Layer imports are checked by `Scripts/check-architecture.py`; SwiftUI stays out of Infrastructure (`Documentation/RepositoryGuardrails.md`).
-- No `ObservableObject`, `@Published` or `AnyView` in production code (same).
+- Layer imports are checked by `Scripts/check-architecture.py`; SwiftUI stays out of Infrastructure (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
+- No `ObservableObject`, `@Published` or `AnyView` in production code (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 - Reuse `crestInteractiveSurface`, `CrestChromeButtonStyle` and the tokens; no ad-hoc fills (skill, "Windows and UI").
-- Never hand-edit `Infrastructure/Core/Generated/`; regenerate from CrestCore.
-- A regenerated `Localizable.xcstrings` belongs to the change that caused it (`AGENTS.md`).
+- Never hand-edit `Infrastructure/Core/Generated/`; change the contract and regenerate (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- A regenerated `Localizable.xcstrings` belongs to the change that caused it (`AGENTS.md`, "Generated localization catalog").
 - Feature organization and preview rules: `Documentation/RepositoryGuardrails.md`, "Feature organization".
 
 ## Read next

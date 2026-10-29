@@ -43,9 +43,9 @@ ownership, privacy and security decisions) at the layer that owns them.
 
 ## Rules
 
-- Default to no new test; add one only for a contract that breaks silently, and never test appearance or copy (skill, "Tests").
-- One focused test at the owning layer; do not duplicate a shared contract across platform targets (same; `AGENTS.md`, "Test retention and cleanup").
-- Remove probes and temporary fixtures before handing off; never delete a failing test to go green (same).
+- Default to no new test; add one only for a contract that breaks silently, and never test appearance or copy (`.agents/skills/crest-contribution/SKILL.md`, "Tests").
+- One focused test at the owning layer; do not duplicate a shared contract across platform targets (`.agents/skills/crest-contribution/SKILL.md`, "Tests"; `AGENTS.md`, "Test retention and cleanup").
+- Remove probes and temporary fixtures before handing off; never delete a failing test to go green (`.agents/skills/crest-contribution/SKILL.md`, "Tests"; `AGENTS.md`, "Test retention and cleanup").
 - Run these tests and `Scripts/control-plane/lint-dotnet.sh` before committing a core change (`CrestCore/README.md`).
 - No dated totals or investigation notes in the suite or its documents (`AGENTS.md`, "Test retention and cleanup").
 

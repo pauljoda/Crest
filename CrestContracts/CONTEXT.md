@@ -24,15 +24,18 @@ tags and fingerprints no source file spells by hand.
 ## Depends on
 
 The C# records in `CrestCore.Contracts`, through
-`Scripts/control-plane/generate-contracts.sh`. Consumed by `CrestShared`,
-`CrestMac`, `CrestMobile` and `CrestEngines/Chromium`.
+`Scripts/control-plane/generate-contracts.sh` and
+`CrestCore/tools/CrestCore.Generator`. Implemented by
+`CrestCore/src/CrestCore.Native/`; imported as the `CrestCoreABI` module by
+`CrestShared/Infrastructure/` (every app and test target's
+`SWIFT_INCLUDE_PATHS` in `project.yml`); included by `CrestEngines/Chromium/`.
 
 ## Rules
 
-- Never hand-edit `crest_contracts.h` or `crest_engine_contract.h`; change the contract record and run `Scripts/control-plane/generate-contracts.sh` (`README.md`).
-- Source never spells a wire tag; the generator owns them (skill, "Architecture").
-- The four `crest_*.h` headers other than `crest_contracts.h` are Chromium engine inputs; changing them needs a maintainer-published engine (`AGENTS.md`, "Published Chromium engine").
-- The ABI is experimental; do not advertise external stability (`README.md`).
+- Never hand-edit `crest_contracts.h` or `crest_engine_contract.h`; change the contract record and run `Scripts/control-plane/generate-contracts.sh` (`CrestContracts/README.md`).
+- Source never spells a wire tag; the generator owns them (skill, "Architecture"; `CrestContracts/README.md`).
+- `crest_core.h`, `crest_app.h`, `crest_engine.h` and `crest_engine_contract.h` are Chromium engine inputs (`Scripts/control-plane/chromium_engine.py`, `INPUTS`); changing them needs a maintainer-published engine (`AGENTS.md`, "Published Chromium engine").
+- The ABI is experimental; do not advertise external stability (`CrestContracts/README.md`).
 
 ## Read next
 

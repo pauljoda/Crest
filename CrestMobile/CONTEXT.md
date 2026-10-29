@@ -36,11 +36,11 @@ allowed only in this tree (`Scripts/check-architecture.py`).
 - A platform file exists only for a genuine seam; never fork a shared component's behavior (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Platform differences come from `BrowserInteractionCapabilities`, not a device identity (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Each scene owns its own page store, live WebKit views and private session; shared tab records never share a live page (`Documentation/ARCHITECTURE.md`, "Scenes on iPhone and iPad").
-- The Mac window coordinator, live-page handoff and tab tear-off are Mac-only (same section).
+- The Mac window coordinator, live-page handoff and tab tear-off are Mac-only (`Documentation/ARCHITECTURE.md`, "Scenes on iPhone and iPad").
 - Do not enable the managed iOS default-browser entitlement until Apple approves it (`CONTRIBUTING.md`, "Change discipline").
 - Informational feedback is a notice, never an alert or sheet (skill, "Windows and UI").
 - Validation launches use `CREST_ISOLATED_SESSION=1` (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").
-- Visual changes are checked in the Simulator or on a device and shown in the pull request, never tested (skill, "Verification and reporting").
+- Visual changes are checked in the running app or Simulator and shown in the pull request (skill, "Verification and reporting"); appearance is never tested (skill, "Tests").
 
 ## Read next
 

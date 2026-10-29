@@ -21,17 +21,19 @@ the mobile sidebar, Archive and History views.
 
 ## Depends on
 
-The core read models for archived tabs, history and downloads through
-`BrowserStore`, `CrestShared/Infrastructure/Downloads/`, `Tabs/` (favicons).
-Coordinated by `Sidebar/Services/BrowserSidebarUtilityCoordinator.swift`;
-hosted by `CrestMac/Features/Sidebar/`,
-`CrestMobile/Features/Sidebar/`, `CrestMobile/Features/Archive/` and
-`CrestMobile/Features/History/`.
+The core's archived tabs, history entries and `DownloadState` through
+`CrestShared/Infrastructure/Core/`, `BrowserStore`, `CrestShared/Domain/`,
+`Tabs/` (favicons), `Sidebar/` and `Chrome/` (metrics and layout),
+`DesignSystem/`. Coordinated by
+`Sidebar/Services/BrowserSidebarUtilityCoordinator.swift`; hosted by
+`CrestMac/Features/Sidebar/`, `CrestMobile/Features/Sidebar/`,
+`CrestMobile/Features/Archive/`, `CrestMobile/Features/History/` and
+`CrestMobile/Features/Downloads/`.
 
 ## Rules
 
-- A surface's `name` is how the selected surface is remembered; never change one (`Models/BrowserUtilitySurface.swift`).
-- History, archive and downloads belong to the Space (`Documentation/ARCHITECTURE.md`, "Space isolation").
+- A surface's `name` is how the selected surface is remembered; never change one (`CrestShared/Features/Utilities/Models/BrowserUtilitySurface.swift`).
+- History and archive are part of a Space's boundary (`Documentation/ARCHITECTURE.md`, "Space isolation"); each utility list shows one Space's items (`CrestShared/Features/Utilities/Models/BrowserUtilitySurface.swift`).
 - Clearing history and archiving are core intents, never list edits (skill, "Architecture").
 - Download risk decisions are a contract worth a test; list layout is not (skill, "Tests").
 

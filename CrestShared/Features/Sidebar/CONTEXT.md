@@ -28,16 +28,18 @@ sized by `BrowserInteractionCapabilities` and the density preference.
 
 `BrowserStore` and the core read models, `Tabs/` (rows, favicons, pinned
 grid), `Spaces/`, `Utilities/` (the Archive, History and Downloads lists),
-`SidebarWidgets/`, `Chrome/`. Hosted by `CrestMac/Features/Sidebar/` and
-`CrestMobile/Features/Sidebar/`.
+`Chrome/`, `SplitView/` (split rows), `Settings/` (device appearance),
+`BrowserSpaceAccessController`, `DesignSystem/`. Hosted by
+`CrestMac/Features/Sidebar/` and `CrestMobile/Features/Sidebar/`, which
+also place the `SidebarWidgets/` deck.
 
 ## Rules
 
 - Tab, folder, split and Space edits are core intents, never direct session writes (skill, "Architecture").
-- Each window owns one `BrowserSidebarInteractionState` for drags and reorder geometry (`Documentation/ARCHITECTURE.md`, "Platform shape").
+- Each window and browsing mode owns a `BrowserSidebarInteractionState` for drags and measured reorder geometry (`Documentation/ARCHITECTURE.md`, "Platform shape").
 - Touch, hover and drop-target sizing come from `BrowserInteractionCapabilities`, not the platform (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Rows use `crestInteractiveSurface` and the tokens; no ad-hoc fills (skill, "Windows and UI").
-- Name interaction thresholds and metrics in the `*Metrics` type that owns them (`Documentation/ARCHITECTURE.md`, "Platform shape").
+- Name interaction thresholds and design metrics where they are owned (`Documentation/ARCHITECTURE.md`, "Platform shape").
 
 ## Read next
 

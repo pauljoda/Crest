@@ -47,11 +47,11 @@ One implementation of each feature, adapting to its shell through
 ## Rules
 
 - State changes go to the core as intents; views never mutate `BrowserStore.session` (skill, "Architecture").
-- Shared views never call WebKit or Chromium; they use the engine port in `Infrastructure/Engines/` (skill, "Architecture").
+- Shared views never call WebKit or Chromium APIs; they talk to the engine abstraction (skill, "Architecture"), whose ports are in `CrestShared/Infrastructure/Engines/`.
 - Organize by user-visible feature; `Models`, `Components`, `Support`, `Services` are vocabulary, not required layers (`Documentation/RepositoryGuardrails.md`, "Feature organization").
-- A platform difference is a capability bit, shell input, optional action or accessory slot, in that order; never a forked component (same).
+- A platform difference is a capability bit, shell input, optional action or accessory slot, in that order; never a forked component (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Reuse `crestInteractiveSurface`, `CrestChromeButtonStyle` and the tokens (skill, "Windows and UI").
-- Previews sit beside the component that owns editable UI, deterministic and isolated (`Documentation/RepositoryGuardrails.md`, "Feature organization").
+- Previews sit beside the component that owns editable UI and stay deterministic, with no live persistence, network or Keychain (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - No tests for appearance, copy, layout numbers or previews (skill, "Tests").
 
 ## Read next

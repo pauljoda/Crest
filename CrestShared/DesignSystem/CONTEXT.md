@@ -42,8 +42,8 @@ Consumed by `Features/` and the platform shells.
 - Every interactive control has hover and pressed states from the system (skill, "Windows and UI").
 - Informational feedback uses the notice capsule, not a modal (skill, "Windows and UI").
 - Previews sit beside the component that owns editable UI, are deterministic, and live in `#if DEBUG` (`Documentation/RepositoryGuardrails.md`, "Feature organization").
-- Components are canonical here; a platform difference is a capability bit, shell input, optional action or accessory slot, never a fork or a device identity (`Documentation/RepositoryGuardrails.md`, "Feature organization").
-- No tests for token values, layout numbers, accessibility identifier strings or previews (skill, "Tests").
+- Components are canonical in `CrestShared`; a platform difference is a capability bit, shell input, optional action or accessory slot, never a fork or a device identity (`Documentation/RepositoryGuardrails.md`, "Feature organization").
+- No tests for token values, layout numbers, accessibility identifier strings or previews (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - No `AnyView`, and follow the Xcode 27 `@State` rules `Scripts/check-architecture.py` checks (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 
 ## Read next

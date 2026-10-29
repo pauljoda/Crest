@@ -35,13 +35,13 @@ the platform trees.
 
 ## Rules
 
-- Never hand-edit `Generated/`; change the C# contract and run `Scripts/control-plane/generate-contracts.sh` (`Documentation/Architecture/ControlPlane.md`, "The typed contract"; `ROUTING.md`, "Never by default").
+- Never hand-edit `Generated/`; change the C# contract and run `Scripts/control-plane/generate-contracts.sh` (`Documentation/Architecture/ControlPlane.md`, "The typed contract"; each generated file's "Do not edit" header).
 - A new change applies itself in `Changes/<Area>/<Change>+CoreState.swift`; a case without its logic does not compile (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - Only the changes `CrestCore` receives update `CoreState`; every value is stored before it is announced (`Documentation/Architecture/ControlPlane.md`, "The read model").
-- Views must not read a whole read-model list's `.values`; a generator check refuses it (same section).
-- Tests and previews build sessions as typed seeds (`SessionState.Seed`) (same section; "Resolved values and seeds").
+- Views must not read a whole read-model list's `.values`; a generator check refuses it (`Documentation/Architecture/ControlPlane.md`, "The read model").
+- Tests and previews build sessions as typed seeds (`SessionState.Seed`) (`Documentation/Architecture/ControlPlane.md`, "The read model" and "Resolved values and seeds").
 - The core refuses a schema fingerprint other than its own, so Swift and the core ship from the same contracts (`Documentation/Architecture/ControlPlane.md`, "The C ABI").
-- An engine command or event change touches the Chromium engine key (`AGENTS.md`, "Published Chromium engine").
+- An engine contract change regenerates `crest_engine_contract.h`, an input of the Chromium engine key, so it needs a newly published engine (`Scripts/control-plane/chromium_engine.py`; `AGENTS.md`, "Published Chromium engine").
 
 ## Read next
 

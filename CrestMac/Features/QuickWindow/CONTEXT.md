@@ -31,9 +31,9 @@ are opened by `CrestMac/App/Shell/BrowserMacWindows.swift`.
 ## Rules
 
 - A window a page asks for opens as a Quick Window over the opener's window, in the opener's Space and engine, never as a window of its own (skill, "Windows and UI"; `Documentation/ARCHITECTURE.md`, "Windows on macOS").
-- Any new window from a Quick Window loads in that Quick Window (`Documentation/LinkOpeningPolicy.md`).
-- The core decides where a link or a page-made window goes; nothing here infers a gesture the page did not report (`Documentation/LinkOpeningPolicy.md`).
-- A page opened by another page stays on its opener's engine, whatever the site's engine rule (skill, "Architecture").
+- Any new window from a Quick Window loads in that Quick Window (`Documentation/LinkOpeningPolicy.md`, "Link opening" gesture table).
+- The core decides where a link or a page-made window goes; nothing here infers a gesture the page did not report (`Documentation/LinkOpeningPolicy.md`, "Link opening").
+- A page opened by another page stays on its opener's engine, whatever the site's engine rule (skill, "Architecture"; `Documentation/LinkOpeningPolicy.md`, "Link opening").
 - Its address field claims the title-bar guard so the window does not move under a press (`Documentation/ARCHITECTURE.md`, "Windows on macOS").
 - An unexpected window during validation is a defect (skill, "Windows and UI").
 

@@ -18,13 +18,16 @@ Keep signing inputs for the core-hosting targets out of the shared Swift tree.
 
 ## Depends on
 
-Referenced from `project.yml` only; no source imports it.
+No source imports it. `project.yml` references `ControlPlane.entitlements` and
+`MobileCloudReview.entitlements`; `MacCloudReview.entitlements` is passed at
+build time through `CREST_NATIVE_CORE_ENTITLEMENTS`
+(`Documentation/Architecture/ControlPlane.md`, "Isolated CloudKit review").
 
 ## Rules
 
 - Targets and their settings live in `project.yml`; never set them only in Xcode (`CONTRIBUTING.md`, "Local setup").
 - Review builds use an isolated session and their own cloud ID (`Documentation/Architecture/ControlPlane.md`, "Isolated CloudKit review").
-- No signing or provisioning material is committed (`Scripts/check-public-source.py`).
+- No signing or provisioning material is committed (`Documentation/RepositoryGuardrails.md`, "Focused guard tests"; enforced by `Scripts/check-public-source.py`).
 
 ## Read next
 

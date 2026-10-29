@@ -25,7 +25,9 @@ One focused behavioral test per durable contract, at the layer that owns it.
 ## Depends on
 
 The `Crest` target (`TEST_HOST`), `CrestContracts/include`, and the core
-library. Run by `Scripts/validate.sh` through the `Crest` scheme.
+library that target embeds. `CrestNativeCoreTests` compiles the files its
+`includes` lists from here against `CrestNativeCore` (`project.yml`), so a new file it should run must be added there. Run by
+`Scripts/validate.sh` through the `Crest` scheme.
 
 ## Rules
 
@@ -34,7 +36,6 @@ library. Run by `Scripts/validate.sh` through the `Crest` scheme.
 - Do not duplicate a shared contract in `CrestMobileTests/` unless the adapters diverge (skill, "Tests").
 - Every test launch uses `CREST_ISOLATED_SESSION=1` (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").
 - `Fixtures/` stays out of the bundle and is read relative to `#filePath` (`project.yml`, `CrestTests` target).
-- A file added to `CrestNativeCoreTests` must be listed in its `includes` (`project.yml`).
 
 ## Read next
 

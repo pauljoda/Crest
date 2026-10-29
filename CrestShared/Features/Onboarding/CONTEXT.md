@@ -22,18 +22,20 @@ every platform says what it shows there.
 
 ## Depends on
 
-The core's setup contract (`SetupStep`) through
-`CrestShared/Infrastructure/Core/`, `CrestShared/Application/BrowserOnboarding/`,
-`Spaces/` and `Tabs/`. Implemented by `CrestMac/Features/Onboarding/` and
-`CrestMobile/Features/Onboarding/`; recovery is shown by
-`CrestMac/App/Shell/BrowserMacLaunchRecovery.swift` and
+The core's setup contract (`SetupStep`) and models through
+`CrestShared/Infrastructure/Core/`, `BrowserStore` (the manual setup),
+`Spaces/` (appearance editors), `Tabs/`, `Sidebar/` (density, row
+previews), `Settings/` (device appearance), `DesignSystem/`. Implemented by
+`CrestMac/Features/Onboarding/` and `CrestMobile/Features/Onboarding/`,
+whose flows use `CrestShared/Application/BrowserOnboarding/`; recovery is
+shown by `CrestMac/App/Shell/BrowserMacLaunchRecovery.swift` and
 `CrestMobile/App/CrestMobileApp.swift`.
 
 ## Rules
 
-- Setup state lives in the core; the host's final action applies it (`BrowserManualSetupView/Components/BrowserSpaceSetupWizard.swift`).
+- The core holds the manual setup until the host's final action applies it; finishing setup is the core's (`Documentation/NativeTabs.md`, "Getting Started").
 - Forced-onboarding and setup launches use `CREST_ISOLATED_SESSION=1` (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").
-- A new `SetupStep` needs a page on every platform; the protocol makes that a compile error (`BrowserOnboardingPages.swift`).
+- A step the core adds fails to compile until every platform says what it shows there (`CrestShared/Features/Onboarding/BrowserOnboardingPages.swift`).
 
 ## Read next
 

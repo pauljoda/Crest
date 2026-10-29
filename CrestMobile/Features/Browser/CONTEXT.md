@@ -29,15 +29,16 @@ into touch layouts, while the core and the page store own the state.
 `BrowserStore`, `MobileBrowserPageStore` (`../../Infrastructure/WebKit/`), the
 shared features (`CrestShared/Features/Browser/`, `CrestShared/Features/Sidebar/`,
 `CrestShared/Features/Chrome/`),
-`../Sidebar/`, `../Chrome/`, `../TransientBrowsing/`. Created by
+`../Sidebar/`, `../Chrome/`, `../TransientBrowsing/`, `../SplitView/`,
+`../Commands/`, `../Settings/`. Created by
 `CrestMobile/App/MobileBrowserWindowScene.swift`. Tests: `CrestMobileTests/MobileBrowserRootModelTests.swift`.
 
 ## Rules
 
 - Layout follows width, not device: regular shares the persistent sidebar and page surface, compact uses compact navigation and sheets (`Documentation/ARCHITECTURE.md`, "Platform shape").
-- Each scene owns its page store and live views; a root never reaches into another scene's pages (`Documentation/ARCHITECTURE.md`, "Scenes on iPhone and iPad").
+- Each scene owns its page store and live WebKit views; shared tab records never share a live page between scenes (`Documentation/ARCHITECTURE.md`, "Scenes on iPhone and iPad").
 - Selection, tab and Space changes go through core intents; the root only renders and sends them (skill, "Architecture").
-- Feedback such as "copied" is a transient capsule, never an alert or sheet; alerts only for a decision (skill, "Windows and UI").
+- Feedback such as "copied" is a notice capsule, never an alert or sheet; alerts and sheets only for a decision (skill, "Windows and UI").
 - A popup a page asks for opens as a Quick Window in the opener's Space, never a window of its own (skill, "Windows and UI").
 - Keep root `body` and view builders small; split at meaningful subviews (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 

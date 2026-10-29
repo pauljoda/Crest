@@ -50,7 +50,8 @@ beside the area that receives them, under `Application/` (`CrestCore/README.md`)
 
 ## Depends on
 
-Nothing outside the assembly. Consumed by `Domain/`, `Application/`,
+Nothing outside the assembly; within it, some records reach `Domain/` or
+`Application/` for the behavior they carry. Consumed by `Domain/`, `Application/`,
 `CrestCore/src/CrestCore.Native` and `CrestCore/tools/CrestCore.Generator`, and through the generated
 code by `CrestShared/Infrastructure/Core/Generated/` and `CrestContracts/include/`.
 
@@ -59,9 +60,9 @@ code by `CrestShared/Infrastructure/Core/Generated/` and `CrestContracts/include
 - Contracts use neither Domain nor Application, except a message that carries its own behavior (`CrestCore/README.md`).
 - Every message is a named record; rule failures are rejection objects, never strings (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 - A fixed set is a sealed class with static instances; its wire tag is its index in `All`, so `All` only grows at the end (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
-- A record that holds a password is `[HoldsSecrets]`; `tests/CrestCore.Tests/Credentials/SecretContainmentTests.cs` checks nothing stored or synced reaches it (same).
-- No source spells a wire tag; after any change here run `Scripts/control-plane/generate-contracts.sh` (same).
-- An engine command or event change is a Chromium engine input (`CrestEngines/Chromium/CONTEXT.md`).
+- A record that holds a password is `[HoldsSecrets]`; `CrestCore/tests/CrestCore.Tests/Credentials/SecretContainmentTests.cs` checks nothing stored or synced reaches it (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- No source spells a wire tag; after any change here run `Scripts/control-plane/generate-contracts.sh` (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- An engine command or event change regenerates `crest_engine_contract.h`, a Chromium engine input that needs a published engine (`Scripts/control-plane/chromium_engine.py`, its input list; `AGENTS.md`, "Published Chromium engine").
 - Contract field names never define a stored or synced key (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 
 ## Read next

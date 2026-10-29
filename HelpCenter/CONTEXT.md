@@ -23,9 +23,10 @@ own words.
 
 ## Depends on
 
-Node.js 20 or later (`CONTRIBUTING.md`, "Local setup"). Built by the
-**Website and Help Center** job in `.github/workflows/ci.yml`. Its
-`build:website` output is `Website/guides/`.
+Node.js 20 or later (`CONTRIBUTING.md`, "Local setup"). Checked with
+`npm run build` by the **Website and Help Center** job in
+`.github/workflows/ci.yml`. `npm run build:website` writes `Website/guides/`,
+which `.github/workflows/pages.yml` deploys.
 
 ## Rules
 

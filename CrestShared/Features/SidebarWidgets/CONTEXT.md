@@ -23,13 +23,14 @@ shell can render, not by Space or profile.
 ## Depends on
 
 `CrestShared/Application/SidebarWidgets/` (registry, runtime, preferences,
-software update phase), `CrestShared/Application/MediaSessions/`. Hosted by
+software update phase, the `BrowserMediaSessionSnapshot` Now Playing reads),
+`Sidebar/` (`BrowserSidebarMetrics`), `DesignSystem/`. Hosted by
 `CrestMac/Features/Sidebar/` and `CrestMobile/Features/Sidebar/`; the Mac
 update flow lives in `CrestMac/Features/SoftwareUpdates/`.
 
 ## Rules
 
-- Which widgets show depends only on platform, shell capabilities and each kind's instance policy (`CrestShared/Application/SidebarWidgets/BrowserSidebarWidgetRegistry.swift`).
+- Which widgets show depends only on the platform, the shell's capabilities and each kind's instance policy, never the profile or Space (`CrestShared/Application/SidebarWidgets/BrowserSidebarWidgetRegistry.swift`, `visibleInstances`).
 - Software update trust is a security decision worth a test; widget appearance is not (skill, "Tests").
 - Widget styles reuse the design system's surfaces and tokens (skill, "Windows and UI").
 

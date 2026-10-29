@@ -25,17 +25,21 @@ on every shell.
 
 ## Depends on
 
-The core's Space read model through `BrowserStore`, `DesignSystem/`. Used by
+The core's `SpaceModel` and branding values through
+`CrestShared/Infrastructure/Core/`, `DesignSystem/`, `Sidebar/` (switcher
+layout), `Settings/` (appearance previews and pane chrome). Used by
 `Sidebar/` (header and switcher), `Settings/` (Space sections),
-`Onboarding/` (manual setup), and the Space editors in
-`CrestMac/Features/Settings/` and `CrestMobile/Features/Settings/`.
+`Onboarding/` (manual setup), `Credentials/` and `TransientBrowsing/` (Space
+identity), `Browser/` (banner backdrop), the Space editors in
+`CrestMac/Features/Settings/` and `CrestMobile/Features/Settings/`, and
+`CrestMac/Features/Onboarding/`.
 
 ## Rules
 
-- Space appearance and order are core state; edits go through intents (skill, "Architecture").
+- Spaces live in the core; Swift edits them through intents (skill, "Architecture").
 - A Space is the privacy boundary; what it owns is listed in `Documentation/ARCHITECTURE.md`, "Space isolation".
 - Colours come from the Crest tokens and template house palettes, never system rainbow colours (skill, "Windows and UI").
-- Previews use the branding preview fixture with fixed identities (`Documentation/RepositoryGuardrails.md`, "Feature organization").
+- Previews reuse the feature's fixture, `CrestShared/Features/Spaces/Support/BrowserSpaceBrandingPreviewFixture.swift`, with fixed identities and dates (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 
 ## Read next
 

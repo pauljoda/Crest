@@ -22,15 +22,18 @@ a script fails here before it fails in a release.
 
 ## Depends on
 
-The scripts in `Scripts/` and `Scripts/control-plane/` that each module
-imports. Run by `Scripts/validate.sh` and by the CI workflows in
-`.github/workflows/`.
+The scripts in `Scripts/` and `Scripts/control-plane/` that each module loads
+or runs, and the files whose contracts they read: `project.yml`, `Config/`,
+`ci_scripts/`, `.github/workflows/` and `Documentation/ReleaseNotes.json`. Run
+by `Scripts/validate.sh` and by `ci.yml`, `chromium.yml` and
+`chromium-engine.yml` in `.github/workflows/`.
 
 ## Rules
 
 - Run with `python3 -m unittest discover -s Scripts/Tests` (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
 - Keep only durable contracts; remove temporary probes before handing off (`AGENTS.md`, "Test retention and cleanup").
-- One focused behavioral test at the owning layer, no source-text assertions (skill, "Tests").
+- Keep a small focused suite for the scripts' durable failure modes (`Documentation/RepositoryGuardrails.md`, "Feature organization"); add no feature-specific source-topology tests ("Focused guard tests" there).
+- Stay compatible with the Python 3.9 bundled with Xcode (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
 
 ## Read next
 

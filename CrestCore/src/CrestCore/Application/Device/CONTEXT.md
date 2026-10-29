@@ -34,12 +34,12 @@ device store, `Application/Session/` for the workspaces its windows show.
 
 ## Rules
 
-- Which Space and tab a window shows is device state, never session state; the device repairs every other window after a commit (`Documentation/Architecture/ControlPlane.md`, "Windows belong to the device").
-- Device state is saved in the device store, memory-only Spaces' choices stay in memory, and none of it syncs (same, "State the core keeps").
-- The device store's tables are additive so older builds ignore them (same, "Storage").
-- What an older release kept is adopted once under an append-only marker, and the old values stay readable (same, "Upgrading an installed session").
-- Each device family's case overrides its `Apply` in its own file under `Intents/` (same, "The typed contract").
-- Crest never opens a window the person did not ask for (skill, "Windows and UI").
+- Which Space and tab a window shows is device state, never session state; the device repairs every other window after a commit (`Documentation/Architecture/ControlPlane.md`, "Windows belong to the device" and "Sessions and commands").
+- Device state is saved in the device store, memory-only Spaces' choices stay in memory, and none of it syncs (`Documentation/Architecture/ControlPlane.md`, "State the core keeps").
+- The device store's tables are additive so older builds ignore them (`Documentation/Architecture/ControlPlane.md`, "Storage").
+- What an older release kept is adopted once under an append-only marker, and the old values stay readable (`Documentation/Architecture/ControlPlane.md`, "Upgrading an installed session").
+- Each device family's case overrides its `Apply` in its own file under `Intents/` (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- Crest never opens a window the person did not ask for (`.agents/skills/crest-contribution/SKILL.md`, "Windows and UI").
 
 ## Read next
 

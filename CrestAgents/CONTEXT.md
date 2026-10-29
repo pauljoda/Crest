@@ -23,13 +23,14 @@ Crest is closed and served by the app when it runs.
 
 ## Depends on
 
-Foundation. Compiled into `Crest`, `CrestNativeCore` and `CrestBrowserHelper`
+Foundation, CryptoKit and Darwin. Compiled into `Crest`, `CrestNativeCore`,
+`CrestBrowserHelper` and the `ChromiumHostFramework` template's targets
 (`project.yml`); served by `CrestMac/App/Agents/` and
 `CrestMac/Infrastructure/Agents/`, spoken by `CrestAgentHelper/`.
 
 ## Rules
 
-- A new tool needs its definition here and its work in `CrestMac/App/Agents/`: the helper lists definitions without the app (`AgentToolDefinition.swift`).
+- A new tool is a definition here and an instance in `CrestMac/App/Agents/BrowserAgentTool.swift` (that file's doc comment); the helper lists definitions without the app (`CrestAgents/AgentToolDefinition.swift` doc comment).
 - Never mutate shared state from Swift for an agent; send a core intent (skill, "Architecture").
 - Never open a window the person did not ask for (skill, "Windows and UI").
 - Keep a test only for a contract such as Space ownership or authorization (skill, "Tests"); the agent suites are `CrestTests/BrowserAgentCatalogTests.swift` and `CrestTests/BrowserAgentMutationTests.swift`.

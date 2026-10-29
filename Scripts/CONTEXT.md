@@ -31,12 +31,12 @@ CI runs.
 
 zsh, Python 3, Git and ripgrep; Xcode, XcodeGen and the .NET SDK for the
 build scripts (`CONTRIBUTING.md`, "Local setup"). Called by `.github/workflows/`
-and `ci_scripts/`.
+and `ci_scripts/` (`check-version.sh`).
 
 ## Rules
 
 - Repository guard tooling stays compatible with the Python 3.9 bundled with Xcode (`Documentation/RepositoryGuardrails.md`, "Focused guard tests"); the Chromium and release tools need 3.11+ (`CONTRIBUTING.md`, "Local setup").
-- No feature-specific source-topology tests; the repository-wide guards own dependency direction (same).
+- No feature-specific source-topology tests; the repository-wide guards own dependency direction (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
 - The formatter check only lints changed files; never run a repository-wide format (`Documentation/RepositoryGuardrails.md`, "Changed-file formatting").
 - Periphery findings are evidence, never a reason to delete without proof (`Documentation/RepositoryGuardrails.md`, "Periphery evidence audit").
 - Keep new scripts arm64-native (`CONTRIBUTING.md`, "Validation").

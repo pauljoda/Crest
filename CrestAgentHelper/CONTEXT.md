@@ -23,12 +23,13 @@ running app only for the calls that need it.
 
 ## Depends on
 
-`CrestAgents/` (compiled into the same `CrestBrowserHelper` target,
-`project.yml`). The packager copies the tool into `Crest.app/Contents/Helpers`.
+`CrestAgents/`, which holds the protocol and tool definitions and is compiled
+into the same `CrestBrowserHelper` target (`project.yml`). The `Crest` target
+embeds the tool in `Contents/Helpers`; for the Chromium host the packager
+copies it there (`project.yml`).
 
 ## Rules
 
-- The protocol and tool definitions live in `CrestAgents/`, not here (`CrestAgents/AgentToolDefinition.swift`).
 - Keep the target arm64-native (`CONTRIBUTING.md`, "Validation").
 - Test copies of Crest that the helper connects to are quit, unregistered and deleted before handing off (skill, "Verification and reporting").
 

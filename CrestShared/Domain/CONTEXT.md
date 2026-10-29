@@ -41,12 +41,13 @@ or system framework.
 
 ## Depends on
 
-Foundation only. Consumed by `Application/`, `Infrastructure/`, `Features/`,
-the platform trees and the Chromium adapter.
+Foundation only, plus the exact exemptions in
+`Config/ArchitectureGuardrails.json`. Consumed by `Application/`,
+`Infrastructure/`, `Features/`, the platform trees and the Chromium adapter.
 
 ## Rules
 
-- Domain imports Foundation only; `Scripts/check-architecture.py` enforces it (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
+- Domain imports Foundation only, apart from entries in `Config/ArchitectureGuardrails.json`; `Scripts/check-architecture.py` enforces it (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 - Shared browser state and rules belong to the core; only appearance, window geometry and transient presentation stay in Swift (skill, "Architecture"; `Documentation/Architecture/ControlPlane.md`, "What stays in Swift").
 - Framework-neutral default-browser and passkey values and policies stay in Domain (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
 - Fixed sets are self-describing types; no `*Policy`, `*Rules` or `*Helper` siblings and no switches on a member (skill, "Code style").

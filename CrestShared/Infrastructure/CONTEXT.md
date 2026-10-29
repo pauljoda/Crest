@@ -48,11 +48,11 @@ by the platform trees, the features and the Chromium adapter.
 ## Rules
 
 - No SwiftUI in shared Infrastructure; AppKit, CoreServices and SecurityInterface stay in `CrestMac`, UIKit in `CrestMobile` (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
-- AuthenticationServices, Security and other system bridges belong here, not in Domain or Application (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
-- Launch flags are read from the process only by the Infrastructure adapter (same section).
-- Shared code talks to the engine port, never to WebKit or Chromium APIs; engine code lives in `WebKit/` or the Chromium adapter (skill, "Architecture").
+- Default-browser and passkey system bridges (AuthenticationServices, Security) belong in shared or platform Infrastructure, not in Domain or Application (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
+- Launch flags are read from the process only by the Infrastructure adapter (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
+- Shared code talks to the engine port, never to WebKit or Chromium APIs (skill, "Architecture"); engine types stay in the engine bindings (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
 - Bindings report events and never decide browser rules (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
-- Never hand-edit `Core/Generated/` (`ROUTING.md`, "Never by default").
+- Never hand-edit `Core/Generated/`; change the contract and regenerate (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - Every exemption is listed in `Config/ArchitectureGuardrails.json`; an exemption is not precedent (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 
 ## Read next

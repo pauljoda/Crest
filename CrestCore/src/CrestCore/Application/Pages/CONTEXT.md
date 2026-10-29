@@ -35,10 +35,10 @@ tabs and windows that own pages). Engine commands reach the bindings through
 ## Rules
 
 - Every case overrides `PageIntent.Apply` or `PageEvent.Apply` in its own file under `Intents/` or `Events/` (`Documentation/Architecture/ControlPlane.md`, "Page lifecycle").
-- Typed addresses and every first load go through `Navigate`, resolved by the Space's address and search rules before `LoadPage` (same).
-- A report about a page the core no longer hosts, or another engine hosts, changes nothing (same).
-- A page opened by another page runs in the opener's engine; popups become Quick Window pages in the opener's Space (skill, "Architecture"; `Documentation/LinkOpeningPolicy.md`).
-- A page's engine page lives in its Space's profile, so it moves only between Spaces of that profile (`Page.cs`).
+- Typed addresses and every first load go through `Navigate`, resolved by the Space's address and search rules before `LoadPage` (`Documentation/Architecture/ControlPlane.md`, "Page lifecycle").
+- A report about a page the core no longer hosts, or another engine hosts, changes nothing (`Documentation/Architecture/ControlPlane.md`, "Page lifecycle").
+- A page opened by another page runs in the opener's engine; a popup window becomes a Quick Window page in the opener's Space (`.agents/skills/crest-contribution/SKILL.md`, "Architecture" and "Windows and UI"; `Documentation/LinkOpeningPolicy.md`).
+- A page's engine page lives in its Space's profile, so it moves only between Spaces of that profile (`CrestCore/src/CrestCore/Application/Pages/Page.cs`, its doc comment).
 - The core refuses a page in a locked Space or one being deleted (`Documentation/Architecture/ControlPlane.md`, "Page lifecycle").
 
 ## Read next

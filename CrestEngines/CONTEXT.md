@@ -18,8 +18,8 @@ shared UI never depend on which engine draws a page.
 
 ## Depends on
 
-The engine contract in `CrestContracts/include` and the core's generated
-engine codec; the engine port in `CrestShared/Infrastructure/Engines/`
+The engine contract in `CrestContracts/include` (the C ABI and the generated
+C++ engine codec `crest_engine_contract.h`); the engine port in `CrestShared/Infrastructure/Engines/`
 (`BrowserPageEngine`, `BrowserEngineRegistration`). Consumed by the Mac
 Chromium compositions in `project.yml`.
 
@@ -27,8 +27,8 @@ Chromium compositions in `project.yml`.
 
 - Bindings own page creation, loads, engine history, find, zoom, extensions and transfers; they report to the core and never decide browser rules (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
 - No Swift outside `CrestEngines` tests `CREST_CHROMIUM_HOST` (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Current state").
-- Capability declarations in `BrowserEngineRegistration` describe what a binding really does; UI never gates on build flags (same document, "Ownership").
-- Place a new feature with the ownership decision guide (same document, "Ownership decision guide").
+- Capability declarations in `BrowserEngineRegistration` describe what a binding really does; UI never gates on build flags (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
+- Place a new feature with the ownership decision guide (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership decision guide").
 - Engine-input changes need a maintainer-published engine (`AGENTS.md`, "Published Chromium engine").
 
 ## Read next

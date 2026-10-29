@@ -37,7 +37,7 @@ through `CrestEngines/Chromium/Apple/ChromiumComposition.swift` instead of
 - Never create a window the person did not ask for; a window a page asks for opens as a Quick Window (skill, "Windows and UI").
 - Window contents change through core intents such as `ShowSpace` and `ShowTab`, never by mutating `BrowserStore.session` (skill, "Architecture"; `Documentation/ARCHITECTURE.md`, "Windows on macOS").
 - Only what one engine's host alone can do goes into `BrowserMacEngineHost`; the rest of the shell stays engine-neutral (`CrestMac/App/Shell/BrowserMacEngineHost.swift`).
-- `Composition/` is compiled into the WebKit product only; the Chromium host framework excludes it (`project.yml`).
+- `Composition/` is compiled into the WebKit product targets only; the Chromium host framework excludes it (`project.yml`; `CrestMac/App/Composition/CrestMain.swift`).
 - An agent reaches only the Spaces the person allowed, as the core's `AgentReach` answers, and every tab it touches shows its badge (`CrestMac/App/Agents/BrowserMacAgents.swift`).
 - Validation launches use `CREST_ISOLATED_SESSION=1` (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").
 

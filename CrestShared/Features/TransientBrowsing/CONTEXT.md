@@ -24,17 +24,20 @@ drop without a new window appearing.
 
 ## Depends on
 
-`CrestShared/Application/BrowserTransientBrowsing/` (Peek and Quick Window
-coordination), the engine port for the page, `BrowserStore`. Hosted by
+`BrowserStore`, `BrowserSpaceAccessController`, the core's `SpaceModel`
+through `CrestShared/Infrastructure/Core/`, the engine port's `CorePage`
+(`CrestShared/Infrastructure/Engines/`), `CrestShared/Domain/` (runtime
+assignments), `Spaces/` (Space identity), `DesignSystem/`. Hosted by
 `CrestMac/Features/TransientBrowsing/`, `CrestMac/Features/QuickWindow/` and
-`CrestMobile/Features/TransientBrowsing/`.
+`CrestMobile/Features/TransientBrowsing/`, whose Peek and Quick Window
+coordination is `CrestShared/Application/BrowserTransientBrowsing/`.
 
 ## Rules
 
 - Never create a window the person did not ask for; popups open as a Quick Window in the opener's engine and Space (skill, "Windows and UI").
-- Which link opens a Peek, a Quick Window or a tab is `Documentation/LinkOpeningPolicy.md`.
+- Which link opens a Peek, a Quick Window or a tab is the gesture table in `Documentation/LinkOpeningPolicy.md`, "Link opening".
 - Quick Window and Peek borrow the selected Space's session boundary (`Documentation/ARCHITECTURE.md`, "Space isolation").
-- Keeping a page as a tab is a core decision; the adapter moves it when the platform can (`Services/BrowserTransientPagePromotion.swift`).
+- Keeping a page as a tab is a core decision; the adapter moves it when the platform can (`CrestShared/Features/TransientBrowsing/Services/BrowserTransientPagePromotion.swift`).
 
 ## Read next
 

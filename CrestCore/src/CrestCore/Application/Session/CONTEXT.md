@@ -34,12 +34,12 @@ a stored format a rollback build still reads.
 ## Rules
 
 - Each case overrides `SessionIntent.Edit` in its own file under `Intents/`; the authority validates what comes back (`Documentation/Architecture/ControlPlane.md`, "Sessions and commands").
-- The session holds browsing data only: what a window shows is device state, never stored here (`NativeSessionAuthority.cs`; same, "Windows belong to the device").
-- A locked Space refuses a prepared intent with `SpaceLocked` before it runs; deletion, raising protection and retention sweeps still apply (same, "Locked Spaces").
-- A borrowed workspace never edits its Space's settings (`BorrowedProfileRequiresOwner`) and is never saved or staged (same, "Sessions and commands").
-- Every stored key lives in `StoredSessionCodec`; contract field names never define one (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
+- The session holds browsing data only: what a window shows is device state, never stored here (`Documentation/Architecture/ControlPlane.md`, "Windows belong to the device").
+- A locked Space refuses a prepared intent with `SpaceLocked` before it runs; deletion, raising protection and retention sweeps still apply (`Documentation/Architecture/ControlPlane.md`, "Locked Spaces").
+- A borrowed workspace never edits its Space's settings (`BorrowedProfileRequiresOwner`) and is never saved or staged (`Documentation/Architecture/ControlPlane.md`, "Sessions and commands").
+- Every stored key lives in `StoredSessionCodec`; contract field names never define one (`CrestCore/src/CrestCore/Application/Session/StoredSessionCodec.cs`, its doc comment; `Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 - Commits whose effects outside the core depend on the file save before they return (`Documentation/Architecture/ControlPlane.md`, "Storage").
-- An intent that changes nothing publishes nothing (`Intents/SessionIntent.cs`).
+- An intent that changes nothing publishes nothing (`CrestCore/src/CrestCore/Application/Session/Intents/SessionIntent.cs`, its doc comment).
 
 ## Read next
 

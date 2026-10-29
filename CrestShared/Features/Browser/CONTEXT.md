@@ -23,7 +23,10 @@ sidebar or find bar differently.
 
 ## Depends on
 
-`Sidebar/`, `Chrome/`, `SplitView/`, `BrowserStore`. Composed by
+`Sidebar/` (toggle and page layout), `Chrome/`, `Spaces/` (banner
+backdrop), `SplitView/` (page surface presentation), `DesignSystem/`, the
+core's `SpaceModel` through `CrestShared/Infrastructure/Core/`, and find
+matches from `CrestShared/Infrastructure/PageActions/`. Composed by
 `CrestMac/Features/Browser/` and `CrestMobile/Features/Browser/`.
 
 ## Rules

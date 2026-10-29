@@ -40,7 +40,7 @@ and `CrestEngines/Chromium/Apple/`. Consumed by `CrestMac/Features/`.
 - An engine event is a new type with its own `apply(to:)`, never a switch (`CrestMac/Infrastructure/Pages/EngineEvents/BrowserPageEngineEvent.swift`; skill, "Code style").
 - Each tab has one runtime owning its live page; the focused window hosts the live view (`Documentation/ARCHITECTURE.md`, "Windows on macOS").
 - A window a page makes goes to a Quick Window in the opener's engine and Space (skill, "Windows and UI").
-- The title-bar guard keeps the window movable by Move & Resize, tiling and display changes (`Documentation/ARCHITECTURE.md`, "Windows on macOS").
+- While the pointer is on a page under the title bar, `BrowserTitleBarPointerTracker` claims `BrowserWindowTitleBarGuard` so a press does not drag the window; Move & Resize, tiling and display changes still move it (`Documentation/ARCHITECTURE.md`, "Windows on macOS").
 - Memory pressure never unloads a page that has not shown a document (`Documentation/LinkOpeningPolicy.md`, "Loading and residency").
 
 ## Read next

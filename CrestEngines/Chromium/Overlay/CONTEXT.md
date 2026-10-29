@@ -31,8 +31,9 @@ engine contract headers from `CrestContracts/include` into
 
 The pinned upstream source (`../source.lock.json`), `../Patches/` and the
 reviewed hashes in `../host-inputs.json`, the generated C++ engine codec and C
-ABI in `CrestContracts/include`, and `../Apple/CrestChromiumHost.h`. Configured
-and built by the control-plane scripts (`Scripts/control-plane/configure-chromium.py`,
+ABI in `CrestContracts/include`, and `../Apple/CrestChromiumHost.h`. Installed,
+configured and built by the control-plane scripts
+(`Scripts/control-plane/apply-chromium-host.py`, `configure-chromium.py`,
 `build-chromium-baseline.py`).
 
 ## Rules

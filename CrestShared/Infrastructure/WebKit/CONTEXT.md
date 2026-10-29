@@ -55,9 +55,9 @@ hosts and compositions.
 - A command performs itself in `Commands/` (`perform(on:)`) and a page request answers itself in `Requests/` (`answer(on:)`); a new case without its logic does not compile (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - A popup opens as a Quick Window in its opener's engine and Space, never a new window (skill, "Windows and UI").
 - A Space is one profile; private profiles get a non-persistent store erased when private browsing ends (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership"; `Documentation/Architecture/ControlPlane.md`, "WebKit's binding").
-- Content-blocking rules are decided by the core; WebKit only compiles and applies them (`Documentation/Architecture/ContentBlocking.md`).
+- Content-blocking rules are decided by the core; WebKit only compiles and applies them (`Documentation/Architecture/ContentBlocking.md`, "Built-in protection").
 - Reader and built-in content blocking are WebKit-only by decision (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
-- No SwiftUI here (`Scripts/check-architecture.py`).
+- No SwiftUI here (`Scripts/check-architecture.py`; `Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 
 ## Read next
 

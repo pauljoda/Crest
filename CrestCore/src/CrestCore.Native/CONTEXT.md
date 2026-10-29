@@ -26,17 +26,18 @@ format cross it, typed messages come out, and nothing crosses as JSON.
 `CrestCore/src/CrestCore` (`Application/`, `Contracts/`). Its entry points
 are declared in `CrestContracts/include/crest_core.h`, `crest_app.h` and
 `crest_engine.h`. Built by `Scripts/control-plane/build-apple-core.py` and
-`package-apple-core.py`; checked by `CrestContracts/tests/native_abi.c` and
+`package-apple-core.py`, linked by `project.yml`; uses the system SQLite
+(`libsqlite3`, `CrestCore.Native.csproj`); checked by `CrestContracts/tests/native_abi.c` and
 `engine_abi.cc`.
 
 ## Rules
 
 - Never hand-edit `Generated/`; change the contract and run `Scripts/control-plane/generate-contracts.sh` (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
-- Exports only adapt: decode, call `CrestApp`, encode; browser rules stay in `Application/` (`CrestCore/README.md`).
+- Exports only adapt native callers to the application layer; browser rules stay in `Domain/` and `Application/` (`CrestCore/README.md`).
 - Preserve the C ABI when moving or renaming code; native callers keep their type names (`CrestCore/README.md`).
 - `crest_app_create` refuses any schema fingerprint but its own, so a stale core fails at launch (`Documentation/Architecture/ControlPlane.md`, "The C ABI").
-- Status codes stay identical to the `CREST_*` macros in `crest_core.h` (`CrestCore/src/CrestCore/Application/Status/CoreStatus.cs`).
-- The hand-written headers are Chromium engine inputs (`CrestContracts/CONTEXT.md`).
+- Status codes stay identical to the `CREST_*` macros in `crest_core.h` (`CrestCore/src/CrestCore/Application/Status/CoreStatus.cs`, its doc comment).
+- The hand-written headers are Chromium engine inputs: changing them needs a published engine (`Scripts/control-plane/chromium_engine.py`, its input list; `AGENTS.md`, "Published Chromium engine").
 - Apple silicon only: keep builds arm64 (`CONTRIBUTING.md`, "Validation").
 
 ## Read next

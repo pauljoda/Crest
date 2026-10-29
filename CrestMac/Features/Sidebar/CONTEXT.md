@@ -31,7 +31,7 @@ behavior.
 
 ## Rules
 
-- Add a file here only for an AppKit seam or a `BrowserPlatform*` same-name pair; never fork the shared sidebar's behavior (`Documentation/RepositoryGuardrails.md`, "Feature organization").
+- Add a file here only for a genuine platform seam, such as an AppKit gesture or system adapter or a `BrowserPlatform*` same-name pair; never fork the shared sidebar's behavior (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Reorders, moves, folders and closes go through core intents; never mutate `BrowserStore.session` (skill, "Architecture").
 - Each window and browsing mode owns its own `BrowserSidebarInteractionState` for drags and reorder geometry (`Documentation/ARCHITECTURE.md`, "Platform shape").
 - Sizing and reveal come from `BrowserInteractionCapabilities` and shared policy, not a device check (`Documentation/RepositoryGuardrails.md`, "Feature organization").

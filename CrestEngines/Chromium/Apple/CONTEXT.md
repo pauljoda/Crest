@@ -43,11 +43,11 @@ files from here in place of the ones they exclude from `CrestShared` and
 - `CrestChromiumHost.h` is an engine input: changing it needs a maintainer-published engine; say so in the pull request (`AGENTS.md`, "Published Chromium engine").
 - Every other file here reuses the published engine (`AGENTS.md`, "Published Chromium engine").
 - The binding reports what Chromium did; the core decides rules and owns state (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
-- A Space is one profile; a private window is a fresh incognito profile with no installed extensions (same section).
-- Extensions run only in Chromium; their popups open as a tab and side panels and DevTools dock inside the window (same section; skill, "Windows and UI").
+- A Space is one profile; a private window is a fresh incognito profile with no installed extensions (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
+- Extensions run only in Chromium (`Documentation/ARCHITECTURE.md`, introduction); an extension's popup opens as a tab, and side panels and DevTools dock inside the window (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
 - A page another page opens stays on its opener's engine (skill, "Architecture").
 - Capabilities in `BrowserEngineRegistration+Chromium.swift` describe what the binding really does (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
-- Never launch the unbranded Chromium build directly; its keychain item prompts (same document, "Builds and packaging").
+- Never launch the unbranded Chromium build directly; its keychain item prompts (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Builds and packaging").
 
 ## Read next
 

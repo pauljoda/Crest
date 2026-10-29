@@ -32,11 +32,11 @@ progress. Swift's side is `CrestShared/Infrastructure/Downloads/`.
 
 ## Rules
 
-- Each case overrides its family's `Apply` in its own file; an event that does not apply to a record's phase publishes nothing (`Downloads.cs`; `Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- Each case overrides its family's `Apply` in its own file; an event that does not apply to a record's phase publishes nothing (`CrestCore/src/CrestCore/Application/Downloads/Downloads.cs`, its doc comment; `Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - A dangerous file is asked about before it has a place; a download without the person's gesture passes the site's automatic-download choice (`Documentation/Architecture/ControlPlane.md`, "Page lifecycle", Downloads).
-- `PauseDownload` and `ResumeDownload` validate the record and Space access before commanding the owning engine; resuming never approves a risk warning (same).
-- The engine contract fixes the spelling of download states and interruptions; their meaning is declared here, not in the binding (`EngineDownloadStage.cs`, `EngineDownloadStop.cs`).
-- Download risk decisions are a security contract worth a permanent test (skill, "Tests").
+- `PauseDownload` and `ResumeDownload` validate the record and Space access before commanding the owning engine; resuming never approves a risk warning (`Documentation/Architecture/ControlPlane.md`, "Page lifecycle", Downloads).
+- The engine contract fixes the spelling of download states and interruptions; their meaning is declared here, not in the binding (`CrestCore/src/CrestCore/Application/Downloads/EngineDownloadStage.cs` and `EngineDownloadStop.cs`, their doc comments).
+- Download risk decisions are a security contract worth a permanent test (`.agents/skills/crest-contribution/SKILL.md`, "Tests").
 
 ## Read next
 

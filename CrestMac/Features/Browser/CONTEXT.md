@@ -25,7 +25,8 @@ page pool and hands AppKit only the seams it needs.
 `CrestShared/Features/Browser/` and the shared feature views it composes,
 `CrestMac/Infrastructure/Pages/` (`BrowserPagePool`, `BrowserPage`),
 `CrestMac/Features/Sidebar/`, `CrestMac/Features/QuickWindow/`. Hosted by
-`CrestMac/App/BrowserMacWindowScene.swift`.
+`CrestMac/App/BrowserMacWindowScene.swift` and `BrowserMacApplication`'s
+window content.
 
 ## Rules
 

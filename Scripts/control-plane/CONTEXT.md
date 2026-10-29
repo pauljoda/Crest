@@ -28,14 +28,15 @@ a key over exactly the inputs that change it.
 
 ## Depends on
 
-`CrestCore/` (the generator and `CrestCore/src/CrestCore.Native/`), `CrestContracts/`,
-`CrestEngines/Chromium/`. Called by `project.yml` build phases,
-`.github/workflows/` and `ci_scripts/ci_post_clone.sh`.
+`CrestCore/` (the generator in `CrestCore/tools/CrestCore.Generator/` and
+`CrestCore/src/CrestCore.Native/`), `CrestContracts/`, `CrestEngines/Chromium/`.
+Called by `project.yml` build phases (`build-apple-core.py`),
+`.github/workflows/` and `ci_scripts/ci_post_clone.sh` (`install-dotnet.sh`).
 
 ## Rules
 
 - Changing `prepare-chromium.py`, `apply-chromium-host.py`, `configure-chromium.py` or `build-chromium-baseline.py` needs a maintainer-published engine; say so in the pull request (`AGENTS.md`, "Published Chromium engine").
-- Only maintainers publish engines (skill, "Pull request"; `CrestEngines/Chromium/README.md`, "Releasing").
+- Only maintainers publish engines (skill, "Pull request"; `AGENTS.md`, "Published Chromium engine").
 - After changing a contract record, run `generate-contracts.sh`; never hand-edit its outputs (`CrestContracts/README.md`).
 - A core library passed through `CREST_CORE_LIBRARY_DIR` or `CREST_CORE_FRAMEWORK_DIR` must match the checked-out contracts (`Documentation/Architecture/ControlPlane.md`, "Build workflow").
 - Experiment builds launch with an isolated session (`Documentation/RepositoryGuardrails.md`, "Isolated validation sessions").

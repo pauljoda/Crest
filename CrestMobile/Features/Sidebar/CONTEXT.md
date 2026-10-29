@@ -43,7 +43,7 @@ shared reorder state), `BrowserStore`, `MobileBrowserPageStore`. Consumed by
 ## Rules
 
 - Shared handlers own interaction state, source validation, cancellation and commitment; UIKit code here only translates native input (`Documentation/ARCHITECTURE.md`, "Platform shape").
-- Each window owns a `BrowserSidebarInteractionState` for drag sessions and reorder geometry (same section).
+- Each window and browsing mode owns a `BrowserSidebarInteractionState` for drag sessions and reorder geometry (`Documentation/ARCHITECTURE.md`, "Platform shape").
 - Tab, folder and Space moves go through core intents (skill, "Architecture").
 - Never fork a shared sidebar component; add a capability bit, shell input, optional action or accessory slot (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 - Interactive rows and buttons use `crestInteractiveSurface` and `CrestChromeButtonStyle` (skill, "Windows and UI").

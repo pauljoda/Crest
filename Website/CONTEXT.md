@@ -23,15 +23,15 @@ privacy and support.
 
 ## Depends on
 
-`HelpCenter/` for `guides/`. Deployed by `.github/workflows/pages.yml`;
-`README.md` embeds images from `assets/`.
+`HelpCenter/` for `guides/`. Deployed by `.github/workflows/pages.yml`; the
+root `README.md` embeds images from `assets/`.
 
 ## Rules
 
 - Change a guide in `HelpCenter/docs/` and rebuild; `guides/` is build output (`HelpCenter/package.json`, `build:website`).
-- Third-party marks are embedded without modification; `assets/BRAND_ASSETS.md` lists each one's source.
+- Third-party marks are embedded without visual modification, each listed with its source (`Website/assets/BRAND_ASSETS.md`).
 - A changed website dependency, font or copied asset runs `Scripts/audit-licenses.py` (`CONTRIBUTING.md`, "Validation").
-- The Crest name and visual identity are covered by `TRADEMARKS.md` (`CONTRIBUTING.md`).
+- The Crest name and visual identity are covered by `TRADEMARKS.md` (`CONTRIBUTING.md`, opening paragraph).
 
 ## Read next
 

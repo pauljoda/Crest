@@ -36,12 +36,12 @@ transaction). The Swift transport is `CrestShared/Infrastructure/Sync/`.
 ## Rules
 
 - Sync stays Apple-only; CloudKit is an OS service and the core owns records, merging, ordering and scheduling (`Documentation/Architecture/ControlPlane.md`, "Sync").
-- Private and temporary workspaces cannot attach sync (same).
-- A merge computes outside the core's lock and takes it only to commit with a revision check; session and journal are written in one transaction (same).
-- Rules that differ by record kind belong to that kind's `SyncPayloadType`; members this build does not know are kept (same).
-- A record the core cannot read or whose schema is newer is skipped and counted; a snapshot with any skipped record is refused whole (same).
-- Each session change names the records it removed (`Change.RemovedRecords`) (same).
-- Sync codec changes are a contract worth a permanent test (skill, "Tests").
+- Private and temporary workspaces cannot attach sync (`Documentation/Architecture/ControlPlane.md`, "Sync").
+- A merge computes outside the core's lock and takes it only to commit with a revision check; session and journal are written in one transaction (`Documentation/Architecture/ControlPlane.md`, "Sync").
+- Rules that differ by record kind belong to that kind's `SyncPayloadType`; members this build does not know are kept (`Documentation/Architecture/ControlPlane.md`, "Sync").
+- A record the core cannot read or whose schema is newer is skipped and counted; a snapshot with any skipped record is refused whole (`Documentation/Architecture/ControlPlane.md`, "Sync").
+- Each session change names the records it removed (`Change.RemovedRecords`) (`Documentation/Architecture/ControlPlane.md`, "Sync").
+- Sync codec changes are a contract worth a permanent test (`.agents/skills/crest-contribution/SKILL.md`, "Tests").
 
 ## Read next
 

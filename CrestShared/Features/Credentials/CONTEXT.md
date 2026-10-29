@@ -23,18 +23,19 @@ engines and both shells.
 
 ## Depends on
 
-`CrestShared/Infrastructure/Credentials/` (`BrowserCredentialSession`,
-Keychain and passkeys), `CrestShared/Application/Credentials/` and
-`CrestShared/Application/BrowserPasskeyAccess/`. Used by
-`Settings/BrowserPasswordSettingsPane/` and the platform `Credentials/`
-folders in `CrestMac/Features/` and `CrestMobile/Features/`.
+`CrestShared/Application/Credentials/` (suggestions and Keychain models),
+`CrestShared/Infrastructure/Credentials/` (sensitive access),
+`CrestShared/Application/BrowserPasskeyAccess/`, `BrowserStore`,
+`BrowserSpaceAccessController`, `Spaces/` (Space identity). Used by
+`Settings/BrowserPasswordSettingsPane/` and the page surfaces in
+`CrestMac/Features/Browser/` and `CrestMobile/Features/Browser/`.
 
 ## Rules
 
-- Credentials are per Space and matched by origin; a Space can turn Crest's suggestions, generation and save prompts off (`Documentation/ARCHITECTURE.md`, "Credentials and privacy").
-- Sensitive reveals and exports require device authentication (same).
-- Page-to-app credential messages are schema-checked and origin-bound (same).
-- Crest does not intercept WebAuthn; engines hand passkey requests to the system (same).
+- Credentials are matched by origin and belong to a Space, which can turn off Crest's suggestions, generation, save prompts and HTTP-auth reuse (`Documentation/ARCHITECTURE.md`, "Credentials and privacy", "Space isolation").
+- Sensitive reveals and exports require device authentication (`Documentation/ARCHITECTURE.md`, "Credentials and privacy").
+- Page-to-app credential messages are schema-checked and origin-bound (`Documentation/ARCHITECTURE.md`, "Credentials and privacy").
+- Crest does not intercept WebAuthn: WebKit handles credential requests itself and Chromium sends them to the system passkey sheet (`Documentation/ARCHITECTURE.md`, "Credentials and privacy").
 - Privacy, authorization and Keychain contracts are where permanent tests belong (skill, "Tests").
 
 ## Read next

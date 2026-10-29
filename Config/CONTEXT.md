@@ -30,7 +30,7 @@ Nothing. Read by `project.yml`, `Scripts/`, `ci_scripts/` and
 - Change the version only with `Scripts/set-version.sh`, stage it with the change, and pass `Scripts/check-version.sh --fix-commit`; never change `CURRENT_PROJECT_VERSION` (`AGENTS.md`, "Versioning completed work").
 - A release-line change is an explicit maintainer decision (`CONTRIBUTING.md`, "AI-assisted contributions").
 - An architecture exemption is exact, carries a reason, and is not precedent (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
-- A new dependency needs a redistributable license, a preserved notice and a passing `Scripts/audit-licenses.py` (`CONTRIBUTING.md`, "Validation").
+- A new runtime dependency needs a redistributable license, a preserved notice and a passing `Scripts/audit-licenses.py` (`CONTRIBUTING.md`, "Validation").
 
 ## Read next
 

@@ -21,15 +21,19 @@ practice window.
 
 ## Depends on
 
-The core's split groups through `BrowserStore`; native cards come through
-`NativeTabs/BrowserNativeTabHost.swift`. Hosted by `CrestMac/Features/SplitView/`,
-`CrestMobile/Features/SplitView/` and `GettingStarted/`.
+The core's `TabStateModel` and `SpaceModel` through
+`CrestShared/Infrastructure/Core/`, `CrestShared/Domain/` (runtime
+assignments), `Sidebar/` (reorder state for card drags), `Chrome/` (layout
+and appearance), `DesignSystem/`. Hosted by `CrestMac/Features/SplitView/`,
+`CrestMobile/Features/SplitView/` (whose cards place native tabs through
+`NativeTabs/BrowserNativeTabHost.swift`), the platform `Browser/` roots,
+`Sidebar/` and `GettingStarted/`.
 
 ## Rules
 
 - Split membership and order are core state; the view never edits them (skill, "Architecture").
-- A tab dragged between workspaces arrives without its split membership (`Documentation/ARCHITECTURE.md`, "Windows on macOS").
-- Native and website cards share the split; only website members get pages (`Documentation/NativeTabs.md`).
+- A tab dragged between workspaces arrives without its source folder or split membership (`Documentation/ARCHITECTURE.md`, "Windows on macOS").
+- Native and website cards share the split; only website members get pages (`Documentation/NativeTabs.md`, opening section).
 - Name metrics and thresholds in the type that owns them (`Documentation/ARCHITECTURE.md`, "Platform shape").
 
 ## Read next

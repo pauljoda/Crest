@@ -32,11 +32,11 @@ generator.
 Nothing at runtime. Generators: `Scripts/generate-emoji-catalog.py`,
 `Scripts/update-sf-symbol-catalog.py`, `Scripts/generate-app-icon-palettes.py`.
 `Scripts/validate-identity.sh` requires `CrestIcon/Crest.icon`. Consumed by
-every target that includes `CrestShared`.
+every target that includes `CrestShared`; `CrestShareExtension` takes only
+`Localizable.xcstrings` (`project.yml`).
 
 ## Rules
 
-- Leave asset catalogs alone unless the change is an asset (`ROUTING.md`, "Never by default").
 - A regenerated `Localizable.xcstrings` belongs to the change that caused it (`AGENTS.md`, "Generated localization catalog").
 - User-facing strings go through `String(localized:)` and the catalog, short and platform-native (skill, "Writing").
 - Target membership is set in `project.yml`, never in the Xcode project (skill, "Pull request").

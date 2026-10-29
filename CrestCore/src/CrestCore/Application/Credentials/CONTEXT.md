@@ -24,15 +24,17 @@ staged or synced by it.
 `Contracts/Credentials/` (`Files/` for import and export) and
 `Contracts/Passkeys/`, `Domain/Csv/`. Swift's side is
 `CrestShared/Features/Credentials/` and `CrestShared/Infrastructure/Credentials/`;
-setup routes imported passwords through `Application/Device/Intents/Setup/`.
+setup's import commit (`Application/Device/Intents/Setup/`) brackets the
+passwords the platform imports. `CredentialFile` reads and writes through
+`Domain/Csv/`.
 
 ## Rules
 
 - The credential questions keep no state; importing and exporting a password file are the only questions that carry passwords, answered from the question alone (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
-- A record that holds a password is `[HoldsSecrets]`; no change, intent, stored session, device record or sync journal may reach it, which `CrestCore/tests/CrestCore.Tests/Credentials/SecretContainmentTests.cs` checks (same).
-- A generated password never exists in the core; it answers only the recipe (`Queries/StrongPassword.cs`).
+- A record that holds a password is `[HoldsSecrets]`; no change, intent, stored session, device record or sync journal may reach it, which `CrestCore/tests/CrestCore.Tests/Credentials/SecretContainmentTests.cs` checks (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- A generated password never exists in the core; it answers only the recipe (`CrestCore/src/CrestCore/Application/Credentials/Queries/StrongPassword.cs`, its doc comment).
 - Credentials are matched by origin; each Space can turn off Crest's suggestions, generation, save prompts and HTTP-auth reuse (`Documentation/ARCHITECTURE.md`, "Credentials and privacy").
-- Privacy and authorization boundaries and Keychain access are contracts worth a permanent test (skill, "Tests").
+- Privacy and authorization boundaries and Keychain access are contracts worth a permanent test (`.agents/skills/crest-contribution/SKILL.md`, "Tests").
 
 ## Read next
 

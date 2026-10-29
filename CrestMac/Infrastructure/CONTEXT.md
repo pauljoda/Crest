@@ -38,10 +38,10 @@ Consumed by `CrestMac/App/` and `CrestMac/Features/`.
 
 ## Rules
 
-- AppKit, CoreServices and SecurityInterface are allowed only under `CrestMac` (`Scripts/check-architecture.py`; `Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
-- Framework bridges stay in Infrastructure; values and policies stay in shared Domain and Application (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
+- Of the Swift source roots, only `CrestMac` may import AppKit, CoreServices and SecurityInterface (`Scripts/check-architecture.py`; `Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
+- Default-browser and passkey values and policies stay in shared Domain and their controllers in Application; AuthenticationServices, AppKit and Security bridges stay in Infrastructure (`Documentation/RepositoryGuardrails.md`, "Focused guard tests").
 - A protocol needs two production implementations or a real system boundary (`Documentation/RepositoryGuardrails.md`, "Feature organization").
-- Import exemptions are exact entries with a reason in `Config/ArchitectureGuardrails.json`; an exemption is not precedent (`Documentation/RepositoryGuardrails.md`).
+- Import exemptions are exact entries with a reason in `Config/ArchitectureGuardrails.json`; an exemption is not precedent (`Documentation/RepositoryGuardrails.md`, "Architecture and Xcode 27 compatibility").
 - Download risk, Keychain access and other security decisions are contracts worth a test (skill, "Tests").
 - Only this Crest's own `crest-browser` helper, running as this user, may use the agent socket (`CrestMac/Infrastructure/Agents/BrowserAgentListener.swift`).
 

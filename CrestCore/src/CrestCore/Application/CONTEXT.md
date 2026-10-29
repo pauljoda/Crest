@@ -35,7 +35,8 @@ message is one file beside the area it changes.
 
 ## Depends on
 
-`Contracts/` and `Domain/`. Called by `CrestCore/src/CrestCore.Native`
+`Contracts/` and `Domain/`; the system SQLite through `LibraryImport`
+(`Storage/Sqlite.cs`). Called by `CrestCore/src/CrestCore.Native`
 (the C exports) and by `CrestCore/tests/CrestCore.Tests`.
 
 ## Rules
@@ -45,7 +46,7 @@ message is one file beside the area it changes.
 - Decode JSON at an input boundary, apply domain objects, encode at the output; JSON stays only for the native session and sync formats (`CrestCore/README.md`).
 - Stored and synced formats have hand-written codecs; the generator never defines a stored or synced key (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 - What each area keeps, saves and syncs is the table in `Documentation/Architecture/ControlPlane.md`, "State the core keeps".
-- `CoreStatus` values stay identical to the `CREST_*` macros in `CrestContracts/include/crest_core.h` (`Status/CoreStatus.cs`).
+- `CoreStatus` values stay identical to the `CREST_*` macros in `CrestContracts/include/crest_core.h` (`CrestCore/src/CrestCore/Application/Status/CoreStatus.cs`, its doc comment).
 - Data-only records share their concept's file or a `Types` region; a type with behavior has its own file (`CrestCore/README.md`).
 
 ## Read next
