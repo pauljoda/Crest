@@ -61,7 +61,7 @@ code by `CrestShared/Infrastructure/Core/Generated/` and `CrestContracts/include
 - Every message is a named record; rule failures are rejection objects, never strings (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 - A fixed set is a sealed class with static instances; its wire tag is its index in `All`, so `All` only grows at the end (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - A record that holds a password is `[HoldsSecrets]`; `CrestCore/tests/CrestCore.Tests/Credentials/SecretContainmentTests.cs` checks nothing stored or synced reaches it (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
-- No source spells a wire tag; after any change here run `Scripts/control-plane/generate-contracts.sh` (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
+- No source spells a wire tag; after changing an exported contract record, fixed set, enum it references or attribute the generator reads, wherever it is declared, run `Scripts/control-plane/generate-contracts.sh` (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - An engine command or event change regenerates `crest_engine_contract.h`, a Chromium engine input that needs a published engine (`Scripts/control-plane/chromium_engine.py`, its input list; `AGENTS.md`, "Published Chromium engine").
 - Contract field names never define a stored or synced key (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 
