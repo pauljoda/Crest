@@ -1,8 +1,8 @@
 # HelpCenter
 
-Crest Help, the user guides, as a Docusaurus site. It is built by CI on every
-pull request and published under `crestbrowser.com/guides/` by writing its
-build into `Website/guides/`.
+Crest Help, the user guides, as a Docusaurus site. CI checks it on every
+pull request with `npm run build`; `npm run build:website` writes the
+published build into `Website/guides/`, served under `crestbrowser.com/guides/`.
 
 ## Goal
 

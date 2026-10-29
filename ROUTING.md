@@ -56,7 +56,7 @@ column.
 
 | Task | Go to | Load | Skip |
 | --- | --- | --- | --- |
-| Mac windows, menus, the Dock, launch recovery or quit | `CrestMac/App/CONTEXT.md` | `Documentation/ARCHITECTURE.md` ("Windows on macOS"), `CrestMac/App/Shell/BrowserMacShell.swift` | CrestMobile, `CrestMac/App/Composition/` |
+| Mac windows, menus, the Dock, launch recovery or quit | `CrestMac/App/CONTEXT.md` | `Documentation/ARCHITECTURE.md` ("Windows on macOS"), `CrestMac/App/Shell/BrowserMacShell.swift`; for the Dock tile icon, `CrestDockTilePlugin/CONTEXT.md` | CrestMobile, `CrestMac/App/Composition/` |
 | A Mac page, the page pool or an engine event | `CrestMac/Infrastructure/Pages/CONTEXT.md` | `Documentation/ARCHITECTURE.md` ("Engine boundary"), `CrestMac/Infrastructure/Pages/EngineEvents/BrowserPageEngineEvent.swift` | `CrestEngines/Chromium/Overlay/`, `CrestEngines/Chromium/Patches/` |
 | Mac WebKit page behavior (delegates, link bridges, Picture in Picture, feature flags) | `CrestMac/Infrastructure/WebKit/CONTEXT.md` | `CrestShared/Infrastructure/WebKit/`, `Documentation/Architecture/DesktopPictureInPicture.md` | the Chromium fork |
 | Quick Window or a popup window | `CrestMac/Features/QuickWindow/CONTEXT.md` | `Documentation/LinkOpeningPolicy.md`, `HelpCenter/docs/browsing/peek-and-quick-window.md` | CrestMobile |

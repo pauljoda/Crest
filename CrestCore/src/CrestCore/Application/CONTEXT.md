@@ -43,7 +43,7 @@ message is one file beside the area it changes.
 
 - Messages route and apply themselves: each case overrides its family's `Route`, `Apply`, `Edit` or `Answer` in its own file beside its area; no type switches (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - Message records here keep the `CrestCore.Contracts` namespace; area types use `CrestCore.Application` (`CrestCore/README.md`).
-- Decode JSON at an input boundary, apply domain objects, encode at the output; JSON stays only for the native session and sync formats (`CrestCore/README.md`).
+- Decode JSON at an input boundary, apply domain objects, encode at the output; JSON stays only in the native, persistence and sync formats this layer owns, such as the session, the device-store documents and sync (`CrestCore/README.md`).
 - Stored and synced formats have hand-written codecs; the generator never defines a stored or synced key (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 - What each area keeps, saves and syncs is the table in `Documentation/Architecture/ControlPlane.md`, "State the core keeps".
 - `CoreStatus` values stay identical to the `CREST_*` macros in `CrestContracts/include/crest_core.h` (`CrestCore/src/CrestCore/Application/Status/CoreStatus.cs`, its doc comment).

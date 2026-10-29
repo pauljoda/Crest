@@ -57,7 +57,7 @@ code by `CrestShared/Infrastructure/Core/Generated/` and `CrestContracts/include
 
 ## Rules
 
-- Contracts use neither Domain nor Application, except a message that carries its own behavior (`CrestCore/README.md`).
+- `CrestCore/README.md` keeps contracts free of Domain and Application except a message that carries its own behavior, but some state records already use both (for example `CrestCore/src/CrestCore/Contracts/Session/SpaceState.cs`); confirm with the maintainer before adding such a dependency.
 - Every message is a named record; rule failures are rejection objects, never strings (`Documentation/Architecture/CoreArchitecture.md`, "Modeling rules").
 - A fixed set is a sealed class with static instances; its wire tag is its index in `All`, so `All` only grows at the end (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
 - A record that holds a password is `[HoldsSecrets]`; `CrestCore/tests/CrestCore.Tests/Credentials/SecretContainmentTests.cs` checks nothing stored or synced reaches it (`Documentation/Architecture/ControlPlane.md`, "The typed contract").

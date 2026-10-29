@@ -33,7 +33,7 @@ The .NET SDK in `global.json`; the system SQLite (`libsqlite3`, linked by
 
 ## Rules
 
-- Contracts use neither Domain nor Application, except a message that carries its own behavior; Domain uses only Contracts (`CrestCore/README.md`).
+- Domain uses only Contracts (`CrestCore/README.md`); the README's rule that contracts avoid Domain and Application has exceptions in the code (`src/CrestCore/Contracts/CONTEXT.md`).
 - Decode JSON at an input boundary, apply typed domain objects, encode at the output (`CrestCore/README.md`).
 - Messages carry their own behavior; no type switches or operation strings (`.agents/skills/crest-contribution/SKILL.md`, "Code style").
 - After changing a contract, run `Scripts/control-plane/generate-contracts.sh`; the lint and the Apple core build fail while generated files are stale (`Documentation/Architecture/ControlPlane.md`).

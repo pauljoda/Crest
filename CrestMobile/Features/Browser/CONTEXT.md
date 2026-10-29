@@ -39,7 +39,7 @@ shared features (`CrestShared/Features/Browser/`, `CrestShared/Features/Sidebar/
 - Each scene owns its page store and live WebKit views; shared tab records never share a live page between scenes (`Documentation/ARCHITECTURE.md`, "Scenes on iPhone and iPad").
 - Selection, tab and Space changes go through core intents; the root only renders and sends them (skill, "Architecture").
 - Feedback such as "copied" is a notice capsule, never an alert or sheet; alerts and sheets only for a decision (skill, "Windows and UI").
-- A popup a page asks for opens as a Quick Window in the opener's Space, never a window of its own (skill, "Windows and UI").
+- A popup window a page asks for opens as a tab beside the opener; iPhone and iPad have no Quick Window (`Documentation/LinkOpeningPolicy.md`, "Link opening").
 - Keep root `body` and view builders small; split at meaningful subviews (`Documentation/RepositoryGuardrails.md`, "Feature organization").
 
 ## Read next

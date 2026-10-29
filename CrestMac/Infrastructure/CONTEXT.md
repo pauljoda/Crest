@@ -8,8 +8,9 @@ permissions and CloudKit entitlement. Shared adapters live in
 
 ## Goal
 
-Every macOS framework call sits behind one named adapter here, so shared code
-and Mac features never reach the system directly.
+Every macOS system service sits behind one named adapter here, so shared code
+never reaches the system directly; Mac features keep their own AppKit seams
+(`Documentation/RepositoryGuardrails.md`, "Feature organization").
 
 ## Contents
 

@@ -34,7 +34,7 @@ coordination is `CrestShared/Application/BrowserTransientBrowsing/`.
 
 ## Rules
 
-- Never create a window the person did not ask for; popups open as a Quick Window in the opener's engine and Space (skill, "Windows and UI").
+- Never create a window the person did not ask for; on the Mac a popup window opens as a Quick Window in the opener's engine and Space, on iPhone and iPad as a tab (`Documentation/LinkOpeningPolicy.md`, "Link opening"; skill, "Windows and UI").
 - Which link opens a Peek, a Quick Window or a tab is the gesture table in `Documentation/LinkOpeningPolicy.md`, "Link opening".
 - Quick Window and Peek borrow the selected Space's session boundary (`Documentation/ARCHITECTURE.md`, "Space isolation").
 - Keeping a page as a tab is a core decision; the adapter moves it when the platform can (`CrestShared/Features/TransientBrowsing/Services/BrowserTransientPagePromotion.swift`).

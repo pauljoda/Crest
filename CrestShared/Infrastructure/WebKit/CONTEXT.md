@@ -53,7 +53,7 @@ hosts and compositions.
 
 - The binding reports what WebKit did and settles what the core answers; it never decides browser rules or changes state except by reporting (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
 - A command performs itself in `Commands/` (`perform(on:)`) and a page request answers itself in `Requests/` (`answer(on:)`); a new case without its logic does not compile (`Documentation/Architecture/ControlPlane.md`, "The typed contract").
-- A popup opens as a Quick Window in its opener's engine and Space, never a new window (skill, "Windows and UI").
+- On the Mac a popup window opens as a Quick Window in its opener's engine and Space, never a new window; iPhone and iPad have no Quick Window and open it as a tab (`Documentation/LinkOpeningPolicy.md`, "Link opening"; skill, "Windows and UI").
 - A Space is one profile; private profiles get a non-persistent store erased when private browsing ends (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership"; `Documentation/Architecture/ControlPlane.md`, "WebKit's binding").
 - Content-blocking rules are decided by the core; WebKit only compiles and applies them (`Documentation/Architecture/ContentBlocking.md`, "Built-in protection").
 - Reader and built-in content blocking are WebKit-only by decision (`Documentation/Architecture/EngineAbstractionCompletion.md`, "Ownership").
