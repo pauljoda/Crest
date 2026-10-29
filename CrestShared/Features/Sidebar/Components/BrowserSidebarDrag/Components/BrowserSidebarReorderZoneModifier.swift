@@ -14,6 +14,11 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// place to drop *beside* the folder.
     var topInset: CGFloat = 0
     var minimumHeight: CGFloat = 0
+    /// The visible part of a scrolling lane the zone sits in, in global
+    /// coordinates. What the lane scrolled out of view takes no drop, so a
+    /// Space chip hidden past the picker's edge cannot claim a lift released
+    /// over the page beside it.
+    var visibleRegion: CGRect? = nil
 
     /// Identity for this registration. The mobile space pager keeps neighbouring
     /// pages alive and they register the same targets, so registrations must not
@@ -32,15 +37,21 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
         let target = target
         let topInset = topInset
         let minimumHeight = minimumHeight
+        let visibleRegion = visibleRegion
         let supportsTouch = capabilities.supportsTouch
         return
             content
             .onGeometryChange(for: BrowserSidebarReorderZone?.self) { proxy in
                 guard isActive else { return nil }
+                var frame = Self.resolvedFrame(
+                    proxy.frame(in: BrowserSidebarReorderSpace.globalSpace), target: target, topInset: topInset)
+                if let visibleRegion {
+                    frame = frame.intersection(visibleRegion)
+                    guard !frame.isNull, !frame.isEmpty else { return nil }
+                }
                 return BrowserSidebarReorderZone(
                     target: target,
-                    frame: Self.resolvedFrame(
-                        proxy.frame(in: BrowserSidebarReorderSpace.globalSpace), target: target, topInset: topInset),
+                    frame: frame,
                     minimumHeight: minimumHeight,
                     supportsTouch: supportsTouch)
             } action: { zone in
@@ -83,7 +94,8 @@ extension View {
         isActive: Bool = true,
         requiresSelectedSpace: Bool = false,
         topInset: CGFloat = 0,
-        minimumHeight: CGFloat = 0
+        minimumHeight: CGFloat = 0,
+        visibleRegion: CGRect? = nil
     ) -> some View {
         modifier(
             BrowserSidebarReorderZoneModifier(
@@ -91,7 +103,7 @@ extension View {
                 state: state,
                 isActive: isActive,
                 requiresSelectedSpace: requiresSelectedSpace,
-                topInset: topInset, minimumHeight: minimumHeight
+                topInset: topInset, minimumHeight: minimumHeight, visibleRegion: visibleRegion
             )
         )
     }
