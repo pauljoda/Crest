@@ -33,6 +33,11 @@ final class BrowserChromeState {
         set { publish(newValue, into: \.commandPaletteModeStorage, as: \.commandPaletteMode) }
     }
     @ObservationIgnored private var commandPaletteModeStorage: BrowserCommandPaletteMode?
+    /// What the person has entered in the open new-tab palette: the text and
+    /// the search provider or scope they narrowed it to. A palette opened
+    /// again for another Space starts from it, so all of it follows them
+    /// there.
+    @ObservationIgnored private(set) var newTabDraft = BrowserCommandPaletteDraft.empty
     private(set) var addressFocusRequest = 0
     private(set) var startPageFocusRequest = 0
     private(set) var notice: BrowserNotice?
@@ -116,11 +121,34 @@ final class BrowserChromeState {
     // MARK: - Actions - Command Palette
 
     func openLocation(_ address: String = "") {
+        newTabDraft = .empty
         commandPaletteMode = .editLocation(address)
     }
 
     func presentCommandPalette() {
+        newTabDraft = .empty
         commandPaletteMode = .newTab
+    }
+
+    /// What a palette opened in `mode` starts from: what was entered in the
+    /// new-tab palette so far, or nil for an edited tab's address, which
+    /// starts from that address.
+    func commandPaletteDraft(for mode: BrowserCommandPaletteMode) -> BrowserCommandPaletteDraft? {
+        mode == .newTab ? newTabDraft : nil
+    }
+
+    /// Notes what the person entered while the new-tab palette is open.
+    func recordCommandPaletteDraft(_ draft: BrowserCommandPaletteDraft) {
+        guard commandPaletteMode == .newTab else { return }
+        newTabDraft = draft
+    }
+
+    /// The window moved to another Space. A new tab can open there just as
+    /// well, so its palette stays open with what was typed; editing an
+    /// address belongs to the tab left behind, so that palette closes.
+    func spaceChanged() {
+        guard case .editLocation = commandPaletteMode else { return }
+        dismissCommandPalette()
     }
 
     func openNewTab(isStartPageSelected: Bool) {
@@ -133,11 +161,12 @@ final class BrowserChromeState {
             presentCommandPalette()
             return
         }
-        commandPaletteMode = nil
+        dismissCommandPalette()
         startPageFocusRequest &+= 1
     }
 
     func dismissCommandPalette() {
+        newTabDraft = .empty
         commandPaletteMode = nil
     }
 

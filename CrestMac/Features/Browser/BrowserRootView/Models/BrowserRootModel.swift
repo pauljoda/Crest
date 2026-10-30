@@ -270,6 +270,7 @@ extension BrowserRootModel {
 
     func synchronizeAfterSpaceChange() {
         guard isPrepared else { return }
+        chrome.spaceChanged()
         isAddressEditing = false
         AddressFocusAction.resign()
         if selectedSpaceIsLocked || !pages.isPresentingSelection() {

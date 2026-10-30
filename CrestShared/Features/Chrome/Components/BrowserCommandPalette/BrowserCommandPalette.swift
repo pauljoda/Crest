@@ -10,6 +10,8 @@ struct BrowserCommandPalette: View {
     let morphNamespace: Namespace.ID?
     let overlayContentLeadingInset: CGFloat
     let overlayContentInsets: EdgeInsets?
+    /// Hears what the person enters, as it changes.
+    let draftChanged: ((BrowserCommandPaletteDraft) -> Void)?
 
     @State private var model: BrowserCommandPaletteModel
 
@@ -18,6 +20,7 @@ struct BrowserCommandPalette: View {
         space: SpaceModel?,
         selectedTabID: UUID?,
         initialQuery: String = "",
+        draft: BrowserCommandPaletteDraft? = nil,
         commands: BrowserCommandPaletteCommandRegistry? = nil,
         offersRestingCommands: Bool = true,
         isSourceAvailable: @escaping (BrowserTabRuntimeAssignment) -> Bool,
@@ -28,6 +31,7 @@ struct BrowserCommandPalette: View {
             ) -> Bool,
         openURL: @escaping (BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteOpening) -> Bool,
         dismiss: @escaping () -> Void,
+        draftChanged: ((BrowserCommandPaletteDraft) -> Void)? = nil,
         presentation: BrowserCommandPalettePresentation = .overlay,
         morphNamespace: Namespace.ID? = nil,
         overlayContentLeadingInset: CGFloat = 0,
@@ -40,12 +44,16 @@ struct BrowserCommandPalette: View {
         self.morphNamespace = morphNamespace
         self.overlayContentLeadingInset = overlayContentLeadingInset
         self.overlayContentInsets = overlayContentInsets
+        self.draftChanged = draftChanged
         _model = State(
             initialValue: BrowserCommandPaletteModel(
                 browser: browser,
                 space: space,
                 selectedTabID: selectedTabID,
-                initialQuery: initialQuery,
+                initialQuery: draft?.query ?? initialQuery,
+                typesAfterInitialQuery: draft != nil,
+                initialProvider: draft?.provider,
+                initialScope: draft?.scope,
                 commands: commands,
                 offersRestingCommands: offersRestingCommands,
                 isSourceAvailable: isSourceAvailable,
@@ -66,6 +74,7 @@ struct BrowserCommandPalette: View {
             overlayContentLeadingInset: overlayContentLeadingInset,
             overlayContentInsets: overlayContentInsets
         )
+        .onChange(of: model.draft) { _, draft in draftChanged?(draft) }
         .onChange(of: model.isCompletionSourceAvailable) { _, available in
             if !available { model.invalidateURLCompletion() }
         }

@@ -64,12 +64,18 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         context.coordinator.refreshSuffix()
         if focused, canFocus, !context.coordinator.didRequestFocus {
             context.coordinator.didRequestFocus = true
+            let typesAfterQuery = model.typesAfterInitialQuery
             DispatchQueue.main.async { [weak field, weak coordinator = context.coordinator] in
                 guard let field, coordinator?.field === field, field.isEditable, let window = field.window else {
                     return
                 }
                 window.makeFirstResponder(field)
-                field.currentEditor()?.selectAll(nil)
+                guard let editor = field.currentEditor() else { return }
+                if typesAfterQuery {
+                    editor.selectedRange = NSRange(location: editor.string.utf16.count, length: 0)
+                } else {
+                    editor.selectAll(nil)
+                }
             }
         }
     }

@@ -21,6 +21,7 @@ struct BrowserRootCommandPaletteLayer: View {
                 space: paletteSpace,
                 selectedTabID: model.browser.shownTab?.id,
                 initialQuery: mode.initialQuery,
+                draft: model.chrome.commandPaletteDraft(for: mode),
                 commands: model.paletteRegistry(
                     windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts,
                     settings: spaceSettingsPresentation),
@@ -30,6 +31,7 @@ struct BrowserRootCommandPaletteLayer: View {
                     model.openPaletteURL(url, mode: mode, from: source, opening: opening, windows: windows)
                 },
                 dismiss: model.chrome.dismissCommandPalette,
+                draftChanged: model.chrome.recordCommandPaletteDraft,
                 morphNamespace: commandSurfaceNamespace,
                 overlayContentInsets: contentInsets,
                 emptySelectionActions: model.emptySelectionPaletteActions,
