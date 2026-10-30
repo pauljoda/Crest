@@ -83,6 +83,12 @@ final class BrowserAppPreferenceStore {
         set { set { $0.showsRecentTabs = newValue } }
     }
 
+    /// Whether the sidebar offers Tidy for open tabs. Off until the person turns it on.
+    var offersTabTidying: Bool {
+        get { preferences.offersTabTidying }
+        set { set { $0.offersTabTidying = newValue } }
+    }
+
     /// How the command palette ranks and arranges what it offers.
     var palette: PalettePreferences {
         get { preferences.palette }

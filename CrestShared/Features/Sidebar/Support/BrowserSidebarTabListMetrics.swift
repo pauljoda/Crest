@@ -19,6 +19,10 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
     /// underneath.
     let clearActionOcclusionWidth: CGFloat
 
+    /// How much more of the divider is given up while the tidy control shows
+    /// beside the clear control.
+    let tidyActionOcclusionWidth: CGFloat
+
     /// The height of the band a run keeps for the drop it cannot otherwise
     /// show.
     ///
@@ -41,6 +45,7 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
         dividerHorizontalInset: 12,
         dividerVerticalInset: 3,
         clearActionOcclusionWidth: 92,
+        tidyActionOcclusionWidth: 64,
         sectionEndBandHeight: CrestSpacing.medium
     )
 
@@ -49,6 +54,7 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
         dividerHorizontalInset: 16,
         dividerVerticalInset: 22,
         clearActionOcclusionWidth: 52,
+        tidyActionOcclusionWidth: 48,
         sectionEndBandHeight: 28
     )
 }

@@ -21,6 +21,8 @@ Crest's emoji picker catalog is generated from the official
 The Unicode data notice is preserved in
 [`ThirdParty/Unicode-LICENSE.txt`](ThirdParty/Unicode-LICENSE.txt).
 
+When the person turns on Tidy, Crest downloads the MIT-licensed [potion-base-8M](https://huggingface.co/minishlab/potion-base-8M) word-vector table by Minish Lab from Hugging Face, at a pinned revision checked by SHA-256. It is not shipped with the app and is deleted when Tidy is turned off.
+
 Beyond these, the apps link only Apple platform frameworks supplied by the macOS
 and iOS SDKs: AuthenticationServices, CloudKit, LocalAuthentication, Security,
 SwiftUI, and WebKit.

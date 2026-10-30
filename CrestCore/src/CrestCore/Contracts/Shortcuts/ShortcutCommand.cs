@@ -138,7 +138,7 @@ public sealed class ShortcutCommand {
         availableWhen: facts => facts.HasArchivedTabs, reservedFromPages: true);
     public static readonly ShortcutCommand ClearUnpinnedTabs = new(Kinds.ClearUnpinnedTabs, name: "clearUnpinnedTabs",
         ShortcutSection.Tabs, title: "Clear Unpinned Tabs", symbol: "sparkles",
-        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned tabs");
+        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean archive unpinned tabs");
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
         title: "Archive Tab", symbol: "archivebox", shortcuts: Everywhere(Character("e", Command)),
         availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && shown.Placement == TabPlacement.Current);

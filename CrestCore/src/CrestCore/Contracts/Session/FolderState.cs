@@ -7,6 +7,11 @@ namespace CrestCore.Contracts;
 /// <see cref="ParentId"/>, and a child always shares its parent's <see cref="Location"/>.
 /// <see cref="Symbol"/> and <see cref="Color"/> are null until someone chooses them.
 /// <see cref="OrderAnchorTabId"/> is the tab an empty folder keeps its place before.
+/// <see cref="IsTidyHeader"/> marks a folder Tidy made in the open section, which the
+/// sidebar draws as a plain header with a close button; moved out of that section, it
+/// becomes an ordinary folder. The mark stays on the device
+/// that made it: sync carries the folder, and other devices show it as an ordinary
+/// folder, which they close or delete like any other.
 /// </summary>
 [Observed]
 public sealed record FolderState(
@@ -18,7 +23,8 @@ public sealed record FolderState(
     Guid? ParentId = null,
     bool IsCollapsed = false,
     DateTimeOffset? CollapseModifiedAt = null,
-    Guid? OrderAnchorTabId = null) {
+    Guid? OrderAnchorTabId = null,
+    bool IsTidyHeader = false) {
     #region Static Variables
 
     /// The most folders deep a folder may nest, counting the folder itself.
@@ -45,10 +51,10 @@ public sealed record FolderState(
 
     #endregion
 
-    #region Actions - Imports
+    #region Actions - Matching
 
-    /// The key an imported folder matches an existing one by: its letters and
-    /// digits in compatibility form, lowercased.
+    /// The key an imported folder, or a header Tidy names, matches an existing
+    /// one by: its letters and digits in compatibility form, lowercased.
     internal static string MatchKey(string title) => string.Concat(title.Normalize(NormalizationForm.FormKD)
         .Where(char.IsLetterOrDigit)).ToLowerInvariant();
 

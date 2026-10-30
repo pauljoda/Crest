@@ -82,6 +82,7 @@ internal static partial class StoredSessionCodec {
         public const string IsCollapsed = "isCollapsed";
         public const string IsEnabled = "isEnabled";
         public const string IsSavedTabsExpanded = "isSavedTabsExpanded";
+        public const string IsTidyHeader = "isTidyHeader";
         public const string KeepsControlsReadable = "keepsControlsReadable";
         public const string KeepsPageLoaded = "keepsPageLoaded";
         public const string Kind = "kind";
@@ -96,6 +97,7 @@ internal static partial class StoredSessionCodec {
         public const string Location = "location";
         public const string Name = "name";
         public const string NativeContent = "nativeContent";
+        public const string OffersTabTidying = "offersTabTidying";
         public const string OffersTranslation = "offersTranslation";
         public const string OperationId = "operationID";
         public const string OrderAnchorTabId = "orderAnchorTabID";

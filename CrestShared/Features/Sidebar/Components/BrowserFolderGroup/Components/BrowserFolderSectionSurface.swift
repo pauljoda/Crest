@@ -9,6 +9,8 @@ struct BrowserFolderSectionSurface: ViewModifier {
     /// How many folders hold this one.
     var depth = 0
     var isSelected = false
+    /// A header Tidy made draws no fill of its own, only the drop target's.
+    var isTidyHeader = false
     let folderID: UUID
     let reorder: BrowserSidebarReorderState
     private var isTargeted: Bool { reorder.isTargetedFolder(folderID) }
@@ -29,7 +31,8 @@ struct BrowserFolderSectionSurface: ViewModifier {
                 BrowserFolderHighlightSurface(
                     color: color, intensity: intensity,
                     textColorMode: textColorMode,
-                    showsFill: alwaysVisible || previewShowsHighlight || isHovered || isSelected || isTargeted,
+                    showsFill: isTargeted
+                        || (!isTidyHeader && (alwaysVisible || previewShowsHighlight || isHovered || isSelected)),
                     showsBorders: showsBorders, depth: depth,
                     isSelected: isSelected,
                     emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
