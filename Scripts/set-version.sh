@@ -99,7 +99,10 @@ sed -E \
   "$version_file" > "$updated_file"
 mv "$updated_file" "$version_file"
 
-if ! "$check_script"; then
+# The bump changes only MARKETING_VERSION, so the static check covers it. The
+# resolved build settings are verified by Scripts/bootstrap.sh, which every
+# release build runs after generating the project.
+if ! "$check_script" --static; then
   mv "$backup_file" "$version_file"
   print -u2 "error: version validation failed; restored $current_version."
   exit 1
