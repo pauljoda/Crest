@@ -89,6 +89,11 @@ final class FaviconAssets {
     /// The open tabs of the kept workspace whose images `keeper` last took,
     /// each with the fingerprint of the image it wore then, or none.
     @ObservationIgnored private var kept: [UUID: BrowserFaviconPayloadIdentity?] = [:]
+    /// Whether a tab was placed or removed, or an image changed, since the
+    /// kept images last followed the session. A batch that only retitles or
+    /// navigates tabs leaves them as they were, so following it skips the
+    /// walk over every open tab.
+    @ObservationIgnored private var keptMayDiffer = false
 
     // MARK: - Actions - Reading
 
@@ -123,7 +128,8 @@ final class FaviconAssets {
     /// written, and the images of tabs it no longer holds open go, or with
     /// `pruning` the images of every tab it does not hold open.
     func keepImages(of workspace: WorkspaceModel, pruning: Bool = false) {
-        guard let keeper, keeper.workspaceID == workspace.id else { return }
+        guard let keeper, keeper.workspaceID == workspace.id, pruning || keptMayDiffer else { return }
+        keptMayDiffer = false
         var open: [UUID: BrowserFaviconPayloadIdentity?] = [:]
         for space in workspace.spaces.models {
             for tab in space.tabs.models {
@@ -159,6 +165,7 @@ final class FaviconAssets {
     func place(_ tabIDs: some Sequence<UUID>, in workspaceID: UUID) {
         let offer = offers[workspaceID]
         for tabID in tabIDs {
+            keptMayDiffer = true
             detached.remove(tabID)
             guard slots[tabID]?.data == nil else { continue }
             setImage(offer?.placed[tabID], of: tabID)
@@ -176,7 +183,9 @@ final class FaviconAssets {
 
     /// Tabs a change removed keep their images until the batch ends.
     func detach(_ tabIDs: some Sequence<UUID>) {
+        let count = detached.count
         detached.formUnion(tabIDs)
+        if detached.count != count { keptMayDiffer = true }
     }
 
     /// A copy shows the image its source wears, or the one offered for it.
@@ -192,6 +201,7 @@ final class FaviconAssets {
             (tab.tabID, offered.indices.contains(tab.source) ? offered[tab.source][tab.sourceTabID] : nil)
         }
         for (tabID, image) in images {
+            keptMayDiffer = true
             detached.remove(tabID)
             setImage(image, of: tabID)
         }
@@ -215,11 +225,13 @@ final class FaviconAssets {
     func finishBatch(holding holds: (UUID) -> Bool) {
         for tabID in detached where !holds(tabID) {
             slots.removeValue(forKey: tabID)?.image = nil
+            keptMayDiffer = true
         }
         detached.removeAll()
     }
 
     private func setImage(_ data: Data?, of tabID: UUID) {
+        keptMayDiffer = true
         if let slot = slots[tabID] {
             guard slot.data != data else { return }
             slot.image = data.map(Image.init)
