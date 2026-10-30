@@ -17,17 +17,7 @@ struct BrowserFolderHeader: View {
             configuration: configuration,
             interaction: interaction
         )
-        .accessibilityLabel("\(folder.shownTitle) folder")
-        .accessibilityValue(
-            BrowserChromeAccessibility.folderValue(
-                isExpanded: interaction.isExpanded.wrappedValue
-            )
-        )
-        .accessibilityHint(
-            interaction.isExpanded.wrappedValue
-                ? "Collapses this folder"
-                : "Expands this folder"
-        )
+        .modifier(BrowserFolderHeaderAccessibility(folder: folder, isExpanded: interaction.isExpanded.wrappedValue))
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         // Inside the folder's padding, as a Split View's header is inside its own.
         .padding(.horizontal, BrowserSidebarMetrics.layerInset + BrowserSidebarMetrics.containerPadding)
@@ -62,6 +52,25 @@ struct BrowserFolderHeader: View {
         .overlay {
             BrowserFolderNestDropHighlight(
                 state: sidebarInteraction.sidebarReorderState, target: .folder(folder.id), depth: configuration.depth)
+        }
+    }
+}
+
+/// A folder's header reads as one folder control. A header Tidy made labels
+/// its title and its close control apart instead, so the label here would
+/// cover both.
+private struct BrowserFolderHeaderAccessibility: ViewModifier {
+    let folder: FolderStateModel
+    let isExpanded: Bool
+
+    func body(content: Content) -> some View {
+        if folder.isTidyHeader {
+            content
+        } else {
+            content
+                .accessibilityLabel("\(folder.shownTitle) folder")
+                .accessibilityValue(BrowserChromeAccessibility.folderValue(isExpanded: isExpanded))
+                .accessibilityHint(isExpanded ? "Collapses this folder" : "Expands this folder")
         }
     }
 }

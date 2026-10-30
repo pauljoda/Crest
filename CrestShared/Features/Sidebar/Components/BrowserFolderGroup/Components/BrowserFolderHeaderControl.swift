@@ -42,13 +42,13 @@ struct BrowserFolderHeaderControl: View {
                     Spacer(minLength: 8)
                 }
                 .browserSavedFolderHeaderLayout(configuration: configuration)
+            } else if folder.isTidyHeader {
+                BrowserTidyHeaderRow(
+                    configuration: configuration, isExpanded: interaction.isExpanded.wrappedValue,
+                    toggleExpansion: toggleExpansion)
             } else {
                 Button {
-                    guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
-                    configuration.browser.tabMultiSelection.click(
-                        .folder(folder.id),
-                        units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
-                    interaction.toggleExpansion()
+                    toggleExpansion()
                 } label: {
                     HStack(spacing: 7) {
                         BrowserFolderIcon(
@@ -77,6 +77,66 @@ struct BrowserFolderHeaderControl: View {
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
     }
 
+    private func toggleExpansion() {
+        guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
+        configuration.browser.tabMultiSelection.click(
+            .folder(folder.id),
+            units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
+        interaction.toggleExpansion()
+    }
+}
+
+/// A header Tidy made: its name in small secondary text, with no icon or
+/// count, and a control at its trailing edge that closes the header and its
+/// tabs. Pointer shells reveal the control on hover; touch shells always show it.
+private struct BrowserTidyHeaderRow: View {
+    let configuration: BrowserFolderGroupConfiguration
+    let isExpanded: Bool
+    let toggleExpansion: () -> Void
+    @State private var isHovering = false
+
+    private var folder: FolderStateModel { configuration.folder }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button(action: toggleExpansion) {
+                Text(folder.shownTitle)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(folder.shownTitle) header")
+            .accessibilityValue(BrowserChromeAccessibility.folderValue(isExpanded: isExpanded))
+            .accessibilityHint(isExpanded ? "Collapses this header" : "Expands this header")
+            // The close button shows only on hover with a pointer, so the
+            // header carries its action for VoiceOver and Full Keyboard Access.
+            .accessibilityAction(named: "Close \(folder.shownTitle)", closeHeader)
+
+            Button(action: closeHeader) {
+                BrowserSidebarTabTrailingControlLabel(systemName: "xmark", metrics: closeMetrics)
+            }
+            .modifier(BrowserSidebarTabTrailingControlStyle(metrics: closeMetrics))
+            .foregroundStyle(Color.primary)
+            .opacity(showsCloseButton ? closeMetrics.closeOpacity(isSelected: false) : 0)
+            .disabled(!showsCloseButton)
+            .accessibilityLabel("Close \(folder.shownTitle)")
+            .accessibilityHint("Closes the tabs under this header")
+        }
+        .browserSavedFolderHeaderLayout(configuration: configuration)
+        .onHover { isHovering = $0 }
+    }
+
+    private func closeHeader() {
+        _ = configuration.context.tabActions.closeTidyHeader(folder.id)
+    }
+
+    /// The close control a tab row draws, so the header's matches it.
+    private var closeMetrics: BrowserTabTrailingControlMetrics { configuration.capabilities.trailingControlMetrics }
+
+    private var showsCloseButton: Bool { closeMetrics.isRevealed(isHovering: isHovering, isSelected: false) }
 }
 
 /// The folder's title, in its color where the person asked for it, and bold

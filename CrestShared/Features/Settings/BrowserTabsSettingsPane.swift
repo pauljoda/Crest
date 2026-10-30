@@ -16,6 +16,7 @@ struct BrowserTabsSettingsPane: View {
                 BrowserSplitFocusSettingsSection()
                 BrowserRecentTabsSettingsSection()
             #endif
+            BrowserTabTidyingSettingsSection(preferences: appPreferences)
             if let sidebarWidgets {
                 BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
             }
@@ -47,6 +48,31 @@ struct BrowserNewTabSettingsSection: View {
         } footer: {
             CrestFormFootnote("Hold Shift as you open a link to do the opposite.")
         }
+    }
+}
+
+/// Whether the sidebar offers Tidy, and how it runs on this device. Off by
+/// default. Turning it off deletes its models.
+struct BrowserTabTidyingSettingsSection: View {
+    @Bindable var preferences: BrowserAppPreferenceStore
+
+    var body: some View {
+        Section {
+            Toggle("Offer Tidy for open tabs", isOn: $preferences.offersTabTidying)
+                .accessibilityIdentifier("offer-tab-tidying-toggle")
+        } header: {
+            Text("Tidy")
+        } footer: {
+            Text(footnote).crestFormFootnote()
+        }
+    }
+
+    private var footnote: LocalizedStringResource {
+        let downloads = TidyModelDownloads.shared
+        let method = downloads.method ?? TidyMethod.current
+        if preferences.offersTabTidying, downloads.isDownloading { return method.downloading }
+        if preferences.offersTabTidying, downloads.didFail { return method.downloadFailed }
+        return method.summary
     }
 }
 

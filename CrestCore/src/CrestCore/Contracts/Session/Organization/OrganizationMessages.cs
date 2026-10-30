@@ -29,6 +29,17 @@ public sealed record UnknownFolder(Guid FolderId) : Rejection;
 
 #endregion
 
+#region Rejections - Tidy
+
+/// Tidy only files and names an open tab outside every folder and split, and
+/// each one at most once in the folders it proposes.
+public sealed record TabCannotBeTidied(Guid TabId) : Rejection;
+
+/// A folder Tidy proposes holds fewer than two tabs.
+public sealed record TidyFolderNeedsTwoTabs(string FolderTitle) : Rejection;
+
+#endregion
+
 #region Rejections - Splits
 
 /// The tab is already a member of that split.

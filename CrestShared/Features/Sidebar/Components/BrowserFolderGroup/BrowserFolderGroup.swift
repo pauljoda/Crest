@@ -116,7 +116,7 @@ struct BrowserFolderGroup: View {
                 textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
                 depth: depth,
                 isSelected: BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context),
-                folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)
+                isTidyHeader: folder.isTidyHeader, folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)
         )
         .modifier(BrowserFolderReorderContainer(configuration: configuration))
         .browserSidebarReorderZone(

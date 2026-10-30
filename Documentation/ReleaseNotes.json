@@ -4589,6 +4589,42 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "sidebar-tidy-open-tabs": {
+      "category": "new",
+      "message": "Turn on Tidy in Tabs settings to group your open tabs under a header for each topic in about a second. It runs on Apple Intelligence on your device, and you can close a whole header at once."
+    },
+    "sidebar-tidy-review-fixes": {
+      "category": "internal",
+      "message": "Tidy's header close action works with VoiceOver and Full Keyboard Access, the Tidy button counts only tabs that show a web page, every group keeps a name when the model skips one, and turning Tidy off during its download or keyphrase work leaves no stale state."
+    },
+    "sidebar-tidy-pause-and-rerun-fixes": {
+      "category": "internal",
+      "message": "Tidy keeps its word list and keyphrases while Apple Intelligence is briefly unavailable and can be turned off meanwhile, names each group correctly when the model numbers or formats its answer oddly, keeps long titles and answers within the model's limits, describes a tab again when the model was busy, and files tabs under an existing Tidy header of the same name. Searching the command palette for \"tidy\" no longer offers Clear Unpinned Tabs."
+    },
+    "sidebar-tidy-copies-and-names": {
+      "category": "internal",
+      "message": "Tidy files copies of one page under that page's header, keeps header names short, leaves catch-all groups such as Miscellaneous loose, never describes a private window's tabs in the background, and a Tidy header moved to saved tabs becomes an ordinary folder."
+    },
+    "sidebar-tidy-localizable-strings": {
+      "category": "internal",
+      "message": "Tidy's settings, button, errors and header accessibility text can be translated."
+    },
+    "sidebar-tidy-stops-when-unavailable": {
+      "category": "internal",
+      "message": "Tidy makes no headers when it is turned off or Apple Intelligence becomes unavailable while it is grouping tabs."
+    },
+    "sidebar-tidy-skips-changed-tabs": {
+      "category": "internal",
+      "message": "A tab that navigates or changes its title while Tidy is grouping stays loose instead of landing under a header made for its old page."
+    },
+    "sidebar-tidy-header-closes-like-tabs": {
+      "category": "internal",
+      "message": "Closing a Tidy header closes its tabs the way closing them does, asking first when a page wants to stay open, with the same close button as a tab; test launches no longer touch the installed app's word list, and Tidy's logs never name a tab."
+    },
+    "sidebar-tidy-open-models": {
+      "category": "new",
+      "message": "Tidy now works on Macs, iPhones and iPads without Apple Intelligence, using open models on your device. It shows the headers it found, and you apply them all at once or cancel."
     }
   }
 }

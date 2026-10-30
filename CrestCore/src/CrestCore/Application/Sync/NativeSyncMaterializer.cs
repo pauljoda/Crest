@@ -111,10 +111,11 @@ public static class NativeSyncMaterializer {
     private static List<FolderState> Folders(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local,
         IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
         var colorIds = records.Where(record => record.Kind == SyncRecordKind.Folder && record.SuppliesFolderColor).Select(record => record.Id).ToHashSet();
+        var tidyHeaderIds = (local?.Folders ?? []).Where(folder => folder.IsTidyHeader).Select(folder => folder.Id).ToHashSet();
         var synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
             .OrderBy(folder => folder.OrderToken, StringComparer.Ordinal).ThenBy(folder => folder.Id.ToString("D"), StringComparer.Ordinal)
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
-                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId)).ToArray();
+                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, tidyHeaderIds.Contains(folder.Id))).ToArray();
         IReadOnlyList<FolderState> resolved;
         try { resolved = FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
         var included = resolved.Select(folder => folder.Id).ToHashSet();

@@ -231,6 +231,9 @@
         }
       }
     },
+    "%@ header" : {
+
+    },
     "%@ History" : {
       "localizations" : {
         "ar" : {
@@ -2157,6 +2160,9 @@
     "Applies to every Space on this device. Doesn’t sync." : {
 
     },
+    "Apply" : {
+
+    },
     "Apply Custom Viewport" : {
 
     },
@@ -3330,12 +3336,12 @@
     "Claude Code" : {
 
     },
-    "clean tidy archive unpinned tabs" : {
+    "clean archive unpinned tabs" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تنظيف ترتيب أرشفة علامات التبويب غير المثبتة"
+            "value" : "تنظيف أرشفة علامات التبويب غير المثبتة"
           }
         }
       }
@@ -3672,6 +3678,9 @@
         }
       }
     },
+    "Closes the tabs under this header" : {
+
+    },
     "Cloud records observed" : {
       "localizations" : {
         "ar" : {
@@ -3733,6 +3742,9 @@
           }
         }
       }
+    },
+    "Collapses this header" : {
+
     },
     "Color" : {
       "extractionState" : "stale",
@@ -4085,10 +4097,22 @@
     "Couldn’t Delete Space" : {
 
     },
+    "Couldn't download Tidy's models. Turn Tidy off and on to try again." : {
+
+    },
+    "Couldn't download Tidy's word list. Turn Tidy off and on to try again." : {
+
+    },
     "Couldn’t Open Crest" : {
 
     },
     "Couldn’t open language downloads." : {
+
+    },
+    "Couldn't Tidy" : {
+
+    },
+    "Couldn't Tidy Open Tabs" : {
 
     },
     "Country" : {
@@ -5399,6 +5423,12 @@
     "Downloading" : {
 
     },
+    "Downloading Tidy's models…" : {
+
+    },
+    "Downloading Tidy's word list…" : {
+
+    },
     "Downloading Update" : {
 
     },
@@ -5844,6 +5874,9 @@
           }
         }
       }
+    },
+    "Expands this header" : {
+
     },
     "Experimental" : {
 
@@ -6565,6 +6598,15 @@
           }
         }
       }
+    },
+    "Groups open tabs under headers" : {
+
+    },
+    "Groups open tabs under headers using Apple Intelligence on this device. Turning it on downloads a 30 MB word list. Tab titles and addresses never leave this device." : {
+
+    },
+    "Groups open tabs under headers using open models on this device, and shows the groups before filing them. Turning it on downloads 50 MB of models. Tab titles and addresses never leave this device." : {
+
     },
     "Gules" : {
 
@@ -8927,6 +8969,9 @@
           }
         }
       }
+    },
+    "Offer Tidy for open tabs" : {
+
     },
     "Offer to Translate" : {
 
@@ -14226,6 +14271,12 @@
 
     },
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
+
+    },
+    "Tidy" : {
+
+    },
+    "Tidy Open Tabs" : {
 
     },
     "Time range" : {

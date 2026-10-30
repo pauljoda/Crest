@@ -21,6 +21,12 @@ Crest's emoji picker catalog is generated from the official
 The Unicode data notice is preserved in
 [`ThirdParty/Unicode-LICENSE.txt`](ThirdParty/Unicode-LICENSE.txt).
 
+When the person turns on Tidy, Crest downloads its models, each file at a pinned revision checked by SHA-256. They are not shipped with the app and are deleted when Tidy is turned off.
+
+- With Apple Intelligence, the MIT-licensed [potion-base-8M](https://huggingface.co/minishlab/potion-base-8M) word-vector table by Minish Lab, from Hugging Face.
+
+- Without it, [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) by the sentence-transformers authors, under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), and [smart-tab-topic](https://huggingface.co/Mozilla/smart-tab-topic) by Mozilla, under the [Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/). Crest converts both to Core ML with int8 weights using [`Scripts/tidy-models/convert.py`](Scripts/tidy-models/convert.py) and publishes the converted files, with their licenses, as a release of this repository; their tokenizer files come from Hugging Face. The conversion adapts T5's relative position buckets from [Hugging Face transformers](https://github.com/huggingface/transformers), under the Apache License 2.0.
+
 Beyond these, the apps link only Apple platform frameworks supplied by the macOS
 and iOS SDKs: AuthenticationServices, CloudKit, LocalAuthentication, Security,
 SwiftUI, and WebKit.
