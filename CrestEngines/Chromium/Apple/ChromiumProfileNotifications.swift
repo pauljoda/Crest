@@ -11,6 +11,8 @@
         private struct Posted {
             let generation: UUID
             let notification: ProfileNotificationPosted
+            /// When it was posted; the oldest leaves first at the cap.
+            let order: Int
         }
 
         // MARK: - Variables
@@ -19,6 +21,7 @@
         private let center: any BrowserHostedWebNotificationCentering
         private let pages: NativeEnginePages
         private var posted: [String: Posted] = [:]
+        private var postings = 0
 
         // MARK: - Initializers
 
@@ -33,15 +36,24 @@
 
         func show(_ notification: ProfileNotificationPosted) {
             let identifier = identifier(profileID: notification.profileID, notificationID: notification.notificationID)
-            guard allows(notification), posted[identifier] != nil || posted.count < 256 else {
+            guard allows(notification) else {
                 answer(notification, .declined)
                 return
+            }
+            // Nothing reports a notification the person dismissed in
+            // Notification Center, so at the cap the oldest makes room rather
+            // than every new one being declined until relaunch.
+            if posted[identifier] == nil, posted.count >= 256,
+                let oldest = posted.min(by: { $0.value.order < $1.value.order })
+            {
+                decline(oldest.key, oldest.value.generation)
             }
             let generation = UUID()
             if let previous = posted[identifier] {
                 remove(identifier, previous.generation)
             }
-            posted[identifier] = Posted(generation: generation, notification: notification)
+            postings &+= 1
+            posted[identifier] = Posted(generation: generation, notification: notification, order: postings)
             let delivery = BrowserHostedWebNotificationDelivery(
                 identifier: systemIdentifier(identifier, generation), title: notification.title,
                 body: notification.body, origin: notification.origin, isSilent: notification.silent)
