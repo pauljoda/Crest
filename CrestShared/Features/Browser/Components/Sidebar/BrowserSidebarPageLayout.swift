@@ -13,15 +13,12 @@ struct BrowserSidebarPageLayout<Detail: View, Sidebar: View, Controls: View>: Vi
 
     var body: some View {
         ZStack(alignment: .leading) {
-            HStack(spacing: 0) {
-                BrowserRootSidebarLayoutReservation(
-                    presentation: presentation, width: edge == .leading ? width : 0,
-                    isApproachingDock: isApproachingDock)
-                detail.anchorPreference(key: BrowserRootPageBoundsKey.self, value: .bounds) { $0 }
-                BrowserRootSidebarLayoutReservation(
-                    presentation: presentation, width: edge == .trailing ? width : 0,
-                    isApproachingDock: isApproachingDock)
-            }
+            detail
+                .anchorPreference(key: BrowserRootPageBoundsKey.self, value: .bounds) { $0 }
+                .modifier(
+                    BrowserRootSidebarLayoutReservation(
+                        width: presentation.reservedWidth(for: width, whileApproachingDock: isApproachingDock),
+                        edge: edge))
             sidebar.frame(maxWidth: .infinity, alignment: edge == .leading ? .leading : .trailing)
             controls.frame(maxWidth: .infinity, alignment: edge == .leading ? .leading : .trailing)
         }
