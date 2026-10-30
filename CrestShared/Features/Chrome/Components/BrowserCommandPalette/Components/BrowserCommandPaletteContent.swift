@@ -33,12 +33,12 @@ struct BrowserCommandPaletteContent: View {
         }
         .onKeyPress(.downArrow) {
             guard !model.completionEditing.isComposing else { return .ignored }
-            model.moveSelection(by: 1)
+            model.pressDown()
             return .handled
         }
         .onKeyPress(.upArrow) {
             guard !model.completionEditing.isComposing else { return .ignored }
-            model.moveSelection(by: -1)
+            model.pressUp()
             return .handled
         }
         .browserPaletteExitCommand(

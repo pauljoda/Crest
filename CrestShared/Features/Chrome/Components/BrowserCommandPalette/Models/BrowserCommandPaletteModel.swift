@@ -6,8 +6,9 @@ import SwiftUI
 /// scope a person narrowed it to. The core ranks what the palette offers for each
 /// query, off the main thread; an answer that arrives after a newer keystroke
 /// is dropped, so the latest query always wins, and a key pressed before the
-/// first answer for its text waits for it. The query text, the selection, the
-/// completion editing and the modifier keys held stay here.
+/// first answer for its text waits for it, while a click acts on the row it
+/// landed on. The query text, the selection, the completion editing and the
+/// modifier keys held stay here.
 @MainActor
 @Observable
 final class BrowserCommandPaletteModel {
@@ -248,8 +249,8 @@ final class BrowserCommandPaletteModel {
         }
     }
 
-    /// Shift-Tab moves to the row before.
-    func pressBacktab() { moveSelection(by: -1) }
+    /// Shift-Tab moves to the row before, as Up does.
+    func pressBacktab() { pressUp() }
 
     /// Return runs the selected row, once the answer to what was typed arrived.
     func pressReturn() {
@@ -259,6 +260,11 @@ final class BrowserCommandPaletteModel {
     /// Down moves to the next row, once the answer to what was typed arrived.
     func pressDown() {
         waitForAnswer { [weak self] in self?.moveSelection(by: 1) }
+    }
+
+    /// Up moves to the row before, once the answer to what was typed arrived.
+    func pressUp() {
+        waitForAnswer { [weak self] in self?.moveSelection(by: -1) }
     }
 
     /// Notes the modifier keys the person holds.
@@ -327,33 +333,46 @@ final class BrowserCommandPaletteModel {
         narrowed(keeping: entry.text)
     }
 
+    /// Asks once for the narrowed palette: a changed text asks as it is set,
+    /// the same text asks here.
     private func narrowed(keeping text: String = "") {
         invalidateURLCompletion()
+        let changed = query != text
         query = text
         replaceText?(text)
-        requestAnswer()
+        if !changed { requestAnswer() }
     }
 
     // MARK: - Actions - Selection
 
+    /// Moves the selection by `offset` rows, on the rows shown: the keys that
+    /// call it waited for the answer to what was typed, or chose the rows
+    /// already shown.
     func moveSelection(by offset: Int) {
         rejectURLCompletion()
-        guard shownSequence == sequence, !items.isEmpty else { return }
+        guard !items.isEmpty else { return }
         selectedResultIndex = (selectedResultIndex + offset + items.count) % items.count
         keyboardSelectionRevision &+= 1
     }
 
-    /// Moves to the first row of the next or previous section.
+    /// Moves to the first row of the next or previous section, once the answer
+    /// to what was typed arrived.
     func moveSection(by offset: Int) {
-        rejectURLCompletion()
-        guard shownSequence == sequence, !groups.isEmpty,
-            let current = groups.firstIndex(where: { $0.items.contains { $0.index == selectedResultIndex } }),
-            let first = groups[(current + offset + groups.count) % groups.count].items.first
-        else { return }
-        selectedResultIndex = first.index
-        keyboardSelectionRevision &+= 1
+        waitForAnswer { [weak self] in
+            guard let self else { return }
+            rejectURLCompletion()
+            guard !groups.isEmpty,
+                let current = groups.firstIndex(where: { $0.items.contains { $0.index == selectedResultIndex } }),
+                let first = groups[(current + offset + groups.count) % groups.count].items.first
+            else { return }
+            selectedResultIndex = first.index
+            keyboardSelectionRevision &+= 1
+        }
     }
 
+    /// Selects the row the pointer is over. A hover while an answer is pending
+    /// is dropped: the answer may reflow the rows under the pointer, and the
+    /// pointer's next move selects again.
     func selectResult(at index: Int) {
         rejectURLCompletion()
         guard shownSequence == sequence, items.indices.contains(index) else { return }
@@ -384,9 +403,10 @@ final class BrowserCommandPaletteModel {
 
     /// Runs `row` as its kind's activation does. One that closes the palette
     /// has it remember the pick for what was typed and close; one that
-    /// narrows it, to a provider or a scope, leaves it open.
+    /// narrows it, to a provider or a scope, leaves it open. A row is run as
+    /// shown, so a click lands on the row the person saw even while a newer
+    /// answer is pending; Return waits for that answer before it comes here.
     func activate(_ row: PaletteRow) {
-        guard shownSequence == sequence else { return }
         let activation = row.kind.activation
         let typed = query
         guard BrowserCommandPaletteActivation.of(activation)?.run(row, self) == true, activation.closesPalette else {
@@ -489,7 +509,8 @@ final class BrowserCommandPaletteModel {
 
     /// Asks the core for the current query's answer off the main thread, then
     /// for the search suggestions the answer allows, and shows each only while
-    /// no later keystroke has asked again.
+    /// no later keystroke has asked again. An answer the core refuses leaves
+    /// the rows as they are and lets the keys act on them, as a long wait does.
     private func requestAnswer() {
         sequence &+= 1
         let asked = sequence
@@ -497,9 +518,13 @@ final class BrowserCommandPaletteModel {
         let core = browser.core
         answerTask?.cancel()
         answerTask = Task { [weak self] in
-            guard let answer = await Self.answer(question, from: core), !Task.isCancelled, let self,
-                asked == sequence
-            else { return }
+            let answer = await Self.answer(question, from: core)
+            guard !Task.isCancelled, let self, asked == sequence else { return }
+            guard let answer else {
+                shownSequence = asked
+                runWaitingKey()
+                return
+            }
             show(answer, for: asked)
             guard let address = answer.suggestionAddress.flatMap(URL.init(string:)) else { return }
             do {

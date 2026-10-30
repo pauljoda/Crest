@@ -270,7 +270,7 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveUp(_:)):
-                model.moveSelection(by: -1)
+                model.pressUp()
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveToEndOfParagraph(_:)):
