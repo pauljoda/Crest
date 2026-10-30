@@ -307,14 +307,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         _ urls: [URL],
         in assignment: BrowserSpaceRuntimeAssignment
     ) {
-        var selected: URL?
+        var opened = false
         for url in urls where ExternalLocalDocument.accepts(url) {
             guard browser.openNewTab(url: url, matching: assignment) != nil else { continue }
-            selected = url
+            opened = true
         }
-        guard let selected else { return }
+        guard opened else { return }
         pages.select()
-        pages.load(selected)
         chrome.dismissCommandPalette()
     }
 
