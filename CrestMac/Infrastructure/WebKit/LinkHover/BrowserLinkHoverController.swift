@@ -50,6 +50,9 @@ final class BrowserLinkHoverController {
         ) { [weak self] event in
             MainActor.assumeIsolated {
                 guard let self else { return }
+                // Every attached page hears every move in the app; one with no
+                // preview pending or shown has nothing to hit test for.
+                if event.type == .mouseMoved, self.work == nil, self.destination == nil { return }
                 if event.type != .mouseMoved || !self.canPresent {
                     self.invalidate()
                 }
