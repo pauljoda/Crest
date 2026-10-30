@@ -22,7 +22,11 @@ Crest name and visual identity remain governed by [TRADEMARKS.md](TRADEMARKS.md)
 - Reproducible work is tracked in
   [GitHub Issues](https://github.com/pauljoda/Crest/issues).
 - Planned release outcomes are summarized in the public GitHub Project and
-  milestones.
+  milestones. Only the maintainer adds items to them; an issue or pull request
+  is not a commitment.
+- Pull requests are reviewed and merged only from vetted contributors, and
+  the maintainer reviews every one before it merges. See
+  [Who can contribute code](CONTRIBUTING.md#who-can-contribute-code).
 - Architecture decisions preserve Space isolation, live page identity,
   native Apple-platform behavior, security boundaries, and sustainable
   maintenance.
@@ -34,6 +38,9 @@ correctness, user impact, platform viability, and available maintenance time
 drive planning.
 
 ## Becoming a maintainer
+
+Contributing code starts with becoming a vetted contributor. Vetting is at the
+maintainer's discretion and can be revoked at any time.
 
 Maintainer access is earned through sustained, trustworthy participation:
 high-quality contributions, useful review, respectful community work, and

@@ -15,6 +15,10 @@ and the pull request template asks the author to confirm that it did.
 `CONTRIBUTING.md` and `Documentation/RepositoryGuardrails.md` remain the base
 contract for setup, validation and change discipline.
 
+Pull requests are reviewed only from vetted contributors (see "Who can
+contribute code" in `CONTRIBUTING.md`). Don't open one for someone who isn't
+vetted: it is closed automatically.
+
 ## Versioning completed work
 
 - Every committed app-code change advances `MARKETING_VERSION` with

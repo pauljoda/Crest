@@ -19,6 +19,9 @@ remain the base contract.
    and verifies this skill is linked for Claude Code.
 3. Work from the issue or the maintainer's description. Keep the pull request
    to that one outcome.
+4. Pull requests are reviewed only from vetted contributors (see "Who can
+   contribute code" in `CONTRIBUTING.md`). Don't open one for someone who
+   isn't vetted: it is closed automatically.
 
 ## Code style
 

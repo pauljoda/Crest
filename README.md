@@ -195,7 +195,8 @@ reproducible bugs and concrete tracked outcomes. Security concerns belong in a
 never a public post. [SUPPORT.md](SUPPORT.md) explains each route in detail.
 
 Crest is one of several open source projects built by Paul Davis. You can
-support the work through [Ko-fi](https://ko-fi.com/pauljoda/tiers) or
+support the work through [Ko-fi](https://ko-fi.com/pauljoda/tiers),
+[Patreon](https://www.patreon.com/CrestBrowser) or
 [GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not
 buy roadmap priority or private access.
 
@@ -209,10 +210,12 @@ Paul's open source projects. Sponsors can be recognized in the public
 - **Sustainer — $10/month:** higher placement with an optional approved link.
 - **Supporter — $3/month:** name in the public roll.
 
-Recognition is optional. A listing is a thank-you, not an endorsement or a way
-to buy roadmap priority, private support, or project ownership. See the
-[membership tiers on Ko-fi](https://ko-fi.com/pauljoda/tiers) to become a
-monthly sponsor.
+Every level can also have a sponsor flair on
+[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Recognition is
+optional. A listing is a thank-you, not an endorsement or a way to buy roadmap
+priority, private support, or project ownership. See the membership tiers on
+[Ko-fi](https://ko-fi.com/pauljoda/tiers) or
+[Patreon](https://www.patreon.com/CrestBrowser) to become a monthly sponsor.
 
 ## AI usage
 
@@ -247,10 +250,13 @@ there are some areas that desperately need help.
 - **Security:** I have some background in cyber security, mainly red team/blue team and some as a dev, so I welcome any and all security audits and improvements. Please report findings through the built-in security reporting.
 - **Engine guru:** if you have lots of experience with Chromium and browser engines in general, I would love any input or help.
 
-While those are the larger needed roles, anyone is free to contribute. Please
-follow the guidelines and make sure your work is well done and aligns with the
-product. If you have a more drastic change, you can always fork it to try it
-out, then share it to see whether it would be a good fit to merge in.
+Pull requests are reviewed and merged only from vetted contributors. If you
+would like to become one, read
+[Who can contribute code](CONTRIBUTING.md#who-can-contribute-code) and message
+me on [Discord](https://discord.gg/gjrM5qMB6x). Please follow the guidelines and make sure your
+work is well done and aligns with the product. If you have a more drastic
+change, you can always fork it to try it out, then share it to see whether it
+would be a good fit to merge in.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline,
 [GOVERNANCE.md](GOVERNANCE.md) for project ownership, and the

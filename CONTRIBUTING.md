@@ -4,6 +4,25 @@ Crest is licensed under the Mozilla Public License 2.0. Contributions are
 accepted under the same license. The Crest name and visual identity remain
 covered by [`TRADEMARKS.md`](TRADEMARKS.md).
 
+## Who can contribute code
+
+Pull requests are reviewed and merged only from vetted contributors. To become
+one, message Paul on [Discord](https://discord.gg/gjrM5qMB6x) so you can talk it through first.
+The basic requirements:
+
+- You are a developer with some background building software.
+- You understand C# and SwiftUI.
+- You may use AI tools, but not to cover for experience you don't have. You
+  must be able to explain every line you submit.
+
+Approval is at the maintainer's discretion and can be revoked at any time.
+Every pull request, including one from a vetted contributor, is still
+reviewed by the maintainer before it merges. Pull requests from anyone else
+are closed automatically with a link to this section.
+
+Everyone is welcome to report bugs in GitHub Issues and to discuss ideas on
+r/CrestBrowser and Discord.
+
 ## Local setup
 
 1. Install Xcode with SDKs supporting the macOS 26.1 and iOS 26.1 deployment targets.
@@ -58,7 +77,9 @@ ideas, user questions, and compatibility experiences before they become
 actionable engineering work. Use GitHub Issues for reproducible bugs and
 concrete outcomes. The public
 [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
-release milestones summarize planned work. [The roadmap](Documentation/ROADMAP.md)
+release milestones summarize planned work. Only the maintainer adds items to
+them: opening an issue or a pull request doesn't put it on the roadmap or
+commit to building it. [The roadmap](Documentation/ROADMAP.md)
 is generated from public GitHub issues with `Scripts/render-roadmap.py --write`.
 The renderer updates only its marked section, preserving the platform notes.
 

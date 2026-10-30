@@ -1,0 +1,57 @@
+name: Vetted contributors
+
+# Pull requests are reviewed only from vetted contributors. The maintainer
+# keeps their GitHub logins, separated by spaces or commas, in the
+# VETTED_CONTRIBUTORS repository variable. This workflow never checks out the
+# pull request's code: it reads the event and closes the pull request.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vetted-contributors-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  vetted:
+    name: Vetted contributor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Close a pull request from an author who isn't vetted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          SENDER: ${{ github.event.sender.login }}
+          OWNER: ${{ github.repository_owner }}
+          VETTED: ${{ vars.VETTED_CONTRIBUTORS }}
+          PULL_REQUEST: ${{ github.event.pull_request.html_url }}
+          POLICY: ${{ github.server_url }}/${{ github.repository }}/blob/main/CONTRIBUTING.md#who-can-contribute-code
+        run: |
+          set -euo pipefail
+          author=$(printf '%s' "$AUTHOR" | tr '[:upper:]' '[:lower:]')
+          owner=$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')
+          sender=$(printf '%s' "$SENDER" | tr '[:upper:]' '[:lower:]')
+
+          # The owner, bots, and pull requests the owner reopened stay open.
+          if [ "$author" = "$owner" ] || [ "$AUTHOR_TYPE" = "Bot" ] || [ "$sender" = "$owner" ]; then
+            exit 0
+          fi
+          for login in $(printf '%s' "$VETTED" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'); do
+            if [ "$login" = "$author" ]; then
+              exit 0
+            fi
+          done
+
+          body=$(printf '%s\n\n%s\n\n%s' \
+            "Thanks for the pull request. Crest reviews and merges pull requests only from vetted contributors, so this one is closed." \
+            "To become a vetted contributor, read [Who can contribute code]($POLICY) and message Paul on Discord: https://discord.gg/gjrM5qMB6x" \
+            "Bug reports are still welcome in Issues, and ideas on r/CrestBrowser.")
+          gh pr close "$PULL_REQUEST" --comment "$body"

@@ -1,3 +1,5 @@
+<!-- Pull requests are reviewed only from vetted contributors. Read "Who can contribute code" in CONTRIBUTING.md before opening one. -->
+
 ## What changed
 
 <!-- Describe the user-visible or architectural outcome. -->
