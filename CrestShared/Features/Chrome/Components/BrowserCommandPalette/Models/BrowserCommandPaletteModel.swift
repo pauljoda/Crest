@@ -116,11 +116,12 @@ final class BrowserCommandPaletteModel {
         return offeredScope
     }
 
+    /// The completion the field shows: the core's for what is typed, or,
+    /// until its answer arrives, the last one shown while the keystrokes
+    /// since then still type into it.
     var urlCompletion: AddressCompletion? {
-        guard isUnscoped, isCompletionSourceAvailable, completionEditing.canPropose(for: query),
-            completionProposal?.typed == query
-        else { return nil }
-        return completionProposal
+        guard isUnscoped, isCompletionSourceAvailable, completionEditing.canPropose(for: query) else { return nil }
+        return completionProposal?.continued(to: query)
     }
 
     var isCompletionSourceAvailable: Bool {
