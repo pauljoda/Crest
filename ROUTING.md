@@ -78,7 +78,7 @@ column.
 | Task | Go to | Load | Skip |
 | --- | --- | --- | --- |
 | Chromium engine inputs (patches, overlay, host header, prepare/apply/configure/build scripts) | `CrestEngines/Chromium/CONTEXT.md` | `CrestEngines/Chromium/README.md` ("Releasing"), `CrestEngines/Chromium/ForkMaintenance.md` | CrestMobile, `HelpCenter/` |
-| The Chromium C++ binding or the Crest BrowserWindow (an engine input) | `CrestEngines/Chromium/Overlay/CONTEXT.md` | `CrestEngines/Chromium/README.md` ("Native Crest host overlay", "Releasing"), `Documentation/Architecture/CoreArchitecture.md` ("Engines") | CrestMobile, `CrestEngines/Chromium/Apple/EnginePresentations/` |
+| The Chromium C++ binding or the Crest BrowserWindow (an engine input) | `CrestEngines/Chromium/CONTEXT.md` ("Overlay") | `CrestEngines/Chromium/README.md` ("Native Crest host overlay", "Releasing"), `Documentation/Architecture/CoreArchitecture.md` ("Engines") | CrestMobile, `CrestEngines/Chromium/Apple/EnginePresentations/` |
 | How a Chromium engine event or extension UI appears in Swift | `CrestEngines/Chromium/Apple/CONTEXT.md` | `CrestEngines/Chromium/Apple/EnginePresentations/`, `CrestEngines/Chromium/Apple/Extensions/` | `CrestEngines/Chromium/Overlay/`, `Patches/` |
 
 ## Tests, tooling, docs and release
