@@ -37,6 +37,9 @@ final class CoreState {
     /// page opens or goes, so a page's new title redraws only its readers.
     var pages: [UUID: PageStateModel] { observed(\.pagesStorage, as: \.pages) }
     @ObservationIgnored var pagesStorage: [UUID: PageStateModel] = [:]
+    /// The pages of each tab, by tab, kept beside `pages` so finding a tab's
+    /// page reads only that tab's pages rather than every page.
+    @ObservationIgnored var pageIDsByTab: [UUID: Set<UUID>] = [:]
     /// The engines this device registered, with what each supports and which
     /// one new pages open on, as the core last published them. Nil until an
     /// engine registers.

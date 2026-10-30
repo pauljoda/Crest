@@ -6,7 +6,15 @@ extension PageChanged {
     /// change to it, so a change for a page the state does not hold is about
     /// one already removed and changes nothing.
     @MainActor func apply(to state: CoreState) {
-        state.pages[self.page.id]?.update(self.page)
+        guard let model = state.pages[self.page.id] else { return }
+        let oldTabID = model.tabID
+        model.update(self.page)
+        // A page that moves to another tab moves in the index, and every
+        // reader looks again, as a scan of every page's tab would have.
+        if oldTabID != self.page.tabID {
+            state.indexPage(self.page.id, from: oldTabID, to: self.page.tabID)
+            state.withMutation(keyPath: \.pages) {}
+        }
     }
 
     @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {

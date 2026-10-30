@@ -56,7 +56,7 @@ extension TabStateModel {
     /// tab. Reading it observes the page's live state.
     func shownTitle(in state: CoreState?) -> String {
         guard nativeView == nil, BrowserShownTitle.resolve(customTitle) == nil,
-            let page = state?.pages.values.first(where: { $0.tabID == id && $0.phase.holdsEnginePage }),
+            let page = state?.enginePage(ofTab: id),
             page.live.failure != nil, let failed = page.live.displayURL, let host = failed.host(), !host.isEmpty
         else { return shownTitle }
         return BrowserAddressPresentation(failed.absoluteString).domain
