@@ -145,6 +145,10 @@ final class SpacePickerPresentationView: UIView {
         let inset = group?.selectionInset ?? 0
         let frame = interpolation.frame(from: start, to: end).insetBy(dx: inset, dy: inset)
         let color = tint ?? UIColor(white: SpaceForegroundPresentation.white(at: position, tones: tones), alpha: 1)
+        // The outline wears its primary's tone whichever member is selected.
+        let primaryTones = tones.indices.map { tones[outline.primary(of: $0)] }
+        let outlineColor =
+            tint ?? UIColor(white: SpaceForegroundPresentation.white(at: position, tones: primaryTones), alpha: 1)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         highlight.frame = frame
@@ -162,8 +166,8 @@ final class SpacePickerPresentationView: UIView {
             groupOutline.opacity = Float(group.opacity)
             groupOutline.cornerRadius = CrestSpaceIconPickerShape(style: style).cornerRadius(in: group.rect)
             groupOutline.cornerCurve = CrestSpaceIconPickerShape.layerCornerCurve
-            groupOutline.backgroundColor = color.withAlphaComponent(0.11).cgColor
-            groupOutline.borderColor = color.cgColor
+            groupOutline.backgroundColor = outlineColor.withAlphaComponent(0.11).cgColor
+            groupOutline.borderColor = outlineColor.cgColor
             groupOutline.borderWidth = CrestSpaceIconPickerMetrics.groupOutlineStroke
         }
         CATransaction.commit()

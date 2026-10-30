@@ -69,5 +69,10 @@ struct SpacePickerGroupOutline: Equatable {
         return members.dropFirst().reduce(first) { $0.union($1) }
     }
 
+    /// The index of the primary of the Space at `index`'s group, the Space
+    /// that leads it, whose colour the outline wears whichever member is
+    /// selected.
+    func primary(of index: Int) -> Int { groupOf[index].lowerBound }
+
     private func isGrouped(_ index: Int) -> Bool { groupOf[index].count > 1 }
 }
