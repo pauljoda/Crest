@@ -32,10 +32,13 @@ jobs:
           # commit is already on main, but checkout refuses it under
           # pull_request_target unless the step opts in.
           allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
+          fetch-depth: 2
 
       - name: Check the publishable source and dependency licenses
         run: |
-          git diff --check
+          # The checkout is GitHub's merge commit on a pull request and the
+          # pushed or released commit otherwise; its first parent is the base.
+          git diff --check HEAD^1 HEAD
           Scripts/check-public-source.py
           python3 Scripts/release_note_catalog.py
           Scripts/audit-licenses.py

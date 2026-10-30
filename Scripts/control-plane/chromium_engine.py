@@ -35,7 +35,9 @@ def engine_key(repo: Path) -> str:
     digest = hashlib.sha256()
     for name in INPUTS:
         path = repo / name
-        files = sorted(p for p in path.rglob("*") if p.is_file()) if path.is_dir() else [path]
+        # A stray `.DS_Store` or editor swap file in a maintainer's checkout
+        # must not change the key a fresh clone computes.
+        files = sorted(p for p in path.rglob("*") if p.is_file() and not p.name.startswith(".")) if path.is_dir() else [path]
         if not files or not all(p.is_file() for p in files):
             raise SystemExit(f"Missing engine input: {name}")
         for file in files:

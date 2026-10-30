@@ -39,6 +39,10 @@ jobs:
     name: Resolve publication
     if: github.event_name != 'pull_request_target' || github.event.pull_request.merged
     runs-on: ubuntu-latest
+    # This job only reads releases and the updates branch; the write grants
+    # above stay with the jobs that publish.
+    permissions:
+      contents: read
     outputs:
       asset_base: ${{ steps.release.outputs.asset_base }}
       build_number: ${{ steps.release.outputs.build_number }}
