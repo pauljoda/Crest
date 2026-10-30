@@ -52,6 +52,37 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(StartupBehavior.LastActiveTab, relaunched.Query(LaunchPlan(relaunched.Workspace)).Startup);
     }
 
+    /// The link menu's arrangement persists on this device, naming every row
+    /// once: a repeated row keeps its first place, a row it never named, such
+    /// as one a later release adds, joins at the end and shows, and a row this
+    /// build cannot name is left out.
+    [Fact]
+    public void LinkMenuArrangementPersistsWithEveryRowOnce() {
+        byte[] saved;
+        using (var device = new TestDevice(SavedSession().Document["session"]!)) {
+            device.Send(new SetAppPreferences(device.Workspace, AppPreferences.Default with {
+                LinkMenu = new([new(LinkMenuRow.Peek, IsShown: true), new(LinkMenuRow.SplitView, IsShown: false),
+                    new(LinkMenuRow.Peek, IsShown: false)])
+            }));
+            saved = device.Authority.Checkpoint().Read("core");
+        }
+        using (var relaunched = new TestDevice(JsonNode.Parse(saved)!)) {
+            LinkMenuChoice[] expected = [new(LinkMenuRow.Peek, true), new(LinkMenuRow.SplitView, false),
+                new(LinkMenuRow.NewTab, true), new(LinkMenuRow.OtherSpaces, true), new(LinkMenuRow.Search, true)];
+            Assert.Equal(expected, relaunched.Authority.Current.AppPreferences!.LinkMenu.Rows);
+        }
+
+        var stored = JsonNode.Parse(saved)!;
+        stored["appPreferences"]!["linkMenu"] = new JsonObject {
+            ["rows"] = new JsonArray(new JsonObject { ["row"] = "future", ["isShown"] = false },
+                new JsonObject { ["row"] = "search", ["isShown"] = false })
+        };
+        using var later = new TestDevice(stored);
+        var rows = later.Authority.Current.AppPreferences!.LinkMenu.Rows;
+        Assert.Equal(new LinkMenuChoice(LinkMenuRow.Search, false), rows[0]);
+        Assert.Equal(LinkMenuRow.All.Count, rows.Count);
+    }
+
     [Fact]
     public void CloudReplacementNeverCarriesOrReplacesAppPreferences() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();

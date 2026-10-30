@@ -89,6 +89,12 @@ final class BrowserAppPreferenceStore {
         set { set { $0.palette = newValue } }
     }
 
+    /// Which of Crest's rows a page's context menu shows, and in what order.
+    var linkMenu: LinkMenuPreferences {
+        get { preferences.linkMenu }
+        set { set { $0.linkMenu = newValue } }
+    }
+
     // MARK: - Initializers
 
     init(preferences: AppPreferences = .default) {

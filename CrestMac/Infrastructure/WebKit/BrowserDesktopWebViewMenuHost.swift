@@ -7,8 +7,6 @@ import Foundation
 /// right-click is still being handled, so every answer here is synchronous.
 @MainActor
 protocol BrowserDesktopWebViewMenuHost: BrowserPageContextMenuHost {
-    var opensLinksInCurrentSpace: Bool { get }
-
     /// The content the right-click that is opening this menu landed on.
     ///
     /// Consumes the capture: nil means no fresh page report arrived, and

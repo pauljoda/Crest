@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x2e, 0xd4, 0xbb, 0xcf, 0xf3, 0x7d, 0xf6, 0x2f, 0x29, 0x89, 0x33, 0xd5, 0x21, 0x69, 0x58, 0xb8, 0x9d, 0x7f, 0x2a, 0x12, 0x80, 0x3b, 0x72, 0x87, 0x99, 0x66, 0x36, 0xdf, 0x66, 0xed, 0x13, 0x70
+        0x14, 0xd4, 0x9b, 0x0f, 0x48, 0x2e, 0x8d, 0xc2, 0x08, 0x30, 0xd1, 0xa0, 0xb0, 0xe0, 0x73, 0x26, 0x57, 0xd0, 0xad, 0xa5, 0xb0, 0x75, 0x63, 0x8a, 0xef, 0xcf, 0x3e, 0x96, 0x05, 0xe3, 0x91, 0xc1
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -4356,7 +4356,8 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
-            ReadPalettePreferences(reader));
+            ReadPalettePreferences(reader),
+            ReadLinkMenuPreferences(reader));
     }
 
     public static void WriteAppPreferences(WireWriter writer, AppPreferences value) {
@@ -4377,6 +4378,7 @@ public static class ContractCodec {
         writer.WriteBool(value.AutomaticallyShowsDeveloperToolbar);
         writer.WriteBool(value.ShowsRecentTabs);
         WritePalettePreferences(writer, value.Palette);
+        WriteLinkMenuPreferences(writer, value.LinkMenu);
     }
 
     public static AppPreferencesChanged ReadAppPreferencesChanged(WireReader reader) {
@@ -10675,6 +10677,35 @@ public static class ContractCodec {
         writer.WriteBool(value.TopLevel);
         WriteShortcutModifiers(writer, value.Modifiers);
         writer.WriteBool(value.MiddleClick);
+    }
+
+    public static LinkMenuChoice ReadLinkMenuChoice(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LinkMenuChoice(
+            ReadLinkMenuRow(reader),
+            reader.ReadBool());
+    }
+
+    public static void WriteLinkMenuChoice(WireWriter writer, LinkMenuChoice value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteLinkMenuRow(writer, value.Row);
+        writer.WriteBool(value.IsShown);
+    }
+
+    public static LinkMenuPreferences ReadLinkMenuPreferences(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LinkMenuPreferences(
+            reader.ReadList(() => ReadLinkMenuChoice(reader)));
+    }
+
+    public static void WriteLinkMenuPreferences(WireWriter writer, LinkMenuPreferences value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Rows.Count);
+        foreach (var itemRows in value.Rows) {
+            WriteLinkMenuChoice(writer, itemRows);
+        }
     }
 
     public static LinkNavigation ReadLinkNavigation(WireReader reader) {
@@ -20028,6 +20059,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(LinkBehavior.All, value));
+    }
+
+    public static LinkMenuRow ReadLinkMenuRow(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return LinkMenuRow.All[reader.ReadEnum(LinkMenuRow.All.Count)];
+    }
+
+    public static void WriteLinkMenuRow(WireWriter writer, LinkMenuRow value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(LinkMenuRow.All, value));
     }
 
     public static LinkNavigationDecision ReadLinkNavigationDecision(WireReader reader) {

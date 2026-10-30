@@ -66,8 +66,8 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         symbol: "cpu", tincture: .riverLapis)
     static let links = BrowserSettingsDestination(
         kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",
-        searchTerms: "external apps Quick Window Peek pinned saved routing open", symbol: "link",
-        tincture: .meadowVert)
+        searchTerms: "external apps Quick Window Peek pinned saved routing open context menu right-click",
+        symbol: "link", tincture: .meadowVert)
     static let shortcuts = BrowserSettingsDestination(
         kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
         searchTerms: "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page", symbol: "keyboard",

@@ -3919,6 +3919,9 @@
     "content blocking ads trackers camera microphone site access history cookies data website cache clear browsing" : {
 
     },
+    "Context Menu" : {
+
+    },
     "Continue" : {
 
     },
@@ -5972,7 +5975,7 @@
     "External Apps" : {
 
     },
-    "external apps Quick Window Peek pinned saved routing open" : {
+    "external apps Quick Window Peek pinned saved routing open context menu right-click" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9150,6 +9153,9 @@
         }
       }
     },
+    "Open Link in New Tab" : {
+
+    },
     "Open Link in Peek" : {
 
     },
@@ -11005,6 +11011,9 @@
     "Reset Icon" : {
 
     },
+    "Reset Menu" : {
+
+    },
     "Reset Order" : {
 
     },
@@ -11815,6 +11824,9 @@
 
     },
     "Search with %@" : {
+
+    },
+    "Search with Selection" : {
 
     },
     "Searching" : {

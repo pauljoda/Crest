@@ -131,12 +131,12 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
             TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar,
             TolerantFlag(value[Key.ShowsRecentTabs]) ?? defaults.ShowsRecentTabs,
-            DecodePalettePreferences(value[Key.Palette]));
+            DecodePalettePreferences(value[Key.Palette]), DecodeLinkMenuPreferences(value[Key.LinkMenu]));
     }
 
-    /// The app-wide preferences. The palette's are written only once they
-    /// differ from the defaults, so a release that never stored them reads
-    /// its own document back unchanged.
+    /// The app-wide preferences. The palette's and the link menu's are written
+    /// only once they differ from the defaults, so a release that never stored
+    /// them reads its own document back unchanged.
     internal static JsonObject Encode(AppPreferences preferences) {
         var value = new JsonObject {
             [Key.StartupBehavior] = preferences.Startup.Name,
@@ -152,6 +152,7 @@ internal static partial class StoredSessionCodec {
             [Key.ShowsRecentTabs] = preferences.ShowsRecentTabs
         };
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
+        if (!preferences.LinkMenu.Equals(LinkMenuPreferences.Default)) value[Key.LinkMenu] = Encode(preferences.LinkMenu);
         return value;
     }
 
@@ -194,6 +195,25 @@ internal static partial class StoredSessionCodec {
         [Key.SearchesSitesWithTab] = preferences.SearchesSitesWithTab,
         [Key.ProviderSpaceTrigger] = preferences.ProviderSpaceTrigger.Name,
         [Key.ShowsReasons] = preferences.ShowsReasons
+    };
+
+    /// The link menu preferences. A row this build cannot name is left out, a
+    /// row whose choice it cannot read shows, and a row never named joins at
+    /// the end.
+    internal static LinkMenuPreferences DecodeLinkMenuPreferences(JsonNode? node) {
+        var value = node as JsonObject ?? [];
+        List<LinkMenuChoice> rows = [];
+        foreach (var item in (value[Key.Rows] as JsonArray ?? []).OfType<JsonObject>())
+            if (LinkMenuRow.Named(TolerantText(item[Key.Row])) is { } row)
+                rows.Add(new(row, TolerantFlag(item[Key.IsShown]) ?? true));
+        return new LinkMenuPreferences(rows).Restored();
+    }
+
+    /// The link menu preferences in their stored form: each row's name and
+    /// whether it shows, in the menu's order.
+    internal static JsonObject Encode(LinkMenuPreferences preferences) => new() {
+        [Key.Rows] = new JsonArray([.. preferences.Rows.Select(choice =>
+            (JsonNode)new JsonObject { [Key.Row] = choice.Row.Name, [Key.IsShown] = choice.IsShown })])
     };
 
     /// The values the native settings stored before the core owned them, each

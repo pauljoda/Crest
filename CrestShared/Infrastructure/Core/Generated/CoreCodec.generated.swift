@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x2e, 0xd4, 0xbb, 0xcf, 0xf3, 0x7d, 0xf6, 0x2f, 0x29, 0x89, 0x33, 0xd5, 0x21, 0x69, 0x58, 0xb8, 0x9d, 0x7f, 0x2a, 0x12, 0x80, 0x3b, 0x72, 0x87, 0x99, 0x66, 0x36, 0xdf, 0x66, 0xed, 0x13, 0x70
+        0x14, 0xd4, 0x9b, 0x0f, 0x48, 0x2e, 0x8d, 0xc2, 0x08, 0x30, 0xd1, 0xa0, 0xb0, 0xe0, 0x73, 0x26, 0x57, 0xd0, 0xad, 0xa5, 0xb0, 0x75, 0x63, 0x8a, 0xef, 0xcf, 0x3e, 0x96, 0x05, 0xe3, 0x91, 0xc1
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -2825,7 +2825,8 @@ extension AppPreferences {
         let automaticallyShowsDeveloperToolbar = try reader.readBool()
         let showsRecentTabs = try reader.readBool()
         let palette = try PalettePreferences(from: &reader)
-        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, palette: palette)
+        let linkMenu = try LinkMenuPreferences(from: &reader)
+        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, palette: palette, linkMenu: linkMenu)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -2844,6 +2845,7 @@ extension AppPreferences {
         writer.writeBool(automaticallyShowsDeveloperToolbar)
         writer.writeBool(showsRecentTabs)
         palette.encode(into: &writer)
+        linkMenu.encode(into: &writer)
     }
 }
 
@@ -11979,6 +11981,39 @@ extension LinkHovered {
             writer.writeString(present0)
         } else {
             writer.writePresence(false)
+        }
+    }
+}
+
+extension LinkMenuChoice {
+    init(from reader: inout WireReader) throws(WireError) {
+        let row = try LinkMenuRow(from: &reader)
+        let isShown = try reader.readBool()
+        self.init(row: row, isShown: isShown)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        row.encode(into: &writer)
+        writer.writeBool(isShown)
+    }
+}
+
+extension LinkMenuPreferences {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rowsCount = try reader.readCount()
+        var rows: [LinkMenuChoice] = []
+        rows.reserveCapacity(rowsCount)
+        for _ in 0..<rowsCount {
+            let rowsElement = try LinkMenuChoice(from: &reader)
+            rows.append(rowsElement)
+        }
+        self.init(rows: rows)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(rows.count)
+        for element0 in rows {
+            element0.encode(into: &writer)
         }
     }
 }
@@ -26141,6 +26176,20 @@ extension LinkBehavior {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown LinkBehavior \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension LinkMenuRow {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown LinkMenuRow \(tag)")
         }
         self = Self.all[tag]
     }

@@ -778,7 +778,7 @@
  #import "components/remote_cocoa/app_shim/menu_controller_cocoa_delegate_impl.h"
  #include "content/public/browser/web_contents.h"
  #include "ui/base/cocoa/menu_utils.h"
-@@ -78,16 +80,53 @@
+@@ -78,16 +80,58 @@
    views::Widget* widget = views::Widget::GetTopLevelWidgetForNativeView(
        source_web_contents_->GetNativeView());
  
@@ -790,13 +790,18 @@
 -  menu_controller_delegate_ = [[MenuControllerCocoaDelegateImpl alloc]
 -      initWithParams:MenuControllerParamsForWidget(widget)];
 +  if (crest::IsEnabled()) {
-+    // These destinations require Chrome profile/Views UI. Crest owns Space and
-+    // window routing; never expose an engine-only window or profile here.
++    // Crest owns tab, Space and window routing and puts its own new-tab row
++    // first; never expose an engine-only tab, window or profile here.
 +    for (size_t i = menu_model_.GetItemCount(); i > 0; --i) {
 +      switch (menu_model_.GetCommandIdAt(i - 1)) {
++        case IDC_CONTENT_CONTEXT_OPENLINKNEWTAB:
++          // Crest's own row replaces this only for links Crest opens.
++          if (!params_.link_url.SchemeIsHTTPOrHTTPS()) break;
++          [[fallthrough]];
 +        case IDC_CONTENT_CONTEXT_OPENLINKNEWWINDOW:
 +        case IDC_CONTENT_CONTEXT_OPENLINKOFFTHERECORD:
 +        case IDC_CONTENT_CONTEXT_OPENLINKINPROFILE:
++        case IDC_OPEN_LINK_IN_PROFILE_FIRST:
 +        case IDC_CONTENT_CONTEXT_OPENLINKBOOKMARKAPP:
 +        case IDC_CONTENT_CONTEXT_OPENLINKSPLITVIEW:
 +        // These open Views surfaces this build never creates, or depend on a
@@ -835,7 +840,7 @@
  
    NSPoint position =
        NSMakePoint(params_.x, NSHeight(parent_view_.bounds) - params_.y);
-@@ -97,7 +136,8 @@
+@@ -97,7 +141,8 @@
  
    ui::ShowContextMenu(menu_controller_.menu, clickEvent, parent_view_,
                        /*allow_nested_tasks=*/true,

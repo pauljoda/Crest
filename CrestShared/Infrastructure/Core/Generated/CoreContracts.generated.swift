@@ -1089,6 +1089,15 @@ struct AppPreferences: Equatable, Sendable {
             searchesSitesWithTab: true,
             showsReasons: false,
             providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
+        ),
+        linkMenu: LinkMenuPreferences(
+            rows: [
+                LinkMenuChoice(row: LinkMenuRow.newTab, isShown: true),
+                LinkMenuChoice(row: LinkMenuRow.peek, isShown: true),
+                LinkMenuChoice(row: LinkMenuRow.splitView, isShown: true),
+                LinkMenuChoice(row: LinkMenuRow.otherSpaces, isShown: true),
+                LinkMenuChoice(row: LinkMenuRow.search, isShown: true)
+            ]
         )
     )
 
@@ -1104,6 +1113,7 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
     var palette: PalettePreferences
+    var linkMenu: LinkMenuPreferences
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
@@ -3585,6 +3595,25 @@ struct LinkGesture: Equatable, Sendable {
 struct LinkHovered: Equatable, Sendable {
     let pageID: UUID
     let url: String?
+}
+
+struct LinkMenuChoice: Equatable, Sendable {
+    var row: LinkMenuRow
+    var isShown: Bool
+}
+
+struct LinkMenuPreferences: Equatable, Sendable {
+    static let `default` = LinkMenuPreferences(
+        rows: [
+            LinkMenuChoice(row: LinkMenuRow.newTab, isShown: true),
+            LinkMenuChoice(row: LinkMenuRow.peek, isShown: true),
+            LinkMenuChoice(row: LinkMenuRow.splitView, isShown: true),
+            LinkMenuChoice(row: LinkMenuRow.otherSpaces, isShown: true),
+            LinkMenuChoice(row: LinkMenuRow.search, isShown: true)
+        ]
+    )
+
+    var rows: [LinkMenuChoice]
 }
 
 struct LinkNavigation: Query, Equatable, Sendable {
@@ -13842,6 +13871,57 @@ struct LinkBehavior: Hashable, Sendable {
 
         init(name: String) {
             self.name = name
+        }
+    }
+}
+
+/// The members of the core's `LinkMenuRow`. A member's wire tag is its index in `all`.
+struct LinkMenuRow: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let newTab = LinkMenuRow(tag: 0, name: "newTab", title: LocalizedStringResource("Open Link in New Tab"))
+    static let peek = LinkMenuRow(tag: 1, name: "peek", title: LocalizedStringResource("Open Link in Peek"))
+    static let splitView = LinkMenuRow(
+        tag: 2,
+        name: "splitView",
+        title: LocalizedStringResource("Open Link in Split View")
+    )
+    static let otherSpaces = LinkMenuRow(
+        tag: 3,
+        name: "otherSpaces",
+        title: LocalizedStringResource("Open Link in Another Space")
+    )
+    static let search = LinkMenuRow(tag: 4, name: "search", title: LocalizedStringResource("Search with Selection"))
+
+    static let all: [LinkMenuRow] = [newTab, peek, splitView, otherSpaces, search]
+
+    static func named(_ name: String?) -> LinkMenuRow? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: LinkMenuRow, rhs: LinkMenuRow) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }

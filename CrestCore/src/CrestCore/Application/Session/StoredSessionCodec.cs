@@ -81,6 +81,7 @@ internal static partial class StoredSessionCodec {
         public const string Id = "id";
         public const string IsCollapsed = "isCollapsed";
         public const string IsEnabled = "isEnabled";
+        public const string IsShown = "isShown";
         public const string IsSavedTabsExpanded = "isSavedTabsExpanded";
         public const string KeepsControlsReadable = "keepsControlsReadable";
         public const string KeepsPageLoaded = "keepsPageLoaded";
@@ -93,6 +94,7 @@ internal static partial class StoredSessionCodec {
         public const string LegacySelectedSpace = "selectedSpaceID";
         public const string LegacySelectedTab = "selectedTabID";
         public const string Limit = "limit";
+        public const string LinkMenu = "linkMenu";
         public const string Location = "location";
         public const string Name = "name";
         public const string NativeContent = "nativeContent";
@@ -115,6 +117,8 @@ internal static partial class StoredSessionCodec {
         public const string Red = "red";
         public const string RenderingVersion = "renderingVersion";
         public const string ResourceId = "resourceID";
+        public const string Row = "row";
+        public const string Rows = "rows";
         public const string SavedTabClosePolicy = "savedTabClosePolicy";
         public const string SavedTabFaviconReturnsToSavedUrl = "savedTabFaviconReturnsToSavedURL";
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";

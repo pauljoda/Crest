@@ -24,6 +24,10 @@ struct BrowserLinkSettingsContent: View {
             dragsLinksToPeek: dragsLinksToPeekBinding
         )
 
+        #if os(macOS)
+            BrowserLinkMenuSettingsSection()
+        #endif
+
         if lockedRouteDestinationSpaces.isEmpty {
             BrowserLinkRoutingSection(
                 routes: links.preferences.routes,
