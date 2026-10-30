@@ -104,10 +104,14 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
     private var spaceActions: some View {
         Menu {
             if let space = selectedSpaceID.flatMap({ browser.spaceModel($0) }) {
-                BrowserSpaceGroupMenuItems(
-                    browser: browser, space: space, requestGroupChange: requestGroupChange, addSubSpace: addSubSpace)
-                Divider()
-                BrowserSpaceDeletionMenuItems(browser: browser, space: space, requestDeletion: requestDeletion)
+                Group {
+                    BrowserSpaceGroupMenuItems(
+                        browser: browser, space: space, requestGroupChange: requestGroupChange,
+                        addSubSpace: addSubSpace)
+                    Divider()
+                    BrowserSpaceDeletionMenuItems(browser: browser, space: space, requestDeletion: requestDeletion)
+                }
+                .crestMenuActionLabelStyle()
             }
         } label: {
             Label("Space Actions", systemImage: "ellipsis")

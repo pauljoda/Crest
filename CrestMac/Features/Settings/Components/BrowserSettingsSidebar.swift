@@ -183,6 +183,7 @@ struct BrowserSettingsSidebar: View {
                 if selection.wrappedValue == .space(space.id) {
                     Menu {
                         spaceMenu(space)
+                            .crestMenuActionLabelStyle()
                     } label: {
                         Image(systemName: "ellipsis")
                     }
@@ -199,7 +200,7 @@ struct BrowserSettingsSidebar: View {
             isDropTarget: dropTargetID == browser.primary(of: space).id
         )
         .moveDisabled(!tabState.isArrangingSpaces)
-        .contextMenu { spaceMenu(space) }
+        .contextMenu { spaceMenu(space).crestMenuActionLabelStyle() }
         .modifier(
             BrowserSettingsSpaceGroupDrag(
                 space: space, browser: browser, isArranging: tabState.isArrangingSpaces,

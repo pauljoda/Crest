@@ -81,14 +81,17 @@ struct BrowserSettingsSpacePage: View {
             )
             .disabled(spaceAccess.isLocked(space))
             Menu {
-                BrowserSettingsSpaceMenu(
-                    browser: browser, space: space, spaceAccess: spaceAccess, openSpace: openSpace,
-                    addSubSpace: addSubSpace, requestDeletion: { pendingDeletion = $0 },
-                    requestGroupChange: { pendingGroupChange = $0 })
-                Divider()
-                Button("Reset Appearance") { resetAppearance() }
-                    .disabled(startingAppearance == nil || startingAppearance == space.settings.look)
-                Button("Artwork Credits") { showsArtworkCredits = true }
+                Group {
+                    BrowserSettingsSpaceMenu(
+                        browser: browser, space: space, spaceAccess: spaceAccess, openSpace: openSpace,
+                        addSubSpace: addSubSpace, requestDeletion: { pendingDeletion = $0 },
+                        requestGroupChange: { pendingGroupChange = $0 })
+                    Divider()
+                    Button("Reset Appearance", systemImage: "arrow.counterclockwise") { resetAppearance() }
+                        .disabled(startingAppearance == nil || startingAppearance == space.settings.look)
+                    Button("Artwork Credits", systemImage: "info.circle") { showsArtworkCredits = true }
+                }
+                .crestMenuActionLabelStyle()
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
@@ -216,16 +219,16 @@ struct BrowserSettingsSpaceMenu: View {
 
     var body: some View {
         let order = BrowserSpaceOrderActions(browser: browser, spaceID: space.id)
-        Button("Rename") { openSpace(space.id, intent: .rename) }
-        Button("Edit Crest…") { openSpace(space.id, tab: .appearance) }
+        Button("Rename", systemImage: "pencil") { openSpace(space.id, intent: .rename) }
+        Button("Edit Crest…", systemImage: "paintpalette") { openSpace(space.id, tab: .appearance) }
         Divider()
-        Button("Move Up", action: order.moveUp).disabled(!order.canMoveUp)
-        Button("Move Down", action: order.moveDown).disabled(!order.canMoveDown)
+        Button("Move Up", systemImage: "arrow.up", action: order.moveUp).disabled(!order.canMoveUp)
+        Button("Move Down", systemImage: "arrow.down", action: order.moveDown).disabled(!order.canMoveDown)
         Divider()
         BrowserSpaceGroupMenuItems(
             browser: browser, space: space, requestGroupChange: requestGroupChange, addSubSpace: addSubSpace)
         Divider()
-        Toggle("Lock Space", isOn: lock)
+        Toggle("Lock Space", systemImage: "lock", isOn: lock)
         Divider()
         BrowserSpaceDeletionMenuItems(browser: browser, space: space, requestDeletion: requestDeletion)
     }

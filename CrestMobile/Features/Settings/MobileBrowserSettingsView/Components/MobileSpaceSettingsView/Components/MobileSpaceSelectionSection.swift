@@ -55,14 +55,17 @@ struct MobileSpaceSelectionSection: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("space-settings-row-\(space.id)")
         .contextMenu {
-            let order = BrowserSpaceOrderActions(browser: browser, spaceID: space.id)
-            Button("Move Up", action: order.moveUp).disabled(!order.canMoveUp)
-            Button("Move Down", action: order.moveDown).disabled(!order.canMoveDown)
-            Divider()
-            BrowserSpaceGroupMenuItems(
-                browser: browser, space: space, requestGroupChange: requestGroupChange, addSubSpace: addSubSpace)
-            Divider()
-            BrowserSpaceDeletionMenuItems(browser: browser, space: space, requestDeletion: requestDeletion)
+            Group {
+                let order = BrowserSpaceOrderActions(browser: browser, spaceID: space.id)
+                Button("Move Up", systemImage: "arrow.up", action: order.moveUp).disabled(!order.canMoveUp)
+                Button("Move Down", systemImage: "arrow.down", action: order.moveDown).disabled(!order.canMoveDown)
+                Divider()
+                BrowserSpaceGroupMenuItems(
+                    browser: browser, space: space, requestGroupChange: requestGroupChange, addSubSpace: addSubSpace)
+                Divider()
+                BrowserSpaceDeletionMenuItems(browser: browser, space: space, requestDeletion: requestDeletion)
+            }
+            .crestMenuActionLabelStyle()
         }
     }
 }

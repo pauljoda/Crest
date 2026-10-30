@@ -87,7 +87,7 @@ struct BrowserSpaceGroupCrestRow: View {
         .accessibilityLabel(Text(verbatim: member.settings.name))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("space-group-crest-\(member.id)")
-        .contextMenu { menu(member) }
+        .contextMenu { menu(member).crestMenuActionLabelStyle() }
         #if os(macOS)
             .onDrag {
                 draggedSpaceID = member.id
@@ -106,8 +106,8 @@ struct BrowserSpaceGroupCrestRow: View {
         // The primary leads its group; a Sub-Space moves among the others.
         if browser.isSubSpace(member) {
             let order = BrowserSpaceOrderActions(browser: browser, spaceID: member.id)
-            Button("Move Left", action: order.moveUp).disabled(!order.canMoveUp)
-            Button("Move Right", action: order.moveDown).disabled(!order.canMoveDown)
+            Button("Move Left", systemImage: "arrow.left", action: order.moveUp).disabled(!order.canMoveUp)
+            Button("Move Right", systemImage: "arrow.right", action: order.moveDown).disabled(!order.canMoveDown)
             Divider()
         }
         BrowserSpaceGroupMenuItems(
