@@ -89,8 +89,12 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     }
 
     public List<FolderState> PreserveOrder(HashSet<Guid> removed, IReadOnlyList<BrowserTab> tabs,
-        HashSet<Guid>? excluding = null) => folders.Select(folder => {
-            if (excluding?.Contains(folder.Id) == true) return folder;
+        HashSet<Guid>? excluding = null) {
+        // A folder that still holds a tab keeps its anchor. Finding those once
+        // spares a subtree walk and a scan of every tab for each of them.
+        var occupied = Occupied(tabs.Where(tab => !removed.Contains(tab.Id)));
+        return folders.Select(folder => {
+            if (excluding?.Contains(folder.Id) == true || occupied.Contains(folder.Id)) return folder;
             var subtree = Subtree(folder.Id);
             var members = tabs.Where(tab => tab.FolderId is { } folderId && subtree.Contains(folderId)).ToArray();
             if (members.Any(tab => !removed.Contains(tab.Id))) return folder;
@@ -104,6 +108,16 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
                 && tab.Placement == folder.Location && (parent is null || tab.FolderId is { } folderId && parent.Contains(folderId)))?.Id
             };
         }).ToList();
+    }
+
+    /// The folders that hold one of `tabs`, however deep.
+    private HashSet<Guid> Occupied(IEnumerable<BrowserTab> tabs) {
+        HashSet<Guid> result = [];
+        foreach (var tab in tabs)
+            for (var id = tab.FolderId; id is { } folderId && result.Add(folderId);)
+                id = byId.TryGetValue(folderId, out var folder) ? folder.ParentId : null;
+        return result;
+    }
 
     #endregion
 
