@@ -53,7 +53,8 @@ public sealed record UnknownLinkRoute(Guid RouteId) : Rejection;
 /// the whole page, the modifier keys held, and whether it was a middle click.
 public sealed record LinkGesture(bool UserActivated, bool TopLevel, ShortcutModifiers Modifiers, bool MiddleClick);
 
-/// What following a link does.
-public sealed record LinkNavigationAnswer(LinkNavigationDecision Decision);
+/// What following a link does, and for one a route sends to another Space,
+/// which opens it in a new tab, the Space the platform opens that tab in.
+public sealed record LinkNavigationAnswer(LinkNavigationDecision Decision, Guid? RoutedSpaceId);
 
 #endregion

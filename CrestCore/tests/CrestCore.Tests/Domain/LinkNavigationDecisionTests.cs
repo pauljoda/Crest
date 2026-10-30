@@ -34,12 +34,24 @@ public sealed class LinkNavigationDecisionTests {
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(null));
     }
 
+    [Fact]
+    public void ARoutedLinkOpensATabForATopLevelClickAndNeverOverPeek() {
+        Assert.Equal(LinkNavigationDecision.ForegroundTab, Decide(routed: true));
+        Assert.Equal(LinkNavigationDecision.ForegroundTab, Decide(routed: true, savedUrl: "https://apple.com/"));
+        Assert.Equal(LinkNavigationDecision.Navigate, Decide(routed: true, userLink: false));
+        Assert.Equal(LinkNavigationDecision.Navigate, Decide(routed: true, topLevel: false));
+        Assert.Equal(LinkNavigationDecision.Navigate, Decide(routed: true, owned: false));
+        Assert.Equal(LinkNavigationDecision.PeekModifier, Decide(routed: true, peek: true));
+        Assert.Equal(LinkNavigationDecision.BackgroundTab, Decide(routed: true, newTab: true));
+    }
+
     private static ShortcutModifiers Held(bool command, bool option) =>
         (command ? ShortcutModifiers.Command : ShortcutModifiers.None) | (option ? ShortcutModifiers.Option : ShortcutModifiers.None);
 
     private static LinkNavigationDecision Decide(string? url = "https://example.com/", bool userLink = true,
         bool topLevel = true, bool peek = false, bool newTab = false, bool shift = false, bool focus = false,
-        bool owned = true, string? placement = "saved", string? savedUrl = "https://apple.com/", bool automatic = true) =>
+        bool owned = true, string? placement = "saved", string? savedUrl = "https://apple.com/", bool automatic = true,
+        bool routed = false) =>
         LinkNavigationDecision.For(url, userLink, topLevel, peek, newTab, shift, focus, owned, TabPlacement.Named(placement), savedUrl,
-            automatic);
+            automatic, routed);
 }

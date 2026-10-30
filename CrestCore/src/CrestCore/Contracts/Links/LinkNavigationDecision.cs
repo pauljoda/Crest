@@ -61,14 +61,18 @@ public sealed class LinkNavigationDecision {
 
     /// Where following a link to `destination` goes, from the gesture, the
     /// person's link preferences and the tab's place and saved address.
+    /// `routedElsewhere` says a link route sends the link to another Space: a
+    /// plain click on such a link opens it in a new tab, which the platform
+    /// places in that Space, and the page it was followed from stays.
     internal static LinkNavigationDecision For(string? destination, bool userActivatedLink,
         bool topLevel, bool peekModified, bool newTabModified, bool shiftModified,
         bool focusesNewTabs, bool hasContext, TabPlacement? placement, string? savedUrl,
-        bool automaticallyOpensPeek) {
+        bool automaticallyOpensPeek, bool routedElsewhere) {
         if (!userActivatedLink || !TryWebUrl(destination, out var target)) return Navigate;
         if (topLevel && hasContext && peekModified) return PeekModifier;
         if (newTabModified)
             return focusesNewTabs != shiftModified ? ForegroundTab : BackgroundTab;
+        if (topLevel && hasContext && routedElsewhere) return ForegroundTab;
         if (topLevel && hasContext && automaticallyOpensPeek && placement?.IsDurable == true
             && TryWebUrl(savedUrl, out var saved) && NormalizeHost(saved!) != NormalizeHost(target!))
             return PeekSavedSite;

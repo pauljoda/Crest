@@ -256,6 +256,14 @@ final class BrowserMacShell {
         return (window, space)
     }
 
+    /// Opens a link a person followed in an engine's page `opener` of
+    /// `windowID` as a new tab of `spaceID`, the Space a route sends it to,
+    /// in front when `selecting`.
+    func openRoutedLink(_ url: URL, in spaceID: UUID, window windowID: UUID, selecting: Bool, opener: UUID) {
+        guard let running, !running.quit.isQuitting, ExternalWebLink.accepts(url) else { return }
+        running.application.openRoutedLink(url, in: spaceID, window: windowID, selecting: selecting, opener: opener)
+    }
+
     /// Opens the window reserved for an engine-created browser, just before
     /// its first tab is offered for adoption, coming forward as `focused`
     /// says.

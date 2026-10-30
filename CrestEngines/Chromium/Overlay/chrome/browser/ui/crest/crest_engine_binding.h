@@ -99,6 +99,14 @@ class EngineBinding {
     // Opens the window reserved as `placement`, showing its Space, just before
     // its first tab is offered; in front when `focused`.
     virtual void PresentWindow(const WindowPlacement& placement, bool focused) = 0;
+    // Opens `url`, a link a person followed in the page `page` of the Crest
+    // window `window` that a route sends to the Space `space`, as a new tab
+    // there, in front when `foreground`. Its page opens on `page`'s engine
+    // when the Space shares `page`'s profile, and as any new page would
+    // otherwise. The engine opens no tab of its own for it. Called once the
+    // turn ends, never on a navigation's stack.
+    virtual void OpenRoutedLink(const std::string& page, const std::string& window, const std::string& space,
+                                const std::string& url, bool foreground) = 0;
     // Drops the views the shell hosts beside `page`, whose WebContents the
     // binding destroys next.
     virtual void ReleasePage(const std::string& page) = 0;
@@ -140,20 +148,23 @@ class EngineBinding {
   // A person's click on a link with a modifier key or the middle button in
   // `contents`, which Chromium verified: the core decides whether it opens a
   // tab in front or behind, which `params` then asks of the engine, or Peek,
-  // for which the link is staged. Answers whether the binding took the link.
+  // for which the link is staged; a link a route sends to another Space goes
+  // to the platform, which opens its tab. Answers whether the binding took
+  // the link.
   bool FollowModifiedLink(content::WebContents* contents, content::OpenURLParams& params);
   // A person's plain click on the link to `url` in `contents`: answers
   // whether it opens Peek instead, as the core decides for a link leaving a
-  // saved tab's site, which the platform then hears.
+  // saved tab's site, or a new tab of the Space a route sends it to, which
+  // the platform then hears.
   bool KeepsLinkForPeek(content::WebContents* contents, const GURL& url);
   // A person's plain click on a link that opens in a window of its own, such
   // as one with target="_blank", whose WebContents the engine made for
-  // `navigation`: answers whether it opens Peek instead, as the core decides
-  // for the page the link was in. The window is then withheld from the core
-  // and closes.
+  // `navigation`: answers whether it opens Peek or a routed Space's new tab
+  // instead, as the core decides for the page the link was in. The window is
+  // then withheld from the core and closes.
   bool KeepsWindowLinkForPeek(content::NavigationHandle& navigation);
-  // Whether `contents` is a window whose link opened in Peek, which the core
-  // is never offered.
+  // Whether `contents` is a window whose link opened in Peek or a routed
+  // Space, which the core is never offered.
   bool Withholds(content::WebContents* contents) const;
   // The throttle that asks, for each plain click on a link in a page.
   static std::unique_ptr<content::NavigationThrottle> LinkThrottle(content::NavigationThrottleRegistry& registry);
@@ -214,6 +225,12 @@ class EngineBinding {
   void DropStagedLink(const std::string& token);
 
  private:
+  // Whether the core's answer sends the link to `url` from `page` to a new
+  // tab of another Space, which the platform then opens once the turn ends:
+  // nothing is mounted or moved while Chromium's navigation stack is live.
+  bool OpensRoutedLink(const EnginePage& page, const engine::LinkNavigationAnswer& answer, const GURL& url);
+  // Asks the platform to open the routed link, unless the binding is going.
+  void OpenRoutedLink(std::string page, std::string window, std::string space, std::string url, bool foreground);
   friend class base::NoDestructor<EngineBinding>;
 
   // A page the engine opened by itself, until the core adopts or refuses it.
@@ -315,7 +332,7 @@ class EngineBinding {
   // yet closes when it is offered.
   void CloseWithheld(base::WeakPtr<content::WebContents> contents);
   // Forgets the links modified clicks sent to new tabs this turn.
-  void ForgetRoutedTabs();
+  void ForgetModifiedTabs();
   void CreateNow(const std::string& page);
   void ProfileLoaded(const std::string& page, Profile* profile);
   void Created(const std::string& page, content::WebContents* contents);
@@ -357,11 +374,11 @@ class EngineBinding {
   // The pages the engine offered, by offer, and the links staged, by link.
   std::map<std::string, OfferedPage> offers_;
   std::map<std::string, std::unique_ptr<StagedLink>> staged_links_;
-  // The windows whose link opened in Peek, until they close.
+  // The windows whose link opened in Peek or a routed Space, until they close.
   std::vector<base::WeakPtr<content::WebContents>> withheld_;
   // The links modified clicks sent to the new tabs the engine opens next,
   // with the pages they were followed in, until the turn ends.
-  std::vector<std::pair<std::string, std::string>> routed_tabs_;
+  std::vector<std::pair<std::string, std::string>> modified_tabs_;
   std::unique_ptr<EngineProfiles> profiles_;
   std::unique_ptr<EngineBrowsers> browsers_;
   std::unique_ptr<EngineTabGroups> tab_groups_;

@@ -103,12 +103,13 @@ final class WebKitEnginePage: EngineHostedPage {
     /// loads in the page. A page no binding holds lets a person's own
     /// top-level click open a new tab, so a pinned or saved tab never leaves
     /// the page it keeps.
-    func linkActivation(to url: URL?, gesture: LinkGesture) -> LinkNavigationDecision {
-        guard let url else { return .navigate }
+    func linkActivation(to url: URL?, gesture: LinkGesture) -> LinkNavigationAnswer {
+        guard let url else { return LinkNavigationAnswer(decision: .navigate, routedSpaceID: nil) }
         guard let answer = binding?.ask(LinkActivation(pageID: id, url: url.absoluteString, gesture: gesture)) else {
-            return gesture.userActivated && gesture.topLevel ? .foregroundTab : .navigate
+            return LinkNavigationAnswer(
+                decision: gesture.userActivated && gesture.topLevel ? .foregroundTab : .navigate, routedSpaceID: nil)
         }
-        return answer.decision
+        return answer
     }
 
     /// Stages `request`, a modified link the page followed, for the Peek the

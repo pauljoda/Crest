@@ -29,7 +29,7 @@ namespace crest::engine {
 // SHA-256 of the engine contract alone. A binding registers with it, so the
 // core refuses an engine built against any other contract.
 inline constexpr std::array<uint8_t, 32> kFingerprint = {
-    0x76, 0x91, 0xdf, 0xee, 0xe6, 0xa3, 0xba, 0x80, 0x33, 0x3f, 0x82, 0x77, 0x5c, 0x53, 0x7c, 0x23, 0xfa, 0x1f, 0x55, 0x8e, 0xc8, 0x61, 0x5a, 0x65, 0x6f, 0xd2, 0xe8, 0xd0, 0x7b, 0x1f, 0x27, 0x1c};
+    0x5e, 0xa8, 0x3d, 0xf3, 0x04, 0xa5, 0xe5, 0x76, 0x44, 0x88, 0xfb, 0xb5, 0xdf, 0x2a, 0xff, 0xd3, 0xd0, 0x30, 0x92, 0x3c, 0x91, 0x5b, 0x15, 0x69, 0x93, 0xa6, 0x38, 0x5f, 0x7d, 0xd6, 0x5f, 0x2b};
 
 // A GUID in RFC 4122 byte order, as the wire carries it.
 using Guid = std::array<uint8_t, 16>;
@@ -2098,14 +2098,17 @@ inline bool Read(WireReader& reader, LinkHovered& value) {
 
 struct LinkNavigationAnswer {
   LinkNavigationDecision decision = {};
+  std::optional<Guid> routed_space_id;
 
   friend bool operator==(const LinkNavigationAnswer&, const LinkNavigationAnswer&) = default;
 };
 inline void Write(WireWriter& writer, const LinkNavigationAnswer& value) {
   Write(writer, value.decision);
+  Write(writer, value.routed_space_id);
 }
 inline bool Read(WireReader& reader, LinkNavigationAnswer& value) {
-  return Read(reader, value.decision);
+  return Read(reader, value.decision)
+      && Read(reader, value.routed_space_id);
 }
 
 struct LoadPage {

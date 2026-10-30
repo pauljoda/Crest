@@ -49,6 +49,16 @@ extension BrowserMacApplication {
         return true
     }
 
+    /// Opens a link a route sends to `spaceID` from the page `opener` of
+    /// `window`, as a new tab there that loads at once, shown when
+    /// `selecting`. The engine asks after its navigation unwound, so a Space
+    /// that locked meanwhile takes nothing.
+    func openRoutedLink(_ url: URL, in spaceID: UUID, window: UUID, selecting: Bool, opener: UUID) {
+        guard let host = hostWindow(window), let space = host.browser.spaceModel(spaceID), !spaceAccess.isLocked(space)
+        else { return }
+        host.pages.openModifiedLink(URLRequest(url: url), in: spaceID, selecting: selecting, opener: opener)
+    }
+
     /// Opens a link another app sent in `space`, in `window`.
     @discardableResult
     func openExternalLink(_ url: URL, in space: BrowserSpaceRuntimeAssignment, window: UUID) -> Bool {

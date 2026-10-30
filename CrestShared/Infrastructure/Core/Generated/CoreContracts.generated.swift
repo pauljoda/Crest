@@ -3597,6 +3597,7 @@ struct LinkNavigation: Query, Equatable, Sendable {
 
 struct LinkNavigationAnswer: Equatable, Sendable {
     let decision: LinkNavigationDecision
+    let routedSpaceID: UUID?
 }
 
 struct LinkPatternTooLong: Equatable, Sendable {

@@ -85,8 +85,9 @@ extension BrowserPage: WKNavigationDelegate {
             ? peekSourcePresentation(for: navigationAction.request.url, in: webView) : nil
     }
 
-    /// Opens a modified click's link in a new tab of the page's Space.
-    func routeModifiedLink(_ request: URLRequest, selecting: Bool) {
+    /// Opens a link the core sends to a new tab in `spaceID`: the Space a
+    /// route sends it to, or else the page's own.
+    func routeModifiedLink(_ request: URLRequest, selecting: Bool, in spaceID: UUID) {
         openModifiedLink(request, spaceID, selecting)
     }
 

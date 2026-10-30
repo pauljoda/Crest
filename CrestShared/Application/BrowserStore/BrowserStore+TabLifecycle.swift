@@ -53,9 +53,19 @@ extension BrowserStore {
         in spaceID: UUID,
         selecting: Bool
     ) -> UUID? {
-        guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
-        return openSessionTab(
-            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
+        guard !isDeleting(spaceID), let space = spaceModel(spaceID) else { return nil }
+        // A tab shown in a Space this window enters for it is an explicit
+        // opening: Space entry must show it, not the Space's remembered tab.
+        let enters = selecting && spaceID != selectedSpaceID
+        guard
+            let tabID = openSessionTab(
+                .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
+        else { return nil }
+        if enters {
+            pendingMovedTabActivation = BrowserTabRuntimeAssignment(
+                tabID: tabID, spaceID: spaceID, profileID: space.profileID)
+        }
+        return tabID
     }
 
     @discardableResult

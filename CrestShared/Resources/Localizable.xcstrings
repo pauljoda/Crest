@@ -11298,7 +11298,7 @@
     "Route actions" : {
 
     },
-    "Routes apply to links from other apps. The first matching route wins." : {
+    "Routes apply to links from other apps and links on pages. The first matching route wins." : {
 
     },
     "Routing" : {

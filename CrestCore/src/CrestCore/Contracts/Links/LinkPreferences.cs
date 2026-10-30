@@ -132,12 +132,21 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
     /// destination.
     internal LinkRoutingDecision Route(string url, LinkRoutingContext context) {
         ArgumentNullException.ThrowIfNull(context);
-        var route = Routes.FirstOrDefault(candidate => candidate.IsEnabled
-            && context.IsAvailable(candidate.DestinationSpaceId) && candidate.Matches(url));
-        if (route is not null) return new(false, route.DestinationSpaceId);
+        if (RoutedSpace(url, context.IsAvailable) is { } routed) return new(false, routed);
         var remembered = RememberedSite.SiteOf(url) is { } site ? RememberedSites.FirstOrDefault(entry => entry.Site == site)?.SpaceId : null;
         var destination = Destination;
         return new(destination.OpensQuickWindow, destination.Space(this, remembered, context));
+    }
+
+    /// The Space the first enabled route that matches `url` names, among the
+    /// Spaces `canOpen` says can take the link now; null when no such route
+    /// claims it. A link from another app passes the Spaces that can open, so
+    /// a later route may claim it; a link followed from a page passes every
+    /// Space, so only the first matching route counts.
+    internal Guid? RoutedSpace(string url, Func<Guid, bool> canOpen) {
+        ArgumentNullException.ThrowIfNull(canOpen);
+        return Routes.FirstOrDefault(candidate => candidate.IsEnabled && canOpen(candidate.DestinationSpaceId) && candidate.Matches(url))
+            ?.DestinationSpaceId;
     }
 
     #endregion

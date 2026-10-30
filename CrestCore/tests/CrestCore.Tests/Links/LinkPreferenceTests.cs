@@ -11,8 +11,8 @@ namespace CrestCore.Tests;
 /// Link preferences are device state: the device store keeps them beside the
 /// session, carried once from the document an installed release kept. A link
 /// another app hands a window never opens a locked Space, whatever preference
-/// names it, and a link followed from a page goes where its tab, its Peek and
-/// the preferences send it.
+/// names it, and a link followed from a page goes where its tab, its Peek,
+/// the preferences and the routes send it.
 public sealed partial class BrowserContractsTests {
     private static LinkPreferences Links(IReadOnlyList<Change> changes) =>
         Assert.Single(changes.OfType<LinkPreferencesChanged>()).Preferences;
@@ -105,6 +105,59 @@ public sealed partial class BrowserContractsTests {
         app.Send(new LockSpace(locked));
         app.Send(new SetSpaceAccess(workspace, open, SpaceAccessPolicy.DeviceOwnerAuthentication));
         Assert.Equal(new ExternalLinkPlacement(null, false, false, null, false), Route("https://example.com/a"));
+    }
+
+    [Fact]
+    public void ALinkARouteClaimsOnAPageOpensInANewTabOfTheRoutedSpace() {
+        var session = TwoSpaceSession();
+        var (first, second) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
+        var (app, engine, binding, workspace, window) = PageHost(session);
+        using var disposal = app;
+        var (_, source) = LiveTab(app, engine, workspace, window, first);
+        var route = Guid.NewGuid();
+        app.Send(new AddLinkRoute(route, second));
+        app.Send(new EditLinkRoute(route, IsEnabled: null, Match: null, Pattern: "routed.example", DestinationSpaceId: null));
+        var click = new LinkGesture(UserActivated: true, TopLevel: true, ShortcutModifiers.None, MiddleClick: false);
+        LinkNavigationAnswer Follow(string url, LinkGesture gesture) => app.Query(new LinkNavigation(source, url, gesture));
+        var stays = new LinkNavigationAnswer(LinkNavigationDecision.Navigate, RoutedSpaceId: null);
+
+        // A plain click on a routed link opens a tab in the routed Space, which
+        // the platform opens; a link that no route claims loads in place.
+        Assert.Equal(new LinkNavigationAnswer(LinkNavigationDecision.ForegroundTab, second), Follow("https://routed.example/a", click));
+        Assert.Equal(stays, Follow("https://other.example/", click));
+        Assert.Equal(stays, Follow("https://routed.example/a", click with { TopLevel = false }));
+
+        // A link to the site the page already shows stays on it, so browsing
+        // a routed site opened in another Space never bounces the window.
+        var (_, onSite) = LiveTab(app, engine, workspace, window, first, "https://www.routed.example/home");
+        Assert.Equal(stays, app.Query(new LinkNavigation(onSite, "https://routed.example/a", click)));
+
+        // A route to the page's own Space changes nothing, and as the first
+        // match it wins: a later route to another Space never takes its place.
+        var (_, own) = LiveTab(app, engine, workspace, window, second, "https://second.example/");
+        Assert.Equal(stays, app.Query(new LinkNavigation(own, "https://routed.example/a", click)));
+        var ownRoute = Guid.NewGuid();
+        app.Send(new AddLinkRoute(ownRoute, first));
+        app.Send(new EditLinkRoute(ownRoute, IsEnabled: null, Match: null, Pattern: "routed.example", DestinationSpaceId: null));
+        app.Send(new MoveLinkRoute(ownRoute, -1));
+        Assert.Equal(stays, Follow("https://routed.example/a", click));
+        app.Send(new RemoveLinkRoute(ownRoute));
+
+        // A page the engine opened for such a link is not rerouted: it keeps
+        // its opener and its tab beside the page that opened it.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), ProfileId(session["spaces"]![0]!), source, null, null, "https://routed.example/b", true));
+        Assert.Equal(first, Assert.Single(app.Drain().OfType<OfferedPageAdopted>()).SpaceId);
+
+        // A route to a locked Space leaves the link where it was followed, and
+        // never unlocks the Space; so does one to a Space being deleted.
+        app.Send(new SetSpaceAccess(workspace, second, SpaceAccessPolicy.DeviceOwnerAuthentication));
+        app.Send(new LockSpace(second));
+        Assert.Equal(stays, Follow("https://routed.example/c", click));
+        TestGrants.Unlock(app.Send, workspace, second);
+        Assert.Equal(new LinkNavigationAnswer(LinkNavigationDecision.ForegroundTab, second), Follow("https://routed.example/c", click));
+        app.Send(new BeginDeletingSpace(workspace, window, second, Guid.NewGuid()));
+        app.Drain();
+        Assert.Equal(stays, Follow("https://routed.example/d", click));
     }
 
 }

@@ -414,11 +414,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// on iPhone and iPad.
     var webKitEnginePage: WebKitEnginePage? { webKitPage }
 
-    func routeModifiedLink(_ url: URL, selecting: Bool) {
-        routeModifiedLink(URLRequest(url: url), selecting: selecting)
-    }
-
-    func routeModifiedLink(_ request: URLRequest, selecting: Bool) {
+    /// Opens a link the core sends to a new tab in `spaceID`: the Space a
+    /// route sends it to, or else the page's own.
+    func routeModifiedLink(_ request: URLRequest, selecting: Bool, in spaceID: UUID) {
         guard let url = request.url,
             let registration = openModifiedLink(url, spaceID, selecting)
         else { return }

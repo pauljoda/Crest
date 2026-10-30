@@ -52,8 +52,9 @@ struct BrowserNavigationDecision: Equatable, Sendable {
     static func openInNewTab(_ url: URL) -> BrowserNavigationDecision {
         BrowserNavigationDecision(name: "openInNewTab", destination: url) {
             page, navigationAction, webView, decisionHandler in
-            // Allow WebKit to continue to WKUIDelegate.createWebViewWith,
-            // where Crest can apply the owning Space's pop-up policy exactly once.
+            // The page's link handling opens Peek or a new tab itself and
+            // cancels; otherwise WebKit continues to createWebViewWith, where
+            // Crest applies the owning Space's pop-up policy exactly once.
             page.decideLinkPolicy(for: navigationAction, in: webView, decisionHandler: decisionHandler)
         }
     }

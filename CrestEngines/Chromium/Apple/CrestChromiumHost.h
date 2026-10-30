@@ -73,6 +73,14 @@ NS_SWIFT_UI_ACTOR
 // Opens the reserved window just before its first tab is offered.
 - (void)presentEngineWindow:(NSUUID *)windowID space:(NSUUID *)spaceID focused:(BOOL)focused
     NS_SWIFT_NAME(presentEngineWindow(_:space:focused:));
+// A link a person followed in the page `pageID` of `windowID` that a route
+// sends to `spaceID`: Crest opens it as a new tab there, loading at once,
+// in front when `selecting`.
+- (void)openRoutedLink:(NSURL *)url
+                  page:(NSUUID *)pageID
+                window:(NSUUID *)windowID
+                 space:(NSUUID *)spaceID
+             selecting:(BOOL)selecting NS_SWIFT_NAME(openRoutedLink(_:page:window:space:selecting:));
 // A quit the application asked for; true while Crest finishes it itself.
 - (BOOL)deferQuit;
 // A Dock click or `Open` with no Crest window.

@@ -47,6 +47,12 @@
             shell?.presentEngineWindow(windowID, space: spaceID, focused: focused)
         }
 
+        func openRoutedLink(
+            _ url: URL, page pageID: UUID, window windowID: UUID, space spaceID: UUID, selecting: Bool
+        ) {
+            shell?.openRoutedLink(url, in: spaceID, window: windowID, selecting: selecting, opener: pageID)
+        }
+
         // MARK: - Actions - Application
 
         func deferQuit() -> Bool { ChromiumComposition.deferQuit() }

@@ -36,7 +36,8 @@ struct BrowserLinkRoutingSection: View {
         } header: {
             Text("Routing")
         } footer: {
-            CrestFormFootnote("Routes apply to links from other apps. The first matching route wins.")
+            CrestFormFootnote(
+                "Routes apply to links from other apps and links on pages. The first matching route wins.")
         }
     }
 }

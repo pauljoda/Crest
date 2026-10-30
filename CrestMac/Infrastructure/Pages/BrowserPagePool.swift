@@ -516,9 +516,11 @@ final class BrowserPagePool:
         return page
     }
 
-    /// Opens the link a person followed with a modifier in page `opener` as a
-    /// new tab of Space `spaceID`, whose page runs on its opener's engine.
-    private func openModifiedLink(
+    /// Opens the link a person followed with a modifier, or that a route
+    /// sends to another Space, in page `opener` as a new tab of Space
+    /// `spaceID`, whose page runs on its opener's engine when the Space
+    /// shares its profile.
+    func openModifiedLink(
         _ request: URLRequest,
         in spaceID: UUID,
         selecting: Bool,

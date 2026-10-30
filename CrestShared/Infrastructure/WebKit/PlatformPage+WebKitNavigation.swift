@@ -54,9 +54,10 @@ extension BrowserPlatformPage {
         let sourcePresentation = linkSourcePresentation(for: navigationAction, in: webView)
         // The core decides what the link does, as it does for Chromium's.
         let webKitPage = webKitEnginePage
-        let decision =
+        let answer =
             webKitPage?.linkActivation(to: navigationAction.request.url, gesture: navigationAction.linkGesture)
-            ?? .navigate
+            ?? LinkNavigationAnswer(decision: .navigate, routedSpaceID: nil)
+        let decision = answer.decision
         // A modified click keeps its initiator's referrer through a staged
         // request; a saved-site Peek starts afresh, as it does on Chromium.
         let engineNavigation = decision.stagesLink ? webKitPage?.stageLink(navigationAction.request) : nil
@@ -71,7 +72,8 @@ extension BrowserPlatformPage {
         }
         if let engineNavigation { corePage.discardStagedLink(engineNavigation) }
         if decision.opensTab {
-            routeModifiedLink(navigationAction.request, selecting: decision.selectsTab)
+            let destination = answer.routedSpaceID ?? spaceID
+            routeModifiedLink(navigationAction.request, selecting: decision.selectsTab, in: destination)
             decisionHandler(.cancel)
             return
         }

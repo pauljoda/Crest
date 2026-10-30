@@ -645,6 +645,16 @@ class MacShell final : public crest::EngineBinding::Shell {
     if (window && space) [UI() presentEngineWindow:window space:space focused:focused ? YES : NO];
   }
 
+  void OpenRoutedLink(const std::string& page, const std::string& window, const std::string& space,
+                      const std::string& url, bool foreground) override {
+    NSUUID* page_id = UUIDFor(page);
+    NSUUID* window_id = UUIDFor(window);
+    NSUUID* space_id = UUIDFor(space);
+    NSURL* link = [NSURL URLWithString:base::SysUTF8ToNSString(url)];
+    if (!page_id || !window_id || !space_id || !link) return;
+    [UI() openRoutedLink:link page:page_id window:window_id space:space_id selecting:foreground ? YES : NO];
+  }
+
   void ReleasePage(const std::string& page) override { State().views.erase(page); }
 
   // A Space-scoped popup may be anchored in the profile being let go of.

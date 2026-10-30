@@ -15,7 +15,7 @@ public sealed record LinkActivation(Guid PageId, string Url, LinkGesture Gesture
     internal override LinkNavigationAnswer Answer(CrestApp app, Engine engine) =>
         ReferenceEquals(app.Pages.Hosted(PageId)?.Engine, engine)
             ? app.Device.Answer(new LinkNavigation(PageId, Url, Gesture), app.Pages)
-            : new LinkNavigationAnswer(LinkNavigationDecision.Navigate);
+            : new LinkNavigationAnswer(LinkNavigationDecision.Navigate, RoutedSpaceId: null);
 
     #endregion
 }
