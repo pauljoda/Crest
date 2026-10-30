@@ -91,6 +91,12 @@ type you touch. The rules that matter most:
   cards. Every interactive control has hover and pressed states from the
   system. Search `CrestShared/DesignSystem` before writing any new fill or
   control.
+- **Every menu item has an icon.** Each item of a menu, context menu or
+  submenu Crest builds shows an icon: an SF Symbol for an action, and the
+  Space's crest for a Space (`BrowserSpaceIdentityLabel`), as Move to Space
+  does. Apply `crestMenuActionLabelStyle()` inside each `Menu` and
+  `contextMenu` builder, submenus included; applied to the control that opens
+  the menu, it does not reach the rows.
 - **No modal notices.** Informational feedback such as "copied" or "captured"
   goes through the top-of-window notice capsule
   (`BrowserChromeState.showNotice`). Alerts and sheets appear only when the
@@ -186,7 +192,7 @@ type you touch. The rules that matter most:
 - [ ] Touched types follow the section layout and typed-value rules.
 - [ ] Formatter, linter and affected builds ran clean.
 - [ ] Shared state changes go through core intents; no direct engine calls in shared code.
-- [ ] No new windows, ad-hoc fills or modal notices.
+- [ ] No new windows, ad-hoc fills or modal notices; every menu item has an icon.
 - [ ] Tests only for silent-breaking contracts; probes removed.
 - [ ] Patch bump, release-note entry and `check-version.sh --fix-commit` pass.
 - [ ] Pull request lists what ran, and both AI usage boxes are ticked.
