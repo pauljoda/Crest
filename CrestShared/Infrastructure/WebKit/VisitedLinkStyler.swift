@@ -7,6 +7,11 @@ enum BrowserVisitedLinkStyler {
     private static let contentWorld = WKContentWorld.world(
         name: "com.pauldavis.crest.visited-links"
     )
+    /// The address history keeps for each address of the history styled
+    /// last, or nil for one it keeps none of. The core's answer reads only
+    /// the address, so a navigation asks it only about addresses it has not
+    /// seen.
+    private static var keptAddresses: [String: String?] = [:]
 
     nonisolated static func supports(_ pageURL: URL) -> Bool {
         guard let scheme = pageURL.scheme?.lowercased(), pageURL.host() != nil else {
@@ -34,14 +39,36 @@ enum BrowserVisitedLinkStyler {
             guard let store = BrowserNativeVisitedLinkStore(webView: webView) else {
                 return
             }
-            let visitedURLStrings = normalizedVisitedURLStrings(history)
-            store.replace(with: visitedURLStrings.compactMap(URL.init(string:)))
+            let visitedURLStrings = keptVisitedURLStrings(history)
+            store.update(to: visitedURLStrings)
             let pageURLVariants = await matchingPageURLVariants(
                 visitedURLStrings: visitedURLStrings,
                 in: webView
             )
             store.add(pageURLVariants)
         #endif
+    }
+
+    /// What `normalizedVisitedURLStrings` answers for `history`, asking the
+    /// core only about addresses the last history styled did not hold.
+    private static func keptVisitedURLStrings(_ history: [HistoryEntryState]) -> [String] {
+        let addresses = history.prefix(maximumVisitedURLCount).map(\.url)
+        let unknown = Array(Set(addresses.filter { keptAddresses.index(forKey: $0) == nil }))
+        if !unknown.isEmpty {
+            guard let answered = try? CrestCore.answer(HistoryAddresses(addresses: unknown)).normalized,
+                answered.count == unknown.count
+            else { return normalizedVisitedURLStrings(history) }
+            for (address, kept) in zip(unknown, answered) { keptAddresses[address] = .some(kept) }
+        }
+        var current: [String: String?] = [:]
+        var visited: [String] = []
+        for address in addresses {
+            let kept = keptAddresses[address] ?? nil
+            current[address] = .some(kept)
+            if let kept { visited.append(kept) }
+        }
+        keptAddresses = current
+        return visited
     }
 
     #if os(macOS)
@@ -128,6 +155,10 @@ enum BrowserVisitedLinkStyler {
         private static let containsSelector = NSSelectorFromString("containsVisitedLinkWithURL:")
         private static let removeAllSelector = NSSelectorFromString("removeAll")
 
+        /// What the history last put in each store, so a history that only
+        /// grew adds what is new instead of rebuilding the store.
+        private static var appliedKey: UInt8 = 0
+
         private let store: NSObject
 
         init?(webView: WKWebView) {
@@ -147,6 +178,21 @@ enum BrowserVisitedLinkStyler {
             add(urls)
         }
 
+        /// Makes the store hold `urlStrings`: when it already holds every
+        /// one the history put there last, only the new ones are added;
+        /// otherwise, as when history lost an entry, it is rebuilt.
+        func update(to urlStrings: [String]) {
+            let target = Set(urlStrings)
+            let applied = objc_getAssociatedObject(store, &Self.appliedKey) as? BrowserVisitedLinkSet
+            if let applied, applied.urlStrings.isSubset(of: target) {
+                add(target.subtracting(applied.urlStrings).compactMap(URL.init(string:)))
+            } else {
+                replace(with: urlStrings.compactMap(URL.init(string:)))
+            }
+            objc_setAssociatedObject(
+                store, &Self.appliedKey, BrowserVisitedLinkSet(target), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+
         func add(_ urls: [URL]) {
             for url in urls {
                 store.perform(Self.addSelector, with: url as NSURL)
@@ -157,6 +203,16 @@ enum BrowserVisitedLinkStyler {
             let implementation = store.method(for: Self.containsSelector)
             let contains = unsafeBitCast(implementation, to: ContainsVisitedLink.self)
             return contains(store, Self.containsSelector, url as NSURL)
+        }
+    }
+
+    /// The addresses a visited-link store took from the history, kept on the
+    /// store itself so they live and go with it.
+    private final class BrowserVisitedLinkSet: NSObject {
+        let urlStrings: Set<String>
+
+        init(_ urlStrings: Set<String>) {
+            self.urlStrings = urlStrings
         }
     }
 #endif
