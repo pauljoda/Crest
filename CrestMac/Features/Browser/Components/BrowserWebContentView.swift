@@ -13,6 +13,7 @@ struct BrowserWebContentView: View {
 
     @Environment(\.browserWebFocusRestorationGate)
     private var browserFocusRestorationGate
+    @Environment(\.browserWebFocusWindow) private var focusWindow
 
     var body: some View {
         VStack(spacing: 0) {
@@ -90,7 +91,8 @@ struct BrowserWebContentView: View {
     private var focusRestorationGate: BrowserWebFocusRestorationGate {
         BrowserWebFocusRestorationGate(
             browserChromeOwnsFocus:
-                browserFocusRestorationGate.browserChromeOwnsFocus,
+                browserFocusRestorationGate.browserChromeOwnsFocus
+                || focusWindow?.chromeOwnsFocus == true,
             pageChromeOwnsFocus:
                 page.isFindPresented
                 || page.credentialFillRequest != nil
