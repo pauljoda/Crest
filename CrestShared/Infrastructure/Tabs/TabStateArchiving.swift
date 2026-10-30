@@ -12,7 +12,8 @@ import Foundation
 /// *whether* a tab may be archived: private and disposable runtimes are given no
 /// archive at all, so they cannot write one by accident.
 protocol BrowserTabStateArchiving: AnyObject, Sendable {
-    /// The framed envelope stored for one tab, or nil when there is none.
+    /// The framed envelope the archive was last asked to keep for one tab,
+    /// whether or not its file has caught up, or nil when there is none.
     func archivedState(profileID: UUID, tabID: UUID) -> Data?
     /// Keeps the tab's engine history as showing `url`, with its back and
     /// forward history as the core keeps it across engines, when it has one.

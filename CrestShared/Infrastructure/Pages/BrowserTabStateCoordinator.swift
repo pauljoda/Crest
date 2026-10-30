@@ -1,25 +1,36 @@
 import Foundation
 
-/// Owns session-state eligibility and pending copies without retaining pages.
-/// The platform supplies a page only while capturing its opaque engine state.
+/// Owns session-state eligibility and the states tabs' next pages open with,
+/// without retaining pages. The platform supplies a page only while capturing
+/// its opaque engine state.
 @MainActor
 final class BrowserTabStateCoordinator {
+    // MARK: - Variables
+
     private let archive: (any BrowserTabStateArchiving)?
-    private var pendingCopies: [BrowserTabRuntimeAssignment: BrowserTabStateEnvelope] = [:]
+    /// What a tab's next page opens with, by tab: the state a copy was given
+    /// before its first page opened, or the archive read ahead of the open,
+    /// as the core took the tab's history back, so the page restores the
+    /// state that read decoded instead of reading the archive again.
+    private var pendingStates: [BrowserTabRuntimeAssignment: BrowserTabStateEnvelope] = [:]
     private var lastPrunedTabIDsByProfileID: [UUID: Set<UUID>] = [:]
 
     var archivesResidentPages: Bool { archive != nil }
+
+    // MARK: - Initializers
 
     init(archive: (any BrowserTabStateArchiving)?) {
         self.archive = archive
     }
 
+    // MARK: - Actions - Pending states
+
     func retainCopies(for tabIDs: Set<UUID>) {
-        pendingCopies = pendingCopies.filter { tabIDs.contains($0.key.tabID) }
+        pendingStates = pendingStates.filter { tabIDs.contains($0.key.tabID) }
     }
 
     func retainCopies(matching assignments: Set<BrowserTabRuntimeAssignment>) {
-        pendingCopies = pendingCopies.filter { assignments.contains($0.key) }
+        pendingStates = pendingStates.filter { assignments.contains($0.key) }
     }
 
     /// Keeps what the copy `assignment` opens with: its engine state, the
@@ -27,9 +38,11 @@ final class BrowserTabStateCoordinator {
     /// history the core keeps for it.
     func prepareCopy(_ state: Data?, url: URL?, history: Data?, for assignment: BrowserTabRuntimeAssignment) {
         guard state != nil || history != nil else { return }
-        pendingCopies[assignment] = BrowserTabStateEnvelope(
+        pendingStates[assignment] = BrowserTabStateEnvelope(
             interactionState: state ?? Data(), url: url, history: history)
     }
+
+    // MARK: - Actions - Archiving
 
     func archivePage(_ page: BrowserPlatformPage, for tabID: UUID) {
         archivePage(page, showing: page.live.documentURL, for: tabID)
@@ -40,6 +53,8 @@ final class BrowserTabStateCoordinator {
     func archivePage(_ page: BrowserPlatformPage, showing url: URL?, for tabID: UUID) {
         // WebKit drives adopted popups; they are never persisted as user tabs.
         guard let archive, !page.wasOpenedAsPopup else { return }
+        // The page's own state is newer than anything read ahead of its open.
+        pendingStates = pendingStates.filter { $0.key.tabID != tabID }
         // The core keeps the page's history whether or not its engine has
         // state to keep yet, as before its first document commits. Such a
         // page keeps the engine state its archive already holds, so an empty
@@ -65,7 +80,9 @@ final class BrowserTabStateCoordinator {
         )
     }
 
-    /// The back and forward history the tab's pending copy or archive keeps,
+    // MARK: - Actions - Restoring
+
+    /// The back and forward history the tab's pending state or archive keeps,
     /// when it still shows `url`, which the core takes back before the tab's
     /// page opens. Leaves the engine history for the page to restore.
     func history(for assignment: BrowserTabRuntimeAssignment, expecting url: URL) -> Data? {
@@ -83,15 +100,17 @@ final class BrowserTabStateCoordinator {
         return envelope.interactionState
     }
 
-    /// What the tab's pending copy keeps, or else its archive, when it still
-    /// shows `url`.
+    /// What the tab's pending state keeps, or else its archive, when it still
+    /// shows `url`. A read that leaves the pending state in place runs ahead
+    /// of the tab's open, so what it reads from the archive waits there for
+    /// the page that opens.
     private func envelope(
         for assignment: BrowserTabRuntimeAssignment,
         expecting url: URL,
         consumePendingCopy: Bool
     ) -> BrowserTabStateEnvelope? {
-        let pending = pendingCopies[assignment]
-        if consumePendingCopy { pendingCopies.removeValue(forKey: assignment) }
+        let pending = pendingStates[assignment]
+        if consumePendingCopy { pendingStates.removeValue(forKey: assignment) }
         if let pending,
             SamePage.restoresArchivedState(archivedURL: pending.url, tabURL: url)
         {
@@ -103,8 +122,11 @@ final class BrowserTabStateCoordinator {
             envelope.isReadable,
             SamePage.restoresArchivedState(archivedURL: envelope.url, tabURL: url)
         else { return nil }
+        if !consumePendingCopy { pendingStates[assignment] = envelope }
         return envelope
     }
+
+    // MARK: - Actions - Removing
 
     /// Only membership changes warrant another directory sweep. Closed tabs
     /// retain state until they leave both the live and archived tab collections.
@@ -117,7 +139,7 @@ final class BrowserTabStateCoordinator {
     }
 
     func discardState(matching assignment: BrowserTabRuntimeAssignment) {
-        pendingCopies.removeValue(forKey: assignment)
+        pendingStates.removeValue(forKey: assignment)
         removeState(profileID: assignment.profileID, tabID: assignment.tabID)
     }
 

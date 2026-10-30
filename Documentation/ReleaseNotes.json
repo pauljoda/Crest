@@ -4589,6 +4589,10 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "tab-reopen-skips-save-queue": {
+      "category": "improved",
+      "message": "Opening a tab whose page was unloaded no longer waits for other tabs' states to finish saving, so a tab opens as quickly right after minimizing a window or closing many tabs as at any other time."
     }
   }
 }

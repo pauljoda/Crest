@@ -60,6 +60,35 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         XCTAssertFalse(historyOnly.isRestorable, "An empty engine state is never handed to the engine.")
     }
 
+    func testAReadAnswersTheLatestAskBeforeItsFileCatchesUp() async throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("crest-tab-state-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let archive = BrowserTabStateArchive(rootDirectory: root)
+        let profileID = UUID()
+        let tabID = UUID()
+        let url = try XCTUnwrap(URL(string: "https://example.com/"))
+        let first = Data("first".utf8)
+        let second = Data("second".utf8)
+        func kept() -> Data? {
+            archive.archivedState(profileID: profileID, tabID: tabID).flatMap(BrowserTabStateEnvelope.decode)?
+                .interactionState
+        }
+
+        archive.archive(interactionState: first, url: url, history: nil, profileID: profileID, tabID: tabID)
+        archive.archive(interactionState: second, url: url, history: nil, profileID: profileID, tabID: tabID)
+        XCTAssertEqual(kept(), second, "A tab closed a moment ago reopens with the state it just left.")
+        archive.removeState(profileID: profileID, tabID: tabID)
+        XCTAssertNil(kept(), "A state being removed is already gone to a read.")
+        archive.archive(interactionState: first, url: url, history: nil, profileID: profileID, tabID: tabID)
+        archive.removeStates(profileID: profileID)
+        XCTAssertNil(kept(), "Deleting a Space supersedes the writes queued before it.")
+        archive.archive(interactionState: second, url: url, history: nil, profileID: profileID, tabID: tabID)
+        XCTAssertEqual(kept(), second, "A write asked after the deletion stands on its own.")
+        await archive.flushPendingWrites()
+        XCTAssertEqual(kept(), second, "Once the queue catches up, the file says the same.")
+    }
+
     func testUnframedOrTruncatedDataDecodesToNothing() throws {
         let encoded = BrowserTabStateEnvelope(
             interactionState: Data("session".utf8),
