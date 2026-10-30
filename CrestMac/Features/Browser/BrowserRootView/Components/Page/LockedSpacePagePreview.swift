@@ -4,6 +4,10 @@ import SwiftUI
 /// Only processed pixels reach the locked surface. It never mounts a WebKit
 /// view, and a missing snapshot leaves the opaque access screen in place.
 struct LockedSpacePagePreview: View {
+    /// One context for every blur: building one sets up a Metal device and
+    /// its caches each time, and a context is safe to share across threads.
+    nonisolated private static let blurContext = CIContext()
+
     let space: SpaceModel
     /// The tabs the window shows side by side in `space`.
     let cards: [TabStateModel]
@@ -57,6 +61,6 @@ struct LockedSpacePagePreview: View {
         let output = input.clampedToExtent()
             .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 24])
             .cropped(to: input.extent)
-        return CIContext().createCGImage(output, from: input.extent)
+        return blurContext.createCGImage(output, from: input.extent)
     }
 }
