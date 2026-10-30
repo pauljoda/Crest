@@ -2,8 +2,6 @@ import AppKit
 import Foundation
 
 extension BrowserPage: BrowserDesktopWebViewMenuHost {
-    var opensLinksInCurrentSpace: Bool { navigationContext != nil }
-
     /// Answers the menu WebKit is building right now.
     ///
     /// A report can never be inherited by a later menu. The shared page action
