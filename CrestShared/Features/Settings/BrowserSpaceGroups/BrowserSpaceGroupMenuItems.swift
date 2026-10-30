@@ -6,11 +6,18 @@ struct BrowserSpaceGroupMenuItems: View {
     let browser: BrowserStore
     let space: SpaceModel
     let requestGroupChange: (BrowserSpaceGroupChange) -> Void
+    /// Starts a Sub-Space after the Space named, where Settings opens it on
+    /// its own page; elsewhere the window shows it.
+    var addSubSpace: ((UUID) -> Void)? = nil
 
     var body: some View {
         if !browser.isPrivateBrowsing {
             Button("New Sub-Space") {
-                if browser.addSubSpace(after: space.id) { BrowserSpaceGroupNotices.formed() }
+                if let addSubSpace {
+                    addSubSpace(space.id)
+                } else if browser.addSubSpace(after: space.id) {
+                    BrowserSpaceGroupNotices.formed()
+                }
             }
             .disabled(browser.isDeleting(space.id))
         }

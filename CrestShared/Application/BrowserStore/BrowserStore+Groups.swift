@@ -117,6 +117,27 @@ extension BrowserStore {
                 workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID, separates: separates))
     }
 
+    /// Moves `spaceID` to where `targetID` stands: before it when it comes
+    /// from further on, after it when it comes from earlier. The core keeps
+    /// every group together, its primary first.
+    func move(_ spaceID: UUID, to targetID: UUID) {
+        var order = spaceModels.map(\.id)
+        guard let from = order.firstIndex(of: spaceID), let to = order.firstIndex(of: targetID), from != to else {
+            return
+        }
+        order.remove(at: from)
+        order.insert(spaceID, at: to)
+        orderSpaces(order)
+    }
+
+    /// Moves whole groups, as `spaceGroups` lists them, from `source` to
+    /// `destination` in that list.
+    func moveGroups(from source: IndexSet, to destination: Int) {
+        var groups = spaceGroups
+        groups.move(fromOffsets: source, toOffset: destination)
+        orderSpaces(groups.flatMap { $0.map(\.id) })
+    }
+
     /// Puts the workspace's Spaces in the order `spaceIDs` lists; the core
     /// keeps every group together.
     func orderSpaces(_ spaceIDs: [UUID]) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The Settings pane list: a search field over the platform's own sidebar list,
 /// grouped the way the macOS catalog orders it, with the Spaces between the
@@ -9,12 +10,14 @@ struct BrowserSettingsSidebar: View {
     @State private var pendingDeletion: BrowserSpaceDeletionRequest?
     @State private var pendingGroupChange: BrowserSpaceGroupChange?
     @State private var hoveredItem: BrowserSettingsSidebarItem?
+    @State private var dropTargetID: UUID?
     @Bindable var tabState: BrowserSettingsTabState
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
     let openSpace: BrowserSettingsOpenSpaceAction
     let addSpace: () -> Void
+    let addSubSpace: (UUID) -> Void
     @FocusState private var isSearchFocused: Bool
 
     private var navigation: BrowserSettingsNavigationState { tabState.navigation }
@@ -93,21 +96,20 @@ struct BrowserSettingsSidebar: View {
 
     @ViewBuilder
     private var spacesSection: some View {
-        let spaces = visibleSpaces
-        if !spaces.isEmpty || navigation.query.isEmpty {
+        let groups = visibleSpaceGroups
+        if !groups.isEmpty || navigation.query.isEmpty {
             Section {
-                ForEach(spaces) { space in
-                    spaceRow(space)
-                }
-                .onMove { source, destination in
-                    browser.moveSpaces(from: source, to: destination)
+                if tabState.isArrangingSpaces {
+                    ForEach(groups, id: \.[0].id) { group in groupRow(group) }
+                        .onMove { source, destination in browser.moveGroups(from: source, to: destination) }
+                } else {
+                    // A Sub-Space dropped between groups comes out on its own; a
+                    // Space on its own moves there.
+                    ForEach(groups, id: \.[0].id) { group in groupRow(group) }
+                        .onInsert(of: [.plainText]) { index, _ in placeDraggedSpace(at: index, among: groups) }
                 }
             } header: {
                 spacesHeader
-                    // A Sub-Space dropped on the list's heading leaves its group.
-                    .dropDestination(for: String.self) { items, _ in
-                        requestSeparation(of: items)
-                    }
             }
         }
     }
@@ -143,18 +145,17 @@ struct BrowserSettingsSidebar: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func spaceRow(_ space: SpaceModel) -> some View {
-        HStack(spacing: 6) {
-            // A Sub-Space sits under its primary, as a tab sits in a folder.
-            if browser.isSubSpace(space) {
-                Color.clear.frame(width: BrowserSettingsSidebarMetrics.subSpaceIndent, height: 1)
-                    .accessibilityHidden(true)
-            }
+    /// A group's row: its primary's crest and name, with its Sub-Spaces'
+    /// crests stacked behind. Its page edits each of them.
+    private func groupRow(_ group: [SpaceModel]) -> some View {
+        let primary = group[0]
+        let isLocked = group.contains { $0.settings.requiresAuthentication }
+        return HStack(spacing: 6) {
             Label {
-                Text(space.settings.name.isEmpty ? String(localized: "Untitled Space") : space.settings.name)
+                Text(primary.settings.name.isEmpty ? String(localized: "Untitled Space") : primary.settings.name)
                     .lineLimit(1)
             } icon: {
-                BrowserSpaceIdentityIcon(space: space, size: 18)
+                BrowserSpaceGroupIcon(members: group, size: 18)
             }
             Spacer(minLength: 4)
             if tabState.isArrangingSpaces {
@@ -162,15 +163,15 @@ struct BrowserSettingsSidebar: View {
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("Drag to reorder")
             } else {
-                if space.settings.requiresAuthentication {
+                if isLocked {
                     Image(systemName: "lock.fill")
                         .imageScale(.small)
                         .foregroundStyle(.secondary)
                         .accessibilityLabel("Locked")
                 }
-                if navigation.selection == .space(space.id) {
+                if selection.wrappedValue == .space(primary.id) {
                     Menu {
-                        spaceMenu(space)
+                        spaceMenu(primary)
                     } label: {
                         Image(systemName: "ellipsis")
                     }
@@ -182,65 +183,77 @@ struct BrowserSettingsSidebar: View {
                 }
             }
         }
-        .settingsSidebarRow(.space(space.id), hovered: $hoveredItem, selection: selection)
-        .moveDisabled(!tabState.isArrangingSpaces)
-        .contextMenu { spaceMenu(space) }
-        .modifier(
-            BrowserSettingsSpaceGroupDrag(space: space, isArranging: tabState.isArrangingSpaces) { items in
-                requestJoin(of: items, into: space)
-            }
+        .settingsSidebarRow(
+            .space(primary.id), hovered: $hoveredItem, selection: selection, isDropTarget: dropTargetID == primary.id
         )
-        .accessibilityIdentifier("settings-space-\(space.id)")
+        .moveDisabled(!tabState.isArrangingSpaces)
+        .contextMenu { spaceMenu(primary) }
+        .modifier(
+            BrowserSettingsSpaceGroupDrag(
+                group: group, browser: browser, isArranging: tabState.isArrangingSpaces,
+                draggedSpaceID: $tabState.draggedSpaceID, dropTargetID: $dropTargetID
+            ) { space in requestJoin(of: space, into: primary) }
+        )
+        .accessibilityIdentifier("settings-space-\(primary.id)")
     }
 
-    /// Asks to make the Space a dragged row names a Sub-Space of `group`'s
-    /// group. Answers whether the drop named one that may join it.
-    private func requestJoin(of items: [String], into group: SpaceModel) -> Bool {
-        guard let space = draggedSpace(items), space !== group,
-            let change = BrowserSpaceGroupChange.joining(space, into: group, in: browser)
-        else { return false }
-        pendingGroupChange = change
-        return true
-    }
-
-    /// Asks to separate the Sub-Space a dragged row names from its group.
-    private func requestSeparation(of items: [String]) -> Bool {
-        guard let space = draggedSpace(items), let change = BrowserSpaceGroupChange.separating(space, in: browser)
-        else { return false }
-        pendingGroupChange = change
-        return true
-    }
-
-    /// The Space of this workspace a dragged Settings row names.
-    private func draggedSpace(_ items: [String]) -> SpaceModel? {
-        guard items.count == 1, let id = items.first.flatMap(UUID.init(uuidString:)), !browser.isDeleting(id) else {
-            return nil
+    /// Asks to make `space` a Sub-Space of `group`'s group. Answers whether it
+    /// may join it.
+    private func requestJoin(of space: SpaceModel, into group: SpaceModel) -> Bool {
+        guard space !== group, let change = BrowserSpaceGroupChange.joining(space, into: group, in: browser) else {
+            return false
         }
-        return browser.spaceModel(id)
+        pendingGroupChange = change
+        return true
+    }
+
+    /// Places the Space being dragged between the groups `groups` lists, at
+    /// `index`: a Sub-Space asks to come out of its group, and a Space on its
+    /// own moves there.
+    private func placeDraggedSpace(at index: Int, among groups: [[SpaceModel]]) {
+        defer { tabState.draggedSpaceID = nil }
+        guard let space = tabState.draggedSpaceID.flatMap({ browser.spaceModel($0) }) else { return }
+        if let change = BrowserSpaceGroupChange.separating(space, in: browser) {
+            pendingGroupChange = change
+        } else if let from = groups.firstIndex(where: { $0.count == 1 && $0[0].id == space.id }) {
+            browser.moveGroups(from: IndexSet(integer: from), to: index)
+        }
     }
 
     private func spaceMenu(_ space: SpaceModel) -> some View {
         BrowserSettingsSpaceMenu(
-            browser: browser, space: space, spaceAccess: spaceAccess, openSpace: openSpace,
+            browser: browser, space: space, spaceAccess: spaceAccess, openSpace: openSpace, addSubSpace: addSubSpace,
             requestDeletion: { pendingDeletion = $0 }, requestGroupChange: { pendingGroupChange = $0 })
     }
 
-    /// Every Space while arranging; otherwise the Spaces the search shows.
-    private var visibleSpaces: [SpaceModel] {
-        let spaces = browser.spaceModels.filter { !browser.isDeleting($0.id) }
-        guard !tabState.isArrangingSpaces else { return spaces }
+    /// Every group of Spaces while arranging; otherwise the groups with a
+    /// Space the search shows.
+    private var visibleSpaceGroups: [[SpaceModel]] {
+        let groups = browser.spaceGroups
+        guard !tabState.isArrangingSpaces else { return groups }
         let tab = navigation.matchingSpaceTab(locale: locale, in: state)
-        return spaces.filter { navigation.lists($0, spaceTab: tab) }
+        return groups.filter { group in group.contains { navigation.lists($0, spaceTab: tab) } }
     }
 
     // MARK: - Selection
+
+    /// The primary of the group whose page is shown, if a Space's is.
+    private var currentGroupPrimaryID: UUID? {
+        guard case .space(let id) = navigation.selection.row, let space = browser.spaceModel(id) else { return nil }
+        return browser.primary(of: space).id
+    }
 
     /// The list's selection. A page without a row selects the row it lives
     /// under; clearing the selection is ignored, so a pane is always shown.
     private var selection: Binding<BrowserSettingsSidebarItem?> {
         Binding {
-            navigation.selection.row
+            guard case .space(let id) = navigation.selection.row, let space = browser.spaceModel(id) else {
+                return navigation.selection.row
+            }
+            return .space(browser.primary(of: space).id)
         } set: { item in
+            // Choosing the row of the group shown keeps the Space shown.
+            if item == .space(currentGroupPrimaryID ?? UUID()) { return }
             item?.select(on: tabState) { id in
                 openSpace(id, tab: navigation.matchingSpaceTab(locale: locale, in: state))
             }
@@ -250,13 +263,16 @@ struct BrowserSettingsSidebar: View {
 
 extension View {
     /// A sidebar row for `item`, wearing Crest's hover surface while the
-    /// pointer is over it unless it is the selected row.
+    /// pointer is over it unless it is the selected row, and while a dragged
+    /// Space would join its group.
     fileprivate func settingsSidebarRow(
         _ item: BrowserSettingsSidebarItem,
         hovered: Binding<BrowserSettingsSidebarItem?>,
-        selection: Binding<BrowserSettingsSidebarItem?>
+        selection: Binding<BrowserSettingsSidebarItem?>,
+        isDropTarget: Bool = false
     ) -> some View {
-        let isHovered = hovered.wrappedValue == item && selection.wrappedValue != item
+        // A row a dragged Space would join wears the hover surface too.
+        let isHovered = (hovered.wrappedValue == item && selection.wrappedValue != item) || isDropTarget
         return
             self
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -284,25 +300,77 @@ private enum BrowserSettingsSidebarMetrics {
     /// Lines the header's buttons up with the trailing glyphs of the rows.
     static let headerTrailingInset: CGFloat = 6
     static let headerButtonSize = CGSize(width: 22, height: 22)
-    /// How far a Sub-Space's row sits in from its primary's.
-    static let subSpaceIndent: CGFloat = 14
 }
 
-/// Lets a Space's Settings row be dragged onto another Space's row, which
-/// asks to make it a Sub-Space there, or onto the Spaces heading, which asks
-/// to separate it. While the person arranges Spaces, rows reorder instead.
+/// Lets a group's Settings row take a Space dragged onto it, from another
+/// row or from a group page's crests, which asks to make it a Sub-Space there.
+/// A Space on its own drags from its row the same way. While the person
+/// arranges Spaces, rows reorder instead.
 private struct BrowserSettingsSpaceGroupDrag: ViewModifier {
-    let space: SpaceModel
+    let group: [SpaceModel]
+    let browser: BrowserStore
     let isArranging: Bool
-    let drop: ([String]) -> Bool
+    @Binding var draggedSpaceID: UUID?
+    @Binding var dropTargetID: UUID?
+    let join: (SpaceModel) -> Bool
 
     func body(content: Content) -> some View {
         if isArranging {
             content
-        } else {
+        } else if group.count == 1 {
             content
-                .draggable(space.id.uuidString)
-                .dropDestination(for: String.self) { items, _ in drop(items) }
+                .onDrag {
+                    draggedSpaceID = group[0].id
+                    return NSItemProvider(object: group[0].id.uuidString as NSString)
+                }
+                .onDrop(of: [.plainText], delegate: dropDelegate)
+        } else {
+            content.onDrop(of: [.plainText], delegate: dropDelegate)
+        }
+    }
+
+    private var dropDelegate: RowDrop {
+        RowDrop(
+            primary: group[0], browser: browser, draggedSpaceID: $draggedSpaceID, dropTargetID: $dropTargetID,
+            join: join)
+    }
+
+    /// A group's row taking a dragged Space, which asks to join the group.
+    private struct RowDrop: DropDelegate {
+        let primary: SpaceModel
+        let browser: BrowserStore
+        @Binding var draggedSpaceID: UUID?
+        @Binding var dropTargetID: UUID?
+        let join: (SpaceModel) -> Bool
+
+        private var dragged: SpaceModel? {
+            draggedSpaceID.flatMap { browser.spaceModel($0) }
+        }
+
+        func validateDrop(info: DropInfo) -> Bool {
+            guard let dragged, dragged !== primary else { return false }
+            return BrowserSpaceGroupChange.joining(dragged, into: primary, in: browser) != nil
+        }
+
+        func dropEntered(info: DropInfo) {
+            if validateDrop(info: info) { dropTargetID = primary.id }
+        }
+
+        func dropExited(info: DropInfo) {
+            if dropTargetID == primary.id { dropTargetID = nil }
+        }
+
+        func dropUpdated(info: DropInfo) -> DropProposal? {
+            DropProposal(operation: validateDrop(info: info) ? .move : .forbidden)
+        }
+
+        func performDrop(info: DropInfo) -> Bool {
+            defer {
+                dropTargetID = nil
+                draggedSpaceID = nil
+            }
+            guard let dragged else { return false }
+            return join(dragged)
         }
     }
 }

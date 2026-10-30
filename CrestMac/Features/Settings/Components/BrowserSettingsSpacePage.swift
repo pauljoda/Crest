@@ -9,6 +9,7 @@ struct BrowserSettingsSpacePage: View {
     let dataDeleter: any BrowserSpaceDataDeleting
     @Bindable var tabState: BrowserSettingsTabState
     let openSpace: BrowserSettingsOpenSpaceAction
+    let addSubSpace: (UUID) -> Void
 
     @State private var downloads = BrowserSpaceDownloadSettingsModel()
     @State private var passwordSearchText = ""
@@ -19,6 +20,16 @@ struct BrowserSettingsSpacePage: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if !browser.isPrivateBrowsing {
+                BrowserSpaceGroupCrestRow(
+                    browser: browser, space: space, draggedSpaceID: $tabState.draggedSpaceID,
+                    select: { openSpace($0) }, addSubSpace: addSubSpace,
+                    requestGroupChange: { pendingGroupChange = $0 }, requestDeletion: { pendingDeletion = $0 }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 10)
+            }
             Divider()
 
             if spaceAccess.isLocked(space) {
@@ -72,7 +83,8 @@ struct BrowserSettingsSpacePage: View {
             Menu {
                 BrowserSettingsSpaceMenu(
                     browser: browser, space: space, spaceAccess: spaceAccess, openSpace: openSpace,
-                    requestDeletion: { pendingDeletion = $0 }, requestGroupChange: { pendingGroupChange = $0 })
+                    addSubSpace: addSubSpace, requestDeletion: { pendingDeletion = $0 },
+                    requestGroupChange: { pendingGroupChange = $0 })
                 Divider()
                 Button("Reset Appearance") { resetAppearance() }
                     .disabled(startingAppearance == nil || startingAppearance == space.settings.look)
@@ -198,6 +210,7 @@ struct BrowserSettingsSpaceMenu: View {
     let space: SpaceModel
     let spaceAccess: BrowserSpaceAccessController
     let openSpace: BrowserSettingsOpenSpaceAction
+    let addSubSpace: (UUID) -> Void
     let requestDeletion: (BrowserSpaceDeletionRequest) -> Void
     let requestGroupChange: (BrowserSpaceGroupChange) -> Void
 
@@ -209,7 +222,8 @@ struct BrowserSettingsSpaceMenu: View {
         Button("Move Up", action: order.moveUp).disabled(!order.canMoveUp)
         Button("Move Down", action: order.moveDown).disabled(!order.canMoveDown)
         Divider()
-        BrowserSpaceGroupMenuItems(browser: browser, space: space, requestGroupChange: requestGroupChange)
+        BrowserSpaceGroupMenuItems(
+            browser: browser, space: space, requestGroupChange: requestGroupChange, addSubSpace: addSubSpace)
         Divider()
         Toggle("Lock Space", isOn: lock)
         Divider()
