@@ -41,6 +41,12 @@ internal sealed class PaletteContext {
     /// The Space's history by address, or null without a Space.
     public AddressIndex? History { get; }
 
+    /// The Space's tabs by identity, built the first time a row needs one.
+    private Dictionary<Guid, TabState>? tabsById;
+
+    /// What earlier picks add to each destination for the text last ranked.
+    private (string Text, IReadOnlyDictionary<PaletteDestination, double> Boosts)? learned;
+
     #endregion
 
     #region Constructors
@@ -91,13 +97,25 @@ internal sealed class PaletteContext {
             Learned(query, row));
 
     /// What the person's earlier picks for what was typed add to `row`.
-    public double Learned(PaletteQuery query, PaletteRow row) =>
-        Preferences.LearnsChoices && Destination(row) is { } destination ? Memory.Learned(query.Text, destination, Now) : 0;
+    public double Learned(PaletteQuery query, PaletteRow row) {
+        if (!Preferences.LearnsChoices || Memory.Choices.Count == 0 || Destination(row) is not { } destination) return 0;
+        if (learned?.Text != query.Text) learned = (query.Text, Memory.LearnedBoosts(query.Text, Now));
+        return learned.Value.Boosts.GetValueOrDefault(destination);
+    }
 
     /// Where `row` leads, as picks remember it.
     public PaletteDestination? Destination(PaletteRow row) =>
-        row.Kind.Destination(row, tab => Space?.Tabs.FirstOrDefault(candidate => candidate.Id == tab) is { } found
-            ? found.SavedAddress ?? found.Url : null);
+        row.Kind.Destination(row, tab => Tab(tab) is { } found ? found.SavedAddress ?? found.Url : null);
+
+    /// The Space's tab `id` names, or null.
+    private TabState? Tab(Guid id) {
+        if (Space is null) return null;
+        if (tabsById is null) {
+            tabsById = new(Space.Tabs.Count);
+            foreach (var tab in Space.Tabs) tabsById.TryAdd(tab.Id, tab);
+        }
+        return tabsById.GetValueOrDefault(id);
+    }
 
     #endregion
 

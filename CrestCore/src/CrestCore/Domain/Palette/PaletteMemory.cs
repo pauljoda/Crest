@@ -105,18 +105,23 @@ public sealed class PaletteMemory {
     /// the picks whose text starts with what was typed, by how often it was
     /// picked and how much of its text was typed, doubled when it was exactly
     /// this text. Zero when nothing learned matches.
-    public double Learned(string typed, PaletteDestination destination, DateTimeOffset now) {
+    public double Learned(string typed, PaletteDestination destination, DateTimeOffset now) =>
+        LearnedBoosts(typed, now).GetValueOrDefault(destination);
+
+    /// The boost `Learned` gives each destination for `typed`, in one pass
+    /// over the picks, so ranking every row of an answer reads them once.
+    public IReadOnlyDictionary<PaletteDestination, double> LearnedBoosts(string typed, DateTimeOffset now) {
+        var boosts = new Dictionary<PaletteDestination, double>();
         string text = Folded(typed);
-        if (text.Length == 0) return 0;
-        double best = 0;
+        if (text.Length == 0) return boosts;
         foreach (var choice in Choices) {
-            if (choice.Destination != destination || !choice.Text.StartsWith(text, StringComparison.Ordinal)) continue;
+            if (!choice.Text.StartsWith(text, StringComparison.Ordinal)) continue;
             double uses = Current(choice, now);
             double coverage = (double)text.Length / choice.Text.Length;
             double boost = 500 * uses / (uses + 1) * coverage * (choice.Text.Length == text.Length ? 2 : 1);
-            best = Math.Max(best, boost);
+            boosts[choice.Destination] = Math.Max(boosts.GetValueOrDefault(choice.Destination), boost);
         }
-        return best;
+        return boosts;
     }
 
     /// The destination a person picked at least twice for exactly `typed`,
