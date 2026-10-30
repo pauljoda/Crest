@@ -37,6 +37,12 @@ struct BrowserQuickWindowUnlockedContent: View {
                 addressFocusRequest: addressFocusRequest,
                 promote: promote
             )
+            if let downloadCenter = model.pages?.downloadCenter {
+                BrowserMacDownloadTrayLayer(downloadCenter: downloadCenter)
+                    .padding(.top, BrowserQuickWindowLayout.toolbarHeight)
+                    // Keeps the cards inside the page surface's frame.
+                    .padding([.horizontal, .bottom], BrowserQuickWindowLayout.horizontalPadding)
+            }
         }
         .modifier(
             BrowserQuickWindowActivityLifecycleModifier(

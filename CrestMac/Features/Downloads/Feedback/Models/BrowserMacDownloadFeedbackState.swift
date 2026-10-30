@@ -8,6 +8,8 @@ import Observation
 final class BrowserMacDownloadFeedbackState {
     struct Flight: Identifiable {
         let id: UUID
+        /// The name of the file in flight, whose kind picks the glyph it flies as.
+        let filename: String
         let path: BrowserMacDownloadFlightPath?
     }
 
@@ -43,7 +45,8 @@ final class BrowserMacDownloadFeedbackState {
                 && $0.profileID == context.profileID
         }
         for event in newEvents {
-            next.append(Flight(id: event.id, path: path(for: event, context: context)))
+            next.append(
+                Flight(id: event.id, filename: event.filename, path: path(for: event, context: context)))
         }
         next = Array(next.suffix(BrowserDownloadFeedbackEvent.maximumVisible))
         return !newEvents.isEmpty

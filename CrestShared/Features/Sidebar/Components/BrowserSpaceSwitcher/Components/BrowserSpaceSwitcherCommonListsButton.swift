@@ -4,6 +4,10 @@ import SwiftUI
 /// and downloads lists, badged when downloads have finished unseen. It wears
 /// the symbol of the list it opens, which its menu changes.
 struct BrowserSpaceSwitcherCommonListsButton: View {
+    /// The width of the ring that shows the newest live download's progress
+    /// around the button.
+    private static let progressLineWidth: CGFloat = 2.5
+
     let isExpanded: Bool
     let surface: BrowserUtilitySurface
     let downloads: [DownloadState]
@@ -28,6 +32,20 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                 height: BrowserSpaceSwitcherLayout.utilityButtonSize
             )
             .symbolVariant(isExpanded ? .fill : .none)
+            .background {
+                if let download = downloads.newestLiveDownload {
+                    BrowserDownloadProgressRing(
+                        fraction: download.knownProgress,
+                        tint: badgeColor,
+                        lineWidth: Self.progressLineWidth
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .animation(
+                CrestMotion.contentState.unlessReducingMotion(reduceMotion),
+                value: downloads.newestLiveDownload == nil
+            )
             .contextMenu {
                 Picker(selection: Binding(get: { surface }, set: choose)) {
                     ForEach(BrowserUtilitySurface.all) { surface in
@@ -54,7 +72,8 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                         tint: downloads.contains(where: { $0.phase.needsAttention })
                             ? .red
                             : badgeColor,
-                        progress: downloads.notificationProgress
+                        // The ring around the button carries the progress.
+                        progress: nil
                     )
                     .offset(
                         x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,

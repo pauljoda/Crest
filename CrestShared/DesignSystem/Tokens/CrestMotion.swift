@@ -96,6 +96,8 @@ enum CrestMotion {
     static let contentStateTransition: TimeInterval = 0.22
     /// Presenting transient confirmation feedback in browser chrome.
     static let feedbackPresentationTransition: TimeInterval = 0.22
+    /// A download's card rising into a window's corner as the download starts.
+    static let downloadCardEntranceTransition: TimeInterval = 0.42
     /// Dismissing a Peek card back into browser chrome.
     static let peekDismissalTransition: TimeInterval = 0.22
     /// Revealing one destination in the utility fan.
@@ -174,6 +176,11 @@ enum CrestMotion {
     static var contentState: Animation { .snappy(duration: contentStateTransition) }
     static var feedbackPresentation: Animation {
         .snappy(duration: feedbackPresentationTransition)
+    }
+    /// A springy rise with a little overshoot, so a download's card pops into
+    /// place.
+    static var downloadCardEntrance: Animation {
+        .spring(duration: downloadCardEntranceTransition, bounce: 0.3)
     }
     static var peekDismissal: Animation { .snappy(duration: peekDismissalTransition) }
     static var utilityFanReveal: Animation {
