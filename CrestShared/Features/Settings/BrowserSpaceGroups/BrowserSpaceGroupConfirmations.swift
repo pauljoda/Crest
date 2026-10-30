@@ -50,6 +50,9 @@ private struct BrowserSpaceGroupChangeConfirmation: ViewModifier {
     private func apply(_ change: BrowserSpaceGroupChange) {
         self.change = nil
         Task { @MainActor in
+            // The change redraws much of the window, so the confirmation
+            // finishes closing on screen first instead of hanging over it.
+            try? await Task.sleep(for: .seconds(CrestMotion.dismissalTransition))
             for space in change.unlocking {
                 guard await spaceAccess.unlock(space) else { return }
             }
