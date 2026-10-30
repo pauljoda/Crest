@@ -147,6 +147,14 @@ import WebKit
             return true
         }
 
+        /// Forgets what a page closed for good kept. Stopping a watch needs
+        /// the page, which is gone once it closes, so its activity would stay.
+        func forget(_ pageID: UUID) {
+            activities[pageID] = nil
+            observed.remove(pageID)
+            handlers.removeValue(forKey: pageID)?.stop()
+        }
+
         func console(_ request: ReadPageConsole) -> PageConsoleLog {
             let activity = activities[request.pageID] ?? Activity()
             return PageConsoleLog(

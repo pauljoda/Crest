@@ -8,6 +8,10 @@ extension ClosePage {
         let page = binding.pages.removeValue(forKey: pageID)?.value
         binding.declinePrompts(of: pageID)
         binding.stagedLinks = binding.stagedLinks.filter { $0.value.sourcePageID != pageID }
+        #if os(macOS)
+            // A page unloaded or moved comes back under the same identity.
+            if !keepsState { binding.enginePages.agents.forget(pageID) }
+        #endif
         engines.report(PageClosed(pageID: pageID, restoreState: keepsState ? page?.restoreState : nil), from: binding)
     }
 }
