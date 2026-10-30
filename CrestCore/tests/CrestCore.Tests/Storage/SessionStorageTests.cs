@@ -146,6 +146,30 @@ public sealed unsafe partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AskingWhatIsPendingRetriesASaveBehindThatFailed() {
+        using var directory = new StorageDirectory();
+        var document = SavedSession().Document["session"]!.AsObject();
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
+        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(), app.Send(Adoption(document)));
+        var workspace = TestWorkspaces.OpenStored(app).Workspace;
+
+        // The worker's write fails and leaves the edit unwritten, with no
+        // later edit to wake it again.
+        RefuseWrites(directory.File, "core");
+        app.Send(Renaming(workspace, document, "Kept"));
+        _ = DrainUntil(app, changes => changes.OfType<StorageFailed>().Any());
+        AcceptWrites(directory.File);
+
+        // A caller about to wait for the edit, as quitting does, has it written.
+        long pending = Assert.NotNull(app.Query(new PendingSave()).Revision);
+        var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision >= pending));
+        Assert.Contains(announced, change => change is Saved saved && saved.Revision >= pending);
+        Assert.Null(app.Query(new PendingSave()).Revision);
+        var stored = JsonNode.Parse(StoredParts(directory.File)["core"])!;
+        Assert.Equal("Kept", stored["spaces"]![0]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void AnEditWritesOnlyThePartsItChanged() {
         using var directory = new StorageDirectory();
         var document = SavedSession().Document["session"]!.AsObject();
