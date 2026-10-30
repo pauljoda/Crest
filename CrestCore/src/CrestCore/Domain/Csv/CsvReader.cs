@@ -13,6 +13,16 @@ namespace CrestCore.Domain;
 /// Reading stops at the first limit `Limits` sets, so a hostile file costs no
 /// more than the limits allow.
 public sealed class CsvReader {
+    #region Static Variables
+
+    /// The most UTF-16 code units a character, as a person counts one, may
+    /// take. A field holding more code units than its character limit times
+    /// this is too large whatever it spells, so it is refused as it is read
+    /// and its characters are counted once, when it ends, never at each unit.
+    private const int MaximumUnitsPerCharacter = 16;
+
+    #endregion
+
     #region Variables
 
     /// The most a text may hold.
@@ -41,8 +51,9 @@ public sealed class CsvReader {
         bool inQuotes = false, afterClosingQuote = false, fieldStarted = false;
 
         void EndField() {
-            Check(field);
-            row.Add(field.ToString());
+            string value = field.ToString();
+            CheckCharacters(value);
+            row.Add(value);
             field.Clear();
             fieldStarted = false;
             afterClosingQuote = false;
@@ -74,7 +85,7 @@ public sealed class CsvReader {
                 } else {
                     field.Append(breaksLine ? '\n' : character);
                 }
-                Check(field);
+                CheckUnits(field);
                 continue;
             }
             if (afterClosingQuote) {
@@ -94,19 +105,29 @@ public sealed class CsvReader {
             } else {
                 field.Append(character);
                 fieldStarted = true;
-                Check(field);
+                CheckUnits(field);
             }
         }
-        if (inQuotes) throw new CsvException(CsvFault.Malformed);
+        if (inQuotes) {
+            CheckCharacters(field.ToString());
+            throw new CsvException(CsvFault.Malformed);
+        }
         if (fieldStarted || afterClosingQuote || field.Length > 0 || row.Count > 0) EndRow();
         return rows;
     }
 
-    /// Throws `CsvException` when `field` holds more characters, as a person
-    /// counts them, than a field may.
-    private void Check(StringBuilder field) {
+    /// Throws `CsvException` when `field`, still being read, holds more
+    /// UTF-16 code units than any field within its character limit can.
+    private void CheckUnits(StringBuilder field) {
+        if (field.Length > (long)Limits.MaximumFieldCharacters * MaximumUnitsPerCharacter)
+            throw new CsvException(CsvFault.FieldTooLarge);
+    }
+
+    /// Throws `CsvException` when the finished `field` holds more characters,
+    /// as a person counts them, than a field may.
+    private void CheckCharacters(string field) {
         if (field.Length <= Limits.MaximumFieldCharacters) return;
-        if (new StringInfo(field.ToString()).LengthInTextElements > Limits.MaximumFieldCharacters)
+        if (new StringInfo(field).LengthInTextElements > Limits.MaximumFieldCharacters)
             throw new CsvException(CsvFault.FieldTooLarge);
     }
 
@@ -114,7 +135,8 @@ public sealed class CsvReader {
 }
 
 /// The most rows, fields in a row and characters in a field a CSV text may
-/// hold. A field's characters are counted as a person counts them.
+/// hold. A field's characters are counted as a person counts them, once the
+/// field ends; while it is read, each may take at most sixteen code units.
 public sealed record CsvLimits(int MaximumRows, int MaximumColumns, int MaximumFieldCharacters);
 
 /// The first rule a CSV text breaks.

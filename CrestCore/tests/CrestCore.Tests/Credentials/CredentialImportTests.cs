@@ -50,6 +50,19 @@ public sealed class CredentialImportTests {
     }
 
     [Fact]
+    public void AFieldCountsCharactersAsAPersonDoesAndARunOfMarksIsRefusedAsItIsRead() {
+        // An accented letter spelled as two code units is one character, so
+        // the longest allowed password fits even though its code units do not.
+        string accented = string.Concat(Enumerable.Repeat("é", CredentialFile.MaximumFieldCharacters));
+        Assert.Equal(1, Preview($"url,username,password\nhttps://accounts.example,ada,{accented}\n").ValidRowCount);
+        // A letter under a million combining marks is one character to a
+        // person; it is refused once it passes sixteen code units a character,
+        // without counting the field again at each mark.
+        string marks = "a" + new string('́', CredentialFile.MaximumFieldCharacters * 16);
+        Assert.Equal(CredentialFileFlaw.FieldTooLarge, Flaw($"url,username,password\nhttps://accounts.example,ada,{marks}\n"));
+    }
+
+    [Fact]
     public void BrokenRowsAreLeftOutAndPlainHttpRowsWarnWithoutLosingValidRows() {
         var plan = Preview("""
             url,username,password
