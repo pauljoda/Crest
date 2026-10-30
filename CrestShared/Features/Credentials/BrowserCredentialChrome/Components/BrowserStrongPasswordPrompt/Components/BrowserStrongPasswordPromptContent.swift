@@ -5,6 +5,9 @@ struct BrowserStrongPasswordPromptContent: View {
     let space: BrowserSpaceIdentity?
     let siteIconData: Data?
     let model: BrowserStrongPasswordOperationModel
+    /// Where the password is kept before it is filled.
+    let destinationName: String
+    let sentToApplePasswords: Bool
     let metrics: BrowserCredentialPromptMetrics
     let dismiss: () -> Void
     let generateAndFill: () -> Void
@@ -28,7 +31,7 @@ struct BrowserStrongPasswordPromptContent: View {
                 )
             }
             BrowserStrongPasswordExplanation(
-                spaceName: space?.name ?? "this Space"
+                destinationName: destinationName
             )
             BrowserStrongPasswordActionButton(
                 isWorking: model.isWorking,
@@ -42,7 +45,9 @@ struct BrowserStrongPasswordPromptContent: View {
                 )
             } else if model.phase == .savedButFillFailed {
                 BrowserCredentialPromptError(
-                    "The password is saved in this Space, but the form changed before Crest could fill it."
+                    sentToApplePasswords
+                        ? "The password was sent to Apple Passwords, but the form changed before Crest could fill it."
+                        : "The password is saved in this Space, but the form changed before Crest could fill it."
                 )
             }
         }

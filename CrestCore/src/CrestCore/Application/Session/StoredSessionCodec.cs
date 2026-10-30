@@ -163,6 +163,7 @@ internal static partial class StoredSessionCodec {
         public const string Trim = "trim";
         public const string TrimColorIndex = "trimColorIndex";
         public const string Url = "url";
+        public const string UsesApplePasswords = "usesApplePasswords";
         public const string Value = "value";
         public const string VisitCount = "visitCount";
     }

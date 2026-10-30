@@ -65,6 +65,11 @@ struct BrowserCredentialPromptCrossOriginSubject: Hashable, Sendable {
 struct BrowserCredentialPromptDestinationMetadata: Sendable {
     let detail: LocalizedStringResource
     let syncStatus: LocalizedStringResource?
+    /// The button that sends this one save to the other place, when there is one.
+    var switchTitle: LocalizedStringResource?
+    /// Said under the destination where Apple Passwords is set to never save
+    /// for the site, which also makes the destination a fixed Crest Passwords.
+    var neverSavesNote: LocalizedStringResource?
 }
 
 enum BrowserCredentialPromptDestinationPresentation: Equatable, Sendable {
@@ -147,6 +152,12 @@ struct BrowserCredentialPromptRoute: Equatable, Sendable {
 
     let state: BrowserCredentialPromptState
     let offersSystemPasswords: Bool
+    /// Where the password goes. Only a destination that keeps the Space's vault
+    /// is written by Crest; the other is handed to Apple Passwords.
+    let destination: CredentialProvider
+    let offersDestinationChoice: Bool
+    /// Whether Apple Passwords is set to never save for the site.
+    let appleNeverSaves: Bool
 
     var primaryAction: BrowserCredentialPromptPrimaryAction? {
         state.primaryAction
@@ -177,19 +188,25 @@ struct BrowserCredentialPromptRoute: Equatable, Sendable {
     init(
         phase: BrowserCredentialSavePromptPhase,
         systemPasswordOfferPhase: BrowserSystemPasswordOfferPhase,
-        offersSystemPasswords: Bool
+        offersSystemPasswords: Bool,
+        destination: CredentialProvider = .crestPasswords,
+        offersDestinationChoice: Bool = false,
+        appleNeverSaves: Bool = false
     ) {
+        self.appleNeverSaves = appleNeverSaves
         self.offersSystemPasswords = offersSystemPasswords
+        self.destination = destination
+        self.offersDestinationChoice = offersDestinationChoice
 
         guard case .saved = phase else {
-            state = Self.state(for: phase)
+            state = Self.state(for: phase, destination: destination)
             return
         }
 
         state =
             switch systemPasswordOfferPhase {
             case .notRequested:
-                Self.state(for: phase)
+                Self.state(for: phase, destination: destination)
             case .offering:
                 .offeringToSystemPasswords
             case .completed:
@@ -226,11 +243,26 @@ struct BrowserCredentialPromptRoute: Equatable, Sendable {
         syncsWithICloud: Bool,
         presentation: BrowserCredentialPromptDestinationPresentation
     ) -> BrowserCredentialPromptDestinationMetadata {
+        let alternateTitle: LocalizedStringResource =
+            destination.keepsSpaceVault ? "Use Apple Passwords" : "Use Crest Passwords"
+        let switchTitle = offersDestinationChoice ? alternateTitle : nil
+        if appleNeverSaves {
+            return BrowserCredentialPromptDestinationMetadata(
+                detail: "Crest Passwords", syncStatus: nil, switchTitle: nil,
+                neverSavesNote: "Apple Passwords is set to never save here.")
+        }
+        guard destination.keepsSpaceVault else {
+            return BrowserCredentialPromptDestinationMetadata(
+                detail: "Saves to Apple Passwords, which asks you to confirm", syncStatus: nil,
+                switchTitle: switchTitle)
+        }
+
         if offersSystemPasswords {
             return BrowserCredentialPromptDestinationMetadata(
                 detail: spaceName.map { "Crest saves in \($0) first; Passwords asks separately" }
                     ?? "Crest saves in this Space first; Passwords asks separately",
-                syncStatus: nil
+                syncStatus: nil,
+                switchTitle: switchTitle
             )
         }
 
@@ -238,24 +270,28 @@ struct BrowserCredentialPromptRoute: Equatable, Sendable {
             return BrowserCredentialPromptDestinationMetadata(
                 detail: spaceName.map { "Stored only in \($0), with Crest iCloud sync" }
                     ?? "Stored only in this Space, with Crest iCloud sync",
-                syncStatus: nil
+                syncStatus: nil,
+                switchTitle: switchTitle
             )
         }
 
         return BrowserCredentialPromptDestinationMetadata(
             detail: spaceName.map { "Stored only in the \($0) Space" } ?? "Stored only in this Space",
-            syncStatus: syncsWithICloud ? "Crest iCloud sync on" : nil
+            syncStatus: syncsWithICloud ? "Crest iCloud sync on" : nil,
+            switchTitle: switchTitle
         )
     }
 
     /// The workflow is a union of phases, so this one place maps each onto
     /// its prompt state.
-    private static func state(for phase: BrowserCredentialSavePromptPhase) -> BrowserCredentialPromptState {
+    private static func state(
+        for phase: BrowserCredentialSavePromptPhase, destination: CredentialProvider
+    ) -> BrowserCredentialPromptState {
         switch phase {
         case .preparing:
             .preparing
         case .create:
-            .create
+            destination.keepsSpaceVault ? .create : .createInApplePasswords
         case .update:
             .update
         case .alreadyStored:
@@ -264,6 +300,8 @@ struct BrowserCredentialPromptRoute: Equatable, Sendable {
             .saving(action)
         case .saved(let disposition):
             .saved(disposition)
+        case .sent:
+            .sent
         case .failed(.preparation):
             .failedPreparation
         case .failed(.commit(let action)):

@@ -23,6 +23,10 @@ struct BrowserCredentialSavePort {
     /// written to and the identity the prompt names.
     let spaceID: UUID
 
+    /// The tab of the page that submitted the form, which Apple Passwords
+    /// queries name. Nil where the shell has no such tab to name.
+    let tabID: UUID?
+
     /// The candidate the page is presenting right now.
     ///
     /// Read back after every await rather than captured, so a prompt only ever

@@ -14,6 +14,7 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
                 && fields.isTrustedUserEvent
                 && !fields.containsPassword
                 && !fields.containsPasswordKind
+                && !fields.isOneTimeCodeField
         })
     static let focus = BrowserCredentialFormEvent(
         name: "focus", captureEvent: .focus, closesFillWhenRefused: true,
@@ -23,6 +24,8 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
                 && !fields.hasInvalidUsername
                 && !fields.containsPassword
                 && fields.passwordKind != nil
+                // A code field is a current-password focus to the core and nothing else.
+                && (!fields.isOneTimeCodeField || fields.passwordKind == .current)
         })
     static let submit = BrowserCredentialFormEvent(
         name: "submit", captureEvent: .submit,
@@ -32,6 +35,7 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
                 && !fields.hasInvalidUsername
                 && !fields.hasInvalidPassword
                 && !fields.hasInvalidPasswordKind
+                && !fields.isOneTimeCodeField
                 && fields.password != nil
                 && fields.passwordKind != nil
         })
@@ -39,6 +43,7 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
         name: "documentState", captureEvent: .documentState, weighsPendingCandidate: true,
         accepts: { fields in
             fields.hasVisiblePasswordField != nil
+                && !fields.isOneTimeCodeField
                 && !fields.containsUsername
                 && !fields.containsPassword
                 && !fields.containsPasswordKind
@@ -56,6 +61,7 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
             // the event cannot be a way in for anything but a rect.
             fields.formID != nil
                 && fields.fieldRect != nil
+                && !fields.isOneTimeCodeField
                 && !fields.containsUsername
                 && !fields.containsPassword
                 && !fields.containsPasswordKind

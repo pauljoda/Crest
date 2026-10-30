@@ -359,6 +359,16 @@ struct BrowserPasswordSettingsPane: View {
                 )
             )
         }
+
+        if browser.offersApplePasswordsSetting(in: space) {
+            Toggle(
+                "Use Apple Passwords",
+                isOn: browser.credentialPreferenceBinding(
+                    \.usesApplePasswords,
+                    in: space
+                )
+            )
+        }
     }
 
     @ViewBuilder

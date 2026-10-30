@@ -31,6 +31,9 @@ final class BrowserStore {
     /// The process's core, which every window of every browsing mode shares.
     @ObservationIgnored let core: CrestCore
     @ObservationIgnored let credentialVault: any CredentialVault
+    /// Apple Passwords as a second password source. Only the Mac sets it, for
+    /// its standard windows; every other store leaves it nil.
+    @ObservationIgnored var applePasswords: (any BrowserApplePasswordsAccess)?
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
@@ -314,6 +317,7 @@ extension BrowserStore {
             core: core
         )
         store.localSyncErrorDescription = localSyncErrorDescription
+        store.applePasswords = applePasswords
         return store
     }
 }

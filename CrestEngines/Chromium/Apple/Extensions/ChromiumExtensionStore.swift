@@ -79,6 +79,14 @@ final class ChromiumExtensionStore {
         }
         return pages.request(InstalledExtensions(profileID: space.profileID)).extensions.map(Installed.init)
     }
+    /// Whether Apple's iCloud Passwords extension is installed and enabled in the
+    /// Space, which the core weighs when it decides if Apple Passwords is used
+    /// through the helper instead. Reads only the list already cached for the
+    /// Space, changing nothing, so it is false until `load` has read the Space.
+    func isApplePasswordsExtensionEnabled(in space: BrowserSpaceIdentity) -> Bool {
+        installed[space.profileID]?
+            .first { $0.id == BrowserApplePasswordsSystem.appleExtensionID }?.enabled == true
+    }
     func load(_ space: BrowserSpaceIdentity, in browser: BrowserStore? = nil) async {
         guard authorized(space, in: browser), let engine = ChromiumComposition.chromiumEngine else { return }
         let ready = await engine.prepareProfile(space.profileID)

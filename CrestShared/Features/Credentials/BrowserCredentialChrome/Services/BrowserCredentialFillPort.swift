@@ -25,6 +25,10 @@ struct BrowserCredentialFillPort {
     /// identity it names.
     let spaceID: UUID
 
+    /// The tab of the page that raised the prompt, which Apple Passwords
+    /// queries name. Nil where the shell has no such tab to name.
+    let tabID: UUID?
+
     /// How one of the page's CSS pixels maps to a point in this shell — the
     /// page's zoom, and the only thing standing between a rect the page
     /// reported and the place a panel is drawn.
@@ -38,9 +42,18 @@ struct BrowserCredentialFillPort {
     /// where the form moved on before the fill could land.
     let fill: (BrowserCredential, UUID) async throws -> Void
 
+    /// Puts a one-time code into the focused code field the request came from.
+    /// Throws where the field moved on before the fill could land.
+    let fillOneTimeCode: (String, UUID) async throws -> Void
+
     /// Puts a freshly generated password into the form and its confirmation
     /// field.
     let fillGeneratedPassword: (String, UUID) async throws -> Void
+
+    /// Remembers, for the page, a generated password that was sent to Apple
+    /// Passwords before it was filled, so the form's submission does not offer
+    /// to save it again.
+    let rememberPresavedPassword: (BrowserCredentialPresavedPassword) -> Void
 
     /// Closes the prompt without filling anything.
     let dismiss: () -> Void

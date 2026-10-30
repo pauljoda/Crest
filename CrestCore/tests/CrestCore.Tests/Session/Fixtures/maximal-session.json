@@ -512,6 +512,7 @@
       ],
       "credentialPreferences" : {
         "syncsCrestPasswordsWithICloud" : false,
+        "usesApplePasswords" : false,
         "alsoOffersSaveToSystemPasswords" : true,
         "isEnabled" : false
       }
@@ -623,6 +624,7 @@
       ],
       "credentialPreferences" : {
         "syncsCrestPasswordsWithICloud" : true,
+        "usesApplePasswords" : false,
         "alsoOffersSaveToSystemPasswords" : false,
         "isEnabled" : true
       }
@@ -739,6 +741,7 @@
       ],
       "credentialPreferences" : {
         "syncsCrestPasswordsWithICloud" : true,
+        "usesApplePasswords" : false,
         "alsoOffersSaveToSystemPasswords" : false,
         "isEnabled" : true
       }

@@ -13,6 +13,14 @@ struct BrowserCredentialPromptState: Hashable, Sendable {
     static let update = BrowserCredentialPromptState(
         name: "update", title: { _ in BrowserCredentialSavePromptAction.update.promptTitle },
         primaryAction: .commit(.update))
+    static let createInApplePasswords = BrowserCredentialPromptState(
+        name: "createInApplePasswords", title: { _ in BrowserCredentialSavePromptAction.applePasswords.promptTitle },
+        primaryAction: .commit(.applePasswords))
+    /// Handed to Apple Passwords. The prompt closes at once, and says nothing of
+    /// a save, because Crest cannot tell whether the person confirmed.
+    static let sent = BrowserCredentialPromptState(
+        name: "sent", title: { _ in BrowserCredentialSavePromptAction.applePasswords.promptTitle },
+        dismissAction: .done)
     static let alreadyStored = BrowserCredentialPromptState(
         name: "alreadyStored", title: { _ in BrowserCredentialSavePromptAction.create.promptTitle })
     static let failedPreparation = BrowserCredentialPromptState(
@@ -76,10 +84,7 @@ struct BrowserCredentialPromptState: Hashable, Sendable {
         BrowserCredentialPromptState(
             name: "failedCommit \(action.name)", title: { _ in action.promptTitle },
             primaryAction: .retryCredentialPreparation,
-            errorMessage: { spaceName in
-                spaceName.map { "Crest couldn’t save this password to the \($0) Space." }
-                    ?? "Crest couldn’t save this password to this Space."
-            })
+            errorMessage: action.failureMessage)
     }
 
     // MARK: - Actions - Presentation

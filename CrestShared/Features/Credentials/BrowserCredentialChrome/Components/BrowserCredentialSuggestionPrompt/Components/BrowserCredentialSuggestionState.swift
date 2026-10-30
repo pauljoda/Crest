@@ -4,9 +4,15 @@ import SwiftUI
 /// when the answer is nothing.
 struct BrowserCredentialSuggestionState: View {
     let isLoading: Bool
-    let suggestions: [CredentialDescriptor]
+    let suggestions: [BrowserCredentialSuggestion]
+    var codes: [BrowserOneTimeCodeSuggestion] = []
+    var offersPairing = false
+    var offersOpeningPasswordsApp = false
     let metrics: BrowserCredentialPromptMetrics
-    let fill: (CredentialDescriptor) -> Void
+    let fill: (BrowserCredentialSuggestion) -> Void
+    var fillCode: (BrowserOneTimeCodeSuggestion) -> Void = { _ in }
+    var beginPairing: () -> Void = {}
+    var openPasswordsApp: () -> Void = {}
 
     @ViewBuilder
     var body: some View {
@@ -14,13 +20,19 @@ struct BrowserCredentialSuggestionState: View {
             ProgressView("Checking this Space…")
                 .controlSize(.small)
                 .frame(minHeight: metrics.suggestionStateMinimumHeight)
-        } else if suggestions.isEmpty {
+        } else if suggestions.isEmpty && codes.isEmpty && !offersPairing && !offersOpeningPasswordsApp {
             empty
         } else {
             BrowserCredentialSuggestionList(
                 suggestions: suggestions,
+                codes: codes,
+                offersPairing: offersPairing,
+                offersOpeningPasswordsApp: offersOpeningPasswordsApp,
                 metrics: metrics,
-                fill: fill
+                fill: fill,
+                fillCode: fillCode,
+                beginPairing: beginPairing,
+                openPasswordsApp: openPasswordsApp
             )
         }
     }
@@ -79,8 +91,11 @@ private struct BrowserCredentialCompactLabelStyle: LabelStyle {
             BrowserCredentialSuggestionState(isLoading: true, suggestions: [], metrics: .pointer, fill: { _ in })
             BrowserCredentialSuggestionState(isLoading: false, suggestions: [], metrics: .pointer, fill: { _ in })
             BrowserCredentialSuggestionState(
-                isLoading: false, suggestions: [BrowserCredentialDetailPreviewFixture.descriptor], metrics: .pointer,
-                fill: { _ in })
+                isLoading: false,
+                suggestions: [
+                    BrowserCredentialSuggestion(
+                        descriptor: BrowserCredentialDetailPreviewFixture.descriptor, provider: .crestPasswords)
+                ], metrics: .pointer, fill: { _ in })
         }.padding().frame(width: 380)
     }
 #endif

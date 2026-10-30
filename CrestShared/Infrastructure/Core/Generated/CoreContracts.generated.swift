@@ -1111,6 +1111,24 @@ struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
     let preferences: AppPreferences?
 }
 
+struct ApplePasswordsAvailability: Query, Equatable, Sendable {
+    typealias Answer = ApplePasswordsSupport
+
+    let isMacPlatform: Bool
+    let hasManagedBrowserCapability: Bool
+    let isLaunchIsolated: Bool
+    let isPrivateBrowsing: Bool
+    let spaceCredentialsEnabled: Bool
+    let spaceUsesApplePasswords: Bool
+    let applePasswordsExtensionEnabled: Bool
+    let helper: ApplePasswordsHelperFact
+}
+
+struct ApplePasswordsSupport: Equatable, Sendable {
+    let status: ApplePasswordsStatus
+    let offersToTurnOffExtension: Bool
+}
+
 struct ApplyManualSetup: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -1963,6 +1981,7 @@ struct CredentialPreferences: Equatable, Sendable {
     var isEnabled: Bool
     var syncsCrestPasswordsWithICloud: Bool
     var alsoOffersSaveToSystemPasswords: Bool
+    var usesApplePasswords: Bool
 }
 
 struct CredentialRecord: Equatable, Sendable, Identifiable {
@@ -7571,6 +7590,195 @@ struct AgentActivityKind: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `ApplePasswordsHelperFact`. A member's wire tag is its index in `all`.
+struct ApplePasswordsHelperFact: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var status: ApplePasswordsStatus { facts.status }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, status: ApplePasswordsStatus) {
+        self.tag = tag
+        facts = Facts(name: name, status: status)
+    }
+
+    static let notStarted = ApplePasswordsHelperFact(
+        tag: 0,
+        name: "not-started",
+        status: ApplePasswordsStatus.pairingRequired
+    )
+    static let unpaired = ApplePasswordsHelperFact(
+        tag: 1,
+        name: "unpaired",
+        status: ApplePasswordsStatus.pairingRequired
+    )
+    static let paired = ApplePasswordsHelperFact(tag: 2, name: "paired", status: ApplePasswordsStatus.available)
+    static let unavailable = ApplePasswordsHelperFact(
+        tag: 3,
+        name: "unavailable",
+        status: ApplePasswordsStatus.helperUnavailable
+    )
+    static let unrecognized = ApplePasswordsHelperFact(
+        tag: 4,
+        name: "unrecognized",
+        status: ApplePasswordsStatus.helperUnrecognized
+    )
+
+    static let all: [ApplePasswordsHelperFact] = [notStarted, unpaired, paired, unavailable, unrecognized]
+
+    static func named(_ name: String?) -> ApplePasswordsHelperFact? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ApplePasswordsHelperFact, rhs: ApplePasswordsHelperFact) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let status: ApplePasswordsStatus
+
+        init(name: String, status: ApplePasswordsStatus) {
+            self.name = name
+            self.status = status
+        }
+    }
+}
+
+/// The members of the core's `ApplePasswordsStatus`. A member's wire tag is its index in `all`.
+struct ApplePasswordsStatus: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var startsHelper: Bool { facts.startsHelper }
+    var offersApplePasswords: Bool { facts.offersApplePasswords }
+    var needsPairing: Bool { facts.needsPairing }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, startsHelper: Bool, offersApplePasswords: Bool, needsPairing: Bool) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            startsHelper: startsHelper,
+            offersApplePasswords: offersApplePasswords,
+            needsPairing: needsPairing
+        )
+    }
+
+    static let unsupportedPlatform = ApplePasswordsStatus(
+        tag: 0,
+        name: "unsupported-platform",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let isolatedLaunch = ApplePasswordsStatus(
+        tag: 1,
+        name: "isolated-launch",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let privateWindow = ApplePasswordsStatus(
+        tag: 2,
+        name: "private-window",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let managedBrowserCapabilityRequired = ApplePasswordsStatus(
+        tag: 3,
+        name: "managed-browser-capability-required",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let credentialsDisabled = ApplePasswordsStatus(
+        tag: 4,
+        name: "credentials-disabled",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let turnedOff = ApplePasswordsStatus(
+        tag: 5,
+        name: "turned-off",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let helperUnavailable = ApplePasswordsStatus(
+        tag: 6,
+        name: "helper-unavailable",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let helperUnrecognized = ApplePasswordsStatus(
+        tag: 7,
+        name: "helper-unrecognized",
+        startsHelper: false,
+        offersApplePasswords: false,
+        needsPairing: false
+    )
+    static let pairingRequired = ApplePasswordsStatus(
+        tag: 8,
+        name: "needs-pairing",
+        startsHelper: true,
+        offersApplePasswords: false,
+        needsPairing: true
+    )
+    static let available = ApplePasswordsStatus(
+        tag: 9,
+        name: "available",
+        startsHelper: true,
+        offersApplePasswords: true,
+        needsPairing: false
+    )
+
+    static let all: [ApplePasswordsStatus] = [
+        unsupportedPlatform,
+        isolatedLaunch,
+        privateWindow,
+        managedBrowserCapabilityRequired,
+        credentialsDisabled,
+        turnedOff,
+        helperUnavailable,
+        helperUnrecognized,
+        pairingRequired,
+        available
+    ]
+
+    static func named(_ name: String?) -> ApplePasswordsStatus? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ApplePasswordsStatus, rhs: ApplePasswordsStatus) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let startsHelper: Bool
+        let offersApplePasswords: Bool
+        let needsPairing: Bool
+
+        init(name: String, startsHelper: Bool, offersApplePasswords: Bool, needsPairing: Bool) {
+            self.name = name
+            self.startsHelper = startsHelper
+            self.offersApplePasswords = offersApplePasswords
+            self.needsPairing = needsPairing
+        }
+    }
+}
+
 /// The members of the core's `ArchiveFilterGroup`. A member's wire tag is its index in `all`.
 struct ArchiveFilterGroup: Hashable, Sendable {
     let tag: Int
@@ -9715,6 +9923,59 @@ struct CredentialImportEffect: Hashable, Sendable {
         init(name: String, changesPasswords: Bool) {
             self.name = name
             self.changesPasswords = changesPasswords
+        }
+    }
+}
+
+/// The members of the core's `CredentialProvider`. A member's wire tag is its index in `all`.
+struct CredentialProvider: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var keepsSpaceVault: Bool { facts.keepsSpaceVault }
+    var needsPairing: Bool { facts.needsPairing }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, keepsSpaceVault: Bool, needsPairing: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, keepsSpaceVault: keepsSpaceVault, needsPairing: needsPairing)
+    }
+
+    static let crestPasswords = CredentialProvider(
+        tag: 0,
+        name: "crest-passwords",
+        keepsSpaceVault: true,
+        needsPairing: false
+    )
+    static let applePasswords = CredentialProvider(
+        tag: 1,
+        name: "apple-passwords",
+        keepsSpaceVault: false,
+        needsPairing: true
+    )
+
+    static let all: [CredentialProvider] = [crestPasswords, applePasswords]
+
+    static func named(_ name: String?) -> CredentialProvider? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialProvider, rhs: CredentialProvider) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let keepsSpaceVault: Bool
+        let needsPairing: Bool
+
+        init(name: String, keepsSpaceVault: Bool, needsPairing: Bool) {
+            self.name = name
+            self.keepsSpaceVault = keepsSpaceVault
+            self.needsPairing = needsPairing
         }
     }
 }

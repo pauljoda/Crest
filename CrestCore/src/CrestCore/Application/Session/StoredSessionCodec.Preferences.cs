@@ -15,7 +15,7 @@ internal static partial class StoredSessionCodec {
         new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever));
 
     /// What a Space that stored no credential preferences offers.
-    internal static CredentialPreferences DefaultCredentialPreferences { get; } = new(true, true, false);
+    internal static CredentialPreferences DefaultCredentialPreferences { get; } = new(true, true, false, false);
 
     #endregion
 
@@ -101,13 +101,15 @@ internal static partial class StoredSessionCodec {
         var value = Object(node);
         return new(Flag(value[Key.IsEnabled]) ?? DefaultCredentialPreferences.IsEnabled,
             Flag(value[Key.SyncsCrestPasswordsWithICloud]) ?? DefaultCredentialPreferences.SyncsCrestPasswordsWithICloud,
-            Flag(value[Key.AlsoOffersSaveToSystemPasswords]) ?? DefaultCredentialPreferences.AlsoOffersSaveToSystemPasswords);
+            Flag(value[Key.AlsoOffersSaveToSystemPasswords]) ?? DefaultCredentialPreferences.AlsoOffersSaveToSystemPasswords,
+            Flag(value[Key.UsesApplePasswords]) ?? DefaultCredentialPreferences.UsesApplePasswords);
     }
 
     internal static JsonObject Encode(CredentialPreferences preferences) => new() {
         [Key.IsEnabled] = preferences.IsEnabled,
         [Key.SyncsCrestPasswordsWithICloud] = preferences.SyncsCrestPasswordsWithICloud,
-        [Key.AlsoOffersSaveToSystemPasswords] = preferences.AlsoOffersSaveToSystemPasswords
+        [Key.AlsoOffersSaveToSystemPasswords] = preferences.AlsoOffersSaveToSystemPasswords,
+        [Key.UsesApplePasswords] = preferences.UsesApplePasswords
     };
 
     #endregion

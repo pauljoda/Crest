@@ -8,6 +8,9 @@ import os
 struct DiagnosticLog: Sendable {
     // MARK: - Static Variables
 
+    /// The Apple Passwords helper: that it started, ended or was refused, by
+    /// numbers only. Never a message, a site, a username or a password.
+    static let applePasswords = DiagnosticLog(category: "ApplePasswords")
     static let links = DiagnosticLog(category: "Links")
     /// Which pages each window shows, the engine told to show or hide a page,
     /// Picture in Picture and what memory pressure takes back. Pages are named

@@ -7,102 +7,42 @@ import SwiftUI
 /// is *which of mine*. The site is not repeated here: every suggestion is an
 /// exact-origin match for the one the header already named.
 struct BrowserCredentialSuggestionRow: View {
-    let suggestion: CredentialDescriptor
+    let suggestion: BrowserCredentialSuggestion
+    /// Whether the row names the provider that issued it.
+    var showsProvider = false
     let metrics: BrowserCredentialPromptMetrics
     let fill: () -> Void
 
     var body: some View {
-        Button(action: fill) {
-            HStack(spacing: BrowserCredentialPromptMetrics.suggestionRowSpacing) {
-                Image(systemName: "person.crop.circle")
-                    .font(
-                        .system(
-                            size: BrowserCredentialPromptMetrics
-                                .suggestionRowIconSize
-                        )
-                    )
-                    .foregroundStyle(.secondary)
-                VStack(
-                    alignment: .leading,
-                    spacing: BrowserCredentialPromptMetrics
-                        .suggestionRowTextSpacing
-                ) {
-                    Text(title)
-                        .font(.callout)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    if let detail {
-                        Text(detail)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                }
-                Spacer(
-                    minLength: BrowserCredentialPromptMetrics
-                        .suggestionRowSpacerLength
-                )
-                Image(systemName: "arrow.right.circle.fill")
-                    .foregroundStyle(.tint)
-            }
-            .padding(.horizontal, metrics.suggestionRowHighlightBleed)
-            .frame(
-                maxWidth: .infinity,
-                minHeight: metrics.suggestionRowMinimumHeight,
-                alignment: .leading
-            )
-            .contentShape(.rect)
-        }
-        .buttonStyle(
-            BrowserCredentialSuggestionRowStyle(
-                highlightCornerRadius: metrics.suggestionRowHighlightCornerRadius
-            )
+        BrowserCredentialPromptRow(
+            symbol: "person.crop.circle",
+            title: title,
+            detail: detail,
+            metrics: metrics,
+            action: fill
         )
-        .padding(.vertical, metrics.suggestionRowVerticalPadding)
     }
 
     /// What the row is filed under: the name the credential was saved with,
     /// falling back to the login it signs in with.
     private var title: String {
         guard
-            let displayName = suggestion.displayName?.trimmingCharacters(
+            let displayName = suggestion.descriptor.displayName?.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ), !displayName.isEmpty
         else {
-            return suggestion.username
+            return suggestion.descriptor.username
         }
         return displayName
     }
 
-    /// The login under the name, where the name is not already it.
+    /// The login under the name, where the name is not already it, and the
+    /// provider where more than one is listed.
     private var detail: String? {
-        guard metrics.suggestionRowShowsAccountDetail,
-            title != suggestion.username
-        else { return nil }
-        return suggestion.username
-    }
-}
-
-/// The row's resting and pressed treatment, where its shell draws one.
-///
-/// A plain button style everywhere else: a band's rows are aimed at with a
-/// finger, which never rests, and a highlight that only ever appears under the
-/// thumb already covering it is noise.
-private struct BrowserCredentialSuggestionRowStyle: ButtonStyle {
-    let highlightCornerRadius: CGFloat?
-
-    @ViewBuilder
-    func makeBody(configuration: Configuration) -> some View {
-        if let highlightCornerRadius {
-            configuration.label
-                .crestHoverSurface(
-                    cornerRadius: highlightCornerRadius,
-                    isPressed: configuration.isPressed
-                )
-        } else {
-            configuration.label
-        }
+        let account = metrics.suggestionRowShowsAccountDetail && title != suggestion.descriptor.username
+        let parts = [account ? suggestion.descriptor.username : nil, showsProvider ? suggestion.providerTitle : nil]
+        let line = parts.compactMap { $0 }.joined(separator: " · ")
+        return line.isEmpty ? nil : line
     }
 }
 
@@ -110,9 +50,13 @@ private struct BrowserCredentialSuggestionRowStyle: ButtonStyle {
     #Preview("Pointer and touch") {
         VStack(spacing: 20) {
             BrowserCredentialSuggestionRow(
-                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, metrics: .pointer, fill: {})
+                suggestion: BrowserCredentialSuggestion(
+                    descriptor: BrowserCredentialDetailPreviewFixture.descriptor, provider: .crestPasswords),
+                metrics: .pointer, fill: {})
             BrowserCredentialSuggestionRow(
-                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, metrics: .touch, fill: {})
+                suggestion: BrowserCredentialSuggestion(
+                    descriptor: BrowserCredentialDetailPreviewFixture.descriptor, provider: .crestPasswords),
+                metrics: .touch, fill: {})
         }.padding().frame(width: 380)
     }
 #endif

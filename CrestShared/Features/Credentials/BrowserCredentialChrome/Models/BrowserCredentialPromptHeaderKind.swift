@@ -8,6 +8,8 @@ struct BrowserCredentialPromptHeaderKind: Hashable, Sendable {
         name: "strongPassword", symbol: "key.horizontal.fill", title: { "Strong Password for \($0)" })
     static let suggestions = BrowserCredentialPromptHeaderKind(
         name: "suggestions", symbol: "key.fill", title: { "Passwords in \($0)" })
+    static let oneTimeCodes = BrowserCredentialPromptHeaderKind(
+        name: "oneTimeCodes", symbol: "checkmark.shield.fill", title: { "Verification codes in \($0)" })
 
     // MARK: - Variables
 

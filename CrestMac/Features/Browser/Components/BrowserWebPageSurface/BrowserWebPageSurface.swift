@@ -146,14 +146,19 @@ struct BrowserWebPageSurface: View {
     private var credentialFillPort: BrowserCredentialFillPort {
         BrowserCredentialFillPort(
             spaceID: page.spaceID,
+            tabID: page.navigationContext?.tabID,
             contentScale: page.renderedPageZoom,
             siteIconData: page.faviconData,
             fill: { credential, requestID in
                 try await page.fillCredential(credential, for: requestID)
             },
+            fillOneTimeCode: { code, requestID in
+                try await page.fillOneTimeCode(code, for: requestID)
+            },
             fillGeneratedPassword: { password, requestID in
                 try await page.fillGeneratedPassword(password, for: requestID)
             },
+            rememberPresavedPassword: { page.credentialState.rememberPresavedPassword($0) },
             dismiss: page.dismissCredentialFillRequest
         )
     }
@@ -163,6 +168,7 @@ struct BrowserWebPageSurface: View {
     private var credentialSavePort: BrowserCredentialSavePort {
         BrowserCredentialSavePort(
             spaceID: page.spaceID,
+            tabID: page.navigationContext?.tabID,
             presentedCandidateID: { page.credentialSaveCandidate?.id },
             dismiss: page.dismissCredentialSaveCandidate,
             offerToSystemPasswords: nil

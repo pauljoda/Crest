@@ -348,14 +348,17 @@ struct MobileBrowserDetailView: View {
     ) -> BrowserCredentialFillPort {
         BrowserCredentialFillPort(
             spaceID: page.spaceID,
+            tabID: nil,
             contentScale: page.pageZoom,
             siteIconData: page.faviconData,
             fill: { credential, requestID in
                 try await page.fillCredential(credential, for: requestID)
             },
+            fillOneTimeCode: { _, _ in throw BrowserCredentialFillError.staleOrMismatchedRequest },
             fillGeneratedPassword: { password, requestID in
                 try await page.fillGeneratedPassword(password, for: requestID)
             },
+            rememberPresavedPassword: { page.credentialState.rememberPresavedPassword($0) },
             dismiss: page.dismissCredentialFillRequest
         )
     }
@@ -368,6 +371,7 @@ struct MobileBrowserDetailView: View {
     ) -> BrowserCredentialSavePort {
         BrowserCredentialSavePort(
             spaceID: page.spaceID,
+            tabID: nil,
             presentedCandidateID: { page.credentialSaveCandidate?.id },
             dismiss: page.dismissCredentialSaveCandidate,
             offerToSystemPasswords: { candidate, title in

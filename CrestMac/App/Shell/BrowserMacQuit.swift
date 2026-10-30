@@ -56,6 +56,7 @@ final class BrowserMacQuit {
                 Task { @MainActor in
                     self.windows.closeQuickWindowsWithoutAsking()
                     await self.application.flushPendingPersistenceBeforeQuit()
+                    self.application.stopApplePasswords()
                     self.hasFinished = true
                     finish(true)
                 }

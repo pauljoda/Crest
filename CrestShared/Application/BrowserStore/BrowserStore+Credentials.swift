@@ -1,19 +1,5 @@
 import Foundation
 
-// MARK: - Suggestion Loading
-
-extension BrowserStore: BrowserCredentialSuggestionLoading {
-    func credentialSuggestions(
-        for origin: CredentialOrigin,
-        in spaceID: UUID
-    ) async throws -> [CredentialDescriptor] {
-        guard let url = URL(string: origin.description) else {
-            throw CredentialVaultError.invalidOrigin
-        }
-        return try await credentialSuggestions(for: url, in: spaceID)
-    }
-}
-
 // MARK: - Lookup
 
 extension BrowserStore {
@@ -180,7 +166,8 @@ extension BrowserStore {
         }
         let preferences = CredentialPreferences(
             isEnabled: current.isEnabled, syncsCrestPasswordsWithICloud: isSynchronizable,
-            alsoOffersSaveToSystemPasswords: current.alsoOffersSaveToSystemPasswords)
+            alsoOffersSaveToSystemPasswords: current.alsoOffersSaveToSystemPasswords,
+            usesApplePasswords: current.usesApplePasswords)
         // The native credential operation completed for this profile. Persist
         // its corresponding policy through the same session authority.
         let sent = SetCredentialPreferences(workspaceID: family.workspaceID, spaceID: spaceID, preferences: preferences)
@@ -498,7 +485,7 @@ extension BrowserStore {
         )
     }
 
-    private func validateCredentialSaveCandidate(
+    func validateCredentialSaveCandidate(
         _ candidate: BrowserCredentialSaveCandidate,
         in spaceID: UUID,
         now: Date

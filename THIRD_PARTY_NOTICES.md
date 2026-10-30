@@ -5,16 +5,24 @@ Crest ships these third-party runtime components:
 | Component | Version | Use | License |
 | --- | --- | --- | --- |
 | [Sparkle](https://github.com/sparkle-project/Sparkle) | 2.9.5 | Signed software updates on macOS | MIT-style license with bundled BSD, MIT, and zlib-style notices |
+| [BigNum](https://github.com/adam-fowler/big-num) | 2.0.3 | Big-integer arithmetic for pairing with Apple Passwords on macOS | MIT, with a vendored BoringSSL under ISC, OpenSSL, and SSLeay terms |
 | [.NET runtime](https://github.com/dotnet/runtime) (Native AOT) | 10.0.5 | Crest's core, compiled ahead of time into every app | MIT, with bundled third-party notices |
 | [Chromium](https://www.chromium.org/), built with [ungoogled-chromium-macos](https://github.com/ungoogled-software/ungoogled-chromium-macos) | 152.0.7977.82 | The Chromium engine in Crest's Chromium build for macOS | BSD-3-Clause, with bundled third-party licenses |
 
 The complete notices are preserved in
 [`ThirdParty/Sparkle-LICENSE.txt`](ThirdParty/Sparkle-LICENSE.txt),
+[`ThirdParty/BigNum-LICENSE.txt`](ThirdParty/BigNum-LICENSE.txt),
 [`ThirdParty/DotNet-LICENSE.txt`](ThirdParty/DotNet-LICENSE.txt) and
 [`ThirdParty/Chromium-LICENSE.txt`](ThirdParty/Chromium-LICENSE.txt).
 Chromium includes many third-party components under their own licenses; the
 Chromium build lists every one of them, with its license text, at
 `chrome://credits`.
+
+Crest's pairing with Apple Passwords on macOS is a Swift port of the protocol
+logic in [icloud-passwords-firefox](https://github.com/au2001/icloud-passwords-firefox)
+by au2001 and its derivative
+[open-passwords](https://github.com/ManiForoughi2/open-passwords), both Apache-2.0. Only the
+protocol is reused; no source is copied.
 
 Crest's emoji picker catalog is generated from the official
 [Unicode Emoji 17.0 test data](https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt).

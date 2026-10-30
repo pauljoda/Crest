@@ -19,6 +19,10 @@ final class BrowserMacApplication {
     let privateChrome: BrowserChromeState
     let privateTransientBrowsing: BrowserTransientBrowsingCoordinator
     let spaceAccess: BrowserSpaceAccessController
+    /// The one Apple Passwords helper of this launch, shared by every Space. It is
+    /// made when first asked for and never started here: only the core's answer
+    /// for a Space starts it.
+    private var applePasswordsHelper: ApplePasswordsHelper?
     /// The app's one passkey controller: pages refresh it and settings show it.
     let passkeyAccess: BrowserPasskeyAccessController
     /// Whether agents can reach Crest now: the agent service keeps it and
@@ -309,6 +313,11 @@ final class BrowserMacApplication {
             ? nil : BrowserMemoryPressureMonitor(core: core) { [pagePoolRegistry] in pagePoolRegistry.livePools }
         browser.family.configureSpaceDataCleanup(pagePoolRegistry, from: browser)
         memoryPressure?.start()
+        // An isolated launch gets no access at all, so nothing can reach the
+        // helper from it. The private window keeps none either.
+        if !usesIsolatedLaunch {
+            browser.applePasswords = BrowserMacApplePasswords(core: core, browser: browser, helper: applePasswords)
+        }
     }
 
     func settingsTabContent(
@@ -397,6 +406,19 @@ final class BrowserMacApplication {
     /// closes as the app goes; the core saves them before it returns.
     func rememberWindowsForLaunch() {
         _ = try? browser.core.send(RememberWindowsForLaunch(windowIDs: stackedWindowIDs))
+    }
+
+    /// The launch's one Apple Passwords helper, made on first use and not started.
+    var applePasswords: ApplePasswordsHelper {
+        if let applePasswordsHelper { return applePasswordsHelper }
+        let helper = ApplePasswordsHelper(launcher: ApplePasswordsProcessLauncher(launchEnvironment: .current))
+        applePasswordsHelper = helper
+        return helper
+    }
+
+    /// Ends the helper, if one was ever made. Sent as the app quits.
+    func stopApplePasswords() {
+        applePasswordsHelper?.stop()
     }
 
     func closePrivateBrowsingWindow() {

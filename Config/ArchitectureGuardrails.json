@@ -5,6 +5,11 @@
       "path": "CrestShared/Domain/BrowserTab/Icons/BrowserFaviconPayloadIdentity.swift",
       "module": "CryptoKit",
       "reason": "A favicon render identity must read every byte exactly once off the main actor's update path. SHA-256 states that directly; hand-rolling an equivalent from Foundation's per-process Hasher took two full passes over the payload and a fingerprint that could not safely be stored or compared across processes."
+    },
+    {
+      "path": "CrestShared/Domain/BrowserCredential/Capture/BrowserCredentialPresavedPassword.swift",
+      "module": "CryptoKit",
+      "reason": "The page remembers that a generated password was already sent to Apple Passwords by a SHA-256 digest, so the password itself is never kept. A digest that does not leave the process must still be collision resistant, which Foundation's Hasher is not."
     }
   ],
   "xcode27PatternExemptions": []

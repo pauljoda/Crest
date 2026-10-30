@@ -1082,6 +1082,7 @@
             "splitGroups": [],
             "credentialPreferences": {
               "syncsCrestPasswordsWithICloud": true,
+              "usesApplePasswords": false,
               "alsoOffersSaveToSystemPasswords": false,
               "isEnabled": true
             }
@@ -1285,6 +1286,7 @@
               "splitGroups": [],
               "credentialPreferences": {
                 "syncsCrestPasswordsWithICloud": true,
+                "usesApplePasswords": false,
                 "alsoOffersSaveToSystemPasswords": false,
                 "isEnabled": true
               }

@@ -13,6 +13,7 @@ struct BrowserCredentialFormFields: Sendable {
     let isTrustedUserEvent: Bool
     let hasVisiblePasswordField: Bool?
     let fieldRect: BrowserCredentialFieldRect?
+    let isOneTimeCodeField: Bool
     let containsUsername: Bool
     let containsPassword: Bool
     let containsPasswordKind: Bool
@@ -48,6 +49,10 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
     /// still deserves a prompt, just not an anchored one.
     let fieldRect: BrowserCredentialFieldRect?
 
+    /// Whether the focused field takes a one-time code rather than a password.
+    /// Swift-only: the core sees such a focus as a current-password one.
+    let isOneTimeCodeField: Bool
+
     var description: String {
         "BrowserCredentialFormMessage(event: \(event.name), formID: \(formID ?? "none"), username: \(username ?? "none"), password: <redacted>)"
     }
@@ -64,6 +69,7 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
         case trusted
         case hasVisiblePasswordField
         case fieldRect
+        case codeField
     }
 
     // MARK: - Initializers
@@ -98,6 +104,7 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
             isTrustedUserEvent: (try? container.decodeIfPresent(Bool.self, forKey: .trusted)) ?? false,
             hasVisiblePasswordField: try? container.decodeIfPresent(Bool.self, forKey: .hasVisiblePasswordField),
             fieldRect: try? container.decodeIfPresent(BrowserCredentialFieldRect.self, forKey: .fieldRect),
+            isOneTimeCodeField: (try? container.decodeIfPresent(Bool.self, forKey: .codeField)) ?? false,
             containsUsername: container.contains(.username),
             containsPassword: container.contains(.password),
             containsPasswordKind: container.contains(.passwordKind))
@@ -114,6 +121,7 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
         isTrustedUserEvent = fields.isTrustedUserEvent
         hasVisiblePasswordField = fields.hasVisiblePasswordField
         fieldRect = fields.fieldRect
+        isOneTimeCodeField = fields.isOneTimeCodeField
     }
 
     // MARK: - Actions - Decoding

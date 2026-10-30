@@ -18,6 +18,10 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     /// placement it has always had rather than pointing at the wrong place.
     let fieldRect: BrowserCredentialFieldRect?
 
+    /// Whether the field asks for a one-time code, which the prompt then
+    /// offers instead of passwords.
+    let isOneTimeCodeField: Bool
+
     init(
         id: UUID,
         origin: CredentialOrigin,
@@ -26,7 +30,8 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         passwordKind: CredentialPasswordKind,
         isCrossOriginFrame: Bool,
         requestedAt: Date,
-        fieldRect: BrowserCredentialFieldRect? = nil
+        fieldRect: BrowserCredentialFieldRect? = nil,
+        isOneTimeCodeField: Bool = false
     ) {
         self.id = id
         self.origin = origin
@@ -36,6 +41,7 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         self.isCrossOriginFrame = isCrossOriginFrame
         self.requestedAt = requestedAt
         self.fieldRect = fieldRect
+        self.isOneTimeCodeField = isOneTimeCodeField
     }
 
     /// The same request, following its field to where the page just moved it.
@@ -52,7 +58,8 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
             passwordKind: passwordKind,
             isCrossOriginFrame: isCrossOriginFrame,
             requestedAt: requestedAt,
-            fieldRect: fieldRect
+            fieldRect: fieldRect,
+            isOneTimeCodeField: isOneTimeCodeField
         )
     }
 }

@@ -20,9 +20,10 @@ final class BrowserCredentialSession {
         core: CrestCore,
         supportsAccess: Bool,
         isEnabled: Bool,
+        offersOneTimeCodes: Bool = false,
         httpAuthentication: BrowserHTTPAuthenticationSession
     ) {
-        state = BrowserCredentialPageState(spaceID: spaceID, core: core)
+        state = BrowserCredentialPageState(spaceID: spaceID, core: core, offersOneTimeCodes: offersOneTimeCodes)
         self.supportsAccess = supportsAccess
         self.isEnabled = supportsAccess && isEnabled
         self.httpAuthentication = httpAuthentication
@@ -96,5 +97,28 @@ final class BrowserCredentialSession {
             throw BrowserCredentialFillError.formChanged
         }
         state.completeGeneratedPasswordFill(requestID: requestID)
+    }
+
+    /// Puts the code the person picked into the focused code field of the frame
+    /// that raised the prompt. The frame's own origin is checked again where
+    /// the code lands, and nothing is submitted.
+    func fillOneTimeCode(_ code: String, for requestID: UUID, evaluate: Evaluate) async throws {
+        guard isEnabled else {
+            throw BrowserCredentialFillError.staleOrMismatchedRequest
+        }
+        let context = try state.oneTimeCodeFillContext(for: requestID)
+        let result = try await evaluate(
+            "return globalThis.__crestCredentialBridge?.fillOneTimeCode(formID, origin, code) === true;",
+            [
+                "formID": context.target.formID,
+                "origin": context.request.origin.description,
+                "code": code,
+            ],
+            context.target.frame
+        )
+        guard result as? Bool == true else {
+            throw BrowserCredentialFillError.formChanged
+        }
+        state.completeOneTimeCodeFill(requestID: requestID)
     }
 }

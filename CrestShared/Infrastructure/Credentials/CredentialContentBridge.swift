@@ -160,6 +160,47 @@ enum BrowserCredentialContentBridge {
           const spansIndependentCredentialScopes = (root, inputs) =>
             new Set(inputs.map((input) => credentialScopeFor(root, input))).size > 1;
 
+          // A field takes a one-time code when it says so, or, cautiously, when
+          // it is the only text field of its form, short, numeric and named for
+          // a code. A guess that is wrong costs a prompt that never opens.
+          const codeFieldTypes = ["text", "tel", "number", "search", ""];
+          const codeFieldNames = /code|otp|2fa|mfa|verif/i;
+          const notCodeFieldNames = /zip|postal|promo|coupon|discount|voucher|area|cvv|cvc|csc|security|card|pin|post|ssn|tax/i;
+
+          const declaredLength = (input) => {
+            if (input.hasAttribute("maxlength")) return input.maxLength;
+            return input.hasAttribute("size") ? input.size : 0;
+          };
+
+          const namesOfField = (input) => [
+            input.name,
+            input.id,
+            input.placeholder,
+            input.getAttribute("aria-label"),
+            Array.from(input.labels || []).map((label) => label.textContent).join(" ")
+          ].join(" ");
+
+          const isOneTimeCodeField = (input) => {
+            if (!isVisible(input) || input.readOnly || !codeFieldTypes.includes(input.type)) return false;
+            const tokens = input.autocomplete.toLowerCase().split(/\s+/);
+            if (tokens.includes("one-time-code")) return true;
+            if (tokens.some((token) => token.startsWith("cc-") || token === "postal-code")) return false;
+            const root = rootFor(input);
+            if (passwordInputsIn(root).length) return false;
+            const textInputs = inputsIn(root).filter((candidate) =>
+              isVisible(candidate) && [...codeFieldTypes, "email", "url"].includes(candidate.type)
+            );
+            if (textInputs.length !== 1) return false;
+            const length = declaredLength(input);
+            if (length < 4 || length > 8) return false;
+            const isNumeric = ["numeric", "decimal"].includes(input.inputMode)
+              || input.type === "tel"
+              || input.type === "number"
+              || /\d|0-9/.test(input.pattern);
+            const names = namesOfField(input);
+            return isNumeric && codeFieldNames.test(names) && !notCodeFieldNames.test(names);
+          };
+
           const passwordKind = (input) =>
             input.autocomplete.toLowerCase().includes("new-password") ? "new" : "current";
 
@@ -326,6 +367,44 @@ enum BrowserCredentialContentBridge {
             return true;
           };
 
+          // A code field raises the same prompt a current-password field does;
+          // the flag tells the host to offer codes and nothing else.
+          const reportCodeFocus = (input) => {
+            const root = rootFor(input);
+            const usernameInput = inputsIn(credentialScopeFor(root, input)).filter(isVisible).find((candidate) =>
+              candidate !== input
+                && (candidate.autocomplete.toLowerCase().includes("username") || candidate.type === "email")
+            );
+            const rect = rectOf(input);
+            const formID = idFor(root);
+            trackedField = rect ? { input: new WeakRef(input), formID } : null;
+            trackedFieldRect = rect;
+            post({
+              event: "focus",
+              trusted: true,
+              formID,
+              username: usernameInput?.value?.trim() || undefined,
+              passwordKind: "current",
+              codeField: true,
+              fieldRect: rect || undefined
+            });
+            return true;
+          };
+
+          // The code field that has focus now in the form, or the one that
+          // raised the prompt when focus moved to the prompt itself.
+          const focusedCodeInput = (root) => {
+            let active = document.activeElement;
+            while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+            if (active instanceof HTMLInputElement && rootFor(active) === root && isOneTimeCodeField(active)) {
+              return active;
+            }
+            const tracked = trackedField?.input.deref();
+            return tracked && tracked.isConnected && rootFor(tracked) === root && isOneTimeCodeField(tracked)
+              ? tracked
+              : null;
+          };
+
           const setInputValue = (input, value) => {
             const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
             if (setter) setter.call(input, value); else input.value = value;
@@ -348,6 +427,18 @@ enum BrowserCredentialContentBridge {
               passwordInput.focus();
               return true;
             },
+            fillOneTimeCode(formID, origin, code) {
+              if (location.origin !== origin) return false;
+              const root = rootsByID.get(formID)?.deref();
+              if (!root || !root.isConnected) {
+                rootsByID.delete(formID);
+                return false;
+              }
+              const input = focusedCodeInput(root);
+              if (!input || (input.maxLength >= 0 && code.length > input.maxLength)) return false;
+              setInputValue(input, code);
+              return true;
+            },
             fillGenerated(formID, password) {
               const root = rootsByID.get(formID)?.deref();
               if (!root || !root.isConnected) {
@@ -366,9 +457,14 @@ enum BrowserCredentialContentBridge {
           });
 
           document.addEventListener("focusin", (event) => {
+            if (!event.isTrusted) return;
             const input = passwordInputFromEvent(event);
-            if (!event.isTrusted || !input) return;
-            reportFocus(input);
+            if (input) {
+              reportFocus(input);
+              return;
+            }
+            const target = elementFromEvent(event);
+            if (target instanceof HTMLInputElement && isOneTimeCodeField(target)) reportCodeFocus(target);
           }, true);
 
           // The prompt is anchored under the focused field, so it stops

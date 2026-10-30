@@ -19,7 +19,7 @@ extension BrowserStore {
             localSyncErrorDescription = "Core workspace creation failed: \(error)"
             return nil
         }
-        return BrowserStore(
+        let temporary = BrowserStore(
             opening: BrowserWindowOpening(id: id),
             credentialVault: credentialVault,
             browsingMode: browsingMode,
@@ -27,6 +27,8 @@ extension BrowserStore {
             linkPreferences: linkPreferences,
             core: core
         )
+        temporary.applePasswords = applePasswords
+        return temporary
     }
 
     /// Settings in a temporary window edit the canonical profile through their

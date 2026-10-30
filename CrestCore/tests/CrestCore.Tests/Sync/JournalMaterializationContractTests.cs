@@ -160,12 +160,13 @@ public sealed partial class BrowserContractsTests {
         source["spaces"]![1]!["credentialPreferences"] = new JsonObject {
             ["isEnabled"] = false,
             ["syncsCrestPasswordsWithICloud"] = true,
-            ["alsoOffersSaveToSystemPasswords"] = false
+            ["alsoOffersSaveToSystemPasswords"] = false,
+            ["usesApplePasswords"] = true
         };
         source["spaces"]![1]!["credentialsEnabledModifiedAt"] = 800_000_100.0;
         var local = source.DeepClone().AsObject();
         local["defaultSpaceID"] = SwiftId(Fixed(20_001));
-        local["spaces"]![0]!["credentialPreferences"] = new JsonObject { ["isEnabled"] = false };
+        local["spaces"]![0]!["credentialPreferences"] = new JsonObject { ["isEnabled"] = false, ["usesApplePasswords"] = true };
         local["spaces"]![1]!["credentialPreferences"] = new JsonObject {
             ["isEnabled"] = true,
             ["syncsCrestPasswordsWithICloud"] = false,
@@ -179,11 +180,14 @@ public sealed partial class BrowserContractsTests {
 
         Assert.Equal(Fixed(20_001), StoredSessionCodec.Identity(result["defaultSpaceID"]));
         var chosen = StoredSessionCodec.DecodeSpace(SpaceIn(result, Fixed(20_004))).Settings;
-        Assert.Equal(new CredentialPreferences(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: true),
+        Assert.Equal(new CredentialPreferences(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: true,
+                UsesApplePasswords: false),
             chosen.CredentialPreferences);
         Assert.Equal(StoredSessionCodec.Date(800_000_100.0), chosen.CredentialsEnabledModifiedAt);
         // A Space nobody chose for keeps this device's own choice.
         Assert.False(StoredSessionCodec.DecodeSpace(SpaceIn(result, Fixed(20_001))).Settings.CredentialPreferences.IsEnabled);
+        // Using Apple Passwords is this device's own choice: a record neither sets nor clears it.
+        Assert.True(StoredSessionCodec.DecodeSpace(SpaceIn(result, Fixed(20_001))).Settings.CredentialPreferences.UsesApplePasswords);
     }
 
     /// A device that syncs neither current tabs nor history keeps its own of

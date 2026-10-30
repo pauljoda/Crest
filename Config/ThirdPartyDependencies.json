@@ -6,6 +6,13 @@
       "version": "2.9.5",
       "license": "MIT",
       "notice": "ThirdParty/Sparkle-LICENSE.txt"
+    },
+    {
+      "identity": "big-num",
+      "name": "BigNum",
+      "version": "2.0.3",
+      "license": "MIT, with a vendored BoringSSL under ISC, OpenSSL and SSLeay terms",
+      "notice": "ThirdParty/BigNum-LICENSE.txt"
     }
   ],
   "bundledData": [

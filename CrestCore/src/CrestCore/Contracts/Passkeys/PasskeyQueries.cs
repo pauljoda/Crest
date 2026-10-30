@@ -18,3 +18,7 @@ public enum SystemPasswordWriteThroughAvailability {
 /// Whether this launch may offer saved passwords to the system's Passwords app,
 /// or why not.
 public sealed record SystemPasswordWriteThroughSupport(SystemPasswordWriteThroughAvailability Availability);
+
+/// Whether Apple Passwords may be used, and whether Crest offers to turn Apple's
+/// own iCloud Passwords extension off in the Space.
+public sealed record ApplePasswordsSupport(ApplePasswordsStatus Status, bool OffersToTurnOffExtension);

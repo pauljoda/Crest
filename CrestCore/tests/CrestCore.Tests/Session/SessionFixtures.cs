@@ -180,7 +180,8 @@ public sealed partial class BrowserContractsTests {
             ["credentialPreferences"] = new JsonObject {
                 ["isEnabled"] = false,
                 ["syncsCrestPasswordsWithICloud"] = true,
-                ["alsoOffersSaveToSystemPasswords"] = false
+                ["alsoOffersSaveToSystemPasswords"] = false,
+                ["usesApplePasswords"] = false
             },
             ["isSavedTabsExpanded"] = true,
             ["splitGroups"] = new JsonArray(),

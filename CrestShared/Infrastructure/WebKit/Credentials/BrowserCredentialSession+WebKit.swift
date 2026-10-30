@@ -30,6 +30,10 @@ extension BrowserCredentialSession {
         try await fillGeneratedPassword(password, for: requestID, evaluate: Self.evaluator(in: webView))
     }
 
+    func fillOneTimeCode(_ code: String, for requestID: UUID, in webView: WKWebView) async throws {
+        try await fillOneTimeCode(code, for: requestID, evaluate: Self.evaluator(in: webView))
+    }
+
     static func evaluator(in webView: WKWebView) -> Evaluate {
         { [weak webView] body, arguments, frame in
             guard let webView, let frameInfo = frame.handle as? WKFrameInfo else {

@@ -8,6 +8,7 @@ struct BrowserCredentialSavePromptContent: View {
     let namesSystemPasswordsDestination: Bool
     let metrics: BrowserCredentialPromptMetrics
     let dismiss: () -> Void
+    let switchDestination: (() -> Void)?
     let perform: (BrowserCredentialPromptPrimaryAction) -> Void
 
     var body: some View {
@@ -27,7 +28,9 @@ struct BrowserCredentialSavePromptContent: View {
             BrowserCredentialSaveDestination(
                 destination: destination,
                 space: space,
-                namesSystemPasswordsDestination: namesSystemPasswordsDestination
+                namesSystemPasswordsDestination: namesSystemPasswordsDestination,
+                isBusy: route.isBusy,
+                switchDestination: switchDestination
             )
 
             if candidate.isCrossOriginFrame {

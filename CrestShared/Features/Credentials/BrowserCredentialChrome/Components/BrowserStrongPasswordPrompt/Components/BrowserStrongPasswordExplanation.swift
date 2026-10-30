@@ -2,11 +2,12 @@ import SwiftUI
 
 /// What the offer actually does, and where the password ends up.
 struct BrowserStrongPasswordExplanation: View {
-    let spaceName: String
+    /// Where the password is kept first: the Space, or Apple Passwords.
+    let destinationName: String
 
     var body: some View {
         Text(
-            "Crest saves a unique 20-character password in \(spaceName) first, then fills it here and in the confirmation field."
+            "Crest saves a unique 20-character password in \(destinationName) first, then fills it here and in the confirmation field."
         )
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -16,6 +17,6 @@ struct BrowserStrongPasswordExplanation: View {
 
 #if DEBUG
     #Preview("Component") {
-        BrowserStrongPasswordExplanation(spaceName: "Work").padding().frame(width: 360)
+        BrowserStrongPasswordExplanation(destinationName: "Work").padding().frame(width: 360)
     }
 #endif

@@ -333,6 +333,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             core: downloadCenter.core,
             supportsAccess: allowsCredentialAccess,
             isEnabled: isCredentialAccessEnabled,
+            offersOneTimeCodes: true,
             httpAuthentication: httpAuthenticationSession
         )
         navigationDecider = BrowserNavigationDecider()
@@ -828,6 +829,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
         guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fill(credential, for: requestID, evaluate: evaluate)
+    }
+
+    func fillOneTimeCode(_ code: String, for requestID: UUID) async throws {
+        guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
+        try await credentialSession.fillOneTimeCode(code, for: requestID, evaluate: evaluate)
     }
 
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {

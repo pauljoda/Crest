@@ -31,10 +31,15 @@ struct BrowserCredentialObservation<FillTarget> {
 final class BrowserCredentialPageState<FillTarget> {
     let spaceID: UUID
     @ObservationIgnored private let core: CrestCore
+    /// Whether this page may raise a prompt for a one-time-code field.
+    @ObservationIgnored private let offersOneTimeCodes: Bool
 
     private(set) var fillRequest: BrowserCredentialFillRequest?
     private(set) var saveCandidate: BrowserCredentialSaveCandidate?
 
+    /// The generated password already sent to Apple Passwords for this page,
+    /// held as a digest until the form submits or the page leaves the origin.
+    @ObservationIgnored private var presavedPassword: BrowserCredentialPresavedPassword?
     @ObservationIgnored private var fillTargets: [UUID: FillTarget] = [:]
 
     /// The form the live request's field belongs to, kept here rather than on
@@ -47,9 +52,10 @@ final class BrowserCredentialPageState<FillTarget> {
     @ObservationIgnored private var pendingSaveCandidate: BrowserCredentialSaveCandidate?
     @ObservationIgnored private var candidateExpirationTask: Task<Void, Never>?
 
-    init(spaceID: UUID, core: CrestCore) {
+    init(spaceID: UUID, core: CrestCore, offersOneTimeCodes: Bool = false) {
         self.spaceID = spaceID
         self.core = core
+        self.offersOneTimeCodes = offersOneTimeCodes
     }
 
     /// Applies one validated form message. The portable core decides what
@@ -62,6 +68,8 @@ final class BrowserCredentialPageState<FillTarget> {
         isMainFrame: Bool,
         fillTarget: FillTarget?
     ) {
+        // A page that cannot offer codes never hears of a code field.
+        if message.isOneTimeCodeField && !offersOneTimeCodes { return }
         guard let event = message.event.captureEvent else {
             followField(message, frameOrigin: frameOrigin, isMainFrame: isMainFrame)
             return
@@ -126,6 +134,29 @@ final class BrowserCredentialPageState<FillTarget> {
         return (request, target)
     }
 
+    /// The target of a one-time code the person picked for the request's own
+    /// field, under the core's answer for a saved credential going into a
+    /// current-password field.
+    func oneTimeCodeFillContext(
+        for requestID: UUID
+    ) throws -> (request: BrowserCredentialFillRequest, target: FillTarget) {
+        guard let request = fillRequest,
+            request.id == requestID,
+            request.isOneTimeCodeField,
+            fillAllowed(from: .saved, into: request.passwordKind),
+            let target = fillTargets[requestID]
+        else {
+            throw BrowserCredentialFillError.staleOrMismatchedRequest
+        }
+        return (request, target)
+    }
+
+    /// A code never submits anything and tells the page nothing to remember.
+    func completeOneTimeCodeFill(requestID: UUID) {
+        guard fillRequest?.id == requestID else { return }
+        dismissFillRequest()
+    }
+
     func generatedPasswordFillContext(
         for requestID: UUID
     ) throws -> (request: BrowserCredentialFillRequest, target: FillTarget) {
@@ -167,6 +198,12 @@ final class BrowserCredentialPageState<FillTarget> {
         fillRequest = nil
     }
 
+    /// Remembers that the generated password was sent to Apple Passwords, so
+    /// the submission that follows does not offer to save it again.
+    func rememberPresavedPassword(_ presaved: BrowserCredentialPresavedPassword) {
+        presavedPassword = presaved
+    }
+
     func dismissSaveCandidate() {
         pendingSaveCandidate = nil
         candidateExpirationTask?.cancel()
@@ -179,8 +216,18 @@ final class BrowserCredentialPageState<FillTarget> {
             let url,
             let currentOrigin = CredentialOrigin(url: url),
             currentOrigin != hint.topLevelOrigin
-        else { return }
+        else {
+            clearPresavedPassword(leaving: url)
+            return
+        }
         clearUsernameHint()
+        clearPresavedPassword(leaving: url)
+    }
+
+    private func clearPresavedPassword(leaving url: URL?) {
+        guard let presaved = presavedPassword else { return }
+        if let url, let origin = CredentialOrigin(url: url), origin == presaved.topLevelOrigin { return }
+        presavedPassword = nil
     }
 
     func didStartNavigation() {
@@ -195,6 +242,7 @@ final class BrowserCredentialPageState<FillTarget> {
         dismissFillRequest()
         dismissSaveCandidate()
         clearUsernameHint()
+        presavedPassword = nil
     }
 
     private func rememberUsername(
@@ -301,7 +349,8 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
             passwordKind: passwordKind,
             isCrossOriginFrame: decision.isCrossOriginFrame,
             requestedAt: observation.now,
-            fieldRect: decision.anchorsToField ? message.fieldRect : nil
+            fieldRect: decision.anchorsToField ? message.fieldRect : nil,
+            isOneTimeCodeField: message.isOneTimeCodeField
         )
         if let previousRequest = fillRequest {
             fillTargets[previousRequest.id] = nil
@@ -332,6 +381,11 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
         )
         dismissFillRequest()
         clearUsernameHint()
+        // A password Apple Passwords already holds is not offered again; one that
+        // adds a username is. Either way the submission settles the marker.
+        let presaved = presavedPassword
+        presavedPassword = nil
+        if presaved?.covers(candidate) == true { return }
         pendingSaveCandidate = candidate
         let lifetime = decision.candidateLifetime
         candidateExpirationTask = Task { @MainActor [weak self] in

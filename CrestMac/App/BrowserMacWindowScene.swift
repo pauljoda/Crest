@@ -91,11 +91,16 @@ struct BrowserMacWindowScene: View {
                 },
                 focusChanged: { focused in
                     pages.setWindowFocused(focused)
+                    if focused { applePasswordsTabEvents?.windowBecameKey(browser) }
                 },
                 close: closeWindowRuntime)
         )
         .onAppear(perform: activateWindow)
         .modifier(BrowserTemporaryWorkspaceReconciliation(coordinator: coordinator))
+        .modifier(
+            BrowserMacApplePasswordsTabEventsFollowing(
+                browser: browser, isWindowKey: { model.window?.isKeyWindow == true })
+        )
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
             spaceAccess.lockAllForInactiveScene()
         }
@@ -157,11 +162,17 @@ struct BrowserMacWindowScene: View {
         )
     }
 
+    /// Where this window's tab changes are reported for Apple Passwords, when its store has access.
+    private var applePasswordsTabEvents: BrowserMacApplePasswordsTabEvents? {
+        (browser.applePasswords as? BrowserMacApplePasswords)?.tabEvents
+    }
+
     private func closeWindowRuntime() {
         guard !closed else { return }
         closed = true
         (browser.interactionObserver as? BrowserSidebarInteractionState)?.cancel()
         sidebarWidgets.removeHost(id: id)
+        applePasswordsTabEvents?.forget(browser)
         pagePoolRegistry.unregister(pages, for: id)
         flushPendingPersistence()
         coordinator.closeWindow(id)
