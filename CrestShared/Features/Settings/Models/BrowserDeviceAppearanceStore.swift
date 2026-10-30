@@ -171,6 +171,11 @@ final class BrowserDeviceAppearanceStore {
     var sidebarOnRight: Bool {
         didSet { saveSoon() }
     }
+    /// Whether each page carries its own back, forward, reload and address
+    /// controls above it, rather than the sidebar carrying the shown page's.
+    var showsPageToolbar: Bool {
+        didSet { saveSoon() }
+    }
     /// How wide, in points, the strip along the window's edge is that shows a
     /// hidden sidebar when the pointer rests on it. Only the Mac has one.
     var sidebarRevealWidth: Double {
@@ -280,6 +285,7 @@ final class BrowserDeviceAppearanceStore {
         windowBorderWidth = borderWidth
         isBorderless = BrowserChromeAppearance(borderWidth: borderWidth).borderless
         sidebarOnRight = chrome.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)
+        showsPageToolbar = chrome.bool(forKey: BrowserChromeAppearancePreference.pageToolbarKey)
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
@@ -391,6 +397,7 @@ final class BrowserDeviceAppearanceStore {
         write(foldersTintTitle, forKey: BrowserFolderAppearancePreference.tintsTitleKey, in: defaults)
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
+        write(showsPageToolbar, forKey: BrowserChromeAppearancePreference.pageToolbarKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
     }
 

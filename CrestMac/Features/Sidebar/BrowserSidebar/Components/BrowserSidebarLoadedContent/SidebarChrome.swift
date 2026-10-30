@@ -14,6 +14,7 @@ struct SidebarChrome: View {
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var appearance: BrowserDeviceAppearanceStore { .shared }
 
     var body: some View {
         if let space = selectedSpace {
@@ -25,6 +26,11 @@ struct SidebarChrome: View {
                         pages: pages, browser: context.browser, showHistory: context.chromeActions.presentHistory),
                     capabilities: context.capabilities
                 )
+                // Above the pages, the controls leave the strip but its room
+                // stays for the window controls and for moving the window.
+                .opacity(appearance.showsPageToolbar ? 0 : 1)
+                .allowsHitTesting(!appearance.showsPageToolbar)
+                .accessibilityHidden(appearance.showsPageToolbar)
                 .contentTransition(.opacity)
                 .background {
                     // Only the empty navigation-strip background acts as the
@@ -39,7 +45,7 @@ struct SidebarChrome: View {
                     value: [pages.canGoBack, pages.canGoForward, pages.activePage?.live.isLoading == true]
                 )
 
-                if context.utilityPresentation.surface == nil {
+                if context.utilityPresentation.surface == nil, !appearance.showsPageToolbar {
                     SpaceSidebarAddressBand(
                         space: space,
                         offersSiteControls: !context.browser.isDeleting(space.id),

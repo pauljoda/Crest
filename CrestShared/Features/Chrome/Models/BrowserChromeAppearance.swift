@@ -109,6 +109,7 @@ enum BrowserChromeAppearancePreference {
     static let sidebarOnRightKey = "crest.appearance.sidebar-on-right"
     static let borderWidthKey = "crest.appearance.window-border-width"
     static let borderlessKey = "crest.appearance.borderless"
+    static let pageToolbarKey = "crest.appearance.page-toolbar"
     static let defaults = defaults(for: .current)
 
     static func defaults(for environment: BrowserLaunchEnvironment) -> UserDefaults {

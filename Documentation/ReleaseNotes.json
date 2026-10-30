@@ -4625,6 +4625,22 @@
     "space-picker-stronger-selection": {
       "category": "improved",
       "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    },
+    "mac-address-bar-above-pages": {
+      "category": "new",
+      "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
+    },
+    "mac-page-toolbar-site-controls-focus": {
+      "category": "internal",
+      "message": "Bring a Split View pane forward before its own Site Controls open from the address bar above it."
+    },
+    "mac-page-toolbar-follows-pool-focus": {
+      "category": "internal",
+      "message": "The address bar above a page treats the page the window shows as focused, as Split View does."
+    },
+    "mac-page-toolbar-history-focus": {
+      "category": "internal",
+      "message": "Opening History from an unfocused Split View pane's address bar brings that pane forward first."
     }
   }
 }
