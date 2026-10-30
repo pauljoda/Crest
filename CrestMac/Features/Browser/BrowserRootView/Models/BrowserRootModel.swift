@@ -145,17 +145,9 @@ extension BrowserRootModel {
         pages.setWindowFocused(isFocused)
     }
 
-    func reconcileTabIcons() {
-        pages.reconcileTabIcons()
-    }
-
     func reconcileContentBlocking() {
         guard isPrepared else { return }
         Task { await pages.reconcileContentBlocking() }
-    }
-
-    func reconcileCredentialAccess() {
-        pages.reconcileCredentialAccess()
     }
 
     func reloadContentBlocking() {
