@@ -100,4 +100,33 @@ final class BrowserAgentCatalogTests: XCTestCase {
         }
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
     }
+
+    // MARK: - Actions - Requests
+
+    func testRequestDetailHidesSignInHeadersHoweverTheSiteSpellsThem() throws {
+        let hidden = "(hidden by Crest)"
+        let request = PageNetworkRequest(
+            sequence: 1, url: "https://example.com/api", method: "GET", resourceType: "fetch", status: 200,
+            mimeType: "application/json",
+            requestHeaders: [
+                PageHeader(name: "Cookie", value: "sid=1"), PageHeader(name: "X-CSRFToken", value: "c"),
+                PageHeader(name: "X-Auth-Token", value: "t"), PageHeader(name: "Sec-WebSocket-Key", value: "k"),
+                PageHeader(name: "Accept", value: "application/json"),
+            ],
+            responseHeaders: [
+                PageHeader(name: "Set-Cookie", value: "sid=2"), PageHeader(name: "X-Amz-Security-Token", value: "s"),
+                PageHeader(name: "Content-Type", value: "application/json"),
+            ],
+            started: Date(), duration: 1, bytes: 1, failure: nil)
+        let detail = BrowserMacAgents.RequestDetail(request)
+        XCTAssertEqual(
+            detail.requestHeaders,
+            [
+                "Cookie": hidden, "X-CSRFToken": hidden, "X-Auth-Token": hidden, "Sec-WebSocket-Key": hidden,
+                "Accept": "application/json",
+            ])
+        XCTAssertEqual(
+            detail.responseHeaders,
+            ["Set-Cookie": hidden, "X-Amz-Security-Token": hidden, "Content-Type": "application/json"])
+    }
 }

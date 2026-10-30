@@ -183,12 +183,15 @@ extension BrowserMacAgents {
 
     /// A request as get_network_request shows it, its credentials hidden and,
     /// as in the listing, what the engine doesn't know left out.
-    private struct RequestDetail: Encodable {
-        /// Headers whose values carry the person's sign-ins, which an agent
-        /// never reads.
-        private static let privateHeaders: Set<String> = [
-            "cookie", "set-cookie", "authorization", "proxy-authorization", "x-csrf-token", "x-xsrf-token",
-            "x-api-key",
+    struct RequestDetail: Encodable {
+        /// What the name of a header whose value carries the person's
+        /// sign-ins contains, which an agent never reads. Sites spell these
+        /// headers their own way (X-CSRFToken, X-Auth-Token, X-Session-Token,
+        /// X-Amz-Security-Token, Apikey), so the parts are matched rather
+        /// than a list of names.
+        private static let privateHeaderMarks = [
+            "cookie", "auth", "token", "key", "secret", "session", "csrf", "xsrf", "credential", "signature",
+            "password",
         ]
 
         let id: Int64
@@ -222,8 +225,10 @@ extension BrowserMacAgents {
         /// out; nil when the engine reported none.
         private static func shown(_ headers: [PageHeader]) -> [String: String]? {
             guard !headers.isEmpty else { return nil }
-            let shown = headers.map {
-                ($0.name, privateHeaders.contains($0.name.lowercased()) ? "(hidden by Crest)" : $0.value)
+            let shown = headers.map { header in
+                let name = header.name.lowercased()
+                let isPrivate = privateHeaderMarks.contains { name.contains($0) }
+                return (header.name, isPrivate ? "(hidden by Crest)" : header.value)
             }
             return Dictionary(shown, uniquingKeysWith: { first, _ in first })
         }
