@@ -6,9 +6,10 @@ covered by [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## Who can contribute code
 
-Anyone can have one pull request open at a time; GitHub holds back any more.
-Vetted contributors can have more open at once. To become one, message Paul on
-[Discord](https://discord.gg/gjrM5qMB6x) so you can talk it through first. The basic requirements:
+Anyone can have one pull request open at a time. Vetted contributors can have
+more open at once. To become one, message Paul on
+[Discord](https://discord.gg/gjrM5qMB6x) so you can talk it through first.
+The basic requirements:
 
 - You are a developer with some background building software.
 - You understand C# and SwiftUI.
