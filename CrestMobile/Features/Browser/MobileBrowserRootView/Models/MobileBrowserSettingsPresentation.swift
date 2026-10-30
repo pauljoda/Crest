@@ -77,6 +77,13 @@ final class MobileBrowserSettingsPresentation {
 
     func reconcile() {
         guard showsSheet else { return }
+        // The sheet stays open on its Space when the Space joins or leaves a
+        // group and so changes profile.
+        if let space = sheetAssignment.flatMap({ browser.spaceModel($0.spaceID) }),
+            sheetAssignment != BrowserSpaceRuntimeAssignment(space: space)
+        {
+            sheetAssignment = BrowserSpaceRuntimeAssignment(space: space)
+        }
         guard let sheetAssignment,
             let space = browser.selectedUnlockedSpace(matching: sheetAssignment, accessController: spaceAccess),
             sheetTabID == nil || sheetTabID.flatMap({ space.shownTab($0) })?.nativeTabContent == .settings
