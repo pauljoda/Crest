@@ -86,6 +86,8 @@ final class SpacePagerViewport<Content: View>: NSView {
         selectSpace: @escaping (UUID) -> UUID,
         makeRoot: @escaping (SpaceModel, Bool) -> SpacePageRoot<Content>
     ) {
+        // A Space that joins or leaves a group keeps its page.
+        hosts.follow(spaces)
         let assignments = spaces.map(BrowserSpaceRuntimeAssignment.init(space:))
         let accessPolicies = spaces.map(\.settings.accessPolicy)
         let assignmentsChanged = shownAssignments != assignments
@@ -725,7 +727,9 @@ final class SpacePagerViewport<Content: View>: NSView {
             let key = BrowserSpaceRuntimeAssignment(space: space)
             guard required.contains(key) else { continue }
             if let host = hosts[key] {
-                if refreshContent { host.hostingView.rootView = makeRoot(space, space.id == selectedSpaceID) }
+                if refreshContent || host.hostingView.rootView.assignment != key {
+                    host.hostingView.rootView = makeRoot(space, space.id == selectedSpaceID)
+                }
             } else {
                 let host = SpacePageHost(root: makeRoot(space, space.id == selectedSpaceID))
                 host.frame = CGRect(

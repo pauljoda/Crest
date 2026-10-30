@@ -44,3 +44,19 @@ extension BrowserSpaceRuntimeAssignment: Codable {
 extension BrowserSpaceRuntimeAssignment: Identifiable {
     var id: Self { self }
 }
+
+// MARK: - Pages
+
+extension Dictionary where Key == BrowserSpaceRuntimeAssignment {
+    /// Moves what is kept for each of `spaces` from the profile it browsed
+    /// with to the one it browses with now, as when it joins or leaves a
+    /// group, so its page follows it instead of being built again.
+    @MainActor
+    mutating func follow(_ spaces: [SpaceModel]) {
+        for space in spaces {
+            let key = BrowserSpaceRuntimeAssignment(space: space)
+            guard self[key] == nil, let previous = keys.first(where: { $0.spaceID == space.id }) else { continue }
+            self[key] = removeValue(forKey: previous)
+        }
+    }
+}

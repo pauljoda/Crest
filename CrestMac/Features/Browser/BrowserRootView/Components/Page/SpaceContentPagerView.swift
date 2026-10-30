@@ -37,9 +37,12 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         makeRoot: @escaping (SpaceModel, Bool) -> SpacePageRoot<Content>
     ) {
         let changedLocks = self.lockedSpaceIDs.symmetricDifference(lockedSpaceIDs)
+        // A Space that joins or leaves a group keeps its page, which takes a
+        // root for the new profile below.
+        hosts.follow(spaces.filter { !changedLocks.contains($0.id) })
         let assignments = Set(spaces.map(BrowserSpaceRuntimeAssignment.init(space:)))
-        // Withdraw old clear surfaces before admitting roots for a new lock or
-        // profile assignment. In-flight reversal cannot resurrect those hosts.
+        // Withdraw old clear surfaces before admitting roots for a new lock.
+        // In-flight reversal cannot resurrect those hosts.
         for key in hosts.keys where changedLocks.contains(key.spaceID) || !assignments.contains(key) {
             hosts.removeValue(forKey: key)?.removeFromSuperview()
         }
@@ -246,7 +249,9 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                     // the release origin before its native animation starts.
                     host.setFrameOrigin(origin(for: key, at: position))
                 }
-                var root = refresh ? makeRoot(space, space.id == selectedSpaceID) : host.hostingView.rootView
+                var root =
+                    refresh || host.hostingView.rootView.assignment != key
+                    ? makeRoot(space, space.id == selectedSpaceID) : host.hostingView.rootView
                 root.contentPresentation = contentPresentation
                 // A page off screen is hidden as well: on macOS 26, another
                 // hosting view beside the selected page can take its clicks.

@@ -20,13 +20,15 @@ extension EnvironmentValues {
 /// them and a page can be built before it has inherited them.
 struct SpacePageRoot<Content: View>: View {
     let content: Content
+    /// The Space and profile the root was built for. A Space keeps its page
+    /// when it joins or leaves a group; the page takes a root for the new
+    /// profile then rather than being built again.
     let assignment: BrowserSpaceRuntimeAssignment
     let objects: SpacePageObjects
     var contentPresentation = SpaceContentPresentation.interactive
 
     var body: some View {
         content
-            .id(assignment)
             .environment(\.spaceContentPresentation, contentPresentation)
             .environment(objects.sidebarInteraction)
             .environment(objects.extensionSidePanel)
