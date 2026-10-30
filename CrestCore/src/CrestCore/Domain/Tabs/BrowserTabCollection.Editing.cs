@@ -33,7 +33,7 @@ public sealed partial class BrowserTabCollection {
         tab.Place(placement, folder, now, preservesSplit: !detachSplit);
         if (detachSplit) tab.SetSplit(null);
         tab.MarkPosition(now); remaining.Insert(insertion, tab);
-        tabs.Clear(); tabs.AddRange(remaining); folders.Clear(); folders.AddRange(nextFolders);
+        tabs.Replace(remaining); folders.Clear(); folders.AddRange(nextFolders);
         RepairSplitMembership();
         if (detachSplit) NormalizeSplits(now);
         return true;
@@ -78,7 +78,7 @@ public sealed partial class BrowserTabCollection {
     /// Null when `origin` is not in this Space, which leaves placement to the
     /// tab's section.
     public int? InsertionIndexAfter(Guid origin) =>
-        tabs.Any(t => t.Id == origin) ? tabs.IndexOf(SplitMembers(origin)[^1]) + 1 : null;
+        tabs.Holds(origin) ? tabs.IndexOf(SplitMembers(origin)[^1]) + 1 : null;
 
     /// Adds a tab to its section, at `requestedIndex` within it, or where its
     /// section puts a new tab. Refused with `PinnedTabsFull`,
@@ -86,7 +86,7 @@ public sealed partial class BrowserTabCollection {
     public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false) {
         RequireRoom(tab.Placement, tabs.Count(t => t.Placement == tab.Placement) + 1);
         if (tabs.Count >= MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
-        if (tabs.Any(t => t.Id == tab.Id)) throw new Rejected(new TabAlreadyExists(tab.Id));
+        if (tabs.Holds(tab.Id)) throw new Rejected(new TabAlreadyExists(tab.Id));
         int lower = tabs.FindIndex(t => t.Placement.Rank >= tab.Placement.Rank);
         if (lower < 0) lower = tabs.Count;
         int upper = NextSection(tabs, tab.Placement);
@@ -114,8 +114,8 @@ public sealed partial class BrowserTabCollection {
         tabs.RemoveAll(t => removing.Contains(t.Id));
         folders.Clear(); folders.AddRange(orderedFolders);
         if (selected is { } current && removing.Contains(current))
-            selected = fallback is { } candidate && tabs.Any(t => t.Id == candidate) ? candidate : null;
-        if (ensureSelection && (selected is null || !tabs.Any(t => t.Id == selected)))
+            selected = fallback is { } candidate && tabs.Holds(candidate) ? candidate : null;
+        if (ensureSelection && (selected is not { } kept || !tabs.Holds(kept)))
             selected = FallbackSelection();
         NormalizeSplits(now);
         return selected;

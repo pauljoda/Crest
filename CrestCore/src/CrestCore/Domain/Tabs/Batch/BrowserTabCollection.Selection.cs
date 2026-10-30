@@ -15,7 +15,7 @@ public sealed partial class BrowserTabCollection {
         IReadOnlyList<Guid> picked = [.. selection.TabIds, .. selection.FolderIds];
         if (picked.Count == 0 || picked.Distinct().Count() != picked.Count
             || selection.FolderIds.Any(id => folders.All(folder => folder.Id != id))
-            || selection.TabIds.Any(id => tabs.All(tab => tab.Id != id)))
+            || selection.TabIds.Any(id => !tabs.Holds(id)))
             throw new Rejected(new SelectionChanged());
         var resolved = Resolve(selection.TabIds, selection.FolderIds);
         var seen = selection.MemberTabIds.ToHashSet();
@@ -32,7 +32,7 @@ public sealed partial class BrowserTabCollection {
     public ResolvedSelection Preview(IReadOnlyList<Guid> tabIds, IReadOnlyList<Guid> folderIds) {
         ArgumentNullException.ThrowIfNull(tabIds);
         ArgumentNullException.ThrowIfNull(folderIds);
-        var resolved = Resolve([.. tabIds.Distinct().Where(id => tabs.Any(tab => tab.Id == id && !tab.Content.IsStartPage))],
+        var resolved = Resolve([.. tabIds.Distinct().Where(id => tabs.Find(id) is { } tab && !tab.Content.IsStartPage)],
             [.. folderIds.Distinct().Where(id => folders.Any(folder => folder.Id == id))]);
         return new(resolved.Roots, resolved.Folders, [.. resolved.Members.Where(tab => !tab.Content.IsStartPage)]);
     }

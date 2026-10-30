@@ -8,7 +8,7 @@ public sealed partial class BrowserTabCollection {
     /// Archives a Quick Window's page as the closed open tab `closed`.
     /// Refused with `TabAlreadyExists` when the Space holds its identity.
     public void ArchiveTransient(TabState closed, DateTimeOffset now) {
-        if (tabs.Any(t => t.Id == closed.Id) || archive.Any(archived => archived.Tab.Id == closed.Id))
+        if (tabs.Holds(closed.Id) || archive.Any(archived => archived.Tab.Id == closed.Id))
             throw new Rejected(new TabAlreadyExists(closed.Id));
         archive.Add(new(closed, now, ArchiveReason.QuickWindow));
     }
@@ -31,7 +31,7 @@ public sealed partial class BrowserTabCollection {
     public Guid? CloseDurable(Guid id, Guid? selected, Guid? fallback, bool returnToSavedUrl) {
         var tab = Tab(id);
         if (returnToSavedUrl) tab.ReturnToSavedUrl();
-        return selected == id ? fallback is { } other && other != id && tabs.Any(t => t.Id == other)
+        return selected == id ? fallback is { } other && other != id && tabs.Holds(other)
             ? other : null : selected;
     }
 
@@ -49,7 +49,7 @@ public sealed partial class BrowserTabCollection {
         folders.Clear(); folders.AddRange(nextFolders);
         // Maintenance preserves an empty selection and does not dissolve a
         // surviving split. User-driven dismissal has a different contract.
-        if (selected is not null && !tabs.Any(t => t.Id == selected))
+        if (selected is { } shown && !tabs.Holds(shown))
             selected = FallbackSelection();
         return selected;
     }

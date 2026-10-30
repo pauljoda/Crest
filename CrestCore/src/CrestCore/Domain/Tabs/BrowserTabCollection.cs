@@ -19,11 +19,11 @@ public sealed partial class BrowserTabCollection {
     public const int MaximumTabs = 5000;
     /// The most characters a Space or folder name holds.
     public const int MaximumNameLength = 200;
-    private readonly List<BrowserTab> tabs = [];
+    private readonly TabList tabs = new();
     private readonly List<FolderState> folders = [];
     private readonly List<SplitGroupState> splitGroups = [];
     private readonly List<ArchivedTabState> archive = [];
-    public IReadOnlyList<BrowserTab> Tabs => tabs.AsReadOnly();
+    public IReadOnlyList<BrowserTab> Tabs => tabs;
     public IReadOnlyList<FolderState> Folders => folders.AsReadOnly();
     public IReadOnlyList<SplitGroupState> SplitGroups => splitGroups.AsReadOnly();
     public IReadOnlyList<ArchivedTabState> Archive => archive.AsReadOnly();
@@ -68,9 +68,10 @@ public sealed partial class BrowserTabCollection {
 
     /// Where a later section starts: the first tab whose section comes after
     /// `placement`'s, or the end.
-    private static int NextSection(List<BrowserTab> tabs, TabPlacement placement) {
-        int index = tabs.FindIndex(tab => tab.Placement.Rank > placement.Rank);
-        return index < 0 ? tabs.Count : index;
+    private static int NextSection(IReadOnlyList<BrowserTab> tabs, TabPlacement placement) {
+        for (int index = 0; index < tabs.Count; index++)
+            if (tabs[index].Placement.Rank > placement.Rank) return index;
+        return tabs.Count;
     }
 
     /// The tab a Space selects once its selection is gone.
@@ -81,7 +82,7 @@ public sealed partial class BrowserTabCollection {
 
     #region Mutators
 
-    public BrowserTab Tab(Guid id) => tabs.Find(t => t.Id == id) ?? throw new Rejected(new UnknownTab(id));
+    public BrowserTab Tab(Guid id) => tabs.Find(id) ?? throw new Rejected(new UnknownTab(id));
 
     /// The folder with this identity, or `UnknownFolder`.
     private FolderState KnownFolder(Guid id) => folders.Find(f => f.Id == id) ?? throw new Rejected(new UnknownFolder(id));

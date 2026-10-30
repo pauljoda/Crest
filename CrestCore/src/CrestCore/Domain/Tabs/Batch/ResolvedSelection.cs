@@ -23,6 +23,9 @@ public sealed class ResolvedSelection {
 
     #region Variables
 
+    /// The members' identities, for asking after one without a search.
+    private readonly HashSet<Guid> memberIds;
+
     /// What the person picked that no picked folder holds, in sidebar order.
     public IReadOnlyList<Root> Roots { get; }
 
@@ -48,6 +51,7 @@ public sealed class ResolvedSelection {
         Folders = folders;
         Members = members;
         MemberIds = [.. members.Select(tab => tab.Id)];
+        memberIds = [.. MemberIds];
     }
 
     #endregion
@@ -55,7 +59,7 @@ public sealed class ResolvedSelection {
     #region Actions - Membership
 
     /// Whether the selection holds the tab.
-    public bool Holds(Guid tabId) => MemberIds.Contains(tabId);
+    public bool Holds(Guid tabId) => memberIds.Contains(tabId);
 
     #endregion
 }

@@ -83,7 +83,7 @@ public sealed partial class BrowserTabCollection {
             member.SetSplit(group); member.MarkPosition(now);
         }
         remaining.InsertRange(insertion, members);
-        tabs.Clear(); tabs.AddRange(remaining); folders.Clear(); folders.AddRange(nextFolders);
+        tabs.Replace(remaining); folders.Clear(); folders.AddRange(nextFolders);
         NormalizeSplits(now);
         return new(joiner.Id, copies);
     }

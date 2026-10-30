@@ -15,10 +15,25 @@ public sealed partial class BrowserTabCollection {
     public Guid? TransferTo(BrowserTabCollection destination, Guid id, Guid? selected, Guid? fallback,
         TabPlacement? requestedPlacement, Guid? requestedFolder, Guid? before,
         bool afterSelection, Guid? destinationSelection, DateTimeOffset now) {
+        selected = Transfer(destination, id, selected, fallback, requestedPlacement, requestedFolder, before, afterSelection,
+            destinationSelection, now);
+        // Cross-Space organization retains a singleton's stored membership,
+        // as checkpoint repair does for incomplete sync batches. A window
+        // transfer explicitly detaches and normalizes its source run.
+        if (afterSelection) NormalizeSplits(now); else RepairSplitMembership();
+        destination.RepairSplitMembership();
+        return selected;
+    }
+
+    /// Moves the tab as `TransferTo` does, leaving both Spaces' split runs for
+    /// the caller to repair, once for however many tabs it moves.
+    private Guid? Transfer(BrowserTabCollection destination, Guid id, Guid? selected, Guid? fallback,
+        TabPlacement? requestedPlacement, Guid? requestedFolder, Guid? before,
+        bool afterSelection, Guid? destinationSelection, DateTimeOffset now) {
         ArgumentNullException.ThrowIfNull(destination);
         if (ReferenceEquals(this, destination)) throw new ArgumentException("A tab moves to another Space.", nameof(destination));
         var tab = Tab(id);
-        if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(archived => archived.Tab.Id == id))
+        if (destination.tabs.Holds(id) || destination.archive.Any(archived => archived.Tab.Id == id))
             throw new Rejected(new TabAlreadyExists(id));
         if (destination.tabs.Count >= MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
         var placement = requestedPlacement ?? tab.Placement;
@@ -43,12 +58,7 @@ public sealed partial class BrowserTabCollection {
         tabs.Remove(tab); folders.Clear(); folders.AddRange(ordered);
         tab.Place(placement, folder, now); tab.SetSplit(null); tab.MarkPosition(now);
         destination.tabs.Insert(insertion, tab);
-        // Cross-Space organization retains a singleton's stored membership,
-        // as checkpoint repair does for incomplete sync batches. A window
-        // transfer explicitly detaches and normalizes its source run.
-        if (afterSelection) NormalizeSplits(now); else RepairSplitMembership();
-        destination.RepairSplitMembership();
-        return selected == id ? fallback is { } next && tabs.Any(t => t.Id == next) ? next : null : selected;
+        return selected == id ? fallback is { } next && tabs.Holds(next) ? next : null : selected;
     }
 
     #endregion

@@ -120,7 +120,7 @@ public sealed partial class BrowserTabCollection {
             tab.MarkPosition(now);
         }
         remaining.InsertRange(insertion, members);
-        tabs.Clear(); tabs.AddRange(remaining); folders.Clear(); folders.AddRange(nextFolders);
+        tabs.Replace(remaining); folders.Clear(); folders.AddRange(nextFolders);
         if (detachSplitMembers) NormalizeSplits(now);
     }
 
@@ -139,7 +139,7 @@ public sealed partial class BrowserTabCollection {
             || KnownFolder(sibling).Location != destination)) throw new Rejected(new InvalidFolderPlacement());
         var members = tabs.Where(t => t.FolderId is { } f && movingIds.Contains(f)).ToArray();
         var memberIds = members.Select(t => t.Id).ToHashSet();
-        if (beforeTab is { } a && (memberIds.Contains(a) || !tabs.Any(t => t.Id == a && t.Placement == destination)))
+        if (beforeTab is { } a && (memberIds.Contains(a) || tabs.Find(a)?.Placement != destination))
             throw new Rejected(new InvalidFolderPlacement());
         var nextFolders = tree.PreserveOrder(memberIds, tabs, movingIds);
         var remaining = tabs.Where(t => !memberIds.Contains(t.Id)).ToList();
@@ -162,7 +162,7 @@ public sealed partial class BrowserTabCollection {
         remaining.InsertRange(insertion, members);
         if (members.Length > 0) nextFolders = nextFolders.Select(f => predecessors.Contains(f.Id) && !movingIds.Contains(f.Id)
             ? f with { OrderAnchorTabId = members[0].Id } : f).ToList();
-        tabs.Clear(); tabs.AddRange(remaining); folders.Clear(); folders.AddRange(nextFolders);
+        tabs.Replace(remaining); folders.Clear(); folders.AddRange(nextFolders);
     }
 
     #endregion

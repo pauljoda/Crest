@@ -27,7 +27,7 @@ public sealed partial class BrowserTabCollection {
         var next = DismissTabs(selection.MemberIds, shown, fallback, now, deleting: true, ensureSelection: true,
             resetArchivePlacement: true);
         return shown is { } removed && selection.Holds(removed)
-            ? fallback is { } other && tabs.Any(tab => tab.Id == other) ? other : null
+            ? fallback is { } other && tabs.Holds(other) ? other : null
             : next;
     }
 
@@ -133,8 +133,12 @@ public sealed partial class BrowserTabCollection {
             RequireRoom(placement, destination.tabs.Count(tab => tab.Placement == placement)
                 + selection.Members.Count(tab => tab.Placement == placement));
         var followed = shown is { } active && selection.Holds(active) ? active : selection.MemberIds[0];
+        // No tab in a split moves, and each lands at the end of its section,
+        // so neither Space's split runs change until they are repaired once.
         foreach (var id in selection.MemberIds)
-            shown = TransferTo(destination, id, shown, fallback, null, null, null, afterSelection: false, destinationShown, now);
+            shown = Transfer(destination, id, shown, fallback, null, null, null, afterSelection: false, destinationShown, now);
+        RepairSplitMembership();
+        destination.RepairSplitMembership();
         if (!follows) return (shown, destinationShown);
         destination.Tab(followed).Activate(now);
         return (shown, followed);
@@ -169,7 +173,7 @@ public sealed partial class BrowserTabCollection {
             throw new Rejected(new CannotPinSplit(member.Id));
         RequireRoom(placement, tabs.Count(tab => tab.Placement == placement && !selection.Holds(tab.Id)) + selection.Members.Count);
         if (folder is not null || beforeFolder is not null
-            || before is { } named && !tabs.Any(tab => tab.Id == named && tab.Placement == placement))
+            || before is { } named && tabs.Find(named)?.Placement != placement)
             throw new Rejected(new InvalidFolderPlacement());
         foreach (var id in selection.MemberIds) MoveTab(id, placement, null, before, leavesSplits, now);
     }
