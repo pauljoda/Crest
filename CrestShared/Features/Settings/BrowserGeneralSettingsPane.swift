@@ -82,6 +82,15 @@ struct BrowserGeneralSettingsPane: View {
                 BrowserTranslationSettingsSection()
             }
 
+            Section {
+                Toggle("Ask before saving apps and installers", isOn: $appPreferences.asksBeforeSavingInstallers)
+                    .accessibilityIdentifier("asks-before-saving-installers")
+            } header: {
+                Text("Downloads")
+            } footer: {
+                CrestFormFootnote("Crest always asks when a page downloads one without a click.")
+            }
+
             #if os(macOS)
                 Section {
                     BrowserSpellCheckingToggle()

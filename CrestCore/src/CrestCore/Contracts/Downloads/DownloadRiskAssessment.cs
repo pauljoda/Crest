@@ -13,8 +13,11 @@ public sealed record DownloadRiskAssessment(string SanitizedFilename, IReadOnlyL
         return new(facts.SanitizedFilename, [.. DownloadRiskReason.All.Where(reason => reason.Applies(facts))]);
     }
 
-    /// Whether the person must confirm the download before it continues.
-    public bool RequiresConfirmation(bool isUserInitiated) => Reasons.Any(reason => reason.RequiresConfirmation(isUserInitiated));
+    /// Whether the person must confirm the download before it continues, by
+    /// how it began and whether they chose to be asked before saving apps and
+    /// installers.
+    public bool RequiresConfirmation(bool isUserInitiated, bool asksBeforeSavingInstallers) =>
+        Reasons.Any(reason => reason.RequiresConfirmation(isUserInitiated, asksBeforeSavingInstallers));
 
     #endregion
 }

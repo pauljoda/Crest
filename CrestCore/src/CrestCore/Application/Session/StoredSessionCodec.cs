@@ -30,6 +30,7 @@ internal static partial class StoredSessionCodec {
         public const string Alpha = "alpha";
         public const string AppPreferences = "appPreferences";
         public const string Archive = "archive";
+        public const string AsksBeforeSavingInstallers = "asksBeforeSavingInstallers";
         public const string ArchivedAt = "archivedAt";
         public const string ArchivedTabs = "archivedTabs";
         public const string AutomaticallyEntersPictureInPicture = "automaticallyEntersPictureInPicture";

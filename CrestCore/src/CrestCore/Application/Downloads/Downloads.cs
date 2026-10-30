@@ -44,10 +44,12 @@ public sealed class Downloads {
             query.FractionCompleted, query.IsPaused, query.Uptime);
     }
 
-    public DownloadRiskVerdict Answer(DownloadRisk query) {
+    /// The risk `query` asks about, and whether the person must confirm it
+    /// given whether they chose to be asked before saving apps and installers.
+    public DownloadRiskVerdict Answer(DownloadRisk query, bool asksBeforeSavingInstallers) {
         ArgumentNullException.ThrowIfNull(query);
         var assessment = DownloadRiskAssessment.Of(query.Facts);
-        return new(assessment, assessment.RequiresConfirmation(query.IsUserInitiated));
+        return new(assessment, assessment.RequiresConfirmation(query.IsUserInitiated, asksBeforeSavingInstallers));
     }
 
     #endregion

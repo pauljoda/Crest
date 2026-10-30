@@ -752,6 +752,7 @@
     "splitFocusFollowsMouse" : true,
     "automaticallyShowsDeveloperToolbar" : false,
     "showsRecentTabs" : false,
+    "asksBeforeSavingInstallers" : true,
     "savedTabClosePolicy" : "returnToSavedURL",
     "translationRules" : {
       "sources" : {

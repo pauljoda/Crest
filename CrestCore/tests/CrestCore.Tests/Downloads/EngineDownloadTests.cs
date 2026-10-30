@@ -69,15 +69,15 @@ public sealed partial class BrowserContractsTests {
         var profile = ProfileOf(app, workspace, space);
 
         app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.AwaitingApproval,
-            warning: EngineDownloadWarning.DangerousFile, token: "danger:file")));
+            warning: EngineDownloadWarning.PotentiallyUnwanted, token: "unwanted")));
         var asked = app.Drain();
         var record = asked.OfType<DownloadUpdated>().Last().Download;
         Assert.Equal(DownloadPhase.AwaitingApproval, record.Phase);
         var approval = Assert.IsType<DownloadApprovalAsked>(asked[^1]);
-        Assert.Equal((record.Id, "report.pdf", DownloadWarning.DangerousFile),
+        Assert.Equal((record.Id, "report.pdf", DownloadWarning.PotentiallyUnwanted),
             (approval.DownloadId, approval.Filename, approval.Warning));
         Assert.Contains(new PromptSettled(approval.PromptId), app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: true)));
-        Assert.Equal(new ApproveEngineDownload(profile, "7", "danger:file"), binding.Commands[^1]);
+        Assert.Equal(new ApproveEngineDownload(profile, "7", "unwanted"), binding.Commands[^1]);
 
         // The person cancels it from its row, then clears it; a late report brings nothing back.
         app.Send(new CancelDownload(record.Id, "Canceled."));
@@ -88,25 +88,29 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(app.Drain());
     }
 
-    [Fact]
-    public void ADownloadTheCoreJudgesDangerousIsAskedAboutBeforeItsPlaceAndDecliningCancelsIt() {
+    [Theory]
+    [InlineData("installer.dmg", "application/x-apple-diskimage")]
+    [InlineData("invoice\u200B.pdf", "application/pdf")]
+    public void ADownloadTheCoreJudgesDangerousIsAskedAboutBeforeItsPlaceAndDecliningCancelsIt(string name, string mime) {
         var (app, engine, binding, page, workspace, _, space, _) = LivePage();
         using var disposal = app;
         var profile = ProfileOf(app, workspace, space);
         var prompt = Guid.NewGuid();
+        var expected = DownloadRiskAssessment.Of(new(name, name, mime, ExtensionRunsCode: false, MimeTypeRunsCode: false,
+            TypesRelated: null)).Reasons;
+        Assert.NotEmpty(expected);
 
-        // An installer the site sent on its own asks first, with the core's
-        // reason, its Space and only the host it came from.
-        app.Report(engine, Destination(prompt, Transfer(profile, page) with { Filename = "installer.dmg" }, "installer.dmg",
-            "application/x-apple-diskimage", userInitiated: false));
+        // An installer, or a file with a disguised name, the site sent on its
+        // own asks first, with the core's reasons, its Space and only the host
+        // it came from.
+        app.Report(engine, Destination(prompt, Transfer(profile, page) with { Filename = name }, name, mime, userInitiated: false));
         var asked = app.Drain();
         var approval = Assert.IsType<DownloadApprovalAsked>(asked[^1]);
-        Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(approval.Reasons));
-        Assert.Equal((space, "installer.dmg", (DownloadWarning?)null, "files.example"),
+        Assert.Equal(expected, approval.Reasons);
+        Assert.Equal((space, DownloadFilename.Safe(name), (DownloadWarning?)null, "files.example"),
             (approval.SpaceId, approval.Filename, approval.Warning, approval.SourceHost));
         Assert.DoesNotContain(asked, change => change is DownloadDestinationAsked);
-        Assert.Equal(DownloadRiskReason.ExecutableOrInstaller,
-            Assert.Single(asked.OfType<DownloadUpdated>().Last().Download.Risk!.Reasons));
+        Assert.Equal(expected, asked.OfType<DownloadUpdated>().Last().Download.Risk!.Reasons);
 
         // Declining it cancels it on its engine without asking where it goes.
         var declined = app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: false));
@@ -132,8 +136,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new DownloadDestinationAsked(prompt, approval.DownloadId, space, "installer.dmg", ForcesPrompt: false), kept[^1]);
         app.Send(new AnswerDownloadDestination(prompt, "/Users/test/Downloads/installer.dmg"));
 
-        // The engine's warning that the file runs code is what the person
-        // kept, so the core approves it without asking.
+        // The engine's warning that the file runs code is what the core
+        // already asked about, so the core approves it without asking.
         app.Report(engine, new EngineDownloadChanged(installer with {
             State = EngineDownloadState.AwaitingApproval,
             Warning = EngineDownloadWarning.DangerousFile,
@@ -152,6 +156,57 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((DownloadWarning.InsecureConnection, "files.example"),
             (insecure.Warning, insecure.SourceHost));
         Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(insecure.Reasons));
+    }
+
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    public void TheChoiceToAskBeforeSavingInstallersCoversOnlyOnesThePersonStarted(bool asks, bool userInitiated, bool expected) {
+        // Unless the person chose otherwise, a clicked installer is not asked about.
+        Assert.False(AppPreferences.Default.AsksBeforeSavingInstallers);
+        var (app, engine, _, page, workspace, _, space, _) = LivePage();
+        using var disposal = app;
+        var preferences = app.Workspace(workspace).Current.AppPreferences ?? AppPreferences.Default;
+        app.Send(new SetAppPreferences(workspace, preferences with { AsksBeforeSavingInstallers = asks }));
+        app.Drain();
+        var prompt = Guid.NewGuid();
+
+        // A page that saves an installer without a click is asked about
+        // whatever the person chose.
+        app.Report(engine, Destination(prompt, Transfer(ProfileOf(app, workspace, space), page) with { Filename = "installer.dmg" },
+            "installer.dmg", "application/x-apple-diskimage", userInitiated));
+        var asked = app.Drain();
+        Assert.Equal(expected, asked.Any(change => change is DownloadApprovalAsked));
+        Assert.Equal(!expected, asked[^1] is DownloadDestinationAsked);
+    }
+
+    [Fact]
+    public void APeeksFirstDownloadIsTheLinkThePersonFollowedButOneAfterItShowsADocumentIsNot() {
+        var (app, engine, _, page, workspace, window, space, _) = LivePage();
+        using var disposal = app;
+        var preferences = app.Workspace(workspace).Current.AppPreferences ?? AppPreferences.Default;
+        app.Send(new SetAppPreferences(workspace, preferences with { AsksBeforeSavingInstallers = false }));
+        var peek = Guid.NewGuid();
+        app.Send(new OpenPage(peek, workspace, space, null, window, TransientPresentation.Peek, OpenerPageId: page));
+        app.Report(engine, new PageCreated(peek));
+        app.Drain();
+        var profile = ProfileOf(app, workspace, space);
+
+        // The engine lost the click's gesture, but the Peek has shown nothing
+        // but the link the person followed, so only where it goes is asked.
+        app.Report(engine, Destination(Guid.NewGuid(), Transfer(profile, peek) with { Filename = "installer.dmg" }, "installer.dmg",
+            "application/x-apple-diskimage", userInitiated: false));
+        Assert.IsType<DownloadDestinationAsked>(app.Drain()[^1]);
+
+        // Once it shows a document, that document's own download without a
+        // gesture is asked about.
+        app.Report(engine, new NavigationCommitted(peek, "https://files.example/", SameDocument: false));
+        app.Drain();
+        app.Report(engine, Destination(Guid.NewGuid(), Transfer(profile, peek) with { DownloadId = "8", Filename = "installer.dmg" },
+            "installer.dmg", "application/x-apple-diskimage", userInitiated: false));
+        Assert.IsType<DownloadApprovalAsked>(app.Drain()[^1]);
     }
 
     [Theory]

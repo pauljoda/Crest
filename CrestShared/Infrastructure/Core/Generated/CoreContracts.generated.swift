@@ -1089,7 +1089,8 @@ struct AppPreferences: Equatable, Sendable {
             searchesSitesWithTab: true,
             showsReasons: false,
             providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
-        )
+        ),
+        asksBeforeSavingInstallers: false
     )
 
     var startup: StartupBehavior
@@ -1104,6 +1105,7 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
     var palette: PalettePreferences
+    var asksBeforeSavingInstallers: Bool
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
@@ -12379,35 +12381,31 @@ struct DownloadPhase: Hashable, Sendable {
 }
 
 /// The members of the core's `DownloadRiskReason`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `applies`.
+/// Core-only behavior, not emitted: `applies`, `confirmsUserInitiated`.
 struct DownloadRiskReason: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
-    var confirmsUserInitiated: Bool { facts.confirmsUserInitiated }
     var message: LocalizedStringResource { facts.message }
     private let facts: Facts
 
-    private init(tag: Int, name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        facts = Facts(name: name, confirmsUserInitiated: confirmsUserInitiated, message: message)
+        facts = Facts(name: name, message: message)
     }
 
     static let executableOrInstaller = DownloadRiskReason(
         tag: 0,
         name: "executableOrInstaller",
-        confirmsUserInitiated: false,
         message: LocalizedStringResource("This file type can install or run software.")
     )
     static let deceptiveFilename = DownloadRiskReason(
         tag: 1,
         name: "deceptiveFilename",
-        confirmsUserInitiated: true,
         message: LocalizedStringResource("The original filename used invisible or direction-changing characters that can disguise its real extension.")
     )
     static let dangerousTypeMismatch = DownloadRiskReason(
         tag: 2,
         name: "dangerousTypeMismatch",
-        confirmsUserInitiated: true,
         message: LocalizedStringResource("The server-reported file type does not match the filename and one of those types can run software.")
     )
 
@@ -12427,12 +12425,10 @@ struct DownloadRiskReason: Hashable, Sendable {
 
     private final class Facts: Sendable {
         let name: String
-        let confirmsUserInitiated: Bool
         let message: LocalizedStringResource
 
-        init(name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
+        init(name: String, message: LocalizedStringResource) {
             self.name = name
-            self.confirmsUserInitiated = confirmsUserInitiated
             self.message = message
         }
     }
@@ -12598,7 +12594,7 @@ struct DownloadWarning: Hashable, Sendable {
     var engineWarning: EngineDownloadWarning { facts.engineWarning }
     var approvalMessage: LocalizedStringResource { facts.approvalMessage }
     var failure: DownloadFailure { facts.failure }
-    var coveredBy: [DownloadRiskReason] { facts.coveredBy }
+    var confirms: Bool { facts.confirms }
     private let facts: Facts
 
     private init(
@@ -12607,7 +12603,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: EngineDownloadWarning,
         approvalMessage: LocalizedStringResource,
         failure: DownloadFailure,
-        coveredBy: [DownloadRiskReason]
+        confirms: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -12615,7 +12611,7 @@ struct DownloadWarning: Hashable, Sendable {
             engineWarning: engineWarning,
             approvalMessage: approvalMessage,
             failure: failure,
-            coveredBy: coveredBy
+            confirms: confirms
         )
     }
 
@@ -12625,7 +12621,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: .insecureConnection,
         approvalMessage: LocalizedStringResource("This file was transferred over an insecure connection and could have been changed by someone else. Keep it only if you trust its source."),
         failure: DownloadFailure.blockedInsecure,
-        coveredBy: []
+        confirms: true
     )
     static let dangerousFile = DownloadWarning(
         tag: 1,
@@ -12633,7 +12629,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: .dangerousFile,
         approvalMessage: LocalizedStringResource("This type of file can change your computer. Keep it only if you trust its source."),
         failure: DownloadFailure.blockedUnsafe,
-        coveredBy: [DownloadRiskReason.executableOrInstaller, DownloadRiskReason.dangerousTypeMismatch]
+        confirms: false
     )
     static let uncommonContent = DownloadWarning(
         tag: 2,
@@ -12641,7 +12637,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: .uncommonContent,
         approvalMessage: LocalizedStringResource("This file is not commonly downloaded. The engine could not confirm that it is safe."),
         failure: DownloadFailure.blockedUnsafe,
-        coveredBy: []
+        confirms: true
     )
     static let potentiallyUnwanted = DownloadWarning(
         tag: 3,
@@ -12649,7 +12645,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: .potentiallyUnwanted,
         approvalMessage: LocalizedStringResource("This file may change your browser or computer settings without your permission."),
         failure: DownloadFailure.blockedUnsafe,
-        coveredBy: []
+        confirms: true
     )
     static let insecureBlocked = DownloadWarning(
         tag: 4,
@@ -12657,7 +12653,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: .insecureBlocked,
         approvalMessage: LocalizedStringResource("The engine blocked this insecure download."),
         failure: DownloadFailure.blockedInsecure,
-        coveredBy: []
+        confirms: true
     )
     static let policyBlocked = DownloadWarning(
         tag: 5,
@@ -12665,7 +12661,7 @@ struct DownloadWarning: Hashable, Sendable {
         engineWarning: .policyBlocked,
         approvalMessage: LocalizedStringResource("The engine blocked this download because of its safety or organization policy verdict."),
         failure: DownloadFailure.blockedByPolicy,
-        coveredBy: []
+        confirms: true
     )
 
     static let all: [DownloadWarning] = [
@@ -12694,20 +12690,20 @@ struct DownloadWarning: Hashable, Sendable {
         let engineWarning: EngineDownloadWarning
         let approvalMessage: LocalizedStringResource
         let failure: DownloadFailure
-        let coveredBy: [DownloadRiskReason]
+        let confirms: Bool
 
         init(
             name: String,
             engineWarning: EngineDownloadWarning,
             approvalMessage: LocalizedStringResource,
             failure: DownloadFailure,
-            coveredBy: [DownloadRiskReason]
+            confirms: Bool
         ) {
             self.name = name
             self.engineWarning = engineWarning
             self.approvalMessage = approvalMessage
             self.failure = failure
-            self.coveredBy = coveredBy
+            self.confirms = confirms
         }
     }
 }

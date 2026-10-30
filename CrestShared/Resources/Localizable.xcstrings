@@ -2279,6 +2279,9 @@
         }
       }
     },
+    "Ask before saving apps and installers" : {
+
+    },
     "Ask where to save" : {
 
     },
@@ -4318,6 +4321,9 @@
       }
     },
     "Crest %@ sidebar after import" : {
+
+    },
+    "Crest always asks when a page downloads one without a click." : {
 
     },
     "Crest Browser" : {

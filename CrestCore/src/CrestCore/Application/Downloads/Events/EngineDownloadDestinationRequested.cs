@@ -7,7 +7,8 @@ namespace CrestCore.Contracts;
 /// is the engine's name for it, and `ForcesPrompt` asks the person to choose.
 /// The download waits for the core's `SettleDownloadDestination`, which first
 /// judges its risk from the platform's `Facts` and whether the person started
-/// it: a download the person must confirm is asked about before its place.
+/// it, as `UserInitiated` says or as a Peek opened for the person's link
+/// shows: a download the person must confirm is asked about before its place.
 /// `SourceHost` is the host the file came from, which that question shows; the
 /// engine never sends the address itself.
 public sealed record EngineDownloadDestinationRequested(Guid PromptId, EngineDownload Download, string SuggestedFilename,
@@ -23,10 +24,9 @@ public sealed record EngineDownloadDestinationRequested(Guid PromptId, EngineDow
             return;
         }
         download.SourceHost = SourceHost is { Length: > 0 and <= EngineDownloads.MaximumHostLength } host ? host : null;
-        var verdict = engineDownloads.Verdict(Facts, UserInitiated);
+        var verdict = engineDownloads.Verdict(Download, Facts, UserInitiated || engineDownloads.FollowsPersonsLink(Download));
         engineDownloads.Record(new AssessDownloadRisk(download.DownloadId, verdict.Assessment), turn.Changes);
         download.Reasons = verdict.Assessment.Reasons;
-        download.ReasonsApproved = false;
         if (!verdict.RequiresConfirmation) {
             engineDownloads.AskDestination(download, this, space, turn.Changes);
             return;

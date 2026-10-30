@@ -30,12 +30,28 @@ public sealed record DownloadRiskFacts(string SuggestedFilename, string Sanitize
         "application/x-shellscript"
     };
 
+    /// MIME types that say only that the response is a file to save, such as
+    /// the `application/octet-stream` file hosts send for an installer, so
+    /// they name no type a filename could disagree with.
+    private static readonly HashSet<string> GenericMimeTypes = new(StringComparer.Ordinal) {
+        "application/download",
+        "application/force-download",
+        "application/octet-stream",
+        "application/x-download",
+        "binary/octet-stream"
+    };
+
     /// The platform's suggested name may be longer than the name it saves under.
     public static int MaximumSuggestedFilenameLength => DownloadTextField.Filename.MaximumLength * 4;
 
     /// The saved name's extension or the declared type installs or runs software.
     public bool RunsCode => ExtensionRunsCode || MimeTypeRunsCode || CodeRunningExtensions.Contains(SanitizedExtension)
         || MimeType is { } mime && CodeRunningMimeTypes.Contains(mime.ToLowerInvariant());
+
+    /// The declared type names a type its filename's does not belong to. A
+    /// generic type only says the response is a file, so it disagrees with
+    /// none.
+    public bool TypesDisagree => TypesRelated == false && !(MimeType is { } mime && GenericMimeTypes.Contains(mime.ToLowerInvariant()));
 
     /// The suggested name holds invisible or direction-changing characters,
     /// which can disguise its real extension, such as `photo.jpg<RLO>gpj.command`.

@@ -85,6 +85,12 @@ internal sealed class Page {
     /// committed.
     public string? DocumentAddress => documentUrl;
 
+    /// Whether a download the page starts now is the link the person followed
+    /// to open it. A Peek opens only for a link the person clicked or chose,
+    /// and until it shows a document nothing else in it can start one, so
+    /// an engine that lost the click's gesture on the way still counts it.
+    public bool DownloadsPersonsLink => Transient == TransientPresentation.Peek && documentUrl is null;
+
     /// Whether the page has loaded nothing yet: its engine is still creating
     /// it, or created it and it neither shows a document nor heads to one.
     public bool AwaitsFirstLoad => Phase == PagePhase.Opening

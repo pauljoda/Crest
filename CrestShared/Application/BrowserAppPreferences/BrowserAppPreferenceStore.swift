@@ -83,6 +83,14 @@ final class BrowserAppPreferenceStore {
         set { set { $0.showsRecentTabs = newValue } }
     }
 
+    /// Whether Crest asks before saving an app or installer the person
+    /// started downloading. Off, it saves for macOS to check when opened; a
+    /// page that downloads one on its own is still asked about.
+    var asksBeforeSavingInstallers: Bool {
+        get { preferences.asksBeforeSavingInstallers }
+        set { set { $0.asksBeforeSavingInstallers = newValue } }
+    }
+
     /// How the command palette ranks and arranges what it offers.
     var palette: PalettePreferences {
         get { preferences.palette }

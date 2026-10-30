@@ -43,10 +43,8 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
         public string? ApprovalToken { get; set; }
         /// The site's choices refused it, and it waits for the person to retry it.
         public bool IsBlocked { get; set; }
-        /// Why the core judged it dangerous, and whether the person kept it
-        /// knowing that.
+        /// Why the core judged it dangerous.
         public IReadOnlyList<DownloadRiskReason> Reasons { get; set; } = [];
-        public bool ReasonsApproved { get; set; }
         /// The host its file came from, which an approval shows.
         public string? SourceHost { get; set; }
     }
@@ -158,11 +156,12 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
             Settle(id, changes);
     }
 
-    /// The core's risk verdict from the platform's facts. Facts the ledger
-    /// could not record ask the person first rather than passing as safe.
-    internal DownloadRiskVerdict Verdict(DownloadRiskFacts facts, bool userInitiated) {
+    /// The core's risk verdict from the platform's facts about `reported`, by
+    /// how it began and the app's preferences. Facts the ledger could not
+    /// record ask the person first rather than passing as safe.
+    internal DownloadRiskVerdict Verdict(EngineDownload reported, DownloadRiskFacts facts, bool userInitiated) {
         try {
-            return downloads.Answer(new DownloadRisk(facts, userInitiated));
+            return downloads.Answer(new DownloadRisk(facts, userInitiated), PreferencesFor(reported).AsksBeforeSavingInstallers);
         } catch (Rejected) {
             return new(new DownloadRiskAssessment(DownloadFilename.Safe(facts.SuggestedFilename), []), RequiresConfirmation: true);
         }
@@ -176,6 +175,19 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
     internal void Settle(Guid promptId, ChangeFeed changes) {
         if (waiting.Remove(promptId)) changes.Publish(new PromptSettled(promptId));
     }
+
+    /// Whether the person started `reported` by following a link, though its
+    /// engine did not say so: it comes from a Peek that has shown nothing but
+    /// the link the person followed into it.
+    internal bool FollowsPersonsLink(EngineDownload reported) => reported.SourcePageId is { } pageId
+        && pages.Hosted(pageId) is { DownloadsPersonsLink: true } page && page.ProfileId == reported.ProfileId;
+
+    /// The app's preferences: those the persistent session keeps, or else
+    /// those of the workspace the download's page is in.
+    private AppPreferences PreferencesFor(EngineDownload reported) => device.PersistentPreferences()
+        ?? (reported.SourcePageId is { } pageId && pages.Hosted(pageId) is { } page
+            ? device.Attached(page.WorkspaceId)?.Current.AppPreferences : null)
+        ?? AppPreferences.Default;
 
     /// The Space a download belongs to: its page's, while the page lives in a
     /// Space of the download's profile, or else the one Space of that profile

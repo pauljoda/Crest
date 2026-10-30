@@ -39,7 +39,6 @@ internal sealed class EngineDownloadQuestion {
             engineDownloads.Settle(answer.PromptId, changes);
             var held = prompt.Held!;
             if (answer.Approved && engineDownloads.SpaceOf(held.Download) is { } space) {
-                download.ReasonsApproved = true;
                 engineDownloads.AskDestination(download, held, space, changes);
             } else {
                 app.Issue(download.Engine, new SettleDownloadDestination(held.PromptId, Path: null));

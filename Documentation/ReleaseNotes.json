@@ -4589,6 +4589,14 @@
     "website-data-locked-space-guard": {
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "ask-before-saving-installers-setting": {
+      "category": "new",
+      "message": "Turn on Ask before saving apps and installers in General settings to be asked before Crest saves an app or installer you click to download, such as a .dmg or .pkg. Crest always asks when a page downloads one without a click, and when a file's name is disguised or doesn't match its type."
+    },
+    "generic-download-type-not-a-mismatch": {
+      "category": "fixed",
+      "message": "An installer from a site that sends every file as a generic download, such as a GitHub release, is no longer reported as a file whose type doesn't match its name."
     }
   }
 }

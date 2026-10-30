@@ -19,15 +19,7 @@ public sealed class DownloadPolicyTests {
     public void InstallerAndScriptExtensionsAreExecutableEvenWithoutPlatformTypes(string filename) {
         var assessment = Assess(filename, "application/octet-stream");
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
-        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
-    }
-
-    [Fact]
-    public void UserInitiatedInstallersRelyOnThePlatformProtection() {
-        var assessment = Assess("Crest.dmg", "application/x-apple-diskimage", true, true, true);
-        Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
-        Assert.False(assessment.RequiresConfirmation(isUserInitiated: true));
-        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false, asksBeforeSavingInstallers: false));
     }
 
     [Theory]
@@ -39,17 +31,28 @@ public sealed class DownloadPolicyTests {
         var assessment = Assess(filename, "application/octet-stream", sanitized: "renamed.txt");
         Assert.Contains(DownloadRiskReason.DeceptiveFilename, assessment.Reasons);
         Assert.Equal("renamed.txt", assessment.SanitizedFilename);
-        Assert.True(assessment.RequiresConfirmation(isUserInitiated: true));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: true, asksBeforeSavingInstallers: false));
     }
 
     [Fact]
     public void ADangerousTypeThatDisagreesWithItsFilenameIsAMismatch() {
         var mismatch = Assess("holiday.jpg", "application/x-mach-binary", mimeRunsCode: true, related: false);
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller, DownloadRiskReason.DangerousTypeMismatch], mismatch.Reasons);
-        Assert.True(mismatch.RequiresConfirmation(isUserInitiated: true));
+        Assert.True(mismatch.RequiresConfirmation(isUserInitiated: true, asksBeforeSavingInstallers: false));
         Assert.DoesNotContain(DownloadRiskReason.DangerousTypeMismatch,
             Assess("holiday.jpg", "application/x-mach-binary", mimeRunsCode: true, related: null).Reasons);
         Assert.Empty(Assess("holiday.jpg", "image/png", related: false).Reasons);
+    }
+
+    [Theory]
+    [InlineData("application/octet-stream")]
+    [InlineData("BINARY/OCTET-STREAM")]
+    [InlineData("application/force-download")]
+    public void AGenericDeclaredTypeIsNoMismatchSoAClickedInstallerIsNotAsked(string mime) {
+        var assessment = Assess("Rectangle.dmg", mime, extensionRunsCode: true, related: false);
+        Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
+        Assert.False(assessment.RequiresConfirmation(isUserInitiated: true, asksBeforeSavingInstallers: false));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false, asksBeforeSavingInstallers: false));
     }
 
     [Theory]
