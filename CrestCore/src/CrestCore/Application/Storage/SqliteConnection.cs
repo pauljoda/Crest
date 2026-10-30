@@ -674,13 +674,21 @@ internal sealed class SqliteConnection : IDisposable {
     });
 
     /// Inserts one row per item of `items` with `sql`, each bound by `bind`
-    /// with the item and its position in the list.
+    /// with the item and its position in the list. The rows share one
+    /// prepared statement, reset between them, since a save rewrites a
+    /// changed list whole.
     private void InsertInOrder<T>(string sql, IReadOnlyList<T> items, Action<nint, T, int> bind) {
-        for (int position = 0; position < items.Count; position++) {
-            var item = items[position];
-            int index = position;
-            Insert(sql, statement => bind(statement, item, index));
-        }
+        if (items.Count == 0) return;
+        Query(sql, statement => {
+            for (int position = 0; position < items.Count; position++) {
+                bind(statement, items[position], position);
+                int result = Sqlite.sqlite3_step(statement);
+                if (result != Sqlite.Done) throw Failure(result);
+                Checked(Sqlite.sqlite3_reset(statement));
+                Checked(Sqlite.sqlite3_clear_bindings(statement));
+            }
+            return items.Count;
+        });
     }
 
     private void Insert(string sql, Action<nint> bind) => Query(sql, statement => {

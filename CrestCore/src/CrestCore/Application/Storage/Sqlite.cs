@@ -93,6 +93,12 @@ internal static partial class Sqlite {
     public static partial int sqlite3_finalize(nint statement);
 
     [LibraryImport(Library)]
+    public static partial int sqlite3_reset(nint statement);
+
+    [LibraryImport(Library)]
+    public static partial int sqlite3_clear_bindings(nint statement);
+
+    [LibraryImport(Library)]
     public static partial int sqlite3_column_int(nint statement, int column);
 
     [LibraryImport(Library)]
