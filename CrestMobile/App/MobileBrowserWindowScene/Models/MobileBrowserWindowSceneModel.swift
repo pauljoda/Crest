@@ -131,7 +131,9 @@ final class MobileBrowserWindowSceneModel {
     /// The window closed. Other windows still present the standard
     /// confirmations they share; this window's private workspace closes with
     /// it, and so do its private downloads and their records in the shared
-    /// private center. Closing it again does nothing.
+    /// private center. Its standard pages go too, once their state is written
+    /// out, so the core stops hosting them for a window that is gone. Closing
+    /// it again does nothing.
     func closeWindowRuntime() {
         guard !isClosed else { return }
         isClosed = true
@@ -139,6 +141,7 @@ final class MobileBrowserWindowSceneModel {
         pageStoreRegistry.unregister(pages)
         pageStoreRegistry.unregister(privatePages)
         flushPendingPersistence()
+        pages.closeWindowSession()
     }
 
     func togglePrivateBrowsing(from mode: BrowserBrowsingMode) -> BrowserBrowsingMode {

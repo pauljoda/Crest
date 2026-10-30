@@ -384,6 +384,20 @@ final class MobileBrowserPageStore:
         releasePrivateBrowsingData(in: spaces)
     }
 
+    /// Lets go of every page this scene kept as its window closes, keeping
+    /// what brings each tab back, once `archiveResidentTabStates()` wrote
+    /// their state out. A scene's pages are its own: the core hosts a closed
+    /// window's pages until their owner lets them go, and while a closed
+    /// scene still holds a tab's page, a scene restored under the same
+    /// identity cannot open the tab another.
+    func closeWindowSession() {
+        deactivatePagePresentation()
+        let tabIDs = Set(host.runtimes.keys)
+        host.releasePages(for: tabIDs.union(nativeTabs.tabIDs), keepingStateOf: tabIDs)
+        nativeTabs.reconcile(validTabIDs: [])
+        host.releaseAllTransientPages()
+    }
+
     func styleVisitedLinks(in space: SpaceModel) async {
         await activePage?.styleVisitedLinks(history: space.history.entries)
     }
