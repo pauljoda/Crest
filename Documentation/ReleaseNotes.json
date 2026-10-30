@@ -4617,6 +4617,10 @@
     "sub-spaces-group-records": {
       "category": "internal",
       "message": "A Space keeps its own profile while it browses with its group's, so separating it brings its own data back. Site permission choices, saved passwords, history and protection settings are kept for the group, and deleting a Sub-Space erases only what is its own."
+    },
+    "space-picker-stronger-selection": {
+      "category": "improved",
+      "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
     }
   }
 }

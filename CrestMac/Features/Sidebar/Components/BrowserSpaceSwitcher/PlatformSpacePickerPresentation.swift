@@ -40,6 +40,10 @@ final class SpacePickerPresentationView: NSView {
     private var spaceIDs: [UUID] = []
     private var frames: [UUID: CGRect] = [:]
     private var colors: [UUID: NSColor] = [:]
+    /// Each Space's colour for a stroke: lifted toward the colour its text
+    /// reads in, so the selection and a group's outline hold against a
+    /// backdrop of their own hue.
+    private var strokes: [UUID: NSColor] = [:]
     private var lastSnapshot: SpacePagerPresentation.Snapshot?
     private var scrollSegment: SpacePickerScrollProgress?
     private var activeTransition: SpacePagerSettlement?
@@ -100,10 +104,17 @@ final class SpacePickerPresentationView: NSView {
         outline = SpacePickerGroupOutline(profileIDs: spaces.map(\.profileID))
         if self.frames != frames { needsInitialPosition = true }
         self.frames = frames
-        colors = Dictionary(
-            uniqueKeysWithValues: spaces.map {
-                ($0.id, NSColor(selectionTint ?? $0.branding.primaryColor.color))
-            })
+        let system = BrowserSpaceForegroundTone(
+            readingIn: effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light)
+        colors = [:]
+        strokes = [:]
+        for space in spaces {
+            let color = NSColor(selectionTint ?? space.branding.primaryColor.color)
+            let reading: NSColor = space.branding.foregroundTone(system: system) == .light ? .white : .black
+            colors[space.id] = color
+            strokes[space.id] =
+                color.blended(withFraction: CrestSpaceIconPickerMetrics.strokeLift, of: reading) ?? color
+        }
         if let snapshot = presentation.snapshot, snapshot.spaceIDs == ids {
             receive(snapshot)
         } else if let selectedSpaceID, let index = ids.firstIndex(of: selectedSpaceID) {
@@ -199,8 +210,10 @@ final class SpacePickerPresentationView: NSView {
 
     private func animateHighlight(_ transition: SpacePagerSettlement) -> Bool {
         let frames = transition.positions.compactMap { selectionFrame(at: $0) }
-        let colors = transition.positions.compactMap { interpolatedColor(at: $0) }
-        guard frames.count == transition.positions.count, colors.count == frames.count else { return false }
+        let colors = transition.positions.compactMap { interpolated(self.colors, at: $0) }
+        let strokes = transition.positions.compactMap { interpolated(self.strokes, at: $0) }
+        guard frames.count == transition.positions.count, colors.count == frames.count, strokes.count == frames.count
+        else { return false }
         animateOutline(transition)
         transition.animate(
             highlight, keyPath: "position", values: frames.map { NSValue(point: CGPoint(x: $0.midX, y: $0.midY)) })
@@ -213,7 +226,7 @@ final class SpacePickerPresentationView: NSView {
             values: colors.map {
                 $0.withAlphaComponent($0.alphaComponent * CrestSpaceIconPickerMetrics.selectionFillOpacity).cgColor
             })
-        transition.animate(highlight, keyPath: "strokeColor", values: colors.map(\.cgColor))
+        transition.animate(highlight, keyPath: "strokeColor", values: strokes.map(\.cgColor))
         return true
     }
 
@@ -221,8 +234,10 @@ final class SpacePickerPresentationView: NSView {
     /// group, holds within one and shrinks back as the selection leaves.
     private func animateOutline(_ transition: SpacePagerSettlement) {
         let outlines = transition.positions.map { outlineFrame(at: $0) }
-        let colors = transition.positions.compactMap { outlineColor(at: $0) }
-        guard outlines.allSatisfy({ $0 != nil }), colors.count == outlines.count else {
+        let colors = transition.positions.compactMap { outlineColor(self.colors, at: $0) }
+        let strokes = transition.positions.compactMap { outlineColor(self.strokes, at: $0) }
+        guard outlines.allSatisfy({ $0 != nil }), colors.count == outlines.count, strokes.count == outlines.count
+        else {
             groupOutline.isHidden = true
             return
         }
@@ -239,7 +254,7 @@ final class SpacePickerPresentationView: NSView {
             values: colors.map {
                 $0.withAlphaComponent($0.alphaComponent * CrestSpaceIconPickerMetrics.groupOutlineFillOpacity).cgColor
             })
-        transition.animate(groupOutline, keyPath: "strokeColor", values: colors.map(\.cgColor))
+        transition.animate(groupOutline, keyPath: "strokeColor", values: strokes.map(\.cgColor))
     }
 
     private func advanceScroll(_ segment: SpacePickerScrollProgress, position: CGFloat) {
@@ -266,7 +281,9 @@ final class SpacePickerPresentationView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
-        guard let frame = selectionFrame(at: position), let color = interpolatedColor(at: position) else {
+        guard let frame = selectionFrame(at: position), let color = interpolated(colors, at: position),
+            let stroke = interpolated(strokes, at: position)
+        else {
             highlight.isHidden = true
             groupOutline.isHidden = true
             return
@@ -274,20 +291,21 @@ final class SpacePickerPresentationView: NSView {
         drawOutline(at: position)
         highlight.isHidden = false
         highlight.frame = frame
-        let stroke = CrestLayout.hairline
         highlight.path = selectionPath(in: frame.size, inset: selectionInset(at: position))
         highlight.fillColor =
             color.withAlphaComponent(
                 color.alphaComponent * CrestSpaceIconPickerMetrics.selectionFillOpacity
             ).cgColor
-        highlight.strokeColor = color.cgColor
-        highlight.lineWidth = stroke
+        highlight.strokeColor = stroke.cgColor
+        highlight.lineWidth = CrestSpaceIconPickerMetrics.selectionStroke
     }
 
     /// Draws the group outline at `position`, or hides it where it wraps
     /// nothing.
     private func drawOutline(at position: CGFloat) {
-        guard let outline = outlineFrame(at: position), let color = outlineColor(at: position) else {
+        guard let outline = outlineFrame(at: position), let color = outlineColor(colors, at: position),
+            let stroke = outlineColor(strokes, at: position)
+        else {
             groupOutline.isHidden = true
             return
         }
@@ -297,7 +315,7 @@ final class SpacePickerPresentationView: NSView {
         groupOutline.path = outlinePath(in: outline.rect.size)
         groupOutline.fillColor =
             color.withAlphaComponent(color.alphaComponent * CrestSpaceIconPickerMetrics.groupOutlineFillOpacity).cgColor
-        groupOutline.strokeColor = color.cgColor
+        groupOutline.strokeColor = stroke.cgColor
         groupOutline.lineWidth = CrestSpaceIconPickerMetrics.groupOutlineStroke
     }
 
@@ -306,7 +324,7 @@ final class SpacePickerPresentationView: NSView {
     /// concentric corners.
     private func selectionPath(in size: CGSize, inset: CGFloat) -> CGPath {
         CrestSpaceIconPickerShape(style: style)
-            .inset(by: inset + CrestLayout.hairline / 2)
+            .inset(by: inset + CrestSpaceIconPickerMetrics.selectionStroke / 2)
             .path(in: CGRect(origin: .zero, size: size).insetBy(dx: -inset, dy: -inset))
             .cgPath
     }
@@ -345,18 +363,21 @@ final class SpacePickerPresentationView: NSView {
         return sample.frame(from: start, to: end)
     }
 
-    /// The group outline's colour at `position`: its primary's, so it stays
-    /// one colour while the selection moves through the group.
-    private func outlineColor(at position: CGFloat) -> NSColor? {
-        interpolatedColor(at: position) { outline.primary(of: $0) }
+    /// The group outline's colour from `palette` at `position`: its
+    /// primary's, so it stays one colour while the selection moves through
+    /// the group.
+    private func outlineColor(_ palette: [UUID: NSColor], at position: CGFloat) -> NSColor? {
+        interpolated(palette, at: position) { outline.primary(of: $0) }
     }
 
-    /// The colour at `position`, blending the colours of the Spaces `index`
-    /// picks for the positions either side of it.
-    private func interpolatedColor(at position: CGFloat, of index: (Int) -> Int = { $0 }) -> NSColor? {
+    /// The colour from `palette` at `position`, blending the colours of the
+    /// Spaces `index` picks for the positions either side of it.
+    private func interpolated(
+        _ palette: [UUID: NSColor], at position: CGFloat, of index: (Int) -> Int = { $0 }
+    ) -> NSColor? {
         guard let sample = SpacePagerInterpolation(position: position, count: spaceIDs.count),
-            let start = colors[spaceIDs[index(sample.lower)]]?.usingColorSpace(.deviceRGB),
-            let end = colors[spaceIDs[index(sample.upper)]]?.usingColorSpace(.deviceRGB)
+            let start = palette[spaceIDs[index(sample.lower)]]?.usingColorSpace(.deviceRGB),
+            let end = palette[spaceIDs[index(sample.upper)]]?.usingColorSpace(.deviceRGB)
         else { return nil }
         let fraction = sample.fraction
         return NSColor(
