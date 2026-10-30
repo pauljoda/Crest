@@ -27,6 +27,9 @@ struct BrowserQuickWindowAddressControl: View {
             BrowserQuickWindowAddressSecurityIcon(
                 isSecure: model.page?.live.security.isSecure == true
             )
+            // The Quick Window has no site controls, so its page asks for
+            // permissions from the site's own icon.
+            .pagePermissionPopover(model.page?.sitePermissionRequests)
             BrowserAddressContent(
                 text: $addressText,
                 isEditing: $isAddressEditing,
