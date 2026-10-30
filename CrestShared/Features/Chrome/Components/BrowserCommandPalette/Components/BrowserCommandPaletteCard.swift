@@ -13,6 +13,8 @@ struct BrowserCommandPaletteCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.browserCommandPaletteTransitionPhase) private var transitionPhase
+    @AppStorage(BrowserCommandPaletteScrimPreference.key, store: BrowserChromeAppearancePreference.defaults)
+    private var dimsPage = BrowserCommandPaletteScrimPreference.defaultValue
 
     let model: BrowserCommandPaletteModel
     let presentation: BrowserCommandPalettePresentation
@@ -62,6 +64,7 @@ struct BrowserCommandPaletteCard: View {
                 )
                 .clipShape(morphingShape)
                 .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: morphingShape))
+                .background { liftedShadow(shape: morphingShape) }
                 .animation(glassAnimation) {
                     $0.opacity(isSettled ? 1 : 0)
                 }
@@ -86,6 +89,7 @@ struct BrowserCommandPaletteCard: View {
                 )
                 .clipShape(restingShape)
                 .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: restingShape))
+                .background { liftedShadow(shape: restingShape) }
                 .opacity(isSettled ? 1 : 0)
         }
     }
@@ -114,6 +118,16 @@ struct BrowserCommandPaletteCard: View {
                 )
             }
         }
+    }
+
+    /// Lifts an overlay card off a page its scrim leaves undimmed.
+    private func liftedShadow(shape: RoundedRectangle) -> some View {
+        CrestLiftedSurfaceShadow(
+            cornerRadius: shape.cornerSize.width,
+            opacity: presentation == .overlay && !dimsPage ? BrowserCommandPaletteMetrics.liftedShadowOpacity : 0,
+            radius: BrowserCommandPaletteMetrics.liftedShadowRadius,
+            yOffset: BrowserCommandPaletteMetrics.liftedShadowYOffset
+        )
     }
 
     /// Whether the card keeps one height while its results change.

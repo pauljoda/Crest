@@ -4625,6 +4625,10 @@
     "space-picker-stronger-selection": {
       "category": "improved",
       "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    },
+    "command-bar-dim-setting": {
+      "category": "new",
+      "message": "On the Mac, Look & Feel can stop the command bar from dimming the page behind it. The bar then casts a shadow, and clicking outside it still closes it."
     }
   }
 }

@@ -3,13 +3,17 @@ import SwiftUI
 struct BrowserCommandPaletteScrim: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.browserCommandPaletteTransitionPhase) private var transitionPhase
+    @AppStorage(BrowserCommandPaletteScrimPreference.key, store: BrowserChromeAppearancePreference.defaults)
+    private var dimsPage = BrowserCommandPaletteScrimPreference.defaultValue
 
     let dismiss: () -> Void
 
     var body: some View {
         Button(action: dismiss) {
             Color.black.opacity(
-                BrowserCommandPaletteMetrics.scrimOpacity.scrimOpacity(reduceTransparency: reduceTransparency)
+                dimsPage
+                    ? BrowserCommandPaletteMetrics.scrimOpacity.scrimOpacity(reduceTransparency: reduceTransparency)
+                    : 0
             )
             .contentShape(.rect)
         }
