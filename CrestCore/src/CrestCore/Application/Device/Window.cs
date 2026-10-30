@@ -251,8 +251,14 @@ internal sealed class Window {
         foreach (var groupId in shares.Keys.ToArray())
             if (!session.Spaces.Any(space => RenderedColumns(space, groupId) == shares[groupId].Count)) shares.Remove(groupId);
         foreach (var (spaceId, history) in recent.ToArray()) {
-            if (!spaces.TryGetValue(spaceId, out var space)) recent.Remove(spaceId);
-            else history.RemoveAll(tabId => !Contains(space, tabId));
+            if (!spaces.TryGetValue(spaceId, out var space)) {
+                recent.Remove(spaceId);
+                continue;
+            }
+            // The history keeps every tab the window showed in the Space, so
+            // one set of the Space's tabs answers each of them.
+            var held = space.Tabs.Select(tab => tab.Id).ToHashSet();
+            history.RemoveAll(tabId => !held.Contains(tabId));
         }
         foreach (var spaceId in tabs.Keys) Remember(spaceId);
     }
@@ -308,8 +314,9 @@ internal sealed class Window {
     /// How many columns a split group renders with in `space`: the length of
     /// its first contiguous run of tabs, when that run can render.
     private static int RenderedColumns(SpaceState space, Guid groupId) {
-        int start = space.Tabs.ToList().FindIndex(tab => tab.SplitGroupId == groupId);
-        if (start < 0) return 0;
+        int start = 0;
+        while (start < space.Tabs.Count && space.Tabs[start].SplitGroupId != groupId) start++;
+        if (start == space.Tabs.Count) return 0;
         int length = space.Tabs.Skip(start).TakeWhile(tab => tab.SplitGroupId == groupId).Count();
         return length >= MinimumSplitMembers ? length : 0;
     }
