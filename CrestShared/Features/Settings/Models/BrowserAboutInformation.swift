@@ -64,7 +64,14 @@ struct BrowserAboutReleaseNote: Equatable, Identifiable, Sendable {
     let message: String
 }
 
+/// The release-note catalog Crest ships, in the order the catalog lists it.
+///
+/// The catalog only ever appends, so its order is its chronology: the last
+/// entries are the newest. Entry ids are plain words, not dates, so sorting
+/// them says nothing about age.
 struct BrowserAboutReleaseNotes: Sendable {
+    // MARK: - Types
+
     private struct Document: Decodable {
         let entries: [String: Entry]
     }
@@ -74,34 +81,111 @@ struct BrowserAboutReleaseNotes: Sendable {
         let message: String
     }
 
-    private(set) var entries: [BrowserAboutReleaseNote]
+    // MARK: - Static Variables
+
+    /// How many of the newest public entries What's New lists.
+    static let highlightLimit = 12
 
     static let bundled = loadBundled()
 
+    // MARK: - Variables
+
+    /// Every entry, oldest first.
+    let entries: [BrowserAboutReleaseNote]
+
+    /// The newest public entries, newest first, capped at `highlightLimit`.
+    let currentHighlights: [BrowserAboutReleaseNote]
+
+    // MARK: - Initializers
+
     init(data: Data) throws {
         let document = try JSONDecoder().decode(Document.self, from: data)
-        entries = document.entries.map { id, entry in
-            BrowserAboutReleaseNote(
-                id: id,
-                category: entry.category,
-                message: entry.message
-            )
+        var remaining = document.entries
+        var ordered = Self.entryOrder(in: data).compactMap { id in
+            remaining.removeValue(forKey: id).map { entry in
+                BrowserAboutReleaseNote(id: id, category: entry.category, message: entry.message)
+            }
         }
+        // Anything the scan missed still appears, after the ordered entries.
+        for (id, entry) in remaining.sorted(by: { $0.key < $1.key }) {
+            ordered.append(BrowserAboutReleaseNote(id: id, category: entry.category, message: entry.message))
+        }
+        self.init(entries: ordered)
     }
 
     init(entries: [BrowserAboutReleaseNote]) {
         self.entries = entries
+        let publicEntries = entries.filter { $0.category != .internal }
+        currentHighlights = publicEntries.suffix(Self.highlightLimit).reversed()
     }
 
-    func currentHighlights(limit: Int = 12) -> [BrowserAboutReleaseNote] {
-        guard limit > 0 else { return [] }
-        return Array(
-            entries
-                .filter { $0.category != .internal }
-                .sorted { $0.id > $1.id }
-                .prefix(limit)
-        )
+    // MARK: - Actions - Order
+
+    /// The ids of the `entries` object in the order the catalog text lists them.
+    ///
+    /// `JSONDecoder` returns the entries as a dictionary and forgets that order, so
+    /// one pass over the text recovers it: it tracks strings and nesting, and
+    /// records each key one level inside the root `entries` object.
+    private static func entryOrder(in data: Data) -> [String] {
+        let quote = UInt8(ascii: "\"")
+        let escape = UInt8(ascii: "\\")
+        let open = UInt8(ascii: "{")
+        let close = UInt8(ascii: "}")
+        let colon = UInt8(ascii: ":")
+        let whitespace: Set<UInt8> = [UInt8(ascii: " "), UInt8(ascii: "\n"), UInt8(ascii: "\r"), UInt8(ascii: "\t")]
+        var keys: [String] = []
+        var depth = 0
+        var entriesDepth: Int?
+        var awaitingEntriesObject = false
+        var index = data.startIndex
+        while index < data.endIndex {
+            let byte = data[index]
+            index += 1
+            switch byte {
+            case open:
+                depth += 1
+                if awaitingEntriesObject {
+                    entriesDepth = depth
+                    awaitingEntriesObject = false
+                }
+            case close:
+                if depth == entriesDepth { return keys }
+                depth -= 1
+            case quote:
+                let start = index
+                while index < data.endIndex, data[index] != quote {
+                    index += data[index] == escape ? 2 : 1
+                }
+                let end = min(index, data.endIndex)
+                index = end + 1
+                var next = index
+                while next < data.endIndex, whitespace.contains(data[next]) { next += 1 }
+                guard next < data.endIndex, data[next] == colon else { continue }
+                let key = Self.stringValue(of: data[start..<end])
+                if depth == entriesDepth {
+                    keys.append(key)
+                } else if depth == 1, key == "entries" {
+                    awaitingEntriesObject = true
+                }
+            default:
+                break
+            }
+        }
+        return keys
     }
+
+    /// The text a JSON string literal's contents spell.
+    private static func stringValue(of contents: Data) -> String {
+        guard contents.contains(UInt8(ascii: "\\")) else {
+            return String(decoding: contents, as: UTF8.self)
+        }
+        var literal = Data([UInt8(ascii: "\"")])
+        literal.append(contents)
+        literal.append(UInt8(ascii: "\""))
+        return (try? JSONDecoder().decode(String.self, from: literal)) ?? String(decoding: contents, as: UTF8.self)
+    }
+
+    // MARK: - Actions - Loading
 
     private static func loadBundled() -> BrowserAboutReleaseNotes {
         guard

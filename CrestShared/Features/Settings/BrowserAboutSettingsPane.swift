@@ -11,7 +11,7 @@ struct BrowserAboutSettingsPane: View {
     init(
         buildInformation: BrowserAboutBuildInformation = .current,
         releaseNotes: [BrowserAboutReleaseNote] =
-            BrowserAboutReleaseNotes.bundled.currentHighlights()
+            BrowserAboutReleaseNotes.bundled.currentHighlights
     ) {
         self.buildInformation = buildInformation
         self.releaseNotes = releaseNotes
