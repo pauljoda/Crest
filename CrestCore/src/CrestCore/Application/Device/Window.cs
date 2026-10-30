@@ -160,11 +160,29 @@ internal sealed class Window {
     public RecentTabItem? LastUsed(SpaceState space, IReadOnlySet<Guid> elsewhere) {
         ArgumentNullException.ThrowIfNull(space);
         if (Tab(space.Id) is not { } shown) return null;
-        var shownItem = Cards(space, shown).TabIds;
+        // One pass over the sidebar finds every tab's split, where looking
+        // each tab up would walk the whole sidebar once per tab.
+        var groups = GroupRows(space);
+        var shownItem = Cards(space, shown, groups).TabIds;
         return space.Tabs.Where(tab => !tab.IsStartPage && !shownItem.Contains(tab.Id) && !departed.Contains((space.Id, tab.Id))
-                && !Cards(space, tab.Id).TabIds.Any(elsewhere.Contains))
-            .MaxBy(tab => tab.LastActivatedAt) is { } last ? new(Cards(space, last.Id).TabIds, last.Id) : null;
+                && !Cards(space, tab.Id, groups).TabIds.Any(elsewhere.Contains))
+            .MaxBy(tab => tab.LastActivatedAt) is { } last ? new(Cards(space, last.Id, groups).TabIds, last.Id) : null;
     }
+
+    /// The row of the split each tab of `space` belongs to, by tab: the first
+    /// such row in the sidebar's order, as `Cards` finds it.
+    private static Dictionary<Guid, SidebarRow> GroupRows(SpaceState space) {
+        var rows = new Dictionary<Guid, SidebarRow>();
+        foreach (var list in space.Sidebar.Lists)
+            foreach (var row in list.Rows)
+                if (row.Kind.GroupsTabs)
+                    foreach (var member in row.Members) rows.TryAdd(member, row);
+        return rows;
+    }
+
+    /// The cards `Cards` names for `shown`, read from the rows `GroupRows` found.
+    private static ShownCards Cards(SpaceState space, Guid shown, Dictionary<Guid, SidebarRow> groups) =>
+        groups.TryGetValue(shown, out var row) ? new(space.Id, [.. row.Members], row.Id) : new(space.Id, [shown], null);
 
     /// Shows `space`, on the tab the window showed there while it still
     /// exists, else on the Space's fallback tab.
