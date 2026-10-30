@@ -32,6 +32,10 @@ final class MobileBrowserWindowSceneModel {
     @ObservationIgnored private let privateDownloads: MobileBrowserDownloads?
     /// Whether the window closed, taking its private workspace with it.
     @ObservationIgnored private var isClosed = false
+    /// Whether the resident pages were archived since the scene was last
+    /// active. A scene passes through `.inactive` on its way to `.background`,
+    /// and the archive it wrote there still holds when it arrives.
+    @ObservationIgnored private var archivedResidentPagesSinceActive = false
 
     var privateBrowser: BrowserStore { privateRuntime.browser }
     var privatePages: MobileBrowserPageStore { privateRuntime.pages }
@@ -104,6 +108,7 @@ final class MobileBrowserWindowSceneModel {
 
     func activateWindow() {
         reopenIfClosed()
+        archivedResidentPagesSinceActive = false
         pageStoreRegistry.register(pages)
         pageStoreRegistry.registerPrivateBrowsing(privatePages)
     }
@@ -118,14 +123,22 @@ final class MobileBrowserWindowSceneModel {
         }
     }
 
+    /// The scene stopped receiving input but still shows. A force quit from
+    /// the app switcher ends the app from here, with no `.background` pass
+    /// promised first, so the resident pages archive now.
     func prepareForInactiveScene() {
         spaceAccess.lockAllForInactiveScene()
-        flushPendingPersistence()
+        flushPendingPersistence(archivingResidentPages: true)
     }
 
+    /// The scene left the foreground, always by way of `.inactive`. The
+    /// archive written there still holds: no input reaches a page between
+    /// the two phases, and a load that commits in that window is caught by
+    /// the next archive. Only a scene that never passed through `.inactive`
+    /// since it was last active archives here.
     func prepareForBackgroundScene() {
         spaceAccess.lockAll()
-        flushPendingPersistence()
+        flushPendingPersistence(archivingResidentPages: !archivedResidentPagesSinceActive)
     }
 
     /// The window closed. Other windows still present the standard
@@ -138,7 +151,7 @@ final class MobileBrowserWindowSceneModel {
         closePrivateWorkspace()
         pageStoreRegistry.unregister(pages)
         pageStoreRegistry.unregister(privatePages)
-        flushPendingPersistence()
+        flushPendingPersistence(archivingResidentPages: true)
     }
 
     func togglePrivateBrowsing(from mode: BrowserBrowsingMode) -> BrowserBrowsingMode {
@@ -249,10 +262,17 @@ final class MobileBrowserWindowSceneModel {
             profileIDs: Set(privateBrowser.spaceModels.map(\.profileID)))
     }
 
-    private func flushPendingPersistence() {
+    /// Writes the core's pending edits, and with `archivingResidentPages` each
+    /// resident page's engine state first. Reading that state is a synchronous
+    /// round trip to every page's web content process, so a scene asks for it
+    /// once per excursion from `.active`, not on each phase it passes through.
+    private func flushPendingPersistence(archivingResidentPages: Bool) {
         // Reading resident WebKit session state must happen while pages remain
         // resident, before the asynchronous persistence flush begins.
-        pages.archiveResidentTabStates()
+        if archivingResidentPages {
+            pages.archiveResidentTabStates()
+            archivedResidentPagesSinceActive = true
+        }
         // iOS may suspend the app once the scene leaves the foreground and end
         // it while suspended, so the flush keeps it running until it is done.
         let backgroundTask = MobileBackgroundTask(named: "Save pending edits")
