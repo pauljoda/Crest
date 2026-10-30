@@ -2,6 +2,15 @@ import SwiftUI
 
 /// The same sidebar preview used by import and setup, dressed in the live draft.
 struct BrowserSpaceAppearanceHero: View {
+    // MARK: - Static Variables
+
+    /// The tab a compact preview shows under the name: a Start Page.
+    @MainActor private static let exampleTab = SpaceModel.detached(
+        SpaceState.Seed(name: String(localized: "Your Space"), tabs: [.startPage()])
+    ).tabs.models[0]
+
+    // MARK: - Variables
+
     @Environment(\.colorScheme) private var colorScheme
     let branding: SpaceBranding
     let symbol: String
@@ -11,12 +20,14 @@ struct BrowserSpaceAppearanceHero: View {
     var showsNameHint = false
     var spacePicker: BrowserSpaceCustomizationPicker? = nil
     @State private var favicons = FaviconAssets()
+    /// The draft as the core resolves it, asked again only when the draft
+    /// changes: the core's answer is too slow to repeat on every body pass.
+    @State private var preview: SpaceModel?
 
-    /// The showcase's first Space dressed in the draft, as the core resolves it.
-    private var preview: SpaceModel {
-        SpaceModel.detached(
-            SessionState.Seed.showcase.spaces[0].wearing(
-                branding, symbol: symbol, name: name.isEmpty ? String(localized: "Your Space") : name))
+    /// The showcase's first Space dressed in the draft, before the core resolves it.
+    private var draft: SpaceState.Seed {
+        SessionState.Seed.showcase.spaces[0].wearing(
+            branding, symbol: symbol, name: name.isEmpty ? String(localized: "Your Space") : name)
     }
 
     private var nameHint: LocalizedStringKey {
@@ -27,8 +38,18 @@ struct BrowserSpaceAppearanceHero: View {
         #endif
     }
 
+    // MARK: - Actions - Drawing
+
     var body: some View {
-        let preview = preview
+        ZStack {
+            if let preview {
+                hero(preview)
+            }
+        }
+        .onChange(of: draft, initial: true) { _, draft in preview = SpaceModel.detached(draft) }
+    }
+
+    private func hero(_ preview: SpaceModel) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 BrowserSpaceIdentityIcon(space: preview, size: 26)
@@ -88,11 +109,6 @@ struct BrowserSpaceAppearanceHero: View {
         .accessibilityElement(children: editableName == nil && spacePicker == nil ? .ignore : .contain)
         .accessibilityLabel("Live sidebar preview for \(preview.settings.name)")
     }
-
-    /// The tab a compact preview shows under the name: a Start Page.
-    @MainActor private static let exampleTab = SpaceModel.detached(
-        SpaceState.Seed(name: String(localized: "Your Space"), tabs: [.startPage()])
-    ).tabs.models[0]
 }
 
 #if DEBUG
