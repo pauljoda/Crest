@@ -116,12 +116,14 @@ type you touch. The rules that matter most:
 
 ## Pull request
 
-- **Version and release note.** Every commit that changes app code runs
-  `Scripts/set-version.sh --patch`, appends a new entry with a unique
-  lowercase kebab-case ID to `Documentation/ReleaseNotes.json`, stages
-  `Config/Version.xcconfig` with the change, and passes
-  `Scripts/check-version.sh --fix-commit`. Never change
-  `CURRENT_PROJECT_VERSION`.
+- **Release note, derived version.** Every commit that changes app code adds
+  its own entry file, `Documentation/ReleaseNotes/<id>.json` with a unique
+  lowercase kebab-case ID and `{"category", "message"}`, and passes
+  `Scripts/check-version.sh --fix-commit`. Never edit
+  `Config/Version.xcconfig` or `Documentation/ReleaseNotes.json`: the patch
+  version is derived from history (`Scripts/derive-version.py`), and only a
+  maintainer-approved release line runs `Scripts/set-version.sh --release`.
+  Never change `CURRENT_PROJECT_VERSION`.
 - **One focused pull request.** No scope widening and no drive-by refactors.
   When a change regenerates `CrestShared/Resources/Localizable.xcstrings`,
   the regenerated catalog is part of that change. Edit `project.yml` and run
@@ -188,7 +190,7 @@ type you touch. The rules that matter most:
 - [ ] Shared state changes go through core intents; no direct engine calls in shared code.
 - [ ] No new windows, ad-hoc fills or modal notices.
 - [ ] Tests only for silent-breaking contracts; probes removed.
-- [ ] Patch bump, release-note entry and `check-version.sh --fix-commit` pass.
+- [ ] Release-note entry file added and `check-version.sh --fix-commit` passes.
 - [ ] Pull request lists what ran, and both AI usage boxes are ticked.
 - [ ] Visual changes are shown in screenshots attached to the pull request.
 - [ ] Test copies of Crest are quit, unregistered and deleted.

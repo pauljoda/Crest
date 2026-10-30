@@ -91,27 +91,47 @@ tools helped, and that the skill was run and its output reviewed. The
 without the second, or that removed the section. You remain responsible for
 understanding, validating and explaining everything you submit.
 
-`Config/Version.xcconfig` is the only source for Crest's public version. Versions
-use complete `X.Y.Z` semantic versioning. Once a fix is verified and ready to
-commit, run `Scripts/set-version.sh --patch`, stage the version file with the
-fix, and run `Scripts/check-version.sh --fix-commit`. Each independently
-verified fix advances the patch component once; when several already verified
-fixes intentionally share one commit, use `Scripts/set-version.sh --patch N` to
-account for all of them.
+Crest's public version is derived, so no change edits a shared version line.
+`Config/Version.xcconfig` names the release line's base version, `X.Y.Z`. Each
+build's patch version is that base plus the number of first-parent commits on
+the branch since the base last changed: every merge to `main` raises it by one.
+Run `Scripts/derive-version.py version` to see what a commit builds as, and
+`Scripts/derive-version.py tag` for the stable tag that names it. Release
+builds stamp the derived version into their own checkout; never commit a
+stamped file.
 
-Changing the major or minor release line is a separate release decision. Use
-`Scripts/set-version.sh --release X.Y.Z` only when that release and its tag have
-been explicitly approved. Xcode Cloud continues to own distributed integer
-build numbers while the repository keeps build `1` as its local fallback.
+### Starting a new version
 
-Every user-visible or architecture-significant work commit adds a new entry to
-`Documentation/ReleaseNotes.json`. The stable lowercase kebab-case ID is the
-entry's identity across rebases and history rewrites; never reuse, reorder, or
-delete one, and append new entries at the end. Choose `new`, `improved`, or
-`fixed` for public notes and write the message as a concise user-facing outcome.
-Use `internal` to record architecture, release, or tooling work that should not
-appear to users. The fix-commit check requires the new staged entry alongside
-the patch bump.
+Changing the major or minor release line is a separate release decision. Once
+a maintainer approves it:
+
+1. On a branch from `main`, run `Scripts/set-version.sh --release X.Y.0`.
+2. Commit `Config/Version.xcconfig` on its own, checked by
+   `Scripts/check-version.sh --release-commit`, and merge it.
+3. Builds of `main` now count up from `X.Y.0`: the merge itself builds as
+   `X.Y.0`, the next merge as `X.Y.1`.
+4. To publish a stable release, tag the commit with the version it builds as:
+   `git tag -a "$(Scripts/derive-version.py tag --ref <commit>)" <commit>`.
+   The release workflow refuses a tag that does not match.
+
+Xcode Cloud continues to own distributed integer build numbers while the
+repository keeps build `1` as its local fallback.
+
+### Release notes
+
+Every user-visible or architecture-significant work commit adds its own entry
+file, `Documentation/ReleaseNotes/<id>.json`, holding only
+`{"category": "...", "message": "..."}`. The file name is the entry's stable
+lowercase kebab-case ID, its identity across rebases and history rewrites;
+never reuse, rename, edit, or delete one. `Documentation/ReleaseNotes.json` is
+frozen: it holds every entry written before entries moved to their own files,
+and release builds assemble it with the entry files in the order history added
+them. Choose `new`, `improved`, or `fixed` for public notes and write the
+message as a concise user-facing outcome. Use `internal` to record
+architecture, release, or tooling work that should not appear to users.
+`Scripts/check-version.sh --fix-commit` requires the new staged entry file and
+refuses an edit to `Config/Version.xcconfig`; the **Contribution checks**
+workflow refuses the same edits on every pull request.
 
 Keep commits focused and use a Conventional Commit subject such as
 `refactor(settings): adopt native split navigation`. Commit subjects remain

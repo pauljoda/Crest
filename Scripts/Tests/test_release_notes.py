@@ -217,5 +217,44 @@ class ReleaseNotesTests(unittest.TestCase):
             self.assertIn("Keep pinned tabs safe during iCloud Sync", stable.stdout)
 
 
+    def write_entry(self, repository: pathlib.Path, identifier: str, category: str, message: str) -> None:
+        entry = repository / "Documentation" / "ReleaseNotes" / f"{identifier}.json"
+        entry.parent.mkdir(parents=True, exist_ok=True)
+        entry.write_text(json.dumps({"category": category, "message": message}) + "\n")
+        self.run_git(repository, "add", str(entry.relative_to(repository)))
+
+    def test_entry_files_reach_both_the_ref_and_cursor_modes_in_merge_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "tests@crestbrowser.com")
+            self.write_catalog(repository, {"existing-change": {"category": "fixed", "message": "Keep existing behavior reliable"}})
+            previous_commit = self.commit(repository, "catalog")
+
+            # One entry arrives through a merge commit, one through a direct
+            # commit, and an internal one stays private.
+            self.run_git(repository, "switch", "-q", "-c", "topic")
+            self.write_entry(repository, "profiles", "new", "Create separate browsing profiles")
+            self.commit(repository, "feat: profiles")
+            self.run_git(repository, "switch", "-q", "main")
+            self.run_git(repository, "merge", "-q", "--no-ff", "-m", "Merge profiles", "topic")
+            self.write_entry(repository, "navigation", "fixed", "Keep navigation controls in sync")
+            self.write_entry(repository, "plumbing", "internal", "Move release notes into files")
+            current_commit = self.commit(repository, "fix: navigation")
+
+            by_ref = self.generate_notes(repository, current_commit, previous_commit)
+            self.assertEqual(by_ref.returncode, 0, by_ref.stderr)
+            self.assertIn("- Create separate browsing profiles", by_ref.stdout)
+            self.assertIn("- Keep navigation controls in sync", by_ref.stdout)
+            self.assertNotIn("Keep existing behavior reliable", by_ref.stdout)
+            self.assertNotIn("Move release notes into files", by_ref.stdout)
+
+            by_cursor = self.generate_notes(repository, current_commit, previous_entry="profiles")
+            self.assertEqual(by_cursor.returncode, 0, by_cursor.stderr)
+            self.assertNotIn("Create separate browsing profiles", by_cursor.stdout)
+            self.assertIn("- Keep navigation controls in sync", by_cursor.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import json
 import plistlib
 import shlex
 import shutil
@@ -276,6 +277,88 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("TestFlight post-action", result.stdout)
                 self.assertFalse((capture / "arguments").exists())
+
+
+    def make_cloud_checkout(self, root: pathlib.Path) -> pathlib.Path:
+        """A primary repository with history, the version and catalog
+        scripts, and a generated project, as Xcode Cloud clones it."""
+        repository = root / "crest"
+        (repository / "Config").mkdir(parents=True)
+        (repository / "Scripts").mkdir()
+        (repository / "Crest.xcodeproj").mkdir()
+        (repository / "Documentation" / "ReleaseNotes").mkdir(parents=True)
+        for script in ("derive-version.py", "release_note_catalog.py"):
+            shutil.copy2(REPOSITORY_ROOT / "Scripts" / script, repository / "Scripts" / script)
+        (repository / "Crest.xcodeproj" / "project.pbxproj").write_text("CURRENT_PROJECT_VERSION = 1;\n")
+        (repository / "Documentation" / "ReleaseNotes.json").write_text(json.dumps(
+            {"schemaVersion": 1, "entries": {"existing-change": {"category": "fixed", "message": "Keep it reliable"}}}))
+        (repository / "Config" / "Version.xcconfig").write_text("MARKETING_VERSION = 0.8.10\n")
+
+        def git(*arguments: str) -> None:
+            subprocess.run(["git", "-C", str(repository), *arguments], check=True, capture_output=True)
+
+        git("init", "-q", "--initial-branch=main")
+        git("config", "user.name", "Crest Tests")
+        git("config", "user.email", "tests@crestbrowser.com")
+        git("add", "-A")
+        git("commit", "-q", "-m", "base")
+        for identifier in ("first-change", "second-change"):
+            (repository / "Documentation" / "ReleaseNotes" / f"{identifier}.json").write_text(
+                json.dumps({"category": "new", "message": f"Add {identifier}"}))
+            git("add", "-A")
+            git("commit", "-q", "-m", identifier)
+        return repository
+
+    def run_pre_archive(self, root: pathlib.Path, repository: pathlib.Path) -> subprocess.CompletedProcess[str]:
+        fake_bin = root / "bin"
+        fake_bin.mkdir(exist_ok=True)
+        # Reports what the checkout's files configure, as xcodebuild resolves them.
+        (fake_bin / "xcodebuild").write_text(
+            "#!/bin/sh\n"
+            f"version=$(sed -nE 's/^MARKETING_VERSION = (.*)$/\\1/p' '{repository}/Config/Version.xcconfig')\n"
+            f"build=$(sed -nE 's/^CURRENT_PROJECT_VERSION = (.*);$/\\1/p' '{repository}/Crest.xcodeproj/project.pbxproj')\n"
+            'echo "    MARKETING_VERSION = $version"\n'
+            'echo "    CURRENT_PROJECT_VERSION = $build"\n')
+        (fake_bin / "xcodebuild").chmod(0o755)
+        return subprocess.run(
+            ["/bin/sh", str(REPOSITORY_ROOT / "ci_scripts" / "ci_pre_xcodebuild.sh")],
+            env=os.environ | {
+                "CI_XCODE_CLOUD": "TRUE",
+                "CI_XCODEBUILD_ACTION": "archive",
+                "CI_PRIMARY_REPOSITORY_PATH": str(repository),
+                "CI_PRODUCT_PLATFORM": "macOS",
+                "CI_XCODE_SCHEME": "Crest",
+                "CI_BUILD_NUMBER": "1234",
+                "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            },
+            check=False, capture_output=True, text=True,
+        )
+
+    def test_pre_archive_stamps_the_derived_version_and_the_assembled_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            repository = self.make_cloud_checkout(root)
+
+            result = self.run_pre_archive(root, repository)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("version 0.8.12 (1234)", result.stdout)
+            self.assertEqual((repository / "Config" / "Version.xcconfig").read_text(), "MARKETING_VERSION = 0.8.12\n")
+            catalog = json.loads((repository / "Documentation" / "ReleaseNotes.json").read_text())
+            self.assertEqual(list(catalog["entries"]), ["existing-change", "first-change", "second-change"])
+
+    def test_pre_archive_refuses_a_shallow_clone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            repository = self.make_cloud_checkout(root)
+            shallow = root / "shallow"
+            subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{repository}", str(shallow)],
+                           check=True, capture_output=True)
+
+            result = self.run_pre_archive(root, shallow)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("full history", result.stderr)
 
 
 if __name__ == "__main__":

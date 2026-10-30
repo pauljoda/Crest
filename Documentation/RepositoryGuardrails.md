@@ -18,42 +18,59 @@ Scripts/check-swift-format.sh --base main
 
 The script only invokes strict `swift-format lint`. It never runs formatter write mode and never performs a repository-wide formatting pass.
 
-## Fix commit versions
+## Derived versions
 
-Every verified fix advances the patch component of Crest's public version in
-the same commit:
+No change edits a shared version line. `Config/Version.xcconfig` names the
+release line's base version; each build's patch version is the base patch plus
+the number of first-parent commits since the commit that last changed the file,
+so every merge to `main` raises it by one and the version only ever rises:
 
 ```sh
-Scripts/set-version.sh --patch
-git add Config/Version.xcconfig
-Scripts/check-version.sh --fix-commit
+Scripts/derive-version.py version   # what HEAD builds as
+Scripts/derive-version.py tag       # the stable tag that names it
 ```
 
-Pass a positive count to `--patch` only when one focused commit intentionally
-contains that many independently verified fixes. The fix-commit check reads the
-Git index and rejects a missing, unstaged, non-increasing, or major/minor bump.
-Changing release lines uses `Scripts/set-version.sh --release X.Y.Z` and remains
-an explicit release-and-tag decision. Neither path changes
+A change commit stages its release-note entry and runs
+`Scripts/check-version.sh --fix-commit`, which rejects any edit to
+`Config/Version.xcconfig`. The **Contribution checks** workflow enforces the
+same on every pull request (`Scripts/check-contribution.py release-files`): it
+fails one that edits the version file without moving to a later release line,
+edits the frozen catalog document, or changes or removes a merged entry file,
+because an edited patch number would repeat a published version. Changing release lines uses
+`Scripts/set-version.sh --release X.Y.Z` in a commit of its own, checked by
+`Scripts/check-version.sh --release-commit`, and remains an explicit
+release-and-tag decision. The release workflows and Xcode Cloud stamp the
+derived version into their own checkout before anything reads it
+(`Scripts/derive-version.py stamp`), so they need the full history; a shallow
+checkout is refused rather than misnumbered. Neither path changes
 `CURRENT_PROJECT_VERSION`; Xcode Cloud owns distributed build numbers.
 
 ## Explicit release-note entries
 
-`Documentation/ReleaseNotes.json` is the machine-readable source for GitHub and
-Sparkle release copy. Its `entries` object maps a stable lowercase kebab-case ID
-to exactly one category and message. `new`, `improved`, and `fixed` entries are
-public; `internal` records a commit that should not be announced. Messages state
-the user outcome directly and do not inherit commit wording.
+Each entry is its own file, `Documentation/ReleaseNotes/<id>.json`, holding
+exactly one category and message; the file name is the stable lowercase
+kebab-case ID. `new`, `improved`, and `fixed` entries are public; `internal`
+records a commit that should not be announced. Messages state the user outcome
+directly and do not inherit commit wording. Two open changes therefore never
+edit the same file.
+
+`Documentation/ReleaseNotes.json` is frozen: it holds every entry written
+before entries moved to their own files and the schema 2
+`publicationBaselines`, the immutable bootstrap cursors for the stable,
+nightly, and development builds published then. The catalog's order is that
+document's order, then each entry file in the order the first-parent history
+added it, which is release order. Release builds write the assembled catalog
+over the document in their checkout (`python3 Scripts/release_note_catalog.py
+--write-assembled`), so the app bundle, the generated notes, and the
+publication cursors read one ordered catalog. Successful publications keep the
+live per-channel cursors in the workflow-owned `updates` branch and advance
+only the selected channel in the same commit as its signed appcast.
 
 The IDs, rather than commit hashes, survive rebases and history rewrites. Never
-reuse, rewrite, reorder, or delete an ID; append new entries so catalog order
-remains release order. The schema 2 `publicationBaselines` are immutable
-bootstrap cursors for the currently published stable, nightly, and development
-builds. Successful publications keep the live per-channel cursors in the
-workflow-owned `updates` branch and advance only the selected channel in the
-same commit as its signed appcast. Every product or architecture commit adds at
-least one new entry. `Scripts/check-version.sh --fix-commit` validates the staged
-catalog and rejects a patch bump without a new entry. Validate the working
-catalog directly with:
+reuse, rename, edit, or delete an entry or entry file. Every product or
+architecture commit adds at least one; `Scripts/check-version.sh --fix-commit`
+validates the staged entry files and rejects an edit to the frozen document.
+Validate the catalog directly with:
 
 ```sh
 python3 Scripts/release_note_catalog.py

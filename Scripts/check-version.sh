@@ -5,8 +5,12 @@ script_root="${0:A:h:h}"
 repository_root="${CREST_VERSION_REPOSITORY_ROOT:-$script_root}"
 mode="${1:-}"
 
-if [[ -n "$mode" && "$mode" != "--static" && "$mode" != "--fix-commit" ]]; then
-  print -u2 "Usage: Scripts/check-version.sh [--static|--fix-commit]"
+# --fix-commit checks a change commit: it adds a release-note entry file and
+# leaves Config/Version.xcconfig alone, because the patch version is derived
+# from history (Scripts/derive-version.py). --release-commit checks a commit
+# that starts a new release line with Scripts/set-version.sh --release.
+if [[ -n "$mode" && "$mode" != "--static" && "$mode" != "--fix-commit" && "$mode" != "--release-commit" ]]; then
+  print -u2 "Usage: Scripts/check-version.sh [--static|--fix-commit|--release-commit]"
   exit 64
 fi
 
@@ -49,8 +53,14 @@ is_strict_semver "$marketing_version" \
   || fail "MARKETING_VERSION must use strict X.Y.Z SemVer without leading zeroes or suffixes."
 
 if [[ "$mode" == "--fix-commit" ]]; then
+  git -C "$repository_root" diff --cached --quiet -- Config/Version.xcconfig \
+    || fail "Leave Config/Version.xcconfig alone: the patch version is derived from history. Only Scripts/set-version.sh --release changes it, in a commit of its own."
+  python3 "$release_note_catalog_check" \
+    --repository-root "$repository_root" \
+    --require-staged-entry
+elif [[ "$mode" == "--release-commit" ]]; then
   if git -C "$repository_root" diff --cached --quiet -- Config/Version.xcconfig; then
-    fail "Fix commits must stage Config/Version.xcconfig with their patch version increase."
+    fail "A release-line commit stages Config/Version.xcconfig from Scripts/set-version.sh --release."
   fi
 
   head_version="$({
@@ -69,14 +79,9 @@ if [[ "$mode" == "--fix-commit" ]]; then
 
   head_parts=("${(@s:.:)head_version}")
   staged_parts=("${(@s:.:)staged_version}")
-  [[ "${staged_parts[1]}.${staged_parts[2]}" == "${head_parts[1]}.${head_parts[2]}" ]] \
-    || fail "A fix commit must increment the patch version without changing the release line."
-  (( staged_parts[3] > head_parts[3] )) \
-    || fail "A fix commit must increment the patch version."
-
-  python3 "$release_note_catalog_check" \
-    --repository-root "$repository_root" \
-    --require-staged-entry
+  (( staged_parts[1] > head_parts[1] || (staged_parts[1] == head_parts[1] && staged_parts[2] > head_parts[2]) )) \
+    || fail "A release-line commit must move Config/Version.xcconfig to a later X.Y; patch versions are derived."
+  python3 "$release_note_catalog_check" --repository-root "$repository_root"
 else
   python3 "$release_note_catalog_check" --repository-root "$repository_root"
 fi
@@ -148,7 +153,9 @@ if [[ -z "$mode" ]]; then
 fi
 
 if [[ "$mode" == "--fix-commit" ]]; then
-  print "Validated fix commit patch version from $head_version to $staged_version."
+  print "Validated change commit: release-note entry added, version derived from history."
+elif [[ "$mode" == "--release-commit" ]]; then
+  print "Validated release-line commit from $head_version to $staged_version."
 elif [[ "$mode" == "--static" ]]; then
   print "Validated Crest $marketing_version version metadata (static)."
 else

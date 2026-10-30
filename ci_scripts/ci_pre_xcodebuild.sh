@@ -40,6 +40,15 @@ version_file="$repository_path/Config/Version.xcconfig"
 [ -f "$version_file" ] \
     || fail "Config/Version.xcconfig is missing from the primary repository."
 
+# Changes never edit Config/Version.xcconfig or a shared release-note file.
+# Stamp this ephemeral checkout with the version its history derives and the
+# catalog assembled from the frozen document and the entry files, as the
+# release workflow does, so the checks below and the archive read them.
+python3 "$repository_path/Scripts/derive-version.py" --repository-root "$repository_path" stamp \
+    || fail "Unable to derive the version; Xcode Cloud needs the full history."
+python3 "$repository_path/Scripts/release_note_catalog.py" --repository-root "$repository_path" --write-assembled \
+    || fail "Unable to assemble the release-note catalog."
+
 project_file="$repository_path/Crest.xcodeproj/project.pbxproj"
 [ -f "$project_file" ] \
     || fail "Crest.xcodeproj/project.pbxproj is missing from the primary repository."

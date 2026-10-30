@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import shutil
@@ -147,31 +148,66 @@ class VersionContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Release must inherit Config/Version.xcconfig", result.stderr)
 
-    def test_fix_commit_check_rejects_a_missing_staged_patch_bump(self) -> None:
+    def stage_entry(self, identifier: str = "new-change") -> None:
+        path = self.fixture_root / "Documentation" / "ReleaseNotes" / f"{identifier}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"category": "fixed", "message": "Fix a workflow"}) + "\n")
+        subprocess.run(["git", "add", str(path)], cwd=self.fixture_root, check=True)
+
+    def test_a_change_commit_adds_an_entry_and_leaves_the_version_alone(self) -> None:
+        self.stage_entry()
+
+        result = self.run_check("--fix-commit")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("version derived from history", result.stdout)
+
+    def test_a_change_commit_rejects_a_patch_bump(self) -> None:
+        self.stage_entry()
         self.write_version(self.next_patch_version)
+        self.stage_version()
 
         result = self.run_check("--fix-commit")
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("stage Config/Version.xcconfig", result.stderr)
+        self.assertIn("Leave Config/Version.xcconfig alone", result.stderr)
 
-    def test_fix_commit_check_rejects_a_missing_staged_release_note(self) -> None:
-        self.write_version(self.next_patch_version)
-        self.stage_version()
-
+    def test_a_change_commit_rejects_a_missing_release_note(self) -> None:
         result = self.run_check("--fix-commit")
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("stage at least one new release-note entry", result.stderr)
 
-    def test_fix_commit_check_rejects_a_new_release_line(self) -> None:
+    def test_a_release_line_commit_moves_to_a_later_line_only(self) -> None:
+        self.write_version(self.next_patch_version)
+        self.stage_version()
+        patch = self.run_check("--release-commit")
+        self.assertNotEqual(patch.returncode, 0)
+        self.assertIn("later X.Y", patch.stderr)
+
         self.write_version(self.next_release_line)
         self.stage_version()
+        line = self.run_check("--release-commit")
+        self.assertEqual(line.returncode, 0, line.stderr)
 
-        result = self.run_check("--fix-commit")
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("patch version", result.stderr)
+    def run_set_version(self, *arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [str(REPOSITORY_ROOT / "Scripts" / "set-version.sh"), *arguments],
+            cwd=self.fixture_root, env=self.environment, capture_output=True, text=True, check=False,
+        )
+
+    def test_set_version_steers_to_the_derived_version_and_leaves_the_file_alone(self) -> None:
+        patch = self.run_set_version("--patch")
+        self.assertNotEqual(patch.returncode, 0)
+        self.assertIn("patch versions are derived from history", patch.stderr)
+
+        same_line = self.run_set_version("--release", self.next_patch_version)
+        self.assertNotEqual(same_line.returncode, 0)
+        self.assertIn("derived from history", same_line.stderr)
+        self.assertNotIn("--patch", same_line.stderr)
+
+        self.assertEqual(self.current_marketing_version(), self.current_version)
 
 
 if __name__ == "__main__":

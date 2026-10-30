@@ -56,8 +56,11 @@ unmerged PR does nothing. It never checks out the PR's own code: it builds the
 merge commit on `main` with the existing `production` environment and
 serialized publication queue. A direct push to `main` publishes nothing.
 
-The marketing version comes from `Config/Version.xcconfig`. Stable tags must
-match it exactly. Distributed build numbers add the GitHub Actions run number
+The marketing version is derived: `Config/Version.xcconfig` names the release
+line's base version, and each build adds the number of first-parent commits
+since the base last changed (`Scripts/derive-version.py`). Every workflow that
+builds stamps it into its checkout first. Stable tags must match the version
+the tagged commit derives exactly. Distributed build numbers add the GitHub Actions run number
 to Crest's public-repository build epoch. The epoch keeps Sparkle ordering
 strictly increasing across the repository migration; the run number keeps every
 subsequent published update newer than the prior build. Preflight also reads
@@ -105,9 +108,12 @@ notarizing, creating a release, or advancing an appcast. If no nightly appcast
 exists, preflight builds even if a GitHub Release exists, because that release
 may belong to an interrupted publication.
 
-Release notes come from the explicit `Documentation/ReleaseNotes.json` catalog.
-Every product or architecture commit adds a stable entry ID, category, and
-purpose-written message. The generator reads the selected channel's cursor,
+Release notes come from the explicit release-note catalog: the frozen
+`Documentation/ReleaseNotes.json` followed by one file per entry in
+`Documentation/ReleaseNotes/`, in the order history added them. Every product
+or architecture commit adds its own entry file with a stable ID, category, and
+purpose-written message, and each workflow assembles the catalog into its
+checkout before it builds. The generator reads the selected channel's cursor,
 groups the later public entries into New, Improved, and Fixed highlights, omits
 `internal` entries, and limits long ranges to the 12 most recent highlights.
 The catalog's immutable publication baselines name each channel's starting
@@ -192,8 +198,8 @@ the old signing path retained long enough to update installed copies safely.
 
 Before publishing a stable tag:
 
-1. confirm `CHANGELOG.md`, `Documentation/ReleaseNotes.json`, and the marketing
-   version are ready;
+1. confirm `CHANGELOG.md` and the release-note entries are ready, and read the
+   version the commit builds as with `Scripts/derive-version.py version`;
 2. complete local app and release-script tests for the commit being published;
 3. confirm **Build Crest** passed on the intended `main` commit and the Pages
    workflow is green. The stable release will validate its exact source again;
@@ -208,19 +214,20 @@ Before publishing a stable tag:
    from the previous stable WebKit-only app and an existing Chromium build,
    preserving Space and tab identity, engine profiles, and unsaved-changes prompts.
 
-For a new release line, explicitly set the intended version with
-`Scripts/set-version.sh --release X.Y.Z`. Routine fixes use
-`Scripts/set-version.sh --patch`. Keep `CURRENT_PROJECT_VERSION` unchanged;
+For a new release line, explicitly set the intended base version with
+`Scripts/set-version.sh --release X.Y.0` in a commit of its own, checked by
+`Scripts/check-version.sh --release-commit`. Routine changes never edit the
+version; it is derived from history. Keep `CURRENT_PROJECT_VERSION` unchanged;
 the distribution workflows own build numbers. Update the changelog, refresh
 the public roadmap with `Scripts/render-roadmap.py --write`, and review the
 maintained [iPhone and iPad listing](../Marketing/AppStore/README.md) against
 the release's mobile capabilities.
 
-Commit the version and release documentation together, push that commit to
-`main`, and wait for a **Build Crest** run on it to pass before creating and
-pushing an annotated `vX.Y.Z` tag at that same commit. A new release line uses
-`Scripts/check-version.sh` and the release-note catalog check;
-`--fix-commit` applies only to patch increases on the existing line.
+Merge the release documentation to `main` and wait for a **Build Crest** run
+on that commit to pass. Then tag that same commit with the version it derives:
+`git tag -a "$(Scripts/derive-version.py tag --ref <commit>)" <commit>`, and
+push the tag. The release workflow refuses a tag that differs from the derived
+version.
 Pushing the stable tag starts macOS publication. App Store build selection,
 submission, and release are separate steps in App Store Connect.
 

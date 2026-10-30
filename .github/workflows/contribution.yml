@@ -42,3 +42,19 @@ jobs:
 
       - name: Check that every commit carries a sign-off
         run: python3 Scripts/check-contribution.py sign-off --event "$GITHUB_EVENT_PATH" --commits "${RUNNER_TEMP}/commits.json" --exempt-login "$GITHUB_REPOSITORY_OWNER"
+
+  release-files:
+    name: Shared release files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # The patch version is derived from history and each release note is its
+      # own file, so a pull request never edits the shared version line, the
+      # frozen catalog document, or an entry file that already merged.
+      - name: Check the version file and the release-note catalog
+        run: python3 Scripts/check-contribution.py release-files --event "$GITHUB_EVENT_PATH"

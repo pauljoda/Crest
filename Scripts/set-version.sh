@@ -6,10 +6,13 @@ repository_root="${CREST_VERSION_REPOSITORY_ROOT:-$script_root}"
 version_file="$repository_root/Config/Version.xcconfig"
 check_script="${0:A:h}/check-version.sh"
 
+# Config/Version.xcconfig names the release line's base version. Changes never
+# edit it: Scripts/derive-version.py derives each build's patch version from
+# history. This script only starts a new release line.
 usage() {
   print -u2 "Usage:"
-  print -u2 "  Scripts/set-version.sh --patch [COUNT]"
   print -u2 "  Scripts/set-version.sh --release X.Y.Z"
+  print -u2 "Print the version a commit builds as with Scripts/derive-version.py version."
   exit 64
 }
 
@@ -55,14 +58,10 @@ current_version="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:spac
 
 case "${1:-}" in
   --patch)
-    [[ "$#" -le 2 ]] || usage
-    patch_count="${2:-1}"
-    [[ "$patch_count" =~ '^[1-9][0-9]*$' ]] || usage
-
-    current_parts=("${(@s:.:)current_version}")
-    next_patch=$(( current_parts[3] + patch_count ))
-    requested_version="${current_parts[1]}.${current_parts[2]}.$next_patch"
-    update_kind="fix"
+    print -u2 "error: patch versions are derived from history; a change commit leaves Config/Version.xcconfig alone."
+    print -u2 "Add a release-note entry as Documentation/ReleaseNotes/<id>.json and run Scripts/check-version.sh --fix-commit."
+    print -u2 "This commit would build as $(python3 "${0:A:h}/derive-version.py" version 2>/dev/null || print "the next derived version")."
+    exit 64
     ;;
   --release)
     [[ "$#" == 2 ]] || usage
@@ -74,7 +73,7 @@ case "${1:-}" in
     current_parts=("${(@s:.:)current_version}")
     requested_parts=("${(@s:.:)requested_version}")
     if [[ "${requested_parts[1]}.${requested_parts[2]}" == "${current_parts[1]}.${current_parts[2]}" ]]; then
-      print -u2 "error: use --patch for fixes on the current release line."
+      print -u2 "error: a release starts a later X.Y; patch versions on the current line are derived from history (Scripts/derive-version.py)."
       exit 1
     fi
     update_kind="release line"
@@ -106,3 +105,5 @@ if ! "$check_script"; then
 fi
 
 print "Updated Crest $update_kind from $current_version to $requested_version."
+print "Commit Config/Version.xcconfig on its own and check it with Scripts/check-version.sh --release-commit."
+print "Once it merges, builds of the default branch count patch versions up from $requested_version."

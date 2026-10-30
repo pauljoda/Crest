@@ -151,13 +151,18 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
                 result = self.run_catalog_check()
                 self.assertNotEqual(result.returncode, 0)
 
-    def test_staged_contract_requires_a_new_entry_and_preserves_existing_ids(self) -> None:
-        entries = {
-            "existing-change": {
-                "category": "fixed",
-                "message": "Keep existing behavior reliable",
-            }
-        }
+    def write_entry(self, identifier: str, category: str, message: str) -> str:
+        path = self.repository / "Documentation" / "ReleaseNotes" / f"{identifier}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"category": category, "message": message}) + "\n")
+        return str(path.relative_to(self.repository))
+
+    def commit(self, *paths: str, message: str = "change") -> None:
+        subprocess.run(["git", "add", *paths], cwd=self.repository, check=True)
+        subprocess.run(["git", "commit", "-m", message], cwd=self.repository, check=True, capture_output=True)
+
+    def test_a_change_adds_an_entry_file_and_leaves_existing_entries_alone(self) -> None:
+        entries = {"existing-change": {"category": "fixed", "message": "Keep existing behavior reliable"}}
         self.write_catalog(entries)
         self.commit_catalog()
 
@@ -165,100 +170,86 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
         self.assertNotEqual(no_change.returncode, 0)
         self.assertIn("stage at least one new release-note entry", no_change.stderr)
 
-        entries["new-change"] = {
-            "category": "improved",
-            "message": "Make the current workflow easier to understand",
-        }
-        self.write_catalog(entries)
-        subprocess.run(
-            ["git", "add", "Documentation/ReleaseNotes.json"],
-            cwd=self.repository,
-            check=True,
-        )
-
+        added_path = self.write_entry("new-change", "improved", "Make the current workflow easier to understand")
+        subprocess.run(["git", "add", added_path], cwd=self.repository, check=True)
         added = self.run_catalog_check("--require-staged-entry")
         self.assertEqual(added.returncode, 0, added.stderr)
         self.assertIn("new-change", added.stdout)
+        subprocess.run(["git", "commit", "-m", "entry"], cwd=self.repository, check=True, capture_output=True)
 
-        entries.pop("existing-change")
+        # The document is frozen: an entry added to it is refused.
+        entries["late-change"] = {"category": "new", "message": "Append to the old document"}
         self.write_catalog(entries)
-        subprocess.run(
-            ["git", "add", "Documentation/ReleaseNotes.json"],
-            cwd=self.repository,
-            check=True,
-        )
+        subprocess.run(["git", "add", "Documentation/ReleaseNotes.json"], cwd=self.repository, check=True)
+        frozen = self.run_catalog_check("--require-staged-entry")
+        self.assertNotEqual(frozen.returncode, 0)
+        self.assertIn("is frozen", frozen.stderr)
+        subprocess.run(["git", "reset", "-q", "--hard"], cwd=self.repository, check=True)
 
-        deleted = self.run_catalog_check("--require-staged-entry")
-        self.assertNotEqual(deleted.returncode, 0)
-        self.assertIn("must not delete release-note entries", deleted.stderr)
+        # An entry file already merged is never rewritten.
+        self.write_entry("new-change", "improved", "Rewritten release copy")
+        self.write_entry("another-change", "fixed", "Fix another workflow")
+        subprocess.run(["git", "add", "Documentation/ReleaseNotes"], cwd=self.repository, check=True)
+        rewritten = self.run_catalog_check("--require-staged-entry")
+        self.assertNotEqual(rewritten.returncode, 0)
+        self.assertIn("must not change or delete an existing entry file", rewritten.stderr)
 
-    def test_staged_contract_appends_new_ids_after_the_existing_catalog(self) -> None:
-        existing_entries = {
-            "existing-change": {
-                "category": "fixed",
-                "message": "Keep existing behavior reliable",
-            }
-        }
-        self.write_catalog(existing_entries)
+    def test_entry_files_follow_the_document_in_the_order_history_added_them(self) -> None:
+        self.write_catalog({"existing-change": {"category": "fixed", "message": "Keep existing behavior reliable"}})
         self.commit_catalog()
+        # Added later but named first: history, not the name, orders it.
+        self.commit(self.write_entry("zeta-change", "new", "Add the first workflow"))
+        self.commit(self.write_entry("alpha-change", "fixed", "Fix the second workflow"))
+        # Not committed yet: after every committed entry, by name.
+        self.write_entry("beta-change", "improved", "Improve a pending workflow")
 
-        inserted_entries = {
-            "new-change": {
-                "category": "new",
-                "message": "Add a new workflow",
-            },
-            **existing_entries,
-        }
-        self.write_catalog(inserted_entries)
-        subprocess.run(
-            ["git", "add", "Documentation/ReleaseNotes.json"],
-            cwd=self.repository,
-            check=True,
+        result = self.run_catalog_check("--write-assembled")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        assembled = json.loads((self.repository / "Documentation" / "ReleaseNotes.json").read_text())
+        self.assertEqual(
+            list(assembled["entries"]),
+            ["existing-change", "zeta-change", "alpha-change", "beta-change"],
         )
+        # A release checkout reads its stamped catalog as the same catalog.
+        again = self.run_catalog_check()
+        self.assertEqual(again.returncode, 0, again.stderr)
+        self.assertIn("Validated 4 release-note entries", again.stdout)
+
+        # A file reusing an id the catalog already holds with other text is a duplicate.
+        self.write_entry("existing-change", "new", "Reuse an existing id")
+        duplicate = self.run_catalog_check()
+        self.assertNotEqual(duplicate.returncode, 0)
+        self.assertIn("already used", duplicate.stderr)
+
+
+    def test_a_merged_entry_file_is_never_deleted(self) -> None:
+        self.write_catalog({"existing-change": {"category": "fixed", "message": "Keep existing behavior reliable"}})
+        self.commit_catalog()
+        self.commit(self.write_entry("merged-change", "new", "Add a workflow"))
+        (self.repository / "Documentation" / "ReleaseNotes" / "merged-change.json").unlink()
+        self.write_entry("next-change", "fixed", "Fix another workflow")
+        subprocess.run(["git", "add", "-A", "Documentation/ReleaseNotes"], cwd=self.repository, check=True)
 
         result = self.run_catalog_check("--require-staged-entry")
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("append new release-note entries", result.stderr)
+        self.assertIn("must not change or delete an existing entry file", result.stderr)
 
-    def test_schema_migration_must_not_rewrite_an_existing_entry(self) -> None:
-        existing_entries = {
-            "existing-change": {
-                "category": "fixed",
-                "message": "Keep existing behavior reliable",
-            }
-        }
-        self.write_catalog(existing_entries)
+    def test_merged_and_directly_committed_entries_keep_first_parent_order(self) -> None:
+        self.write_catalog({"existing-change": {"category": "fixed", "message": "Keep existing behavior reliable"}})
         self.commit_catalog()
+        subprocess.run(["git", "switch", "-q", "-c", "topic"], cwd=self.repository, check=True)
+        self.commit(self.write_entry("from-topic", "new", "Arrive through a merge"))
+        subprocess.run(["git", "switch", "-q", "main"], cwd=self.repository, check=True)
+        self.commit(self.write_entry("direct-first", "fixed", "Arrive directly first"))
+        subprocess.run(["git", "merge", "-q", "--no-ff", "-m", "merge topic", "topic"], cwd=self.repository, check=True)
+        self.commit(self.write_entry("direct-last", "improved", "Arrive directly last"))
 
-        rewritten_entries = {
-            "stable-boundary": {
-                "category": "internal",
-                "message": "Record the stable publication boundary",
-            },
-            "existing-change": {
-                "category": "improved",
-                "message": "Rewrite existing release copy",
-            },
-        }
-        self.write_catalog(
-            rewritten_entries,
-            {
-                "stable": "stable-boundary",
-                "development": "stable-boundary",
-                "nightly": "stable-boundary",
-            },
-        )
-        subprocess.run(
-            ["git", "add", "Documentation/ReleaseNotes.json"],
-            cwd=self.repository,
-            check=True,
-        )
+        result = self.run_catalog_check("--write-assembled")
 
-        result = self.run_catalog_check("--require-staged-entry")
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("must not rewrite release-note entries", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        assembled = json.loads((self.repository / "Documentation" / "ReleaseNotes.json").read_text())
+        self.assertEqual(list(assembled["entries"]), ["existing-change", "direct-first", "from-topic", "direct-last"])
 
 
 if __name__ == "__main__":

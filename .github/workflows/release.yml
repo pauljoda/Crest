@@ -60,6 +60,15 @@ jobs:
           allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           fetch-depth: 0
 
+      - name: Derive the version and assemble the release notes
+        # Changes never edit Config/Version.xcconfig or a shared release-note
+        # file. This checkout takes the version its history derives and the
+        # catalog assembled from the frozen document and the entry files, so
+        # every later step reads them where it always has. Never committed.
+        run: |
+          python3 Scripts/derive-version.py stamp
+          python3 Scripts/release_note_catalog.py --write-assembled
+
       - name: Resolve release identity and previous publication
         id: release
         shell: bash
@@ -245,6 +254,15 @@ jobs:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           fetch-depth: 0
+
+      - name: Derive the version and assemble the release notes
+        # Changes never edit Config/Version.xcconfig or a shared release-note
+        # file. This checkout takes the version its history derives and the
+        # catalog assembled from the frozen document and the entry files, so
+        # every later step reads them where it always has. Never committed.
+        run: |
+          python3 Scripts/derive-version.py stamp
+          python3 Scripts/release_note_catalog.py --write-assembled
 
       - name: Ensure build tools are available
         run: |

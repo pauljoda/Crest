@@ -1,5 +1,7 @@
 """Protect upstream selection, persistent build ownership, and publication gates."""
+import contextlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import sys
@@ -95,15 +97,67 @@ class PromotionTests(unittest.TestCase):
 
 
 class ReleaseNoteTests(unittest.TestCase):
-    def test_update_note_is_appended_last_without_rewriting_existing_entries(self):
-        catalog = ('{\n  "schemaVersion": 2,\n  "entries": {\n    "earlier": {\n      "category": "fixed",\n'
-                   '      "message": "Downloads follow the site you\u2019re on. Settings \\u203a About."\n    }\n  }\n}\n')
+    def test_update_note_is_its_own_entry_file_and_never_reuses_an_id(self):
         note = {"category": "fixed", "message": "Chromium is updated to 154.0.8037.97 with upstream fixes."}
-        appended = publication.append_release_note(catalog, "chromium-upstream-154", note)
-        self.assertTrue(appended.startswith(catalog[:-len("\n    }\n  }\n}\n")] + "\n    },\n"))
-        self.assertEqual(list(json.loads(appended)["entries"].items())[-1], ("chromium-upstream-154", note))
-        with self.assertRaises(ValueError):
-            publication.append_release_note(appended, "chromium-upstream-154", note)
+        with tempfile.TemporaryDirectory() as directory:
+            notes = Path(directory)
+            path, text = publication.release_note_file(notes, "chromium-upstream-154", note)
+            self.assertEqual(path, notes / "chromium-upstream-154.json")
+            self.assertEqual(json.loads(text), note)
+            path.write_text(text)
+            with self.assertRaises(ValueError):
+                publication.release_note_file(notes, "chromium-upstream-154", note)
+
+
+class UpdateCommitTests(unittest.TestCase):
+    def test_an_upstream_update_commits_its_entry_file_and_never_bumps_the_version(self):
+        base_sha = "a" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            engine = repo / publication.ENGINE
+            engine.mkdir(parents=True)
+            (engine / "fork.json").write_text(json.dumps({
+                "integrationBranch": "main", "automaticChannel": "development", "automaticMajorUpdates": False}))
+            (engine / "source.lock.json").write_text(json.dumps({"ungoogledMac": {"tag": "155.0.8059.84-1"}}))
+            calls = []
+
+            def run(*arguments, capture=False, cwd=None):
+                calls.append(tuple(str(argument) for argument in arguments))
+                if arguments[:3] == ("git", "diff", "--name-only"):
+                    return f"{publication.ENGINE / 'source.lock.json'}\n"
+                if arguments[:3] == ("git", "rev-parse", "HEAD"):
+                    return base_sha
+                if arguments[:3] == ("gh", "pr", "list"):
+                    return "[]"
+                if arguments[:3] == ("gh", "pr", "create"):
+                    return "https://github.com/pauljoda/Crest/pull/1"
+                if arguments[:2] == ("gh", "api"):
+                    return json.dumps({"default_branch": "main"})
+                return ""
+
+            originals = (publication.REPO, publication.run, publication.chromium_engine.engine_key, sys.argv)
+            publication.REPO = repo
+            publication.run = run
+            publication.chromium_engine.engine_key = lambda _: "0" * 64
+            sys.argv = ["publish-chromium-update.py", "--source", "/src", "--ninja", "/ninja",
+                        "--base-sha", base_sha, "--repository", "pauljoda/Crest"]
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    publication.main()
+            finally:
+                publication.REPO, publication.run, publication.chromium_engine.engine_key, sys.argv = originals
+
+            entry = "chromium-upstream-155-0-8059-84-1-aaaaaaaaaaaa"
+            note = json.loads((repo / "Documentation" / "ReleaseNotes" / f"{entry}.json").read_text())
+            self.assertEqual(note["category"], "fixed")
+            self.assertFalse(any("set-version.sh" in call[0] for call in calls))
+            staged = next(call for call in calls if call[:2] == ("git", "add"))
+            self.assertIn(f"Documentation/ReleaseNotes/{entry}.json", staged)
+            self.assertNotIn("Config/Version.xcconfig", staged)
+            self.assertNotIn("Documentation/ReleaseNotes.json", staged)
+            checks = [call for call in calls if call[0].endswith("check-version.sh")]
+            self.assertEqual(checks, [(str(repo / "Scripts/check-version.sh"), "--fix-commit")])
+            self.assertLess(calls.index(staged), calls.index(checks[0]))
 
 
 if __name__ == "__main__":

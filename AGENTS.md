@@ -17,29 +17,30 @@ contract for setup, validation and change discipline.
 
 ## Versioning completed work
 
-- Every committed app-code change advances `MARKETING_VERSION` with
-  `Scripts/set-version.sh --patch` unless the commit explicitly opens a new
-  release line.
-- Keep routine development versions on the current release line until a
-  maintainer explicitly requests a release-line change; the version already in
-  `main` is the source of truth.
+- A change never edits `Config/Version.xcconfig`. It names the release line's
+  base version, and each build's patch version is derived from history:
+  `Scripts/derive-version.py version` prints what a commit builds as.
+- Only a maintainer-requested release line moves the base, with
+  `Scripts/set-version.sh --release X.Y.0` in a commit of its own, checked by
+  `Scripts/check-version.sh --release-commit`.
 - Do not increment `CURRENT_PROJECT_VERSION`; the release pipeline owns
   distributed build numbers.
-- Before committing app-code changes, stage `Config/Version.xcconfig` with the
-  task-owned files and run `Scripts/check-version.sh --fix-commit`.
+- Before committing app-code changes, stage the task-owned files with the
+  change's release-note entry and run `Scripts/check-version.sh --fix-commit`.
 
 ## Explicit release notes
 
-- Every committed app-code or architecture-significant change adds a new
-  stable entry to `Documentation/ReleaseNotes.json` in the same commit.
-- Use a unique lowercase kebab-case ID and one of `new`, `improved`, `fixed`,
-  or `internal`. Use `internal` only when the change should not appear in
-  public release notes.
+- Every committed app-code or architecture-significant change adds its own
+  entry file, `Documentation/ReleaseNotes/<id>.json`, in the same commit:
+  `{"category": "...", "message": "..."}`. Never edit
+  `Documentation/ReleaseNotes.json`; it is frozen, and release builds assemble
+  it with the entry files in the order history added them.
+- Use a unique lowercase kebab-case ID, as the file name, and one of `new`,
+  `improved`, `fixed`, or `internal`. Use `internal` only when the change
+  should not appear in public release notes.
 - Write public entry messages as concise user-facing outcomes rather than
   commit subjects, implementation details, issue IDs, or test descriptions.
-- Never reuse, reorder, or delete an existing entry ID; append new entries at
-  the end. Stage the catalog with the task-owned files before running
-  `Scripts/check-version.sh --fix-commit`.
+- Never reuse, rename, edit, or delete an existing entry or entry file.
 
 ## Generated localization catalog
 

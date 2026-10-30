@@ -1,0 +1,4 @@
+{
+  "category": "internal",
+  "message": "Changes no longer edit a shared version line or release-note file: the patch version is derived from history and each release note is its own file, so open pull requests stop conflicting after every merge."
+}

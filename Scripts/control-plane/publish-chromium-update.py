@@ -18,24 +18,16 @@ def automatic_release_allowed(policy, *, enabled, default_branch, major_update):
             and (not major_update or policy["automaticMajorUpdates"]))
 
 
-def append_release_note(catalog, identifier, note):
-    """The release-note catalog text with `note` appended as its last entry.
+def release_note_file(directory, identifier, note):
+    """The path and text of the update's release-note entry file.
 
-    The catalog keeps literal characters beside older escapes, so its existing
-    text is left exactly as it is instead of being serialized again.
+    Each entry is its own file, so the update never edits a file another
+    change also edits. An id the catalog already uses is refused.
     """
-    entries = json.loads(catalog)["entries"]
-    if identifier in entries:
+    path = directory / f"{identifier}.json"
+    if path.exists():
         raise ValueError("This upstream update already has a release note")
-    closing = "\n    }\n  }\n}\n"
-    if not catalog.endswith(closing):
-        raise ValueError("The release-note catalog no longer ends with its entries")
-    fields = ",\n".join(f"      {json.dumps(name)}: {json.dumps(value, ensure_ascii=False)}"
-                        for name, value in note.items())
-    appended = f"{catalog[:-len(closing)]}\n    }},\n    {json.dumps(identifier)}: {{\n{fields}\n    }}\n  }}\n}}\n"
-    if list(json.loads(appended)["entries"].items()) != list((entries | {identifier: note}).items()):
-        raise ValueError("The release-note catalog did not take the update's entry last")
-    return appended
+    return path, json.dumps(note, indent=2, ensure_ascii=False) + "\n"
 
 
 def main():
@@ -63,15 +55,17 @@ def main():
     run("git", "switch", "-c", branch)
     run("git", "config", "user.name", "github-actions[bot]")
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
-    run(REPO / "Scripts/set-version.sh", "--patch")
-    notes_path = REPO / "Documentation/ReleaseNotes.json"
+    # The version is derived from history, so the update adds only its
+    # release-note entry file.
     entry = f"chromium-upstream-{tag.replace('.', '-')}-{args.base_sha[:12]}"
     note = {"category": "fixed", "message": f"Chromium is updated to {tag.split('-')[0]} with upstream security and compatibility fixes."}
     try:
-        notes_path.write_text(append_release_note(notes_path.read_text(), entry, note))
+        note_path, note_text = release_note_file(REPO / "Documentation/ReleaseNotes", entry, note)
     except ValueError as error:
         parser.error(str(error))
-    run("git", "add", *sorted(allowed_paths), "Config/Version.xcconfig", "Documentation/ReleaseNotes.json")
+    note_path.parent.mkdir(parents=True, exist_ok=True)
+    note_path.write_text(note_text)
+    run("git", "add", *sorted(allowed_paths), str(note_path.relative_to(REPO)))
     run(REPO / "Scripts/check-version.sh", "--fix-commit")
     run("git", "commit", "-m", f"Update Chromium to {tag}")
     head = run("git", "rev-parse", "HEAD", capture=True).strip()

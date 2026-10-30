@@ -11,10 +11,9 @@ import subprocess
 import urllib.parse
 
 from release_note_catalog import (
-    CATALOG_PATH,
     CatalogValidationError,
     ReleaseNoteEntry,
-    parse_catalog,
+    assembled_catalog_at,
 )
 
 
@@ -208,10 +207,9 @@ def catalog_at_ref(
     repository_root: pathlib.Path,
     reference: str,
 ) -> dict[str, ReleaseNoteEntry] | None:
-    result = git_result(repository_root, "show", f"{reference}:{CATALOG_PATH}")
-    if result.returncode != 0:
-        return None
-    return parse_catalog(result.stdout, f"{reference}:{CATALOG_PATH}")
+    # The document and the entry files the commit holds, in release order.
+    catalog = assembled_catalog_at(repository_root, reference)
+    return None if catalog is None else catalog.entries
 
 
 def catalog_changes(
