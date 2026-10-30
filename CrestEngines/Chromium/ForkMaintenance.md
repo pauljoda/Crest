@@ -78,6 +78,28 @@ The immediate upstream is ungoogled-chromium for macOS. Updates therefore follow
 its releases, not the first Google Chrome announcement. Pulling a Google security
 fix ahead of that release requires a deliberate patch and normal engine review.
 
+## Endpoint Verification compatibility
+
+The host patch keeps `enterprise.reportingPrivate.getContextInfo` available
+when enterprise cloud content analysis is disabled. Chromium's existing fetcher
+returns browser and OS signals with empty connector lists; the ungoogled patches
+report unavailable Safe Browsing protections as disabled. The fetcher's connector
+assertion uses the same build guard as its connector accesses, so diagnostic
+builds can also collect these signals without a connectors service.
+
+This adapts [ungoogled-chromium #4020](https://github.com/ungoogled-software/ungoogled-chromium/pull/4020).
+It does not enable cloud content analysis or browser cloud management. Validate
+with the official Endpoint Verification extension in an isolated work Space:
+check that `getContextInfo` returns an object, then complete enrollment, repeated
+syncs, a browser restart, and access to a protected application under the
+organization's actual policy. A successful API response alone does not establish
+Workspace compatibility.
+
+The pinned ungoogled patches also exclude `managed_profile_creation_controller.cc`
+and remove its production call, but leave a call to `CreateManagedProfileForTesting`.
+The host patch removes that test-only branch to avoid an unresolved symbol when
+linking the engine. Retire this hunk when upstream removes the dangling call.
+
 ## Certificate trust backports
 
 Chrome distrusts certificate authorities through components: CRLSets and Chrome

@@ -378,5 +378,17 @@
   "net/data/ssl/chrome_root_store/root_store.certs": {
     "before": "653230aea8ce815391eb8a13bc22fb3a0243ba0f09395b61c319aa6d52348102",
     "after": "e3ada9517680b712e979331df3c34d805ebcdcbb14da13dcce004f4171e4b8ee"
+  },
+  "chrome/browser/extensions/api/enterprise_reporting_private/enterprise_reporting_private_api.cc": {
+    "before": "5f1eebbd627b83417109a8620d1b6f716e96f04ba5a794c9825aef05d3546f9e",
+    "after": "7a70aebcd283fa17618a0ffd8062c34788c7fb50eb3bca1676adc95fb74d6e9d"
+  },
+  "chrome/browser/enterprise/signals/context_info_fetcher.cc": {
+    "before": "4c26566baaf632af43c7ba5e9b8c438b7cf8355e0f209c120d6d1f8e73bebe9e",
+    "after": "658c876255be936ffa3ce74d50081c168ca05e90337c29e88e0287e605ecd9f3"
+  },
+  "chrome/browser/enterprise/signin/profile_management_disclaimer_service.cc": {
+    "before": "881817855117a9abf0b487f9113ef3a9b62d841b4d4305565403b43d10b53991",
+    "after": "5aff61d30c792fd9647847fbfc323e9a0c2d58bfce326f539de686e75b246273"
   }
 }
