@@ -8,8 +8,9 @@ namespace CrestCore.Tests;
 /// Closing asks each page it would close whether it may go, one at a time: the
 /// first that asks to stay ends it not allowed, a page that goes has nothing to
 /// ask, a page that shows another document after agreeing voids the answer, a
-/// window asks only the pages that go with it, and quitting with downloads in
-/// progress asks the person.
+/// window asks only the pages that go with it, a page its engine closes while
+/// asked never moves from that answer, and quitting with downloads in progress
+/// asks the person.
 public sealed partial class BrowserContractsTests {
     [Fact]
     public void ClosingAsksEachPageInTurnAndTheFirstThatStaysEndsItNotAllowed() {
@@ -81,5 +82,23 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new CheckBeforeUnload(privateQuick), binding.Commands[^1]);
         app.Report(engine, new BeforeUnloadAnswered(privateQuick, Proceeds: false));
         Assert.Equal([new CloseReady(closingPrivate, Allowed: false)], app.Drain());
+    }
+
+    [Fact]
+    public void APageItsEngineClosedWhileAskedNeverMovesFromThatAnswer() {
+        var (app, webKit, webKitBinding, page, _, _, _, _) = LivePage();
+        using var disposal = app;
+        var chromiumBinding = new RecordingEngine();
+        app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, IsDefault: false), chromiumBinding.Run);
+        app.Send(new RehostPage(page, EngineKind.Chromium));
+        Assert.Equal(new CheckBeforeUnload(page), webKitBinding.Commands[^1]);
+
+        // An extension removed the page while its question was open: its tab
+        // closes, and the move it would have answered creates nothing.
+        app.Report(webKit, new PageClosed(page, RestoreState: null));
+        var changes = app.Drain();
+        Assert.Equal(PagePhase.Closed, Assert.Single(changes.OfType<PageChanged>()).Page.Phase);
+        Assert.DoesNotContain(changes, change => change is PageRehosted);
+        Assert.Empty(chromiumBinding.Commands);
     }
 }

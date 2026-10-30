@@ -88,9 +88,7 @@ internal sealed class ClosePreparations(Device device, Pages pages, Downloads do
         var origin = address is null ? null : new WebAddress(address).Origin;
         var siteEngine = origin is null ? null : device.ChosenEngine(page.SpaceId, origin);
         Start(ids.Next(), quits: false, [page.Id], turn.Changes, turn.Issue, (allowed, changes) => {
-            if (!allowed || !ReferenceEquals(pages.Hosted(page.Id), page) || !ReferenceEquals(page.Engine, previous)
-                || page.Documents != document || pages.Shown(page) is null)
-                return;
+            if (!allowed || !Stays(page, previous, document)) return;
             if (remembersSite && origin is not null) {
                 if (device.ChosenEngine(page.SpaceId, origin) != siteEngine) return;
                 device.Choose(page.SpaceId, origin, engine.Kind);
@@ -108,9 +106,7 @@ internal sealed class ClosePreparations(Device device, Pages pages, Downloads do
         var previous = page.Engine;
         long document = page.Documents;
         Start(ids.Next(), quits: false, [page.Id], turn.Changes, turn.Issue, (allowed, changes) => {
-            if (!allowed || !ReferenceEquals(pages.Hosted(page.Id), page) || !ReferenceEquals(page.Engine, previous)
-                || page.Documents != document || pages.Shown(page) is null)
-                return;
+            if (!allowed || !Stays(page, previous, document)) return;
             pages.Return(page, entryId, new PageTurn(changes, turn.Issue, this));
         });
     }
@@ -168,6 +164,14 @@ internal sealed class ClosePreparations(Device device, Pages pages, Downloads do
 
     /// A live page, which its engine can ask.
     private Page? Asking(Guid pageId) => pages.Hosted(pageId) is { } page && page.Phase == PagePhase.Live ? page : null;
+
+    /// Whether a page asked whether it may go is still the page that was
+    /// asked: the core hosts it, live on `previous` and showing the document
+    /// it showed then, in a Space this process shows. One that moved, closed,
+    /// lost access or shows another document stays where it is.
+    private bool Stays(Page page, Engine previous, long document) =>
+        ReferenceEquals(pages.Hosted(page.Id), page) && page.Phase == PagePhase.Live && ReferenceEquals(page.Engine, previous)
+            && page.Documents == document && pages.Shown(page) is not null;
 
     #endregion
 }
