@@ -4590,6 +4590,10 @@
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
     },
+    "browser-window-focus-redraw": {
+      "category": "improved",
+      "message": "On Mac, a browser window responds sooner when an alert closes and when the window comes back to the front."
+    },
     "sub-spaces": {
       "category": "new",
       "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."

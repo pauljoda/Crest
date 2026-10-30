@@ -6,6 +6,11 @@ extension EnvironmentValues {
     @Entry var browserPagePresentation = BrowserPagePresentation.presented
     @Entry var browserWebFocusRestorationGate =
         BrowserWebFocusRestorationGate.suppressed
+    /// The browser window whose chrome can hold keyboard focus over the pages
+    /// under a view. The environment carries the window rather than its focus,
+    /// so focus moving re-renders only the views that hand focus to a page,
+    /// not every view in the window.
+    @Entry var browserWebFocusWindow: BrowserRootModel? = nil
 }
 
 struct BrowserPlatformWebView: NSViewRepresentable {
