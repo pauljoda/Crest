@@ -33,7 +33,7 @@ struct BrowserSpaceGroupCrestRow: View {
         HStack(spacing: CrestSpacing.small) {
             HStack(spacing: 0) {
                 ForEach(members) { member in
-                    crest(member, in: members)
+                    crest(member)
                 }
             }
             .padding(style.trackPadding)
@@ -59,7 +59,7 @@ struct BrowserSpaceGroupCrestRow: View {
 
     // MARK: - Crests
 
-    private func crest(_ member: SpaceModel, in members: [SpaceModel]) -> some View {
+    private func crest(_ member: SpaceModel) -> some View {
         let isSelected = member.id == space.id
         let tint = member.identity.branding.primaryColor.color
         let isDropTarget = dropTargetID == member.id
@@ -87,7 +87,7 @@ struct BrowserSpaceGroupCrestRow: View {
         .accessibilityLabel(Text(verbatim: member.settings.name))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("space-group-crest-\(member.id)")
-        .contextMenu { menu(member, in: members) }
+        .contextMenu { menu(member) }
         #if os(macOS)
             .onDrag {
                 draggedSpaceID = member.id
@@ -102,13 +102,12 @@ struct BrowserSpaceGroupCrestRow: View {
     }
 
     @ViewBuilder
-    private func menu(_ member: SpaceModel, in members: [SpaceModel]) -> some View {
+    private func menu(_ member: SpaceModel) -> some View {
         // The primary leads its group; a Sub-Space moves among the others.
-        if browser.isSubSpace(member), let index = members.firstIndex(where: { $0.id == member.id }) {
-            Button("Move Left") { browser.move(member.id, to: members[index - 1].id) }
-                .disabled(index <= 1)
-            Button("Move Right") { browser.move(member.id, to: members[index + 1].id) }
-                .disabled(index == members.count - 1)
+        if browser.isSubSpace(member) {
+            let order = BrowserSpaceOrderActions(browser: browser, spaceID: member.id)
+            Button("Move Left", action: order.moveUp).disabled(!order.canMoveUp)
+            Button("Move Right", action: order.moveDown).disabled(!order.canMoveDown)
             Divider()
         }
         BrowserSpaceGroupMenuItems(

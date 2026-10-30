@@ -4592,7 +4592,7 @@
     },
     "sub-spaces": {
       "category": "new",
-      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a group is one row, with its Spaces' crests above its settings: + starts a Sub-Space, and on the Mac you can drag a Space onto a group to add it or drag a crest out to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
+      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
     },
     "sub-spaces-pinned-tabs": {
       "category": "new",

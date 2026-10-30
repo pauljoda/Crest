@@ -130,12 +130,28 @@ extension BrowserStore {
         orderSpaces(order)
     }
 
-    /// Moves whole groups, as `spaceGroups` lists them, from `source` to
-    /// `destination` in that list.
-    func moveGroups(from source: IndexSet, to destination: Int) {
+    /// Moves `spaceID` to stand right before `targetID`.
+    func move(_ spaceID: UUID, before targetID: UUID) {
+        var order = spaceModels.map(\.id)
+        guard spaceID != targetID, let from = order.firstIndex(of: spaceID) else { return }
+        order.remove(at: from)
+        guard let to = order.firstIndex(of: targetID) else { return }
+        order.insert(spaceID, at: to)
+        orderSpaces(order)
+    }
+
+    /// Moves the group `spaceID` belongs to, whole, to stand right before the
+    /// group `targetID` leads, or last when there is none.
+    func moveGroup(of spaceID: UUID, before targetID: UUID?) {
         var groups = spaceGroups
-        groups.move(fromOffsets: source, toOffset: destination)
-        orderSpaces(groups.flatMap { $0.map(\.id) })
+        guard let from = groups.firstIndex(where: { $0.contains { $0.id == spaceID } }),
+            !groups[from].contains(where: { $0.id == targetID })
+        else { return }
+        let group = groups.remove(at: from)
+        let to = targetID.flatMap { id in groups.firstIndex { $0[0].id == id } } ?? groups.count
+        groups.insert(group, at: to)
+        // The core orders every Space, those being deleted too.
+        orderSpaces(groups.flatMap { $0.map(\.id) } + spaceModels.map(\.id).filter(isDeleting))
     }
 
     /// Puts the workspace's Spaces in the order `spaceIDs` lists; the core

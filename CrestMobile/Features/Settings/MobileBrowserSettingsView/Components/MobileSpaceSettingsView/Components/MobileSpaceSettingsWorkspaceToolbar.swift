@@ -55,23 +55,26 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         .fixedSize()
     }
 
-    /// One entry per group in picker order, by its primary; the crest row
-    /// under the toolbar picks the group's Space. Its own label keeps the
-    /// group's name on one line, shortened when the toolbar is narrow, so the
-    /// actions beside it stay in view.
+    /// Every Space in picker order, each group in a section of its own, so
+    /// choosing one here or in the crest row under the toolbar chooses it in
+    /// both. Its own label keeps the selected Space's name on one line, shortened
+    /// when the toolbar is narrow, so the actions beside it stay in view.
     private var spacePicker: some View {
         Menu {
-            Picker("Space", selection: groupSelection) {
-                ForEach(browser.spaceGroups, id: \.[0].id) { group in
-                    BrowserSpaceIdentityLabel(space: group[0]).tag(Optional(group[0].id))
+            // One inline picker per group, which the menu separates.
+            ForEach(browser.spaceGroups, id: \.[0].id) { group in
+                Picker("Space", selection: $selectedSpaceID) {
+                    ForEach(group) { space in
+                        BrowserSpaceIdentityLabel(space: space).tag(Optional(space.id))
+                    }
                 }
+                .pickerStyle(.inline)
+                .labelsHidden()
             }
-            .pickerStyle(.inline)
-            .labelsHidden()
         } label: {
             HStack(spacing: 4) {
-                if let primary = selectedGroupPrimary {
-                    BrowserSpaceIdentityLabel(space: primary)
+                if let space = selectedSpaceID.flatMap({ browser.spaceModel($0) }) {
+                    BrowserSpaceIdentityLabel(space: space)
                 }
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption2.weight(.semibold))
@@ -82,21 +85,8 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         }
         .layoutPriority(1)
         .accessibilityLabel("Space")
-        .accessibilityValue(selectedGroupPrimary?.settings.name ?? "")
+        .accessibilityValue(selectedSpaceID.flatMap { browser.spaceModel($0)?.settings.name } ?? "")
         .accessibilityIdentifier("space-settings-picker")
-    }
-
-    /// The primary of the group whose Space is edited.
-    private var selectedGroupPrimary: SpaceModel? {
-        selectedSpaceID.flatMap { browser.spaceModel($0) }.map { browser.primary(of: $0) }
-    }
-
-    /// Picks a group by its primary; the group being edited keeps the Space
-    /// shown.
-    private var groupSelection: Binding<UUID?> {
-        Binding(
-            get: { selectedGroupPrimary?.id },
-            set: { id in if id != selectedGroupPrimary?.id { selectedSpaceID = id } })
     }
 
     private var sectionPicker: some View {
@@ -140,6 +130,6 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
     }
 
     private var spaceOrderControls: some View {
-        BrowserSpaceOrderControls(browser: browser, spaceID: selectedGroupPrimary?.id)
+        BrowserSpaceOrderControls(browser: browser, spaceID: selectedSpaceID)
     }
 }
