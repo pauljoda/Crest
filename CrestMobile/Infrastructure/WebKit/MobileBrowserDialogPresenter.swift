@@ -6,11 +6,15 @@ import WebKit
 
 @MainActor
 enum MobileBrowserDialogPresenter {
-    // A `dismissal` closes the alert once its question no longer waits.
+    // Each dialog appears in `window`, the one showing the page that asks,
+    // so a page in one iPad window never presents over another; nil, as for a
+    // page no window shows, presents over the key window. A `dismissal`
+    // closes the alert once its question no longer waits.
 
     static func presentAlert(
         message: String,
         request: URLRequest,
+        in window: UIWindow?,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable () -> Void
     ) {
@@ -20,12 +24,13 @@ enum MobileBrowserDialogPresenter {
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completion() })
-        present(alert, dismissal: dismissal, fallback: completion)
+        present(alert, in: window, dismissal: dismissal, fallback: completion)
     }
 
     static func presentConfirmation(
         message: String,
         request: URLRequest,
+        in window: UIWindow?,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
@@ -36,13 +41,14 @@ enum MobileBrowserDialogPresenter {
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in completion(false) })
         alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completion(true) })
-        present(alert, dismissal: dismissal) { completion(false) }
+        present(alert, in: window, dismissal: dismissal) { completion(false) }
     }
 
     static func presentPrompt(
         message: String,
         defaultText: String?,
         request: URLRequest,
+        in window: UIWindow?,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (String?) -> Void
     ) {
@@ -57,12 +63,12 @@ enum MobileBrowserDialogPresenter {
             UIAlertAction(title: "OK", style: .default) { [weak alert] _ in
                 completion(alert?.textFields?.first?.text)
             })
-        present(alert, dismissal: dismissal) { completion(nil) }
+        present(alert, in: window, dismissal: dismissal) { completion(nil) }
     }
 
     /// Keeps the originating web request alive while the person repairs the
     /// app-level permission in Settings, then lets the coordinator recheck it.
-    static func recoverGeolocationSystemAuthorization() async {
+    static func recoverGeolocationSystemAuthorization(in window: UIWindow?) async {
         guard
             let settingsURL = URL(
                 string: UIApplication.openSettingsURLString
@@ -85,7 +91,7 @@ enum MobileBrowserDialogPresenter {
                 UIAlertAction(title: "Open Settings", style: .default) { _ in
                     continuation.resume(returning: true)
                 })
-            present(alert) {
+            present(alert, in: window) {
                 continuation.resume(returning: false)
             }
         }
@@ -110,7 +116,8 @@ enum MobileBrowserDialogPresenter {
     static func presentExternalApplicationPermission(
         origin: SiteOrigin,
         destinationURL: URL,
-        spaceName: String
+        spaceName: String,
+        in window: UIWindow?
     ) async -> BrowserExternalSchemePromptResponse {
         let scheme = destinationURL.scheme?.lowercased() ?? "link"
         return await withCheckedContinuation { continuation in
@@ -132,7 +139,7 @@ enum MobileBrowserDialogPresenter {
                 UIAlertAction(title: "Always Allow", style: .default) { _ in
                     continuation.resume(returning: .openAndRemember)
                 })
-            present(alert) {
+            present(alert, in: window) {
                 continuation.resume(returning: .cancel)
             }
         }
@@ -153,6 +160,7 @@ enum MobileBrowserDialogPresenter {
     static func presentHTTPAuthentication(
         prompt: BrowserHTTPAuthenticationPrompt,
         spaceName: String,
+        in window: UIWindow?,
         dismissal: BrowserPromptDismissal? = nil
     ) async -> BrowserHTTPAuthenticationPromptResponse? {
         let descriptor = prompt.descriptor
@@ -218,7 +226,7 @@ enum MobileBrowserDialogPresenter {
                     })
             }
             dismissal?.attach { answer.resume(nil) }
-            present(alert, dismissal: dismissal) { answer.resume(nil) }
+            present(alert, in: window, dismissal: dismissal) { answer.resume(nil) }
         }
     }
 
@@ -236,16 +244,18 @@ enum MobileBrowserDialogPresenter {
 
     static func exportDownloadedFile(
         at url: URL,
-        to destination: MobileBrowserFileExportDestination
+        to destination: MobileBrowserFileExportDestination,
+        in window: UIWindow?
     ) {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
-        presentFile(at: url, temporaryDirectoryURL: nil, to: destination)
+        presentFile(at: url, temporaryDirectoryURL: nil, to: destination, in: window)
     }
 
     static func exportDocument(
         _ data: Data,
         filename: String,
-        to destination: MobileBrowserFileExportDestination
+        to destination: MobileBrowserFileExportDestination,
+        in window: UIWindow?
     ) async throws {
         let directoryURL = try await Task.detached(priority: .userInitiated) {
             let directoryURL = FileManager.default.temporaryDirectory
@@ -265,26 +275,28 @@ enum MobileBrowserDialogPresenter {
         presentFile(
             at: fileURL,
             temporaryDirectoryURL: directoryURL,
-            to: destination
+            to: destination,
+            in: window
         )
     }
 
-    static func presentError(title: String, message: String) {
+    static func presentError(title: String, message: String, in window: UIWindow?) {
         let alert = UIAlertController(
             title: title,
             message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, fallback: {})
+        present(alert, in: window, fallback: {})
     }
 
     private static func present(
         _ alert: UIAlertController,
+        in window: UIWindow?,
         dismissal: BrowserPromptDismissal? = nil,
         fallback: @escaping @MainActor @Sendable () -> Void
     ) {
-        guard let presenter = topViewController() else {
+        guard let presenter = topViewController(in: window) else {
             fallback()
             return
         }
@@ -294,13 +306,15 @@ enum MobileBrowserDialogPresenter {
         presenter.present(alert, animated: true)
     }
 
-    /// Presents `viewController` over the top view controller, or calls
-    /// `fallback` when there is none to present it over.
+    /// Presents `viewController` over the top view controller of `window`,
+    /// or of the key window when it is nil, or calls `fallback` when there
+    /// is none to present it over.
     static func present(
         _ viewController: UIViewController,
+        in window: UIWindow?,
         fallback: @escaping @MainActor @Sendable () -> Void
     ) {
-        guard let presenter = topViewController() else {
+        guard let presenter = topViewController(in: window) else {
             fallback()
             return
         }
@@ -320,10 +334,12 @@ enum MobileBrowserDialogPresenter {
     private static func presentFile(
         at fileURL: URL,
         temporaryDirectoryURL: URL?,
-        to destination: MobileBrowserFileExportDestination
+        to destination: MobileBrowserFileExportDestination,
+        in window: UIWindow?
     ) {
         destination.download.send(
-            fileURL, to: MobileBrowserFilePresenter(temporaryDirectoryURL: temporaryDirectoryURL))
+            fileURL,
+            to: MobileBrowserFilePresenter(temporaryDirectoryURL: temporaryDirectoryURL, window: window))
     }
 
     /// The page's server as a dialog names it, which the core formats: its
@@ -337,17 +353,24 @@ enum MobileBrowserDialogPresenter {
             host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
     }
 
-    private static func topViewController() -> UIViewController? {
-        let root = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { scene in scene.windows }
-            .first { window in window.isKeyWindow }?
-            .rootViewController
+    /// The top of `window`'s presentation stack, or of the key window's when
+    /// `window` is nil. Every scene has a key window, so the key-window scan
+    /// may land in another iPad window; `window` is what keeps a page's
+    /// dialog in the window that shows the page.
+    private static func topViewController(in window: UIWindow?) -> UIViewController? {
+        let root = (window ?? keyWindow())?.rootViewController
         var current = root
         while let presented = current?.presentedViewController {
             current = presented
         }
         return current
+    }
+
+    private static func keyWindow() -> UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { scene in scene.windows }
+            .first { window in window.isKeyWindow }
     }
 }
 

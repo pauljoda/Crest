@@ -1,12 +1,14 @@
 import UIKit
 
 /// Hands a file to the share sheet or the Files picker, on a device without a
-/// Finder. A file staged in `temporaryDirectoryURL` for the export is removed
-/// once the person is done with it.
+/// Finder, in `window`, the one showing the page the file came from. A file
+/// staged in `temporaryDirectoryURL` for the export is removed once the
+/// person is done with it.
 struct MobileBrowserFilePresenter: BrowserFileDestinationOpener {
     // MARK: - Variables
 
     let temporaryDirectoryURL: URL?
+    let window: UIWindow?
 
     // MARK: - Actions - Presenting
 
@@ -21,7 +23,7 @@ struct MobileBrowserFilePresenter: BrowserFileDestinationOpener {
             fileURL: fileURL,
             temporaryDirectoryURL: temporaryDirectoryURL
         )
-        MobileBrowserDialogPresenter.present(controller) {
+        MobileBrowserDialogPresenter.present(controller, in: window) {
             controller.cleanupTemporaryFiles()
         }
     }
@@ -32,7 +34,7 @@ struct MobileBrowserFilePresenter: BrowserFileDestinationOpener {
                 fileURL: fileURL,
                 temporaryDirectoryURL: temporaryDirectoryURL
             )
-            MobileBrowserDialogPresenter.present(controller) {
+            MobileBrowserDialogPresenter.present(controller, in: window) {
                 controller.cleanupTemporaryFiles()
             }
             return
@@ -42,6 +44,6 @@ struct MobileBrowserFilePresenter: BrowserFileDestinationOpener {
             asCopy: true
         )
         controller.shouldShowFileExtensions = true
-        MobileBrowserDialogPresenter.present(controller, fallback: {})
+        MobileBrowserDialogPresenter.present(controller, in: window, fallback: {})
     }
 }
