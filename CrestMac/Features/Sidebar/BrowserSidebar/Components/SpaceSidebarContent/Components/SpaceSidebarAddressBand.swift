@@ -22,6 +22,7 @@ struct SpaceSidebarAddressBand: View {
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
     var body: some View {
         BrowserSidebarAddressField(configuration: addressConfiguration) {
@@ -33,6 +34,9 @@ struct SpaceSidebarAddressBand: View {
             }
         } trailingAccessory: {
             if let siteControl {
+                if appearance.address.showsCopyURLButton {
+                    BrowserAddressCopyURLButton(page: siteControl.page)
+                }
                 BrowserSiteControlButton(configuration: siteControl)
             }
         }
