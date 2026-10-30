@@ -6,9 +6,9 @@ covered by [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## Who can contribute code
 
-Pull requests are reviewed and merged only from vetted contributors. To become
-one, message Paul on [Discord](https://discord.gg/gjrM5qMB6x) so you can talk it through first.
-The basic requirements:
+Anyone can have one pull request open at a time; GitHub holds back any more.
+Vetted contributors can have more open at once. To become one, message Paul on
+[Discord](https://discord.gg/gjrM5qMB6x) so you can talk it through first. The basic requirements:
 
 - You are a developer with some background building software.
 - You understand C# and SwiftUI.
@@ -16,9 +16,9 @@ The basic requirements:
   must be able to explain every line you submit.
 
 Approval is at the maintainer's discretion and can be revoked at any time.
-Every pull request, including one from a vetted contributor, is still
-reviewed by the maintainer before it merges. Pull requests from anyone else
-are closed automatically with a link to this section.
+The maintainer reviews every pull request, including one from a vetted
+contributor, before it merges. Pull requests from contributors who aren't
+vetted are reviewed as time allows.
 
 Everyone is welcome to report bugs in GitHub Issues and to discuss ideas on
 r/CrestBrowser and Discord.

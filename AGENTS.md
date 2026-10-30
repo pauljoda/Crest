@@ -15,9 +15,9 @@ and the pull request template asks the author to confirm that it did.
 `CONTRIBUTING.md` and `Documentation/RepositoryGuardrails.md` remain the base
 contract for setup, validation and change discipline.
 
-Pull requests are reviewed only from vetted contributors (see "Who can
-contribute code" in `CONTRIBUTING.md`). Don't open one for someone who isn't
-vetted: it is closed automatically.
+Someone who isn't a vetted contributor can have only one pull request open
+at a time (see "Who can contribute code" in `CONTRIBUTING.md`). Keep their
+work in that one pull request.
 
 ## Versioning completed work
 

@@ -250,8 +250,8 @@ there are some areas that desperately need help.
 - **Security:** I have some background in cyber security, mainly red team/blue team and some as a dev, so I welcome any and all security audits and improvements. Please report findings through the built-in security reporting.
 - **Engine guru:** if you have lots of experience with Chromium and browser engines in general, I would love any input or help.
 
-Pull requests are reviewed and merged only from vetted contributors. If you
-would like to become one, read
+Anyone can have one pull request open at a time. To open more, become a
+vetted contributor: read
 [Who can contribute code](CONTRIBUTING.md#who-can-contribute-code) and message
 me on [Discord](https://discord.gg/gjrM5qMB6x). Please follow the guidelines and make sure your
 work is well done and aligns with the product. If you have a more drastic
