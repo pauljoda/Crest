@@ -9,14 +9,20 @@ public sealed partial class BrowserTabCollection {
     #region Actions - Closing
 
     /// Archives the selected open tabs, and answers the tab the window shows
-    /// next: `fallback` in place of `shown` when it went, or none. Refused with
+    /// next: `fallback` in place of `shown` when it went, or none. A header
+    /// Tidy made goes with the last of its tabs. Refused with
     /// `CurrentTabsOnly` for a saved or pinned tab.
     public Guid? CloseSelected(ResolvedSelection selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
         RequireSelectedTabs(selection);
         if (selection.Members.FirstOrDefault(tab => tab.Placement.IsDurable) is { } durable)
             throw new Rejected(new CurrentTabsOnly(durable.Id));
-        return DismissTabs(selection.MemberIds, shown, fallback, now, deleting: false, ensureSelection: false,
+        Guid[] emptiedHeaders = [.. folders.Where(folder => folder.IsTidyHeader
+            && selection.Members.Any(tab => tab.FolderId == folder.Id)
+            && tabs.Where(tab => tab.FolderId == folder.Id).All(tab => selection.Holds(tab.Id))).Select(folder => folder.Id)];
+        var next = DismissTabs(selection.MemberIds, shown, fallback, now, deleting: false, ensureSelection: false,
             resetArchivePlacement: false);
+        foreach (var header in emptiedHeaders) DeleteFolder(header, now);
+        return next;
     }
 
     /// Deletes the selected tabs into the archive as open tabs, and answers the

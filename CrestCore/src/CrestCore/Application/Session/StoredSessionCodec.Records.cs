@@ -103,7 +103,7 @@ internal static partial class StoredSessionCodec {
             Text(value[Key.Title]) ?? UntitledFolder, Text(value[Key.Symbol]),
             value[Key.Color] is JsonObject color ? DecodeColor(color) : null, OptionalIdentity(value[Key.ParentId]),
             Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]),
-            OptionalIdentity(value[Key.OrderAnchorTabId]));
+            OptionalIdentity(value[Key.OrderAnchorTabId]), Flag(value[Key.IsTidyHeader]) ?? false);
     }
 
     internal static JsonObject Encode(FolderState folder) {
@@ -118,6 +118,7 @@ internal static partial class StoredSessionCodec {
         value[Key.IsCollapsed] = folder.IsCollapsed;
         Put(value, Key.CollapseModifiedAt, folder.CollapseModifiedAt);
         if (folder.OrderAnchorTabId is { } anchor) value[Key.OrderAnchorTabId] = WrappedIdentity(anchor);
+        if (folder.IsTidyHeader) value[Key.IsTidyHeader] = true;
         return value;
     }
 

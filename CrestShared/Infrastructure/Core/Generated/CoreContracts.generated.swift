@@ -328,7 +328,9 @@ enum Rejection: Equatable, Error, Sendable {
     case syncStagingRefused(SyncStagingRefused)
     case tabAlreadyExists(TabAlreadyExists)
     case tabAlreadyHasPage(TabAlreadyHasPage)
+    case tabCannotBeTidied(TabCannotBeTidied)
     case tabLimitReached(TabLimitReached)
+    case tidyFolderNeedsTwoTabs(TidyFolderNeedsTwoTabs)
     case transientAlreadyCompleted(TransientAlreadyCompleted)
     case translationRuleLimitReached(TranslationRuleLimitReached)
     case unknownAgentSession(UnknownAgentSession)
@@ -1103,7 +1105,8 @@ struct AppPreferences: Equatable, Sendable {
             searchesSitesWithTab: true,
             showsReasons: false,
             providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
-        )
+        ),
+        offersTabTidying: false
     )
 
     var startup: StartupBehavior
@@ -1118,6 +1121,7 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
     var palette: PalettePreferences
+    var offersTabTidying: Bool
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
@@ -2894,6 +2898,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let isCollapsed: Bool
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
+    let isTidyHeader: Bool
     let displaySymbol: String
     let displayColor: BrandColor
 
@@ -2909,6 +2914,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
         var isCollapsed: Bool
         var collapseModifiedAt: Date?
         var orderAnchorTabID: UUID?
+        var isTidyHeader: Bool
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -2922,7 +2928,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
             parentID: parentID,
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
-            orderAnchorTabID: orderAnchorTabID
+            orderAnchorTabID: orderAnchorTabID,
+            isTidyHeader: isTidyHeader
         )
     }
 }
@@ -6741,6 +6748,10 @@ struct TabAlreadyHasPage: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct TabCannotBeTidied: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct TabContent: Equatable, Sendable {
     var address: String?
     var view: NativeView?
@@ -6887,6 +6898,21 @@ struct TabsImported: CoreChange, Equatable, Sendable {
 struct TearOffPermission: Equatable, Sendable {
     let allowed: Bool
     let reason: TearOffRefusal?
+}
+
+struct TidyCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folders: [TidyFolderProposal]
+}
+
+struct TidyFolderNeedsTwoTabs: Equatable, Sendable {
+    let folderTitle: String
+}
+
+struct TidyFolderProposal: Equatable, Sendable {
+    var folderTitle: String
+    var tabIDs: [UUID]
 }
 
 struct TintSplit: Intent, SessionIntent, Equatable, Sendable {
@@ -18232,7 +18258,7 @@ struct ShortcutCommand: Hashable, Sendable {
         name: "clearUnpinnedTabs",
         section: ShortcutSection.tabs,
         title: LocalizedStringResource("Clear Unpinned Tabs"),
-        searchTerms: LocalizedStringResource("clean tidy archive unpinned tabs"),
+        searchTerms: LocalizedStringResource("clean archive unpinned tabs"),
         menuTitle: nil,
         symbol: "sparkles",
         requiredCapability: nil,
@@ -23690,6 +23716,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.orderAnchorTabID)
         return orderAnchorTabIDStorage
     }
+    var isTidyHeader: Bool {
+        access(keyPath: \.isTidyHeader)
+        return isTidyHeaderStorage
+    }
     var displaySymbol: String {
         access(keyPath: \.displaySymbol)
         return displaySymbolStorage
@@ -23707,6 +23737,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var isCollapsedStorage: Bool
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
+    @ObservationIgnored private var isTidyHeaderStorage: Bool
     @ObservationIgnored private var displaySymbolStorage: String
     @ObservationIgnored private var displayColorStorage: BrandColor
 
@@ -23721,6 +23752,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
+            isTidyHeader: isTidyHeader,
             displaySymbol: displaySymbol,
             displayColor: displayColor
         )
@@ -23736,6 +23768,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
         isCollapsedStorage = value.isCollapsed
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
+        isTidyHeaderStorage = value.isTidyHeader
         displaySymbolStorage = value.displaySymbol
         displayColorStorage = value.displayColor
     }
@@ -23773,6 +23806,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if orderAnchorTabIDStorage != value.orderAnchorTabID {
             orderAnchorTabIDStorage = value.orderAnchorTabID
             withMutation(keyPath: \.orderAnchorTabID) {}
+        }
+        if isTidyHeaderStorage != value.isTidyHeader {
+            isTidyHeaderStorage = value.isTidyHeader
+            withMutation(keyPath: \.isTidyHeader) {}
         }
         if displaySymbolStorage != value.displaySymbol {
             displaySymbolStorage = value.displaySymbol

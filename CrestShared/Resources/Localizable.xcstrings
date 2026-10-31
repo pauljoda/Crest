@@ -237,6 +237,9 @@
         }
       }
     },
+    "%@ header" : {
+
+    },
     "%@ History" : {
       "localizations" : {
         "ar" : {
@@ -2198,6 +2201,9 @@
         }
       }
     },
+    "Archive %@" : {
+
+    },
     "Archive applies to current tabs. Use Unload Pages to close saved or pinned pages, or Delete Tabs to remove their saved entries." : {
 
     },
@@ -3351,12 +3357,12 @@
     "Claude Code" : {
 
     },
-    "clean tidy archive unpinned tabs" : {
+    "clean archive unpinned tabs" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تنظيف ترتيب أرشفة علامات التبويب غير المثبتة"
+            "value" : "تنظيف أرشفة علامات التبويب غير المثبتة"
           }
         }
       }
@@ -3755,6 +3761,9 @@
         }
       }
     },
+    "Collapses this header" : {
+
+    },
     "Color" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4106,10 +4115,19 @@
     "Couldn’t Delete Space" : {
 
     },
+    "Couldn't download Tidy's word list. Turn Tidy off and on to try again." : {
+
+    },
     "Couldn’t Open Crest" : {
 
     },
     "Couldn’t open language downloads." : {
+
+    },
+    "Couldn't Tidy" : {
+
+    },
+    "Couldn't Tidy Open Tabs" : {
 
     },
     "Country" : {
@@ -5447,6 +5465,9 @@
     "Downloading" : {
 
     },
+    "Downloading Tidy's word list…" : {
+
+    },
     "Downloading Update" : {
 
     },
@@ -5898,6 +5919,9 @@
           }
         }
       }
+    },
+    "Expands this header" : {
+
     },
     "Experimental" : {
 
@@ -6619,6 +6643,12 @@
           }
         }
       }
+    },
+    "Groups open tabs under headers" : {
+
+    },
+    "Groups open tabs under headers using Apple Intelligence on this device. Turning it on downloads a 30 MB word list. Tab titles and addresses never leave this device." : {
+
     },
     "Gules" : {
 
@@ -8406,6 +8436,9 @@
     "Moves all current tabs to Archive" : {
 
     },
+    "Moves the tabs under this header to Archive" : {
+
+    },
     "Mute" : {
 
     },
@@ -9002,6 +9035,9 @@
           }
         }
       }
+    },
+    "Offer Tidy for open tabs" : {
+
     },
     "Offer to Translate" : {
 
@@ -11045,6 +11081,9 @@
 
     },
     "Require Touch ID or password" : {
+
+    },
+    "Requires Apple Intelligence." : {
 
     },
     "Rerun onboarding" : {
@@ -14357,6 +14396,12 @@
 
     },
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
+
+    },
+    "Tidy" : {
+
+    },
+    "Tidy Open Tabs" : {
 
     },
     "Time range" : {

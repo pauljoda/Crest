@@ -1,5 +1,10 @@
 import Foundation
 
+// MARK: - Types
+
+/// The Space Tidy started in was switched away from or locked before it finished.
+struct TidySpaceNoLongerShown: Error {}
+
 /// The mutations a sidebar row performs on the tabs of one Space.
 ///
 /// Both shells ask for the same work behind the same guard: the Space this
@@ -78,6 +83,46 @@ struct BrowserSidebarTabActions {
         else { return false }
         syncPagesAfterMutation()
         return true
+    }
+
+    /// Files the Space's loose open tabs under headers with the on-device
+    /// model. Throws when the Space stops being the selected, unlocked one,
+    /// when the model fails, or when the core refuses the headers because the
+    /// tabs changed while they were being made. Does nothing when Tidy was
+    /// turned off or Apple Intelligence became unavailable meanwhile, and a
+    /// tab whose page changed meanwhile stays loose.
+    func tidyCurrentTabs() async throws {
+        guard let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) else {
+            throw TidySpaceNoLongerShown()
+        }
+        let candidates = OnDeviceTabTidyingService.candidates(in: space)
+        let headers = try await OnDeviceTabTidyingService().headers(for: candidates)
+        guard let shownSpace = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
+        else {
+            throw TidySpaceNoLongerShown()
+        }
+        guard OnDeviceTabTidyingService.isReady else { return }
+        try browser.tidySessionTabs(
+            folders: OnDeviceTabTidyingService.proposals(headers, unchangedSince: candidates, in: shownSpace),
+            in: assignment.spaceID)
+        syncPagesAfterMutation()
+    }
+
+    /// Closes a header Tidy made by closing the tabs under it, as selecting
+    /// and closing them does, and the header goes with its last tabs. A header
+    /// left without tabs is deleted.
+    @discardableResult
+    func closeTidyHeader(_ folderID: UUID) -> Bool {
+        guard let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) else {
+            return false
+        }
+        let tabIDs = space.tabIDs(inFolder: folderID)
+        guard !tabIDs.isEmpty else { return browser.deleteSessionFolder(folderID, in: assignment.spaceID) }
+        guard let request = BrowserSidebarSelection.capture(tabIDs.map(BrowserSelectionItemID.tab), in: browser) else {
+            return false
+        }
+        return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).perform(
+            browser.closing(request), for: request)
     }
 
     /// Routes an empty-background gesture through the host's existing New Tab

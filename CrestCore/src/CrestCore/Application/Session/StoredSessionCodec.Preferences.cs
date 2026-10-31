@@ -131,11 +131,12 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
             TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar,
             TolerantFlag(value[Key.ShowsRecentTabs]) ?? defaults.ShowsRecentTabs,
-            DecodePalettePreferences(value[Key.Palette]));
+            DecodePalettePreferences(value[Key.Palette]),
+            TolerantFlag(value[Key.OffersTabTidying]) ?? defaults.OffersTabTidying);
     }
 
-    /// The app-wide preferences. The palette's are written only once they
-    /// differ from the defaults, so a release that never stored them reads
+    /// The app-wide preferences. The palette's and Tidy's are written only once
+    /// they differ from the defaults, so a release that never stored them reads
     /// its own document back unchanged.
     internal static JsonObject Encode(AppPreferences preferences) {
         var value = new JsonObject {
@@ -151,6 +152,7 @@ internal static partial class StoredSessionCodec {
             [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar,
             [Key.ShowsRecentTabs] = preferences.ShowsRecentTabs
         };
+        if (preferences.OffersTabTidying) value[Key.OffersTabTidying] = true;
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
         return value;
     }

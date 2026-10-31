@@ -7,15 +7,16 @@ namespace CrestCore.Contracts;
 /// page translation and its per-language rules, spelling, automatic Picture in
 /// Picture, what closing a saved tab does, whether Split View focus follows the
 /// pointer, whether local pages open with the developer toolbar, whether holding
-/// a Most Recent Tab shortcut shows the recent tabs, and how the command palette
-/// ranks and arranges what it offers. Translation rules are in
+/// a Most Recent Tab shortcut shows the recent tabs, how the command palette
+/// ranks and arranges what it offers, and whether the sidebar offers Tidy, which
+/// a person turns on themselves. Translation rules are in
 /// ordinal order of their source language. They stay on this device and never
 /// become sync records.
 /// </summary>
 public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslation, bool AutomaticallyTranslates,
     IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
     SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl, bool SplitFocusFollowsMouse,
-    bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs, PalettePreferences Palette) {
+    bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs, PalettePreferences Palette, bool OffersTabTidying = false) {
     #region Static Variables
 
     /// The documented defaults for a person who never chose, which a platform
@@ -60,12 +61,13 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && SplitFocusFollowsMouse == other.SplitFocusFollowsMouse
         && AutomaticallyShowsDeveloperToolbar == other.AutomaticallyShowsDeveloperToolbar
         && ShowsRecentTabs == other.ShowsRecentTabs
-        && Palette.Equals(other.Palette);
+        && Palette.Equals(other.Palette)
+        && OffersTabTidying == other.OffersTabTidying;
 
     public override int GetHashCode() => HashCode.Combine(Startup, OffersTranslation, AutomaticallyTranslates,
         TranslationRules.Count, ChecksSpelling, AutomaticallyEntersPictureInPicture, SavedTabClose,
         HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, SplitFocusFollowsMouse, AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs,
-            Palette));
+            Palette, OffersTabTidying));
 
     #endregion
 }

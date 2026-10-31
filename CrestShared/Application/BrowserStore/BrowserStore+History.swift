@@ -21,10 +21,12 @@ extension BrowserStore {
     }
 
     /// Removes the addresses a Space's history holds that were visited within
-    /// `range`, every one by default.
+    /// `range`, every one by default. Also drops every keyphrase Tidy wrote for
+    /// open tabs, which describe what the person browsed.
     @discardableResult
     func clearHistory(in spaceID: UUID, range: BrowsingDataRange = .allTime) -> Bool {
-        sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID, range: range))
+        TidyTabDescriptions.shared.forgetAll()
+        return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID, range: range))
     }
 
     @discardableResult
@@ -32,6 +34,7 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard spaceModel(matching: assignment) != nil else { return false }
+        TidyTabDescriptions.shared.forgetAll()
         return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID, range: .allTime))
     }
 

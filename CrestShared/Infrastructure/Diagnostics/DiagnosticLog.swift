@@ -16,6 +16,9 @@ struct DiagnosticLog: Sendable {
     static let popups = DiagnosticLog(category: "Popups")
     static let shortcuts = DiagnosticLog(category: "Shortcuts")
     static let sitePermissions = DiagnosticLog(category: "SitePermissions")
+    /// Tidy's word-table downloads and the on-device model's failures, named
+    /// by the error alone, never by a tab.
+    static let tidy = DiagnosticLog(category: "Tidy")
     static let windows = DiagnosticLog(category: "Windows")
 
     // MARK: - Variables

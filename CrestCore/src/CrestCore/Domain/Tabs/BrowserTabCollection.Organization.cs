@@ -14,7 +14,7 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Organization
 
-    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null) {
+    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null, bool isTidyHeader = false) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new Rejected(new FolderLimitReached(FolderTree.MaximumCount));
         if (folders.Any(f => f.Id == id)) throw new Rejected(new FolderAlreadyExists(id));
@@ -26,7 +26,7 @@ public sealed partial class BrowserTabCollection {
             if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new Rejected(new FolderDepthLimitReached(FolderTree.MaximumDepth));
             var subtree = tree.Subtree(p); insertion = folders.FindLastIndex(f => subtree.Contains(f.Id)) + 1;
         }
-        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent));
+        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent, IsTidyHeader: isTidyHeader));
     }
 
     public void RenameFolder(Guid id, string name) {
@@ -146,7 +146,8 @@ public sealed partial class BrowserTabCollection {
         var remainingTree = new FolderTree(nextFolders);
         var anchor = beforeFolder is { } target ? remainingTree.TabAnchor(target, remaining) : beforeTab;
         var predecessors = remainingTree.EmptyPredecessors(beforeFolder, anchor, parent, destination, remaining);
-        var moving = nextFolders.Where(f => movingIds.Contains(f.Id)).Select(f => f with { Location = destination, ParentId = f.Id == id ? parent : f.ParentId, OrderAnchorTabId = f.Id == id ? anchor : f.OrderAnchorTabId }).ToArray();
+        // A Tidy header that leaves the open section becomes an ordinary folder.
+        var moving = nextFolders.Where(f => movingIds.Contains(f.Id)).Select(f => f with { Location = destination, ParentId = f.Id == id ? parent : f.ParentId, OrderAnchorTabId = f.Id == id ? anchor : f.OrderAnchorTabId, IsTidyHeader = f.IsTidyHeader && destination == TabPlacement.Current }).ToArray();
         nextFolders.RemoveAll(f => movingIds.Contains(f.Id));
         int folderInsertion = beforeFolder is { } bf ? nextFolders.FindIndex(f => f.Id == bf)
             : parent is { } parentFolder ? nextFolders.FindLastIndex(f => tree.Subtree(parentFolder).Contains(f.Id)) + 1 : nextFolders.Count;

@@ -123,6 +123,14 @@ extension BrowserStore {
             from: self)
     }
 
+    /// Files the Space's loose open tabs under the proposed headers, in one
+    /// edit. Throws the rule that refused it, such as a tab that moved while
+    /// the proposal was made.
+    func tidySessionTabs(folders: [TidyFolderProposal], in spaceID: UUID) throws(Rejection) {
+        try family.commit(
+            TidyCurrentTabs(workspaceID: family.workspaceID, spaceID: spaceID, folders: folders), from: self)
+    }
+
     func setSessionTabResidency(_ keep: Bool, tabID: UUID, in spaceID: UUID) -> Bool {
         family.send(
             KeepPageLoaded(
