@@ -1,6 +1,10 @@
 {
-  "schemaVersion": 1,
-  "upstreamRepository": "ungoogled-software/ungoogled-chromium-macos",
+  "schemaVersion": 2,
+  "upstream": {
+    "releases": "https://chromiumdash.appspot.com/fetch_releases",
+    "channel": "Stable",
+    "platform": "Mac"
+  },
   "integrationBranch": "main",
   "automaticChannel": "development",
   "automaticMajorUpdates": false

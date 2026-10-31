@@ -4638,6 +4638,26 @@
       "category": "improved",
       "message": "Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move."
     },
+    "chromium-plain-156-privacy": {
+      "category": "improved",
+      "message": "Chromium is updated to 156 and now built from Chromium itself with Crest's privacy changes. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, protected video and your extensions up to date."
+    },
+    "chromium-widevine-video": {
+      "category": "new",
+      "message": "Chromium plays protected video that uses Widevine. Netflix, Disney+, Max and Prime Video open in WebKit, which plays them with FairPlay, unless you choose an engine for them."
+    },
+    "chromium-third-party-cookies": {
+      "category": "improved",
+      "message": "Chromium allows third-party cookies as Chrome does, except in private windows, so embedded sign-ins and payments work."
+    },
+    "chromium-webrtc-udp": {
+      "category": "fixed",
+      "message": "Calls in Chromium can use UDP again, so they connect faster and sound better, while sites still can't see your device's local network addresses."
+    },
+    "media-widget-ignores-previews": {
+      "category": "fixed",
+      "message": "The sidebar's media controls and Now Playing keep showing what you play when a site previews another video under the pointer, as YouTube does on thumbnails."
+    },
     "sub-space-pinned-drag": {
       "category": "fixed",
       "message": "Dragging a pinned tab in a Space whose group shares its pinned tabs works again: the tile lifts under the pointer, the other pins move aside, and it lands where you let go."

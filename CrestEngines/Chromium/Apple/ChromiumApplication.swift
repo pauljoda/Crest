@@ -15,7 +15,8 @@
 
         override func conforms(to aProtocol: Protocol) -> Bool {
             let name = NSStringFromProtocol(aProtocol)
-            return name == "CrAppProtocol" || name == "CrAppControlProtocol" || super.conforms(to: aProtocol)
+            return name == "CrAppProtocol" || name == "CrAppControlProtocol" || name == "NativeEventProcessor"
+                || super.conforms(to: aProtocol)
         }
 
         @objc func isHandlingSendEvent() -> Bool { handlingSendEvent }

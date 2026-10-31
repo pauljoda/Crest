@@ -202,9 +202,13 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     internal Engine? Chosen(SpaceState space, TabState? tab) => tab?.Url is { } url ? Chosen(space, url) : null;
 
     /// The registered engine chosen in `space` for the site `url` belongs to,
-    /// or null when none is.
-    internal Engine? Chosen(SpaceState space, string url) =>
-        new WebAddress(url).Origin is { } origin && device.ChosenEngine(space.Id, origin) is { } kind ? engines.Registered(kind) : null;
+    /// or null when none is. The person's choice comes first; a protected
+    /// video service otherwise opens in an engine that plays its media.
+    internal Engine? Chosen(SpaceState space, string url) {
+        if (new WebAddress(url).Origin is not { } origin) return null;
+        if (device.ChosenEngine(space.Id, origin) is { } kind) return engines.Registered(kind);
+        return ProtectedMediaService.Serving(origin) is not null ? engines.PlayingProtectedMedia(except: null) : null;
+    }
 
     #endregion
 

@@ -36,7 +36,7 @@
      return std::unique_ptr<BrowserWindow, BrowserWindowDeleter>(
 --- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
 +++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
-@@ -20,6 +20,9 @@
+@@ -18,6 +18,9 @@
  #include "base/supports_user_data.h"
  #include "base/version.h"
  #include "build/build_config.h"
@@ -46,7 +46,7 @@
  #include "chrome/browser/apps/platform_apps/install_chrome_app.h"
  #include "chrome/browser/browser_process.h"
  #include "chrome/browser/custom_handlers/protocol_handler_registry_factory.h"
-@@ -255,6 +258,14 @@
+@@ -253,6 +256,14 @@
      bool restore_tabbed_browser) {
    DCHECK(profile);
    profile_ = profile;
@@ -164,7 +164,7 @@
    // Bring all browser windows to the front. Specifically, this brings them in
    // front of any app windows. FocusWindowSet will also unminimize the most
    // recently minimized window if no windows in the set are visible.
-@@ -2056,6 +2080,11 @@
+@@ -2058,6 +2082,11 @@
  }
  
  - (void)application:(NSApplication*)sender openURLs:(NSArray<NSURL*>*)urls {
@@ -176,7 +176,7 @@
    StartupTabs startupTabs;
    for (NSURL* url in urls) {
      // Handle the google-chrome:// scheme (and chromium://).
-@@ -2140,6 +2169,13 @@
+@@ -2142,6 +2171,13 @@
  }
  
  - (NSMenu*)applicationDockMenu:(NSApplication*)sender {
@@ -230,10 +230,11 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
-@@ -2544,6 +2544,49 @@
+@@ -3342,6 +3342,52 @@
+   }
  
    if (is_mac) {
-     sources += [
++    sources += [
 +      "crest/crest_browser_window.h",
 +      "crest/crest_browser_window.mm",
 +      "crest/crest_chrome_hooks.h",
@@ -277,10 +278,12 @@
 +      "crest/crest_engine_tab_groups.cc",
 +      "crest/crest_engine_tab_groups.h",
 +      "crest/CrestChromiumHost.h",
-       "views/frame/browser_frame_view_factory_mac.mm",
-       "views/frame/browser_frame_view_mac.h",
-       "views/frame/browser_frame_view_mac.mm",
-@@ -2591,6 +2634,13 @@
++    ]
++
+     deps += [
+       ":browser_commands_mac",
+       ":browser_commands_mac_impl",
+@@ -3405,6 +3451,13 @@
        "//components/remote_cocoa/browser",
      ]
      include_dirs = [ "$target_gen_dir" ]
@@ -307,7 +310,7 @@
  #include "chrome/browser/actor/actor_keyed_service.h"
  #include "chrome/browser/actor/actor_tab_data.h"
  #include "chrome/browser/actor/ui/actor_ui_tab_controller.h"
-@@ -514,9 +518,18 @@
+@@ -584,9 +588,18 @@
  
    // Create the ReadAnythingController first to ensure it exists before
    // any potential consumers, like the side panel controller.
@@ -443,7 +446,7 @@
  #include "chrome/browser/app_mode/app_mode_utils.h"
  #include "chrome/browser/apps/app_service/app_service_proxy.h"
  #include "chrome/browser/apps/app_service/app_service_proxy_factory.h"
-@@ -1610,6 +1613,17 @@
+@@ -1609,6 +1612,17 @@
      bool ignore_profile_picker) {
    ProfileManager* profile_manager = g_browser_process->profile_manager();
    const base::FilePath& user_data_dir = profile_manager->user_data_dir();
@@ -551,7 +554,7 @@
  #include "chrome/browser/ui/views/permissions/permission_prompt_notifications_mac.h"
  #include "chrome/browser/web_applications/os_integration/mac/web_app_shortcut_mac.h"
  #endif
-@@ -290,6 +292,9 @@
+@@ -292,6 +294,9 @@
  std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
      content::WebContents* web_contents,
      permissions::PermissionPrompt::Delegate* delegate) {
@@ -563,7 +566,7 @@
      return nullptr;
 --- a/chrome/browser/profiles/profile.cc
 +++ b/chrome/browser/profiles/profile.cc
-@@ -119,6 +119,14 @@
+@@ -121,6 +121,14 @@
      : profile_id_(profile_id) {}
  
  bool Profile::OTRProfileID::AllowsBrowserWindows() const {
@@ -635,25 +638,6 @@
  
    if (result.empty()) {
      error_message = "Can't find native messaging host " + host_name;
---- a/extensions/browser/updater/extension_downloader.cc
-+++ b/extensions/browser/updater/extension_downloader.cc
-@@ -347,6 +347,16 @@
-     AddToFetches(fetches_preparing, std::move(task));
-   pending_tasks_.clear();
- 
-+#if BUILDFLAG(IS_MAC)
-+  // Restore manifest-declared extension updates for Crest's native host. Keep
-+  // the upstream baseline unchanged and retain normal signature/permission checks.
-+  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
-+    for (auto& fetch_list : fetches_preparing) {
-+      for (auto& fetch : fetch_list.second)
-+        StartUpdateCheck(std::move(fetch));
-+    }
-+  }
-+#endif
- }
- 
- void ExtensionDownloader::SetIdentityManager(
 --- a/chrome/browser/ui/unload_controller.cc
 +++ b/chrome/browser/ui/unload_controller.cc
 @@ -3,6 +3,10 @@
@@ -667,7 +651,7 @@
  
  #include <algorithm>
  
-@@ -223,6 +227,12 @@
+@@ -249,6 +253,12 @@
  void UnloadController::BeforeUnloadFired(content::WebContents* web_contents,
                                           bool proceed,
                                           bool* proceed_to_fire_unload) {
@@ -725,7 +709,7 @@
  
  #include <algorithm>
  #include <memory>
-@@ -1591,6 +1595,12 @@
+@@ -1593,6 +1597,12 @@
      DownloadTargetDeterminerDelegate::ConfirmationCallback callback) {
    DCHECK_CURRENTLY_ON(BrowserThread::UI);
    DCHECK(!download->IsTransient());
@@ -751,7 +735,7 @@
  
  #include <optional>
  #include <string>
-@@ -648,7 +652,14 @@
+@@ -647,7 +651,14 @@
  #endif
  
      // If there is a non-neutral confirmation reason, prompt the user.
@@ -878,7 +862,7 @@
      const content::ContextMenuParams& params,
 --- a/content/browser/web_contents/web_contents_view_mac.mm
 +++ b/content/browser/web_contents/web_contents_view_mac.mm
-@@ -244,6 +244,11 @@
+@@ -265,6 +265,11 @@
  
    NSDragOperation mask = static_cast<NSDragOperation>(allowed_operations);
  
@@ -915,7 +899,7 @@
  
  #include <algorithm>
  #include <iterator>
-@@ -2931,6 +2934,10 @@
+@@ -2961,6 +2964,10 @@
  
    std::string process_type =
        command_line->GetSwitchValueASCII(switches::kProcessType);
@@ -926,7 +910,7 @@
    const base::CommandLine& browser_command_line =
        *base::CommandLine::ForCurrentProcess();
  
-@@ -5575,6 +5582,9 @@
+@@ -5672,6 +5679,9 @@
  void ChromeContentBrowserClient::CreateThrottlesForNavigation(
      content::NavigationThrottleRegistry& registry) {
    CreateAndAddChromeThrottlesForNavigation(registry);
@@ -938,7 +922,7 @@
  void ChromeContentBrowserClient::CreateThrottlesForCommitWithoutUrlLoader(
 --- a/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc
 +++ b/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc
-@@ -115,6 +115,7 @@
+@@ -118,6 +118,7 @@
  #endif
  
  #if BUILDFLAG(IS_MAC)
@@ -969,7 +953,7 @@
  
    // If the source is already split, navigate the other pane instead of
    // creating a new tab. Return |source| so that WebContentsImpl::OpenURL()
-@@ -775,6 +781,16 @@
+@@ -773,6 +779,16 @@
    }
  }
  
@@ -986,7 +970,7 @@
  void BrowserWebContentsDelegate::SetContentsBounds(content::WebContents* source,
                                                     const gfx::Rect& bounds) {
    if ((browser_->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL)) {
-@@ -798,6 +814,14 @@
+@@ -796,6 +812,14 @@
  
  void BrowserWebContentsDelegate::UpdateTargetURL(content::WebContents* source,
                                                   const GURL& url) {
@@ -1001,7 +985,7 @@
    std::vector<StatusBubble*> status_bubbles =
        browser_ui_controller_->GetStatusBubbles();
    for (StatusBubble* status_bubble : status_bubbles) {
-@@ -1115,6 +1139,9 @@
+@@ -1113,6 +1137,9 @@
  content::JavaScriptDialogManager*
  BrowserWebContentsDelegate::GetJavaScriptDialogManager(
      content::WebContents* source) {
@@ -1013,7 +997,7 @@
  
 --- a/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.h
 +++ b/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.h
-@@ -129,6 +129,7 @@
+@@ -131,6 +131,7 @@
    void LoadingStateChanged(content::WebContents* source,
                             bool should_show_loading_ui) override;
    void CloseContents(content::WebContents* source) override;
@@ -1035,7 +1019,7 @@
    // at the time this request was issued.
 --- a/third_party/blink/public/mojom/frame/remote_frame.mojom
 +++ b/third_party/blink/public/mojom/frame/remote_frame.mojom
-@@ -134,6 +134,10 @@
+@@ -135,6 +135,10 @@
    // TODO(crbug.com/1315802): Refactor _unfencedTop handling.
    bool is_unfenced_top_navigation = false;
  
@@ -1048,7 +1032,7 @@
    pending_remote<blink.mojom.BlobURLToken>? blob_url_token;
 --- a/third_party/blink/renderer/core/frame/local_frame_client_impl.h
 +++ b/third_party/blink/renderer/core/frame/local_frame_client_impl.h
-@@ -149,7 +149,8 @@
+@@ -150,7 +150,8 @@
        mojo::PendingReceiver<
            mojom::blink::NavigationResumeDeferredCommitListener>,
        std::optional<base::UnguessableToken> script_tool_invocation_id,
@@ -1060,7 +1044,7 @@
    void DidStopLoading() override;
 --- a/third_party/blink/renderer/core/frame/local_frame_client.h
 +++ b/third_party/blink/renderer/core/frame/local_frame_client.h
-@@ -208,7 +208,8 @@
+@@ -206,7 +206,8 @@
            mojom::blink::NavigationResumeDeferredCommitListener>
            resume_defer_commit_listener,
        std::optional<base::UnguessableToken> script_tool_invocation_id,
@@ -1072,7 +1056,7 @@
  
 --- a/third_party/blink/renderer/core/frame/local_frame_client_impl.cc
 +++ b/third_party/blink/renderer/core/frame/local_frame_client_impl.cc
-@@ -637,7 +637,8 @@
+@@ -639,7 +639,8 @@
      mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>
          resume_defer_commit_listener,
      std::optional<base::UnguessableToken> script_tool_invocation_id,
@@ -1082,7 +1066,7 @@
    if (!web_frame_->Client()) {
      return;
    }
-@@ -670,6 +671,7 @@
+@@ -672,6 +673,7 @@
        should_check_main_world_content_security_policy;
    navigation_info->blob_url_token = std::move(blob_url_token);
    navigation_info->input_start = input_start_time;
@@ -1092,7 +1076,7 @@
    navigation_info->initiator_document_token = initiator_document_token;
 --- a/third_party/blink/renderer/core/html/html_anchor_element.h
 +++ b/third_party/blink/renderer/core/html/html_anchor_element.h
-@@ -119,7 +119,7 @@
+@@ -122,7 +122,7 @@
                             NavigationPolicy,
                             bool is_trusted,
                             base::TimeTicks platform_time_stamp,
@@ -1103,7 +1087,7 @@
    unsigned link_relations_ : 31;
 --- a/third_party/blink/renderer/core/html/html_anchor_element.cc
 +++ b/third_party/blink/renderer/core/html/html_anchor_element.cc
-@@ -372,7 +372,7 @@
+@@ -399,7 +399,7 @@
      NavigationPolicy navigation_policy,
      bool is_trusted,
      base::TimeTicks platform_time_stamp,
@@ -1112,7 +1096,7 @@
    LocalDOMWindow* window = GetDocument().domWindow();
    if (!window) {
      return;
-@@ -402,6 +402,7 @@
+@@ -429,6 +429,7 @@
        is_trusted ? mojom::blink::TriggeringEventInfo::kFromTrustedEvent
                   : mojom::blink::TriggeringEventInfo::kFromUntrustedEvent);
    frame_request.SetInputStartTime(platform_time_stamp);
@@ -1120,7 +1104,7 @@
  
    Frame* target_frame =
        frame->Tree().FindOrCreateFrameForNavigation(frame_request, target).frame;
-@@ -509,12 +510,23 @@
+@@ -536,12 +537,23 @@
      return;
    }
  
@@ -1161,7 +1145,7 @@
  
 --- a/third_party/blink/renderer/core/loader/frame_loader.cc
 +++ b/third_party/blink/renderer/core/loader/frame_loader.cc
-@@ -1030,7 +1030,8 @@
+@@ -1029,7 +1029,8 @@
        request.IsContainerInitiated(),
        request.GetWindowFeatures().explicit_opener,
        request.TakeResumeDeferredCommitListener(),
@@ -1204,7 +1188,7 @@
    mojom::RequestContextFrameType frame_type_ =
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
-@@ -5839,6 +5839,16 @@
+@@ -5827,6 +5827,16 @@
    // process: DownloadURL handles downloads, OpenURL handles all navigations
    // that will end up in a different tab/window, and BeginNavigation handles
    // everything else.
@@ -1221,7 +1205,7 @@
    if (info->navigation_policy == blink::kWebNavigationPolicyDownload) {
      mojo::PendingRemote<blink::mojom::BlobURLToken> blob_url_token =
          CloneBlobURLToken(info->blob_url_token);
-@@ -6141,6 +6151,7 @@
+@@ -6129,6 +6139,7 @@
        blink::WebStringToGURL(info->url_request.ReferrerString()),
        info->url_request.GetReferrerPolicy());
    params->disposition = NavigationPolicyToDisposition(policy);
@@ -1239,7 +1223,7 @@
  #include "base/memory/scoped_refptr.h"
  #include "content/common/content_export.h"
  #include "content/public/browser/child_process_host.h"
-@@ -153,6 +154,10 @@
+@@ -167,6 +168,10 @@
    // Indicates whether this navigation was triggered while processing a user
    // gesture if the navigation was initiated by the renderer.
    bool user_gesture;
@@ -1252,7 +1236,7 @@
    bool started_by_ad = false;
 --- a/content/browser/renderer_host/navigator.cc
 +++ b/content/browser/renderer_host/navigator.cc
-@@ -1085,7 +1085,9 @@
+@@ -1088,7 +1088,9 @@
      const std::string& href_translate,
      scoped_refptr<network::SharedURLLoaderFactory> blob_url_loader_factory,
      bool has_rel_opener,
@@ -1263,7 +1247,7 @@
    // Note: This can be called for subframes (even when OOPIFs are not possible)
    // if the disposition calls for a different window.
  
-@@ -1131,6 +1133,8 @@
+@@ -1135,6 +1137,8 @@
    params.should_replace_current_entry = should_replace_current_entry;
    params.user_gesture = user_gesture;
    params.triggering_event_info = triggering_event_info;
@@ -1274,7 +1258,7 @@
    params.initiator_frame_token = base::OptionalFromPtr(initiator_frame_token);
 --- a/content/browser/renderer_host/render_frame_host_impl.cc
 +++ b/content/browser/renderer_host/render_frame_host_impl.cc
-@@ -237,6 +237,7 @@
+@@ -232,6 +232,7 @@
  #include "content/public/browser/surface_embed_connector.h"
  #include "content/public/browser/tracing_support.h"
  #include "content/public/browser/weak_document_ptr.h"
@@ -1282,7 +1266,7 @@
  #include "content/public/browser/web_ui_url_loader_factory.h"
  #include "content/public/common/alternative_error_page_override_info.mojom.h"
  #include "content/public/common/bindings_policy.h"
-@@ -3905,7 +3906,10 @@
+@@ -3873,7 +3874,10 @@
      int32_t world_id) {
    CHECK_CURRENTLY_ON(BrowserThread::UI);
    CHECK_GT(world_id, ISOLATED_WORLD_ID_GLOBAL);
@@ -1294,7 +1278,7 @@
    AssertFrameWasCommitted();
  
    const bool wants_result = !callback.is_null();
-@@ -6695,6 +6699,16 @@
+@@ -6668,6 +6672,16 @@
    commit_state_resetter.disable();
  }
  
@@ -1311,7 +1295,7 @@
  void RenderFrameHostImpl::DidOpenDocumentInputStream(const GURL& url) {
    // Check if the URL can actually be committed to the current origin. When
    // checking, the restrictions should be the same as a same-document navigation
-@@ -7848,6 +7862,18 @@
+@@ -7834,6 +7848,18 @@
    if (!IsActive() && source == ClosePageSource::kRenderer) {
      page_close_state_ = PageCloseState::kNotClosing;
      return;
@@ -1330,8 +1314,8 @@
    }
  
    page_close_state_ = PageCloseState::kReadyToBeClosed;
-@@ -10420,6 +10446,18 @@
-   }
+@@ -10438,6 +10464,18 @@
+ 
    // TODO(crbug.com/385170155): Consider whether to pass actual_navigation_start
    // through this path as well, which may involve a lot of plumbing.
 +  scoped_refptr<base::RefCountedData<base::OnceClosure>> crest_download_fallback;
@@ -1346,10 +1330,10 @@
 +    crest_download_fallback = base::MakeRefCounted<base::RefCountedData<base::OnceClosure>>(
 +        base::BindOnce(&RenderFrameHostImpl::DownloadURL, GetWeakPtr(), std::move(download)));
 +  }
-   owner->GetCurrentNavigator().RequestOpenURL(
+   CHECK(owner_);
+   owner_->GetCurrentNavigator().RequestOpenURL(
        this, validated_url, base::OptionalToPtr(params->initiator_frame_token),
-       GetProcess()->GetDeprecatedID(), params->initiator_origin,
-@@ -10428,7 +10466,8 @@
+@@ -10447,7 +10485,8 @@
        params->disposition, params->should_replace_current_entry,
        params->user_gesture, params->triggering_event_info,
        params->href_translate, std::move(blob_url_loader_factory),
@@ -1361,7 +1345,7 @@
  void RenderFrameHostImpl::GetAssociatedInterface(
 --- a/content/public/browser/web_contents_delegate.h
 +++ b/content/public/browser/web_contents_delegate.h
-@@ -237,6 +237,12 @@
+@@ -238,6 +238,12 @@
    // it needs to do.
    virtual void CloseContents(WebContents* source) {}
  
@@ -1384,7 +1368,7 @@
  #include "content/browser/renderer_host/navigation_controller_impl.h"
  #include "content/common/content_export.h"
  #include "content/common/navigation_client.mojom.h"
-@@ -140,7 +141,9 @@
+@@ -141,7 +142,9 @@
        const std::string& href_translate,
        scoped_refptr<network::SharedURLLoaderFactory> blob_url_loader_factory,
        bool has_rel_opener,
@@ -1539,7 +1523,7 @@
    UpdateBrowserWindow();
    UpdateBrowserToolbar();
  
-@@ -1076,8 +1084,13 @@
+@@ -1075,8 +1083,13 @@
          FROM_HERE, base::BindOnce(&DevToolsWindow::ActivateInspectedTab,
                                    weak_factory_.GetWeakPtr()));
  
@@ -1554,7 +1538,7 @@
        devtools_ui_controller->UpdateDevtools(inspected_web_contents);
      }
      main_web_contents_->SetInitialFocus();
-@@ -1403,7 +1416,15 @@
+@@ -1402,7 +1415,15 @@
  #endif  // BUILDFLAG(IS_MAC)
      DevtoolsUIController* devtools_ui_controller =
          browser ? DevtoolsUIController::From(browser) : nullptr;
@@ -1599,7 +1583,7 @@
      devtools_ui_controller->UpdateDevtools(inspected_web_contents);
 --- a/chrome/browser/extensions/api/tabs/tabs_api.cc
 +++ b/chrome/browser/extensions/api/tabs/tabs_api.cc
-@@ -36,6 +36,9 @@
+@@ -37,6 +37,9 @@
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
  #include "chrome/browser/ui/browser_window/public/browser_window_interface_iterator.h"
  #include "chrome/browser/ui/browser_window/public/create_browser_window.h"
@@ -1609,7 +1593,7 @@
  #include "chrome/browser/ui/incognito_allowed_url.h"
  #include "chrome/browser/ui/navigator/browser_navigator.h"
  #include "chrome/browser/ui/navigator/browser_navigator_params.h"
-@@ -1134,6 +1137,16 @@
+@@ -1135,6 +1138,16 @@
        BrowserWindowInterface::CreationStatus::kOk) {
      return RespondNow(Error(ExtensionTabUtil::kBrowserWindowNotAllowed));
    }
@@ -1657,7 +1641,7 @@
      return;
 --- a/chrome/app/chrome_main_delegate.cc
 +++ b/chrome/app/chrome_main_delegate.cc
-@@ -118,6 +118,8 @@
+@@ -122,6 +122,8 @@
  #if BUILDFLAG(IS_MAC)
  #include "base/apple/foundation_util.h"
  #include "chrome/app/chrome_main_mac.h"
@@ -1666,7 +1650,7 @@
  #include "chrome/browser/mac/code_sign_clone_manager.h"
  #include "chrome/browser/mac/relauncher.h"
  #include "components/crash/core/common/objc_zombie.h"
-@@ -1120,6 +1122,20 @@
+@@ -1175,6 +1177,20 @@
  }
  
  std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
@@ -1687,7 +1671,7 @@
  #if BUILDFLAG(IS_CHROMEOS)
    ash::BootTimesRecorder::Get()->SaveChromeMainStats();
  #endif
-@@ -1491,6 +1507,20 @@
+@@ -1563,6 +1579,20 @@
      InitializeUserDataDir(base::CommandLine::ForCurrentProcess());
    }
  
@@ -1718,7 +1702,7 @@
  #include "base/compiler_specific.h"
  #include "base/containers/span.h"
  #include "base/feature_list.h"
-@@ -1172,6 +1173,12 @@
+@@ -1221,6 +1222,12 @@
    if (preference.has_value()) {
      return *preference;
    }
@@ -1728,13 +1712,15 @@
 +  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    return true;
 +  }
-   const base::Feature* feature;
-   if (request_is_for_google_com) {
-     feature = &device::kWebAuthnICloudKeychainForGoogle;
-@@ -1217,6 +1224,19 @@
+   // Requests for google.com and users with iCloud Keychain configured have
+   // defaulted to iCloud Keychain since M118.
+   if (request_is_for_google_com || is_icloud_keychain_configured) {
+@@ -1253,6 +1260,19 @@
+       web_contents->GetNativeView());
+   if (widget) {
      const gfx::NativeWindow window = widget->GetNativeWindow();
-     if (window) {
-       discovery_factory->set_nswindow(window);
++    if (window) {
++      discovery_factory->set_nswindow(window);
 +      return;
 +    }
 +  }
@@ -1746,11 +1732,9 @@
 +  // is the window the system passkey sheet must be presented from.
 +  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    const gfx::NativeWindow window = web_contents->GetTopLevelNativeWindow();
-+    if (window) {
-+      discovery_factory->set_nswindow(window);
+     if (window) {
+       discovery_factory->set_nswindow(window);
      }
-   }
- }
 --- a/chrome/browser/webauthn/authenticator_request_dialog_controller.cc
 +++ b/chrome/browser/webauthn/authenticator_request_dialog_controller.cc
 @@ -20,6 +20,7 @@
@@ -1857,7 +1841,7 @@
      if (contents_view->web_contents() == web_contents) {
 --- a/third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc
 +++ b/third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc
-@@ -987,7 +987,12 @@
+@@ -999,7 +999,12 @@
        wants_result
            ? mojom::blink::WantResultOption::kWantResultDateAndRegExpAllowed
            : mojom::blink::WantResultOption::kNoResult,
@@ -1902,7 +1886,7 @@
        bubble_anchor_util::kNoToolbarLeftOffset);
 --- a/chrome/browser/ui/browser_commands.cc
 +++ b/chrome/browser/ui/browser_commands.cc
-@@ -1496,8 +1496,10 @@
+@@ -1509,8 +1509,10 @@
    }
  
    // If all selected tabs are pinned, show a confirmation toast if one isn't
@@ -1939,7 +1923,7 @@
  
  #include <memory>
  
-@@ -165,6 +170,13 @@
+@@ -167,6 +172,13 @@
      const std::string& source_language,
      const std::string& target_language,
      const std::u16string& text_selection) {
@@ -2083,7 +2067,7 @@
   private:
 --- a/content/common/frame.mojom
 +++ b/content/common/frame.mojom
-@@ -798,6 +798,10 @@
+@@ -797,6 +797,10 @@
    // https://whatwg.org/C/dynamic-markup-insertion.html#document-open-steps.
    DidOpenDocumentInputStream(url.mojom.Url url);
  
@@ -2096,7 +2080,7 @@
    // URL. The token will then be used to look up the blob associated with the
 --- a/content/browser/renderer_host/render_frame_host_impl.h
 +++ b/content/browser/renderer_host/render_frame_host_impl.h
-@@ -3535,6 +3535,7 @@
+@@ -3496,6 +3496,7 @@
        mojom::DidCommitSameDocumentNavigationParamsPtr same_document_params)
        override;
    void DidOpenDocumentInputStream(const GURL& url) override;
@@ -2106,7 +2090,7 @@
    // retrieved even if the RenderFrameHost has been deleted.
 --- a/content/browser/renderer_host/render_frame_host_delegate.h
 +++ b/content/browser/renderer_host/render_frame_host_delegate.h
-@@ -267,6 +267,11 @@
+@@ -269,6 +269,11 @@
    // The DOMContentLoaded handler in the frame has completed.
    virtual void DOMContentLoaded(RenderFrameHostImpl* render_frame_host) {}
  
@@ -2120,7 +2104,7 @@
    virtual void DocumentOnLoadCompleted(RenderFrameHostImpl* render_frame_host) {
 --- a/content/browser/web_contents/web_contents_impl.h
 +++ b/content/browser/web_contents/web_contents_impl.h
-@@ -758,6 +758,8 @@
+@@ -759,6 +759,8 @@
    void FrameSizeChanged(RenderFrameHostImpl* render_frame_host,
                          const gfx::Size& frame_size) override;
    void DOMContentLoaded(RenderFrameHostImpl* render_frame_host) override;
@@ -2131,7 +2115,7 @@
                     const std::u16string& title) override;
 --- a/content/browser/web_contents/web_contents_impl.cc
 +++ b/content/browser/web_contents/web_contents_impl.cc
-@@ -8911,6 +8911,13 @@
+@@ -9061,6 +9061,13 @@
                               render_frame_host);
  }
  
@@ -2147,7 +2131,7 @@
    OPTIONAL_TRACE_EVENT2("content", "WebContentsImpl::OnDidFinishLoad",
 --- a/content/public/browser/web_contents_observer.h
 +++ b/content/public/browser/web_contents_observer.h
-@@ -476,6 +476,11 @@
+@@ -499,6 +499,11 @@
    // content scripts marked "document_end" get injected into the frame.
    virtual void DOMContentLoaded(RenderFrameHost* render_frame_host) {}
  
@@ -2304,7 +2288,7 @@
  
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -56,6 +56,13 @@
+@@ -55,6 +55,13 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
@@ -2316,8 +2300,8 @@
 +#endif
 +
  #if BUILDFLAG(IS_CHROMEOS)
+ #include "chrome/common/channel_info.h"
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
- #endif
 @@ -127,6 +134,29 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
@@ -2330,7 +2314,7 @@
 +  // command line can still turn the picker off.
 +  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
-+    // Federated sign-in (FedCM) stays off, as ungoogled-chromium intends.
++    // Crest keeps federated sign-in (FedCM) off.
 +    // Disabling it explicitly also hides the API from pages, which otherwise
 +    // keep it, so sites sign in through their own pop-up or redirect, as in
 +    // Safari. Crest has no account chooser to show for such a request.
@@ -2345,9 +2329,9 @@
 +  }
 +#endif  // BUILDFLAG(IS_MAC)
 +
-   // TODO(crbug.com/552456654): Remove when rollout is complete to stable.
-   if (chrome::GetChannel() != version_info::Channel::STABLE) {
-     feature_overrides.EnableFeature(
+ #if BUILDFLAG(IS_ANDROID)
+ #if BUILDFLAG(IS_DESKTOP_ANDROID)
+   // Nota bene: Anything here is expected to be short-lived, unless deemed too
 --- a/chrome/browser/media/webrtc/display_media_access_handler.cc
 +++ b/chrome/browser/media/webrtc/display_media_access_handler.cc
 @@ -53,6 +53,7 @@
@@ -2740,10 +2724,10 @@
      ++shareable_content_errors_;
 --- a/content/browser/media/capture/native_screen_capture_picker_mac.mm
 +++ b/content/browser/media/capture/native_screen_capture_picker_mac.mm
-@@ -412,8 +412,10 @@
-     base::OnceClosure error_callback,
+@@ -413,8 +413,10 @@
      base::OnceCallback<void(DesktopMediaID::Id)> stop_audio_callback) {
-   DCHECK(device_task_runner_->RunsTasksInCurrentSequence());
+   CHECK(device_task_runner_->RunsTasksInCurrentSequence(),
+         base::NotFatalUntil::M160);
 +  // TYPE_NONE lets the person choose a window or a display in one picker.
    CHECK(type == DesktopMediaID::Type::TYPE_SCREEN ||
 -        type == DesktopMediaID::Type::TYPE_WINDOW);
@@ -2752,7 +2736,7 @@
    if (@available(macOS 14.0, *)) {
      active_picker_source_id_++;
      active_picker_type_ = type;
-@@ -470,6 +472,15 @@
+@@ -479,6 +481,15 @@
        VLOG(1) << "NSCPM::Open: Show screen-sharing picker for source id = "
                << active_picker_source_id_;
        LogToUma(SCContentSharingPickerOperation::kPresentScreen_Start);
@@ -2768,7 +2752,7 @@
      } else {
        config.allowedPickerModes = SCContentSharingPickerModeSingleWindow;
        picker.defaultConfiguration = config;
-@@ -600,6 +611,19 @@
+@@ -610,6 +621,19 @@
        source.display_id = filter.includedDisplays.firstObject.displayID;
      }
    }
@@ -3006,47 +2990,18 @@
 +}
 --- a/content/browser/webid/request.cc
 +++ b/content/browser/webid/request.cc
-@@ -390,7 +390,10 @@
+@@ -294,7 +294,10 @@
  
    FederatedApiPermissionStatus permission_status = GetApiPermissionStatus();
  
--  if (!CanBypassPermissionStatusCheck(rp_mode_, mediation_requirement_)) {
+-  if (!CanBypassPermissionStatusCheck(spec_->rp_mode(),
 +  // A click lifts embargo and site settings, but not a build that has FedCM
 +  // turned off: such a browser may have no account chooser to show.
 +  if (permission_status == FederatedApiPermissionStatus::BLOCKED_VARIATIONS ||
-+      !CanBypassPermissionStatusCheck(rp_mode_, mediation_requirement_)) {
++      !CanBypassPermissionStatusCheck(spec_->rp_mode(),
+                                       spec_->mediation_requirement())) {
      if (permission_status != FederatedApiPermissionStatus::GRANTED) {
        std::pair<FederatedRequestResult, TokenStatus> resultAndTokenStatus =
-           PermissionStatusToRequestResultAndTokenStatus(permission_status);
---- a/chrome/browser/extensions/api/identity/identity_launch_web_auth_flow_function.cc
-+++ b/chrome/browser/extensions/api/identity/identity_launch_web_auth_flow_function.cc
-@@ -32,8 +32,13 @@
- 
- namespace {
- 
-+// Crest restores the redirect host Chromium gives every extension. Domain
-+// substitution had replaced it with a name no sign-in provider registers,
-+// so a flow could never return to the address `getRedirectURL()` names, and
-+// an extension that signs in again silently at startup asked at every launch.
-+// The flow takes the redirect at the start of its navigation, as in Chrome.
- static const char kChromiumDomainRedirectUrlPattern[] =
--    "https://%s.ch40m1umapp.qjz9zk/";
-+    "https://%s.chromiumapp.org/";
- 
- IdentityLaunchWebAuthFlowFunction::Error WebAuthFlowFailureToError(
-     WebAuthFlow::Failure failure) {
---- a/chrome/renderer/resources/extensions/identity_custom_bindings.js
-+++ b/chrome/renderer/resources/extensions/identity_custom_bindings.js
-@@ -16,6 +16,8 @@
-     if (path[0] !== '/') {
-       path = '/' + path;
-     }
--    return 'https://' + id + '.ch40m1umapp.qjz9zk' + path;
-+    // Crest: Chromium's own redirect host, which launchWebAuthFlow takes
-+    // back; domain substitution had replaced it.
-+    return 'https://' + id + '.chromiumapp.org' + path;
-   });
- });
 --- a/chrome/browser/mac/code_sign_clone_manager.mm
 +++ b/chrome/browser/mac/code_sign_clone_manager.mm
 @@ -23,6 +23,7 @@
@@ -3079,7 +3034,7 @@
    options.new_process_group = true;
 --- a/chrome/browser/ui/autofill/chrome_autofill_client.cc
 +++ b/chrome/browser/ui/autofill/chrome_autofill_client.cc
-@@ -1066,6 +1066,14 @@
+@@ -1040,6 +1040,14 @@
  }
  
  bool ChromeAutofillClient::IsAutofillProfileEnabled() const {
@@ -3104,7 +3059,7 @@
  #include "base/containers/span.h"
  #include "base/functional/callback.h"
  #include "base/notimplemented.h"
-@@ -872,6 +873,14 @@
+@@ -866,6 +867,14 @@
  }
  
  bool ChromePaymentsAutofillClient::IsAutofillPaymentMethodsEnabled() const {
@@ -3119,52 +3074,9 @@
    if (!autofill_payment_methods_supported_ ||
        !prefs::IsAutofillPaymentMethodsEnabled(
            Profile::FromBrowserContext(web_contents()->GetBrowserContext())
---- a/net/cert/cert_verify_proc_blocklist.inc
-+++ b/net/cert/cert_verify_proc_blocklist.inc
-@@ -418,7 +418,39 @@ static constexpr uint8_t
-         // 289ed1676f42b679f2b665bb5a3f25610d9d19ac017beafa46787f1d6022986a.pem
-         {0x36, 0xce, 0x75, 0xed, 0xea, 0x80, 0x6f, 0x09, 0x85, 0x14, 0x56,
-         0x83, 0x29, 0x4e, 0x54, 0xdb, 0xdf, 0xf0, 0x2f, 0xc8, 0x21, 0x87,
--        0x0c, 0xf5, 0x06, 0x7a, 0x30, 0x8d, 0x15, 0x04, 0xbe, 0x3a}
-+        0x0c, 0xf5, 0x06, 0x7a, 0x30, 0x8d, 0x15, 0x04, 0xbe, 0x3a},
-+        // 0164d7ceae5bb909c272af151ff44b1177ae9b47d9424b94f1d9558c30934d19.pem
-+        {0x49, 0xdd, 0x35, 0x3d, 0xc2, 0xb9, 0x19, 0xa3, 0x77, 0x06, 0x45,
-+         0x11, 0x7d, 0x0e, 0x60, 0xc1, 0x61, 0x15, 0xe7, 0xd1, 0xbc, 0x25,
-+         0x9e, 0xef, 0xe7, 0x34, 0xb0, 0x0e, 0xa4, 0x34, 0xfe, 0x5f},
-+        // 42c4accd12c4f59597925e1a08a7a90102608543809308d50ec427e118ba1493.pem
-+        {0xeb, 0xed, 0x64, 0x75, 0xc2, 0xc2, 0xd8, 0x0f, 0xcb, 0x19, 0x9f,
-+         0x3f, 0xe8, 0xdd, 0x6e, 0x6b, 0x3c, 0xe6, 0x0b, 0x77, 0xeb, 0x15,
-+         0xd4, 0xe4, 0x2c, 0x3d, 0xec, 0x0c, 0x6f, 0x5b, 0x51, 0x05},
-+        // 432ec25f0d28de9006d97bf752f17bbb2cd41f669933fcb072d9a1148d0261f3.pem
-+        {0x5c, 0x06, 0x60, 0xa2, 0xb1, 0x64, 0x91, 0x0d, 0x8f, 0xf5, 0x89,
-+         0xc1, 0x8e, 0x14, 0x55, 0x2e, 0x9e, 0x0e, 0xc2, 0x37, 0xdc, 0xef,
-+         0xe2, 0xcb, 0x73, 0x6d, 0x41, 0xa4, 0x81, 0x1f, 0x81, 0xa0},
-+        // 98b896625c0c230adeec3eb2cf6aad5001ecf9156a68644e82374ce5833bc25b.pem
-+        {0x43, 0xbf, 0xfa, 0x19, 0xd6, 0xef, 0x65, 0x14, 0x51, 0xf6, 0x84,
-+         0x1e, 0x01, 0x99, 0x31, 0xe9, 0x6f, 0x6f, 0x2e, 0xae, 0xff, 0x28,
-+         0xab, 0x4b, 0x6f, 0x1c, 0xe4, 0x57, 0x6d, 0xe2, 0x71, 0x7b},
-+        // cb6e15165ac802e9b3f993f16c25d41f4e81c21ebde71ae1b012ac00bf9c7c3f.pem
-+        {0x63, 0xec, 0xef, 0xee, 0x43, 0x1d, 0x49, 0x52, 0x3b, 0xc1, 0x13,
-+         0x6c, 0x4e, 0x72, 0xd0, 0x20, 0x6a, 0x47, 0x70, 0x86, 0xca, 0xf6,
-+         0x06, 0xcd, 0x5c, 0xf0, 0x25, 0x68, 0x6c, 0x10, 0x9c, 0xf8},
-+        // e7568fe6e12331f4fd7de61da4c7559d0f8eb192a218d4741a3ba75184333838.pem
-+        {0xe0, 0x25, 0x4c, 0x7f, 0xcd, 0xc2, 0x65, 0xe2, 0xf0, 0xf8, 0xa4,
-+         0x28, 0xda, 0xbb, 0x75, 0xab, 0x4a, 0xe0, 0x39, 0xb4, 0x87, 0x2d,
-+         0x62, 0xf5, 0xee, 0x57, 0xf0, 0x87, 0x7d, 0x5a, 0x8a, 0x41},
-+        // 4b2460a466f95fd40113bcdcca2ceb29b3b093921de45474da7df48874c630b1.pem
-+        {0x92, 0xc0, 0x63, 0xd6, 0x7e, 0x8f, 0x14, 0xdb, 0x71, 0xd2, 0x88, 0xe1,
-+         0x12, 0x66, 0xff, 0xda, 0xf6, 0x9c, 0xbf, 0x11, 0x5f, 0x7b, 0xab, 0x14,
-+         0xf3, 0xbc, 0x2f, 0x68, 0xd2, 0x5e, 0x0e, 0x30},
-+        // 9e39de2881273acc225a149c72ba3e0f51424963669ab633ee1dc7df5db067b4.pem
-+        {0xec, 0x4f, 0xfa, 0x1a, 0xd0, 0xac, 0x88, 0x08, 0x13, 0x14, 0xb7, 0xaa,
-+         0xff, 0xef, 0x6a, 0x91, 0xf9, 0x7c, 0xd5, 0x72, 0x91, 0xbb, 0x5b, 0xa6,
-+         0x86, 0xc5, 0x41, 0x5f, 0x5e, 0xb4, 0xf6, 0xb6}
- };
- 
- // Hashes of SubjectPublicKeyInfos known to be used for interception by a
 --- a/net/data/ssl/chrome_root_store/root_store.textproto
 +++ b/net/data/ssl/chrome_root_store/root_store.textproto
-@@ -274,12 +274,6 @@ trust_anchors {
+@@ -276,12 +276,6 @@
    ev_policy_oids: "2.23.140.1.1"
  }
  
@@ -3179,10 +3091,12 @@
    sha256_hex: "bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893"
 --- a/net/data/ssl/chrome_root_store/root_store.certs
 +++ b/net/data/ssl/chrome_root_store/root_store.certs
-@@ -1947,61 +1947,6 @@ RQuQ+q7hv53yrlc8pa6yVvSLZUDp/TGBLPQ5Cdjua6e0ph0VpZj3AYHYhX3zUVxx
+@@ -1945,61 +1945,6 @@
+ 6ftjk4BAtcZsCjEozgyfz7MjNYBBjWzEN3uBL4ChQEKF6dk4jeihU80Bv2noWgby
+ RQuQ+q7hv53yrlc8pa6yVvSLZUDp/TGBLPQ5Cdjua6e0ph0VpZj3AYHYhX3zUVxx
  iN66zB+Afko=
- -----END CERTIFICATE-----
- 
+------END CERTIFICATE-----
+-
 -# 86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b
 -Certificate:
 -    Data:
@@ -3236,8 +3150,6 @@
 -hkjOPQQDAwNpADBmAjEAvvNhzwIQHWSVB7gYboiFBS+DCBeQyh+KTOgNG3qxrdWB
 -CUfvO6wIBHxcmbHtRwfSAjEAnbpV/KlK6O3t5nYBQnvI+GDZjVGLVTv7jHvrZQnD
 -+JbNR6iC8hZVdyR+EhCVBCyj
-------END CERTIFICATE-----
--
+ -----END CERTIFICATE-----
+ 
  # bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893
- Certificate:
-     Data:

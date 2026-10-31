@@ -575,8 +575,13 @@ engine.
   other registered engine (**Open Page in WebKit**), recording no choice.
   Both read the registered engines, not what the device offers, so they are
   there before any page has opened on the other engine.
-- **Protected media.** Crest's Chromium carries no Widevine. When a page, or
-  a frame of its own site, asks for Widevine or PlayReady, Chromium reports
+- **Protected media.** Crest's Chromium plays Widevine once the component
+  updater has delivered its module. Video services whose players refuse it,
+  because Chromium's Widevine lacks the verified media path they require,
+  open in an engine with the `protected-media` capability unless the person
+  chose an engine for the site (`ProtectedMediaService`). When a page, or a
+  frame of its own site, asks for a key system Chromium lacks, such as
+  PlayReady or Widevine before its module arrives, Chromium reports
   `ProtectedMediaUnavailable`. The core automatically attempts a move once per
   document to an engine with the `protected-media` capability, which WebKit has
   through the platform's FairPlay. It checks `beforeunload` before moving and

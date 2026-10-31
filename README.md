@@ -39,12 +39,13 @@ When several Spaces should share one set of sign-ins, make them **Sub-Spaces**: 
 
 ## Two engines on Mac
 
-Crest for Mac opens pages in **Chromium** by default. Its engine is built on
-[ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium),
-with Google integrations removed, and runs Chrome Web Store extensions. Any
-website or page can open in **WebKit** instead, which adds Reader, whole-page
-translation, built-in content blocking, and FairPlay video. When a page needs
-protected video, Crest switches to WebKit automatically, respecting any
+Crest for Mac opens pages in **Chromium** by default. Its engine is Chromium
+with Crest's privacy changes, which keep your browsing, form and account data
+away from Google, and runs Chrome Web Store extensions. Any website or page can
+open in **WebKit** instead, which adds Reader, whole-page translation, built-in
+content blocking, and FairPlay video. Chromium plays Widevine video; Netflix,
+Disney+, Max and Prime Video open in WebKit, and a page that needs protected
+video Chromium can't play switches to WebKit automatically, respecting any
 unsaved-changes prompt before moving it. Choose the default engine and
 per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine

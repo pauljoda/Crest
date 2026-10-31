@@ -11,6 +11,7 @@
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "base/timer/timer.h"
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
 #include "content/public/browser/media_player_id.h"
 #include "mojo/public/cpp/bindings/receiver.h"
@@ -37,6 +38,13 @@ class AudioSpectrumTap;
 // frame that set it, with that frame's cookies, so artwork a signed-in site
 // serves only to its session loads too. The image is kept until the page names
 // other artwork, and each report carries it.
+//
+// Crest shows the media the page names for playback with sound. A page names
+// its media for a preview too, as YouTube does for a thumbnail the pointer
+// rests on, and then plays that video muted. So what the page names waits a
+// moment for the player it belongs to: a player that starts with sound shows
+// it, and a video that loads or starts without sound drops it, unless that
+// video later plays with sound. A preview alone never counts as playing.
 class PageMedia final : public media_session::mojom::MediaSessionObserver {
  public:
   using Present = base::RepeatingCallback<void(engine::EnginePresentation)>;
@@ -53,12 +61,19 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   // screen still counts as playing.
   engine::PageMediaActivity Activity() const;
 
-  void PlayerStarted(const content::MediaPlayerId& id, bool has_video);
+  // A player started, stopped, loaded its media or gained or lost sound.
+  // `has_audio` is false for a muted player.
+  void PlayerStarted(const content::MediaPlayerId& id, bool has_video, bool has_audio);
   void PlayerStopped(const content::MediaPlayerId& id);
+  void PlayerChanged(const content::MediaPlayerId& id, bool has_video, bool has_audio);
+  void PlayerDestroyed(const content::MediaPlayerId& id);
   // The page's sound or muting changed.
   void AudioChanged();
   // The page committed a new document, which gets a session identity of its own.
   void DocumentChanged();
+  // The page moved to another address within its document, as a site that
+  // opens a video in place does.
+  void AddressChanged();
   // The page's view left the screen or came back to it.
   void VisibilityChanged(bool visible);
   // The page's video or document entered or left Picture in Picture.
@@ -102,6 +117,11 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
  private:
   // Presents the session as Crest shows it, once Crest issued its document.
   void Publish();
+  // The page named media; it waits for the player it belongs to.
+  void Hold();
+  // Shows what the page named last, or drops it as a preview's.
+  void Show();
+  void Drop(const content::MediaPlayerId& preview);
   // Keeps the artwork the engine fetched for `generation`, unless the page
   // named other artwork since.
   void ArtworkLoaded(uint64_t generation, const SkBitmap& bitmap);
@@ -121,11 +141,30 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   std::optional<std::vector<uint8_t>> artwork_;
   // Counts artwork changes, so a fetch that finishes late is dropped.
   uint64_t artwork_generation_ = 0;
+  // What Crest shows: the media the page named last for playback with sound,
+  // and the generation of its artwork.
+  std::optional<media_session::MediaMetadata> shown_metadata_;
+  std::optional<std::vector<uint8_t>> shown_artwork_;
+  uint64_t shown_artwork_generation_ = 0;
+  // What the page named waits for its player until this fires; meanwhile,
+  // unless a player with sound plays, the playback shown stands.
+  base::OneShotTimer hold_;
+  bool shown_playing_ = false;
+  // The preview whose media the page named last, while that is still what the
+  // page names.
+  std::optional<content::MediaPlayerId> previewed_;
   std::string document_;
   int64_t sequence_ = 0;
   bool seen_active_ = false;
   bool last_playing_ = false;
   std::set<content::MediaPlayerId> playing_videos_;
+  // The players playing now, those of them playing with sound and those
+  // playing as previews, and the players that have played or loaded with sound
+  // in this document.
+  std::set<content::MediaPlayerId> playing_players_;
+  std::set<content::MediaPlayerId> sounding_;
+  std::set<content::MediaPlayerId> previews_;
+  std::set<content::MediaPlayerId> sounded_;
   bool played_before_hidden_ = false;
   // The page left Picture in Picture in the task running now.
   bool leaving_picture_in_picture_ = false;
