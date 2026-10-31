@@ -623,7 +623,7 @@ final class BrowserSidebarReorderState {
 
     /// How far a row in `section` of `space` moves its icon and title in for
     /// the folders around it, as the sidebar lays the row out.
-    private func contentIndent(
+    func contentIndent(
         of section: BrowserSidebarReorderSection, in space: BrowserSpaceRuntimeAssignment
     ) -> CGFloat {
         var depth = 0

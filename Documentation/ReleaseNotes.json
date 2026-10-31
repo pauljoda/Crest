@@ -4685,6 +4685,10 @@
     "touch-folder-height": {
       "category": "improved",
       "message": "On iPhone and iPad, a closed folder is as tall as a tab, and its whole row still opens it."
+    },
+    "selected-folder-tabs-drag-in-place": {
+      "category": "fixed",
+      "message": "Dragging several selected tabs keeps the icon and title of each tab from inside a folder in place as they lift."
     }
   }
 }

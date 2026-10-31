@@ -194,7 +194,8 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 targetShape: lift.shape == .pinnedTile ? .pinnedTile : .row,
                 progress: lift.shape == .pinnedTile ? 1 : 0,
                 rowWidth: rowWidth, pinnedSize: pinnedSize,
-                isSelected: tab.id == selectedTabID, isLoaded: loadedTabIDs.contains(tab.id))
+                isSelected: tab.id == selectedTabID, isLoaded: loadedTabIDs.contains(tab.id),
+                contentIndent: row.contentIndent)
         }
     }
 }
