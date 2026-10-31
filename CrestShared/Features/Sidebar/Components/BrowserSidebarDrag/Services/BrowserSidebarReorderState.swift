@@ -175,7 +175,8 @@ final class BrowserSidebarReorderState {
             owner != landingDepartingOwner, !row.frame.isEmpty, landingSection == nil || landingSection == row.section,
             preview.landing?.frame != row.frame, preview.landing?.isRevealing != true
         {
-            preview.landing = BrowserSidebarReorderLanding(frame: row.frame)
+            preview.landing = BrowserSidebarReorderLanding(
+                frame: row.frame, contentIndent: contentIndent(of: row.section, in: row.space))
             landingPreview = preview
         }
     }
@@ -428,7 +429,11 @@ final class BrowserSidebarReorderState {
         if retainingPreview, constraintMessage == nil, var preview = liftPreview,
             let frame = landingFrame
         {
-            preview.landing = BrowserSidebarReorderLanding(frame: frame)
+            preview.landing = BrowserSidebarReorderLanding(
+                frame: frame,
+                contentIndent: lift.map {
+                    contentIndent(of: resolvedTarget?.section ?? $0.section, in: $0.item.spaceAssignment)
+                } ?? 0)
             landingRowIDs = lift?.rowIDs ?? preview.item.selectionRowIDs
             landingPreview = preview
             landingSessionToken = sessionToken
@@ -611,8 +616,24 @@ final class BrowserSidebarReorderState {
             previewRows: lift.previewRows,
             pinnedTileSize: pinnedSize,
             sidebarBounds: pinned?.frame,
+            contentIndent: contentIndent(of: lift.section, in: lift.item.spaceAssignment),
             constraintMessage: constraintMessage
         )
+    }
+
+    /// How far a row in `section` of `space` moves its icon and title in for
+    /// the folders around it, as the sidebar lays the row out.
+    private func contentIndent(
+        of section: BrowserSidebarReorderSection, in space: BrowserSpaceRuntimeAssignment
+    ) -> CGFloat {
+        var depth = 0
+        var visited: Set<UUID> = []
+        var parent = section.parentFolderID
+        while let id = parent, visited.insert(id).inserted {
+            depth += 1
+            parent = geometry.row(.folder(id), in: space)?.row.section.parentFolderID
+        }
+        return BrowserFolderLayout.rowContentIndent(depth: depth)
     }
 
     private var landingFrame: CGRect? {

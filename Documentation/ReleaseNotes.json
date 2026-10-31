@@ -4657,6 +4657,10 @@
     "folder-opens-without-jump": {
       "category": "fixed",
       "message": "Opening a folder no longer makes the rows below it jump up for a moment before it slides open."
+    },
+    "drag-previews-true-to-row": {
+      "category": "fixed",
+      "message": "A tab dragged out of a folder keeps its icon and title in place, and dragging several pinned tabs a Sub-Space shares with its group shows them under the pointer."
     }
   }
 }

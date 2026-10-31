@@ -37,7 +37,7 @@ struct BrowserRootDragPreviewLayer: View {
     private var splitCardLiftContent: BrowserSplitCardLiftPreviewContent? {
         guard let lift = model.splitCardLift.lift,
             let space = model.browser.shownSpace,
-            let tab = space.tabs.model(lift.tabID)
+            let tab = space.shownTab(lift.tabID)
         else { return nil }
         return BrowserSplitCardLiftPreviewContent(
             favicon: BrowserTabFaviconSubject(tab: tab, image: model.browser.core.state.favicons.icon(of: tab.id)),

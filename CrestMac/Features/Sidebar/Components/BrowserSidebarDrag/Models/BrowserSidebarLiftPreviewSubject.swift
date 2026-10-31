@@ -137,7 +137,7 @@ extension BrowserSidebarReorderItemID {
     ) -> BrowserSidebarSelectionPreviewRow? {
         let tabs: [TabStateModel]
         switch self {
-        case .tab(let id): tabs = space.tabs.model(id).map { [$0] } ?? []
+        case .tab(let id): tabs = space.shownTab(id).map { [$0] } ?? []
         case .splitGroup(let id): tabs = space.splitMembers(of: id)
         case .folder(let id):
             guard let folder = space.folders.model(id) else { return nil }
