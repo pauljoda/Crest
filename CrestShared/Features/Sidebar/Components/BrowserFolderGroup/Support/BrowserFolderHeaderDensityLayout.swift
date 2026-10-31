@@ -16,8 +16,13 @@ private struct BrowserFolderHeaderDensityLayout: ViewModifier {
 
     func body(content: Content) -> some View {
         let metrics = configuration.headerMetrics
-        let height = BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
-            base: CrestLayout.sidebarRowHeight, touch: !metrics.usesFixedRowHeight)
+        let rowHeight = BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale)
+            .rowHeight(base: CrestLayout.sidebarRowHeight, touch: !metrics.usesFixedRowHeight)
+        // A touch header keeps a whole row, the target a finger needs.
+        let height =
+            metrics.usesFixedRowHeight
+            ? BrowserFolderLayout.headerHeight(rowHeight: rowHeight, tabScale: tabScale, minimum: metrics.iconWidth)
+            : rowHeight
         content.frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, configuration.headerLeadingInset)
             .padding(.trailing, metrics.contentTrailingInset)

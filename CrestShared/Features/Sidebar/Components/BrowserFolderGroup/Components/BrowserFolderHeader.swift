@@ -31,7 +31,12 @@ struct BrowserFolderHeader: View {
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         // Inside the folder's padding, as a Split View's header is inside its own.
         .padding(.horizontal, BrowserSidebarMetrics.layerInset + BrowserSidebarMetrics.containerPadding)
-        .padding(.vertical, BrowserSidebarDensity(tabScale).rowSeparation() / 2)
+        // The separation a tab row keeps, so the two stand alike.
+        .padding(
+            .vertical,
+            BrowserSidebarDensity(tabScale).rowSeparation(
+                hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
+        )
         .modifier(
             BrowserTabSelectionTarget(
                 tabID: nil, browser: configuration.browser,

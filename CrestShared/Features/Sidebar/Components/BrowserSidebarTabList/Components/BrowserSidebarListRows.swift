@@ -98,10 +98,10 @@ extension BrowserSidebarListRow: @MainActor Equatable {
     }
 }
 
-/// Steps a row inside a folder in by the folders around it, the rhythm the
-/// folder's own header keeps. A row at a section's top level stays put. Rows
-/// inside a folder stack as they do at the top level; the folder's padding is
-/// what holds them off its edges.
+/// Steps a row inside a folder in by the folders around it: its surface by
+/// the folders' padding, and its icon and title past the folder's own. A row
+/// at a section's top level stays put. Rows inside a folder stack as they do
+/// at the top level; the folder's padding is what holds them off its edges.
 private struct BrowserSidebarFolderRowIndent: ViewModifier {
     let depth: Int
 
@@ -109,6 +109,7 @@ private struct BrowserSidebarFolderRowIndent: ViewModifier {
     func body(content: Content) -> some View {
         if depth > 0 {
             content
+                .environment(\.sidebarRowContentIndent, BrowserFolderLayout.rowContentIndent(depth: depth))
                 .padding(.leading, BrowserFolderLayout.rowLeadingInset(depth: depth - 1))
                 .padding(.trailing, BrowserFolderLayout.nestingIndent)
                 .frame(maxWidth: .infinity)

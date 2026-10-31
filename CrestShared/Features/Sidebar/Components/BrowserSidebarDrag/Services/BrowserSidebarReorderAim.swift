@@ -70,7 +70,7 @@ struct BrowserSidebarReorderAim {
     private func allowsNesting(in zone: BrowserSidebarReorderZone) -> Bool {
         guard case .folder = lift.item, case .section(let section) = zone.target else { return true }
         let startX = layout.sourceFrame.minX + lift.grabOffset.width
-        let extraDepth = max(0, Int((pointer.x - startX) / BrowserFolderLayout.nestingIndent))
+        let extraDepth = max(0, Int((pointer.x - startX) / BrowserFolderLayout.contentIndent))
         return folderDepth(of: section) <= folderDepth(of: lift.section) + extraDepth
     }
 

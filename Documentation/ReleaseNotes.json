@@ -4645,6 +4645,10 @@
     "drag-preview-under-pointer-at-screen-top": {
       "category": "fixed",
       "message": "A pinned tab you drag stays under the pointer when the window sits at the top of the screen, instead of drawing a row or two below it."
+    },
+    "sidebar-folder-cleanup": {
+      "category": "improved",
+      "message": "Sidebar folders indent the tabs and folders they hold, a closed folder is as tall as a tab, tabs deep in nested folders keep rounded corners, and opening a folder that holds open folders slides its contents in smoothly."
     }
   }
 }

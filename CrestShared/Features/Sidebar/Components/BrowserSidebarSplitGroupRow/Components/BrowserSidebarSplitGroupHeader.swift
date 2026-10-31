@@ -13,6 +13,8 @@ struct BrowserSidebarSplitGroupHeader: View {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
+    @Environment(\.sidebarRowContentIndent) private var folderIndent
+
     var body: some View {
         HStack(spacing: configuration.metrics.headerSpacing) {
             BrowserSidebarSplitGroupIcon(configuration: configuration)
@@ -86,7 +88,8 @@ struct BrowserSidebarSplitGroupHeader: View {
             .disabled(!configuration.isAvailableForDisplay)
         }
         .frame(height: configuration.metrics.headerHeight)
-        .padding(.horizontal, configuration.headerLeadingInset)
+        .padding(.leading, configuration.headerLeadingInset + folderIndent)
+        .padding(.trailing, configuration.headerLeadingInset)
         .contentShape(.rect)
         .browserSplitGroupDraggable(
             item: configuration.dragItem,

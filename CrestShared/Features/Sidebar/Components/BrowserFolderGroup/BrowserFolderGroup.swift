@@ -106,6 +106,10 @@ struct BrowserFolderGroup: View {
             BrowserFolderGroupSurface(configuration: configuration, interaction: interaction)
             if showsContents {
                 folderContents(configuration: configuration)
+                    .transition(
+                        .modifier(
+                            active: BrowserFolderContentsReveal(progress: 0),
+                            identity: BrowserFolderContentsReveal(progress: 1)))
             }
         }
         .environment(\.browserInteractionCapabilities, context.capabilities)
@@ -409,6 +413,36 @@ private struct BrowserFolderReorderContainer: ViewModifier {
         else { return false }
         return item.folderID == configuration.folder.id
             && item.spaceID == configuration.spaceID && item.profileID == configuration.profileID
+    }
+}
+
+/// Shows a folder's contents from the top down as the rows below make room for
+/// them, and covers them again from the bottom up as they close, so nothing
+/// below slides across contents still appearing. However deep the contents
+/// go, they arrive as one piece, the way a folder of tabs alone does.
+private struct BrowserFolderContentsReveal: ViewModifier {
+    /// How much of the contents shows, from the top.
+    let progress: CGFloat
+
+    func body(content: Content) -> some View {
+        content.clipShape(BrowserFolderRevealShape(progress: progress))
+    }
+}
+
+/// The part of a folder's contents a reveal shows. It reaches past them by a
+/// selected tab's glow on every side, so once they are all shown it hides
+/// nothing.
+private struct BrowserFolderRevealShape: Shape {
+    var progress: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let reach = rect.insetBy(dx: -BrowserTabSelectionGlow.outset, dy: -BrowserTabSelectionGlow.outset)
+        return Path(CGRect(x: reach.minX, y: reach.minY, width: reach.width, height: reach.height * progress))
     }
 }
 
