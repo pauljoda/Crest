@@ -429,9 +429,10 @@ private struct BrowserFolderContentsReveal: ViewModifier {
     }
 }
 
-/// The part of a folder's contents a reveal shows. It reaches past them by a
-/// selected tab's glow on every side, so once they are all shown it hides
-/// nothing.
+/// The part of a folder's contents a reveal shows. It reaches past their top
+/// and sides by a selected tab's glow, and past their bottom once they are all
+/// shown, so at rest it hides nothing. While they are still coming in, its
+/// bottom edge is the top of the row below.
 private struct BrowserFolderRevealShape: Shape {
     var progress: CGFloat
 
@@ -441,8 +442,12 @@ private struct BrowserFolderRevealShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let reach = rect.insetBy(dx: -BrowserTabSelectionGlow.outset, dy: -BrowserTabSelectionGlow.outset)
-        return Path(CGRect(x: reach.minX, y: reach.minY, width: reach.width, height: reach.height * progress))
+        let glow = BrowserTabSelectionGlow.outset
+        let bottom = rect.minY + rect.height * progress + (progress >= 1 ? glow : 0)
+        return Path(
+            CGRect(
+                x: rect.minX - glow, y: rect.minY - glow, width: rect.width + glow * 2,
+                height: bottom - rect.minY + glow))
     }
 }
 

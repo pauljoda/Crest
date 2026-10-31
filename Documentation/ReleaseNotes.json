@@ -4649,6 +4649,10 @@
     "sidebar-folder-cleanup": {
       "category": "improved",
       "message": "Sidebar folders indent the tabs and folders they hold, a closed folder is as tall as a tab, tabs deep in nested folders keep rounded corners, and opening a folder that holds open folders slides its contents in smoothly."
+    },
+    "nested-folder-opening-smooth": {
+      "category": "fixed",
+      "message": "Opening a folder inside another folder slides its contents in smoothly instead of showing them all at once."
     }
   }
 }
