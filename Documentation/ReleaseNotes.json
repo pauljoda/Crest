@@ -4641,6 +4641,10 @@
     "sub-space-pinned-drag": {
       "category": "fixed",
       "message": "Dragging a pinned tab in a Space whose group shares its pinned tabs works again: the tile lifts under the pointer, the other pins move aside, and it lands where you let go."
+    },
+    "drag-preview-under-pointer-at-screen-top": {
+      "category": "fixed",
+      "message": "A pinned tab you drag stays under the pointer when the window sits at the top of the screen, instead of drawing a row or two below it."
     }
   }
 }
