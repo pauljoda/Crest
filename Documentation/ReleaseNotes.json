@@ -4689,6 +4689,14 @@
     "selected-folder-tabs-drag-in-place": {
       "category": "fixed",
       "message": "Dragging several selected tabs keeps the icon and title of each tab from inside a folder in place as they lift."
+    },
+    "closing-folder-click-through": {
+      "category": "fixed",
+      "message": "A click on a folder that is closing reaches the row sliding up in its place instead of a tab inside the folder."
+    },
+    "selection-split-other-space": {
+      "category": "fixed",
+      "message": "Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them."
     }
   }
 }

@@ -424,8 +424,13 @@ private struct BrowserFolderContentsReveal: ViewModifier {
     /// How much of the contents shows, from the top.
     let progress: CGFloat
 
+    /// A clip leaves hit testing alone, so contents on their way out stop
+    /// taking clicks as they start to close, and a click lands on the row
+    /// that is sliding up over them.
     func body(content: Content) -> some View {
-        content.clipShape(BrowserFolderRevealShape(progress: progress))
+        content
+            .clipShape(BrowserFolderRevealShape(progress: progress))
+            .allowsHitTesting(progress >= 1)
     }
 }
 
