@@ -48,6 +48,17 @@ enum BrowserMediaSessionContentBridge {
           let pageActive = true;
           let scheduled = false;
           let explicitPlaybackQualified = false;
+          // What the page names waits a moment for the player it belongs to. A
+          // site names its media for a preview too, as YouTube does for a
+          // thumbnail the pointer rests on, and then plays that video muted.
+          const holdMilliseconds = 2000;
+          const sounded = new WeakSet();
+          const previews = new WeakSet();
+          let holdTimer = null;
+          let previewed = null;
+          let shown = { title: null, artist: null, album: null };
+          let shownArtworkGeneration = 0;
+          let shownArtworkDataURL = null;
           \#(BrowserMediaPlayerPolicyScript.source)
           let artworkGeneration = 0;
           let artworkSource = null;
@@ -164,6 +175,7 @@ enum BrowserMediaSessionContentBridge {
                     \#(BrowserMediaSessionPageEventDecoder.maximumArtworkDataURLCharacters)
                 || !/^data:image\/(?:png|jpeg|webp);base64,/i.test(dataURL)) return;
             artworkDataURL = dataURL;
+            if (generation === shownArtworkGeneration) shownArtworkDataURL = dataURL;
             post({});
           };
 
@@ -216,6 +228,10 @@ enum BrowserMediaSessionContentBridge {
                 qualifiedElements.delete(element);
                 continue;
               }
+              if (previews.has(element)) {
+                qualifiedElements.delete(element);
+                continue;
+              }
               const source = mediaSource(element);
               const prior = qualifiedElements.get(element);
               if (prior && (prior.source !== source || prior.stream !== element.srcObject)) {
@@ -245,8 +261,48 @@ enum BrowserMediaSessionContentBridge {
           const isAudible = players => players.some(element =>
             !element.paused && !element.ended && !element.muted && element.volume > 0);
 
-          const post = extra => {
+          const show = () => {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+            previewed = null;
             const metadata = session.metadata;
+            shown = {
+              title: cleanText(metadata?.title),
+              artist: cleanText(metadata?.artist),
+              album: cleanText(metadata?.album)
+            };
+            shownArtworkGeneration = artworkGeneration;
+            shownArtworkDataURL = artworkDataURL;
+          };
+          // No player claimed what the page named within the hold, as when the
+          // page names the next song of a stream that plays on, so it shows.
+          const hold = () => {
+            previewed = null;
+            if (holdTimer === null) {
+              holdTimer = setTimeout(() => { show(); post({}); }, holdMilliseconds);
+            }
+          };
+          const hasSound = media => !media.muted && media.volume > 0;
+          // A player with sound shows what the page named for it. A video that
+          // loads or starts without sound, never had any and was never used is a
+          // preview: what the page named just before it is the preview's, until
+          // the person gives that video sound or the page opens it in place.
+          const claim = (media, type) => {
+            if (hasSound(media)) {
+              sounded.add(media);
+              previews.delete(media);
+              if (!media.paused && (holdTimer !== null || previewed === media)) show();
+            } else if (holdTimer !== null && media instanceof HTMLVideoElement
+                && ["loadedmetadata", "play", "playing"].includes(type)
+                && !sounded.has(media) && !interacted.has(media)) {
+              clearTimeout(holdTimer);
+              holdTimer = null;
+              previewed = media;
+              previews.add(media);
+            }
+          };
+
+          const post = extra => {
             const players = currentPlayers();
             const explicit = hasExplicitNonElementPlayback();
             const active = pageActive && (players.length > 0 || explicit);
@@ -263,10 +319,10 @@ enum BrowserMediaSessionContentBridge {
                 location: String(globalThis.location.href).slice(0, 4096),
                 invalidated: false,
                 active,
-                title: cleanText(metadata?.title),
-                artist: cleanText(metadata?.artist),
-                album: cleanText(metadata?.album),
-                artworkDataURL,
+                title: shown.title,
+                artist: shown.artist,
+                album: shown.album,
+                artworkDataURL: shownArtworkDataURL,
                 playbackState,
                 audible: isAudible(players),
                 muted: players.length > 0 && players.every(element => element.muted),
@@ -292,7 +348,10 @@ enum BrowserMediaSessionContentBridge {
                 set(value) {
                   descriptor.set.call(session, value);
                   queueMicrotask(() => {
-                    if (property === "metadata") refreshArtwork();
+                    if (property === "metadata") {
+                      refreshArtwork();
+                      hold();
+                    }
                     post({});
                   });
                 }
@@ -336,6 +395,11 @@ enum BrowserMediaSessionContentBridge {
             if (!(media instanceof HTMLMediaElement)) return;
             if (["play", "playing"].includes(event.type)) didObservePlayback = true;
             if (event.type === "emptied" || event.type === "ended") qualifiedElements.delete(media);
+            if (event.type === "emptied") {
+              sounded.delete(media);
+              previews.delete(media);
+            }
+            claim(media, event.type);
             if (knownElements.size < 32 || knownElements.has(media)) knownElements.add(media);
             post({});
           };
@@ -386,16 +450,22 @@ enum BrowserMediaSessionContentBridge {
           };
           document.addEventListener('pointerdown', observeInteraction, true);
           document.addEventListener('keydown', observeInteraction, true);
+          // Opening the video a preview showed may name nothing new, so what the
+          // page named for the preview waits for its player again.
+          const addressChanged = () => {
+            if (previewed) hold();
+            schedule();
+          };
           for (const name of ['pushState', 'replaceState']) {
             const original = history[name];
             history[name] = function(...args) {
               const result = Reflect.apply(original, this, args);
-              schedule();
+              addressChanged();
               return result;
             };
           }
-          addEventListener('popstate', schedule);
-          addEventListener('hashchange', schedule);
+          addEventListener('popstate', addressChanged);
+          addEventListener('hashchange', addressChanged);
           addEventListener('resize', schedule);
           document.addEventListener('visibilitychange', schedule);
 
@@ -454,6 +524,7 @@ enum BrowserMediaSessionContentBridge {
           addEventListener("pageshow", () => { pageActive = true; schedule(); });
           queueMicrotask(() => {
             refreshArtwork();
+            show();
             post({});
           });
         })();

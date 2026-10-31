@@ -4653,6 +4653,10 @@
     "chromium-webrtc-udp": {
       "category": "fixed",
       "message": "Calls in Chromium can use UDP again, so they connect faster and sound better, while sites still can't see your device's local network addresses."
+    },
+    "media-widget-ignores-previews": {
+      "category": "fixed",
+      "message": "The sidebar's media controls and Now Playing keep showing what you play when a site previews another video under the pointer, as YouTube does on thumbnails."
     }
   }
 }
