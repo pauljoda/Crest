@@ -6,48 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.114</title>
-            <pubDate>Mon, 26 Oct 2026 15:41:39 +0000</pubDate>
+            <title>0.8.117</title>
+            <pubDate>Sat, 31 Oct 2026 15:03:20 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1355</sparkle:version>
-            <sparkle:shortVersionString>0.8.114</sparkle:shortVersionString>
+            <sparkle:version>1440</sparkle:version>
+            <sparkle:shortVersionString>0.8.117</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 19 user-facing changes.
-
 ### New
 
-- Click the Space in a Quick Window’s address bar to switch Spaces. The page reloads in the Space you choose, with that Space’s cookies and passwords, and Crest remembers the choice for that site.
-- Finished downloads can be dragged out of the Downloads list and dropped into Finder or another app, like any file.
-- Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in.
-- Site Controls can clear the open site's cookies or its cache. Clearing cookies signs you out of the site and removes everything it stored in that Space, including service workers and what sites embedded in it stored there. Both are also in the command palette and, on iPhone and iPad, the page menu.
-- Each Space's Privacy settings list the sites that keep data, with Remove and Remove All, and can clear history, cookies and site data, and cached files from the last hour up to all time.
+- Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data.
+- The Spaces of a group show their primary's pinned tabs, and one pinned tab opens the same page in each. Turn on Separate Pinned Tabs for each to show its own.
+- Deleting a Space that leads Sub-Spaces asks which of them keeps the group, with its sign-ins, history, passwords and pinned tabs, or deletes the whole group. Locking any Space of a group locks the group.
+- Open Link in opens a link in a Quick Window in another Space's session, and Site Controls can open the current page in another Space, for the same site under another account. Keep moves it into that Space.
+- Importing from Arc brings the Spaces of one Arc profile as one group, and importing from Zen brings a profile's workspaces as one. The review outlines each group and can bring a Space in on its own.
 
 ### Improved
 
-- Pressing Command-T while the command bar is open closes it.
-- The floating sidebar stays open when the pointer drifts just past its edge, and hides once the pointer moves further into the page.
-
-### Fixed
-
-- Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it.
-- Pressing Shift-Return in Find moves to the previous match.
-- On iPad with a keyboard, pressing Tab in a webpage's form no longer switches to another Space.
-- Dragging across a Quick Window’s address field selects its text instead of moving the window. The space around the field still moves the window.
-- On a Start Page, Command-T closes an open command bar and puts the cursor back in the Start Page field.
+- On Mac, a browser window responds sooner when an alert closes and when the window comes back to the front.
+- Devices that run an earlier Crest keep syncing and show each Sub-Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices.
+- The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour.
+- Importing from Arc or Zen keeps Spaces that shared sign-ins together. When one of them joins a Space you already have, the rest become Sub-Spaces of that Space's group, Zen workspaces that share a container come in as a group of their own, and imported passwords are saved once for the group.
+- Moving between Spaces in setup's import review is smoother, setup's animations are quicker, and each Space in a group shows which group it joins, with room for Separate.
+- Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c27d743b929d43914e3a3d5daf8051871d0a1440...a6f0f0c35427c5cf9029a1f01bd47d20ea3b42a6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.114-2026-10-26-1355-r355.1/Installer-Crest-0.8.114-nightly-2026-10-26-a6f0f0c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/a6f0f0c35427c5cf9029a1f01bd47d20ea3b42a6...e51998cae6272a8d3e8ce10c8a7f86e6c3427f64) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.117-2026-10-31-1440-r440.1/Installer-Crest-0.8.117-nightly-2026-10-31-e51998c-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.114-2026-10-26-1355-r355.1/Installer-Crest-0.8.114-nightly-2026-10-26-a6f0f0c-arm64.dmg" length="220049042" type="application/octet-stream" sparkle:edSignature="0L6bhXYMaakTmPIb38itnpxYF71ommI4u5KxWjT5O0RAOlXXYRk+3V1jkQPQr4ytS27JutG0PrzosfSTyNAWBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.117-2026-10-31-1440-r440.1/Installer-Crest-0.8.117-nightly-2026-10-31-e51998c-arm64.dmg" length="220482194" type="application/octet-stream" sparkle:edSignature="hWBXK3YFkUXSlx0vZvGUutIw51eMSVQzXxMZGta4vY6m1izRRNBXLJ7V1lTxLCDlqQMhoTbnynQFGog/bZfkDQ=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -133,6 +127,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: eypDOfoxpOKAL4bFQdrETipa2IRVSkdnuFmnPRmfDhpT2tBOUv+C4WAaocizISUCd7ZAQL93AfpRdQvyMpAhDg==
-length: 10005
+edSignature: htHWvaiEbA4vrF+miV65CuKPHmi6ukQZV5lBNTiG8hx4ZwczLvzjhR5CKHWskyGIPkil0FzBxARpxcoaJlcSDw==
+length: 10515
 -->
