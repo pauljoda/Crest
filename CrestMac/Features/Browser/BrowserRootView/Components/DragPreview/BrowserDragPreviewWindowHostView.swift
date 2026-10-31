@@ -79,15 +79,21 @@ final class BrowserDragPreviewWindowHostView: NSView {
             y: sourceFrame.maxY - drawingBounds.maxY,
             width: drawingBounds.width, height: drawingBounds.height)
         let frame = sourceFrame.union(previewFrame)
-        let canvasFrame = CGRect(
-            x: sourceFrame.minX - frame.minX, y: frame.maxY - sourceFrame.maxY,
-            width: sourceFrame.width, height: sourceFrame.height)
         let panel = panel ?? makePanel(for: parent)
+        panel.appearance = parent.effectiveAppearance
+        if panel.frame != frame {
+            panel.setFrame(frame, display: false)
+        }
+        // AppKit keeps a window's top edge below the menu bar, so a panel
+        // asked to reach above it, as one around a pinned tab near the top of
+        // the screen is, sits lower than asked. The canvas follows where the
+        // panel is, or the preview would draw that far below the pointer.
         if let presentation {
             presentation.content = content
-            presentation.canvasFrame = canvasFrame
+            presentation.canvasFrame = Self.canvasFrame(of: sourceFrame, in: panel.frame)
         } else {
-            let presentation = BrowserDragPreviewWindowPresentation(content: content, canvasFrame: canvasFrame)
+            let presentation = BrowserDragPreviewWindowPresentation(
+                content: content, canvasFrame: Self.canvasFrame(of: sourceFrame, in: panel.frame))
             presentation.onSidebarLandingComplete = { [weak self] id in self?.onSidebarLandingComplete(id) }
             presentation.onSidebarLandingArrived = { [weak self] id in self?.onSidebarLandingArrived(id) }
             self.presentation = presentation
@@ -97,14 +103,19 @@ final class BrowserDragPreviewWindowHostView: NSView {
             panel.contentView = hostingView
             self.hostingView = hostingView
         }
-        panel.appearance = parent.effectiveAppearance
-        if panel.frame != frame {
-            panel.setFrame(frame, display: false)
-        }
         if panel.parent !== parent {
             hostingView?.layoutSubtreeIfNeeded()
             parent.addChildWindow(panel, ordered: .above)
+            presentation?.canvasFrame = Self.canvasFrame(of: sourceFrame, in: panel.frame)
         }
+    }
+
+    /// Where the parent's content area, at `sourceFrame` on screen, lies in a
+    /// panel at `panelFrame`, from the panel's top-left corner.
+    private static func canvasFrame(of sourceFrame: CGRect, in panelFrame: CGRect) -> CGRect {
+        CGRect(
+            x: sourceFrame.minX - panelFrame.minX, y: panelFrame.maxY - sourceFrame.maxY,
+            width: sourceFrame.width, height: sourceFrame.height)
     }
 
     /// The parent's content area, in the parent's own coordinates.

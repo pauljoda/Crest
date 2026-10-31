@@ -12,7 +12,7 @@ struct BrowserSidebarReorderAim {
     let pinned: (layout: BrowserPinnedTabReorderLayout, frame: CGRect, emptyHeight: CGFloat)?
     let zones: [BrowserSidebarReorderZone]
     let rows: [BrowserSidebarReorderItemID: BrowserSidebarReorderGeometry.RegisteredRow]
-    let splitCards: [UUID: BrowserSidebarReorderGeometry.SplitCard]
+    let splitCards: [BrowserSidebarReorderGeometry.SplitCard]
 
     func target(previousTarget: BrowserSidebarReorderTarget?) -> BrowserSidebarReorderTarget? {
         let available = zones.filter { !$0.frame.isEmpty && allowsNesting(in: $0) }
@@ -70,7 +70,7 @@ struct BrowserSidebarReorderAim {
     private func allowsNesting(in zone: BrowserSidebarReorderZone) -> Bool {
         guard case .folder = lift.item, case .section(let section) = zone.target else { return true }
         let startX = layout.sourceFrame.minX + lift.grabOffset.width
-        let extraDepth = max(0, Int((pointer.x - startX) / BrowserFolderLayout.nestingIndent))
+        let extraDepth = max(0, Int((pointer.x - startX) / BrowserFolderLayout.contentIndent))
         return folderDepth(of: section) <= folderDepth(of: lift.section) + extraDepth
     }
 
@@ -89,14 +89,14 @@ struct BrowserSidebarReorderAim {
         -> BrowserSidebarReorderTarget?
     {
         // Departing Space cards may remain registered until their transition finishes.
-        let cards = splitCards.filter { $0.value.space == assignment && !$0.value.frame.isEmpty }
+        let cards = splitCards.filter { $0.space == assignment && !$0.frame.isEmpty }
         guard !cards.isEmpty else { return nil }
         return BrowserSidebarReorderTarget(
             kind: .splitInsert(
                 assignment: assignment,
                 index: BrowserSplitColumnLayout.insertionIndex(
                     at: pointer,
-                    orderedCardFrames: BrowserSplitColumnLayout.orderedCardFrames(cards.values.map(\.frame)))
+                    orderedCardFrames: BrowserSplitColumnLayout.orderedCardFrames(cards.map(\.frame)))
             ))
     }
 }
