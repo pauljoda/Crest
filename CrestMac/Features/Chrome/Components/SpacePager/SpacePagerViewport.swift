@@ -461,6 +461,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             let target = assignment(for: destination)
         else { return false }
         let offset = settlingOffset(for: origin, during: current) ?? visibleOffset(for: origin, during: current)
+        let holdsBand = heldBand != nil
         gesture.cancelCurrentGesture()
         stopPresentationSampling()
         stopHostAnimations()
@@ -476,6 +477,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         prepareHosts(around: heading, retaining: destination, refreshContent: false)
         positionHosts()
         updateAccessibility()
+        // The page the slide left shows the heading Space's band only where
+        // the slide held one, so only then can the new slide hold it too.
+        if holdsBand { holdSharedBand() }
         settleMotion(to: destination)
         return true
     }

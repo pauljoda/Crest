@@ -24,6 +24,7 @@ struct MobileBrowserSpacePage: View {
     let compactPageIsFullyPresented: Bool
 
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         if let listContext {
@@ -33,6 +34,7 @@ struct MobileBrowserSpacePage: View {
 
     private func content(_ listContext: BrowserSidebarListContext) -> some View {
         let (sharesPinsBefore, sharesPinsAfter) = (sharesPins(with: -1), sharesPins(with: 1))
+        let layoutDirection = layoutDirection
         return VStack(spacing: 0) {
             // The bounded pinned grid keeps its intrinsic height. Compressing
             // its wrapper when the keyboard appears lets fixed-height tiles
@@ -45,8 +47,11 @@ struct MobileBrowserSpacePage: View {
                 // The pinned tabs a neighbouring Space shows too stay still
                 // while the strip pages to it, and one of the two draws them.
                 // The pager's own scroll offset moves them, with no update.
+                // Frames are physical and offsets follow the layout
+                // direction, so the offset is read along the reading order.
                 .visualEffect { content, proxy in
-                    let offset = proxy.frame(in: .scrollView(axis: .horizontal)).minX
+                    let offset = layoutDirection.semanticHorizontalTranslation(
+                        proxy.frame(in: .scrollView(axis: .horizontal)).minX)
                     let held = offset < 0 ? sharesPinsAfter : offset > 0 && sharesPinsBefore
                     return
                         content
