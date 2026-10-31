@@ -21,7 +21,7 @@ For broader filter-list coverage, install a content-blocking extension in the Sp
 
 ## Malicious sites and downloads
 
-Crest's Chromium build keeps Google services disabled and does not include Google Safe Browsing or another built-in site and download reputation service. It cannot warn about every known phishing site or malicious download. Certificate checks, Chromium's sandbox, and warnings about executable or insecure downloads remain in place. Those checks do not determine whether a file is malware, and a completed download is not a safety verdict.
+Crest's Chromium build doesn't use Google Safe Browsing or another site and download reputation service, so it cannot warn about every known phishing site or malicious download. Certificate checks, with revocation lists Crest keeps up to date, Chromium's sandbox, and warnings about executable or insecure downloads remain in place. Those checks do not determine whether a file is malware, and a completed download is not a safety verdict.
 
 ## Site permissions
 
@@ -44,7 +44,7 @@ Screen sharing asks what to share each time. You can block it for a site, but ca
 
 Allow the site in Crest and allow Crest in macOS notification settings to receive notifications. On Mac, **Settings → Privacy → System permissions** shows whether macOS allows it. Document notifications belong to their open page. Chromium also supports local service-worker and extension notifications while Crest runs, including a service worker's notification after its tab closes. Private profiles do not deliver these background notifications. Locking a Space or revoking its site permission withdraws notifications it can no longer show.
 
-Remote Web Push delivery is not available in this Google-free Chromium build. Local service-worker notifications do not mean that a site can receive server pushes or wake Crest after it quits.
+Remote Web Push delivery is not available in Crest's Chromium build: it needs Google's push service, which gives the browser a persistent identity. Local service-worker notifications do not mean that a site can receive server pushes or wake Crest after it quits.
 
 ## Reset a site
 

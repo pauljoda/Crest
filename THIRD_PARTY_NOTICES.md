@@ -6,7 +6,7 @@ Crest ships these third-party runtime components:
 | --- | --- | --- | --- |
 | [Sparkle](https://github.com/sparkle-project/Sparkle) | 2.9.5 | Signed software updates on macOS | MIT-style license with bundled BSD, MIT, and zlib-style notices |
 | [.NET runtime](https://github.com/dotnet/runtime) (Native AOT) | 10.0.5 | Crest's core, compiled ahead of time into every app | MIT, with bundled third-party notices |
-| [Chromium](https://www.chromium.org/), built with [ungoogled-chromium-macos](https://github.com/ungoogled-software/ungoogled-chromium-macos) | 152.0.7977.82 | The Chromium engine in Crest's Chromium build for macOS | BSD-3-Clause, with bundled third-party licenses |
+| [Chromium](https://www.chromium.org/), with Crest's patches, some adapted from [ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium) | 156.0.8078.80 | The Chromium engine in Crest's Chromium build for macOS | BSD-3-Clause, with bundled third-party licenses |
 
 The complete notices are preserved in
 [`ThirdParty/Sparkle-LICENSE.txt`](ThirdParty/Sparkle-LICENSE.txt),

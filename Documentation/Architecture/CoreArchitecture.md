@@ -268,9 +268,13 @@ address.
 
 ### Protected media fallback
 
-Crest's Chromium has no Widevine. WebKit plays FairPlay through the system's
-own content decryption, so a page whose video needs DRM can move to WebKit.
-Crest licenses nothing for this: it uses the platform's WebKit.
+Crest's Chromium plays Widevine once its module has downloaded, but not for
+services that require Widevine's verified media path, which only Google
+Chrome's signature carries; `ProtectedMediaService` names those, and their
+sites open in WebKit unless the person chose an engine. WebKit plays FairPlay
+through the system's own content decryption, so a page whose video needs a key
+system Chromium lacks can also move to WebKit. Crest licenses nothing for this:
+it uses the platform's WebKit.
 
 1. A page asks for a key system Chromium cannot provide. The Chromium binding
    reports `ProtectedMediaUnavailable(page, keySystem)`.

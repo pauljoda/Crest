@@ -14,8 +14,11 @@ import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 
 import chromium_engine
@@ -24,11 +27,12 @@ REPO = Path(__file__).resolve().parents[2]
 ENGINE = Path("CrestEngines/Chromium")
 # The directory the workspace's Actions runner works in.
 RUNNER_WORK = "runner-work"
-TAG = re.compile(r"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)\.([0-9]+)")
+VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")
 # A prepared source directory is named by its preparation key's first 20 hex digits.
 SOURCE_NAME = re.compile(r"[0-9a-f]{20}")
-PREPARATION_FIELDS = ("chromium", "ungoogledMac", "ungoogled", "inputs", "patches", "crestPatches", "esbuild",
-                      "typescript")
+PREPARATION_FIELDS = ("chromium", "dependencies", "cipd", "crestPatches")
+ARCHIVE = "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
+CIPD = "https://chrome-infra-packages.appspot.com/prpc/cipd.Repository/ResolveVersion"
 
 
 def run(*args, cwd=None, capture=False):
@@ -52,34 +56,33 @@ def write_json(path, value):
     temporary.replace(path)
 
 
-def release_version(tag):
-    match = TAG.fullmatch(tag)
-    if not match:
-        raise ValueError(f"Not a supported upstream release tag: {tag}")
-    return tuple(map(int, match[1].split("."))) + (int(match[2]), int(match[3]))
+def release_version(version):
+    if not VERSION.fullmatch(version):
+        raise ValueError(f"Not a Chromium version: {version}")
+    return tuple(map(int, version.split(".")))
 
 
 def select_update(current, releases, allow_major=False):
+    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed."""
     current_version = release_version(current)
-    candidates = [release["tag_name"] for release in releases
-                  if not release.get("draft") and not release.get("prerelease")
-                  and TAG.fullmatch(release["tag_name"])
-                  and release_version(release["tag_name"]) > current_version]
-    eligible = [tag for tag in candidates
-                if allow_major or release_version(tag)[0] == current_version[0]]
+    candidates = [version for version in releases
+                  if VERSION.fullmatch(version) and release_version(version) > current_version]
+    eligible = [version for version in candidates
+                if allow_major or release_version(version)[0] == current_version[0]]
     return {
         "current": current,
         "candidate": max(eligible, key=release_version) if eligible else None,
         "latest": max(candidates, key=release_version) if candidates else current,
-        "majorReviewRequired": any(release_version(tag)[0] > current_version[0] for tag in candidates),
+        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in candidates),
     }
 
 
-def upstream_releases(repository):
-    # Paginate: latest can be a new milestone while our milestone still receives fixes.
-    pages = json.loads(run("gh", "api", "--paginate", "--slurp",
-                           f"repos/{repository}/releases?per_page=100", capture=True))
-    return [release for page in pages for release in page]
+def upstream_releases(policy):
+    """Chrome's releases on the policy's channel and platform, newest first, from chromiumdash."""
+    upstream = policy["upstream"]
+    query = urllib.parse.urlencode({"channel": upstream["channel"], "platform": upstream["platform"], "num": 50})
+    with urllib.request.urlopen(f"{upstream['releases']}?{query}", timeout=60) as response:
+        return [release["version"] for release in json.load(response)]
 
 
 def preparation_key(repo, lock):
@@ -128,20 +131,6 @@ def prune_sources(root, keep):
     return removed
 
 
-def clone_recipe(destination, lock):
-    if not destination.exists():
-        run("git", "init", destination)
-        run("git", "-C", destination, "remote", "add", "origin", lock["ungoogledMac"]["repository"])
-        run("git", "-C", destination, "fetch", "--depth=1", "origin", lock["ungoogledMac"]["commit"])
-        run("git", "-C", destination, "checkout", "--detach", "FETCH_HEAD")
-        run("git", "-C", destination, "submodule", "update", "--init", "--depth=1")
-    for relative, expected in ((".", lock["ungoogledMac"]["commit"]),
-                               ("ungoogled-chromium", lock["ungoogled"]["commit"])):
-        actual = run("git", "-C", destination / relative, "rev-parse", "HEAD", capture=True).strip()
-        if actual != expected:
-            raise ValueError(f"Wrong upstream commit in {destination / relative}")
-
-
 def restore_host_base(source, previous, desired):
     # A legacy build may already have installed the desired reviewed patch
     # without updating our marker. Accept that exact state, but no local edits.
@@ -155,7 +144,7 @@ def restore_host_base(source, previous, desired):
         if not (source / name).is_file() or sha256(source / name) != hashes["after"]:
             raise ValueError(f"Locally modified host source: {name}")
     subprocess.run(["patch", "--batch", "--fuzz=0", "-R", "-p1"],
-                   input=previous["patch"], cwd=source, text=True, check=True)
+                   input=chromium_engine.reversed_patch(previous["patch"]), cwd=source, text=True, check=True)
 
 
 class Workspace:
@@ -165,26 +154,25 @@ class Workspace:
         self.lock = read_json(repo / ENGINE / "source.lock.json")
         self.key = preparation_key(repo, self.lock)
         self.directory = self.root / "sources" / self.key[:20]
-        self.upstream = self.directory / "upstream"
-        self.source = self.upstream / "build/src"
+        self.source = self.directory / "src"
+        self.downloads = self.root / "downloads"
 
     def script(self, name, *args, capture=False):
         return run(sys.executable, self.repo / "Scripts/control-plane" / name, *args, capture=capture)
 
     def prepare(self):
         self.directory.mkdir(parents=True, exist_ok=True)
-        clone_recipe(self.upstream, self.lock)
-        self.script("prepare-chromium.py", "--upstream", self.upstream, "--verify-only")
         marker = self.directory / "prepared.json"
         if marker.exists():
             if read_json(marker)["preparationKey"] != self.key or not (self.source / "out/CrestBaseline/gn").is_file():
                 raise ValueError("Prepared workspace is incomplete or has different inputs")
-        elif self.source.exists():
-            raise ValueError(f"Incomplete preparation at {self.source}. Inspect it before removing or resuming it.")
+            self.script("prepare-chromium.py", "--source", self.source, "--verify-only")
+        elif self.source.exists() or self.source.with_name("src.partial").exists():
+            raise ValueError(f"Incomplete preparation at {self.directory}. Inspect it before removing or resuming it.")
         else:
             if shutil.disk_usage(self.directory).free < 50 * 1024**3:
                 raise ValueError("A fresh Chromium source preparation needs at least 50 GiB free; existing builds are retained")
-            self.script("prepare-chromium.py", "--upstream", self.upstream)
+            self.script("prepare-chromium.py", "--source", self.source, "--downloads", self.downloads)
             write_json(marker, {"preparationKey": self.key})
 
     def apply_host(self):
@@ -193,11 +181,11 @@ class Workspace:
                for line in processes.splitlines() if line.split()):
             raise ValueError("Wait for the active Chromium build before changing the host")
         installed = self.directory / "host.json"
-        patch = self.repo / ENGINE / "Patches/native-host.patch"
+        patch = chromium_engine.host_patch(self.repo)
         inputs = read_json(self.repo / ENGINE / "host-inputs.json")
         if installed.exists():
             previous = read_json(installed)
-            if previous["patch"] != patch.read_text():
+            if previous["patch"] != patch:
                 restore_host_base(self.source, previous, inputs)
             current_files = {p.relative_to(self.repo / ENGINE / "Overlay").as_posix()
                              for p in (self.repo / ENGINE / "Overlay").rglob("*") if p.is_file()}
@@ -210,7 +198,7 @@ class Workspace:
         self.script("apply-chromium-host.py", "--source", self.source, "--apply")
         overlay = {p.relative_to(self.repo / ENGINE / "Overlay").as_posix(): sha256(p)
                    for p in (self.repo / ENGINE / "Overlay").rglob("*") if p.is_file()}
-        write_json(installed, {"patch": patch.read_text(), "inputs": inputs, "overlay": overlay})
+        write_json(installed, {"patch": patch, "inputs": inputs, "overlay": overlay})
 
     def build(self, sdk, ninja, jobs, reserve):
         self.prepare()
@@ -289,16 +277,11 @@ def performance_configuration_matches(source, lock, sdk=None):
             values[match[1]] = json.loads(match[2])
         return values
 
-    upstream = source.parent.parent
     try:
         values = assignments((source / "out/CrestBaseline/args.gn").read_text())
-        expected_flags = assignments((upstream / "ungoogled-chromium/flags.gn").read_text())
-        expected_flags.update(assignments((upstream / "flags.macos.gn").read_text()))
     except (ValueError, OSError):
         return False
-    for name in set(lock["developmentBuildArguments"]) | set(lock["performanceBuildArguments"]):
-        expected_flags.pop(name, None)
-    expected_flags.update(lock["performanceBuildArguments"])
+    expected_flags = {**lock["buildArguments"], **lock["performanceBuildArguments"]}
     actual_flags = {name: value for name, value in values.items() if name not in ("mac_sdk_path", "pgo_data_path")}
     if actual_flags != expected_flags:
         return False
@@ -341,13 +324,12 @@ def download_profile(root, inputs):
 
 
 def refresh_host_inputs(repo, source, installed=None):
-    """Check unchanged Crest hunks without fuzz before pinning new upstream bytes."""
+    """Check the host patches apply without fuzz before pinning new upstream bytes."""
     host = repo / ENGINE
-    patch = host / "Patches/native-host.patch"
-    names = re.findall(r"^--- a/(.+)$", patch.read_text(), re.MULTILINE)
-    outputs = re.findall(r"^\+\+\+ b/(.+)$", patch.read_text(), re.MULTILINE)
-    if not names or names != outputs or len(set(names)) != len(names):
-        raise ValueError("Host patch must modify each existing file exactly once")
+    patch = chromium_engine.host_patch(repo)
+    names = list(dict.fromkeys(name for name, _ in chromium_engine.patch_sections(patch)))
+    if not names:
+        raise ValueError("The host patches change no files")
     hashes = {}
     with tempfile.TemporaryDirectory(prefix="host-refresh-") as temporary:
         root = Path(temporary)
@@ -367,89 +349,107 @@ def refresh_host_inputs(repo, source, installed=None):
             # A retried update may already have its host installed. Reconstruct
             # pristine inputs in the temporary copy, leaving the live build intact.
             subprocess.run(["patch", "--batch", "--fuzz=0", "-R", "-p1"],
-                           input=previous["patch"], cwd=root, text=True, check=True)
+                           input=chromium_engine.reversed_patch(previous["patch"]), cwd=root, text=True, check=True)
         for name in names:
-            destination = root / name
-            hashes[name] = {"before": sha256(destination)}
-        run("patch", "--batch", "--fuzz=0", "--forward", "-p1", "--input", patch, cwd=root)
+            hashes[name] = {"before": sha256(root / name)}
+        subprocess.run(["patch", "--batch", "--fuzz=0", "--forward", "-p1"], input=patch, cwd=root, text=True, check=True)
         for name in names:
             hashes[name]["after"] = sha256(root / name)
     write_json(host / "host-inputs.json", hashes)
 
 
-def candidate_lock(repo, root, tag):
-    """Resolve a released upstream recipe; do not modify the running build."""
-    release_version(tag)
+def resolve_cipd(package, version):
+    """The SHA-256 instance digest CIPD holds for `package` at `version`."""
+    request = urllib.request.Request(CIPD, data=json.dumps({"package": package, "version": version}).encode(),
+                                     headers={"Content-Type": "application/json", "Accept": "application/json"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        # pRPC prefixes its JSON with an anti-XSSI line.
+        instance = json.loads(response.read().decode().split("\n", 1)[1])["instance"]
+    if instance["hashAlgo"] != "SHA256":
+        raise ValueError(f"CIPD returned an unexpected digest for {package}")
+    return instance["hexDigest"]
+
+
+def deps_cipd(deps_text, prefix):
+    """{checkout path: (package, version)} for the CIPD packages a DEPS file pins on this host."""
+    scope = {}
+    exec(deps_text, {"Var": lambda name: "{" + name + "}", "Str": str}, scope)
+    variables = scope.get("vars", {})
+    packages = {}
+    for path, dependency in scope["deps"].items():
+        if isinstance(dependency, dict) and dependency.get("dep_type") == "cipd":
+            for item in dependency["packages"]:
+                version = item["version"].format(**variables) if item["version"].startswith("{") else item["version"]
+                package = item["package"].replace("${{platform}}", "mac-arm64")
+                packages[prefix + path] = (package, version)
+    return packages
+
+
+def candidate_lock(repo, root, version):
+    """The source lock for Chrome `version`, resolved from its own DEPS; the running build is untouched."""
     lock = read_json(repo / ENGINE / "source.lock.json")
-    policy = read_json(repo / ENGINE / "fork.json")
-    if release_version(tag) <= release_version(lock["ungoogledMac"]["tag"]):
+    if release_version(version) <= release_version(lock["chromium"]["version"]):
         raise ValueError("Upstream updates must advance the pinned release")
-    recipe = root / "recipes" / tag
-    if not recipe.exists():
-        run("git", "clone", "--depth=1", "--branch", tag, "--recurse-submodules", "--shallow-submodules",
-            f"https://github.com/{policy['upstreamRepository']}.git", recipe)
-    if run("git", "-C", recipe, "status", "--porcelain", capture=True).strip():
-        raise ValueError("Upstream recipe has local changes")
-    commit = run("git", "-C", recipe, "rev-parse", "HEAD", capture=True).strip()
-    tagged = run("git", "-C", recipe, "rev-parse", f"{tag}^{{commit}}", capture=True).strip()
-    if commit != tagged:
-        raise ValueError("Recipe is not at the requested upstream tag")
-    uc = recipe / "ungoogled-chromium"
-    version = (uc / "chromium_version.txt").read_text().strip()
-    if version != TAG.fullmatch(tag)[1]:
-        raise ValueError("Upstream Chromium version and tag differ")
-    lock["ungoogledMac"] = {"repository": f"https://github.com/{policy['upstreamRepository']}.git",
-                            "tag": tag, "commit": commit}
-    lock["ungoogled"]["commit"] = run("git", "-C", uc, "rev-parse", "HEAD", capture=True).strip()
-    url = f"https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
-    with urllib.request.urlopen(url + ".hashes", timeout=120) as response:
-        manifest = response.read().decode()
+    url = ARCHIVE.format(version=version)
+    try:
+        with urllib.request.urlopen(url + ".hashes", timeout=120) as response:
+            manifest = response.read().decode()
+    except urllib.error.HTTPError as error:
+        raise ValueError(f"Chromium has not published the {version} source archive yet") from error
     checksums = re.findall(r"^sha256\s+([a-f0-9]{64})\s+(\S+)\s*$", manifest, re.MULTILINE)
     if len(checksums) != 1 or checksums[0][1] != url.rsplit("/", 1)[1]:
         raise ValueError("Source manifest does not identify the requested archive")
     lock["chromium"] = {"version": version, "sourceArchive": url,
                         "hashManifest": manifest, "sourceArchiveSha256": checksums[0][0]}
-    lock["inputs"] = {name: sha256(recipe / name) for name in lock["inputs"]}
-    patches = {}
-    for relative in ("patches", "ungoogled-chromium/patches"):
-        for line in (recipe / relative / "series").read_text().splitlines():
-            name = line.split("#", 1)[0].strip()
-            if name:
-                if name.startswith("/") or ".." in Path(name).parts:
-                    raise ValueError("Invalid upstream patch path")
-                patches[f"{relative}/{name}"] = sha256(recipe / relative / name)
-    lock["patches"] = patches
+    archive = root / "downloads" / url.rsplit("/", 1)[1]
+    if not archive.is_file() or sha256(archive) != checksums[0][0]:
+        download(url, archive)
+        if sha256(archive) != checksums[0][0]:
+            raise ValueError("Chromium source archive does not match its published manifest")
+    # The archive's own DEPS names the CIPD tool versions and the PGO profile.
+    wanted = {f"chromium-{version}/DEPS": "",
+              f"chromium-{version}/third_party/dawn/DEPS": "src/third_party/dawn/",
+              f"chromium-{version}/third_party/devtools-frontend/src/DEPS": "src/third_party/devtools-frontend/src/",
+              f"chromium-{version}/chrome/build/mac-arm.pgo.txt": None}
+    found = {}
+    with tarfile.open(archive) as stream:
+        for member in stream:
+            if member.name in wanted and member.isfile():
+                found[member.name] = stream.extractfile(member).read().decode()
+                if len(found) == len(wanted):
+                    break
+    if len(found) != len(wanted):
+        raise ValueError("The source archive is missing its DEPS or PGO profile name")
+    packages = {}
+    for name, prefix in wanted.items():
+        if prefix is not None:
+            packages.update(deps_cipd(found[name], prefix))
+    for path, pinned in lock["cipd"].items():
+        if path not in packages:
+            raise ValueError(f"DEPS no longer pins {path}")
+        package, package_version = packages[path]
+        if (package, package_version) != (pinned["package"], pinned["version"]):
+            lock["cipd"][path] = {"package": package, "version": package_version,
+                                  "sha256": resolve_cipd(package, package_version)}
+    profile_name = found[f"chromium-{version}/chrome/build/mac-arm.pgo.txt"].strip()
+    profile = download_profile(root, {"pgoProfile": profile_name})
+    lock["performanceInputs"].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
     return lock
 
 
-def prepare_update(repo, root, tag):
+def prepare_update(repo, root, version):
     lock_path, host_path = repo / ENGINE / "source.lock.json", repo / ENGINE / "host-inputs.json"
     original_lock, original_host = lock_path.read_bytes(), host_path.read_bytes()
     pinned = Workspace(root, repo).directory.name
     try:
-        lock = candidate_lock(repo, root, tag)
-        write_json(lock_path, lock)
+        write_json(lock_path, candidate_lock(repo, root, version))
         workspace = Workspace(root, repo)
         # Every update needs a new source. Keep only the checkout's own, which its
         # branch still builds from, and this update's; any other is superseded.
         for name in prune_sources(root, {pinned, workspace.directory.name}):
             print(f"Removed superseded Chromium source {name}", flush=True)
         workspace.prepare()
-        # New versions may require different esbuild or TypeScript packages. Stop
-        # before compilation rather than silently compiling with the previous toolchain.
-        deps = (workspace.source / "third_party/devtools-frontend/src/DEPS").read_text()
-        package = re.search(r"'package':\s*'infra/3pp/tools/esbuild/[^']+',\s*'version':\s*'([^']+)'", deps)
-        if not package or not lock["esbuild"]["url"].endswith("/+/" + package[1]):
-            raise ValueError("DevTools esbuild changed; review and update its source lock before retrying")
-        deps = (workspace.source / "DEPS").read_text()
-        package = re.search(r"'package':\s*'chromium/third_party/typescript/mac-arm64',\s*'version':\s*'([^']+)'", deps)
-        if not package or not lock["typescript"]["url"].endswith("/+/" + package[1]):
-            raise ValueError("Chromium's TypeScript compiler changed; review and update its source lock before retrying")
         refresh_host_inputs(repo, workspace.source, workspace.directory / "host.json")
-        profile_name = (workspace.source / "chrome/build/mac-arm.pgo.txt").read_text().strip()
-        profile = download_profile(root, {"pgoProfile": profile_name})
-        lock["performanceInputs"].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
-        write_json(lock_path, lock)
         return Workspace(root, repo)
     except BaseException:
         lock_path.write_bytes(original_lock)
