@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "space-picker-stronger-selection",
+    "development": "media-widget-ignores-previews",
     "nightly": "sub-space-switch-keeps-shared"
   }
 }

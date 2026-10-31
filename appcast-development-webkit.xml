@@ -6,38 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.116</title>
-            <pubDate>Fri, 30 Oct 2026 23:50:31 +0000</pubDate>
+            <title>0.8.118</title>
+            <pubDate>Sat, 31 Oct 2026 16:31:40 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1437</sparkle:version>
-            <sparkle:shortVersionString>0.8.116</sparkle:shortVersionString>
+            <sparkle:version>1441</sparkle:version>
+            <sparkle:shortVersionString>0.8.118</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data.
-- The Spaces of a group show their primary's pinned tabs, and one pinned tab opens the same page in each. Turn on Separate Pinned Tabs for each to show its own.
-- Deleting a Space that leads Sub-Spaces asks which of them keeps the group, with its sign-ins, history, passwords and pinned tabs, or deletes the whole group. Locking any Space of a group locks the group.
-- Open Link in opens a link in a Quick Window in another Space's session, and Site Controls can open the current page in another Space, for the same site under another account. Keep moves it into that Space.
-- Importing from Arc brings the Spaces of one Arc profile as one group, and importing from Zen brings a profile's workspaces as one. The review outlines each group and can bring a Space in on its own.
+- Chromium plays protected video that uses Widevine. Netflix, Disney+, Max and Prime Video open in WebKit, which plays them with FairPlay, unless you choose an engine for them.
 
 ### Improved
 
-- Devices that run an earlier Crest keep syncing and show each Sub-Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices.
-- The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour.
+- Importing from Arc or Zen keeps Spaces that shared sign-ins together. When one of them joins a Space you already have, the rest become Sub-Spaces of that Space's group, Zen workspaces that share a container come in as a group of their own, and imported passwords are saved once for the group.
+- Moving between Spaces in setup's import review is smoother, setup's animations are quicker, and each Space in a group shows which group it joins, with room for Separate.
+- Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move.
+- Chromium is updated to 156 and now built from Chromium itself with Crest's privacy changes. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, protected video and your extensions up to date.
+- Chromium allows third-party cookies as Chrome does, except in private windows, so embedded sign-ins and payments work.
+
+### Fixed
+
+- Calls in Chromium can use UDP again, so they connect faster and sound better, while sites still can't see your device's local network addresses.
+- The sidebar's media controls and Now Playing keep showing what you play when a site previews another video under the pointer, as YouTube does on thumbnails.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/9e755c15ccd691f2d8c820b689b4c4457e1ff407...0b74d4ff6e95686f0e288016744c9b96aa17efe2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.116-2026-10-30-1437-r437.1/Installer-Crest-0.8.116-development-2026-10-30-0b74d4f-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/0b74d4ff6e95686f0e288016744c9b96aa17efe2...e98edb73e9ef7dd7613b4c19d52c6689ad97bdd0) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.118-2026-10-31-1441-r441.1/Installer-Crest-0.8.118-development-2026-10-31-e98edb7-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.116-2026-10-30-1437-r437.1/Installer-Crest-0.8.116-development-2026-10-30-0b74d4f-arm64.dmg" length="220423835" type="application/octet-stream" sparkle:edSignature="lZMEfXqCH6A1EXaPGKVfAGo8p/qthi4xlHL4C/1Pd4ySQGV3sjeOgZQToDED76FvADuhkPjkUAaiVHub1Jx6Cg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.118-2026-10-31-1441-r441.1/Installer-Crest-0.8.118-development-2026-10-31-e98edb7-arm64.dmg" length="216610971" type="application/octet-stream" sparkle:edSignature="MaUcfLmTxwxDL8iq+FcHSXv6Jh2vPjVP8grDnwIryfH/0Hgrq8BwtNmfEAeA7qfs1rGfL9aGD/zmZC8mWF35BQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -69,6 +73,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: bJ1WvGJ6yWsTMhwxazAbJWVVUJPPmyMpXrQQMMSaeynYR8pbgjyAcDw2BXmMXjaXPLd8yVZ2zORHN8Ro0vVOBw==
-length: 5440
+edSignature: cLKw6LyRMlFj6k4+ScytrFVRwDR5+vXV9PxKjuNBqHpJ5Au3bWTwbrcXRKW5D/cDMKwvaLasieDRXsNeyZTOCg==
+length: 5458
 -->
