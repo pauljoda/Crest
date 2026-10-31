@@ -4625,6 +4625,14 @@
     "space-picker-stronger-selection": {
       "category": "improved",
       "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    },
+    "endpoint-verification-chromium-sync": {
+      "category": "fixed",
+      "message": "Google Endpoint Verification syncs in Chromium pages, so Google Workspace accounts that require a verified device can use Crest."
+    },
+    "endpoint-verification-fetcher-null-service-check": {
+      "category": "internal",
+      "message": "The Chromium engine's context-info fetcher accepts a null connectors service in builds with debug checks enabled, so diagnostic builds no longer abort when Endpoint Verification syncs."
     }
   }
 }
