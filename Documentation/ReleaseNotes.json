@@ -4621,6 +4621,10 @@
     "sidebar-tidy-header-closes-like-tabs": {
       "category": "internal",
       "message": "Closing a Tidy header closes its tabs the way closing them does, asking first when a page wants to stay open, with the same close button as a tab; test launches no longer touch the installed app's word list, and Tidy's logs never name a tab."
+    },
+    "sidebar-tidy-header-archive-highlight": {
+      "category": "internal",
+      "message": "A Tidy header highlights with its tabs on hover like a folder, and its archive button highlights every tab it will move to Archive."
     }
   }
 }

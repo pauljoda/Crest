@@ -2183,6 +2183,9 @@
         }
       }
     },
+    "Archive %@" : {
+
+    },
     "Archive applies to current tabs. Use Unload Pages to close saved or pinned pages, or Delete Tabs to remove their saved entries." : {
 
     },
@@ -3674,9 +3677,6 @@
           }
         }
       }
-    },
-    "Closes the tabs under this header" : {
-
     },
     "Cloud records observed" : {
       "localizations" : {
@@ -8365,6 +8365,9 @@
       }
     },
     "Moves all current tabs to Archive" : {
+
+    },
+    "Moves the tabs under this header to Archive" : {
 
     },
     "Mute" : {

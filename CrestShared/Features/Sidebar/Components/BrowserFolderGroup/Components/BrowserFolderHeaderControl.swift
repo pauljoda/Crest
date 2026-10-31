@@ -87,13 +87,15 @@ struct BrowserFolderHeaderControl: View {
 }
 
 /// A header Tidy made: its name in small secondary text, with no icon or
-/// count, and a control at its trailing edge that closes the header and its
-/// tabs. Pointer shells reveal the control on hover; touch shells always show it.
+/// count, and a control at its trailing edge that archives the header and its
+/// tabs. Pointer shells reveal the control on hover, and hovering it deepens
+/// the folder's surface over every tab it archives; touch shells always show it.
 private struct BrowserTidyHeaderRow: View {
     let configuration: BrowserFolderGroupConfiguration
     let isExpanded: Bool
     let toggleExpansion: () -> Void
     @State private var isHovering = false
+    @Environment(\.folderArchiveControlIsHovered) private var archiveControlIsHovered
 
     private var folder: FolderStateModel { configuration.folder }
 
@@ -113,17 +115,18 @@ private struct BrowserTidyHeaderRow: View {
             .accessibilityHint(isExpanded ? "Collapses this header" : "Expands this header")
             // The close button shows only on hover with a pointer, so the
             // header carries its action for VoiceOver and Full Keyboard Access.
-            .accessibilityAction(named: "Close \(folder.shownTitle)", closeHeader)
+            .accessibilityAction(named: "Archive \(folder.shownTitle)", closeHeader)
 
             Button(action: closeHeader) {
-                BrowserSidebarTabTrailingControlLabel(systemName: "xmark", metrics: closeMetrics)
+                BrowserSidebarTabTrailingControlLabel(systemName: "archivebox", metrics: closeMetrics)
             }
             .modifier(BrowserSidebarTabTrailingControlStyle(metrics: closeMetrics))
             .foregroundStyle(Color.primary)
             .opacity(showsCloseButton ? closeMetrics.closeOpacity(isSelected: false) : 0)
             .disabled(!showsCloseButton)
-            .accessibilityLabel("Close \(folder.shownTitle)")
-            .accessibilityHint("Closes the tabs under this header")
+            .onHover { archiveControlIsHovered?.wrappedValue = $0 && showsCloseButton }
+            .accessibilityLabel("Archive \(folder.shownTitle)")
+            .accessibilityHint("Moves the tabs under this header to Archive")
         }
         .browserSavedFolderHeaderLayout(configuration: configuration)
         .onHover { isHovering = $0 }
