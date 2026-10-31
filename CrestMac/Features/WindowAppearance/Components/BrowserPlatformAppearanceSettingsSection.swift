@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The shared Window group, plus the window choices only the desktop has:
 /// light or dark, how far dark dims Space colors, Space page motion, the
-/// sidebar hover area and whether it stays live over a page in full screen.
+/// sidebar hover area, whether it stays live over a page in full screen, and
+/// whether the command bar dims the page behind it.
 struct BrowserPlatformAppearanceSettingsSection: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -12,6 +13,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
     @AppStorage(SidebarFullscreenRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
     private var revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
+    @AppStorage(BrowserCommandPaletteScrimPreference.key, store: BrowserChromeAppearancePreference.defaults)
+    private var commandBarDimsPage = BrowserCommandPaletteScrimPreference.defaultValue
 
     var body: some View {
         let mode = CrestSettingValue($appearance.mode, default: BrowserLookAndFeelDefaults.appearanceMode)
@@ -24,6 +27,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             $appearance.sidebarRevealWidth, default: SidebarRevealWidthPreference.defaultValue)
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
+        let commandBarScrim = CrestSettingValue(
+            $commandBarDimsPage, default: BrowserCommandPaletteScrimPreference.defaultValue)
 
         return BrowserWindowAppearanceGroup(
             space: space,
@@ -34,6 +39,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 motion.resettable("Animate pages when switching Spaces"),
                 revealWidth.resettable("Sidebar hover area"),
                 fullscreenReveal.resettable("Show sidebar on hover in full screen"),
+                commandBarScrim.resettable("Dim page behind command bar"),
             ]
         ) {
             CrestSettingRow("Appearance", setting: mode.resettable("Appearance")) {
@@ -81,6 +87,15 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 Toggle("Show sidebar on hover in full screen", isOn: fullscreenReveal.binding)
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-fullscreen-reveal")
+            }
+
+            CrestSettingRow(
+                "Dim page behind command bar",
+                setting: commandBarScrim.resettable("Dim page behind command bar")
+            ) {
+                Toggle("Dim page behind command bar", isOn: commandBarScrim.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("command-bar-dims-page")
             }
         }
     }

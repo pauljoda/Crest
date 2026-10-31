@@ -56,4 +56,8 @@ enum BrowserCommandPaletteMetrics {
     static let shortcutBackgroundOpacity = 0.07
 
     static let scrimOpacity = 0.18
+    /// The shadow that lifts an overlay card off a page left undimmed.
+    static let liftedShadowOpacity = 0.35
+    static let liftedShadowRadius: CGFloat = 48
+    static let liftedShadowYOffset: CGFloat = 18
 }
