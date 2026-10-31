@@ -15,11 +15,12 @@ public sealed record DecideSitePermission(Guid SpaceId, SiteOrigin Origin, SiteP
     internal override void Apply(Device device, DeviceTurn turn) {
         var (keeps, locked) = device.ChoiceScope(SpaceId);
         if (locked) throw new Rejected(new SpaceLocked(SpaceId));
+        var groups = device.PermissionGroups();
         lock (device.Gate) {
-            var outcome = (keeps ? device.KeptPermissions : device.PassingPermissions).Set(SpaceId, Origin, Permission, Detail,
+            var outcome = (keeps ? device.KeptPermissions : device.PassingPermissions).Set(groups(SpaceId), Origin, Permission, Detail,
                 Decision, turn.Ids.Next(), StoredSessionCodec.Seconds(turn.Now));
             if (keeps && outcome.PersistenceChanged) device.Storage?.EnqueueDevice(device.Records());
-            device.PublishPermissions(outcome, turn.Changes);
+            device.PublishPermissions(outcome, turn.Changes, groups);
         }
     }
 

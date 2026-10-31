@@ -7,7 +7,7 @@ keywords: [cookies, cache, website data, site data, clear browsing data, sign ou
 
 # Clear website data
 
-Website data belongs to the Space that stored it, and it stays on this device. Clearing it in one Space never touches another Space, your saved passwords, extensions, downloaded files, or site permissions.
+Website data belongs to the Space that stored it, and it stays on this device. Clearing it in one Space never touches another Space, your saved passwords, extensions, downloaded files, or site permissions. The Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share their website data, so clearing it in one clears it for the whole group.
 
 ## Clear one site
 

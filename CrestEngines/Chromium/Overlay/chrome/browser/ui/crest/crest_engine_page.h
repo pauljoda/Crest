@@ -268,6 +268,8 @@ class EnginePage final : public content::WebContentsObserver,
   void MediaStoppedPlaying(const MediaPlayerInfo& info,
                            const content::MediaPlayerId& id,
                            content::WebContentsObserver::MediaStoppedReason reason) override;
+  void MediaMetadataChanged(const MediaPlayerInfo& info, const content::MediaPlayerId& id) override;
+  void MediaDestroyed(const content::MediaPlayerId& id) override;
   void MediaPictureInPictureChanged(bool is_picture_in_picture) override;
   void WebContentsDestroyed() override;
 

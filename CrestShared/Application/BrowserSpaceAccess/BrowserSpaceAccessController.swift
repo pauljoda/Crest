@@ -57,15 +57,14 @@ final class BrowserSpaceAccessController {
     /// while this process holds the grant for its profile.
     func isLocked(_ space: SpaceModel) -> Bool {
         guard space.settings.requiresAuthentication else { return false }
-        let assignment = BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID)
-        return core?.state.spaceAccess[assignment]?.isUnlocked != true
+        return access(of: space.id)?.isUnlocked != true
     }
 
     /// Whether a Space, as its identity views draw it, shows only once this
     /// process holds the grant for its profile.
     func isLocked(_ space: BrowserSpaceIdentity) -> Bool {
         guard space.requiresAuthentication else { return false }
-        return core?.state.spaceAccess[space.assignment]?.isUnlocked != true
+        return access(of: space.id)?.isUnlocked != true
     }
 
     func isAuthenticating(_ space: BrowserSpaceIdentity) -> Bool {
@@ -77,7 +76,14 @@ final class BrowserSpaceAccessController {
     }
 
     private func isAuthenticating(_ assignment: BrowserSpaceRuntimeAssignment) -> Bool {
-        core?.state.spaceAccess[assignment]?.isAuthenticating == true
+        access(of: assignment.spaceID)?.isAuthenticating == true
+    }
+
+    /// The grant the core holds for the Space `spaceID` names, or nil. The
+    /// core grants each Space under its own profile, which never changes,
+    /// whatever profile it browses with as a member of a group.
+    private func access(of spaceID: UUID) -> SpaceLockChanged? {
+        core?.state.spaceAccess.first { $0.key.spaceID == spaceID }?.value
     }
 
     /// Authentication authorizes one profile identity. A window may replace or
@@ -137,7 +143,7 @@ final class BrowserSpaceAccessController {
             failure = .authenticationUnavailable
             return false
         }
-        guard isAuthenticating(assignment) else { return core.state.spaceAccess[assignment]?.isUnlocked == true }
+        guard isAuthenticating(assignment) else { return access(of: space)?.isUnlocked == true }
         failure = nil
         do {
             let authenticated = try await authenticator.authenticate(

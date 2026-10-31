@@ -452,7 +452,7 @@ final class BrowserCommandPaletteModel {
 
     /// The tab a row shows, for its icon.
     func tab(for row: PaletteRow) -> TabStateModel? {
-        row.tabID.flatMap { space?.tabs.model($0) }
+        row.tabID.flatMap { space?.shownTab($0) }
     }
 
     /// The engine a row's tab runs on, when its icon wears that engine's

@@ -98,7 +98,7 @@ public sealed partial class NativeSessionAuthority {
         SessionState previous, next;
         lock (Gate) {
             if (!TakesEdits() || session.PendingDeletion(spaceId) is not null
-                || session.Space(spaceId) is not { } space
+                || session.ViewedSpace(spaceId) is not { } space
                 || space.Tabs.All(tab => tab.Id != tabId)) return null;
             if (IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
             // The stored spelling of the time, so the next load reads the same value.
@@ -117,10 +117,20 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) return IsLockedUnderGate(space);
     }
 
+    /// A Space is locked while this process holds no grant for it, or for
+    /// another Space that stays and browses with its profile: the gate guards
+    /// the session, which a group shares.
     private bool IsLockedUnderGate(SpaceState space) {
         if (access is null) return false;
-        lock (access) return access.IsLocked(new SpaceAccessAssignment(space.Id, space.ProfileId), space.Settings.RequiresAuthentication);
+        lock (access)
+            return Locked(space) || session.Spaces.Any(other => other.Id != space.Id && other.ProfileId == space.ProfileId
+                && session.PendingDeletion(other.Id) is null && Locked(other));
     }
+
+    /// Whether this process holds no grant for `space` itself. The caller
+    /// holds the grants' lock.
+    private bool Locked(SpaceState space) =>
+        access!.IsLocked(new SpaceAccessAssignment(space.Id, space.OwnProfileId), space.Settings.RequiresAuthentication);
 
     #endregion
 }

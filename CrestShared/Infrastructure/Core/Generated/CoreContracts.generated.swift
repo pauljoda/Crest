@@ -246,6 +246,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidLinkRouteEdit(InvalidLinkRouteEdit)
     case invalidMediaSessionCount(InvalidMediaSessionCount)
     case invalidName(InvalidName)
+    case invalidNewPrimary(InvalidNewPrimary)
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
@@ -287,6 +288,9 @@ enum Rejection: Equatable, Error, Sendable {
     case pinnedTabsFull(PinnedTabsFull)
     case pinnedTabsStayPut(PinnedTabsStayPut)
     case pinsOneTabAtATime(PinsOneTabAtATime)
+    case primaryCannotJoin(PrimaryCannotJoin)
+    case primaryCannotSeparate(PrimaryCannotSeparate)
+    case privateSpaceCannotShare(PrivateSpaceCannotShare)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case profileInUse(ProfileInUse)
     case promptAnswerMismatch(PromptAnswerMismatch)
@@ -392,6 +396,9 @@ enum Rejection: Equatable, Error, Sendable {
         case .pinnedTabsFull(let value): value.message
         case .pinnedTabsStayPut(let value): value.message
         case .pinsOneTabAtATime(let value): value.message
+        case .primaryCannotJoin(let value): value.message
+        case .primaryCannotSeparate(let value): value.message
+        case .privateSpaceCannotShare(let value): value.message
         case .profileInUse(let value): value.message
         case .saveFailed(let value): value.message
         case .searchEngineLimitReached(let value): value.message
@@ -793,6 +800,13 @@ struct AddLinkRoute: Intent, LinkIntent, Equatable, Sendable {
 }
 
 struct AddSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
+}
+
+struct AddSubSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let fromSpaceID: UUID
 }
 
 struct AddressCompletion: Equatable, Sendable {
@@ -1285,6 +1299,7 @@ struct BeginDeletingSpace: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let operationID: UUID
+    let newPrimaryID: UUID?
 }
 
 struct BeginDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -3335,6 +3350,10 @@ struct InvalidName: Equatable, Sendable {
     let limit: Int
 }
 
+struct InvalidNewPrimary: Equatable, Sendable {
+    let spaceID: UUID
+}
+
 struct InvalidPasswordLength: Equatable, Sendable {
     let minimum: Int
     let maximum: Int
@@ -3403,6 +3422,12 @@ struct InvalidTabIcon: Equatable, Sendable {
     let mode: TabIconMode
 }
 
+struct JoinSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupSpaceID: UUID
+}
+
 struct JoinSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -3468,6 +3493,7 @@ struct LaunchEnvironment: Equatable, Sendable {
         requestsIsolatedCloudSync: false,
         resetsSession: false,
         presentsShowcase: false,
+        presentsSubSpaces: false,
         usesInMemoryCredentials: false,
         forcesOnboardingWelcome: false,
         forcesDesktopSetup: false,
@@ -3482,6 +3508,7 @@ struct LaunchEnvironment: Equatable, Sendable {
     var requestsIsolatedCloudSync: Bool
     var resetsSession: Bool
     var presentsShowcase: Bool
+    var presentsSubSpaces: Bool
     var usesInMemoryCredentials: Bool
     var forcesOnboardingWelcome: Bool
     var forcesDesktopSetup: Bool
@@ -4813,6 +4840,30 @@ struct PressKeyInPage: PageRequest, Equatable, Sendable {
     let modifiers: KeyModifiers
 }
 
+struct PrimaryCannotJoin: Equatable, Sendable {
+    let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("A Space with Sub-Spaces can't become a Sub-Space.")
+    }
+}
+
+struct PrimaryCannotSeparate: Equatable, Sendable {
+    let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Only a Sub-Space can be separated.")
+    }
+}
+
+struct PrivateSpaceCannotShare: Equatable, Sendable {
+    let workspaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Private windows can't have Sub-Spaces.")
+    }
+}
+
 struct PrivateWorkspaceBoundary: Equatable, Sendable {
     let destinationWorkspaceID: UUID
 }
@@ -5483,6 +5534,15 @@ struct SendPermission: Equatable, Sendable {
     let refusal: Rejection?
 }
 
+struct SeparateImportSpace: Intent, SetupFlowIntent, Equatable, Sendable {
+    let sourceSpaceID: UUID
+}
+
+struct SeparateSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+}
+
 struct SeparateSplits: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -5525,7 +5585,7 @@ struct SessionState: Equatable, Sendable {
         var spaces: [SpaceState.Seed]
         var defaultSpaceID: UUID?
         var disposableSeedMarker: UUID?
-        var spaceDeletions: [SpaceDeletionState]
+        var spaceDeletions: [SpaceDeletionState.Seed]
         var appPreferences: AppPreferences?
     }
 
@@ -5535,7 +5595,7 @@ struct SessionState: Equatable, Sendable {
             spaces: spaces.map(\.seed),
             defaultSpaceID: defaultSpaceID,
             disposableSeedMarker: disposableSeedMarker,
-            spaceDeletions: spaceDeletions,
+            spaceDeletions: spaceDeletions.map(\.seed),
             appPreferences: appPreferences
         )
     }
@@ -5640,6 +5700,12 @@ struct SetSearchShortcuts: Intent, SearchCatalogIntent, Equatable, Sendable {
 
 struct SetSearchSuggestions: Intent, SearchCatalogIntent, Equatable, Sendable {
     let enabled: Bool
+}
+
+struct SetSeparatePinnedTabs: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let separates: Bool
 }
 
 struct SetSitePermission: PageRequest, Equatable, Sendable {
@@ -5822,6 +5888,7 @@ struct SetupReviewSpace: Equatable, Sendable {
     let passwordCount: Int
     let extensions: [ImportExtension]
     let includedExtensionIDs: [String]
+    let joinsGroupOf: UUID?
     let shownName: String
     let bringsPasswords: Bool
     let broughtExtensions: [ImportExtension]
@@ -6184,9 +6251,33 @@ struct SpaceDataNotErased: Equatable, Sendable {
 }
 
 struct SpaceDeletionState: Equatable, Sendable, Identifiable {
-    var id: UUID
-    var spaceID: UUID
-    var profileID: UUID
+    let id: UUID
+    let spaceID: UUID
+    let profileID: UUID
+    let erasedProfileIDs: [UUID]?
+    let successorID: UUID?
+    let erasing: [UUID]
+
+    /// The fields of a `SpaceDeletionState` alone, as a platform builds one to send. The
+    /// core resolves the rest when it reads it.
+    struct Seed: Equatable, Sendable, Identifiable {
+        var id: UUID
+        var spaceID: UUID
+        var profileID: UUID
+        var erasedProfileIDs: [UUID]?
+        var successorID: UUID?
+    }
+
+    /// The record's fields alone, as a platform sends it back.
+    var seed: Seed {
+        Seed(
+            id: id,
+            spaceID: spaceID,
+            profileID: profileID,
+            erasedProfileIDs: erasedProfileIDs,
+            successorID: successorID
+        )
+    }
 }
 
 struct SpaceDeletionUnderway: Equatable, Sendable {
@@ -6220,6 +6311,12 @@ struct SpaceLocked: Equatable, Sendable {
     }
 }
 
+struct SpaceMembership: Equatable, Sendable {
+    var primaryID: UUID?
+    var sharedProfileID: UUID?
+    var modifiedAt: Date
+}
+
 struct SpaceProfileChanged: Equatable, Sendable {
     let spaceID: UUID
 
@@ -6240,6 +6337,9 @@ struct SpaceSettings: Equatable, Sendable {
     let savedTabsExpansionModifiedAt: Date?
     let credentialsEnabledModifiedAt: Date?
     let accessPolicyModifiedAt: Date?
+    let separatesPinnedTabs: Bool
+    let separatesPinnedTabsModifiedAt: Date?
+    let protectionModifiedAt: Date?
     let look: SpaceBranding
     let requiresAuthentication: Bool
 
@@ -6257,6 +6357,9 @@ struct SpaceSettings: Equatable, Sendable {
         var savedTabsExpansionModifiedAt: Date?
         var credentialsEnabledModifiedAt: Date?
         var accessPolicyModifiedAt: Date?
+        var separatesPinnedTabs: Bool
+        var separatesPinnedTabsModifiedAt: Date?
+        var protectionModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6272,7 +6375,10 @@ struct SpaceSettings: Equatable, Sendable {
             isSavedTabsExpanded: isSavedTabsExpanded,
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
             credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
-            accessPolicyModifiedAt: accessPolicyModifiedAt
+            accessPolicyModifiedAt: accessPolicyModifiedAt,
+            separatesPinnedTabs: separatesPinnedTabs,
+            separatesPinnedTabsModifiedAt: separatesPinnedTabsModifiedAt,
+            protectionModifiedAt: protectionModifiedAt
         )
     }
 }
@@ -6285,39 +6391,44 @@ struct SpaceSettingsChanged: CoreChange, Equatable, Sendable {
 
 struct SpaceState: Equatable, Sendable, Identifiable {
     let id: UUID
-    let profileID: UUID
+    let ownProfileID: UUID
     let settings: SpaceSettings
     let folders: [FolderState]
     let tabs: [TabState]
     let splitGroups: [SplitGroupState]
     let archivedTabs: [ArchivedTabState]
     let history: [HistoryEntryState]
+    let membership: SpaceMembership?
+    let profileID: UUID
+    let pinOwnerID: UUID?
     let sidebar: SidebarOutline
 
     /// The fields of a `SpaceState` alone, as a platform builds one to send. The
     /// core resolves the rest when it reads it.
     struct Seed: Equatable, Sendable, Identifiable {
         var id: UUID
-        var profileID: UUID
+        var ownProfileID: UUID
         var settings: SpaceSettings.Seed
         var folders: [FolderState.Seed]
         var tabs: [TabState.Seed]
         var splitGroups: [SplitGroupState.Seed]
         var archivedTabs: [ArchivedTabState.Seed]
         var history: [HistoryEntryState]
+        var membership: SpaceMembership?
     }
 
     /// The record's fields alone, as a platform sends it back.
     var seed: Seed {
         Seed(
             id: id,
-            profileID: profileID,
+            ownProfileID: ownProfileID,
             settings: settings.seed,
             folders: folders.map(\.seed),
             tabs: tabs.map(\.seed),
             splitGroups: splitGroups.map(\.seed),
             archivedTabs: archivedTabs.map(\.seed),
-            history: history
+            history: history,
+            membership: membership
         )
     }
 }
@@ -7386,6 +7497,8 @@ enum SessionFlaw: Int, CaseIterable, Sendable {
     case sharedProfile = 3
     case duplicateTab = 4
     case unknownDeletion = 5
+    case unknownPrimary = 6
+    case scatteredGroup = 7
 }
 
 enum ShareSourceChoice: Int, CaseIterable, Sendable {
@@ -20617,7 +20730,7 @@ struct SitePermission: Hashable, Sendable {
 }
 
 /// The members of the core's `SitePermissionDecision`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `record`.
+/// Core-only behavior, not emitted: `record`, `overrule`.
 struct SitePermissionDecision: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
@@ -23849,6 +23962,18 @@ final class SpaceSettingsModel: ObservedModel {
         access(keyPath: \.accessPolicyModifiedAt)
         return accessPolicyModifiedAtStorage
     }
+    var separatesPinnedTabs: Bool {
+        access(keyPath: \.separatesPinnedTabs)
+        return separatesPinnedTabsStorage
+    }
+    var separatesPinnedTabsModifiedAt: Date? {
+        access(keyPath: \.separatesPinnedTabsModifiedAt)
+        return separatesPinnedTabsModifiedAtStorage
+    }
+    var protectionModifiedAt: Date? {
+        access(keyPath: \.protectionModifiedAt)
+        return protectionModifiedAtStorage
+    }
     var look: SpaceBranding {
         access(keyPath: \.look)
         return lookStorage
@@ -23869,6 +23994,9 @@ final class SpaceSettingsModel: ObservedModel {
     @ObservationIgnored private var savedTabsExpansionModifiedAtStorage: Date?
     @ObservationIgnored private var credentialsEnabledModifiedAtStorage: Date?
     @ObservationIgnored private var accessPolicyModifiedAtStorage: Date?
+    @ObservationIgnored private var separatesPinnedTabsStorage: Bool
+    @ObservationIgnored private var separatesPinnedTabsModifiedAtStorage: Date?
+    @ObservationIgnored private var protectionModifiedAtStorage: Date?
     @ObservationIgnored private var lookStorage: SpaceBranding
     @ObservationIgnored private var requiresAuthenticationStorage: Bool
 
@@ -23885,6 +24013,9 @@ final class SpaceSettingsModel: ObservedModel {
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
             credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
             accessPolicyModifiedAt: accessPolicyModifiedAt,
+            separatesPinnedTabs: separatesPinnedTabs,
+            separatesPinnedTabsModifiedAt: separatesPinnedTabsModifiedAt,
+            protectionModifiedAt: protectionModifiedAt,
             look: look,
             requiresAuthentication: requiresAuthentication
         )
@@ -23902,6 +24033,9 @@ final class SpaceSettingsModel: ObservedModel {
         savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
         credentialsEnabledModifiedAtStorage = value.credentialsEnabledModifiedAt
         accessPolicyModifiedAtStorage = value.accessPolicyModifiedAt
+        separatesPinnedTabsStorage = value.separatesPinnedTabs
+        separatesPinnedTabsModifiedAtStorage = value.separatesPinnedTabsModifiedAt
+        protectionModifiedAtStorage = value.protectionModifiedAt
         lookStorage = value.look
         requiresAuthenticationStorage = value.requiresAuthentication
     }
@@ -23950,6 +24084,18 @@ final class SpaceSettingsModel: ObservedModel {
         if accessPolicyModifiedAtStorage != value.accessPolicyModifiedAt {
             accessPolicyModifiedAtStorage = value.accessPolicyModifiedAt
             withMutation(keyPath: \.accessPolicyModifiedAt) {}
+        }
+        if separatesPinnedTabsStorage != value.separatesPinnedTabs {
+            separatesPinnedTabsStorage = value.separatesPinnedTabs
+            withMutation(keyPath: \.separatesPinnedTabs) {}
+        }
+        if separatesPinnedTabsModifiedAtStorage != value.separatesPinnedTabsModifiedAt {
+            separatesPinnedTabsModifiedAtStorage = value.separatesPinnedTabsModifiedAt
+            withMutation(keyPath: \.separatesPinnedTabsModifiedAt) {}
+        }
+        if protectionModifiedAtStorage != value.protectionModifiedAt {
+            protectionModifiedAtStorage = value.protectionModifiedAt
+            withMutation(keyPath: \.protectionModifiedAt) {}
         }
         if lookStorage != value.look {
             lookStorage = value.look

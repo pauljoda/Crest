@@ -6,6 +6,11 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import chromium_engine  # noqa: E402
 
 # The engine contract's headers in CrestContracts/include that the binding
 # compiles against. chromium_engine.py keys the published engine on them.
@@ -31,30 +36,38 @@ def main():
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         state = next((key for key, value in hashes.items() if value == digest), None)
         if state is None:
-            parser.error(f"Changed Chromium input; review against the pinned host patch: {name}")
+            parser.error(f"Changed Chromium input; review against the pinned host patches: {name}")
         states[name] = state
-    # Each input was matched against its reviewed before/after hash. New host
-    # revisions may introduce another input after earlier files were installed.
-    chunks = (host / "Patches/native-host.patch").read_text().split("--- a/")[1:]
-    pending = "".join("--- a/" + chunk for chunk in chunks
-                      if states[chunk.splitlines()[0]] == "before")
-    if pending:
-        subprocess.run(["patch", "--dry-run", "-p1"], input=pending,
-                       text=True, cwd=source, check=True)
-    state = "after" if not pending else "pending"
-    if not args.apply:
-        print(f"Host inputs validated ({state}); no source was changed.")
-        return
-    # Never alter inputs under an active compiler. The build wrapper uses a
-    # dedicated process group, but other Ninja invocations must also be quiet.
-    processes = subprocess.check_output(["ps", "-axo", "comm=,args="], text=True)
-    if any("ninja" in line.split()[0] and "CrestBaseline" in line for line in processes.splitlines() if line.split()):
-        parser.error("Stop the task's Chromium Ninja build before installing the overlay")
-    if pending:
-        subprocess.run(["patch", "-p1"], input=pending, text=True, cwd=source, check=True)
-    for name, hashes in inputs.items():
-        if hashlib.sha256((source / name).read_bytes()).hexdigest() != hashes["after"]:
-            parser.error(f"Host patch did not produce its reviewed output: {name}")
+    # Each input was matched against its reviewed before/after hash. A new host
+    # revision may introduce another input after earlier files were installed.
+    sections = chromium_engine.patch_sections(chromium_engine.host_patch(repo))
+    if {name for name, _ in sections} != set(inputs):
+        parser.error("host-inputs.json does not cover exactly the files the host patches change")
+    pending = [(name, section) for name, section in sections if states[name] == "before"]
+    # A file several patches change takes them in order, which `patch
+    # --dry-run` cannot check, so the result is made in a scratch copy first.
+    with tempfile.TemporaryDirectory(prefix="crest-host-") as temporary:
+        scratch = Path(temporary)
+        for name in {name for name, _ in pending}:
+            (scratch / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source / name, scratch / name)
+        if pending:
+            subprocess.run(["patch", "--batch", "--fuzz=0", "--forward", "-p1", "-s"],
+                           input="".join(section for _, section in pending), text=True, cwd=scratch, check=True)
+        for name in {name for name, _ in pending}:
+            if hashlib.sha256((scratch / name).read_bytes()).hexdigest() != inputs[name]["after"]:
+                parser.error(f"Host patches do not produce their reviewed output: {name}")
+        state = "after" if not pending else "pending"
+        if not args.apply:
+            print(f"Host inputs validated ({state}); no source was changed.")
+            return
+        # Never alter inputs under an active compiler. The build wrapper uses a
+        # dedicated process group, but other Ninja invocations must also be quiet.
+        processes = subprocess.check_output(["ps", "-axo", "comm=,args="], text=True)
+        if any("ninja" in line.split()[0] and "CrestBaseline" in line for line in processes.splitlines() if line.split()):
+            parser.error("Stop the task's Chromium Ninja build before installing the overlay")
+        for name in {name for name, _ in pending}:
+            shutil.copyfile(scratch / name, source / name)
     # An installed file takes the time it was installed, never its source's:
     # an object built after the source was edited, from the previous install,
     # must still be older than the file that replaces its input, or Ninja

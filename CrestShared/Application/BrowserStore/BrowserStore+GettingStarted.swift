@@ -6,7 +6,7 @@ extension BrowserStore {
     func dismissNativeTab(_ id: UUID, matching assignment: BrowserSpaceRuntimeAssignment) {
         guard let space = shownSpace, BrowserSpaceRuntimeAssignment(space: space) == assignment,
             selectedTabID(in: space.id) == id,
-            space.tabs.model(id)?.nativeContent != nil
+            space.shownTab(id)?.nativeContent != nil
         else { return }
         selectDismissalFallback(afterDismissing: id)
     }

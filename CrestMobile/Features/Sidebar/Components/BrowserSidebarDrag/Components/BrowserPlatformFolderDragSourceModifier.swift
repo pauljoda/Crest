@@ -53,7 +53,10 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                     BrowserFolderDragPreview(
                         folder: folder,
                         favicons: reorder.browser.core.state.favicons,
-                        sourceHeight: reorder.state.frame(ofRow: .folder(folder.id))?.height
+                        sourceHeight: reorder.state.frame(
+                            ofRow: .folder(folder.id),
+                            in: BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
+                        )?.height
                             ?? BrowserFolderDragPreviewLayout.height,
                         rows: reorder.browser.spaceModel(spaceID).map {
                             BrowserFolderDragPreviewRow.resolve(

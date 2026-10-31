@@ -14,6 +14,8 @@ struct BrowserTabDragPreview: View {
     var isSelected = false
     var isLoaded = true
     var rowMetrics = BrowserSidebarTabRowMetrics.pointer
+    /// How far the folders around the row move its icon and title in.
+    var contentIndent: CGFloat = 0
 
     var body: some View {
         let metrics = BrowserTabDragPreviewLayout.metrics(
@@ -45,7 +47,7 @@ struct BrowserTabDragPreview: View {
                 BrowserSidebarTabLabel(
                     tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                     isLoaded: isLoaded, metrics: rowMetrics,
-                    leadingInset: BrowserSidebarMetrics.layerInset + rowMetrics.contentLeadingInset,
+                    leadingInset: BrowserSidebarMetrics.layerInset + rowMetrics.contentLeadingInset + contentIndent,
                     titleOpacity: metrics.titleOpacity,
                     iconOffset: ((metrics.width / 2) - rowIconCenter) * metrics.contentCentering)
             }
@@ -70,7 +72,8 @@ struct BrowserTabDragPreview: View {
     }
 
     private var rowIconCenter: CGFloat {
-        BrowserSidebarMetrics.layerInset + rowMetrics.contentLeadingInset + (rowMetrics.faviconSlot?.width ?? 18) / 2
+        BrowserSidebarMetrics.layerInset + rowMetrics.contentLeadingInset + contentIndent
+            + (rowMetrics.faviconSlot?.width ?? 18) / 2
     }
 
     /// The page-shaped drop preview: what the tab looks like once it is a card.

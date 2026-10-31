@@ -33,12 +33,14 @@ public sealed partial class NativeSessionAuthority {
     /// policy asks for authentication. Throws `Rejected` with `UnknownSpace`
     /// for a Space the session does not hold, and `SpaceBeingDeleted` for one
     /// that is going away.
-    internal (SpaceAccessAssignment Assignment, bool RequiresAuthentication) Unlockable(Guid spaceId) {
+    internal (IReadOnlyList<SpaceAccessAssignment> Assignments, bool RequiresAuthentication) Unlockable(Guid spaceId) {
         lock (Gate) {
             var space = session.KnownSpace(spaceId);
             if (session.PendingDeletion(spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true)
                 throw new Rejected(new SpaceBeingDeleted(spaceId));
-            return (new(space.Id, space.ProfileId), space.Settings.RequiresAuthentication);
+            var members = session.GroupOf(spaceId)?.Members.Where(member => session.PendingDeletion(member.Id) is null) ?? [space];
+            return ([.. members.Select(member => new SpaceAccessAssignment(member.Id, member.OwnProfileId))],
+                space.Settings.RequiresAuthentication);
         }
     }
 

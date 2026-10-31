@@ -70,6 +70,7 @@ final class WorkspaceModel: Identifiable {
         appPreferencesStorage = change.session.appPreferences
         defaultSpaceIDStorage = change.session.defaultSpaceID
         isDisposableSeedStorage = change.session.disposableSeedMarker != nil
+        linkSpaces()
     }
 
     // MARK: - Actions - Reading
@@ -108,6 +109,7 @@ final class WorkspaceModel: Identifiable {
     func apply(_ change: WorkspaceOpened) {
         precondition(change.workspaceID == id, "A WorkspaceModel takes only its own workspace's session.")
         spaces.replace(with: change.session.spaces)
+        linkSpaces()
         apply(
             WorkspaceChanged(
                 workspaceID: id, defaultSpaceID: change.session.defaultSpaceID,
@@ -136,6 +138,13 @@ final class WorkspaceModel: Identifiable {
         let arriving = Set(change.added.map(\.id))
         let order = change.order ?? staying + change.added.map(\.id).filter { !stayingIDs.contains($0) }
         spaces.apply(updated: change.added, removed: change.removed.filter { !arriving.contains($0) }, order: order)
+        linkSpaces()
+    }
+
+    /// Lets each Space read the others of its workspace, as a Sub-Space reads
+    /// the pinned tabs its group shares.
+    private func linkSpaces() {
+        for space in spaces.models where space.siblings !== spaces { space.siblings = spaces }
     }
 }
 

@@ -126,6 +126,51 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
 
     // MARK: - A lift that starts on a pinned tile
 
+    /// The Spaces of a group show the pinned tabs they share under the same
+    /// IDs, and the pager keeps the page beside the shown one alive, a page's
+    /// width away. When that page measures the shared pins after the shown one
+    /// did, a pin lifted in the shown Space must still lift from its own tile
+    /// and open a slot among its own neighbours.
+    func testASubSpaceBesideTheShownSpaceNeverStandsInForItsPinnedTiles() {
+        let state = BrowserSidebarReorderState()
+        let pinned = BrowserSidebarReorderSection.tabs(placement: .pinned, folderID: nil)
+        let profileID = UUID()
+        let shown = BrowserSpaceRuntimeAssignment(spaceID: UUID(), profileID: profileID)
+        let beside = BrowserSpaceRuntimeAssignment(spaceID: UUID(), profileID: profileID)
+        let pins = (0..<4).map { _ in UUID() }
+        func tile(_ index: Int, onPage page: Int) -> CGRect {
+            CGRect(x: 8 + CGFloat(index) * 70 + CGFloat(page) * 289, y: 92, width: 62, height: 47)
+        }
+        for (page, space) in [shown, beside].enumerated() {
+            for (index, pin) in pins.enumerated() {
+                state.register(
+                    row: BrowserSidebarReorderRow(
+                        id: .tab(pin), space: space, section: pinned, frame: tile(index, onPage: page)),
+                    owner: UUID())
+            }
+            state.register(
+                zone: BrowserSidebarReorderZone(
+                    target: .section(pinned), frame: tile(0, onPage: page).union(tile(3, onPage: page))),
+                for: UUID())
+        }
+        let grabbed = CGPoint(x: tile(0, onPage: 0).midX, y: tile(0, onPage: 0).midY)
+
+        state.begin(
+            item: .tab(BrowserTabDragItem(tabID: pins[0], spaceID: shown.spaceID, profileID: profileID)),
+            section: pinned, at: grabbed)
+        state.update(pointer: CGPoint(x: tile(2, onPage: 0).maxX, y: grabbed.y))
+
+        XCTAssertEqual(
+            state.lift?.grabOffset, CGSize(width: 31, height: 23.5),
+            "The lift is drawn under the pointer, from the tile it left.")
+        XCTAssertEqual(
+            state.resolvedTarget?.kind, .insert(section: pinned, beforeID: .tab(pins[3]), index: 2),
+            "Past the third tile, the pin lands after it.")
+        XCTAssertEqual(
+            state.pinnedLayout(ids: pins.map { .tab($0) }, in: shown).insertionIndex, 2,
+            "And the shown Space's tiles step aside there.")
+    }
+
     // MARK: - What an open folder says while a drop is aimed at it
 
     // MARK: - A lift carried onto the page

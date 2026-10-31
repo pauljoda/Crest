@@ -1,11 +1,13 @@
 import SwiftUI
 
 /// The stage's backdrop: a sidebar field in `branding`, darkened so the page
-/// reads over it. A change of look cross-fades from the field shown before.
+/// reads over it. A change of look cross-fades from the field shown before,
+/// as `fade` paces it.
 struct BrowserOnboardingBackdrop: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let branding: SpaceBranding
+    let fade: Animation
 
     /// The look the field shows, which follows `branding` one fade behind,
     /// and how many looks it has worn, so each is a field of its own that
@@ -13,8 +15,9 @@ struct BrowserOnboardingBackdrop: View {
     @State private var shown: SpaceBranding
     @State private var generation = 0
 
-    init(branding: SpaceBranding) {
+    init(branding: SpaceBranding, fade: Animation) {
         self.branding = branding
+        self.fade = fade
         _shown = State(initialValue: branding)
     }
 
@@ -26,7 +29,7 @@ struct BrowserOnboardingBackdrop: View {
             Color.black.opacity(BrowserOnboardingStageMetrics.backdropShade)
         }
         .onChange(of: branding) { _, next in
-            withAnimation(CrestMotion.onboardingBackdrop.unlessReducingMotion(reduceMotion)) {
+            withAnimation(fade.unlessReducingMotion(reduceMotion)) {
                 shown = next
                 generation += 1
             }

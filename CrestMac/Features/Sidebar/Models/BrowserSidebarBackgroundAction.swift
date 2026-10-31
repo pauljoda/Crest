@@ -10,9 +10,12 @@ struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
     static let newSpace = BrowserSidebarBackgroundAction(
         name: "newSpace", title: "New Space…", symbol: "plus", requiresSpaceCreation: true
     ) { $0.createSpace?() }
+    static let newSubSpace = BrowserSidebarBackgroundAction(
+        name: "newSubSpace", title: "New Sub-Space", symbol: "plus.square.on.square", requiresSpaceCreation: true
+    ) { $0.createSubSpace?() }
 
     /// Every action, in menu order.
-    static let all: [BrowserSidebarBackgroundAction] = [editSpace, newSpace]
+    static let all: [BrowserSidebarBackgroundAction] = [editSpace, newSpace, newSubSpace]
 
     // MARK: - Variables
 

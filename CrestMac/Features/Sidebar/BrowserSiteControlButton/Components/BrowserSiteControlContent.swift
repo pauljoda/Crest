@@ -37,6 +37,7 @@ struct BrowserSiteControlContent: View {
             if configuration.page.live.displayURL?.host()?.isEmpty == false {
                 Divider()
                 BrowserSiteDataActions(page: configuration.page, dismiss: dismiss)
+                BrowserSiteOpenInSpaceMenu(page: configuration.page, dismiss: dismiss)
             }
         }
         .padding(CrestSpacing.medium)

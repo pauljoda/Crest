@@ -541,6 +541,9 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   }
   UpdateTheme();
   if (navigation->IsSameDocument()) {
+    if (media_) {
+      media_->AddressChanged();
+    }
     MovedWithinDocument(PresentedURL(committed));
   } else {
     awaits_finish_ = true;
@@ -667,7 +670,7 @@ void EnginePage::DidUpdateAudioMutingState(bool muted) {
 
 void EnginePage::MediaStartedPlaying(const MediaPlayerInfo& info, const content::MediaPlayerId& id) {
   if (media_) {
-    media_->PlayerStarted(id, info.has_video);
+    media_->PlayerStarted(id, info.has_video, info.has_audio);
   }
   StateChanged();
 }
@@ -679,6 +682,18 @@ void EnginePage::MediaStoppedPlaying(const MediaPlayerInfo& info,
     media_->PlayerStopped(id);
   }
   StateChanged();
+}
+
+void EnginePage::MediaMetadataChanged(const MediaPlayerInfo& info, const content::MediaPlayerId& id) {
+  if (media_) {
+    media_->PlayerChanged(id, info.has_video, info.has_audio);
+  }
+}
+
+void EnginePage::MediaDestroyed(const content::MediaPlayerId& id) {
+  if (media_) {
+    media_->PlayerDestroyed(id);
+  }
 }
 
 void EnginePage::MediaPictureInPictureChanged(bool is_picture_in_picture) {

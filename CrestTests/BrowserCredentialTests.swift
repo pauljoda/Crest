@@ -413,6 +413,40 @@ final class BrowserCredentialTests: XCTestCase {
         XCTAssertEqual(authenticator.reasons.count, 1)
     }
 
+    /// A group keeps its passwords in its primary: one saved in a Sub-Space
+    /// is kept there and fills in every Space of the group. Deleting the
+    /// primary hands them to the Sub-Space that takes the group over, even
+    /// when the deletion stops after it began and resumes later.
+    func testAGroupKeepsItsPasswordsInItsPrimaryAndHandsThemToItsSuccessor() async throws {
+        var seed = SessionState.Seed.preview
+        let primary = seed.spaces[0]
+        seed.spaces[1].membership = SpaceMembership(
+            primaryID: primary.id, sharedProfileID: primary.ownProfileID, modifiedAt: Date(timeIntervalSince1970: 1_000)
+        )
+        let subSpace = seed.spaces[1]
+        let vault = InMemoryCredentialVault()
+        let store = BrowserStore(seed: seed, credentialVault: vault)
+        let url = try XCTUnwrap(URL(string: "https://accounts.crest.test/login"))
+
+        let saved = try await store.saveCredential(username: "member", password: "secret", for: url, in: subSpace.id)
+        XCTAssertEqual(saved.spaceID, primary.id)
+        let suggested = try await store.credentialSuggestions(for: url, in: subSpace.id)
+        XCTAssertEqual(suggested.map(\.id), [saved.id])
+
+        let interrupted = GroupDeletionDeleter(core: store.core, failures: 1)
+        do {
+            try await store.deleteSpace(primary.id, newPrimaryID: subSpace.id, dataDeleter: interrupted)
+            XCTFail("The first attempt stops before it erases anything.")
+        } catch {}
+        await store.resumePendingSpaceDeletions(dataDeleter: interrupted)
+
+        let handedOver = try await vault.descriptors(in: subSpace.id)
+        XCTAssertEqual(handedOver.map(\.id), [saved.id])
+        let left = try await vault.descriptors(in: primary.id)
+        XCTAssertTrue(left.isEmpty)
+        XCTAssertNil(store.spaceModel(primary.id))
+    }
+
     private func makeCredential(
         spaceID: UUID,
         origin: CredentialOrigin,
@@ -430,6 +464,26 @@ final class BrowserCredentialTests: XCTestCase {
             ),
             password: password
         )
+    }
+}
+
+/// Erases what a deletion names, after stopping the first `failures` times.
+@MainActor
+private final class GroupDeletionDeleter: BrowserSpaceDataDeleting {
+    private let core: CrestCore
+    private var failures: Int
+
+    init(core: CrestCore, failures: Int) {
+        self.core = core
+        self.failures = failures
+    }
+
+    func deleteData(for deletion: SpaceDeletionState) async throws {
+        guard failures == 0 else {
+            failures -= 1
+            throw BrowserSpaceDeletionError.dataNotErased
+        }
+        try await core.eraseProfiles(of: deletion)
     }
 }
 

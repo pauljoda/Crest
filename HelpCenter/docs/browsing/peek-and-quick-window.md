@@ -29,6 +29,8 @@ On iPhone and iPad, touch and hold webpage links for the native link preview and
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
 
+To see a link under another account on Mac, right-click it and choose a Space from **Open Link in**: it opens in a Quick Window with that Space's sign-ins, and **Keep** moves it into that Space. **Open This Page in** in Site Controls does the same for the current page.
+
 Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
 ### Sign-in and other popup windows

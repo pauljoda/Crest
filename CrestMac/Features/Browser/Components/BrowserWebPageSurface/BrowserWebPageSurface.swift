@@ -13,6 +13,9 @@ struct BrowserWebPageSurface: View {
     /// Where the tab holding a page sits in its Space and what it is called,
     /// for lists that follow the sidebar.
     var tabPlacement: (UUID) -> BrowserShareSourceOffer.TabPlacement? = { _ in nil }
+    /// Whether the page may offer the page of an id to share: one whose tab
+    /// the page's own Space shows.
+    var offersPage: (UUID) -> Bool = { _ in true }
     /// Shows the tab at the other end of the page's tab sharing, when Crest
     /// knows it; the sharing bars lead there.
     var goToSharingCounterpart: (() -> Void)? = nil
@@ -106,7 +109,7 @@ struct BrowserWebPageSurface: View {
 
             if let offer = page.shareSourceOffer {
                 BrowserShareSourcePicker(
-                    offer: offer, requestingPageID: page.corePage.id, tabPlacement: tabPlacement,
+                    offer: offer.keeping(offersPage), requestingPageID: page.corePage.id, tabPlacement: tabPlacement,
                     requestingTabName: tabPlacement(page.corePage.id)?.name ?? page.live.title
                 ) { choice in
                     page.answer(offer, with: choice)

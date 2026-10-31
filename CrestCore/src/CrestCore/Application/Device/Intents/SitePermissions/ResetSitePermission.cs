@@ -8,10 +8,12 @@ public sealed record ResetSitePermission(Guid RecordId) : SitePermissionIntent {
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) {
+        var groups = device.PermissionGroups();
         lock (device.Gate) {
-            var kept = device.KeptPermissions.ResetRecord(RecordId);
+            var kept = device.KeptPermissions.ResetRecord(RecordId, groups);
             if (kept.PersistenceChanged) device.Storage?.EnqueueDevice(device.Records());
-            device.PublishPermissions(kept.Changes.Count > 0 ? kept : device.PassingPermissions.ResetRecord(RecordId), turn.Changes);
+            device.PublishPermissions(kept.Changes.Count > 0 ? kept : device.PassingPermissions.ResetRecord(RecordId, groups), turn.Changes,
+                groups);
         }
     }
 

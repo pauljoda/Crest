@@ -26,7 +26,7 @@ struct BrowserTabOrganizationAction {
             spaceID: assignment.spaceID, profileID: assignment.profileID)
         guard
             let space = browser.selectedUnlockedSpace(matching: spaceAssignment, accessController: spaceAccess),
-            let tab = space.tabs.model(assignment.tabID), tab.surface == .webPage
+            let tab = space.shownTab(assignment.tabID), tab.surface == .webPage
         else { return nil }
         return browser.tabLinkProvider?.liveLinkURL(for: assignment) ?? tab.address
     }
@@ -74,7 +74,7 @@ struct BrowserTabOrganizationAction {
         )
         guard
             let space = browser.selectedUnlockedSpace(matching: spaceAssignment, accessController: spaceAccess),
-            let tab = space.tabs.model(assignment.tabID),
+            let tab = space.shownTab(assignment.tabID),
             tab.placement == expectedPlacement
         else { return nil }
         return spaceAssignment

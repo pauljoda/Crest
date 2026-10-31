@@ -60,6 +60,7 @@ struct BrowserPasswordSettingsPane: View {
     var body: some View {
         BrowserSettingsPane(.passwords) {
             settingsSections
+            BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
         }
         .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)
         .task(id: credentialLoadRequest) {

@@ -42,15 +42,20 @@ public sealed partial class NativeSessionAuthority {
     /// taken: the state stays as it was. The caller holds the gate.
     private (SessionState Previous, SessionState Next, SessionTabEvents Events)? ApplyUnderGate(PageEdit edit) {
         if (!TakesEdits() || session.PendingDeletion(edit.SpaceId) is not null
-            || session.Space(edit.SpaceId) is not { } original
+            || session.ViewedSpace(edit.SpaceId) is not { } original
             || IsLockedUnderGate(original)) return null;
         SessionState next;
         SessionTabEvents events;
         try {
-            if (edit.Apply(original, Stamp(edit.At)) is not { } edited) return null;
+            var now = Stamp(edit.At);
+            if (edit.Apply(original, now) is not { } edited) return null;
             events = new SessionTabEvents([], edited.Favicon);
-            if (edited.Space == original) return (session, session, events);
-            next = session.Replacing(edited.Space);
+            var keeper = session.RecordsOwner(original);
+            var recorded = keeper.Id == original.Id ? edited.Space : keeper;
+            if (edit.Recorded(recorded.History, now) is { } history) recorded = recorded with { History = history };
+            SpaceState[] changed = keeper.Id == original.Id ? [recorded] : [edited.Space, recorded];
+            if (changed.All(space => space == session.ViewedSpace(space.Id))) return (session, session, events);
+            next = session.Replacing(changed);
             Validate(session, next);
             ValidateBorrowedSession(next);
         } catch (Rejected) {

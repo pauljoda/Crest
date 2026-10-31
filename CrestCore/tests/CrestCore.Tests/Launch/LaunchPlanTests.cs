@@ -9,14 +9,14 @@ namespace CrestCore.Tests;
 public sealed class LaunchPlanTests {
     private static readonly string[] FixtureFlags = [
         "testRuntime", "previewRuntime", "isolatedSession", "isolatedCloudSync", "resetSession", "showcase",
-        "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup", "updateTestFeed"
+        "subSpaces", "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup", "updateTestFeed"
     ];
 
     /// A launch environment with the named flags on.
     private static LaunchEnvironment Environment(params string[] enabled) {
         bool On(string flag) => enabled.Contains(flag);
         return new(On("testRuntime"), On("previewRuntime"), On("isolatedSession"), On("namedProfile"), On("isolatedCloudSync"),
-            On("resetSession"), On("showcase"), On("inMemoryCredentials"), On("onboardingWelcome"), On("desktopSetup"),
+            On("resetSession"), On("showcase"), On("subSpaces"), On("inMemoryCredentials"), On("onboardingWelcome"), On("desktopSetup"),
             On("mobileSetup"), On("updateTestFeed"));
     }
 

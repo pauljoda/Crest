@@ -74,7 +74,7 @@ final class BrowserMacWindowCoordinator {
 
     func didMeasureRow(_ row: BrowserSidebarReorderRow, in id: UUID) {
         guard let model = windows[id], let placement = model.tearOffPlacement, placement.isPending,
-            let tabID = row.id.tabID, model.browser.spaceModel(matching: row.space)?.tabs.contains(tabID) == true
+            let tabID = row.id.tabID, model.browser.spaceModel(matching: row.space)?.shownTab(tabID) != nil
         else { return }
         placement.place(at: row)
     }
@@ -262,7 +262,7 @@ final class BrowserMacWindowCoordinator {
         else { return false }
         let images = source.browser.core.state.favicons
         guard
-            let tab = source.browser.spaceModel(matching: item.spaceAssignment)?.tabs.model(item.tabID)
+            let tab = source.browser.spaceModel(matching: item.spaceAssignment)?.shownTab(item.tabID)
                 .map({ BrowserPageTab($0, images: images) }),
             destination.pages.canTransferTabRuntime(
                 from: source.pages, matching: item.runtimeAssignment, in: targetSpace)
@@ -274,7 +274,7 @@ final class BrowserMacWindowCoordinator {
         // Both moves have been validated above. There is no actor suspension
         // between committing the workspace graphs and relocating the runtime.
         let movedTab =
-            destination.browser.spaceModel(matching: item.spaceAssignment)?.tabs.model(tab.id)
+            destination.browser.spaceModel(matching: item.spaceAssignment)?.shownTab(tab.id)
             .map { BrowserPageTab($0, images: destination.browser.core.state.favicons) } ?? tab
         let transferred = destination.pages.transferTabRuntime(
             from: source.pages, matching: item.runtimeAssignment, as: movedTab, in: targetSpace)

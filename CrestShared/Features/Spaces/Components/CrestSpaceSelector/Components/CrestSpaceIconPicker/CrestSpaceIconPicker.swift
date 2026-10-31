@@ -152,7 +152,11 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                             .fill((style.tintsSelection ? tint : Color.primary).opacity(style.selectionFillOpacity))
                             .overlay {
                                 CrestSpaceIconPickerShape(style: style)
-                                    .strokeBorder(style.tintsSelection ? tint : .clear, lineWidth: CrestLayout.hairline)
+                                    .strokeBorder(
+                                        style.tintsSelection
+                                            ? tint.mix(with: .primary, by: CrestSpaceIconPickerMetrics.strokeLift)
+                                            : .clear,
+                                        lineWidth: CrestSpaceIconPickerMetrics.selectionStroke)
                             }
                     }
                 }

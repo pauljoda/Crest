@@ -20,7 +20,7 @@ extension BrowserTabDragItem {
     func liftPreviewSubject(
         in space: SpaceModel, previewRows: [BrowserSidebarReorderRow]
     ) -> BrowserSidebarLiftPreviewSubject? {
-        space.tabs.model(tabID).map(BrowserSidebarLiftPreviewSubject.tab)
+        space.shownTab(tabID).map(BrowserSidebarLiftPreviewSubject.tab)
     }
 }
 

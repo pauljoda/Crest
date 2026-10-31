@@ -84,7 +84,7 @@ extension BrowserPageOwner {
         guard browser.isOpen(as: adopted.windowID), adopted.workspaceID == browser.window.workspaceID,
             host.page(for: adopted.tabID) == nil,
             let space = browser.spaceModel(adopted.spaceID),
-            let tab = space.tabs.model(adopted.tabID),
+            let tab = space.shownTab(adopted.tabID),
             let opened = browser.core.engines.host(adopted.pageID)
         else { return }
         hostAdoptedPage(
@@ -161,27 +161,27 @@ extension BrowserPageOwner {
 // MARK: - Space data
 
 extension BrowserPageOwner {
-    /// Releases the owner's pages in the Space `space` names, then has every
-    /// engine erase its profile's data.
-    func deleteData(for space: BrowserSpaceRuntimeAssignment) async throws {
-        try await host.deleteData(for: space, on: browser.core, ephemeral: usesEphemeralWebsiteDataStores) {
-            await releaseWindowRuntime(for: space)
-            serverTrustOverrides.removeApprovals(for: space.profileID)
+    /// Releases the owner's pages in the Space `deletion` names, then has
+    /// every engine erase the data of each profile it erases. The core forgets
+    /// the Space's site choices once it removes the Space.
+    func deleteData(for deletion: SpaceDeletionState) async throws {
+        try await host.deleteData(for: deletion, on: browser.core, ephemeral: usesEphemeralWebsiteDataStores) {
+            await releaseWindowRuntime(for: deletion)
+            for profileID in deletion.erasing { serverTrustOverrides.removeApprovals(for: profileID) }
         }
-        permissionCenter.reset(spaceID: space.spaceID)
     }
 
     /// Lets go of every page and download record the owner keeps for the
-    /// Space `space` names. Its website data goes when every engine erases
-    /// its profile.
-    func releaseWindowRuntime(for space: BrowserSpaceRuntimeAssignment) async {
-        guard host.spacesReleasingData.insert(space.spaceID).inserted else {
-            host.nativeTabs.remove(in: space.spaceID)
+    /// Space `deletion` names, and of every page of a profile it erases. The
+    /// website data goes when every engine erases those profiles.
+    func releaseWindowRuntime(for deletion: SpaceDeletionState) async {
+        guard host.spacesReleasingData.insert(deletion.spaceID).inserted else {
+            host.nativeTabs.remove(in: deletion.spaceID)
             return
         }
-        defer { host.spacesReleasingData.remove(space.spaceID) }
-        await host.releasePages(of: space)
-        downloadCenter.deleteRecords(profileID: space.profileID, spaceID: space.spaceID)
+        defer { host.spacesReleasingData.remove(deletion.spaceID) }
+        await host.releasePages(of: deletion)
+        downloadCenter.deleteRecords(of: deletion)
     }
 
     /// Lets go of everything a private workspace kept in the Spaces `spaces`

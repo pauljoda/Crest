@@ -8,6 +8,7 @@ import SwiftUI
 /// closures that need the windowed card pool.
 struct SpaceSidebarBrowsingContent: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(\.spaceSidebarBands) private var sidebarBands
 
     let space: SpaceModel
     let browser: BrowserStore
@@ -36,7 +37,7 @@ struct SpaceSidebarBrowsingContent: View {
 
     @ViewBuilder
     private func content(_ listContext: BrowserSidebarListContext) -> some View {
-        let hasPinnedTabs = !listContext.space.sidebar.section(.pinned).isEmpty
+        let hasPinnedTabs = !listContext.space.pinSource.sidebar.section(.pinned).isEmpty
         BrowserPinnedTabsDropSection(context: listContext)
             .equatable()
             .padding(.horizontal, BrowserSidebarMetrics.layerInset)
@@ -44,6 +45,14 @@ struct SpaceSidebarBrowsingContent: View {
             // extension strip above rather than holding space of its own.
             .padding(.top, hasPinnedTabs ? BrowserSidebarMetrics.topSectionSpacing : 0)
             .padding(.bottom, hasPinnedTabs ? BrowserSidebarMetrics.pinnedTabsBottomInset : 0)
+            // The pager holds these and the strip above still while it slides
+            // to a Space that shows them alike.
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .named(SpaceSidebarBands.page))
+            } action: {
+                sidebarBands?.record($0, for: space.id)
+            }
+            .onDisappear { sidebarBands?.forget(space.id) }
 
         BrowserSpaceHeader(
             space: space,
@@ -62,7 +71,12 @@ struct SpaceSidebarBrowsingContent: View {
         SpaceSidebarTabListScroll(browser: browser) {
             BrowserSidebarBackgroundInteractionView(
                 editSpace: editSpace,
-                createSpace: createSpace
+                createSpace: createSpace,
+                createSubSpace: browser.isPrivateBrowsing
+                    ? nil
+                    : { [space = listContext.space.id] in
+                        if browser.addSubSpace(after: space) { BrowserSpaceGroupNotices.formed() }
+                    }
             )
             .modifier(
                 BrowserSidebarEmptySpaceNewTabGesture(
@@ -198,7 +212,11 @@ private struct BrowserSidebarSelectionReconciler: View {
     /// it is shown and unlocked, and residency.
     private var snapshot: Snapshot {
         let space = context.space
-        let lists = space.sidebar.lists.map(\.rows)
+        // A Sub-Space lists the pinned tabs its group shares in place of its own.
+        let ownPins = space.sidebar.section(.pinned)
+        let lists =
+            [space.pinSource.sidebar.section(.pinned).rows]
+            + space.sidebar.lists.filter { $0 !== ownPins }.map(\.rows)
         let listed = lists.flatMap { $0.flatMap(\.members) }
         return Snapshot(
             lists: lists,

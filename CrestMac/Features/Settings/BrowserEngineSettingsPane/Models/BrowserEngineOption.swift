@@ -14,11 +14,11 @@ struct BrowserEngineOption: Identifiable {
     static let all: [BrowserEngineOption] = [
         BrowserEngineOption(
             engine: .chromium, logo: "EngineChromium",
-            summary: "Built on ungoogled-chromium, with Google integrations removed. Smooth browsing and extensions.",
+            summary: "Chromium without Google’s data collection. Smooth browsing and extensions.",
             benefits: [
                 BrowserEngineBenefit(title: "Smooth webpage performance", symbol: "speedometer"),
                 BrowserEngineBenefit(title: "Chrome Web Store extensions", symbol: "puzzlepiece.extension"),
-                BrowserEngineBenefit(title: "WebKit fallback for protected video", symbol: "play.rectangle"),
+                BrowserEngineBenefit(title: "Protected video, with WebKit fallback", symbol: "play.rectangle"),
             ]),
         BrowserEngineOption(
             engine: .webKit, logo: "EngineWebKit",

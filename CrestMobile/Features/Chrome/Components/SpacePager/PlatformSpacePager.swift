@@ -43,8 +43,8 @@ struct PlatformSpacePager<Content: View>: View {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 0) {
                         ForEach(spaces) { space in
+                            // A Space keeps its page when it joins or leaves a group.
                             content(space, space.id == selectedSpaceID)
-                                .id(BrowserSpaceRuntimeAssignment(space: space))
                                 .frame(width: viewport.size.width, height: viewport.size.height, alignment: .top)
                                 .id(space.id)
                                 .allowsHitTesting(space.id == selectedSpaceID)

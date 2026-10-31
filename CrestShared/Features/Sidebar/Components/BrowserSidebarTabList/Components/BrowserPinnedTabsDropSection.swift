@@ -41,7 +41,7 @@ private struct BrowserPinnedTabsGrid: View {
     var body: some View {
         let space = context.space
         PinnedTabGrid(
-            tabs: space.sidebar.section(.pinned).rows.compactMap { space.tabs.model($0.id) },
+            tabs: space.shownPins,
             favicons: context.favicons,
             assignment: context.assignment,
             window: context.window,

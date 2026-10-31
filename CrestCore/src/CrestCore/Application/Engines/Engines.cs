@@ -50,7 +50,7 @@ internal sealed class Engines {
     /// The first registered engine, in `EngineKind.All` order, other than
     /// `except`, that plays protected media through the platform, or null
     /// when none does.
-    public Engine? PlayingProtectedMedia(Engine except) => EngineKind.All.Select(registered.GetValueOrDefault)
+    public Engine? PlayingProtectedMedia(Engine? except) => EngineKind.All.Select(registered.GetValueOrDefault)
         .FirstOrDefault(engine => engine is not null && !ReferenceEquals(engine, except) && engine.Supports(EngineCapability.ProtectedMedia));
 
     #endregion

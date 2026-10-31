@@ -9,7 +9,8 @@ namespace CrestCore.Application;
 /// whose sections list the items they hold. Each Space brings its favorites
 /// as pinned tabs, its pinned section as saved tabs in their folders, and its
 /// unpinned section as open tabs, with its name, icon and colors, and each
-/// split view as a split of its tabs. A Chromium session file Arc wrote is
+/// split view as a split of its tabs. The Spaces of one Arc profile share its
+/// session and come in as one group. A Chromium session file Arc wrote is
 /// read as one.
 internal static class ArcSidebar {
     #region Static Variables
@@ -89,7 +90,8 @@ internal static class ArcSidebar {
                 string symbol = Symbol(space.CustomInfo);
                 var colors = Colors(space.CustomInfo);
                 drafts.Add(new SessionDraft(drafts.Count + 1, name, draft.Folders, draft.Tabs,
-                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors), space.ProfileFolder));
+                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors), space.ProfileFolder,
+                    Group: space.ProfileKey));
             }
         }
         return drafts;

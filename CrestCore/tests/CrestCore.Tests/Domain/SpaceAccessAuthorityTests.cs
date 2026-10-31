@@ -11,7 +11,7 @@ public sealed class SpaceAccessAuthorityTests {
 
     private static void Grant(SpaceAccessAuthority access, SpaceAccessAssignment assignment) {
         var request = Guid.NewGuid();
-        access.Begin(assignment, requiresAuthentication: true, request);
+        access.Begin([assignment], requiresAuthentication: true, request);
         access.Finish(assignment.Space, request, authenticated: true);
     }
 
@@ -36,9 +36,9 @@ public sealed class SpaceAccessAuthorityTests {
         Grant(access, first);
         Grant(access, replacement);
         var request = Guid.NewGuid();
-        access.Begin(other, requiresAuthentication: true, request);
+        access.Begin([other], requiresAuthentication: true, request);
 
-        Assert.Equal(new HashSet<SpaceAccessAssignment> { first, replacement }, access.Lock(first.Space).ToHashSet());
+        Assert.Equal(new HashSet<SpaceAccessAssignment> { first, replacement }, access.Lock(new HashSet<Guid> { first.Space }).ToHashSet());
         Assert.True(access.IsLocked(first, requiresAuthentication: true));
         Assert.True(access.IsLocked(replacement, requiresAuthentication: true));
         Assert.Equal([other], access.Finish(other.Space, request, authenticated: true));

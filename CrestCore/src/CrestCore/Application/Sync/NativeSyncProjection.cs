@@ -81,12 +81,14 @@ public static class NativeSyncProjection {
             var portable = Items(space, StoredSessionCodec.Key.Tabs).Where(t => PortableTab(t!)).Select(t => t!).ToArray();
             var splitIds = portable.Where(t => t[StoredSessionCodec.Key.SplitGroupId] is not null)
                 .Select(t => Id(t[StoredSessionCodec.Key.SplitGroupId])).ToHashSet();
-            // A Space's profile, credentials choice, splits and position are
+            // A Space's own profile, credentials choice, splits and position are
             // its record's own; the rest is copied as the session holds it.
             var spaceValue = Fields(space, StoredSessionCodec.Key.Id, StoredSessionCodec.Key.Name, StoredSessionCodec.Key.Symbol,
                 StoredSessionCodec.Key.Accent, StoredSessionCodec.Key.Branding, StoredSessionCodec.Key.BrowsingPreferences,
                 StoredSessionCodec.Key.AccessPolicy, StoredSessionCodec.Key.AccessPolicyModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded,
-                StoredSessionCodec.Key.SavedTabsExpansionModifiedAt);
+                StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.PrimarySpaceId, StoredSessionCodec.Key.SharedProfileId,
+                StoredSessionCodec.Key.MembershipModifiedAt, StoredSessionCodec.Key.SeparatesPinnedTabs,
+                StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, StoredSessionCodec.Key.ProtectionModifiedAt);
             spaceValue[StoredSessionCodec.Key.ProfileId] = space[StoredSessionCodec.Key.Profile]![StoredSessionCodec.Key.Id]!.DeepClone();
             if (space[StoredSessionCodec.Key.CredentialsEnabledModifiedAt] is { } credentialsModifiedAt) {
                 spaceValue[SyncPayload.Key.CredentialsEnabled] = StoredSessionCodec.DecodeCredentialPreferences(

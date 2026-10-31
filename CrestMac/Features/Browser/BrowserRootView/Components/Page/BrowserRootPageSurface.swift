@@ -46,7 +46,7 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
 
     /// The tab the window shows in this Space.
     private var shownTab: TabStateModel? {
-        model.browser.selectedTabID(in: space.id).flatMap { space.tabs.model($0) }
+        model.browser.selectedTabID(in: space.id).flatMap { space.shownTab($0) }
     }
 
     private var surfacePage: BrowserPage? {
@@ -90,12 +90,14 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                 assignment: isSelectedSpace ? presentation.dropAssignment : nil,
                 state: model.sidebarInteraction.sidebarReorderState
             )
+            // The window's own focus is read only where a page takes focus
+            // back, so the window gaining or losing it never re-renders the
+            // Space's pages.
             .environment(
                 \.browserWebFocusRestorationGate,
-                BrowserWebFocusRestorationGate(
-                    browserChromeOwnsFocus: !isInteractive || !model.isWindowFocused
-                        || model.isAddressEditing || model.chrome.isCommandPalettePresented,
-                    pageChromeOwnsFocus: false))
+                BrowserWebFocusRestorationGate(browserChromeOwnsFocus: !isInteractive, pageChromeOwnsFocus: false)
+            )
+            .environment(\.browserWebFocusWindow, model)
     }
 
     @ViewBuilder

@@ -464,7 +464,7 @@ struct MobileBrowserDetailView: View {
     /// What a neighbour with no page in memory shows as the swipe slides it in.
     @ViewBuilder
     private func swipePlaceholder(of tabID: UUID, viewport: MobileBrowserPageViewport) -> some View {
-        if let space = browser.shownSpace, let tab = space.tabs.model(tabID) {
+        if let space = browser.shownSpace, let tab = space.shownTab(tabID) {
             MobileTabSwipePlaceholder(
                 tab: tab,
                 space: space,

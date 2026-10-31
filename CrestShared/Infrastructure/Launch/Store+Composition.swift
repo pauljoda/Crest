@@ -177,6 +177,7 @@ extension BrowserStore {
         {
             return nil
         }
+        if launchEnvironment.presentsSubSpacesSession { return .subSpaces }
         return launchEnvironment.presentsShowcaseSession ? .showcase : .preview
     }
 

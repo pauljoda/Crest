@@ -106,6 +106,10 @@ struct BrowserFolderGroup: View {
             BrowserFolderGroupSurface(configuration: configuration, interaction: interaction)
             if showsContents {
                 folderContents(configuration: configuration)
+                    .transition(
+                        .modifier(
+                            active: BrowserFolderContentsReveal(progress: 0),
+                            identity: BrowserFolderContentsReveal(progress: 1)))
             }
         }
         .environment(\.browserInteractionCapabilities, context.capabilities)
@@ -148,7 +152,7 @@ struct BrowserFolderGroup: View {
     /// Nested folders are children of the section they move with, so a parent's
     /// measurement, hover surface and lift include the entire expanded subtree.
     private func folderContents(configuration: BrowserFolderGroupConfiguration) -> some View {
-        BrowserSidebarListRows(list: configuration.inside, context: context) { items in
+        BrowserSidebarListRows(list: configuration.inside, context: context, makesRowsLazily: false) { items in
             if items.isEmpty { BrowserFolderEmptyRunBand(configuration: configuration) }
         }
         .equatable()
@@ -409,6 +413,46 @@ private struct BrowserFolderReorderContainer: ViewModifier {
         else { return false }
         return item.folderID == configuration.folder.id
             && item.spaceID == configuration.spaceID && item.profileID == configuration.profileID
+    }
+}
+
+/// Shows a folder's contents from the top down as the rows below make room for
+/// them, and covers them again from the bottom up as they close, so nothing
+/// below slides across contents still appearing. However deep the contents
+/// go, they arrive as one piece, the way a folder of tabs alone does.
+private struct BrowserFolderContentsReveal: ViewModifier {
+    /// How much of the contents shows, from the top.
+    let progress: CGFloat
+
+    /// A clip leaves hit testing alone, so contents on their way out stop
+    /// taking clicks as they start to close, and a click lands on the row
+    /// that is sliding up over them.
+    func body(content: Content) -> some View {
+        content
+            .clipShape(BrowserFolderRevealShape(progress: progress))
+            .allowsHitTesting(progress >= 1)
+    }
+}
+
+/// The part of a folder's contents a reveal shows. It reaches past their top
+/// and sides by a selected tab's glow, and past their bottom once they are all
+/// shown, so at rest it hides nothing. While they are still coming in, its
+/// bottom edge is the top of the row below.
+private struct BrowserFolderRevealShape: Shape {
+    var progress: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let glow = BrowserTabSelectionGlow.outset
+        let bottom = rect.minY + rect.height * progress + (progress >= 1 ? glow : 0)
+        return Path(
+            CGRect(
+                x: rect.minX - glow, y: rect.minY - glow, width: rect.width + glow * 2,
+                height: bottom - rect.minY + glow))
     }
 }
 
