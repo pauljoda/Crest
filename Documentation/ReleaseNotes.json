@@ -4637,6 +4637,10 @@
     "sub-space-switch-keeps-shared": {
       "category": "improved",
       "message": "Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move."
+    },
+    "sub-space-pinned-drag": {
+      "category": "fixed",
+      "message": "Dragging a pinned tab in a Space whose group shares its pinned tabs works again: the tile lifts under the pointer, the other pins move aside, and it lands where you let go."
     }
   }
 }
