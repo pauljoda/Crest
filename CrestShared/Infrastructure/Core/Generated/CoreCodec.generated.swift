@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x0f, 0xcf, 0xd0, 0x83, 0x72, 0xa0, 0x5f, 0x2a, 0xd7, 0x42, 0xfd, 0xd8, 0x2b, 0x70, 0xbb, 0x2b, 0x28, 0x30, 0x6e, 0xa7, 0xfb, 0x87, 0x4a, 0x04, 0x46, 0xc7, 0xa4, 0x95, 0xde, 0xb6, 0x9a, 0xfa
+        0x89, 0x62, 0xf2, 0x37, 0xf9, 0x10, 0x12, 0x07, 0x12, 0x69, 0xee, 0x73, 0x7a, 0x29, 0x3f, 0xf0, 0x8c, 0xe9, 0x62, 0x53, 0x82, 0x0d, 0x44, 0x36, 0x17, 0x3f, 0xbc, 0xac, 0x17, 0xb4, 0x09, 0x4c
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -20728,6 +20728,13 @@ extension SetupReviewSpace {
             let includedExtensionIDsElement = try reader.readString()
             includedExtensionIDs.append(includedExtensionIDsElement)
         }
+        let joinsGroupOf: UUID?
+        if try reader.readPresence() {
+            let joinsGroupOfValue = try reader.readUUID()
+            joinsGroupOf = joinsGroupOfValue
+        } else {
+            joinsGroupOf = nil
+        }
         let shownName = try reader.readString()
         let bringsPasswords = try reader.readBool()
         let broughtExtensionsCount = try reader.readCount()
@@ -20737,7 +20744,7 @@ extension SetupReviewSpace {
             let broughtExtensionsElement = try ImportExtension(from: &reader)
             broughtExtensions.append(broughtExtensionsElement)
         }
-        self.init(source: source, included: included, destinationID: destinationID, customization: customization, includedTabIDs: includedTabIDs, duplicateTabIDs: duplicateTabIDs, matchedTabIDs: matchedTabIDs, placements: placements, includesPasswords: includesPasswords, passwordCount: passwordCount, extensions: extensions, includedExtensionIDs: includedExtensionIDs, shownName: shownName, bringsPasswords: bringsPasswords, broughtExtensions: broughtExtensions)
+        self.init(source: source, included: included, destinationID: destinationID, customization: customization, includedTabIDs: includedTabIDs, duplicateTabIDs: duplicateTabIDs, matchedTabIDs: matchedTabIDs, placements: placements, includesPasswords: includesPasswords, passwordCount: passwordCount, extensions: extensions, includedExtensionIDs: includedExtensionIDs, joinsGroupOf: joinsGroupOf, shownName: shownName, bringsPasswords: bringsPasswords, broughtExtensions: broughtExtensions)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -20775,6 +20782,12 @@ extension SetupReviewSpace {
         writer.writeCount(includedExtensionIDs.count)
         for element0 in includedExtensionIDs {
             writer.writeString(element0)
+        }
+        if let present0 = joinsGroupOf {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
         }
         writer.writeString(shownName)
         writer.writeBool(bringsPasswords)

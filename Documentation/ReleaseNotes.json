@@ -4625,6 +4625,18 @@
     "space-picker-stronger-selection": {
       "category": "improved",
       "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    },
+    "import-keeps-shared-sessions": {
+      "category": "improved",
+      "message": "Importing from Arc or Zen keeps Spaces that shared sign-ins together. When one of them joins a Space you already have, the rest become Sub-Spaces of that Space's group, Zen workspaces that share a container come in as a group of their own, and imported passwords are saved once for the group."
+    },
+    "import-review-smoother": {
+      "category": "improved",
+      "message": "Moving between Spaces in setup's import review is smoother, setup's animations are quicker, and each Space in a group shows which group it joins, with room for Separate."
+    },
+    "sub-space-switch-keeps-shared": {
+      "category": "improved",
+      "message": "Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move."
     }
   }
 }

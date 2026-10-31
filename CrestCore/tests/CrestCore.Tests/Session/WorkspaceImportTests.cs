@@ -145,6 +145,53 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(TabPlacement.Pinned, alone.Tabs[0].Placement);
     }
 
+    /// When the review brings one of the Spaces that shared a session where
+    /// they came from into an existing Space, the others join that Space's
+    /// group, which stays as it was: they browse with its session, take its
+    /// settings and its primary's pinned tabs, and open with it where it is
+    /// open. Their passwords go once to the group's primary.
+    [Fact]
+    public void SpacesThatSharedASessionJoinTheGroupOfTheExistingSpaceOneOfThemJoins() {
+        var (reading, notes) = (Fixed(5_100), Fixed(5_101));
+        var session = SessionOf(Locked(SpaceOf(reading, Fixed(5_190), "Reading",
+                tabs: [TabOf(Fixed(5_110), "Mail", "https://mail.example/", placement: "pinned")])),
+            SpaceOf(notes, Fixed(5_191), "Notes", tabs: [TabOf(Fixed(5_111))]));
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        Unlock(device.Send, device.Workspace, reading);
+        device.Send(new JoinSpace(device.Workspace, notes, reading));
+        var work = ImportedSpace("Work", ImportedTab("https://mail.example/", "pinned"), ImportedTab("https://own-pin.example/", "pinned"),
+            ImportedTab("https://shared.example/"));
+        var merged = ImportedSpace("notes", ImportedTab("https://notes.example/"));
+        var design = ImportedSpace("Design", ImportedTab("https://shared.example/design"));
+        foreach (var member in new[] { merged, design }) {
+            member["primarySpaceID"] = work["id"]!.DeepClone();
+            member["sharedProfileID"] = work["profile"]!["id"]!.DeepClone();
+            member["membershipModifiedAt"] = 800000000.0;
+        }
+
+        var review = Reviewing(device, work, merged, design);
+        Assert.Equal((null, notes, null), (review.Spaces[0].DestinationId, review.Spaces[1].DestinationId, review.Spaces[2].DestinationId));
+        Assert.All(review.Spaces, space => Assert.Equal(reading, space.JoinsGroupOf));
+        device.Send(new BeginImportCommit());
+        device.Send(new ImportReviewedSpaces(device.Workspace, window));
+
+        var current = device.Authority.Current;
+        var primary = current.Space(reading)!;
+        SpaceState Named(string name) => current.Spaces.Single(space => space.Settings.Name == name);
+        Assert.Equal([reading, notes, SpaceId(work), SpaceId(design)], current.GroupOf(reading)!.Members.Select(member => member.Id));
+        Assert.All(current.GroupOf(reading)!.Members, member => Assert.Equal(primary.ProfileId, member.ProfileId));
+        Assert.Null(primary.Membership);
+        Assert.True(Named("Work").Settings.RequiresAuthentication);
+        Assert.Equal([("https://own-pin.example/", TabPlacement.Saved), ("https://shared.example/", TabPlacement.Current)],
+            Named("Work").Tabs.Select(tab => (tab.Url, tab.Placement)));
+        // The group stays open here, so its new Sub-Spaces open with it.
+        device.Send(new RenameTab(device.Workspace, SpaceId(work), Named("Work").Tabs[1].Id, "Renamed"));
+        ImportPasswordSource[] passwords = [new("Arc", "shared.example"), new("Arc", "notes.example")];
+        Assert.Equal([[reading], [reading]],
+            device.Query(new ImportPasswordDestinations(device.Workspace, passwords)).Routes.Select(route => route.SpaceIds));
+    }
+
     [Fact]
     public void AReviewedImportJoinsTheSpaceItNamesAndMakesTheRestNewSpaces() {
         var fixture = SavedSession();

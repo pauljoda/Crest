@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x0f, 0xcf, 0xd0, 0x83, 0x72, 0xa0, 0x5f, 0x2a, 0xd7, 0x42, 0xfd, 0xd8, 0x2b, 0x70, 0xbb, 0x2b, 0x28, 0x30, 0x6e, 0xa7, 0xfb, 0x87, 0x4a, 0x04, 0x46, 0xc7, 0xa4, 0x95, 0xde, 0xb6, 0x9a, 0xfa
+        0x89, 0x62, 0xf2, 0x37, 0xf9, 0x10, 0x12, 0x07, 0x12, 0x69, 0xee, 0x73, 0x7a, 0x29, 0x3f, 0xf0, 0x8c, 0xe9, 0x62, 0x53, 0x82, 0x0d, 0x44, 0x36, 0x17, 0x3f, 0xbc, 0xac, 0x17, 0xb4, 0x09, 0x4c
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -16238,7 +16238,8 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadInt32(),
             reader.ReadList(() => ReadImportExtension(reader)),
-            reader.ReadList(() => reader.ReadString()));
+            reader.ReadList(() => reader.ReadString()),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
         _ = reader.ReadString();
         _ = reader.ReadBool();
         _ = reader.ReadList(() => ReadImportExtension(reader));
@@ -16282,6 +16283,12 @@ public static class ContractCodec {
         writer.WriteCount(value.IncludedExtensionIds.Count);
         foreach (var itemIncludedExtensionIds in value.IncludedExtensionIds) {
             writer.WriteString(itemIncludedExtensionIds);
+        }
+        if (value.JoinsGroupOf is { } presentJoinsGroupOf) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentJoinsGroupOf);
+        } else {
+            writer.WritePresence(false);
         }
         writer.WriteString(value.ShownName);
         writer.WriteBool(value.BringsPasswords);

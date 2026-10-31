@@ -38,9 +38,13 @@ struct BrowserImportSpaceReview: Identifiable, Equatable {
     }
     /// The name, symbol and look the Space takes.
     var customization: SpaceCustomization { record.customization }
-    /// The reviewed Space that leads the group this one came in with where it
-    /// came from: the Space it shared a session with, or itself.
-    var groupID: UUID { record.source.membership?.primaryID ?? record.source.id }
+    /// The group the Space comes into: the primary of the workspace's group
+    /// it joins, or else the reviewed Space that leads the Spaces it shared a
+    /// session with where it came from, or itself.
+    var groupID: UUID { record.joinsGroupOf ?? record.source.membership?.primaryID ?? record.source.id }
+    /// The primary of the workspace's group the Space comes into, when it
+    /// joins one.
+    var existingGroupID: UUID? { record.joinsGroupOf }
     /// Whether the Space comes in as a new Space, which is when it may come in
     /// with its group.
     var comesInNew: Bool { isIncluded && destination == .newSpace }

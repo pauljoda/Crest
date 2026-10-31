@@ -37,6 +37,7 @@ struct SpacePageRoot<Content: View>: View {
             .environment(objects.softwareUpdates)
             .environment(objects.agentEndpoint)
             .environment(objects.core)
+            .environment(\.spaceSidebarBands, objects.sidebarBands)
     }
 }
 

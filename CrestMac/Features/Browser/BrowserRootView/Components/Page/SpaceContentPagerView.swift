@@ -9,6 +9,9 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     private var spaces: [SpaceModel] = []
     private var selectedSpaceID: UUID?
     private var lockedSpaceIDs: Set<UUID> = []
+    /// The places in the strip where a Space and the next one show the same
+    /// page, a pinned tab their group shares, by the first one's position.
+    private var sharedPages: Set<Int> = []
     private var layoutDirection = LayoutDirection.leftToRight
     private var presentation: SpacePagerPresentation?
     private var snapshot: SpacePagerPresentation.Snapshot?
@@ -31,8 +34,10 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
     }
 
+    /// Shows `spaces`, where `shownPins` is the pinned tab each Space shows,
+    /// for the Spaces that show one.
     func update(
-        spaces: [SpaceModel], selectedSpaceID: UUID, lockedSpaceIDs: Set<UUID>,
+        spaces: [SpaceModel], selectedSpaceID: UUID, lockedSpaceIDs: Set<UUID>, shownPins: [UUID: UUID],
         layoutDirection: LayoutDirection, presentation: SpacePagerPresentation?,
         makeRoot: @escaping (SpaceModel, Bool) -> SpacePageRoot<Content>
     ) {
@@ -49,6 +54,12 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         self.spaces = spaces
         self.selectedSpaceID = selectedSpaceID
         self.lockedSpaceIDs = lockedSpaceIDs
+        sharedPages = Set(
+            spaces.indices.dropLast().filter { index in
+                let (space, next) = (spaces[index], spaces[index + 1])
+                return space.profileID == next.profileID && shownPins[space.id] != nil
+                    && shownPins[space.id] == shownPins[next.id]
+            })
         self.layoutDirection = layoutDirection
         self.makeRoot = makeRoot
         if self.presentation !== presentation {
@@ -255,7 +266,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 root.contentPresentation = contentPresentation
                 // A page off screen is hidden as well: on macOS 26, another
                 // hosting view beside the selected page can take its clicks.
-                host.isHidden = contentPresentation == .inactive
+                host.isHidden = contentPresentation == .inactive || yieldsPlace(at: index)
                 if host.hostingView.rootView.content != root.content || previous != contentPresentation {
                     if contentPresentation != .interactive,
                         let responder = window?.firstResponder as? NSView, responder.isDescendant(of: host)
@@ -275,7 +286,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 let host = SpacePageHost(root: root)
                 host.frame = CGRect(origin: origin(for: key, at: position), size: bounds.size)
                 host.hostingView.frame = host.bounds
-                host.isHidden = contentPresentation == .inactive
+                host.isHidden = contentPresentation == .inactive || yieldsPlace(at: index)
                 hosts[key] = host
                 addSubview(host)
             }
@@ -308,7 +319,30 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         let index = spaces.firstIndex { $0.id == key.spaceID } ?? 0
         let placed = SpacePagerInterpolation.index(index, near: reference ?? position, count: spaces.count)
         let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
-        return CGPoint(x: (CGFloat(placed) - position) * bounds.width * direction, y: 0)
+        return CGPoint(x: (place(CGFloat(placed)) - place(position)) * bounds.width * direction, y: 0)
+    }
+
+    /// Where the strip stands at `position` when neighbouring Spaces that
+    /// show the same page count as one place, so moving between them moves
+    /// no page. A place beyond the ends, which a slide around them reaches,
+    /// keeps its distance from the end.
+    private func place(_ position: CGFloat) -> CGFloat {
+        guard !sharedPages.isEmpty, !spaces.isEmpty else { return position }
+        let clamped = min(max(position, 0), CGFloat(spaces.count - 1))
+        let lower = Int(clamped.rounded(.down))
+        var reached = CGFloat(lower - sharedPages.count { $0 < lower })
+        if !sharedPages.contains(lower) { reached += clamped - CGFloat(lower) }
+        return reached + position - clamped
+    }
+
+    /// Whether the page at `index` shares its place with the selected
+    /// Space's, both showing one page, while the strip moves. Only the
+    /// selected Space draws that page then, as it held it before the move.
+    private func yieldsPlace(at index: Int) -> Bool {
+        guard let snapshot, snapshot.phase != .idle, !sharedPages.isEmpty,
+            let selected = spaces.firstIndex(where: { $0.id == selectedSpaceID }), selected != index
+        else { return false }
+        return place(CGFloat(index)) == place(CGFloat(selected))
     }
 
     private func needsMotion(_ host: NSView, to origin: CGPoint) -> Bool {

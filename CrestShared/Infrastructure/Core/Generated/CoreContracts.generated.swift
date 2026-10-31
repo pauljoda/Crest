@@ -5881,6 +5881,7 @@ struct SetupReviewSpace: Equatable, Sendable {
     let passwordCount: Int
     let extensions: [ImportExtension]
     let includedExtensionIDs: [String]
+    let joinsGroupOf: UUID?
     let shownName: String
     let bringsPasswords: Bool
     let broughtExtensions: [ImportExtension]

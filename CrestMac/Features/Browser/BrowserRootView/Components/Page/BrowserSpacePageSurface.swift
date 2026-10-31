@@ -29,6 +29,7 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
             spaces: model.browser.availableSpaces,
             selectedSpaceID: model.browser.selectedSpaceID,
             lockedSpaceIDs: model.lockedSpaceIDs,
+            shownPins: shownPins,
             layoutDirection: context.environment.layoutDirection,
             presentation: animatesSpacePages && !context.environment.accessibilityReduceMotion
                 ? context.environment.spacePagerPresentation : nil
@@ -46,5 +47,19 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
 
     static func dismantleNSView(_ view: SpaceContentPagerView<BrowserRootPageSurface>, coordinator: ()) {
         view.disconnect()
+    }
+
+    /// The pinned tab each open Space shows in this window, for those that
+    /// show one rather than another tab or a Start Page on entry.
+    private var shownPins: [UUID: UUID] {
+        let browser = model.browser
+        var pins: [UUID: UUID] = [:]
+        for space in browser.availableSpaces where !model.lockedSpaceIDs.contains(space.id) {
+            guard space.id == browser.selectedSpaceID || !model.pages.requiresStartPageOnEntry(to: space),
+                let tabID = browser.selectedTabID(in: space.id), space.shownTab(tabID)?.placement == .pinned
+            else { continue }
+            pins[space.id] = tabID
+        }
+        return pins
     }
 }

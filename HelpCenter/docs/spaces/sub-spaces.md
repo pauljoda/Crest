@@ -114,4 +114,8 @@ Devices that run an earlier version of Crest keep syncing. They show each Sub-Sp
 
 ## Import groups from Arc and Zen
 
-Importing from Arc brings the Spaces of one Arc profile in as one group. Importing from Zen brings each profile's workspaces in as one group. The import review outlines each group and can bring a Space in on its own. See [Move your browser data to Crest](../getting-started/move-to-crest.md).
+Importing from Arc brings the Spaces of each Arc profile in as one group, led by the profile's first Space. Importing from Zen does the same for each profile's workspaces. Zen workspaces that open their tabs in one container share that container's sign-ins instead, so they come in as a group of their own.
+
+If the review sends one Space of a group into a Space you already have, the rest of the group become Sub-Spaces of that Space's group, and its primary keeps leading it. They take the group's settings and its primary's pinned tabs. Imported passwords go to the group's primary.
+
+The review outlines each group and says which group each Space joins. Choose **Separate** to bring a Space in on its own. See [Move your browser data to Crest](../getting-started/move-to-crest.md).

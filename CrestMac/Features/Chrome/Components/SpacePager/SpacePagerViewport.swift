@@ -45,6 +45,12 @@ final class SpacePagerViewport<Content: View>: NSView {
     private var presentation: SpacePagerPresentation?
     private var contentTopInsets: [UUID: CGFloat] = [:]
     private var pendingContentTopInsets: [UUID: CGFloat] = [:]
+    /// Where each page ends its extension strip and its pinned tabs.
+    private var bands: SpaceSidebarBands?
+    /// A still copy of the band of strip and pinned tabs the two pages a
+    /// slide moves between show alike, over the pages, which mask out their
+    /// own, while the slide lasts.
+    private var heldBand: NSView?
     private var motionDisplayLink: CADisplayLink?
     /// Which installation of the settling animations finishes the motion. A
     /// slide re-aimed at a new size replaces its animations, and the ones it
@@ -83,6 +89,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         layoutDirection: LayoutDirection,
         presentation: SpacePagerPresentation? = nil,
         contentTopInsets: [UUID: CGFloat] = [:],
+        bands: SpaceSidebarBands? = nil,
         selectSpace: @escaping (UUID) -> UUID,
         makeRoot: @escaping (SpaceModel, Bool) -> SpacePageRoot<Content>
     ) {
@@ -100,6 +107,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             || self.reduceMotion != reduceMotion || self.layoutDirection != layoutDirection
         self.presentation = presentation
         pendingContentTopInsets = contentTopInsets
+        self.bands = bands
         self.spaces = spaces
         self.selectedSpaceID = selectedSpaceID
         self.isInteractionLocked = isInteractionLocked
@@ -186,6 +194,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         if lastSize != bounds.size {
             let previousWidth = lastSize.width
             lastSize = bounds.size
+            releaseSharedBand()
             if motion?.transition != nil, previousWidth > 0, bounds.width > 0 {
                 settling = (previousWidth, settlingHosts, settlementBeginTime)
             } else if motion != nil {
@@ -222,6 +231,7 @@ final class SpacePagerViewport<Content: View>: NSView {
 
     func teardown() {
         gesture.attach(to: nil)
+        releaseSharedBand()
         presentationSpaceID = expectedSelection ?? selectedSpaceID
         cancelMotion()
         publishPresentation()
@@ -267,6 +277,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         // Capture presentation before removing an interrupted animation. The new
         // gesture owns its displacement independently of this inherited offset.
         stopHostAnimations()
+        releaseSharedBand()
         presentationSpaceID = origin.spaceID
         motion = Motion(
             generation: generation, origin: origin, offset: inheritedOffset,
@@ -282,6 +293,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         guard var current = motion, current.generation == token, current.settledDestination == nil,
             !isInteractionLocked, !isHiddenOrHasHiddenAncestor, window != nil
         else { return false }
+        let choosesTarget = current.direction == 0 && deltaX != 0
         if current.direction == 0, deltaX != 0 {
             current.direction = deltaX < 0 ? -1 : 1
             current.target = neighbor(forPhysicalDirection: current.direction)
@@ -306,6 +318,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         let travel = min(max(0, availableTravel), max(0, (current.translation + deltaX) * current.direction))
         current.translation = travel * current.direction
         motion = current
+        if choosesTarget { holdSharedBand() }
         startPresentationSampling()
         return true
     }
@@ -373,6 +386,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         if let target = motion?.target, hosts[target] == nil {
             prepareHosts(around: current.origin.spaceID, retaining: next, refreshContent: false)
         }
+        holdSharedBand()
         settleMotion(to: next)
     }
 
@@ -381,6 +395,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         generation &+= 1
         motion = nil
         stopHostAnimations()
+        releaseSharedBand()
         positionHosts()
         updateAccessibility()
     }
@@ -396,6 +411,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             commitsSelection: commitsSelection)
         positionHosts()
         updateAccessibility()
+        holdSharedBand()
         settleMotion(to: destination)
     }
 
@@ -445,9 +461,11 @@ final class SpacePagerViewport<Content: View>: NSView {
             let target = assignment(for: destination)
         else { return false }
         let offset = settlingOffset(for: origin, during: current) ?? visibleOffset(for: origin, during: current)
+        let holdsBand = heldBand != nil
         gesture.cancelCurrentGesture()
         stopPresentationSampling()
         stopHostAnimations()
+        releaseSharedBand()
         generation &+= 1
         presentationSpaceID = heading
         motion = Motion(
@@ -459,6 +477,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         prepareHosts(around: heading, retaining: destination, refreshContent: false)
         positionHosts()
         updateAccessibility()
+        // The page the slide left shows the heading Space's band only where
+        // the slide held one, so only then can the new slide hold it too.
+        if holdsBand { holdSharedBand() }
         settleMotion(to: destination)
         return true
     }
@@ -647,6 +668,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         stopHostAnimations()
         applyContentTopInsets(animated: true)
         positionHosts()
+        releaseSharedBand()
         updateAccessibility()
         publishPresentation()
         if current.commitsSelection, destination != committedSelection {
@@ -738,7 +760,8 @@ final class SpacePagerViewport<Content: View>: NSView {
                     width: bounds.width, height: pageSize(for: key).height)
                 host.hostingView.frame = host.bounds
                 hosts[key] = host
-                addSubview(host)
+                addSubview(host, positioned: .below, relativeTo: heldBand)
+                if let heldBand { Self.mask(host, below: heldBand.frame.height) }
             }
         }
     }
@@ -823,6 +846,77 @@ final class SpacePagerViewport<Content: View>: NSView {
                 host.layer?.removeAnimation(forKey: key)
             }
         }
+    }
+
+    // MARK: - Actions - Held band
+
+    /// Holds still the band of strip and pinned tabs that the motion's origin
+    /// and target pages show alike, the rest of them sliding beneath: a copy
+    /// of the origin's band stays over the pages, and each page masks out its
+    /// own until the motion ends.
+    private func holdSharedBand() {
+        guard heldBand == nil, let current = motion, let target = current.target,
+            let origin = spaces.first(where: { $0.id == current.origin.spaceID }),
+            let destination = spaces.first(where: { $0.id == target.spaceID }),
+            let height = bands?.sharedHeight(between: origin, and: destination), height > 0,
+            let host = hosts[current.origin], let image = Self.image(of: host, top: height)
+        else { return }
+        let band = NSView(frame: CGRect(x: 0, y: topInset(at: displayedPosition), width: bounds.width, height: height))
+        band.wantsLayer = true
+        band.layer?.contents = image
+        band.layer?.contentsGravity = .resize
+        band.setAccessibilityElement(false)
+        addSubview(band, positioned: .above, relativeTo: nil)
+        heldBand = band
+        for host in hosts.values { Self.mask(host, below: height) }
+    }
+
+    /// Lets the pages show their own bands again.
+    private func releaseSharedBand() {
+        guard let heldBand else { return }
+        heldBand.removeFromSuperview()
+        self.heldBand = nil
+        for host in hosts.values { host.layer?.mask = nil }
+    }
+
+    /// An image of the top `height` points of `host`'s page as its layers
+    /// hold it now, drawn at the window's scale. Core Animation draws the
+    /// layers in about half the time AppKit's view drawing takes.
+    private static func image(of host: NSView, top height: CGFloat) -> CGImage? {
+        let scale = host.window?.backingScaleFactor ?? 2
+        guard let layer = host.layer, host.bounds.width > 0, height > 0,
+            let space = CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: Int((host.bounds.width * scale).rounded()), height: Int((height * scale).rounded()),
+                bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        context.scaleBy(x: scale, y: scale)
+        if runsDown(layer) {
+            context.translateBy(x: 0, y: height)
+            context.scaleBy(x: 1, y: -1)
+        } else {
+            context.translateBy(x: 0, y: height - host.bounds.height)
+        }
+        layer.render(in: context)
+        return context.makeImage()
+    }
+
+    /// Whether `layer`'s own coordinates run down the screen: they do when an
+    /// odd number of the layers from it up flip their geometry.
+    private static func runsDown(_ layer: CALayer) -> Bool {
+        sequence(first: layer, next: \.superlayer).filter(\.isGeometryFlipped).count % 2 == 1
+    }
+
+    /// Hides the top `height` points of `host`'s page, which the held band
+    /// shows in its place.
+    private static func mask(_ host: NSView, below height: CGFloat) {
+        guard let layer = host.layer else { return }
+        let mask = CALayer()
+        mask.backgroundColor = NSColor.black.cgColor
+        let visible = max(0, host.bounds.height - height)
+        mask.frame = CGRect(x: 0, y: runsDown(layer) ? height : 0, width: host.bounds.width, height: visible)
+        layer.mask = mask
     }
 
     private func updateAccessibility() {

@@ -132,8 +132,6 @@ public sealed partial record SetupImportReview {
     internal SetupImportReview Showing(Guid sourceId) =>
         Spaces.Any(space => space.Source.Id == sourceId) ? this with { ShownSpaceId = sourceId } : this;
 
-    /// `review` with `edit` made to `sourceId`, unless it would bring the
-    /// Space in new once the workspace is full, which changes nothing.
     /// `review` with `sourceId` coming in on its own, rather than with the
     /// Spaces it shared a session with where it came from. A Space that leads
     /// such Spaces hands them to the next of them.
@@ -153,6 +151,8 @@ public sealed partial record SetupImportReview {
         }).Analyzed(session);
     }
 
+    /// `review` with `edit` made to `sourceId`, unless it would bring the
+    /// Space in new once the workspace is full, which changes nothing.
     private SetupImportReview Editing(Guid sourceId, SessionState session, Func<SetupReviewSpace, SetupReviewSpace> edit) {
         ArgumentNullException.ThrowIfNull(session);
         if (Spaces.FirstOrDefault(space => space.Source.Id == sourceId) is not { } current) return this;
@@ -170,9 +170,11 @@ public sealed partial record SetupImportReview {
 
     /// Where each of `passwords` goes once the review is imported into
     /// `session`: the destination of each reviewed Space the password belongs
-    /// with that brings its passwords, leaving out a destination `session` no
-    /// longer holds or `isLocked` holds shut. A password whose Space does not
-    /// bring its passwords goes nowhere, never to another profile's Space.
+    /// with that brings its passwords, or the primary of the group that
+    /// destination belongs to, which keeps the group's passwords, once each;
+    /// leaving out a destination `session` no longer holds or `isLocked` holds
+    /// shut. A password whose Space does not bring its passwords goes nowhere,
+    /// never to another profile's Space.
     internal ImportPasswordRoutes PasswordRoutes(IReadOnlyList<ImportPasswordSource> passwords, SessionState session,
         Func<SpaceState, bool> isLocked) {
         ArgumentNullException.ThrowIfNull(passwords);
@@ -184,7 +186,8 @@ public sealed partial record SetupImportReview {
         var open = session.Spaces.Where(space => !isLocked(space)).Select(space => space.Id).ToHashSet();
         var sites = SpaceSites.Of(reviewed);
         return new([.. passwords.Select(password => new ImportPasswordRoute([.. Source.SpacesFor(password, reviewed, sites)
-            .Where(destinations.ContainsKey).Select(spaceId => destinations[spaceId]).Distinct().Where(open.Contains)]))]);
+            .Where(destinations.ContainsKey).Select(spaceId => session.GroupOf(destinations[spaceId])?.Primary.Id ?? destinations[spaceId])
+            .Distinct().Where(open.Contains)]))]);
     }
 
     #endregion
@@ -193,16 +196,20 @@ public sealed partial record SetupImportReview {
 
     /// The review with what its choices mean against `session`: each Space's
     /// tabs its destination already holds and the destination's tabs it
-    /// matches, the pinned tabs past each destination's limit, and the room
-    /// the workspace has for new Spaces.
+    /// matches, the group of the workspace each Space comes into, the pinned
+    /// tabs past each destination's limit, and the room the workspace has for
+    /// new Spaces.
     internal SetupImportReview Analyzed(SessionState session) {
         ArgumentNullException.ThrowIfNull(session);
         var byId = session.ImportDestinations.ToDictionary(space => space.Id);
         var pinned = byId.ToDictionary(entry => entry.Key, entry => entry.Value.Tabs.Count(tab => tab.Placement == TabPlacement.Pinned));
         Dictionary<Guid, int> created = [];
         List<Guid> overflow = [];
+        Guid? GroupOf(Guid? spaceId) => spaceId is { } id && byId.ContainsKey(id) ? session.GroupOf(id)?.Primary.Id ?? id : null;
         var spaces = Spaces.Select(space => {
-            var analyzed = space.Analyzed(space.DestinationId is { } id ? byId.GetValueOrDefault(id) : null);
+            var analyzed = space.Analyzed(space.DestinationId is { } id ? byId.GetValueOrDefault(id) : null) with {
+                JoinsGroupOf = !space.Included ? null : GroupOf(space.DestinationId ?? GroupDestination(space))
+            };
             if (!space.Included) return analyzed;
             var counts = space.DestinationId is null ? created : pinned;
             var key = space.DestinationId ?? space.Source.Id;
@@ -217,6 +224,17 @@ public sealed partial record SetupImportReview {
             return analyzed;
         }).ToArray();
         return this with { Spaces = spaces, OverflowTabIds = overflow, SpaceRoom = session.ImportRoom };
+    }
+
+    /// The Space of the workspace that the Spaces `space` shared a session
+    /// with where they came from come into: the destination of the first of
+    /// them the review brings into a Space the workspace holds, or null when
+    /// it brings each of them in new. A Space it brings in new with them joins
+    /// that Space's group.
+    internal Guid? GroupDestination(SetupReviewSpace space) {
+        ArgumentNullException.ThrowIfNull(space);
+        return Spaces.FirstOrDefault(other => other.Included && other.DestinationId is not null
+            && other.SourceGroupId == space.SourceGroupId)?.DestinationId;
     }
 
     #endregion

@@ -26,6 +26,7 @@ struct BrowserSidebarLoadedContent: View {
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
     @Environment(\.spacePagerPresentation) private var inheritedPagerPresentation
     @State private var standalonePagerPresentation = SpacePagerPresentation()
+    @State private var sidebarBands = SpaceSidebarBands()
 
     private var spacePagerPresentation: SpacePagerPresentation {
         inheritedPagerPresentation ?? standalonePagerPresentation
@@ -65,6 +66,7 @@ struct BrowserSidebarLoadedContent: View {
                     tabPromotionNamespace: tabPromotionNamespace
                 )
                 .padding(.top, BrowserTabSelectionGlow.outset)
+                .coordinateSpace(.named(SpaceSidebarBands.page))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
@@ -104,6 +106,7 @@ struct BrowserSidebarLoadedContent: View {
                     spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))
         }
         .environment(\.spacePagerPresentation, spacePagerPresentation)
+        .environment(\.spaceSidebarBands, sidebarBands)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
             "\(context.browser.shownSpace?.settings.name ?? "Browser") Space"

@@ -44,11 +44,13 @@ final class BrowserOnboardingFlow {
     @ObservationIgnored private var completionTask: Task<Void, Never>?
     @ObservationIgnored private var finalizationTask: Task<Result<BrowserPasswordImportResult, any Error>, Never>?
     @ObservationIgnored private var pendingResetRequest: BrowserOnboardingRequest?
-    /// The review's Spaces as the views draw them, for the review the core
-    /// last published, so a view's body builds them once per change.
-    @ObservationIgnored private var reviewCache: (review: SetupImportReview, spaces: [BrowserImportSpaceReview])?
-    /// The session the review would leave, until the review changes.
-    @ObservationIgnored private var previewCache: (review: SetupImportReview, session: BrowserSessionPreview?)?
+    /// The review's Spaces as the views draw them, for the choices the core
+    /// last published, so a view's body builds them once per change. Showing
+    /// another Space changes no choice, so moving through the review builds
+    /// nothing again.
+    @ObservationIgnored private var reviewCache: (choices: [SetupReviewSpace], spaces: [BrowserImportSpaceReview])?
+    /// The session the review would leave, until its choices change.
+    @ObservationIgnored private var previewCache: (choices: [SetupReviewSpace], session: BrowserSessionPreview?)?
     @ObservationIgnored private var operationGeneration = 0
 
     /// Setup as the core holds it, or nil before it opens.
@@ -72,9 +74,9 @@ final class BrowserOnboardingFlow {
     /// The review's Spaces as the review views draw them.
     var reviewSpaces: [BrowserImportSpaceReview] {
         guard let review else { return [] }
-        if let reviewCache, reviewCache.review == review { return reviewCache.spaces }
+        if let reviewCache, reviewCache.choices == review.spaces { return reviewCache.spaces }
         let spaces = review.spaces.map(BrowserImportSpaceReview.init)
-        reviewCache = (review, spaces)
+        reviewCache = (review.spaces, spaces)
         return spaces
     }
 
@@ -414,12 +416,12 @@ final class BrowserOnboardingFlow {
         send(SeparateImportSpace(sourceSpaceID: sourceSpaceID))
     }
 
-    /// The reviewed Spaces that come in with `review` as one group, in the
-    /// review's order: those of its group the review brings in as new Spaces,
-    /// as the import forms groups. Empty when `review` does not come in new.
+    /// The reviewed Spaces that come into one group with `review`, in the
+    /// review's order, as the import forms and joins groups. Empty when
+    /// `review` does not come in.
     func reviewGroup(of review: BrowserImportSpaceReview) -> [BrowserImportSpaceReview] {
-        guard review.comesInNew else { return [] }
-        return reviewSpaces.filter { $0.comesInNew && $0.groupID == review.groupID }
+        guard review.isIncluded else { return [] }
+        return reviewSpaces.filter { $0.isIncluded && $0.groupID == review.groupID }
     }
 
     func setPasswordsIncluded(_ isIncluded: Bool, in sourceSpaceID: UUID) {
@@ -462,12 +464,12 @@ final class BrowserOnboardingFlow {
     }
 
     /// The session the review would leave. The core answers once each time
-    /// the review changes.
+    /// the review's choices change.
     private func reviewPreview() -> BrowserSessionPreview? {
         guard let review else { return nil }
-        if let previewCache, previewCache.review == review { return previewCache.session }
+        if let previewCache, previewCache.choices == review.spaces { return previewCache.session }
         let session = try? browser.reviewedImportPreview()
-        previewCache = (review, session)
+        previewCache = (review.spaces, session)
         return session
     }
 

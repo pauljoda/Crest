@@ -11,9 +11,13 @@ struct BrowserOnboardingReviewPage: View {
     @Binding var customizationSpaceID: UUID?
     let back: BrowserOnboardingBackAction
 
+    /// The Space the scroll shows. Setup learns it once the scroll settles,
+    /// so moving through the review changes nothing setup holds mid-scroll.
+    @State private var scrolledSpaceID: UUID?
+
     var body: some View {
         if let setupReview = flow.review,
-            let review = flow.selectedReview(id: setupReview.shownSpaceID)
+            let review = flow.selectedReview(id: scrolledSpaceID ?? setupReview.shownSpaceID)
         {
             let spaces = flow.reviewSpaces
             VStack(spacing: 0) {
@@ -44,13 +48,20 @@ struct BrowserOnboardingReviewPage: View {
                         }
                         .scrollTargetLayout()
                     }
-                    .scrollPosition(id: shownSpaceID, anchor: .top)
+                    .scrollPosition(id: $scrolledSpaceID, anchor: .top)
                     .scrollTargetBehavior(.viewAligned)
                     .scrollIndicators(.hidden)
+                    .onScrollPhaseChange { _, phase in
+                        if phase == .idle, let scrolledSpaceID { flow.shownReviewSpaceID = scrolledSpaceID }
+                    }
 
-                    BrowserOnboardingReviewSpaceStepper(spaces: spaces, selectedSpaceID: setupReview.shownSpaceID)
+                    BrowserOnboardingReviewSpaceStepper(spaces: spaces, selectedSpaceID: review.id)
                 }
                 .disabled(flow.isCommittingImport)
+                .onAppear { scrolledSpaceID = setupReview.shownSpaceID }
+                .onChange(of: setupReview.shownSpaceID) { _, shown in
+                    if let shown, shown != scrolledSpaceID { scrolledSpaceID = shown }
+                }
 
                 BrowserOnboardingFooter(back: back, isBackDisabled: flow.isCommittingImport) {
                     HStack(spacing: 22) {
@@ -69,14 +80,12 @@ struct BrowserOnboardingReviewPage: View {
                                 .font(CrestTypography.sans(13, weight: .medium))
                                 .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.7))
                         }
-                        BrowserOnboardingContinueButton(reviewActionTitle(in: setupReview)) {
-                            advanceReviewOrImport(setupReview)
+                        let isLast = review.id == spaces.last?.id
+                        BrowserOnboardingContinueButton(reviewActionTitle(isLast: isLast)) {
+                            advanceReviewOrImport(from: review, in: spaces)
                         }
-                        .disabled(
-                            flow.isCommittingImport || (setupReview.showsLastSpace && !setupReview.hasIncludedSpaces)
-                        )
-                        .accessibilityIdentifier(
-                            setupReview.showsLastSpace ? "onboarding-confirm-import" : "onboarding-review-next-space")
+                        .disabled(flow.isCommittingImport || (isLast && !setupReview.hasIncludedSpaces))
+                        .accessibilityIdentifier(isLast ? "onboarding-confirm-import" : "onboarding-review-next-space")
                     }
                 }
             }
@@ -93,25 +102,25 @@ struct BrowserOnboardingReviewPage: View {
         flow.review.flatMap { flow.offeredSource($0.source) }?.icon
     }
 
-    /// The Space the person is looking at, which setup holds.
-    private var shownSpaceID: Binding<UUID?> {
-        Binding(get: { flow.shownReviewSpaceID }, set: { flow.shownReviewSpaceID = $0 })
-    }
-
+    /// Scrolls to `spaceID`, and tells setup once the scroll arrives, unless
+    /// a later press or a scroll has moved on from it by then.
     private func show(_ spaceID: UUID) {
         withAnimation(motion(CrestMotion.onboardingProgress)) {
-            flow.shownReviewSpaceID = spaceID
+            scrolledSpaceID = spaceID
+        } completion: {
+            if scrolledSpaceID == spaceID { flow.shownReviewSpaceID = spaceID }
         }
     }
 
-    private func reviewActionTitle(in review: SetupImportReview) -> Text {
+    private func reviewActionTitle(isLast: Bool) -> Text {
         if flow.isCommittingImport { return Text("Importing…") }
-        return review.showsLastSpace ? Text(flow.importReviewActionTitle) : Text("Next Space")
+        return isLast ? Text(flow.importReviewActionTitle) : Text("Next Space")
     }
 
-    private func advanceReviewOrImport(_ review: SetupImportReview) {
-        if !review.showsLastSpace, let nextID = review.nextSpaceID {
-            show(nextID)
+    /// Shows the Space after `review` among `spaces`, or imports from the last.
+    private func advanceReviewOrImport(from review: BrowserImportSpaceReview, in spaces: [BrowserImportSpaceReview]) {
+        if let index = spaces.firstIndex(where: { $0.id == review.id }), index + 1 < spaces.count {
+            show(spaces[index + 1].id)
         } else {
             flow.commitReviewedImport()
         }
@@ -184,12 +193,11 @@ private struct BrowserOnboardingReviewSpaceStepper: View {
     }
 
     /// The reviewed Spaces in order, split where one group ends and the next
-    /// begins. Only the Spaces the review brings in as new Spaces come in as
-    /// a group; any other stands on its own.
+    /// begins. Spaces the review leaves out stand on their own.
     private var groups: [[BrowserImportSpaceReview]] {
         var groups: [[BrowserImportSpaceReview]] = []
         for item in spaces {
-            if let last = groups.last?.last, last.comesInNew, item.comesInNew, last.groupID == item.groupID {
+            if let last = groups.last?.last, last.isIncluded, item.isIncluded, last.groupID == item.groupID {
                 groups[groups.count - 1].append(item)
             } else {
                 groups.append([item])

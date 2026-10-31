@@ -8,6 +8,7 @@ import SwiftUI
 /// closures that need the windowed card pool.
 struct SpaceSidebarBrowsingContent: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(\.spaceSidebarBands) private var sidebarBands
 
     let space: SpaceModel
     let browser: BrowserStore
@@ -44,6 +45,14 @@ struct SpaceSidebarBrowsingContent: View {
             // extension strip above rather than holding space of its own.
             .padding(.top, hasPinnedTabs ? BrowserSidebarMetrics.topSectionSpacing : 0)
             .padding(.bottom, hasPinnedTabs ? BrowserSidebarMetrics.pinnedTabsBottomInset : 0)
+            // The pager holds these and the strip above still while it slides
+            // to a Space that shows them alike.
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .named(SpaceSidebarBands.page))
+            } action: {
+                sidebarBands?.record($0, for: space.id)
+            }
+            .onDisappear { sidebarBands?.forget(space.id) }
 
         BrowserSpaceHeader(
             space: space,
