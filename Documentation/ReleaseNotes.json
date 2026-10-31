@@ -4697,6 +4697,10 @@
     "selection-split-other-space": {
       "category": "fixed",
       "message": "Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them."
+    },
+    "mobile-floating-new-tab": {
+      "category": "new",
+      "message": "On iPhone and iPad, a New Tab button floats at the bottom of the sidebar beside the sidebar button, so a new tab is always a tap away."
     }
   }
 }
