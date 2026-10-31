@@ -152,7 +152,7 @@ struct BrowserFolderGroup: View {
     /// Nested folders are children of the section they move with, so a parent's
     /// measurement, hover surface and lift include the entire expanded subtree.
     private func folderContents(configuration: BrowserFolderGroupConfiguration) -> some View {
-        BrowserSidebarListRows(list: configuration.inside, context: context) { items in
+        BrowserSidebarListRows(list: configuration.inside, context: context, makesRowsLazily: false) { items in
             if items.isEmpty { BrowserFolderEmptyRunBand(configuration: configuration) }
         }
         .equatable()

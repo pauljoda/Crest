@@ -1,31 +1,48 @@
 import SwiftUI
 
 /// The rows of one list the core publishes, on every shell: the top level of
-/// a section or the inside of a folder, in a lazy stack.
+/// a section or the inside of a folder.
 ///
 /// It reads only that list and the objects its rows stand for, and hands each
 /// row its objects, so a move redraws only the list it moves within, a new
 /// title or icon redraws only its own row, and showing another tab redraws no
-/// list. Rows are made only as they scroll into view, so a folder that opens
-/// or a section that grows lays out what is on screen and nothing more.
+/// list. A section's rows are made only as they scroll into view, so a section
+/// that grows lays out what is on screen and nothing more. A folder's rows are
+/// made with the folder: a lazy stack sizes itself from an estimate until its
+/// rows are made, and inside a folder that opens, the estimate drew the folder
+/// shorter than its own header for a frame, the rows below jumping up over it.
 struct BrowserSidebarListRows<Trailing: View>: View {
     // MARK: - Variables
 
     let list: SidebarListModel
     let context: BrowserSidebarListContext
+    /// Whether rows are made only as they scroll into view: a section's are,
+    /// a folder's are made with the folder.
+    var makesRowsLazily = true
     /// What the list shows after its rows, given the rows it holds, such as
     /// the band an empty run keeps.
     @ViewBuilder var trailing: ([BrowserSidebarListItem]) -> Trailing
 
     var body: some View {
         let items = BrowserSidebarListItem.items(of: list, in: context.space)
-        LazyVStack(spacing: 0) {
-            ForEach(items) { item in
-                BrowserSidebarListRow(item: item, context: context).equatable()
+        Group {
+            if makesRowsLazily {
+                LazyVStack(spacing: 0) { rows(items) }
+            } else {
+                VStack(spacing: 0) { rows(items) }
             }
-            trailing(items)
         }
         .crestCollectionMotion(ids: items.map(\.collectionMotionID))
+    }
+
+    // MARK: - Actions - Rows
+
+    @ViewBuilder
+    private func rows(_ items: [BrowserSidebarListItem]) -> some View {
+        ForEach(items) { item in
+            BrowserSidebarListRow(item: item, context: context).equatable()
+        }
+        trailing(items)
     }
 }
 
@@ -34,7 +51,7 @@ extension BrowserSidebarListRows: @MainActor Equatable {
     /// window, as SwiftUI compares a view's inputs, so a section that redraws
     /// leaves its list alone. What trails the rows depends only on those.
     static func == (lhs: BrowserSidebarListRows, rhs: BrowserSidebarListRows) -> Bool {
-        lhs.list === rhs.list && lhs.context == rhs.context
+        lhs.list === rhs.list && lhs.context == rhs.context && lhs.makesRowsLazily == rhs.makesRowsLazily
     }
 }
 

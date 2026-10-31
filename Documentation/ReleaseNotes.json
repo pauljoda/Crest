@@ -4653,6 +4653,10 @@
     "nested-folder-opening-smooth": {
       "category": "fixed",
       "message": "Opening a folder inside another folder slides its contents in smoothly instead of showing them all at once."
+    },
+    "folder-opens-without-jump": {
+      "category": "fixed",
+      "message": "Opening a folder no longer makes the rows below it jump up for a moment before it slides open."
     }
   }
 }
