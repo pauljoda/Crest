@@ -4661,6 +4661,10 @@
     "drag-previews-true-to-row": {
       "category": "fixed",
       "message": "A tab dragged out of a folder keeps its icon and title in place, and dragging several pinned tabs a Sub-Space shares with its group shows them under the pointer."
+    },
+    "touch-folder-height": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a closed folder is as tall as a tab, and its whole row still opens it."
     }
   }
 }

@@ -76,7 +76,10 @@ struct BrowserFolderHeaderControl: View {
                         }
                     }
                     .browserSavedFolderHeaderLayout(configuration: configuration)
-                    .contentShape(.rect)
+                    // A finger gets the folder's padding too, so a header
+                    // shorter than a tab row still takes a whole row's touch.
+                    .contentShape(
+                        Rectangle().inset(by: capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
                 }
                 .buttonStyle(BrowserFolderHeaderButtonStyle())
             }

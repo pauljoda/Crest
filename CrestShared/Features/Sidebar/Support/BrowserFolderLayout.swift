@@ -51,11 +51,10 @@ enum BrowserFolderLayout {
             + contentIndent * CGFloat(max(0, depth))
     }
 
-    /// The height of a folder's header on a shell whose rows are one fixed
-    /// band of `rowHeight`: what is left once the padding and spacing a
-    /// folder keeps around itself are taken off, so a closed folder stands
-    /// exactly as tall as a tab row. It never gets shorter than `minimum`,
-    /// the column its symbol takes.
+    /// The height of a folder's header beside rows of `rowHeight`: what is
+    /// left once the padding and spacing a folder keeps around itself are
+    /// taken off, so a closed folder stands exactly as tall as a tab row. It
+    /// never gets shorter than `minimum`, the column its symbol takes.
     @MainActor
     static func headerHeight(rowHeight: CGFloat, tabScale: Double, minimum: CGFloat) -> CGFloat {
         let chrome =
@@ -63,6 +62,11 @@ enum BrowserFolderLayout {
             + BrowserSidebarMetrics.containerSpacing * 2
         return max(rowHeight - chrome, minimum)
     }
+
+    /// How far a folder's header reaches past its own edges for a finger: into
+    /// the padding and spacing above it, which is the most a folder keeps on
+    /// any side, so with the header's height a touch target is a whole row.
+    static let headerTouchReach = BrowserSidebarMetrics.containerPadding + BrowserSidebarMetrics.containerSpacing
 
     /// How far a row inside `depth` folders moves its icon and title in past
     /// where its surface puts them, so they stand one `contentIndent` past
