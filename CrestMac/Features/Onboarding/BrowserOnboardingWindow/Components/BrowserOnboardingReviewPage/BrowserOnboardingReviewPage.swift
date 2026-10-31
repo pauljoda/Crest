@@ -102,12 +102,13 @@ struct BrowserOnboardingReviewPage: View {
         flow.review.flatMap { flow.offeredSource($0.source) }?.icon
     }
 
-    /// Scrolls to `spaceID`, and tells setup once the scroll arrives.
+    /// Scrolls to `spaceID`, and tells setup once the scroll arrives, unless
+    /// a later press or a scroll has moved on from it by then.
     private func show(_ spaceID: UUID) {
         withAnimation(motion(CrestMotion.onboardingProgress)) {
             scrolledSpaceID = spaceID
         } completion: {
-            flow.shownReviewSpaceID = spaceID
+            if scrolledSpaceID == spaceID { flow.shownReviewSpaceID = spaceID }
         }
     }
 
