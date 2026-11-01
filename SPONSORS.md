@@ -16,6 +16,7 @@ _No public sustainers yet._
 
 - Patrick McCarron
 - techfreaktwo
+- Chris F
 
 ## How recognition works
 
