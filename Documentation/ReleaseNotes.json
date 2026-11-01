@@ -4705,6 +4705,10 @@
     "sub-space-shared-pin-page": {
       "category": "fixed",
       "message": "Switching between Sub-Spaces that show the same pinned tab keeps its page on screen instead of leaving it blank, and with extensions pinned, the pinned tabs stay still as you switch."
+    },
+    "address-field-loading-indicator": {
+      "category": "improved",
+      "message": "Pages show their loading progress as a stronger fill in the address field, and the thin loading line along the top of the page on Mac is gone."
     }
   }
 }
