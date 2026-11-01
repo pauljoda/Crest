@@ -65,7 +65,8 @@ internal sealed partial class Device {
     /// While it has listed no other tab there, as after a launch or in a new
     /// window, the Space's tab used last stands second, a split as one item,
     /// unless another open window shows it. A locked Space lists nothing, as
-    /// its palette offers none of its tabs.
+    /// its palette offers none of its tabs. Called without the device lock,
+    /// since it reads whether the Space is locked.
     internal IReadOnlyList<RecentTabItem> RecentItems(Window window, SpaceState space) {
         if (Workspace(window.WorkspaceId).IsLocked(space)) return [];
         lock (gate) {

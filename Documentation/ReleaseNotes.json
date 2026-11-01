@@ -4745,6 +4745,10 @@
     "window-shows-tab-without-device-lock": {
       "category": "internal",
       "message": "The check for whether a window shows a tab no longer reads the session while holding the device lock."
+    },
+    "device-lock-taken-last": {
+      "category": "internal",
+      "message": "The recent tabs a window switches between and the first search catalog also read the session before the device takes its own lock, so the device and session locks are always taken in one order, and Debug builds check it."
     }
   }
 }
