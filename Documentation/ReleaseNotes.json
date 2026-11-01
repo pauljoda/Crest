@@ -4741,6 +4741,26 @@
     "sub-space-switch-steady-pins": {
       "category": "fixed",
       "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
+    },
+    "responsive-with-many-spaces-and-extensions": {
+      "category": "improved",
+      "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
+    },
+    "smoother-scrolling-with-extension-badges": {
+      "category": "improved",
+      "message": "Pages scroll more smoothly while extensions such as ad blockers update their badge counts."
+    },
+    "extension-icon-cache-evicts-oldest": {
+      "category": "internal",
+      "message": "Let a full extension icon cache release its oldest icon instead of every decoded icon."
+    },
+    "quit-after-failed-save": {
+      "category": "fixed",
+      "message": "Crest no longer waits indefinitely to quit after saving your session failed."
+    },
+    "extension-revisions-follow-spaces": {
+      "category": "internal",
+      "message": "Keep the extension icons a Space keeps showing decoded, and release a removed Space's extension change tracking."
     }
   }
 }
