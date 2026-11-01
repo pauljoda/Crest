@@ -1915,6 +1915,10 @@ struct CredentialFillDecision: Equatable, Sendable {
     let isAllowed: Bool
 }
 
+struct CredentialFills: Equatable, Sendable {
+    let fills: [Bool]
+}
+
 struct CredentialFormFacts: Equatable, Sendable {
     var event: CredentialCaptureEvent
     var frameOrigin: CredentialOrigin
@@ -2042,6 +2046,13 @@ struct CredentialUsernameHint: Equatable, Sendable {
     var origin: CredentialOrigin
     var topLevelOrigin: CredentialOrigin
     var capturedAt: Double
+}
+
+struct CredentialsFillingPage: Query, Equatable, Sendable {
+    typealias Answer = CredentialFills
+
+    let page: CredentialOrigin
+    let saved: [CredentialOrigin]
 }
 
 struct CrestCharge: Equatable, Sendable {
