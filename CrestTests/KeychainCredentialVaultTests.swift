@@ -61,6 +61,43 @@ final class KeychainCredentialVaultTests: XCTestCase {
         XCTAssertEqual(restoredItems, [first, second])
     }
 
+    /// A replacement writes only the passwords that change and removes what
+    /// it leaves out last, never clearing the Space, so a stop partway keeps
+    /// every password the person keeps.
+    func testAReplacementWritesWhatChangedAndRemovesWhatItLeavesOutLast() async throws {
+        let spaceID = UUID()
+        let kept = descriptor(id: UUID(), spaceID: spaceID, username: "kept")
+        let changed = descriptor(id: UUID(), spaceID: spaceID, username: "changed")
+        let leftOut = descriptor(id: UUID(), spaceID: spaceID, username: "left-out")
+        let added = descriptor(id: UUID(), spaceID: spaceID, username: "added")
+        let keptItem = try keychainItem(descriptor: kept, password: "kept")
+        let changedItem = try keychainItem(descriptor: changed, password: "changed")
+        let leftOutItem = try keychainItem(descriptor: leftOut, password: "left-out")
+        let store = FailingMigrationCredentialKeychainStore(items: [keptItem, changedItem, leftOutItem])
+        let vault = KeychainCredentialVault(store: store, servicePrefix: "test.crest")
+
+        try await vault.replaceAll(
+            [
+                BrowserCredential(descriptor: kept, password: "kept"),
+                BrowserCredential(descriptor: changed, password: "changed-again"),
+                BrowserCredential(descriptor: added, password: "added"),
+            ],
+            in: spaceID
+        )
+
+        let addedItem = try keychainItem(descriptor: added, password: "added")
+        let operations = await store.operations
+        XCTAssertEqual(
+            operations,
+            [.upsert(changedItem.account), .upsert(addedItem.account), .delete(leftOutItem.account)]
+        )
+        let storedItems = await store.storedItems
+        XCTAssertEqual(
+            storedItems,
+            [keptItem, try keychainItem(descriptor: changed, password: "changed-again"), addedItem]
+        )
+    }
+
     /// Synchronizable descriptors reach builds on other devices that read a
     /// Space only as `{"rawValue": UUID}`. What this build writes decodes
     /// with that older shape, and what an older build wrote reads here.
@@ -205,11 +242,17 @@ private struct PreS62CredentialDescriptor: Codable {
 }
 
 private actor FailingMigrationCredentialKeychainStore: CredentialKeychainStoring {
+    enum Operation: Equatable {
+        case upsert(String)
+        case delete(String)
+        case deleteAll
+    }
+
     private var itemsByAccount: [String: CredentialKeychainItem]
-    private let accountOrder: [String]
+    private var accountOrder: [String]
     private let failingAccount: String?
     private var hasInjectedFailure = false
-    private(set) var writes: [CredentialKeychainItem] = []
+    private(set) var operations: [Operation] = []
 
     init(
         items: [CredentialKeychainItem],
@@ -246,7 +289,7 @@ private actor FailingMigrationCredentialKeychainStore: CredentialKeychainStoring
     }
 
     func upsert(_ item: CredentialKeychainItem, in _: String) throws {
-        writes.append(item)
+        operations.append(.upsert(item.account))
         if item.account == failingAccount,
             item.isSynchronizable,
             !hasInjectedFailure
@@ -254,14 +297,19 @@ private actor FailingMigrationCredentialKeychainStore: CredentialKeychainStoring
             hasInjectedFailure = true
             throw TestCredentialKeychainError.injectedFailure
         }
+        if itemsByAccount[item.account] == nil, !accountOrder.contains(item.account) {
+            accountOrder.append(item.account)
+        }
         itemsByAccount[item.account] = item
     }
 
     func delete(account: String, in _: String) {
+        operations.append(.delete(account))
         itemsByAccount[account] = nil
     }
 
     func deleteAll(in _: String) {
+        operations.append(.deleteAll)
         itemsByAccount.removeAll()
     }
 }
