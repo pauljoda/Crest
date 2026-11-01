@@ -379,8 +379,11 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
     return false;
   }
   auto& controller = web_contents()->GetController();
-  // Restoration is only for a new page, never a replacement of live work.
-  if (!controller.IsInitialNavigation()) {
+  // Restoration is only for a new page, never a replacement of live work. A
+  // page whose restored history never committed a document is still on its
+  // initial navigation, and restoring it again would add a second copy.
+  if (!controller.IsInitialNavigation() || controller.GetEntryCount() != 1 ||
+      !controller.GetLastCommittedEntry()->IsInitialEntry()) {
     return false;
   }
   auto iterator = base::PickleIterator::WithData(base::span(state));
