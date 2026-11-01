@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "chromium-update-deps-conditions",
+    "development": "chromium-restore-history-crash",
     "nightly": "selection-split-other-space"
   }
 }
