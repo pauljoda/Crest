@@ -187,7 +187,13 @@ actor KeychainCredentialVault: CredentialVault {
         from descriptors: [CredentialDescriptor]
     ) throws -> [CredentialDescriptor] {
         let others = descriptors.filter { $0.origin != origin }
-        let othersFill = try fills(origin, others.map(\.origin))
+        let othersFill: [Bool]
+        do {
+            othersFill = try fills(origin, others.map(\.origin))
+        } catch Rejection.invalidCredentialOrigin {
+            // No page has such an origin, but if one did, its own passwords still fill it.
+            othersFill = []
+        }
         let filling = Set(zip(others, othersFill).filter(\.1).map(\.0.id))
         return descriptors.filter { $0.origin == origin || filling.contains($0.id) }
     }
