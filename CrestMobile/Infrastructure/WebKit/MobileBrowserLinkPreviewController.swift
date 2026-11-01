@@ -23,7 +23,7 @@ final class MobileBrowserLinkPreviewController: UIViewController, WKNavigationDe
         webView.isUserInteractionEnabled = false
         webView.allowsLinkPreview = false
         webView.customUserAgent = source.customUserAgent
-        webView.pageZoom = source.pageZoom
+        webView.pageScale = source.pageScale
         preferredContentSize = CGSize(
             width: min(source.bounds.width, 600), height: min(source.bounds.height, 600)
         )

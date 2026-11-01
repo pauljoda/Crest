@@ -187,7 +187,6 @@ private struct BrowserPageLoadingPresentation: View {
 
     let page: BrowserPage
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the first load has run long enough to say the page is opening.
     @State private var initialStatusIsDue = false
 
@@ -206,9 +205,6 @@ private struct BrowserPageLoadingPresentation: View {
                 guard !Task.isCancelled else { return }
                 initialStatusIsDue = true
             }
-            .overlay(alignment: .top) {
-                loadingProgress
-            }
             .allowsHitTesting(false)
     }
 
@@ -223,19 +219,6 @@ private struct BrowserPageLoadingPresentation: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("browser-initial-loading-status")
-    }
-
-    private var loadingProgress: some View {
-        Rectangle()
-            .fill(.tint)
-            .frame(height: BrowserWebPageSurfaceMetrics.loadingProgressHeight)
-            .scaleEffect(x: progress, anchor: .leading)
-            .opacity(isNavigating ? 1 : 0)
-            .animation(
-                CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
-                value: progress
-            )
-            .accessibilityHidden(true)
     }
 
     private var openingLabel: Text {
@@ -263,12 +246,5 @@ private struct BrowserPageLoadingPresentation: View {
 
     private var showsInitialStatus: Bool {
         isNavigating && page.committedNavigationCount == 0 && !hasFailure
-    }
-
-    private var progress: CGFloat {
-        BrowserPageSurfacePresentation.loadingProgress(
-            estimatedProgress: page.estimatedProgress,
-            isNavigating: isNavigating
-        )
     }
 }

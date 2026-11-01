@@ -10,25 +10,19 @@ import SwiftUI
 struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     private let port: BrowserSidebarNavigationPort
     private let capabilities: BrowserInteractionCapabilities
-    private let hidesUnavailableForwardControl: Bool
     private let trailingAccessory: TrailingAccessory
 
-    /// - Parameter hidesUnavailableForwardControl: Whether the forward control
-    ///   leaves the strip entirely when there is nowhere to go. This is a shell's
-    ///   own choice rather than something its inputs decide: a strip that has
-    ///   room for a permanently disabled chevron keeps it where the reader
-    ///   learned it, and one that does not would rather spend the width.
+    /// Back and forward both stay in the strip, disabled while there is
+    /// nowhere to go, so each keeps the place the reader learned.
     init(
         port: BrowserSidebarNavigationPort,
         capabilities: BrowserInteractionCapabilities,
-        hidesUnavailableForwardControl: Bool = false,
         @ViewBuilder trailingAccessory: () -> TrailingAccessory = {
             EmptyView()
         }
     ) {
         self.port = port
         self.capabilities = capabilities
-        self.hidesUnavailableForwardControl = hidesUnavailableForwardControl
         self.trailingAccessory = trailingAccessory()
     }
 
@@ -61,13 +55,11 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                 metrics: metrics
             )
 
-            if showsForwardControl {
-                BrowserSidebarNavigationHistoryControl(
-                    direction: .forward,
-                    port: port,
-                    metrics: metrics
-                )
-            }
+            BrowserSidebarNavigationHistoryControl(
+                direction: .forward,
+                port: port,
+                metrics: metrics
+            )
 
             BrowserReloadControl(
                 isLoading: port.isLoading(),
@@ -84,10 +76,6 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
             trailingAccessory
         }
-    }
-
-    private var showsForwardControl: Bool {
-        !hidesUnavailableForwardControl || port.canGoForward()
     }
 
     private var verticalPadding: CGFloat {
