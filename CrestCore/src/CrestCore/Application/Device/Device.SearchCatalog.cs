@@ -53,6 +53,8 @@ internal sealed partial class Device {
     /// either, so a device whose first launch takes the cloud's Spaces in
     /// place of the seed takes the default those Spaces follow.
     internal IReadOnlyList<SearchFollower> RestoreSearchCatalog(ChangeFeed changes, string? language, string? region) {
+        // The session that keeps the device's preferences is read before the device lock is taken.
+        var keeper = Persistent() is (var workspaceId, var authority) ? (workspaceId, authority.Current) : ((Guid, SessionState)?)null;
         lock (gate) {
             if (searchCatalog is { } kept) {
                 var located = kept.Locating(language, region);
@@ -61,7 +63,7 @@ internal sealed partial class Device {
                 return [];
             }
             var starting = SearchCatalog.Starting(language, region);
-            if (Carried(starting) is not var (catalog, followers, isSeed)) {
+            if (Carried(starting, keeper) is not var (catalog, followers, isSeed)) {
                 changes.Publish(SearchCatalogChanged.Of(starting));
                 return [];
             }
@@ -75,19 +77,17 @@ internal sealed partial class Device {
         }
     }
 
-    /// `starting` with what the Spaces of the session that keeps the device's
-    /// preferences chose before the device kept a catalog, and the Spaces that
-    /// chose the default it makes; null while no such session is open. When a
-    /// Space already follows a default, another device chose it first: this
-    /// device takes the default those Spaces carry and leaves every Space as
-    /// it is. `IsSeed` says the session is still the disposable seed. The
-    /// caller holds the device lock.
-    private (SearchCatalog Catalog, IReadOnlyList<SearchFollower> Followers, bool IsSeed)? Carried(SearchCatalog starting) {
-        var (workspaceId, authority) = persistentWorkspace is { } kept && workspaces.TryGetValue(kept, out var stored) ? (kept, stored)
-            : workspaces.FirstOrDefault(entry => entry.Value.Kind.KeepsAppPreferences) is { Value: not null } seeded ? (seeded.Key, seeded.Value)
-            : (Guid.Empty, null);
-        if (authority is null) return null;
-        var spaces = authority.Current.Spaces.Select(space => (space.Id, Browsing: space.Settings.BrowsingPreferences)).ToList();
+    /// `starting` with what the Spaces of `keeper`, the session that keeps the
+    /// device's preferences, chose before the device kept a catalog, and the
+    /// Spaces that chose the default it makes; null while no such session is
+    /// open. When a Space already follows a default, another device chose it
+    /// first: this device takes the default those Spaces carry and leaves
+    /// every Space as it is. `IsSeed` says the session is still the disposable
+    /// seed.
+    private static (SearchCatalog Catalog, IReadOnlyList<SearchFollower> Followers, bool IsSeed)? Carried(SearchCatalog starting,
+        (Guid WorkspaceId, SessionState Session)? keeper) {
+        if (keeper is not (var workspaceId, var session)) return null;
+        var spaces = session.Spaces.Select(space => (space.Id, Browsing: space.Settings.BrowsingPreferences)).ToList();
         var catalog = starting.Adopting(spaces.SelectMany(space => space.Browsing.CustomSearchProviders));
         var following = spaces.Where(space => space.Browsing.FollowsDefaultSearch).ToList();
         var chose = following.Count > 0 ? following : spaces;
@@ -98,7 +98,7 @@ internal sealed partial class Device {
         var suggesting = following.Count > 0 ? spaces.Where(space => space.Browsing.FollowsDefaultSuggestions).ToList() : spaces;
         if (suggesting.Count > 0)
             catalog = catalog.Suggesting(suggesting.Count(space => space.Browsing.SearchSuggestionsEnabled) * 2 > suggesting.Count);
-        bool isSeed = authority.Current.DisposableSeedMarker is not null;
+        bool isSeed = session.DisposableSeedMarker is not null;
         if (following.Count > 0) return (catalog, [], isSeed);
         List<SearchFollower> followers = [];
         foreach (var (spaceId, browsing) in spaces) {
