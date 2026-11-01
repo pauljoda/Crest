@@ -4729,6 +4729,10 @@
     "chromium-update-deps-conditions": {
       "category": "internal",
       "message": "Automatic Chromium updates read only the CIPD packages that apply to the Mac build, and versions that DEPS keeps in a file, so the Chromium 157 update can prepare its source."
+    },
+    "chromium-lens-menu-crash": {
+      "category": "fixed",
+      "message": "Choosing Google Lens from a page's right-click menu on Mac no longer quits Crest. Lens isn't offered there any more, and images keep their plain image search."
     }
   }
 }
