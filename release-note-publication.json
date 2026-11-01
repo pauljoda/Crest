@@ -3,6 +3,6 @@
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
     "development": "selection-split-other-space",
-    "nightly": "sub-space-switch-keeps-shared"
+    "nightly": "selection-split-other-space"
   }
 }

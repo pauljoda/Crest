@@ -6,42 +6,45 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.117</title>
-            <pubDate>Sat, 31 Oct 2026 15:03:25 +0000</pubDate>
+            <title>0.8.119</title>
+            <pubDate>Sun, 01 Nov 2026 15:44:31 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1440</sparkle:version>
-            <sparkle:shortVersionString>0.8.117</sparkle:shortVersionString>
+            <sparkle:version>1445</sparkle:version>
+            <sparkle:shortVersionString>0.8.119</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data.
-- The Spaces of a group show their primary's pinned tabs, and one pinned tab opens the same page in each. Turn on Separate Pinned Tabs for each to show its own.
-- Deleting a Space that leads Sub-Spaces asks which of them keeps the group, with its sign-ins, history, passwords and pinned tabs, or deletes the whole group. Locking any Space of a group locks the group.
-- Open Link in opens a link in a Quick Window in another Space's session, and Site Controls can open the current page in another Space, for the same site under another account. Keep moves it into that Space.
-- Importing from Arc brings the Spaces of one Arc profile as one group, and importing from Zen brings a profile's workspaces as one. The review outlines each group and can bring a Space in on its own.
+Showing the 12 most recent highlights from 15 user-facing changes.
 
 ### Improved
 
-- On Mac, a browser window responds sooner when an alert closes and when the window comes back to the front.
-- Devices that run an earlier Crest keep syncing and show each Sub-Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices.
-- The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour.
-- Importing from Arc or Zen keeps Spaces that shared sign-ins together. When one of them joins a Space you already have, the rest become Sub-Spaces of that Space's group, Zen workspaces that share a container come in as a group of their own, and imported passwords are saved once for the group.
-- Moving between Spaces in setup's import review is smoother, setup's animations are quicker, and each Space in a group shows which group it joins, with room for Separate.
-- Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move.
+- Sidebar folders indent the tabs and folders they hold, a closed folder is as tall as a tab, tabs deep in nested folders keep rounded corners, and opening a folder that holds open folders slides its contents in smoothly.
+- On iPhone and iPad, a closed folder is as tall as a tab, and its whole row still opens it.
+
+### Fixed
+
+- Calls in Chromium can use UDP again, so they connect faster and sound better, while sites still can't see your device's local network addresses.
+- The sidebar's media controls and Now Playing keep showing what you play when a site previews another video under the pointer, as YouTube does on thumbnails.
+- Dragging a pinned tab in a Space whose group shares its pinned tabs works again: the tile lifts under the pointer, the other pins move aside, and it lands where you let go.
+- A pinned tab you drag stays under the pointer when the window sits at the top of the screen, instead of drawing a row or two below it.
+- Opening a folder inside another folder slides its contents in smoothly instead of showing them all at once.
+- Opening a folder no longer makes the rows below it jump up for a moment before it slides open.
+- A tab dragged out of a folder keeps its icon and title in place, and dragging several pinned tabs a Sub-Space shares with its group shows them under the pointer.
+- Dragging several selected tabs keeps the icon and title of each tab from inside a folder in place as they lift.
+- A click on a folder that is closing reaches the row sliding up in its place instead of a tab inside the folder.
+- Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/a6f0f0c35427c5cf9029a1f01bd47d20ea3b42a6...e51998cae6272a8d3e8ce10c8a7f86e6c3427f64) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.117-2026-10-31-1440-r440.1/Installer-Crest-0.8.117-nightly-2026-10-31-e51998c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/e51998cae6272a8d3e8ce10c8a7f86e6c3427f64...f25b2c9fa797333f71c4dc00caad06afdf9cb587) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.119-2026-11-01-1445-r445.1/Installer-Crest-0.8.119-nightly-2026-11-01-f25b2c9-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.117-2026-10-31-1440-r440.1/Installer-Crest-0.8.117-nightly-2026-10-31-e51998c-arm64.dmg" length="220482194" type="application/octet-stream" sparkle:edSignature="hWBXK3YFkUXSlx0vZvGUutIw51eMSVQzXxMZGta4vY6m1izRRNBXLJ7V1lTxLCDlqQMhoTbnynQFGog/bZfkDQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.119-2026-11-01-1445-r445.1/Installer-Crest-0.8.119-nightly-2026-11-01-f25b2c9-arm64.dmg" length="216579219" type="application/octet-stream" sparkle:edSignature="pteSZ8b8C9VXD5xgCCH3sTUCmCLsx14PnrOZRxD5v1aJz2VP3lP8/bj5+HprE452vRcuyTdzTFNb2Vy8qaS9Dg=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -127,6 +130,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: +RD8IM3sCsxvck7LdylGnt9Db+0+33BND46bKJTLA8y/n6tnSs6JQWVIRFrEPdTsMo8rnAAHerqe91on162QAg==
-length: 10515
+edSignature: ti+nUJOF7sS4HqsYUgXQB6gYPAeluC4UJ8MfbtvWPqizKsO0UnRWqBhZ+YsAb+5Y8i8t2m7P0KcGnuR5wlMzDg==
+length: 9931
 -->
