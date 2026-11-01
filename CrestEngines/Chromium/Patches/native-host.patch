@@ -2288,12 +2288,13 @@
  
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -55,6 +55,13 @@
+@@ -55,6 +55,14 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
 +#if BUILDFLAG(IS_MAC)
 +#include "chrome/common/chrome_features.h"
++#include "components/lens/lens_features.h"
 +#include "components/security_interstitials/core/features.h"
 +#include "content/public/common/content_features.h"
 +#include "media/base/media_switches.h"
@@ -2302,7 +2303,7 @@
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chrome/common/channel_info.h"
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
-@@ -127,6 +134,29 @@
+@@ -127,6 +135,33 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
@@ -2326,6 +2327,10 @@
 +    feature_overrides.DisableFeature(features::kHttpsFirstModeIncognito);
 +    feature_overrides.DisableFeature(
 +        security_interstitials::features::kHttpsFirstDialogUi);
++    // Google Lens needs Chrome's side panel, which Crest's windows don't
++    // have, so a page's menu offers a plain image search instead.
++    feature_overrides.DisableFeature(lens::features::kLensOverlay);
++    feature_overrides.DisableFeature(lens::features::kLensStandalone);
 +  }
 +#endif  // BUILDFLAG(IS_MAC)
 +
