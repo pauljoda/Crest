@@ -331,7 +331,9 @@ extension BrowserNativePageSurfaceLifecycle {
 /// showing it lets go, the view returns to the newest host still claiming it
 /// in the same window, so it always ends up in whichever host survives. A
 /// host in another window keeps waiting for its own window to present the
-/// page again.
+/// page again. A host the window does not draw gives the view to the newest
+/// one it does: the Spaces of a group each hold a host for a pinned tab they
+/// share, and its page shows in the one on screen, whichever claimed it last.
 @MainActor
 final class BrowserWebHostView: NSView {
     // MARK: - Static Variables
@@ -402,6 +404,7 @@ final class BrowserWebHostView: NSView {
                 // unattached view can still return through the path below.
                 self.focusRestoration = nil
                 isPageActive = false
+                Self.showWhereDrawn(webView)
                 return
             }
         }
@@ -456,16 +459,39 @@ final class BrowserWebHostView: NSView {
         isPageActive = false
         focusRestorationAttemptGeneration &+= 1
         guard showsHostedWebView else { return }
-        Self.claimants.allObjects
-            .filter { $0.hostedWebView === hostedWebView && $0.isPlaced(with: placement) }
-            .max { $0.claim < $1.claim }?
-            .show(hostedWebView, focusRestoration: focusRestoration)
+        Self.successor(for: hostedWebView, in: placement)?.show(hostedWebView, focusRestoration: focusRestoration)
     }
 
     /// Whether this host is in `window`, or either has yet to join one.
     private func isPlaced(with window: NSWindow?) -> Bool {
         guard let window, let placement = self.window ?? lastWindow else { return true }
         return placement === window
+    }
+
+    /// Whether the window draws this host: it is in one, and neither it nor a
+    /// view it is in is hidden.
+    private var isDrawn: Bool { window != nil && !isHiddenOrHasHiddenAncestor }
+
+    /// The host in `window` that shows `webView` when the one showing it lets
+    /// go or goes off screen: the newest claim the window draws, or else the
+    /// newest claim.
+    private static func successor(for webView: NSView, in window: NSWindow?) -> BrowserWebHostView? {
+        claimants.allObjects
+            .filter { $0.hostedWebView === webView && $0.isPlaced(with: window) }
+            .max { ($0.isDrawn ? 1 : 0, $0.claim) < ($1.isDrawn ? 1 : 0, $1.claim) }
+    }
+
+    /// Moves `webView` from the host showing it, which the window no longer
+    /// draws, to the newest host claiming it that the window does draw.
+    private static func showWhereDrawn(_ webView: NSView) {
+        guard let showing = webView.superview as? BrowserWebHostView, !showing.isDrawn,
+            let host = successor(for: webView, in: showing.window ?? showing.lastWindow), host.isDrawn
+        else { return }
+        let focusRestoration = showing.focusRestoration
+        (webView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: showing)
+        webView.removeFromSuperview()
+        host.show(webView, focusRestoration: focusRestoration)
+        if host.isPageActive { host.scheduleFocusRestoration() }
     }
 
     // MARK: - Actions - Replacement
@@ -708,11 +734,13 @@ final class BrowserWebHostView: NSView {
     override func viewDidHide() {
         super.viewDidHide()
         titleBarTracker.release()
+        if let hostedWebView { Self.showWhereDrawn(hostedWebView) }
     }
 
     override func viewDidUnhide() {
         super.viewDidUnhide()
         titleBarTracker.checkPointerSoon()
+        if let hostedWebView { Self.showWhereDrawn(hostedWebView) }
     }
 
     private func trackTitleBarPointer() {

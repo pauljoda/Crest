@@ -4701,6 +4701,10 @@
     "mobile-floating-new-tab": {
       "category": "new",
       "message": "On iPhone and iPad, a New Tab button floats at the bottom of the sidebar beside the sidebar button, so a new tab is always a tap away."
+    },
+    "sub-space-shared-pin-page": {
+      "category": "fixed",
+      "message": "Switching between Sub-Spaces that show the same pinned tab keeps its page on screen instead of leaving it blank, and with extensions pinned, the pinned tabs stay still as you switch."
     }
   }
 }
