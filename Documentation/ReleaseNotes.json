@@ -4713,6 +4713,10 @@
     "smaller-mac-windows": {
       "category": "improved",
       "message": "Browser windows on Mac resize much smaller, so two fit side by side on a laptop screen, and the pinned tabs keep their place in a short window."
+    },
+    "mobile-page-zoom-fit": {
+      "category": "fixed",
+      "message": "Zooming a page out on iPhone and iPad fits it to the window instead of leaving a blank band down the side."
     }
   }
 }
