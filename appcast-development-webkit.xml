@@ -6,41 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.120</title>
-            <pubDate>Sun, 01 Nov 2026 17:48:55 +0000</pubDate>
+            <title>0.8.121</title>
+            <pubDate>Sun, 01 Nov 2026 18:30:34 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1446</sparkle:version>
-            <sparkle:shortVersionString>0.8.120</sparkle:shortVersionString>
+            <sparkle:version>1447</sparkle:version>
+            <sparkle:shortVersionString>0.8.121</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Maintenance
 
-- On iPhone and iPad, a New Tab button floats at the bottom of the sidebar beside the sidebar button, so a new tab is always a tap away.
-
-### Improved
-
-- Pages show their loading progress as a stronger fill in the address field, and the thin loading line along the top of the page on Mac is gone.
-- Browser windows on Mac resize much smaller, so two fit side by side on a laptop screen, and the pinned tabs keep their place in a short window.
-- On iPhone Duo held upright, the page and Space controls move into the bar across the top, leaving the sidebar more room, and the controls that don't fit fold into a menu, Settings first. Back and Forward always show on iPhone and iPad, dimmed until there is somewhere to go.
-
-### Fixed
-
-- Switching between Sub-Spaces that show the same pinned tab keeps its page on screen instead of leaving it blank, and with extensions pinned, the pinned tabs stay still as you switch.
-- Zooming a page out on iPhone and iPad fits it to the window instead of leaving a blank band down the side.
-- On iPhone Duo held upright, the controls stay in the top bar while the keyboard is open.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f25b2c9fa797333f71c4dc00caad06afdf9cb587...44a401cfebc3b76caa9c83a2eb65310963cad9d4) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.120-2026-11-01-1446-r446.1/Installer-Crest-0.8.120-development-2026-11-01-44a401c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/44a401cfebc3b76caa9c83a2eb65310963cad9d4...085eddc974fa22c74c4647902acedbaf746b4444) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.121-2026-11-01-1447-r447.1/Installer-Crest-0.8.121-development-2026-11-01-085eddc-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.120-2026-11-01-1446-r446.1/Installer-Crest-0.8.120-development-2026-11-01-44a401c-arm64.dmg" length="216619674" type="application/octet-stream" sparkle:edSignature="HWg0+kNl57t/t+iAjhwehOa46gnS+tfN1daU5Q6+ezv/femS6cXqPmCVMZ5RM4Gpl5FPla8YFOT9i637imz0Bg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.121-2026-11-01-1447-r447.1/Installer-Crest-0.8.121-development-2026-11-01-085eddc-arm64.dmg" length="216639643" type="application/octet-stream" sparkle:edSignature="mcf5Ph6qxd0EGuqazvYIyGQ6gGDLeQKUKmZb0bizeFKyFJ1Wydp0m5xM9a9TuCGrkR964x39r72lsehg5CyCCg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -72,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: V3fLpk1YjSPBR4yain87bH4qjedwQ14c+tTsvY3gUtkbvi3wSBoh8MpF6sk/fqzD6NsA6eI+NOmSHosCu8EdCw==
-length: 5011
+edSignature: 9F49q7h0jzzmkBLfc6Qnp20YGmkq2jS2GPJDBSk3OD2P22Bs6SBjgkz3rO0W+16wHTQcu1iwY/+mCkckSVItDw==
+length: 3943
 -->
