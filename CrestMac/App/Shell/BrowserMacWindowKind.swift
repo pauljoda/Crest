@@ -13,9 +13,12 @@ struct BrowserMacWindowKind: Hashable {
     private static let browsingStyle: NSWindow.StyleMask = [
         .titled, .closable, .miniaturizable, .resizable, .fullSizeContentView,
     ]
-    /// The size a browser window opens at, and the smallest its content may be.
+    /// The size a browser window opens at, and the smallest its content may be:
+    /// small enough for two windows side by side, or one above the other, on
+    /// a laptop screen. AppKit adds the title bar to the minimum height even
+    /// though the content runs under it.
     static let browserContentSize = CGSize(width: 1440, height: 900)
-    static let browserMinimumContentSize = CGSize(width: 900, height: 600)
+    static let browserMinimumContentSize = CGSize(width: 500, height: 350)
 
     /// A browser window over the person's own Spaces, which keeps its frame
     /// under its identity and cascades from the window the person is using.

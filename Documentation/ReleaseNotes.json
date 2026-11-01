@@ -4709,6 +4709,10 @@
     "address-field-loading-indicator": {
       "category": "improved",
       "message": "Pages show their loading progress as a stronger fill in the address field, and the thin loading line along the top of the page on Mac is gone."
+    },
+    "smaller-mac-windows": {
+      "category": "improved",
+      "message": "Browser windows on Mac resize much smaller, so two fit side by side on a laptop screen, and the pinned tabs keep their place in a short window."
     }
   }
 }
