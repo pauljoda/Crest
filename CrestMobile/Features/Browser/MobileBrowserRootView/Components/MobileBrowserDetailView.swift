@@ -391,9 +391,7 @@ struct MobileBrowserDetailView: View {
         let port = BrowserSidebarNavigationPort(pageActions: pageActions, showHistory: showHistory)
         ToolbarItemGroup(placement: .topBarTrailing) {
             MobileHistoryToolbarControl(direction: .back, port: port)
-            if port.canGoForward() {
-                MobileHistoryToolbarControl(direction: .forward, port: port)
-            }
+            MobileHistoryToolbarControl(direction: .forward, port: port)
         }
         ToolbarItemGroup(placement: .bottomBar) {
             Button("Tabs", systemImage: "square.on.square", action: showTabViewer)

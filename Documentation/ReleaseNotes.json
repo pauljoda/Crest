@@ -4698,6 +4698,34 @@
       "category": "fixed",
       "message": "Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them."
     },
+    "mobile-floating-new-tab": {
+      "category": "new",
+      "message": "On iPhone and iPad, a New Tab button floats at the bottom of the sidebar beside the sidebar button, so a new tab is always a tap away."
+    },
+    "sub-space-shared-pin-page": {
+      "category": "fixed",
+      "message": "Switching between Sub-Spaces that show the same pinned tab keeps its page on screen instead of leaving it blank, and with extensions pinned, the pinned tabs stay still as you switch."
+    },
+    "address-field-loading-indicator": {
+      "category": "improved",
+      "message": "Pages show their loading progress as a stronger fill in the address field, and the thin loading line along the top of the page on Mac is gone."
+    },
+    "smaller-mac-windows": {
+      "category": "improved",
+      "message": "Browser windows on Mac resize much smaller, so two fit side by side on a laptop screen, and the pinned tabs keep their place in a short window."
+    },
+    "mobile-page-zoom-fit": {
+      "category": "fixed",
+      "message": "Zooming a page out on iPhone and iPad fits it to the window instead of leaving a blank band down the side."
+    },
+    "duo-top-bar-controls": {
+      "category": "improved",
+      "message": "On iPhone Duo held upright, the page and Space controls move into the bar across the top, leaving the sidebar more room, and the controls that don't fit fold into a menu, Settings first. Back and Forward always show on iPhone and iPad, dimmed until there is somewhere to go."
+    },
+    "duo-top-bar-keyboard": {
+      "category": "fixed",
+      "message": "On iPhone Duo held upright, the controls stay in the top bar while the keyboard is open."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."

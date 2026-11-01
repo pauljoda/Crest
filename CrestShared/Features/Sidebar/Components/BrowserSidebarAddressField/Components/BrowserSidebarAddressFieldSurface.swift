@@ -33,7 +33,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
                     fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
                 }
                 fieldShape
-                    .fill(accent.opacity(isLoading ? 0.2 : 0))
+                    .fill(accent.opacity(isLoading ? BrowserSidebarAddressFieldMetrics.loadingFillOpacity : 0))
                     .scaleEffect(x: loadingProgress, anchor: .leading)
                     .mask(fieldShape)
                     .animation(
