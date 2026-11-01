@@ -221,24 +221,30 @@ final class BrowserCredentialSpaceStore {
             if didStartAccess { url.stopAccessingSecurityScopedResource() }
         }
 
+        // The Space's passwords are read first, so a failure there is never
+        // blamed on the file. Declining to authenticate says nothing.
+        let existing: [BrowserCredential]
         do {
-            let existing = try await BrowserCredentialSensitiveAccess(browser: browser)
+            existing = try await BrowserCredentialSensitiveAccess(browser: browser)
                 .credentialInventory(
                     matching: assignment,
                     reason: String(
                         localized: "Authenticate to import passwords into \(space.settings.name)."
                     )
                 )
-            guard isStillSelected(), browser.spaceModel(matching: assignment) != nil else {
-                throw BrowserCredentialSensitiveAccessError.missingCredential
-            }
+        } catch BrowserCredentialSensitiveAccessError.authenticationDenied {
+            return
+        } catch {
+            errorMessage = String(localized: "Crest couldn’t read this Space’s passwords.")
+            return
+        }
+        guard isStillSelected(), browser.spaceModel(matching: assignment) != nil else { return }
+        do {
             let plan = try await Self.plan(
                 importing: try Self.document(at: url), against: existing, core: browser.core)
             guard isStillSelected(),
                 let currentSpace = browser.spaceModel(matching: assignment)
-            else {
-                throw BrowserCredentialSensitiveAccessError.missingCredential
-            }
+            else { return }
             importReview = BrowserCredentialImportReview(
                 plan: plan,
                 existingCredentials: existing,
@@ -252,8 +258,7 @@ final class BrowserCredentialSpaceStore {
                 errorMessage = rejection.explanation
             }
         } catch {
-            errorMessage =
-                "Crest couldn’t authenticate and read that password file for this Space."
+            errorMessage = String(localized: "Crest couldn’t read that password file.")
         }
     }
 
@@ -300,46 +305,59 @@ final class BrowserCredentialSpaceStore {
         isCommittingImport = true
         errorMessage = nil
         defer { isCommittingImport = false }
+        // Each step says what it left: nothing before the write, the Space's
+        // passwords as they were when the write is undone, and the import
+        // itself once the write succeeds. Declining to authenticate says nothing.
+        let currentInventory: [BrowserCredential]
         do {
-            let currentInventory = try await BrowserCredentialSensitiveAccess(browser: browser)
+            currentInventory = try await BrowserCredentialSensitiveAccess(browser: browser)
                 .credentialInventory(
                     matching: plan.destination,
                     reason: String(
                         localized: "Authenticate to commit the password import into \(space.settings.name)."
                     )
                 )
-            guard plan.matchesExistingInventory(currentInventory) else {
-                errorMessage =
-                    "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts."
-                importReview = nil
-                return
-            }
-            let resolution = try plan.resolvedInventory()
-            guard isStillSelected(), browser.spaceModel(matching: plan.destination) != nil else {
-                throw BrowserCredentialSensitiveAccessError.missingCredential
-            }
+        } catch BrowserCredentialSensitiveAccessError.authenticationDenied {
+            return
+        } catch {
+            errorMessage = String(localized: "Crest couldn’t read this Space’s passwords. Nothing was imported.")
+            return
+        }
+        guard plan.matchesExistingInventory(currentInventory) else {
+            errorMessage =
+                "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts."
+            importReview = nil
+            return
+        }
+        guard isStillSelected(), browser.spaceModel(matching: plan.destination) != nil else { return }
+        let resolution: BrowserCredentialImportResolution
+        do {
+            resolution = try plan.resolvedInventory()
             if resolution.summary.acceptedCount > 0 {
                 try await browser.replaceCredentialInventory(
                     resolution.credentials,
                     in: plan.destination.spaceID
                 )
             }
-            guard isStillSelected(), browser.spaceModel(matching: plan.destination) != nil else {
-                throw BrowserCredentialSensitiveAccessError.missingCredential
-            }
-            importSummary = resolution.summary
-            importReview = nil
-            await load(
-                in: plan.destination.spaceID,
-                accessController: accessController
-            )
         } catch CredentialVaultError.atomicReplacementRestoreFailed {
-            errorMessage =
-                "Crest couldn’t finish the import or restore the original Keychain inventory. Review this Space before trying again."
+            errorMessage = String(
+                localized:
+                    "Crest couldn’t finish the import or restore the original Keychain inventory. Review this Space before trying again."
+            )
+            return
         } catch {
-            errorMessage =
-                "Crest couldn’t commit the import. The original passwords were restored and no imported passwords were accepted."
+            errorMessage = String(
+                localized: "Crest couldn’t import these passwords. This Space’s passwords are unchanged.")
+            return
         }
+        importReview = nil
+        // The import is done; a Space chosen meanwhile shows its own passwords.
+        guard isStillSelected(), browser.spaceModel(matching: plan.destination) != nil else { return }
+        importSummary = resolution.summary
+        await load(
+            in: plan.destination.spaceID,
+            accessController: accessController
+        )
     }
 
     func deleteSelection(

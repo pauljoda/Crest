@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x89, 0x62, 0xf2, 0x37, 0xf9, 0x10, 0x12, 0x07, 0x12, 0x69, 0xee, 0x73, 0x7a, 0x29, 0x3f, 0xf0, 0x8c, 0xe9, 0x62, 0x53, 0x82, 0x0d, 0x44, 0x36, 0x17, 0x3f, 0xbc, 0xac, 0x17, 0xb4, 0x09, 0x4c
+        0xcb, 0x7b, 0x5e, 0xf3, 0x2e, 0x6e, 0x77, 0x72, 0xf9, 0xec, 0xf0, 0x94, 0x8c, 0xc8, 0xbb, 0x3f, 0xf4, 0x76, 0xeb, 0x3b, 0x49, 0xef, 0x0c, 0x93, 0x03, 0xd6, 0x24, 0x50, 0x78, 0x88, 0xba, 0x47
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -8881,6 +8881,7 @@ public static class ContractCodec {
     public static FinishImportCommit ReadFinishImportCommit(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new FinishImportCommit(
+            reader.ReadInt32(),
             reader.ReadInt32());
     }
 
@@ -8888,6 +8889,7 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteInt32(value.PasswordCount);
+        writer.WriteInt32(value.UnsavedPasswordCount);
     }
 
     public static FinishSetup ReadFinishSetup(WireReader reader) {
@@ -16304,6 +16306,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadInt32(),
             reader.ReadInt32(),
+            reader.ReadInt32(),
             reader.ReadInt32());
     }
 
@@ -16314,6 +16317,7 @@ public static class ContractCodec {
         writer.WriteInt32(value.TabCount);
         writer.WriteInt32(value.PasswordCount);
         writer.WriteInt32(value.SpaceCount);
+        writer.WriteInt32(value.UnsavedPasswordCount);
     }
 
     public static ShortcutBinding ReadShortcutBinding(WireReader reader) {

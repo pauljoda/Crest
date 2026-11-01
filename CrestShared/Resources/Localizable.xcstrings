@@ -4484,10 +4484,19 @@
         }
       }
     },
+    "Crest couldn’t finish the import or restore the original Keychain inventory. Review this Space before trying again." : {
+
+    },
+    "Crest couldn’t import these passwords. This Space’s passwords are unchanged." : {
+
+    },
     "Crest couldn’t open itself to agents. Turn agents off and on again to try again." : {
 
     },
     "Crest couldn't open your session" : {
+
+    },
+    "Crest couldn’t read that password file." : {
 
     },
     "Crest couldn’t read the iCloud sync state an earlier version saved." : {
@@ -4505,6 +4514,9 @@
           }
         }
       }
+    },
+    "Crest couldn’t read this Space’s passwords. Nothing was imported." : {
+
     },
     "Crest couldn’t remove the passwords it can’t read." : {
 
@@ -7259,6 +7271,9 @@
         }
       }
     },
+    "Imported %lld reviewed tabs across %lld Spaces. %lld passwords couldn’t be saved." : {
+      "comment" : "Browser-import completion summary. Counts are imported tabs, destination Spaces, then passwords that could not be saved."
+    },
     "Imported %lld reviewed tabs and %lld passwords across %lld Spaces." : {
       "comment" : "Browser-import completion summary. Counts are imported tabs, imported passwords, then destination Spaces.",
       "localizations" : {
@@ -7471,6 +7486,9 @@
           }
         }
       }
+    },
+    "Imported %lld reviewed tabs and %lld passwords across %lld Spaces. %lld passwords couldn’t be saved." : {
+      "comment" : "Browser-import completion summary. Counts are imported tabs, imported passwords, destination Spaces, then passwords that could not be saved."
     },
     "Imported %lld Spaces, %lld tabs, and %lld history entries." : {
       "localizations" : {

@@ -2847,6 +2847,7 @@ struct FinishDownload: Intent, DownloadIntent, Equatable, Sendable {
 
 struct FinishImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
     let passwordCount: Int
+    let unsavedPasswordCount: Int
 }
 
 struct FinishSetup: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -5892,6 +5893,7 @@ struct SetupSummary: Equatable, Sendable {
     let tabCount: Int
     let passwordCount: Int
     let spaceCount: Int
+    let unsavedPasswordCount: Int
 }
 
 struct ShareSourcesOffered: Equatable, Sendable {

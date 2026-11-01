@@ -56,7 +56,8 @@ enum BrowserOnboardingSummary {
     static func completed(_ summary: SetupSummary) -> LocalizedStringResource {
         summary.isImport
             ? completedImport(
-                tabCount: summary.tabCount, passwordCount: summary.passwordCount, spaceCount: summary.spaceCount)
+                tabCount: summary.tabCount, passwordCount: summary.passwordCount, spaceCount: summary.spaceCount,
+                unsavedPasswordCount: summary.unsavedPasswordCount)
             : completedManualSetup(newSpaceCount: summary.spaceCount, addedTabCount: summary.tabCount)
     }
 
@@ -82,11 +83,27 @@ enum BrowserOnboardingSummary {
     private static func completedImport(
         tabCount: Int,
         passwordCount: Int,
-        spaceCount: Int
+        spaceCount: Int,
+        unsavedPasswordCount: Int
     ) -> LocalizedStringResource {
         let tabs = max(tabCount, 0)
         let passwords = max(passwordCount, 0)
         let spaces = max(spaceCount, 0)
+        let unsaved = max(unsavedPasswordCount, 0)
+        if unsaved > 0, passwords == 0 {
+            return LocalizedStringResource(
+                "Imported \(tabs) reviewed tabs across \(spaces) Spaces. \(unsaved) passwords couldn’t be saved.",
+                comment:
+                    "Browser-import completion summary. Counts are imported tabs, destination Spaces, then passwords that could not be saved."
+            )
+        }
+        if unsaved > 0 {
+            return LocalizedStringResource(
+                "Imported \(tabs) reviewed tabs and \(passwords) passwords across \(spaces) Spaces. \(unsaved) passwords couldn’t be saved.",
+                comment:
+                    "Browser-import completion summary. Counts are imported tabs, imported passwords, destination Spaces, then passwords that could not be saved."
+            )
+        }
         if passwords == 0 {
             return LocalizedStringResource(
                 "Imported \(tabs) reviewed tabs across \(spaces) Spaces.",
