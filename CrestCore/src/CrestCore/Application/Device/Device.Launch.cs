@@ -80,13 +80,21 @@ internal sealed partial class Device {
     #region Actions - Quitting
 
     /// The person agreed to quit: the windows still open are the ones the next
-    /// launch reopens.
+    /// launch reopens, and a launch still reopening its pages did not end while
+    /// they opened, which the device store says before this returns, since the
+    /// app may end before the worker writes behind. When the store cannot be
+    /// written now, the worker tries again.
     internal void AcceptQuit() {
         lock (gate) {
             quitAccepted = true;
             if (!reopeningPages) return;
             reopeningPages = false;
-            storage?.EnqueueDevice(Records());
+            var records = Records();
+            try {
+                storage?.SaveDevice(records);
+            } catch (StorageException) {
+                storage?.EnqueueDevice(records);
+            }
         }
     }
 
