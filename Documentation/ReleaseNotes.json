@@ -4741,6 +4741,10 @@
     "sub-space-switch-steady-pins": {
       "category": "fixed",
       "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
+    },
+    "earlier-ip-passwords-fill": {
+      "category": "fixed",
+      "message": "Passwords imported earlier for a site at an IP address written in a long or unusual form, such as 127.1, now fill on that site too."
     }
   }
 }

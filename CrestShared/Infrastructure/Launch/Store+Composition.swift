@@ -18,7 +18,7 @@ extension BrowserStore {
         let favicons: any BrowserFaviconStoring = BrowserFaviconFileStore.production() ?? InMemoryBrowserFaviconStore()
         let stored = try migratedStorage(core: core, legacy: .installed, favicons: favicons, seed: nil)
         return production(
-            stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault())
+            stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault(core: core))
     }
 
     /// The store over the session the core keeps in its file, which `stored`
@@ -84,7 +84,7 @@ extension BrowserStore {
             favicons: favicons, seed: isolatedFixtureSeed(for: launchEnvironment))
         return production(
             stored: stored, core: core, favicons: favicons,
-            credentialVault: KeychainCredentialVault(servicePrefix: namespace))
+            credentialVault: KeychainCredentialVault(core: core, servicePrefix: namespace))
     }
 
     /// Where the core keeps this launch's session file: the installed app's

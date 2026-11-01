@@ -115,6 +115,18 @@ public sealed class CredentialImportTests {
         Assert.Equal(Enumerable.Range(6, 4).Select(row => new CredentialRowRejection(row, CredentialRowFlaw.InvalidOrigin)), plan.Rejections);
         Assert.False(new CredentialOrigin("https", "2001:db8:0:0:0:0:0:1", 443).IsValid);
         Assert.False(new CredentialOrigin("https", "127.1", 443).IsValid);
+
+        // A password an earlier import saved in such a spelling still fills the
+        // page, which spells the address canonically; a different address,
+        // scheme or port, or a spelling no page reads, does not.
+        CredentialOrigin[] earlier = [new("https", "127.1", 443), new("https", "0x7f.0.0.1", 443), new("https", "127.0.0.2", 443),
+            new("http", "127.1", 443), new("https", "127.1", 8443), new("https", "08.1.1.1", 443)];
+        Assert.Equal([true, true, false, false, false, false],
+            Area.Query(new CredentialsFillingPage(new("https", "127.0.0.1", 443), earlier)).Fills);
+        Assert.Equal([true, true], Area.Query(new CredentialsFillingPage(new("https", "2001:db8::1", 443),
+            [new("https", "2001:db8:0:0:0:0:0:1", 443), new("https", "2001:DB8::1", 443)])).Fills);
+        Assert.Equal(new InvalidCredentialOrigin(),
+            Assert.Throws<Rejected>(() => Area.Query(new CredentialsFillingPage(new("https", "127.1", 443), earlier))).Rejection);
     }
 
     [Fact]
