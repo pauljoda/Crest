@@ -52,7 +52,7 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
             // Where the status bar keeps to the far end of a band across the
             // top, the sidebar takes the rest of the band.
             .safeAreaPadding(.top, sidebarTopMargin)
-            .ignoresSafeArea(.container, edges: layout.runsSidebarToTopEdge ? .top : [])
+            .ignoresSafeArea(.container, edges: runsSidebarToTopEdge ? .top : [])
 
         } controls: {
             if effectivePresentation == .collapsed {
@@ -95,10 +95,16 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     /// beside the status bar its controls lead, clear of the corner, and keep
     /// the layout margin.
     private var sidebarTopMargin: CGFloat {
-        if controlPlacement.movesControlsToToolbar {
+        if controlPlacement.runsDownSide {
             return MobileBrowserRootLayout.displayCornerClearance
         }
-        return layout.runsSidebarToTopEdge ? MobileBrowserRootLayout.displayEdgeMargin : 0
+        return runsSidebarToTopEdge ? MobileBrowserRootLayout.displayEdgeMargin : 0
+    }
+
+    /// Whether the sidebar takes the band beside the status bar: not where
+    /// the controls ride in the top bar there.
+    private var runsSidebarToTopEdge: Bool {
+        layout.runsSidebarToTopEdge && !controlPlacement.carriesControlsInTopBar
     }
 
     /// Compact regular windows retain the desktop floating-card treatment, but

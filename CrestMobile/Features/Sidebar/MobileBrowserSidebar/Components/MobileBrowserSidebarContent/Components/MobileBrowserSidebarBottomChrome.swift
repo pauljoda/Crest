@@ -19,23 +19,26 @@ struct MobileBrowserSidebarBottomChrome: View {
         }
     }
 
+    /// The controls as items in the side toolbar's bottom group, or along the
+    /// top bar after the page's.
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
-        ToolbarItemGroup(placement: .bottomBar) {
-            if configuration.showsSidebarToggle {
-                sidebarToggle
-            }
-            if showsNewTab {
-                newTabButton
-            }
-            if showsSpaceActions {
-                MobileSpaceActionButtons(
-                    browser: configuration.context.browser,
-                    pages: configuration.pages,
-                    utilityPresentationStyle: configuration.utilityPresentationStyle,
-                    configuration: configuration.spaceActionsConfiguration
-                )
-            }
+        if configuration.showsSidebarToggle {
+            ToolbarItem(placement: controlPlacement.spaceControlsPlacement) { sidebarToggle }
+                .collapsing(at: .navigation)
+        }
+        if showsNewTab {
+            ToolbarItem(placement: controlPlacement.spaceControlsPlacement) { newTabButton }
+                .collapsing(at: .newTab)
+        }
+        if showsSpaceActions {
+            MobileSpaceActionButtons(
+                browser: configuration.context.browser,
+                pages: configuration.pages,
+                utilityPresentationStyle: configuration.utilityPresentationStyle,
+                configuration: configuration.spaceActionsConfiguration
+            )
+            .toolbarItems(placement: controlPlacement.spaceControlsPlacement)
         }
     }
 
@@ -60,7 +63,7 @@ struct MobileBrowserSidebarBottomChrome: View {
     private var sidebarToggle: some View {
         Button(action: configuration.toggleSidebar) {
             MobileSpaceUtilityButtonLabel(
-                systemImage: sidebarOnRight ? "sidebar.right" : "sidebar.left")
+                title: sidebarToggleTitle, systemImage: sidebarOnRight ? "sidebar.right" : "sidebar.left")
         }
         .help(sidebarToggleTitle)
         .accessibilityLabel(sidebarToggleTitle)
@@ -71,7 +74,7 @@ struct MobileBrowserSidebarBottomChrome: View {
     /// away whether or not the toggle is on.
     private var newTabButton: some View {
         Button(action: configuration.openNewTab) {
-            MobileSpaceUtilityButtonLabel(systemImage: "plus")
+            MobileSpaceUtilityButtonLabel(title: "New Tab", systemImage: "plus")
         }
         .foregroundStyle(.primary)
         .help("New Tab")

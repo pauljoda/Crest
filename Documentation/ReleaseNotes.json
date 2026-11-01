@@ -4717,6 +4717,10 @@
     "mobile-page-zoom-fit": {
       "category": "fixed",
       "message": "Zooming a page out on iPhone and iPad fits it to the window instead of leaving a blank band down the side."
+    },
+    "duo-top-bar-controls": {
+      "category": "improved",
+      "message": "On iPhone Duo held upright, the page and Space controls move into the bar across the top, leaving the sidebar more room, and the controls that don't fit fold into a menu, Settings first. Back and Forward always show on iPhone and iPad, dimmed until there is somewhere to go."
     }
   }
 }

@@ -15,7 +15,10 @@ struct MobileSpaceArchiveButton: View {
 
     var body: some View {
         Button(action: presentsInline ? toggleCommonLists : showArchive) {
-            MobileSpaceUtilityButtonLabel(systemImage: "archivebox")
+            MobileSpaceUtilityButtonLabel(
+                title: presentsInline ? "Archive, History, and Downloads" : "Archive",
+                systemImage: "archivebox"
+            )
         }
         .symbolVariant(
             presentsInline && commonListsAreExpanded ? .fill : .none
