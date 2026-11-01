@@ -45,7 +45,6 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
     func testMissingUpsertAddsWhenUnlockedDataProtectionCredential() async throws {
         let item = credentialItem(isSynchronizable: false)
         let client = RecordingSecurityCredentialKeychainClient(
-            copyResponses: [.init(status: errSecItemNotFound, result: nil)],
             updateStatuses: [errSecItemNotFound],
             addStatuses: [errSecSuccess]
         )
@@ -73,45 +72,29 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
         XCTAssertNil(attributes[kSecAttrAccessGroup])
     }
 
-    func testSynchronizationChangeRestoresTheOriginalItemWhenAddFails() async throws {
-        let original = credentialItem(isSynchronizable: false)
+    /// Changing an item's iCloud setting is one update of the item, so no
+    /// step leaves the account without its password.
+    func testSynchronizationChangeUpdatesTheItemInPlace() async throws {
         let replacement = CredentialKeychainItem(
-            account: original.account,
+            account: "credential-account",
             metadata: Data("replacement-metadata".utf8),
             secret: Data("replacement-secret".utf8),
             isSynchronizable: true
         )
-        let client = RecordingSecurityCredentialKeychainClient(
-            copyResponses: [
-                .init(
-                    status: errSecSuccess,
-                    result: keychainDictionary(for: original) as CFDictionary
-                )
-            ],
-            addStatuses: [errSecDuplicateItem, errSecSuccess],
-            deleteStatuses: [errSecSuccess]
-        )
+        let client = RecordingSecurityCredentialKeychainClient(updateStatuses: [errSecSuccess])
         let store = SecurityCredentialKeychainStore(client: client)
 
-        do {
-            try await store.upsert(replacement, in: "test.service")
-            XCTFail("Expected the replacement add to fail")
-        } catch {
-            XCTAssertEqual(
-                error as? SecurityCredentialKeychainError,
-                .status(errSecDuplicateItem)
-            )
-        }
+        try await store.upsert(replacement, in: "test.service")
 
-        XCTAssertTrue(client.updates.isEmpty)
-        XCTAssertEqual(client.deletes.count, 1)
-        let deleteQuery = try XCTUnwrap(client.deletes.first)
-        assertBaseQuery(deleteQuery, service: "test.service")
-        XCTAssertEqual(deleteQuery[kSecAttrAccount] as? String, original.account)
-
-        XCTAssertEqual(client.adds.count, 2)
-        assertAddedItem(client.adds[0], equals: replacement)
-        assertAddedItem(client.adds[1], equals: original)
+        XCTAssertTrue(client.deletes.isEmpty)
+        XCTAssertTrue(client.adds.isEmpty)
+        let update = try XCTUnwrap(client.updates.first)
+        XCTAssertEqual(client.updates.count, 1)
+        assertBaseQuery(update.query, service: "test.service")
+        XCTAssertEqual(update.query[kSecAttrAccount] as? String, replacement.account)
+        XCTAssertEqual(update.attributes[kSecAttrSynchronizable] as? Bool, true)
+        XCTAssertEqual(update.attributes[kSecAttrGeneric] as? Data, replacement.metadata)
+        XCTAssertEqual(update.attributes[kSecValueData] as? Data, replacement.secret)
     }
 
     func testDeletesTreatMissingItemsAsSuccessAndPropagateOtherStatuses() async throws {
@@ -150,44 +133,6 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
             assertBaseQuery(query, service: "test.service")
             XCTAssertNil(query[kSecAttrAccessGroup])
         }
-    }
-
-    private func assertAddedItem(
-        _ attributes: [CFString: Any],
-        equals item: CredentialKeychainItem,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) {
-        XCTAssertEqual(
-            attributes[kSecAttrAccount] as? String,
-            item.account,
-            file: file,
-            line: line
-        )
-        XCTAssertEqual(
-            attributes[kSecAttrGeneric] as? Data,
-            item.metadata,
-            file: file,
-            line: line
-        )
-        XCTAssertEqual(
-            attributes[kSecValueData] as? Data,
-            item.secret,
-            file: file,
-            line: line
-        )
-        XCTAssertEqual(
-            attributes[kSecAttrSynchronizable] as? Bool,
-            item.isSynchronizable,
-            file: file,
-            line: line
-        )
-        assertCFValue(
-            attributes[kSecAttrAccessible],
-            equals: kSecAttrAccessibleWhenUnlocked,
-            file: file,
-            line: line
-        )
     }
 
     private func assertBaseQuery(
@@ -257,17 +202,6 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
             metadata: Data("metadata".utf8),
             secret: Data("secret".utf8),
             isSynchronizable: isSynchronizable
-        )
-    }
-
-    private func keychainDictionary(
-        for item: CredentialKeychainItem
-    ) -> [CFString: Any] {
-        keychainDictionary(
-            account: item.account,
-            metadata: item.metadata,
-            secret: item.secret,
-            isSynchronizable: item.isSynchronizable
         )
     }
 

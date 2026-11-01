@@ -4741,6 +4741,10 @@
     "sub-space-switch-steady-pins": {
       "category": "fixed",
       "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
+    },
+    "saved-passwords-survive-interrupted-writes": {
+      "category": "fixed",
+      "message": "Saved passwords are no longer lost when Crest quits partway through importing or deleting them, or through turning iCloud Keychain on or off for a Space."
     }
   }
 }
