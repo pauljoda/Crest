@@ -83,14 +83,23 @@ struct MobileBrowserSideToolbarHost: ViewModifier {
                 }
             }
             .background { MobileBrowserHingeObserver(folds: $folds) }
-            .onGeometryChange(for: Bool.self) {
-                $0.size.height > $0.size.width
-            } action: {
-                isUpright = $0
-            }
+            .background { uprightProbe }
             .onChange(of: verticalEdge != nil || sharesTopBandWithStatusBar, initial: true) { _, asksForBars in
                 if asksForBars { hostsBars = true }
             }
+        }
+
+        /// Reads whether the window stands upright from its whole height: the
+        /// keyboard shortens the layout but never turns the display on its side.
+        private var uprightProbe: some View {
+            Color.clear
+                .onGeometryChange(for: Bool.self) {
+                    $0.size.height > $0.size.width
+                } action: {
+                    isUpright = $0
+                }
+                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .accessibilityHidden(true)
         }
 
         /// A foldable's inner display held upright keeps a band across its top
