@@ -1309,6 +1309,9 @@ struct BeginDownload: Intent, DownloadIntent, Equatable, Sendable {
 struct BeginImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
 }
 
+struct BeginReopeningPages: Intent, WindowIntent, Equatable, Sendable {
+}
+
 struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -2849,6 +2852,9 @@ struct FinishImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
     let passwordCount: Int
 }
 
+struct FinishReopeningPages: Intent, WindowIntent, Equatable, Sendable {
+}
+
 struct FinishSetup: Intent, SetupFlowIntent, Equatable, Sendable {
     let windowID: UUID
 }
@@ -3538,6 +3544,7 @@ struct LaunchWindowPlan: Equatable, Sendable {
     let windowIDs: [UUID]
     let startupWindowID: UUID
     let setup: SetupEntry?
+    let quitWhileReopening: Bool
 }
 
 struct LaunchWindows: Query, Equatable, Sendable {
