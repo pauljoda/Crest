@@ -4737,6 +4737,14 @@
     "chromium-restore-history-crash": {
       "category": "fixed",
       "message": "Going back to a restored tab on Mac no longer quits Crest when that tab's page never finished opening, such as one that turned into a download or that you stopped."
+    },
+    "choose-where-new-tabs-open": {
+      "category": "new",
+      "message": "Choose where new tabs open. In Settings > Tabs, new tabs and tabs opened from links can each open after the current tab, at the top or at the bottom of your open tabs, never above pinned or saved tabs or inside a split."
+    },
+    "read-link-preferences-before-session-gate": {
+      "category": "internal",
+      "message": "Opening a tab no longer reads the device's link preferences while holding the session lock."
     }
   }
 }

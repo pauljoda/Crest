@@ -99,16 +99,16 @@ public sealed partial class BrowserContractsTests {
         app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
         var (page, blank, settings) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         app.Send(new OpenTab(workspace, window, first, page, new TabContent("https://example.com/", null, "Example"),
-            TabPlacement.Current, null, Shows: false));
+            TabPlacement.Current, null, Shows: false, TabOpening.Programmatic, OpenerId: null));
         app.Send(new OpenTab(workspace, window, first, blank, new TabContent("about:blank", null, null),
-            TabPlacement.Current, null, Shows: false));
+            TabPlacement.Current, null, Shows: false, TabOpening.Programmatic, OpenerId: null));
         app.Send(new OpenTab(workspace, window, first, settings, new TabContent(null, NativeView.Settings, null),
-            TabPlacement.Current, null, Shows: false));
+            TabPlacement.Current, null, Shows: false, TabOpening.Programmatic, OpenerId: null));
         var internals = new[] { "chrome://settings/", "chrome-extension://abcdefghijklmnop/options.html", "file:///etc/hosts" }
             .Select(address => {
                 var tab = Guid.NewGuid();
                 app.Send(new OpenTab(workspace, window, first, tab, new TabContent(address, null, null), TabPlacement.Current,
-                    null, Shows: false));
+                    null, Shows: false, TabOpening.Programmatic, OpenerId: null));
                 return tab;
             }).ToArray();
         var reached = Assert.Single(app.Query(new AgentReach(agent)).Spaces);

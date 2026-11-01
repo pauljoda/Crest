@@ -20,7 +20,7 @@ extension BrowserSidebarUtilityCoordinator {
             platformActions: BrowserSidebarUtilityPlatformActions(
                 downloadDestinations: [.open, .revealInFinder],
                 openHistoryEntry: { url, assignment in
-                    guard browser.openNewTab(url: url, matching: assignment) != nil
+                    guard browser.openNewTab(url: url, matching: assignment, opener: browser.windowID) != nil
                     else { return }
                     pages.select()
                     pages.load(url)

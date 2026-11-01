@@ -71,6 +71,17 @@ final class BrowserLinkPreferenceStore {
         send(ChoosePeekModifier(modifier: modifier))
     }
 
+    /// Where a new tab opens: a Start Page, an address typed in the command
+    /// bar, a link from another app, and a kept Quick Window.
+    func chooseNewTabPlacement(_ placement: NewTabPlacement) {
+        send(ChooseNewTabPlacement(placement: placement))
+    }
+
+    /// Where a tab opened from a link goes, including a kept Peek.
+    func chooseLinkedTabPlacement(_ placement: NewTabPlacement) {
+        send(ChooseLinkedTabPlacement(placement: placement))
+    }
+
     func chooseArchivePolicy(_ policy: QuickWindowArchivePolicy) {
         send(ChooseQuickWindowArchivePolicy(policy: policy))
     }

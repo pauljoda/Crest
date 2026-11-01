@@ -136,7 +136,7 @@ extension BrowserMacAgents {
         let window = frontWindow(over: space)
         let shows = opening.show == true && window != nil
         let browser = window?.browser ?? application.browser
-        guard let tabID = browser.openNewTab(url: url, in: space.id, selecting: shows) else {
+        guard let tabID = browser.openNewTab(url: url, in: space.id, selecting: shows, opener: call.sessionID) else {
             throw .refused("Crest could not open a tab in this Space.")
         }
         _ = try claim(tabID, call)

@@ -75,6 +75,69 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ANewTabAndATabFromALinkOpenWhereTheDeviceSaysAndNeverAbovePinnedOrSavedTabsOrInsideASplit() {
+        using var directory = new StorageDirectory();
+        var window = Guid.NewGuid();
+        {
+            var (app, workspace, spaces) = DeviceApp(directory);
+            using var disposal = app;
+            var space = SpaceId(spaces[0]!);
+            app.Send(new OpenWindow(window, workspace, Saved: false, CopyingWindowId: null, ShowingSpaceId: null, ShowingTabs: [],
+                RestoresTabs: true));
+            List<TabState> Tabs() => [.. app.Workspace(workspace).Current.Spaces.Single(candidate => candidate.Id == space).Tabs];
+            int IndexOf(Guid tab) => Tabs().FindIndex(candidate => candidate.Id == tab);
+            var original = Tabs();
+            int durable = original.Count(tab => tab.Placement.IsDurable);
+            Assert.True(durable > 0 && original.Any(tab => tab.Placement == TabPlacement.Pinned));
+            var split = original.First(tab => tab.SplitGroupId is not null);
+            var members = original.Where(tab => tab.SplitGroupId == split.SplitGroupId).ToList();
+            Assert.True(members.Count > 1);
+            Guid Open(TabOpening opening, Guid? opener = null) {
+                var tab = Guid.NewGuid();
+                app.Send(new OpenTab(workspace, window, space, tab, new TabContent("https://example.org/" + tab, null, "Opened"),
+                    TabPlacement.Current, split.Id, Shows: false, opening, opener));
+                return tab;
+            }
+
+            // Nothing changes until a person chooses: a tab opens after the one it came from, past its whole split.
+            Assert.Equal(IndexOf(members[^1].Id) + 1, IndexOf(Open(TabOpening.NewTab)));
+            Assert.Equal(IndexOf(members[^1].Id) + 1, IndexOf(Open(TabOpening.Link)));
+            Assert.Equal(members.Select(member => IndexOf(member.Id)).Order().First() + members.Count - 1, IndexOf(members[^1].Id));
+
+            // Each setting moves only its own openings, and a tab stays inside the open tabs.
+            app.Send(new ChooseNewTabPlacement(NewTabPlacement.Top));
+            app.Send(new ChooseLinkedTabPlacement(NewTabPlacement.Bottom));
+            Assert.Equal(durable, IndexOf(Open(TabOpening.NewTab)));
+            var bottomLink = Open(TabOpening.Link);
+            Assert.Equal(Tabs().Count - 1, IndexOf(bottomLink));
+            app.Send(new ChooseNewTabPlacement(NewTabPlacement.Bottom));
+            app.Send(new ChooseLinkedTabPlacement(NewTabPlacement.Top));
+            var bottomNewTab = Open(TabOpening.NewTab);
+            Assert.Equal(Tabs().Count - 1, IndexOf(bottomNewTab));
+            Assert.Equal(durable, IndexOf(Open(TabOpening.Link)));
+            Assert.All(Tabs().Take(durable), tab => Assert.True(tab.Placement.IsDurable));
+            Assert.Equal(members.Select(member => member.Id), Tabs().Where(tab => tab.SplitGroupId == split.SplitGroupId).Select(tab => tab.Id));
+
+            // Software ignores both settings: each opener's tabs follow its last one, starting after the current tab.
+            var (agent, other) = (Guid.NewGuid(), Guid.NewGuid());
+            var first = Open(TabOpening.Programmatic, agent);
+            Assert.Equal(IndexOf(members[^1].Id) + 1, IndexOf(first));
+            var second = Open(TabOpening.Programmatic, agent);
+            Assert.Equal(IndexOf(first) + 1, IndexOf(second));
+            Assert.Equal(IndexOf(members[^1].Id) + 1, IndexOf(Open(TabOpening.Programmatic, other)));
+            var third = Open(TabOpening.Programmatic, agent);
+            Assert.Equal(IndexOf(second) + 1, IndexOf(third));
+            app.Send(new DeleteTab(workspace, window, space, third));
+            Assert.Equal(IndexOf(members[^1].Id) + 1, IndexOf(Open(TabOpening.Programmatic, agent)));
+        }
+
+        var (relaunched, _, _) = DeviceApp(directory);
+        using var relaunchedDisposal = relaunched;
+        var kept = Links(relaunched.Send(new AdoptLinkPreferences(null)));
+        Assert.Equal((NewTabPlacement.Bottom, NewTabPlacement.Top), (kept.NewTabPlacement, kept.LinkedTabPlacement));
+    }
+
+    [Fact]
     public void ALinkFromAnotherAppNeverOpensALockedSpaceWhateverNamesIt() {
         var session = GuardedSession(withOpenSecondSpace: true);
         var (app, _, _, workspace, window) = PageHost(session);
