@@ -5,6 +5,8 @@ struct BrowserWebsiteDataSection: View {
     /// The Space's sites, or nil until the pane asks for them.
     let list: BrowserWebsiteDataList?
     let spaceName: String
+    /// Whether the Space's whole group shares this website data.
+    var isSharedByGroup = false
 
     @State private var query = ""
     @State private var confirmsRemoveAll = false
@@ -59,7 +61,11 @@ struct BrowserWebsiteDataSection: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You’ll be signed out of every site in this Space.")
+            if isSharedByGroup {
+                Text("You’ll be signed out of every site in this Space and the others of its group.")
+            } else {
+                Text("You’ll be signed out of every site in this Space.")
+            }
         }
     }
 }

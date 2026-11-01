@@ -1,6 +1,6 @@
 namespace CrestCore.Contracts;
 
-/// One Space of a manual setup: the Space `SpaceId` with the profile
+/// One Space of a manual setup: the Space `SpaceId` with its own profile
 /// `ProfileId`, whether the setup makes it, and the name and look it takes. A
 /// name left blank stays blank here, as the person is typing it.
 public sealed record SetupDraftSpace(Guid SpaceId, Guid ProfileId, bool IsNew, SpaceCustomization Customization) {
@@ -17,7 +17,7 @@ public sealed record SetupDraftSpace(Guid SpaceId, Guid ProfileId, bool IsNew, S
 
     /// The existing Space `space` as a setup starts from it, with its name and
     /// look.
-    internal static SetupDraftSpace Existing(SpaceState space) => new(space.Id, space.ProfileId, IsNew: false, space.Customization);
+    internal static SetupDraftSpace Existing(SpaceState space) => new(space.Id, space.OwnProfileId, IsNew: false, space.Customization);
 
     /// The Space with its look in `look`, keeping its name, symbol and colors.
     internal SetupDraftSpace Restyled(SetupLook look) => this with { Customization = look.Applying(Customization) };

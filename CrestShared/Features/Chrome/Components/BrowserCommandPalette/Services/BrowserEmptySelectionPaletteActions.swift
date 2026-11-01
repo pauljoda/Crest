@@ -20,7 +20,7 @@ struct BrowserEmptySelectionPaletteActions {
         guard isAvailable,
             target.spaceID == source.spaceID,
             target.profileID == source.profileID,
-            browser.shownSpace?.tabs.model(target.tabID) != nil
+            browser.shownSpace?.shownTab(target.tabID) != nil
         else { return false }
         browser.selectTab(target.tabID)
         didSelectTab()

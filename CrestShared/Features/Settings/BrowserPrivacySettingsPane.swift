@@ -62,11 +62,13 @@ struct BrowserPrivacySettingsPane: View {
                 if let selectedSpace {
                     BrowserWebsiteDataSection(
                         list: websiteData?.profileID == selectedSpace.profileID ? websiteData : nil,
-                        spaceName: selectedSpace.settings.name)
+                        spaceName: selectedSpace.settings.name,
+                        isSharedByGroup: browser.groupMembers(of: selectedSpace).count > 1)
                     BrowserClearBrowsingDataSection(browser: browser, space: selectedSpace) {
                         Task { await websiteData?.read() }
                     }
                 }
+                BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
             } else if let selectedSpace {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: selectedSpace,
@@ -99,7 +101,11 @@ struct BrowserPrivacySettingsPane: View {
             Button("Reset All", role: .destructive, action: resetAll)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Makes every site ask again in this Space")
+            if selectedSpace.map({ browser.groupMembers(of: $0).count > 1 }) == true {
+                Text("Makes every site ask again in this Space and the others of its group")
+            } else {
+                Text("Makes every site ask again in this Space")
+            }
         }
     }
 

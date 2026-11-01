@@ -22,7 +22,7 @@ public sealed partial class BrowserContractsTests {
         Guid.Parse(session["spaces"]![0]!["profile"]!["id"]!.GetValue<string>()));
     private static void Grant(SpaceAccessAuthority access, SpaceAccessAssignment identity) {
         var request = Guid.NewGuid();
-        Assert.Equal([identity], access.Begin(identity, true, request));
+        Assert.Equal([identity], access.Begin([identity], true, request));
         access.Finish(identity.Space, request, authenticated: true);
     }
 

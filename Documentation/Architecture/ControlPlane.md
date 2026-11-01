@@ -230,10 +230,13 @@ validates what comes back. A sidebar drop commits the intent its kind decides
 (`Committed`), an import checks the session it leaves whole, and only a tab
 moving to another workspace's window moves across workspaces.
 
-A Space and its profile are one to one in every accepted document. Borrowed
-workspaces (Blank Windows, detached tabs) bind their source Space and profile,
-keep their own local collections that are never saved or staged, and close
-when the source Space goes. A borrowed workspace never edits its Space's
+Every Space keeps a profile of its own in every accepted document, and no two
+Spaces share one. A Sub-Space browses with its primary's profile instead: a
+group is its primary followed by its Sub-Spaces, and no two groups browse with
+one profile (`SpaceGroup`). Borrowed workspaces (Blank Windows, detached tabs)
+bind their source Space and the profile it browses with, keep their own local
+collections that are never saved or staged, and close when the source Space
+goes or its group changes. A borrowed workspace never edits its Space's
 settings; the core refuses with `BorrowedProfileRequiresOwner`.
 
 The session model covers tab lifecycle and placement, folders, splits,
@@ -572,8 +575,13 @@ engine.
   other registered engine (**Open Page in WebKit**), recording no choice.
   Both read the registered engines, not what the device offers, so they are
   there before any page has opened on the other engine.
-- **Protected media.** Crest's Chromium carries no Widevine. When a page, or
-  a frame of its own site, asks for Widevine or PlayReady, Chromium reports
+- **Protected media.** Crest's Chromium plays Widevine once the component
+  updater has delivered its module. Video services whose players refuse it,
+  because Chromium's Widevine lacks the verified media path they require,
+  open in an engine with the `protected-media` capability unless the person
+  chose an engine for the site (`ProtectedMediaService`). When a page, or a
+  frame of its own site, asks for a key system Chromium lacks, such as
+  PlayReady or Widevine before its module arrives, Chromium reports
   `ProtectedMediaUnavailable`. The core automatically attempts a move once per
   document to an engine with the `protected-media` capability, which WebKit has
   through the platform's FairPlay. It checks `beforeunload` before moving and
@@ -585,11 +593,14 @@ engine.
   site already has a choice. The
   Mac window shows a notice with **Move Back**, which records the engine the
   page left for the site and moves it back.
-- **Profiles and website data.** A Space is one profile on every engine. The
-  profile's Chromium directory and its WebKit website data store share the
-  profile's identifier; a named isolated launch derives its own WebKit store
-  identifiers, and private and ephemeral launches use non-persistent stores.
-  Deleting the Space erases both, and the locked-Space gate covers both.
+- **Profiles and website data.** A Space browses with one profile on every
+  engine: its own, or, as a Sub-Space, its primary's. The profile's Chromium
+  directory and its WebKit website data store share the profile's identifier;
+  a named isolated launch derives its own WebKit store identifiers, and
+  private and ephemeral launches use non-persistent stores. Deleting a Space
+  erases its own profile and the one it browses with, unless a Space that
+  stays browses with it, and the locked-Space gate covers every Space of a
+  profile.
   Sign-in never moves between engines.
 
 ## Page lifecycle

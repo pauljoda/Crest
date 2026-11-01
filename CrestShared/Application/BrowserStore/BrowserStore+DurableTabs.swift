@@ -11,7 +11,7 @@ extension BrowserStore {
             spaceID: assignment.spaceID, profileID: assignment.profileID
         )
         guard let space = spaceModel(matching: spaceAssignment),
-            let tab = space.tabs.model(assignment.tabID),
+            let tab = space.shownTab(assignment.tabID),
             tab.placement.isDurable
         else { return false }
         // The core returns the window to the tab it showed before, skipping the

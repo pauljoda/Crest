@@ -113,7 +113,7 @@ extension BrowserMacAgents {
         let deletion = try call.arguments(HistoryDeletion.self)
         let address = String(try Self.address(deletion.url).absoluteString.prefix { $0 != "#" })
         let space = try resolveSpace(deletion.space, call)
-        guard space.history.entries.contains(where: { $0.url == address }) else {
+        guard space.groupHistory.contains(where: { $0.url == address }) else {
             return .data(HistoryDeletionReceipt(space: space.id, removed: 0))
         }
         let agentName = try allowedName(of: try connectedSession(call))
@@ -124,13 +124,13 @@ extension BrowserMacAgents {
         // The person may lock the Space, or stop allowing it, while asked.
         let current = try resolveSpace(deletion.space, call)
         guard let workspaceID = try reach(call).workspaceID else { throw .rejected(.agentsOff(AgentsOff())) }
-        let before = current.history.entries.count
+        let before = current.groupHistory.count
         do {
             try core.send(RemoveHistoryAddress(workspaceID: workspaceID, spaceID: current.id, address: address))
         } catch {
             throw .rejected(error)
         }
-        let removed = before - current.history.entries.count
+        let removed = before - current.groupHistory.count
         if removed > 0 { note(.deletedHistory, address, call) }
         return .data(HistoryDeletionReceipt(space: current.id, removed: removed))
     }

@@ -379,8 +379,11 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
     return false;
   }
   auto& controller = web_contents()->GetController();
-  // Restoration is only for a new page, never a replacement of live work.
-  if (!controller.IsInitialNavigation()) {
+  // Restoration is only for a new page, never a replacement of live work. A
+  // page whose restored history never committed a document is still on its
+  // initial navigation, and restoring it again would add a second copy.
+  if (!controller.IsInitialNavigation() || controller.GetEntryCount() != 1 ||
+      !controller.GetLastCommittedEntry()->IsInitialEntry()) {
     return false;
   }
   auto iterator = base::PickleIterator::WithData(base::span(state));
@@ -541,6 +544,9 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   }
   UpdateTheme();
   if (navigation->IsSameDocument()) {
+    if (media_) {
+      media_->AddressChanged();
+    }
     MovedWithinDocument(PresentedURL(committed));
   } else {
     awaits_finish_ = true;
@@ -667,7 +673,7 @@ void EnginePage::DidUpdateAudioMutingState(bool muted) {
 
 void EnginePage::MediaStartedPlaying(const MediaPlayerInfo& info, const content::MediaPlayerId& id) {
   if (media_) {
-    media_->PlayerStarted(id, info.has_video);
+    media_->PlayerStarted(id, info.has_video, info.has_audio);
   }
   StateChanged();
 }
@@ -679,6 +685,18 @@ void EnginePage::MediaStoppedPlaying(const MediaPlayerInfo& info,
     media_->PlayerStopped(id);
   }
   StateChanged();
+}
+
+void EnginePage::MediaMetadataChanged(const MediaPlayerInfo& info, const content::MediaPlayerId& id) {
+  if (media_) {
+    media_->PlayerChanged(id, info.has_video, info.has_audio);
+  }
+}
+
+void EnginePage::MediaDestroyed(const content::MediaPlayerId& id) {
+  if (media_) {
+    media_->PlayerDestroyed(id);
+  }
 }
 
 void EnginePage::MediaPictureInPictureChanged(bool is_picture_in_picture) {

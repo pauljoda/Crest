@@ -188,7 +188,10 @@ final class MobileBrowserNavigationTests: XCTestCase {
             ).isPersistent
         )
 
-        try await registry.deleteData(for: BrowserSpaceRuntimeAssignment(space: space))
+        try await registry.deleteData(
+            for: SpaceDeletionState(
+                id: UUID(), spaceID: space.id, profileID: space.ownProfileID, erasedProfileIDs: [space.profileID],
+                successorID: nil, erasing: [space.profileID]))
 
         XCTAssertFalse(primaryPages.containsResidentPage(for: tabID))
         XCTAssertFalse(secondaryPages.containsResidentPage(for: tabID))

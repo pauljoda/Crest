@@ -10,7 +10,7 @@ struct MobileSpaceDownloadsButton: View {
 
     var body: some View {
         Button(action: action) {
-            MobileSpaceUtilityButtonLabel(systemImage: symbol)
+            MobileSpaceUtilityButtonLabel(title: "Downloads", systemImage: symbol)
         }
         .foregroundStyle(.primary)
         .symbolEffect(.bounce, value: reduceMotion ? nil : newDownloads.first?.id)

@@ -1,0 +1,18 @@
+# Crest's patches to Chromium, applied in this order after the overlay's
+# sources are in place. ForkMaintenance.md gives each one's reason. A file may
+# appear in more than one patch; each later patch applies to the earlier ones'
+# result. The build adjustments the source lock names under `crestPatches`
+# apply when the source is prepared and are not listed here.
+native-host.patch
+google-request-allowlist.patch
+component-updater-services.patch
+update-pings-off.patch
+autofill-crowdsourcing-off.patch
+gaia-list-accounts-off.patch
+network-time-off.patch
+intranet-redirect-detector-off.patch
+web-push-off.patch
+privacy-defaults.patch
+safe-browsing-reports-off.patch
+certificate-transparency-enforced.patch
+manifest-v2-extensions.patch

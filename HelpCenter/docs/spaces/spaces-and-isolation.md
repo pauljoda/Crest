@@ -22,6 +22,8 @@ A Crest Space is not only a group of tabs. It is a separate browsing profile wit
 
 That means the same website can be signed into different accounts in Work and Personal without those sessions meeting.
 
+To let several Spaces share sign-ins, history, passwords and extensions while each keeps its own tabs and look, make them [Sub-Spaces](./sub-spaces.md) of one Space.
+
 ## Switch Spaces
 
 Select a Space from the sidebar, swipe or scroll through the Space picker, or use **Option-Command-Left/Right** on a keyboard. **Control-1** through **Control-9** selects a Space by position.
@@ -35,4 +37,6 @@ Open the tab’s context menu and choose a destination, or drag it to another Sp
 ## Delete a Space carefully
 
 Deleting a Space removes its tabs, pins, folders, Archive, history, Crest Passwords, cookies, website storage, permissions, downloads records, and extension state. Read the confirmation before continuing. If you only need less clutter, archive or move tabs instead.
+
+In a group of Sub-Spaces, deleting a Sub-Space deletes only its tabs, and deleting the primary first asks which Sub-Space keeps the group. See [Delete a Space in a group](./sub-spaces.md#delete-a-space-in-a-group).
 

@@ -45,6 +45,11 @@ final class ChromiumExtensionStore {
     @ObservationIgnored private var installCompletion: (@MainActor () -> Void)?
 
     var spaces: [BrowserSpaceIdentity] { ChromiumComposition.extensionSpaces }
+    /// Whether another Space browses with `space`'s profile, as a group's
+    /// Spaces do, so an extension removed from one leaves them all.
+    func sharesProfile(_ space: BrowserSpaceIdentity) -> Bool {
+        spaces.contains { $0.id != space.id && $0.profileID == space.profileID }
+    }
     /// Whether this Space's engine profile may be read and prepared here.
     ///
     /// Ownership is decided by `(spaceID, profileID)` against the store family
@@ -295,9 +300,12 @@ final class ChromiumExtensionStore {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = String(localized: "Remove \(record.name)?")
-            alert.informativeText = String(
-                localized:
-                    "\(record.name) and its Space-local data will be removed. Other Spaces are unchanged.")
+            alert.informativeText =
+                sharesProfile(space)
+                ? String(localized: "\(record.name) and its data will be removed from every Space in this group.")
+                : String(
+                    localized:
+                        "\(record.name) and its Space-local data will be removed. Other Spaces are unchanged.")
             alert.addButton(withTitle: String(localized: "Remove from \(space.name)"))
             alert.addButton(withTitle: String(localized: "Cancel"))
             alert.buttons.first?.hasDestructiveAction = true
@@ -573,8 +581,13 @@ final class ChromiumExtensionInstallation {
         self.approvesItself = approvesItself
     }
     var isAuthorized: Bool { store.authorized(space) && (targetSpace.map { store.authorized($0) } ?? true) }
+    /// The Spaces a copy may go to, one per profile, which a group's primary
+    /// stands for: never the source's own group, which already has it.
     var destinations: [BrowserSpaceIdentity] {
-        store.spaces.filter { $0.id != space.id && !(store.installed[$0.profileID] ?? []).contains { $0.id == id } }
+        var profiles: Set<UUID> = [space.profileID]
+        return store.spaces.filter {
+            profiles.insert($0.profileID).inserted && !(store.installed[$0.profileID] ?? []).contains { $0.id == id }
+        }
     }
     func start() async {
         for target in store.spaces { await store.load(target) }

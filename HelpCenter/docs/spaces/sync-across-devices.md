@@ -15,6 +15,8 @@ Crest synchronizes durable browser structure such as Spaces, tabs, saved folders
 
 Password values never enter CloudKit. Each Space’s separate **Sync with iCloud Keychain** switch controls its encrypted Crest Password items. Private Spaces and transient Quick Window or Peek state are not normal synced browsing state.
 
+[Sub-Space](./sub-spaces.md) groups sync too. A device that runs an earlier version of Crest shows each Sub-Space as a Space on its own, signed out, until it updates.
+
 ## Check status
 
 The Sync page shows whether iCloud is available and whether Crest has pending records. Apple does not expose the Apple Account email to Crest, so confirm the account directly in System Settings if two devices do not meet.

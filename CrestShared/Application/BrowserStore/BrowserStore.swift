@@ -162,7 +162,7 @@ final class BrowserStore {
     /// current-tab cleanup reads. Answers false when the core would not show it.
     @discardableResult
     func activateSessionTab(_ id: UUID, in spaceID: UUID) -> Bool {
-        guard !isDeleting(spaceID), spaceModel(spaceID)?.tabs.contains(id) == true,
+        guard !isDeleting(spaceID), spaceModel(spaceID)?.shownTab(id) != nil,
             sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: id))
         else { return false }
         windowRevision &+= 1

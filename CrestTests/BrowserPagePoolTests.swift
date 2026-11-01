@@ -119,12 +119,12 @@ final class BrowserPagePoolTests: XCTestCase {
         present(pool, tab: deletedTab.id, in: deletedSpace.id)
         present(pool, tab: retainedTab.id, in: retainedSpace.id)
 
-        try await pool.deleteData(for: BrowserSpaceRuntimeAssignment(space: deletedSpace))
+        try await pool.deleteData(for: .erasing(deletedSpace))
 
         XCTAssertFalse(pool.retainedTabIDs.contains(deletedTab.id))
         XCTAssertTrue(pool.retainedTabIDs.contains(retainedTab.id))
         XCTAssertEqual(pool.activeTabID, retainedTab.id)
-        XCTAssertTrue(permissionCenter.records(in: deletedSpace.id).isEmpty)
+        // The core forgets the deleted Space's own choices once it removes the Space.
         XCTAssertEqual(
             permissionCenter.records(in: retainedSpace.id).map(\.decision),
             [.denyPersistently]
@@ -357,7 +357,7 @@ final class BrowserPagePoolTests: XCTestCase {
             archive.archivedState(profileID: space.profileID, tabID: tab.id)
         )
 
-        try await pool.deleteData(for: BrowserSpaceRuntimeAssignment(space: space))
+        try await pool.deleteData(for: .erasing(space))
         await archive.flushPendingWrites()
 
         XCTAssertNil(

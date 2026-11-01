@@ -58,7 +58,7 @@ struct BrowserNativeTabActions {
                 let space = browser.selectedUnlockedSpace(
                     matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
                     accessController: spaceAccess),
-                space.tabs.model(source.tabID)?.nativeTabContent == content,
+                space.shownTab(source.tabID)?.nativeTabContent == content,
                 ["https", "http"].contains(url.scheme?.lowercased() ?? "")
             else { return }
             browser.openNewTab(url: url, in: space.id)

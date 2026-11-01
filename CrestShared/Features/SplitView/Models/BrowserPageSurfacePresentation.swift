@@ -100,7 +100,7 @@ enum BrowserPageSurfacePresentation {
     /// may already belong to a different layout while this surface disappears.
     var singleTab: TabStateModel? {
         guard case .single(let space, let tabID) = self, let tabID else { return nil }
-        return space.tabs.model(tabID)
+        return space.shownTab(tabID)
     }
 
     // MARK: - Actions - Surface

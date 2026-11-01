@@ -35,7 +35,7 @@ extension BrowserTabDragItem: BrowserSidebarDraggedItem {
     func stands(
         in space: SpaceModel, section: BrowserSidebarReorderSection, parentItemID: BrowserSidebarReorderItemID?
     ) -> Bool {
-        guard let tab = space.tabs.model(tabID),
+        guard let tab = space.shownTab(tabID),
             space.shownSplit(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
         else { return false }
         return section == .tabs(placement: tab.placement, folderID: tab.folderID)

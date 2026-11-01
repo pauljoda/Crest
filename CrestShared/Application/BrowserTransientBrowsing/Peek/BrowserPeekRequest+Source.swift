@@ -7,7 +7,7 @@ extension BrowserPeekRequest {
     /// its profile and is not being deleted, as the read model holds it.
     @MainActor
     func hasSource(in browser: BrowserStore) -> Bool {
-        browser.spaceModel(matching: assignment)?.tabs.model(sourceTabID) != nil
+        browser.spaceModel(matching: assignment)?.shownTab(sourceTabID) != nil
     }
 
     /// Whether `browser`'s window shows the tab the Peek opened from.

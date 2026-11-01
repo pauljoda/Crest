@@ -15,7 +15,7 @@ struct BrowserDurableTabCloseAction {
         let space = BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID)
         guard
             let unlocked = browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess),
-            unlocked.tabs.model(assignment.tabID)?.placement.isDurable == true
+            unlocked.shownTab(assignment.tabID)?.placement.isDurable == true
         else { return false }
         return browser.performPageDismissal(of: [assignment]) {
             guard

@@ -9,7 +9,7 @@ keywords: [Crest Passwords, password settings, Space, Keychain, turn off]
 
 # Turn Crest Passwords on or off per Space
 
-Crest Passwords are private to the Space that owns them. You can stop using Crest-owned suggestions, generation, and save prompts in one Space without deleting its saved passwords or changing another Space.
+Crest Passwords are private to the Space that owns them. You can stop using Crest-owned suggestions, generation, and save prompts in one Space without deleting its saved passwords or changing another Space. The Spaces of a [Sub-Space](./sub-spaces.md) group share one set of passwords and these settings.
 
 ## Change the setting
 

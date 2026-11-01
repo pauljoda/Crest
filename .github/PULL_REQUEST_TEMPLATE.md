@@ -1,3 +1,5 @@
+<!-- Anyone can have one pull request open at a time; vetted contributors can have more. See "Who can contribute code" in CONTRIBUTING.md. -->
+
 ## What changed
 
 <!-- Describe the user-visible or architectural outcome. -->

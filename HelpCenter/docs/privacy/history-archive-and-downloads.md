@@ -7,7 +7,7 @@ keywords: [history, Archive, downloads, retention, restore, cleanup]
 
 # History, Archive, downloads, and retention
 
-History, Archive, and Downloads are common browser surfaces, but every record remains attached to the Space that created it.
+History, Archive, and Downloads are common browser surfaces, but every record remains attached to the Space that created it. The Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share one history.
 
 ## History
 

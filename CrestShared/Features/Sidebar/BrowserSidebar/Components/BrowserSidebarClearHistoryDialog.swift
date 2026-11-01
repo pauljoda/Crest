@@ -23,13 +23,23 @@ struct BrowserSidebarClearHistoryDialog: ViewModifier {
                     confirmation = nil
                     request.clearHistory(in: browser, accessController: spaceAccess)
                 }
-            } message: { _ in
-                Text("History in other Spaces is not affected.")
+            } message: { request in
+                Text(message(for: request))
             }
             .onChange(of: isLive) { _, isLive in
                 guard !isLive else { return }
                 confirmation = nil
             }
+    }
+
+    /// What the dialog says the clearing reaches: the Space's whole group,
+    /// which shares one history, or the Space alone.
+    private func message(for request: BrowserSidebarClearHistoryConfirmation) -> String {
+        guard let space = browser.spaceModel(request.spaceID), browser.groupMembers(of: space).count > 1 else {
+            return String(localized: "History in other Spaces is not affected.")
+        }
+        let primary = browser.primary(of: space).settings.name
+        return String(localized: "This clears the history \(primary) and its Sub-Spaces share.")
     }
 
     private var title: String {

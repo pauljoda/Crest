@@ -26,6 +26,7 @@ struct BrowserSidebarLoadedContent: View {
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
     @Environment(\.spacePagerPresentation) private var inheritedPagerPresentation
     @State private var standalonePagerPresentation = SpacePagerPresentation()
+    @State private var sidebarBands = SpaceSidebarBands()
 
     private var spacePagerPresentation: SpacePagerPresentation {
         inheritedPagerPresentation ?? standalonePagerPresentation
@@ -65,6 +66,7 @@ struct BrowserSidebarLoadedContent: View {
                     tabPromotionNamespace: tabPromotionNamespace
                 )
                 .padding(.top, BrowserTabSelectionGlow.outset)
+                .coordinateSpace(.named(SpaceSidebarBands.page))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
@@ -104,6 +106,7 @@ struct BrowserSidebarLoadedContent: View {
                     spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))
         }
         .environment(\.spacePagerPresentation, spacePagerPresentation)
+        .environment(\.spaceSidebarBands, sidebarBands)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
             "\(context.browser.shownSpace?.settings.name ?? "Browser") Space"
@@ -117,7 +120,7 @@ struct BrowserSidebarLoadedContent: View {
             guard
                 pages.containsResidentPage(matching: assignment),
                 let space = context.browser.spaceModel(matching: assignment.spaceAssignment),
-                space.tabs.model(assignment.tabID) != nil,
+                space.shownTab(assignment.tabID) != nil,
                 await context.spaceAccess.unlock(space)
             else { return }
             context.selectSpace(assignment.spaceID)
@@ -133,7 +136,7 @@ struct BrowserSidebarLoadedContent: View {
     private func ownerFaviconData(
         _ assignment: BrowserTabRuntimeAssignment
     ) -> Data? {
-        guard context.browser.spaceModel(matching: assignment.spaceAssignment)?.tabs.model(assignment.tabID) != nil
+        guard context.browser.spaceModel(matching: assignment.spaceAssignment)?.shownTab(assignment.tabID) != nil
         else { return nil }
         return context.browser.core.state.favicons.image(of: assignment.tabID)
     }

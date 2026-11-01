@@ -1,9 +1,16 @@
 import Foundation
 
 extension SpaceState.Seed {
+    // MARK: - Variables
+
+    /// The profile the seeded Space browses with, as the core resolves it: the
+    /// session it shares as a Sub-Space, otherwise its own.
+    var profileID: UUID { membership?.sharedProfileID ?? ownProfileID }
+
     // MARK: - Initializers
 
-    /// A Space to seed a session with, with its own profile unless named.
+    /// A Space to seed a session with, made with its own profile `profileID`
+    /// unless named.
     /// Without `branding` it wears its accent's legacy look. It searches with
     /// Google, sweeps current tabs after twelve hours, blocks content in the
     /// balanced way and keeps what it browses, unless told otherwise.
@@ -26,12 +33,13 @@ extension SpaceState.Seed {
         savedTabsExpansionModifiedAt: Date? = nil
     ) {
         self.init(
-            id: id, profileID: profileID,
+            id: id, ownProfileID: profileID,
             settings: SpaceSettings.Seed(
                 name: name, symbol: symbol, accent: accent, branding: branding,
                 browsingPreferences: browsingPreferences,
                 credentialPreferences: credentialPreferences, accessPolicy: accessPolicy,
-                isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt),
+                isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
+                separatesPinnedTabs: false),
             folders: folders, tabs: tabs, splitGroups: splitGroups, archivedTabs: archivedTabs, history: history)
     }
 

@@ -4,11 +4,12 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// A Space's synced value: its identity and profile, how it looks and
+/// A Space's synced value: its identity and own profile, how it looks and
 /// browses, who may open it and when someone last chose, whether it uses
-/// Crest Passwords once someone chose, its saved tabs' disclosure, its
-/// splits' metadata and its position among the Spaces. Where it keeps its
-/// passwords stays with each device.
+/// Crest Passwords once someone chose, its saved tabs' disclosure, the session
+/// it browses with as a Sub-Space or a primary once someone chose, its splits'
+/// metadata and its position among the Spaces. Where it keeps its passwords
+/// stays with each device.
 internal sealed partial record SpacePayload(
     Guid Id,
     Guid ProfileId,
@@ -21,6 +22,12 @@ internal sealed partial record SpacePayload(
     SyncTime? AccessPolicyModifiedAt,
     bool? CredentialsEnabled,
     SyncTime? CredentialsEnabledModifiedAt,
+    Guid? PrimarySpaceId,
+    Guid? SharedProfileId,
+    SyncTime? MembershipModifiedAt,
+    bool? SeparatesPinnedTabs,
+    SyncTime? SeparatesPinnedTabsModifiedAt,
+    SyncTime? ProtectionModifiedAt,
     bool IsSavedTabsExpanded,
     SyncTime? SavedTabsExpansionModifiedAt,
     IReadOnlyList<SplitGroupPayload>? SplitGroups,
@@ -33,7 +40,9 @@ internal sealed partial record SpacePayload(
         StoredSessionCodec.Key.Id, StoredSessionCodec.Key.ProfileId, StoredSessionCodec.Key.Name, StoredSessionCodec.Key.Symbol,
         StoredSessionCodec.Key.Accent, StoredSessionCodec.Key.Branding, StoredSessionCodec.Key.BrowsingPreferences,
         StoredSessionCodec.Key.AccessPolicy, StoredSessionCodec.Key.AccessPolicyModifiedAt, SyncPayload.Key.CredentialsEnabled,
-        StoredSessionCodec.Key.CredentialsEnabledModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded,
+        StoredSessionCodec.Key.CredentialsEnabledModifiedAt, StoredSessionCodec.Key.PrimarySpaceId, StoredSessionCodec.Key.SharedProfileId,
+        StoredSessionCodec.Key.MembershipModifiedAt, StoredSessionCodec.Key.SeparatesPinnedTabs,
+        StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, StoredSessionCodec.Key.ProtectionModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded,
         StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.SplitGroups, SyncPayload.Key.OrderToken
     ];
 
@@ -57,14 +66,20 @@ internal sealed partial record SpacePayload(
     /// accent and symbol gave it before brandings synced; one without browsing
     /// preferences or an access policy takes the defaults; one without a saved
     /// tabs disclosure shows them; and one without splits' metadata, or without
-    /// the time someone chose its lock or whether it uses Crest Passwords, holds
-    /// no opinion about them.
+    /// the time someone chose its lock, whether it uses Crest Passwords or the
+    /// session it browses with, holds no opinion about them.
     public static SpacePayload Read(SyncPayloadReader value) {
         string name = value.Text(StoredSessionCodec.Key.Name), symbol = value.Text(StoredSessionCodec.Key.Symbol);
         var accent = SpaceAccent.Named(value.Text(StoredSessionCodec.Key.Accent)) ?? throw new UnreadableSyncPayloadException();
         var (credentialsEnabled, credentialsModifiedAt) = value.OptionalFlag(Key.CredentialsEnabled) is { } enabled
             && value.OptionalTime(StoredSessionCodec.Key.CredentialsEnabledModifiedAt) is { } modifiedAt
                 ? (enabled, modifiedAt) : ((bool?)null, (SyncTime?)null);
+        var (primary, sharedProfile, membershipModifiedAt) = value.OptionalTime(StoredSessionCodec.Key.MembershipModifiedAt) is { } chosenAt
+            ? (value.OptionalWrappedIdentity(StoredSessionCodec.Key.PrimarySpaceId), value.OptionalIdentity(StoredSessionCodec.Key.SharedProfileId),
+                chosenAt)
+            : ((Guid?)null, (Guid?)null, (SyncTime?)null);
+        var (separatesPins, separatesPinsModifiedAt) = value.OptionalTime(StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt) is { } pinsChosenAt
+            ? (value.OptionalFlag(StoredSessionCodec.Key.SeparatesPinnedTabs) ?? false, pinsChosenAt) : ((bool?)null, (SyncTime?)null);
         return new(value.WrappedIdentity(StoredSessionCodec.Key.Id), value.Identity(StoredSessionCodec.Key.ProfileId), name, symbol, accent,
             value.OptionalNested(StoredSessionCodec.Key.Branding) is { } branding ? ReadBranding(branding) : SpaceBranding.Legacy(accent, symbol),
             value.OptionalNested(StoredSessionCodec.Key.BrowsingPreferences) is { } browsing ? ReadBrowsingPreferences(browsing)
@@ -74,6 +89,12 @@ internal sealed partial record SpacePayload(
             value.OptionalTime(StoredSessionCodec.Key.AccessPolicyModifiedAt),
             credentialsEnabled,
             credentialsModifiedAt,
+            primary,
+            sharedProfile,
+            membershipModifiedAt,
+            separatesPins,
+            separatesPinsModifiedAt,
+            value.OptionalTime(StoredSessionCodec.Key.ProtectionModifiedAt),
             value.OptionalFlag(StoredSessionCodec.Key.IsSavedTabsExpanded) ?? true,
             value.OptionalTime(StoredSessionCodec.Key.SavedTabsExpansionModifiedAt),
             value.OptionalArray(StoredSessionCodec.Key.SplitGroups) is { } groups ? SplitGroupPayload.Normalized(groups, value.Form) : null,
@@ -98,6 +119,16 @@ internal sealed partial record SpacePayload(
             value[Key.CredentialsEnabled] = credentialsEnabled;
             Put(value, StoredSessionCodec.Key.CredentialsEnabledModifiedAt, credentialsModifiedAt, form);
         }
+        if (MembershipModifiedAt is { } membershipModifiedAt) {
+            if (PrimarySpaceId is { } primary) value[StoredSessionCodec.Key.PrimarySpaceId] = StoredSessionCodec.WrappedIdentity(primary);
+            if (SharedProfileId is { } profile) value[StoredSessionCodec.Key.SharedProfileId] = StoredSessionCodec.BareIdentity(profile);
+            Put(value, StoredSessionCodec.Key.MembershipModifiedAt, membershipModifiedAt, form);
+        }
+        if (SeparatesPinnedTabsModifiedAt is { } pinsModifiedAt) {
+            value[StoredSessionCodec.Key.SeparatesPinnedTabs] = SeparatesPinnedTabs ?? false;
+            Put(value, StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, pinsModifiedAt, form);
+        }
+        Put(value, StoredSessionCodec.Key.ProtectionModifiedAt, ProtectionModifiedAt, form);
         if (SplitGroups is { } groups)
             value[StoredSessionCodec.Key.SplitGroups] = new JsonArray([.. groups.Select(group => (JsonNode?)group.Encode(form))]);
         value[Key.OrderToken] = OrderToken;

@@ -83,7 +83,9 @@ Each Space's page has these tabs:
 
 Click **+** next to the Spaces heading to add a Space. Its Appearance page opens with the name ready to type. Click the pencil next to it to rearrange: drag Spaces by their handles, then click the checkmark when done.
 
-Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **Lock Space**, and **Delete**. Crest needs at least one Space.
+Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **New Sub-Space**, **Make Sub-Space of**, **Lock Space**, and **Delete**. Crest needs at least one Space.
+
+[Sub-Spaces](../spaces/sub-spaces.md) are indented under their primary, and a group's page shows the crests of its Spaces, with **+** to add one. Drag a Space onto another, or among a group's Sub-Spaces, to add it to that group; drag it out to separate it. The Privacy and Passwords pages of a group say they are shared by its Sub-Spaces, and its Browsing page has **Separate Pinned Tabs**.
 
 ## Agents
 

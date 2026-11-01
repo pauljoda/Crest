@@ -97,7 +97,7 @@ struct MobileCompactAddressBar: View {
         .contentShape(.capsule)
         .background {
             fieldShape
-                .fill(.tint.opacity(isLoading ? 0.2 : 0))
+                .fill(.tint.opacity(isLoading ? BrowserSidebarAddressFieldMetrics.loadingFillOpacity : 0))
                 .scaleEffect(x: loadingProgress, anchor: .leading)
                 .mask(fieldShape)
                 .animation(

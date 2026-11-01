@@ -370,7 +370,10 @@ final class BrowserMacApplication {
             \.browserSidebarWidgetRuntime,
             sidebarWidgets
         )
-        .frame(minWidth: 900, minHeight: 600)
+        .frame(
+            minWidth: BrowserMacWindowKind.browserMinimumContentSize.width,
+            minHeight: BrowserMacWindowKind.browserMinimumContentSize.height
+        )
         .preferredColorScheme(.dark)
         .environment(
             \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)

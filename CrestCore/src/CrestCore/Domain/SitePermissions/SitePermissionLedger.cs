@@ -5,7 +5,10 @@ namespace CrestCore.Domain;
 /// Per-Space site permission choices.
 ///
 /// Persistent choices are the ledger's records; session choices override them
-/// until the process ends and are never kept. A request with a detail (such as
+/// until the process ends and are never kept. The Spaces of a group share one
+/// session, so the group's choices answer for each of them: commands and
+/// lookups name a Space's group, the Space that keeps the group's new choices
+/// first, and a lookup takes the latest choice any of them kept. A request with a detail (such as
 /// one URL scheme) is answered by the narrowest choice first, then by the
 /// site-wide rule for the same capability. A locked Space never answers: its
 /// questions are Ask. Removals always apply, so deleting or resetting a Space
@@ -59,54 +62,67 @@ public sealed class SitePermissionLedger {
 
     #region Actions - Decisions
 
-    /// The choice that answers one request. A locked Space, an origin the
-    /// rules cannot read and a detail that is not one answer Ask.
-    public SitePermissionDecision Decision(Guid space, SiteOrigin origin, SitePermission permission, string? detail,
+    /// The choice that answers one request in a Space of the group `spaces`
+    /// names: a session answer, the first Space's first, else the latest
+    /// choice any of them kept. A locked Space, an origin the rules cannot
+    /// read and a detail that is not one answer Ask.
+    public SitePermissionDecision Decision(IReadOnlyList<Guid> spaces, SiteOrigin origin, SitePermission permission, string? detail,
         bool isLocked) {
+        ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(origin);
         ArgumentNullException.ThrowIfNull(permission);
         if (isLocked || !origin.IsValid || !IsValidDetail(detail)) return SitePermissionDecision.Ask;
         var key = new SitePermissionKey(origin, permission, detail);
         foreach (var candidate in detail is null ? [key] : new[] { key, key with { Detail = null } }) {
-            if (session.TryGetValue(space, out var decisions) && decisions.TryGetValue(candidate, out var decision)) return decision;
-            if (persistent.FirstOrDefault(record => record.Space == space && Key(record) == candidate) is { } saved)
-                return saved.Decision;
+            foreach (var space in spaces)
+                if (session.TryGetValue(space, out var decisions) && decisions.TryGetValue(candidate, out var decision)) return decision;
+            if (Kept(spaces, candidate) is { } saved) return saved.Decision;
         }
         return SitePermissionDecision.Ask;
     }
+
+    /// The latest record any of `spaces` keeps for `key`, or null.
+    private SitePermissionRecord? Kept(IReadOnlyList<Guid> spaces, SitePermissionKey key) =>
+        persistent.Where(record => spaces.Contains(record.Space) && Key(record) == key).MaxBy(record => record.ModifiedAt);
 
     /// A capture request's decision. Combined capture must respect a block on
     /// either device, and an existing combined grant still answers a request
     /// for just one of those devices. A capability that stands alone answers
     /// with its own decision.
-    public SitePermissionDecision MediaDecision(Guid space, SiteOrigin origin, SitePermission media, bool isLocked) {
+    public SitePermissionDecision MediaDecision(IReadOnlyList<Guid> spaces, SiteOrigin origin, SitePermission media, bool isLocked) {
         ArgumentNullException.ThrowIfNull(media);
         if (isLocked) return SitePermissionDecision.Ask;
-        var devices = media.Devices().Select(device => Decision(space, origin, device, null, false)).ToArray();
-        var combinations = media.Combinations().Select(combination => Decision(space, origin, combination, null, false)).ToArray();
+        var devices = media.Devices().Select(device => Decision(spaces, origin, device, null, false)).ToArray();
+        var combinations = media.Combinations().Select(combination => Decision(spaces, origin, combination, null, false)).ToArray();
         var strongest = SitePermissionDecision.Strongest(devices.Concat(combinations));
         if (strongest.Denies) return strongest;
         return combinations.FirstOrDefault(decision => decision.Grants) ?? SitePermissionDecision.Strongest(devices);
     }
 
-    /// One Space's persistent records in display order.
-    public IReadOnlyList<SitePermissionRecord> Records(Guid space) =>
-        [.. persistent.Where(record => record.Space == space).Order(SitePermissionRecordOrder.Instance)];
+    /// The persistent records that answer for the group `spaces` names, in
+    /// display order: the latest any of them keeps for each choice.
+    public IReadOnlyList<SitePermissionRecord> Records(IReadOnlyList<Guid> spaces) =>
+        [.. persistent.Where(record => spaces.Contains(record.Space)).GroupBy(Key).Select(kept => kept.MaxBy(record => record.ModifiedAt)!)
+            .Order(SitePermissionRecordOrder.Instance)];
 
     #endregion
 
     #region Actions - Commands
 
-    /// Records one answer. Ask clears both the session and the saved choice;
-    /// a session answer overrides the saved choice without replacing it; a
-    /// persistent answer replaces both and keeps an existing record's identity.
+    /// Records one answer for the group `spaces` names, in its first Space,
+    /// clearing the same choice from the others, so the answer is the
+    /// group's. Ask clears both the session and the saved choice; a session
+    /// answer overrides the saved choice without replacing it, in any Space of
+    /// the group; a persistent answer replaces both and keeps an existing
+    /// record's identity.
     /// `recordId` names the record a new persistent choice creates, and `now`
     /// is when it was made, in seconds of the stored epoch. Throws `Rejected`
     /// for an origin or a detail the rules cannot read, for a grant of a
     /// capability the system asks about each time, and for a new record beyond
     /// the limit.
-    public SitePermissionOutcome Set(Guid space, SiteOrigin origin, SitePermission permission, string? detail,
+    public SitePermissionOutcome Set(IReadOnlyList<Guid> spaces, SiteOrigin origin, SitePermission permission, string? detail,
         SitePermissionDecision decision, Guid recordId, double now) {
+        ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(origin);
         ArgumentNullException.ThrowIfNull(permission);
         ArgumentNullException.ThrowIfNull(decision);
@@ -114,8 +130,11 @@ public sealed class SitePermissionLedger {
         if (!IsValidDetail(detail)) throw new Rejected(new InvalidSitePermissionDetail(MaximumDetailLength));
         if (!IsAvailable(permission, decision)) throw new Rejected(new InvalidSitePermissionGrant(permission));
         var key = new SitePermissionKey(origin, permission, detail);
+        var space = spaces[0];
         bool persistenceChanged = decision.Record(this, space, key, recordId, now);
-        return new(persistenceChanged, [new(space, new(origin, permission, detail, !decision.Grants))]);
+        foreach (var other in spaces.Skip(1)) persistenceChanged |= decision.Overrule(this, other, key);
+        return new(persistenceChanged, [.. spaces.Select(member => new SitePermissionChange(member, new(origin, permission, detail,
+            !decision.Grants)))]);
     }
 
     /// Saves `decision` for `key` in `space`, replacing the session answer and
@@ -136,6 +155,13 @@ public sealed class SitePermissionLedger {
         return persistent.RemoveAll(record => record.Space == space && Key(record) == key) > 0;
     }
 
+    /// Clears the session answer for `key` in `space`, leaving the saved
+    /// choice, so nothing it saves changes.
+    internal bool ForgetForSession(Guid space, SitePermissionKey key) {
+        if (session.TryGetValue(space, out var answers)) answers.Remove(key);
+        return false;
+    }
+
     /// Answers `key` in `space` with `decision` until the process ends,
     /// over the saved choice, which stays.
     internal bool KeepForSession(Guid space, SitePermissionKey key, SitePermissionDecision decision) {
@@ -144,22 +170,64 @@ public sealed class SitePermissionLedger {
         return false;
     }
 
-    /// Forgets the persistent record `id`; one that is gone changes nothing.
-    public SitePermissionOutcome ResetRecord(Guid id) {
-        int index = persistent.FindIndex(record => record.Id == id);
-        if (index < 0) return SitePermissionOutcome.Unchanged;
-        var record = persistent[index];
-        persistent.RemoveAt(index);
-        return new(true, [new(record.Space, new(record.Origin, record.Permission, record.Detail, true))]);
+    /// Forgets the persistent record `id` and the same choice in every other
+    /// Space of the group `group` gives for its Space; one that is gone
+    /// changes nothing.
+    public SitePermissionOutcome ResetRecord(Guid id, Func<Guid, IReadOnlyList<Guid>> group) {
+        ArgumentNullException.ThrowIfNull(group);
+        if (persistent.FirstOrDefault(record => record.Id == id) is not { } record) return SitePermissionOutcome.Unchanged;
+        var spaces = group(record.Space);
+        var key = Key(record);
+        persistent.Remove(record);
+        foreach (var space in spaces) Forget(space, key);
+        return new(true, [.. spaces.Append(record.Space).Distinct()
+            .Select(space => new SitePermissionChange(space, new(record.Origin, record.Permission, record.Detail, true)))]);
     }
 
-    /// Clears every saved and session choice in one Space. It always touches
-    /// the whole Space, so a page withdraws what it was given and cancels a
-    /// request still waiting for an answer, even when no choice was kept.
-    public SitePermissionOutcome ResetSpace(Guid space) {
-        session.Remove(space);
-        bool removed = persistent.RemoveAll(record => record.Space == space) > 0;
-        return new(removed, [new(space, new(null, null, null, true))]);
+    /// Clears every saved and session choice in the group `spaces` names. It
+    /// always touches every Space of it, so a page withdraws what it was given
+    /// and cancels a request still waiting for an answer, even when no choice
+    /// was kept.
+    public SitePermissionOutcome ResetSpace(IReadOnlyList<Guid> spaces) {
+        ArgumentNullException.ThrowIfNull(spaces);
+        foreach (var space in spaces) session.Remove(space);
+        bool removed = persistent.RemoveAll(record => spaces.Contains(record.Space)) > 0;
+        return new(removed, [.. spaces.Select(space => new SitePermissionChange(space, new(null, null, null, true)))]);
+    }
+
+    /// `space` joins the group whose other Spaces `group` names: where the
+    /// group already chose for a site, its choice stands and the joining
+    /// Space's own goes. A session answer the group gave overrides the
+    /// joining Space's saved choice without replacing it.
+    public SitePermissionOutcome Joining(Guid space, IReadOnlyList<Guid> group) {
+        ArgumentNullException.ThrowIfNull(group);
+        var others = group.Where(member => member != space).ToList();
+        var saved = persistent.Where(record => others.Contains(record.Space)).Select(Key).ToHashSet();
+        var decided = others.SelectMany(member => session.TryGetValue(member, out var answers) ? answers.Keys : Enumerable.Empty<SitePermissionKey>())
+            .Union(saved).ToHashSet();
+        int removed = persistent.RemoveAll(record => record.Space == space && saved.Contains(Key(record)));
+        int answered = 0;
+        if (session.TryGetValue(space, out var own))
+            foreach (var key in own.Keys.Where(decided.Contains).ToList()) answered += own.Remove(key) ? 1 : 0;
+        return removed + answered == 0 ? SitePermissionOutcome.Unchanged
+            : new(removed > 0, [.. group.Append(space).Distinct().Select(member => new SitePermissionChange(member, new(null, null, null, true)))]);
+    }
+
+    /// `successor` keeps the choices, saved and for the session, `from` kept
+    /// for the group it took over, in place of its own for the same sites.
+    public SitePermissionOutcome HandingOver(Guid from, Guid successor) {
+        var moved = persistent.Where(record => record.Space == from).ToList();
+        session.Remove(from, out var answers);
+        if (moved.Count == 0 && (answers is null || answers.Count == 0)) return SitePermissionOutcome.Unchanged;
+        var keys = moved.Select(Key).ToHashSet();
+        persistent.RemoveAll(record => record.Space == successor && keys.Contains(Key(record)));
+        for (int index = 0; index < persistent.Count; index++)
+            if (persistent[index].Space == from) persistent[index] = persistent[index] with { Space = successor };
+        if (answers is not null) {
+            if (!session.TryGetValue(successor, out var kept)) session[successor] = kept = [];
+            foreach (var (key, decision) in answers) kept[key] = decision;
+        }
+        return new(moved.Count > 0, [new(from, new(null, null, null, true)), new(successor, new(null, null, null, true))]);
     }
 
     #endregion

@@ -167,13 +167,16 @@ final class BrowserSidebarReorderState {
         scrollRegionID: UUID? = nil
     ) {
         // Freeze transformed rows during a lift; accept newly revealed lazy rows.
-        guard !isDragging || geometry.rows[row.id] == nil else { return }
+        guard !isDragging || geometry.row(row.id, in: row.space) == nil else { return }
         geometry.register(row: row, owner: owner, scrollRegionID: scrollRegionID)
+        // A Sub-Space beside this one lists the pins its group shares too.
         if needsLandingMeasurement, var preview = landingPreview, preview.item.id == row.id,
+            row.space == preview.item.spaceAssignment,
             owner != landingDepartingOwner, !row.frame.isEmpty, landingSection == nil || landingSection == row.section,
             preview.landing?.frame != row.frame, preview.landing?.isRevealing != true
         {
-            preview.landing = BrowserSidebarReorderLanding(frame: row.frame)
+            preview.landing = BrowserSidebarReorderLanding(
+                frame: row.frame, contentIndent: contentIndent(of: row.section, in: row.space))
             landingPreview = preview
         }
     }
@@ -277,7 +280,7 @@ final class BrowserSidebarReorderState {
     }
 
     private var pinnedGeometry: (layout: BrowserPinnedTabReorderLayout, frame: CGRect, emptyHeight: CGFloat)? {
-        guard let lift, let source = geometry.rows[lift.item.id]?.row.frame else { return nil }
+        guard let lift, let source = frame(ofRow: lift.item.id, in: lift.item.spaceAssignment) else { return nil }
         let section = BrowserSidebarReorderSection.tabs(placement: .pinned, folderID: nil)
         guard let zone = restingZone(for: section, inColumn: source) else { return nil }
         let ordered = section.rows(from: registeredRows(in: lift.item.spaceAssignment))
@@ -301,8 +304,8 @@ final class BrowserSidebarReorderState {
         geometry.removeSplitCardFrame(for: tabID, owner: owner)
     }
 
-    func frame(ofRow id: BrowserSidebarReorderItemID) -> CGRect? {
-        geometry.rows[id]?.row.frame
+    func frame(ofRow id: BrowserSidebarReorderItemID, in space: BrowserSpaceRuntimeAssignment) -> CGRect? {
+        geometry.row(id, in: space)?.row.frame
     }
 
     // MARK: - Drag lifecycle
@@ -347,7 +350,7 @@ final class BrowserSidebarReorderState {
             sessionGeneration &+= 1
         }
         if let id = landingPreview?.landing?.id { finishLanding(id) }
-        let frame = frame(ofRow: item.id)
+        let frame = frame(ofRow: item.id, in: item.spaceAssignment)
         let rowIDs = item.selectionRowIDs
         lift = Lift(
             item: item,
@@ -397,7 +400,7 @@ final class BrowserSidebarReorderState {
     }
 
     func folderPreviewRows(for item: BrowserSidebarReorderItem) -> [BrowserSidebarReorderRow] {
-        guard case .folder = item, let frame = frame(ofRow: item.id) else { return [] }
+        guard case .folder = item, let frame = frame(ofRow: item.id, in: item.spaceAssignment) else { return [] }
         return registeredRows(in: item.spaceAssignment)
             .filter { $0.id != item.id && frame.contains($0.frame) && $0.frame.minY > frame.minY }
             .sorted { $0.frame.minY < $1.frame.minY }
@@ -426,7 +429,11 @@ final class BrowserSidebarReorderState {
         if retainingPreview, constraintMessage == nil, var preview = liftPreview,
             let frame = landingFrame
         {
-            preview.landing = BrowserSidebarReorderLanding(frame: frame)
+            preview.landing = BrowserSidebarReorderLanding(
+                frame: frame,
+                contentIndent: lift.map {
+                    contentIndent(of: resolvedTarget?.section ?? $0.section, in: $0.item.spaceAssignment)
+                } ?? 0)
             landingRowIDs = lift?.rowIDs ?? preview.item.selectionRowIDs
             landingPreview = preview
             landingSessionToken = sessionToken
@@ -435,7 +442,8 @@ final class BrowserSidebarReorderState {
             // Within one list the view the row was lifted from is the one it
             // lands in; any other landing leaves that view behind.
             landingDepartingOwner =
-                landingSection == lift?.section ? nil : lift.flatMap { geometry.rows[$0.item.id]?.owner }
+                landingSection == lift?.section
+                ? nil : lift.flatMap { geometry.row($0.item.id, in: $0.item.spaceAssignment)?.owner }
             landingExpirationTask?.cancel()
             landingExpirationTask = nil
             if let landingTimeout {
@@ -501,15 +509,13 @@ final class BrowserSidebarReorderState {
 
     // MARK: - Displacement
     func displacement(for id: BrowserSidebarReorderItemID) -> CGSize {
-        if let row = geometry.rows[id]?.row, row.usesGridOrdering,
-            row.space == lift?.item.spaceAssignment,
+        let row = lift.flatMap { geometry.row(id, in: $0.item.spaceAssignment)?.row }
+        if let row, row.usesGridOrdering,
             let pinned = pinnedGeometry, let frame = pinned.layout.frame(for: .tab(id), in: pinned.frame)
         {
             return CGSize(width: frame.minX - row.frame.minX, height: frame.minY - row.frame.minY)
         }
-        if layout.isActive, let row = geometry.rows[id]?.row, !row.usesGridOrdering,
-            row.space == lift?.item.spaceAssignment, let frame = layout.frame(for: row)
-        {
+        if layout.isActive, let row, !row.usesGridOrdering, let frame = layout.frame(for: row) {
             return CGSize(width: frame.minX - row.frame.minX, height: frame.minY - row.frame.minY)
         }
         guard let context = insertionContext(for: id) else { return .zero }
@@ -610,14 +616,31 @@ final class BrowserSidebarReorderState {
             previewRows: lift.previewRows,
             pinnedTileSize: pinnedSize,
             sidebarBounds: pinned?.frame,
+            contentIndent: contentIndent(of: lift.section, in: lift.item.spaceAssignment),
             constraintMessage: constraintMessage
         )
     }
 
+    /// How far a row in `section` of `space` moves its icon and title in for
+    /// the folders around it, as the sidebar lays the row out.
+    func contentIndent(
+        of section: BrowserSidebarReorderSection, in space: BrowserSpaceRuntimeAssignment
+    ) -> CGFloat {
+        var depth = 0
+        var visited: Set<UUID> = []
+        var parent = section.parentFolderID
+        while let id = parent, visited.insert(id).inserted {
+            depth += 1
+            parent = geometry.row(.folder(id), in: space)?.row.section.parentFolderID
+        }
+        return BrowserFolderLayout.rowContentIndent(depth: depth)
+    }
+
     private var landingFrame: CGRect? {
         guard let lift else { return nil }
-        guard let kind = resolvedTarget?.kind else { return geometry.rows[lift.item.id]?.row.frame }
-        return kind.landingFrame(layout: layout, pinned: pinnedGeometry, rows: geometry.rows)
+        guard let kind = resolvedTarget?.kind else { return frame(ofRow: lift.item.id, in: lift.item.spaceAssignment) }
+        return kind.landingFrame(
+            layout: layout, pinned: pinnedGeometry, rows: geometry.rows(in: lift.item.spaceAssignment))
     }
 
     // MARK: - Resolution
@@ -698,8 +721,8 @@ final class BrowserSidebarReorderState {
         }
         resolvedTarget = BrowserSidebarReorderAim(
             lift: lift, pointer: pointer, insertionPoint: insertionProbe(for: lift), layout: layout,
-            pinned: pinnedGeometry, zones: visibleZones, rows: geometry.rows,
-            splitCards: geometry.splitCards
+            pinned: pinnedGeometry, zones: visibleZones, rows: geometry.rows(in: lift.item.spaceAssignment),
+            splitCards: Array(geometry.splitCards.values)
         ).target(previousTarget: previousTarget)
         if case .splitInsert = resolvedTarget?.kind { hasEnteredSplitContent = true }
     }
@@ -730,7 +753,7 @@ final class BrowserSidebarReorderState {
     private func refreshLayout() {
         guard let lift, layout.isActive else { return }
         var next = layout
-        next.sourceFrame = geometry.rows[lift.item.id]?.row.frame ?? layout.sourceFrame
+        next.sourceFrame = frame(ofRow: lift.item.id, in: lift.item.spaceAssignment) ?? layout.sourceFrame
         if let pinned = pinnedGeometry {
             next.gridFrame = pinned.frame
             next.gridHeightDelta =
@@ -765,7 +788,7 @@ final class BrowserSidebarReorderState {
             var parents: Set<UUID> = []
             var parent = section.parentFolderID
             while let id = parent, parents.insert(id).inserted {
-                parent = geometry.rows[.folder(id)]?.row.section.parentFolderID
+                parent = geometry.row(.folder(id), in: lift.item.spaceAssignment)?.row.section.parentFolderID
             }
             next.gap = BrowserSidebarReorderLayout.Gap(
                 section: section, anchor: anchor, frame: frame, containingFolders: parents)

@@ -70,7 +70,7 @@ internal sealed class Window {
         IReadOnlyDictionary<Guid, Guid> legacyTabs) {
         var launch = LaunchSpace(session);
         var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
-            legacyTabs.Where(entry => session.Spaces.Any(space => space.Id == entry.Key && Contains(space, entry.Value)))
+            legacyTabs.Where(entry => session.ViewedSpace(entry.Key) is { } space && Contains(space, entry.Value))
                 .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], [], [], []);
         if (launch is not null) window.ShowSpace(launch);
         return window;
@@ -92,7 +92,7 @@ internal sealed class Window {
         ArgumentNullException.ThrowIfNull(session);
         var space = Showable(session).FirstOrDefault(candidate => candidate.Id == ShownSpaceId);
         var shown = space is not null && Tab(space.Id) is { } tabId ? space.Tabs.FirstOrDefault(tab => tab.Id == tabId) : null;
-        IReadOnlyList<ShownCards> cards = [.. session.Spaces.OrderBy(candidate => candidate.Id)
+        IReadOnlyList<ShownCards> cards = [.. session.Spaces.OrderBy(candidate => candidate.Id).Select(session.Viewed)
             .Select(candidate => Tab(candidate.Id) is { } tabId && Contains(candidate, tabId) ? Cards(candidate, tabId) : null)
             .OfType<ShownCards>()];
         int shownCards = shown is null ? 0 : cards.First(candidate => candidate.SpaceId == ShownSpaceId).TabIds.Count;
@@ -108,7 +108,7 @@ internal sealed class Window {
     /// of the Space it shows, or none.
     public IReadOnlyList<Guid> OnScreen(SessionState session) {
         ArgumentNullException.ThrowIfNull(session);
-        var space = session.Space(ShownSpaceId);
+        var space = session.ViewedSpace(ShownSpaceId);
         return space is not null && Tab(space.Id) is { } tabId && Contains(space, tabId) ? Cards(space, tabId).TabIds : [];
     }
 
@@ -241,7 +241,7 @@ internal sealed class Window {
     /// one on its fallback tab, split shares survive only while their group
     /// renders with as many columns, and the history forgets what is gone.
     public void Repair(SessionState session) {
-        var spaces = session.Spaces.ToDictionary(space => space.Id);
+        var spaces = session.Spaces.Select(session.Viewed).ToDictionary(space => space.Id);
         foreach (var (spaceId, tabId) in tabs.ToArray()) {
             if (!spaces.TryGetValue(spaceId, out var space)) tabs.Remove(spaceId);
             else if (tabId is not null && !Contains(space, tabId)) tabs[spaceId] = null;
@@ -300,8 +300,9 @@ internal sealed class Window {
         return Math.Abs(total - 1) <= tolerance ? [.. requested] : [.. requested.Select(value => value / total)];
     }
 
-    /// The Spaces a window may show, in the session's order: every one not being deleted.
-    internal static IEnumerable<SpaceState> Showable(SessionState session) => session.StayingSpaces;
+    /// The Spaces a window may show, in the session's order: every one not
+    /// being deleted, as its sidebar shows it.
+    internal static IEnumerable<SpaceState> Showable(SessionState session) => session.StayingSpaces.Select(session.Viewed);
 
     private static bool Contains(SpaceState space, Guid? tabId) => tabId is { } id && space.Tabs.Any(tab => tab.Id == id);
 

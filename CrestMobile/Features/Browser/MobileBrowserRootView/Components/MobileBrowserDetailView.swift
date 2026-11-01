@@ -391,9 +391,7 @@ struct MobileBrowserDetailView: View {
         let port = BrowserSidebarNavigationPort(pageActions: pageActions, showHistory: showHistory)
         ToolbarItemGroup(placement: .topBarTrailing) {
             MobileHistoryToolbarControl(direction: .back, port: port)
-            if port.canGoForward() {
-                MobileHistoryToolbarControl(direction: .forward, port: port)
-            }
+            MobileHistoryToolbarControl(direction: .forward, port: port)
         }
         ToolbarItemGroup(placement: .bottomBar) {
             Button("Tabs", systemImage: "square.on.square", action: showTabViewer)
@@ -464,7 +462,7 @@ struct MobileBrowserDetailView: View {
     /// What a neighbour with no page in memory shows as the swipe slides it in.
     @ViewBuilder
     private func swipePlaceholder(of tabID: UUID, viewport: MobileBrowserPageViewport) -> some View {
-        if let space = browser.shownSpace, let tab = space.tabs.model(tabID) {
+        if let space = browser.shownSpace, let tab = space.shownTab(tabID) {
             MobileTabSwipePlaceholder(
                 tab: tab,
                 space: space,
