@@ -108,7 +108,7 @@ internal sealed partial class Device {
                 Publish(flow with {
                     Step = SetupStep.Complete,
                     Phase = SetupPhase.Idle,
-                    Summary = finish.AppliesManualSetup ? new SetupSummary(IsImport: false, 0, 0, finish.CreatedSpaces) : flow.Summary
+                    Summary = finish.AppliesManualSetup ? new SetupSummary(IsImport: false, 0, 0, finish.CreatedSpaces, 0) : flow.Summary
                 }, changes);
             changes.Publish(new SetupFinished(finish.WorkspaceId, guideSpaceId));
         }

@@ -47,9 +47,10 @@ public sealed record SetupFlowState(Guid WorkspaceId, SetupEntry Entry, SetupSte
 /// refused it, when something did.
 public sealed record SetupFailure(SetupFailureReason Reason, ImportSource? Source, string? Detail);
 
-/// What setup did last: the tabs, passwords and Spaces an import brought,
-/// or the Spaces a manual setup created and the tabs it added.
-public sealed record SetupSummary(bool IsImport, int TabCount, int PasswordCount, int SpaceCount);
+/// What setup did last: the tabs, passwords and Spaces an import brought and
+/// the passwords it could not save, or the Spaces a manual setup created and
+/// the tabs it added.
+public sealed record SetupSummary(bool IsImport, int TabCount, int PasswordCount, int SpaceCount, int UnsavedPasswordCount);
 
 #endregion
 

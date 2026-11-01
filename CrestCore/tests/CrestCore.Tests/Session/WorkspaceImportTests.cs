@@ -243,8 +243,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(reading.Id, device.Space(window));
         Assert.Equal(TabId(moved), device.Tab(window, trips.Id));
         // An import asked for from the app ends on what it did.
-        var finished = Flowing(device.Send(new FinishImportCommit(PasswordCount: 2)));
-        Assert.Equal((SetupStep.Complete, new SetupSummary(IsImport: true, TabCount: 15, PasswordCount: 2, SpaceCount: 2)),
+        var finished = Flowing(device.Send(new FinishImportCommit(PasswordCount: 2, UnsavedPasswordCount: 1)));
+        Assert.Equal((SetupStep.Complete, new SetupSummary(IsImport: true, TabCount: 15, PasswordCount: 2, SpaceCount: 2, UnsavedPasswordCount: 1)),
             (finished.Step, finished.Summary));
     }
 

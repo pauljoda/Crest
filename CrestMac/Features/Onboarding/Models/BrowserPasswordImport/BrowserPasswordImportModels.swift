@@ -52,12 +52,16 @@ enum BrowserPasswordImportError: LocalizedError, Equatable, Sendable {
     }
 }
 
+/// How many passwords an import saved, left out as the review chose, and
+/// could not save.
 struct BrowserPasswordImportResult: Equatable, Sendable {
     let importedCount: Int
     let skippedCount: Int
+    let unsavedCount: Int
 
     static let empty = BrowserPasswordImportResult(
         importedCount: 0,
-        skippedCount: 0
+        skippedCount: 0,
+        unsavedCount: 0
     )
 }

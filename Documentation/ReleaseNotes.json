@@ -4741,6 +4741,10 @@
     "sub-space-switch-steady-pins": {
       "category": "fixed",
       "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
+    },
+    "password-import-errors-say-what-happened": {
+      "category": "fixed",
+      "message": "When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed."
     }
   }
 }

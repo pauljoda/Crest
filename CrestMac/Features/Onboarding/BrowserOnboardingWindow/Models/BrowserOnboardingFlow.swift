@@ -580,7 +580,9 @@ final class BrowserOnboardingFlow {
                 if let extensionInstaller, !review.extensionInstalls.isEmpty {
                     extensionInstaller.installImported(review.extensionInstalls)
                 }
-                send(FinishImportCommit(passwordCount: passwords.importedCount))
+                send(
+                    FinishImportCommit(
+                        passwordCount: passwords.importedCount, unsavedPasswordCount: passwords.unsavedCount))
                 readCurrentSource()
             case .failure(let error):
                 send(FailImport(source: review.source, reason: .import, detail: error.personFacingDescription))

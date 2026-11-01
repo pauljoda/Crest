@@ -4,13 +4,16 @@ import Foundation
 /// The core says which Spaces each password goes to, leaving out Spaces that
 /// are gone or locked, and what each account means against the passwords a
 /// Space already keeps; a Space keeps its saved password for an account it
-/// already has. This writes each Space's Keychain inventory.
+/// already has. This writes each Space's Keychain inventory. A Space whose
+/// passwords could not be read or written counts them as unsaved, apart from
+/// the ones the review left out.
 @MainActor
 enum BrowserPasswordImportCommitter {
     // MARK: - Actions - Importing
 
     /// Imports `passwords` for the review setup holds over `browser`'s
-    /// workspace, answering how many each Space took and how many none did.
+    /// workspace, answering how many the Spaces took, how many none did, and
+    /// how many could not be saved.
     static func commit(
         _ passwords: [BrowserImportedPassword],
         browser: BrowserStore
@@ -22,7 +25,7 @@ enum BrowserPasswordImportCommitter {
                 ImportPasswordDestinations(
                     workspaceID: browser.family.workspaceID, passwords: passwords.map(\.routingSource)))
         } catch {
-            return BrowserPasswordImportResult(importedCount: 0, skippedCount: passwords.count)
+            return BrowserPasswordImportResult(importedCount: 0, skippedCount: 0, unsavedCount: passwords.count)
         }
         var credentialsBySpace: [UUID: [ImportedCredential]] = [:]
         var skippedCount = 0
@@ -40,6 +43,7 @@ enum BrowserPasswordImportCommitter {
         }
 
         var importedCount = 0
+        var unsavedCount = 0
         for (spaceID, credentials) in credentialsBySpace {
             guard let space = browser.spaceModel(spaceID) else {
                 skippedCount += credentials.count
@@ -62,10 +66,11 @@ enum BrowserPasswordImportCommitter {
                 importedCount += resolution.summary.acceptedCount
                 skippedCount += resolution.summary.skippedCount + resolution.summary.rejectedCount
             } catch {
-                skippedCount += credentials.count
+                unsavedCount += credentials.count
             }
         }
-        return BrowserPasswordImportResult(importedCount: importedCount, skippedCount: skippedCount)
+        return BrowserPasswordImportResult(
+            importedCount: importedCount, skippedCount: skippedCount, unsavedCount: unsavedCount)
     }
 }
 
