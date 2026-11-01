@@ -201,4 +201,37 @@ public sealed partial class BrowserContractsTests {
         Assert.NotEqual(Guid.Empty, Assert.Single(first.Query(new LaunchWindows(installed)).WindowIds));
     }
 
+    [Fact]
+    public void ALaunchThatEndsWhileItReopensItsPagesIsKnownToTheNextOne() {
+        using var directory = new StorageDirectory();
+        var installed = LaunchEnvironment.Installed;
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            Assert.False(app.Query(new LaunchWindows(installed)).QuitWhileReopening);
+            // The launch ends before its pages settle, as a crash would: nothing more is sent.
+            app.Send(new BeginReopeningPages());
+        }
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            Assert.True(app.Query(new LaunchWindows(installed)).QuitWhileReopening);
+            app.Send(new BeginReopeningPages());
+            app.Send(new FinishReopeningPages());
+            _ = DrainUntil(app, _ => app.Query(new PendingSave()).Revision is null);
+        }
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            Assert.False(app.Query(new LaunchWindows(installed)).QuitWhileReopening);
+            // A quit the person agreed to ends the launch while its pages still open.
+            app.Send(new BeginReopeningPages());
+            Assert.Contains(app.Send(new PrepareToQuit(Guid.NewGuid())), change => change is CloseReady { Allowed: true });
+            app.Send(new RememberWindowsForLaunch([]));
+        }
+        var (again, _, _) = DeviceApp(directory);
+        using var againDisposal = again;
+        Assert.False(again.Query(new LaunchWindows(installed)).QuitWhileReopening);
+    }
+
 }

@@ -48,8 +48,10 @@ public sealed record DockMenuContent(IReadOnlyList<DockMenuCommand> Commands, IR
 /// The windows a launch opens, back to front, each a saved window's identity:
 /// the frontmost, `StartupWindowId`, takes the startup choice. `Setup` is the
 /// setup that opens in front of them, and holds them back until it finishes,
-/// or null when none does.
-public sealed record LaunchWindowPlan(IReadOnlyList<Guid> WindowIds, Guid StartupWindowId, SetupEntry? Setup);
+/// or null when none does. `QuitWhileReopening` says the previous launch ended
+/// while it was reopening its windows' pages, so the person can choose not to
+/// reopen them this time.
+public sealed record LaunchWindowPlan(IReadOnlyList<Guid> WindowIds, Guid StartupWindowId, SetupEntry? Setup, bool QuitWhileReopening);
 
 /// The window that comes to the person: an open one, or with `OpensWindow`, a
 /// saved window's identity to open.

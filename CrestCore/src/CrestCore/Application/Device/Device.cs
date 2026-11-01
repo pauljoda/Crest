@@ -113,6 +113,7 @@ internal sealed partial class Device {
         agents = records.Agents;
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
+        reopeningPages = quitWhileReopening = records.ReopeningPages;
         adopted.UnionWith(records.Adopted);
         keptTabGroups.AddRange(records.TabGroups);
         paletteMemories = records.PaletteMemories.ToImmutableDictionary();
@@ -343,7 +344,8 @@ internal sealed partial class Device {
         new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
         PaletteMemories = paletteMemories,
         SearchCatalog = searchCatalog,
-        Agents = agents
+        Agents = agents,
+        ReopeningPages = reopeningPages
     };
 
     #endregion

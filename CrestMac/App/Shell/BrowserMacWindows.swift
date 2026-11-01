@@ -23,6 +23,12 @@ extension EnvironmentValues {
 /// the person is using, and lets go of what goes with each as it closes.
 @MainActor
 final class BrowserMacWindows {
+    // MARK: - Static Variables
+
+    /// How long a launch's reopened pages take to settle: a launch that ends
+    /// sooner asks whether to reopen them next time.
+    private static let reopenedPagesSettle: Duration = .seconds(60)
+
     // MARK: - Types
 
     /// A Quick Window's content, which answers for the window it shows in.
@@ -244,11 +250,43 @@ final class BrowserMacWindows {
 
     /// Opens the launch's windows back to front, each coming forward without
     /// focus, and the frontmost last, as the key window on the startup choice.
+    /// After a launch that ended while it reopened its pages, the person first
+    /// chooses whether to reopen them; if not, every window opens on the Start
+    /// Page, and its tabs wait in the sidebar.
     private func open(_ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key) {
         heldLaunch = nil
         application.startupWindowID = plan.startupWindowID
+        if plan.quitWhileReopening, !Self.reopensPagesAfterQuit() {
+            application.startPageWindowIDs = Set(plan.windowIDs)
+        }
+        beginReopeningPages()
         for id in plan.windowIDs {
             open(.reopening(id), activation: id == plan.startupWindowID ? activation : .background)
+        }
+        application.startPageWindowIDs = []
+    }
+
+    /// Asks whether to reopen the pages of the launch's windows, as macOS asks
+    /// of an app that quit while it reopened its windows. True to reopen them.
+    private static func reopensPagesAfterQuit() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Crest quit unexpectedly while reopening your pages.")
+        alert.informativeText = String(localized: "Do you want to try to reopen them?")
+        alert.addButton(withTitle: String(localized: "Reopen"))
+        alert.addButton(withTitle: String(localized: "Don’t Reopen"))
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    /// The launch starts showing its windows' pages. The core keeps that until
+    /// they settle or the person quits, so the next launch knows when this one
+    /// ended while they opened.
+    private func beginReopeningPages() {
+        let core = application.browser.core
+        _ = try? core.send(BeginReopeningPages())
+        Task { @MainActor in
+            try? await Task.sleep(for: Self.reopenedPagesSettle)
+            _ = try? core.send(FinishReopeningPages())
         }
     }
 
