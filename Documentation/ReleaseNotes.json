@@ -4725,6 +4725,10 @@
     "duo-top-bar-keyboard": {
       "category": "fixed",
       "message": "On iPhone Duo held upright, the controls stay in the top bar while the keyboard is open."
+    },
+    "chromium-update-deps-conditions": {
+      "category": "internal",
+      "message": "Automatic Chromium updates read only the CIPD packages that apply to the Mac build, and versions that DEPS keeps in a file, so the Chromium 157 update can prepare its source."
     }
   }
 }
