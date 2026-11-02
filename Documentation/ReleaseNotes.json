@@ -4749,6 +4749,10 @@
     "chromium-extension-popup-crash": {
       "category": "fixed",
       "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    },
+    "chromium-tall-full-page-capture": {
+      "category": "fixed",
+      "message": "Copy Full Page Capture now copies very tall pages on Mac instead of leaving the page blank."
     }
   }
 }
