@@ -4680,6 +4680,9 @@
     "Crest preview" : {
       "extractionState" : "manual"
     },
+    "Crest quit unexpectedly while reopening your pages." : {
+
+    },
     "Crest reads its data when you continue, which may ask for access" : {
 
     },
@@ -5348,6 +5351,9 @@
     "Division" : {
 
     },
+    "Do you want to try to reopen them?" : {
+
+    },
     "Dock Sidebar" : {
 
     },
@@ -5355,6 +5361,9 @@
 
     },
     "Don’t ask again until it disconnects" : {
+
+    },
+    "Don’t Reopen" : {
 
     },
     "Don't Share" : {

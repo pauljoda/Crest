@@ -10,6 +10,8 @@ namespace CrestCore.Application;
 /// still open is one to reopen. Setup stands in front of them on a device that
 /// has not completed it, or in a launch that forces it, until it finishes. A
 /// quit waits for the Spaces being deleted whose data the engines still erase.
+/// While a launch reopens its windows' pages, the device store says so, so
+/// the next launch knows when one ended before they settled.
 internal sealed partial class Device {
     #region Variables
 
@@ -22,6 +24,12 @@ internal sealed partial class Device {
     /// Setup finished during this run, which opens its launch gate whatever
     /// the launch forced.
     private bool setupFinishedThisRun;
+    /// A launch is reopening its windows' pages: from when the platform starts
+    /// showing them until they settle or the person agrees to quit.
+    private bool reopeningPages;
+    /// The previous launch ended while it was reopening its windows' pages.
+    private readonly bool quitWhileReopening;
+    internal bool QuitWhileReopening => quitWhileReopening;
 
     #endregion
 
@@ -45,12 +53,49 @@ internal sealed partial class Device {
 
     #endregion
 
+    #region Actions - Reopening pages
+
+    /// The platform starts showing the pages of the windows this launch
+    /// reopens. The device store says so before this returns, so a launch that
+    /// ends before they settle is known to the next one. Throws
+    /// `StorageException` when the store cannot be written.
+    internal void BeginReopeningPages() {
+        lock (gate) {
+            reopeningPages = true;
+            storage?.SaveDevice(Records());
+        }
+    }
+
+    /// The pages this launch reopened have settled.
+    internal void FinishReopeningPages() {
+        lock (gate) {
+            if (!reopeningPages) return;
+            reopeningPages = false;
+            storage?.EnqueueDevice(Records());
+        }
+    }
+
+    #endregion
+
     #region Actions - Quitting
 
     /// The person agreed to quit: the windows still open are the ones the next
-    /// launch reopens.
+    /// launch reopens, and a launch still reopening its pages did not end while
+    /// they opened, which the device store says before this returns, since the
+    /// app may end before the worker writes behind. When the store cannot be
+    /// written now, the worker tries again.
     internal void AcceptQuit() {
-        lock (gate) quitAccepted = true;
+        lock (gate) {
+            quitAccepted = true;
+            if (!reopeningPages) return;
+            reopeningPages = false;
+            var records = Records();
+            try {
+                storage?.SaveDevice(records);
+            } catch (StorageException) {
+                storage?.EnqueueDevice(records);
+            }
+        }
     }
 
     /// The Spaces an attached workspace is deleting whose profile's data the
