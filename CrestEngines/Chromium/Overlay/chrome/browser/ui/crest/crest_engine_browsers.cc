@@ -107,6 +107,9 @@ struct EngineBrowsers::KeptBrowser final : TabStripModelObserver {
   const bool keeps_tabs;
   std::optional<EngineWindow> engine;
   raw_ptr<TabStripModel> strip;
+  // When one of its pages was last shown or focused, in the order of every
+  // Browser's: the latest of a window's Browsers holds the page in use there.
+  uint64_t activated = 0;
 };
 
 EngineBrowsers::EngineBrowsers(EngineBinding& binding) : binding_(binding) {}
@@ -179,6 +182,7 @@ bool EngineBrowsers::Activate(content::WebContents* contents) {
   if (kept->strip->active_index() != index) {
     kept->strip->ActivateTabAt(index);
   }
+  kept->activated = ++activations_;
   // A page shown in a window in the background leaves the window in use as it
   // is. Its Browser comes into use with its window.
   if (platform_util::IsWindowActive(contents->GetTopLevelNativeWindow())) {
@@ -308,10 +312,9 @@ void EngineBrowsers::Shown(Browser* browser, bool focused) {
 }
 
 void EngineBrowsers::WindowInUse(base::FunctionRef<bool(content::WebContents*)> in_window) {
-  // The window's page with focus, or else the one it showed last, is the one
-  // in use there. Its tab is already its Browser's active tab.
+  // The window's page with focus, or else the one it showed or focused last,
+  // is the one in use there. Its tab is already its Browser's active tab.
   KeptBrowser* latest = nullptr;
-  content::WebContents* shown = nullptr;
   for (const auto& kept : kept_) {
     for (int index = 0; index < kept->strip->count(); ++index) {
       content::WebContents* contents = kept->strip->GetWebContentsAt(index);
@@ -323,8 +326,7 @@ void EngineBrowsers::WindowInUse(base::FunctionRef<bool(content::WebContents*)> 
         Use(*kept);
         return;
       }
-      if (!shown || contents->GetLastActiveTimeTicks() > shown->GetLastActiveTimeTicks()) {
-        shown = contents;
+      if (!latest || kept->activated > latest->activated) {
         latest = kept.get();
       }
     }

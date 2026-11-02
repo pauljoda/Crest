@@ -1,6 +1,7 @@
 #ifndef CHROME_BROWSER_UI_CREST_CREST_ENGINE_BROWSERS_H_
 #define CHROME_BROWSER_UI_CREST_CREST_ENGINE_BROWSERS_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -99,7 +100,8 @@ class EngineBrowsers final {
   void Destroyed(Browser* browser);
   // What the platform reports when a window comes into use: the Browser of
   // the page in use there, as `in_window` picks out its pages, becomes the one
-  // Chromium last saw in use.
+  // Chromium last saw in use. That page is the one with focus, or else the one
+  // shown or focused there last.
   void WindowInUse(base::FunctionRef<bool(content::WebContents*)> in_window);
   // Whether the engine may create a Browser for itself in `profile`, which
   // `chrome.windows.create` asks before it creates one. A normal window gets a
@@ -131,6 +133,9 @@ class EngineBrowsers final {
   raw_ptr<Browser> bootstrap_ = nullptr;
   // The Browser of the page in use, which Chromium counts as active.
   raw_ptr<Browser> active_ = nullptr;
+  // How many times a page has been shown or focused, which orders the
+  // Browsers by when each last held the page in use.
+  uint64_t activations_ = 0;
   std::string creating_window_;
   // The profile `chrome.windows.create` is about to create a Browser in, for
   // the one turn between asking and creating: that Browser is the extension's
