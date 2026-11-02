@@ -60,15 +60,18 @@ enum BrowserCommandPaletteLayout {
     /// presentation's minimum, and no farther than the space's trailing edge,
     /// or across the whole space for one as wide as it; and from the field's
     /// top edge down to the bottom of the space, or for one listing upward,
-    /// from its bottom edge up to the top.
+    /// from its bottom edge up to the top, clear of the screen's safe area
+    /// there as a Peek is.
     static func fieldRegion(
-        field: CGRect, in size: CGSize, presentation: BrowserCommandPalettePresentation
+        field: CGRect, in size: CGSize, safeAreaTop: CGFloat = 0, presentation: BrowserCommandPalettePresentation
     ) -> CGRect {
         let margin = BrowserCommandPaletteMetrics.fieldRegionMargin
         let wanted = max(field.width, presentation.minimumWidth)
         let minX = wanted >= size.width - margin * 2 ? margin : max(margin, field.minX)
         let width = max(0, min(size.width - margin - minX, wanted))
-        let minY = presentation.listsUpward ? margin : field.minY
+        let minY =
+            presentation.listsUpward
+            ? max(safeAreaTop, BrowserCommandPaletteMetrics.fieldRegionTopMargin) : field.minY
         let maxY = presentation.listsUpward ? field.maxY : size.height - margin
         return CGRect(x: minX, y: minY, width: width, height: max(0, maxY - minY))
     }
@@ -78,7 +81,9 @@ enum BrowserCommandPaletteLayout {
     static func fieldResultAreaHeight(
         regionHeight: CGFloat, presentation: BrowserCommandPalettePresentation
     ) -> CGFloat {
-        min(maximumResultAreaHeight, max(0, regionHeight - presentation.input.minimumHeight - CrestLayout.hairline))
+        min(
+            presentation.maximumResultHeight,
+            max(0, regionHeight - presentation.input.minimumHeight - CrestLayout.hairline))
     }
 
     static func overlayResultAreaHeight(availableHeight: CGFloat) -> CGFloat {

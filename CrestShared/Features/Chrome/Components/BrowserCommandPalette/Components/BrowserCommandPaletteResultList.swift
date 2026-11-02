@@ -10,12 +10,19 @@ struct BrowserCommandPaletteResultList: View {
     /// nearest the field, and the list starts scrolled to the bottom.
     var listsUpward = false
 
+    /// The rows' own height as laid out, which text size and platform make
+    /// taller or shorter than the metrics estimate.
+    @State private var contentHeight: CGFloat?
+
+    /// The rows' height, at most `maximumResultAreaHeight`, past which they
+    /// scroll.
     private var resultAreaHeight: CGFloat {
         guard !fillsHeight else { return maximumResultAreaHeight }
-        return BrowserCommandPaletteLayout.resultAreaHeight(
+        let estimate = BrowserCommandPaletteLayout.resultAreaHeight(
             groups: model.groups.map { ($0.section.title != nil, $0.items.count) },
-            maximumHeight: maximumResultAreaHeight
+            maximumHeight: .infinity
         )
+        return min(contentHeight ?? estimate, max(0, maximumResultAreaHeight))
     }
 
     var body: some View {
@@ -35,8 +42,15 @@ struct BrowserCommandPaletteResultList: View {
                 }
                 .padding(BrowserCommandPaletteMetrics.resultContentPadding)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    contentHeight = $0
+                }
             }
             .defaultScrollAnchor(listsUpward ? .bottom : .top)
+            // The scroll bar stays clear of the card's rounded corners.
+            .contentMargins(.vertical, BrowserCommandPaletteMetrics.resultContentPadding, for: .scrollIndicators)
             .frame(height: resultAreaHeight)
             .clipped()
             .onChange(of: model.keyboardSelectionRevision) { _, _ in

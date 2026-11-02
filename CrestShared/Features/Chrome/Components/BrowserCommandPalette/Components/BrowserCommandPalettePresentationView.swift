@@ -45,7 +45,8 @@ struct BrowserCommandPalettePresentationView: View {
         } else if presentation.growsFromField, let fieldFrame {
             GeometryReader { proxy in
                 let region = BrowserCommandPaletteLayout.fieldRegion(
-                    field: fieldFrame, in: proxy.size, presentation: presentation)
+                    field: fieldFrame, in: proxy.size, safeAreaTop: proxy.safeAreaInsets.top,
+                    presentation: presentation)
 
                 ZStack(alignment: .topLeading) {
                     // A click or tap anywhere but the palette closes it.

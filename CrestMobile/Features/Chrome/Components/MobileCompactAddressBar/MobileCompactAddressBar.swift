@@ -115,12 +115,15 @@ struct MobileCompactAddressBar: View {
                     value: loadingProgress
                 )
         }
-        .glassEffect(.regular.interactive(), in: fieldShape)
-        .anchorPreference(key: MobileCompactCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
-        .background { commandPaletteAnchor }
+        // The palette grown out of the bar takes its place. The bar's glass
+        // container draws the glass, so the glass itself steps aside rather
+        // than fading with the bar's contents.
         .animation(commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)) {
             $0.opacity(isPaletteShown ? 0 : 1)
         }
+        .glassEffect(isPaletteShown ? .identity : .regular.interactive(), in: fieldShape)
+        .anchorPreference(key: MobileCompactCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
+        .background { commandPaletteAnchor }
         .allowsHitTesting(!isPaletteShown)
         .accessibilityHidden(isPaletteShown)
         .modifier(

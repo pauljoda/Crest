@@ -47,12 +47,15 @@ struct BrowserCommandPalettePresentation: Equatable, Sendable {
     /// results; its close button, Escape and a click outside close it.
     static let overlay = BrowserCommandPalettePresentation(
         input: .prominent, centersOverWindow: true, growsFromField: false, listsUpward: false, keepsHeight: true,
-        closesOnExit: true, showsCloseButton: true, minimumWidth: 0, fieldIdentifier: "command-palette-field")
+        closesOnExit: true, showsCloseButton: true, minimumWidth: 0,
+        maximumResultHeight: BrowserCommandPaletteMetrics.maximumResultAreaHeight,
+        fieldIdentifier: "command-palette-field")
 
     /// In place on the Start Page, where it stays.
     static let embedded = BrowserCommandPalettePresentation(
         input: .prominent, centersOverWindow: false, growsFromField: false, listsUpward: false, keepsHeight: false,
         closesOnExit: false, showsCloseButton: false, minimumWidth: 0,
+        maximumResultHeight: BrowserCommandPaletteMetrics.maximumResultAreaHeight,
         fieldIdentifier: "start-page-command-palette-field")
 
     /// Grown out of an address field at the top of a window, its results
@@ -61,14 +64,16 @@ struct BrowserCommandPalettePresentation: Equatable, Sendable {
     static let dropping = BrowserCommandPalettePresentation(
         input: .inline, centersOverWindow: false, growsFromField: true, listsUpward: false, keepsHeight: false,
         closesOnExit: true, showsCloseButton: false, minimumWidth: 440,
+        maximumResultHeight: BrowserCommandPaletteMetrics.maximumResultAreaHeight,
         fieldIdentifier: "address-command-palette-field")
 
     /// Grown out of an address bar at the bottom of the screen, its results
     /// rising above the bar with the best match nearest it. It spans the
-    /// screen over the controls beside the bar, so the results stay readable.
+    /// screen over the controls beside the bar, so the results stay readable,
+    /// and grows with them as far as the top of the screen's safe area.
     static let rising = BrowserCommandPalettePresentation(
         input: .inline, centersOverWindow: false, growsFromField: true, listsUpward: true, keepsHeight: false,
-        closesOnExit: true, showsCloseButton: false, minimumWidth: .infinity,
+        closesOnExit: true, showsCloseButton: false, minimumWidth: .infinity, maximumResultHeight: .infinity,
         fieldIdentifier: "address-command-palette-field")
 
     // MARK: - Variables
@@ -89,6 +94,9 @@ struct BrowserCommandPalettePresentation: Equatable, Sendable {
     /// How wide a palette grown out of a field is at least, however narrow
     /// the field.
     let minimumWidth: CGFloat
+    /// The most height the results take before they scroll, where the space
+    /// allows it.
+    let maximumResultHeight: CGFloat
     let fieldIdentifier: String
 
     /// The palette's corner radius: the address field's where it grows out of
@@ -107,7 +115,8 @@ struct BrowserCommandPalettePresentation: Equatable, Sendable {
 
     private init(
         input: Input, centersOverWindow: Bool, growsFromField: Bool, listsUpward: Bool, keepsHeight: Bool,
-        closesOnExit: Bool, showsCloseButton: Bool, minimumWidth: CGFloat, fieldIdentifier: String
+        closesOnExit: Bool, showsCloseButton: Bool, minimumWidth: CGFloat, maximumResultHeight: CGFloat,
+        fieldIdentifier: String
     ) {
         self.input = input
         self.centersOverWindow = centersOverWindow
@@ -117,6 +126,7 @@ struct BrowserCommandPalettePresentation: Equatable, Sendable {
         self.closesOnExit = closesOnExit
         self.showsCloseButton = showsCloseButton
         self.minimumWidth = minimumWidth
+        self.maximumResultHeight = maximumResultHeight
         self.fieldIdentifier = fieldIdentifier
     }
 }

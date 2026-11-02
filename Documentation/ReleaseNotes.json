@@ -4793,6 +4793,10 @@
     "quick-window-keeps-smallest-size": {
       "category": "fixed",
       "message": "A Quick Window on Mac no longer resizes narrower than its toolbar fits, which cut off Open In and slid Back and Forward under the window's buttons."
+    },
+    "palette-results-fit-their-rows": {
+      "category": "fixed",
+      "message": "The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar."
     }
   }
 }
