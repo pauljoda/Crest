@@ -16,17 +16,68 @@ final class BrowserPagePermissionController {
 
     private(set) var current: Request?
     private(set) var generation = UUID()
-    @ObservationIgnored private var isPresentationAvailable = false
+    /// How long requests wait for a view that can show them before they end
+    /// unanswered.
+    @ObservationIgnored private let hostGrace: Duration
+    /// The views that can show this page's requests, each by its own token.
+    /// A page moving between windows gains its new host before or after its
+    /// old one leaves, so only the last host leaving ends its requests.
+    @ObservationIgnored private var hosts: Set<UUID> = []
+    /// The wait for a host while requests have none, which ends them when
+    /// `hostGrace` passes first.
+    @ObservationIgnored private var hostWait: Task<Void, Never>?
     @ObservationIgnored private var requests: [Request] = []
     /// Who waits on each request, each by its own token, so one that no
     /// longer waits can leave without answering the others.
     @ObservationIgnored private var completions:
         [UUID: [(token: UUID, callback: (BrowserSitePermissionPromptResponse?) -> Void)]] = [:]
 
-    func setPresentationAvailable(_ available: Bool) {
-        isPresentationAvailable = available
-        if !available { cancelAll() }
+    // MARK: - Initializers
+
+    /// `hostGrace` covers a page that changes windows, whose new window shows
+    /// it a moment after the old one stops, and a Quick Window whose page
+    /// asks during its first load, before the window has drawn.
+    init(hostGrace: Duration = .seconds(2)) {
+        self.hostGrace = hostGrace
     }
+
+    // MARK: - Actions - Presentation
+
+    func attachHost(_ host: UUID) {
+        hosts.insert(host)
+        hostWait?.cancel()
+        hostWait = nil
+    }
+
+    /// The last host leaving ends the requests only if no host arrives within
+    /// the grace.
+    func detachHost(_ host: UUID) {
+        guard hosts.remove(host) != nil, hosts.isEmpty, !requests.isEmpty else { return }
+        waitForHost()
+    }
+
+    /// The page is going away: no host can show its requests any more.
+    func endPresentation() {
+        hosts.removeAll()
+        hostWait?.cancel()
+        hostWait = nil
+        cancelAll()
+    }
+
+    /// Ends the requests unless a host arrives within the grace. A wait
+    /// already running is kept, so a page that no window shows cannot hold
+    /// its requests open by asking again.
+    private func waitForHost() {
+        guard hostWait == nil else { return }
+        hostWait = Task { [weak self, hostGrace] in
+            try? await Task.sleep(for: hostGrace)
+            guard !Task.isCancelled, let self, self.hosts.isEmpty else { return }
+            self.hostWait = nil
+            self.cancelAll()
+        }
+    }
+
+    // MARK: - Actions - Requests
 
     func request(
         _ permission: SitePermission,
@@ -36,10 +87,6 @@ final class BrowserPagePermissionController {
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping (BrowserSitePermissionPromptResponse?) -> Void
     ) {
-        guard isPresentationAvailable else {
-            completion(nil)
-            return
-        }
         let token = UUID()
         let request: Request
         if let existing = requests.first(where: {
@@ -58,6 +105,7 @@ final class BrowserPagePermissionController {
             current = requests.first
         }
         dismissal?.attach { [weak self] in self?.withdraw(token, from: request.id) }
+        if hosts.isEmpty { waitForHost() }
     }
 
     /// One waiting on `requestID` no longer does: it hears no answer, as a
@@ -103,6 +151,8 @@ final class BrowserPagePermissionController {
     }
 
     func cancelAll() {
+        hostWait?.cancel()
+        hostWait = nil
         generation = UUID()
         let callbacks = requests.flatMap { completions[$0.id] ?? [] }
         requests.removeAll()
