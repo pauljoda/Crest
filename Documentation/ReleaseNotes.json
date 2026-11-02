@@ -4742,6 +4742,10 @@
       "category": "fixed",
       "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
     },
+    "quick-window-site-permission-prompts": {
+      "category": "fixed",
+      "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
+    },
     "paste-without-formatting-shortcut": {
       "category": "improved",
       "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."

@@ -536,7 +536,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         enginePage.close()
         faviconSession.stop()
         sitePermissionSession.resetMediaGrants()
-        sitePermissionRequests.setPresentationAvailable(false)
+        sitePermissionRequests.endPresentation()
         translation.reset()
         readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()
