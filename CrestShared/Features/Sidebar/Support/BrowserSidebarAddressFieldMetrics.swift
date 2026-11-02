@@ -55,6 +55,11 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// has to enlarge it, because only there is it aimed at with a finger.
     let clearControlFont: Font?
 
+    /// How strongly the accent fills an address field from its leading edge
+    /// as its page loads. The fill is the window's only loading indicator, so
+    /// it reads clearly over the field's own tint.
+    static let loadingFillOpacity = 0.55
+
     /// The square a pointer shell's site security control claims: the same
     /// hit target as a row's trailing control.
     static let securityControlSize = BrowserTabTrailingControlMetrics.pointer.controlSize.height

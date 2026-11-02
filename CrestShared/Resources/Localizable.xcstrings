@@ -3833,6 +3833,12 @@
     "Command-click" : {
 
     },
+    "Command-click opens a new tab, or Option-click when Command opens Peek." : {
+
+    },
+    "Command-click opens a new tab, or Option-click when Command opens Peek. Hold Option to drag the link itself." : {
+
+    },
     "Comments" : {
 
     },
@@ -5263,6 +5269,9 @@
 
     },
     "Dim unloaded tabs" : {
+
+    },
+    "Dim the page behind Peek" : {
 
     },
     "Direwolf" : {
@@ -12315,6 +12324,12 @@
         }
       }
     },
+    "Shift (⇧)" : {
+
+    },
+    "Shift-click" : {
+
+    },
     "shift" : {
       "localizations" : {
         "ar" : {
@@ -13869,12 +13884,6 @@
           }
         }
       }
-    },
-    "The other key opens a new tab. Hold Option to drag the link itself." : {
-
-    },
-    "The other key opens the link in a new tab." : {
-
     },
     "The page could not be exported." : {
 

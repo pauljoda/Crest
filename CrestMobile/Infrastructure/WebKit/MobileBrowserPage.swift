@@ -277,7 +277,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
         super.init()
         if normalizedDefaultPageZoom != BrowserDefaultPageZoomStore.defaultLevel {
-            webView.pageZoom = normalizedDefaultPageZoom
+            webView.pageScale = normalizedDefaultPageZoom
         }
         #if DEBUG
             // iOS ships no developer tooling of its own, so an inspectable
@@ -536,7 +536,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         enginePage.close()
         faviconSession.stop()
         sitePermissionSession.resetMediaGrants()
-        sitePermissionRequests.setPresentationAvailable(false)
+        sitePermissionRequests.endPresentation()
         translation.reset()
         readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()

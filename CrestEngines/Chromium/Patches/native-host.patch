@@ -2288,12 +2288,13 @@
  
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -55,6 +55,13 @@
+@@ -55,6 +55,14 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
 +#if BUILDFLAG(IS_MAC)
 +#include "chrome/common/chrome_features.h"
++#include "components/lens/lens_features.h"
 +#include "components/security_interstitials/core/features.h"
 +#include "content/public/common/content_features.h"
 +#include "media/base/media_switches.h"
@@ -2302,7 +2303,7 @@
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chrome/common/channel_info.h"
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
-@@ -127,6 +134,29 @@
+@@ -127,6 +135,33 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
@@ -2326,6 +2327,10 @@
 +    feature_overrides.DisableFeature(features::kHttpsFirstModeIncognito);
 +    feature_overrides.DisableFeature(
 +        security_interstitials::features::kHttpsFirstDialogUi);
++    // Google Lens needs Chrome's side panel, which Crest's windows don't
++    // have, so a page's menu offers a plain image search instead.
++    feature_overrides.DisableFeature(lens::features::kLensOverlay);
++    feature_overrides.DisableFeature(lens::features::kLensStandalone);
 +  }
 +#endif  // BUILDFLAG(IS_MAC)
 +
@@ -3153,3 +3158,73 @@
  -----END CERTIFICATE-----
  
  # bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893
+--- a/chrome/browser/extensions/api/extension_action/extension_action_api.cc
++++ b/chrome/browser/extensions/api/extension_action/extension_action_api.cc
+@@ -122,8 +122,14 @@
+ bool HasPopupOnActiveTab(BrowserWindowInterface& browser,
+                          content::BrowserContext* browser_context,
+                          const Extension& extension) {
+-  content::WebContents* web_contents =
+-      TabListInterface::From(&browser)->GetActiveTab()->GetContents();
++  // Crest: a Browser can have no tabs, as the one a page-less extension click
++  // opens its popup against, so it can have no active tab either.
++  tabs::TabInterface* active_tab =
++      TabListInterface::From(&browser)->GetActiveTab();
++  if (!active_tab) {
++    return false;
++  }
++  content::WebContents* web_contents = active_tab->GetContents();
+   ExtensionAction* extension_action =
+       ExtensionActionManager::Get(browser_context)
+           ->GetExtensionAction(extension);
+--- a/chrome/browser/extensions/extension_tab_util.cc
++++ b/chrome/browser/extensions/extension_tab_util.cc
+@@ -1032,7 +1032,8 @@
+         if (browser_profile == profile ||
+             browser_profile == incognito_profile) {
+           TabListInterface* tab_list = TabListInterface::From(browser);
+-          if (tab_list) {
++          // Crest: a Browser can have no tabs, and so no active tab.
++          if (tab_list && tab_list->GetActiveTab()) {
+             content::WebContents* tab_contents =
+                 tab_list->GetActiveTab()->GetContents();
+             CHECK(tab_contents);
+--- a/chrome/browser/extensions/api/identity/web_auth_flow.cc
++++ b/chrome/browser/extensions/api/identity/web_auth_flow.cc
+@@ -105,15 +105,11 @@
+ 
+ WebAuthFlow::~WebAuthFlow() {
+   DCHECK(!delegate_);
+-  BrowserWindowInterface* popup_browser =
+-      web_contents()
+-          ? browser_window_util::GetBrowserForTabContents(*web_contents())
+-          : nullptr;
+-  if (popup_browser) {
+-    popup_browser->GetWindow()->Close();
+-  } else if (web_contents()) {
+-    // Explicitly close `web_contents()` if it's not displayed in any browser
+-    // window.
++  // Crest: closes only the page, never the window that shows it. Crest shows
++  // the page as a tab beside the person's own, in the same Browser, which
++  // closing the window would close with it. Chrome's popup holds nothing
++  // else, so closing its only tab closes it too.
++  if (web_contents()) {
+     web_contents()->Close();
+   }
+ 
+@@ -497,13 +493,8 @@
+   // already observe Profile destruction, so we can just be silent here.
+   delegate_ = nullptr;
+ 
+-  BrowserWindowInterface* popup_browser =
+-      web_contents()
+-          ? browser_window_util::GetBrowserForTabContents(*web_contents())
+-          : nullptr;
+-  if (popup_browser) {
+-    popup_browser->GetWindow()->Close();
+-  } else if (web_contents()) {
++  // Crest: closes only the page, as the destructor does.
++  if (web_contents()) {
+     web_contents()->Close();
+   }
+ 
