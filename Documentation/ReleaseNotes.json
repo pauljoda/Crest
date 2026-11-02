@@ -4746,6 +4746,10 @@
       "category": "fixed",
       "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
     },
+    "chromium-extension-popup-crash": {
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
