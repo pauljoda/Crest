@@ -4893,6 +4893,10 @@
     "chromium-stale-window-link": {
       "category": "internal",
       "message": "A new-window link on the Chromium engine whose Peek or Quick Window has already moved to another page no longer replaces that page."
+    },
+    "extension-popups-stay-open-for-system-prompts": {
+      "category": "fixed",
+      "message": "Extension popups, such as a password manager's, now stay open while macOS asks for Touch ID or another app is in front, so unlocking with Touch ID completes."
     }
   }
 }
