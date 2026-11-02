@@ -4825,6 +4825,10 @@
     "iphone-palette-larger-text": {
       "category": "fixed",
       "message": "On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes."
+    },
+    "palette-provider-chips-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
     }
   }
 }
