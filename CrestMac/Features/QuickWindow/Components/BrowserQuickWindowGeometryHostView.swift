@@ -1,7 +1,9 @@
 import AppKit
 
-/// Places a Quick Window over the page it came from, at the size the person
-/// last gave one, and remembers each size they give it afterwards.
+/// Places a Quick Window over the page it came from, or when another app asked
+/// for it, over the window the person is in there, at the size the person last
+/// gave one and clear of another Quick Window, and remembers each size they
+/// give it afterwards.
 @MainActor
 final class BrowserQuickWindowGeometryHostView: NSView {
     // MARK: - Static Variables
@@ -18,11 +20,16 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         (NSWindow.didEnterFullScreenNotification, #selector(BrowserQuickWindowGeometryHostView.endFullScreenChange)),
         (NSWindow.didExitFullScreenNotification, #selector(BrowserQuickWindowGeometryHostView.endFullScreenChange)),
     ]
+    /// The Quick Windows already placed, which a new one opens clear of.
+    private static let placedWindows = NSHashTable<NSWindow>.weakObjects()
 
     // MARK: - Variables
 
     private weak var pagePoolRegistry: BrowserPagePoolRegistry?
     private var targetWindowID: UUID?
+    /// Whether the window opens where the person is, over the window they
+    /// are in in another app, instead of over the page it came from.
+    private let opensWherePersonIs: Bool
     private weak var positionedWindow: NSWindow?
     /// The window whose resizes the view remembers.
     private weak var observedWindow: NSWindow?
@@ -34,10 +41,12 @@ final class BrowserQuickWindowGeometryHostView: NSView {
 
     init(
         pagePoolRegistry: BrowserPagePoolRegistry?,
-        targetWindowID: UUID?
+        targetWindowID: UUID?,
+        opensWherePersonIs: Bool = false
     ) {
         self.pagePoolRegistry = pagePoolRegistry
         self.targetWindowID = targetWindowID
+        self.opensWherePersonIs = opensWherePersonIs
         super.init(frame: .zero)
     }
 
@@ -146,32 +155,89 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             let windowScreen = window.screen ?? NSScreen.main
         else { return }
         positionedWindow = window
-        let sourceWebContentFrame = targetWindowID.flatMap { targetWindowID in
+        // A window another app asked for opens where the person is, over the
+        // window they are in there, not over the Crest window it would move
+        // into, which may be on another display.
+        let sourceTarget = opensWherePersonIs ? nil : targetWindowID
+        let sourceWebContentFrame = sourceTarget.flatMap { targetWindowID in
             pagePoolRegistry?
                 .runtime(for: targetWindowID)?
                 .activeWebContentFrame
         }
-        let sourceWindowFrame = targetWindowID.flatMap { targetWindowID in
-            NSApp.windows.first {
-                $0 !== window && $0.identifier?.rawValue == targetWindowID.uuidString
-            }?.frame
-        }
+        let sourceWindowFrame =
+            opensWherePersonIs
+            ? Self.frontWindowFrameOutsideCrest()
+            : sourceTarget.flatMap { targetWindowID in
+                NSApp.windows.first {
+                    $0 !== window && $0.identifier?.rawValue == targetWindowID.uuidString
+                }?.frame
+            }
         // The screen the source window is on, which the Quick Window opens
-        // over.
+        // over, or with none, for a window another app asked for, the screen
+        // under the pointer.
+        let pointerScreen =
+            opensWherePersonIs ? NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } : nil
         let screen =
             sourceWindowFrame.flatMap { frame in
                 NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
-            } ?? windowScreen
-        let frame = Self.targetFrame(
+            } ?? pointerScreen ?? windowScreen
+        let placed = Self.targetFrame(
             sourceWebContentFrame: sourceWebContentFrame,
             sourceWindowFrame: sourceWindowFrame,
             visibleFrame: screen.visibleFrame,
             rememberedSize: rememberedSize
         )
+        let others = Self.placedWindows.allObjects.filter { $0 !== window && $0.isVisible }.map(\.frame)
+        let frame = Self.cascaded(placed, clearOf: others, in: screen.visibleFrame)
+        Self.placedWindows.add(window)
         if !framesApproximatelyEqual(window.frame, frame) {
             window.setFrame(frame, display: true, animate: false)
         }
         observeSize(of: window)
+    }
+
+    /// The frame, in screen coordinates, of the frontmost ordinary window
+    /// another app shows: the window the person is in, which only Crest's own
+    /// windows coming forward could hide. The window list gives each window's
+    /// bounds and owner without asking for any permission.
+    private static func frontWindowFrameOutsideCrest() -> CGRect? {
+        guard
+            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                as? [[String: Any]],
+            let primary = NSScreen.screens.first
+        else { return nil }
+        let crest = ProcessInfo.processInfo.processIdentifier
+        let minimum = BrowserQuickWindowLayout.minimumForeignWindowSize
+        for info in windows {
+            guard (info[kCGWindowLayer as String] as? Int) == 0,
+                (info[kCGWindowOwnerPID as String] as? pid_t) != crest,
+                (info[kCGWindowAlpha as String] as? Double).map({ $0 > 0 }) ?? true,
+                let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
+                let width = bounds["Width"], let height = bounds["Height"], let x = bounds["X"], let y = bounds["Y"],
+                width >= minimum, height >= minimum
+            else { continue }
+            // The window list measures from the top of the main display;
+            // AppKit measures from its bottom.
+            return CGRect(x: x, y: primary.frame.maxY - y - height, width: width, height: height)
+        }
+        return nil
+    }
+
+    /// `frame`, moved down and to the right a step at a time while another
+    /// Quick Window opens at the same place, as new windows cascade on the
+    /// Mac, and kept inside `visibleFrame`.
+    static func cascaded(_ frame: CGRect, clearOf others: [CGRect], in visibleFrame: CGRect) -> CGRect {
+        let step = BrowserQuickWindowLayout.cascadeStep
+        var frame = frame
+        for _ in 0..<BrowserQuickWindowLayout.cascadeLimit {
+            guard
+                others.contains(where: { abs($0.minX - frame.minX) < step / 2 && abs($0.maxY - frame.maxY) < step / 2 })
+            else { break }
+            frame = frame.offsetBy(dx: step, dy: -step)
+        }
+        let x = max(min(frame.minX, visibleFrame.maxX - frame.width), visibleFrame.minX)
+        let y = min(max(frame.minY, visibleFrame.minY), visibleFrame.maxY - frame.height)
+        return CGRect(x: x, y: y, width: frame.width, height: frame.height)
     }
 
     private func scheduleGeometryUpdate() {

@@ -48,6 +48,9 @@ extension BrowserMacShell {
             return true
         }
         guard !isQuitting else { return true }
+        // A focused Chromium page keeps the window-cycling key from AppKit,
+        // so it cycles here for every page.
+        if BrowserMacWindowCycling.cycle(for: event) { return true }
         // The application menu runs Settings once a page lets the key go.
         if !pageSeesFirst, shortcut == BrowserShortcut(key: .character(","), modifiers: .command) {
             BrowserMacApplicationAction.settings.perform(in: self)

@@ -4913,6 +4913,18 @@
     "sidebar-new-tab-row-height": {
       "category": "fixed",
       "message": "On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them."
+    },
+    "quick-window-opens-where-you-are": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window for a link from another app opens over the window you're in and on its display, instead of over a Crest window that may be on another display, and comes to the Space you're on."
+    },
+    "quick-windows-cascade": {
+      "category": "improved",
+      "message": "On Mac, a Quick Window that opens where another already is opens a little below and to the right of it, so both stay in view."
+    },
+    "chromium-cycle-windows": {
+      "category": "fixed",
+      "message": "On Mac, Command-` (Move focus to next window) moves between Crest's windows, Quick Windows included, when a Chromium page has focus."
     }
   }
 }
