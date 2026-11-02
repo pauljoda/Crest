@@ -4865,6 +4865,10 @@
     "sidebar-scroll-freeze": {
       "category": "fixed",
       "message": "Scrolling the sidebar no longer makes Crest stop responding, with or without folders open."
+    },
+    "shortcuts-follow-command-keyboard-layout": {
+      "category": "fixed",
+      "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak – QWERTY ⌘, Russian and Greek, so Command-X cuts instead of quitting Crest."
     }
   }
 }
