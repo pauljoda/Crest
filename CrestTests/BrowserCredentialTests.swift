@@ -33,6 +33,14 @@ final class BrowserCredentialTests: XCTestCase {
         XCTAssertNil(CredentialOrigin(url: try XCTUnwrap(URL(string: "https://a%2Fb.com/login"))))
         XCTAssertNil(CredentialOrigin(url: try XCTUnwrap(URL(string: "https://[fe80::1%25en0]/login"))))
         XCTAssertNil(CredentialOrigin(url: try XCTUnwrap(URL(string: "https://%3A%3A1/login"))))
+        // A host an authentication challenge or a stored password names is not
+        // parsed into another one.
+        XCTAssertNil(CredentialOrigin(securityProtocol: "https", host: "a@b.com", port: 443))
+        XCTAssertNil(CredentialOrigin(securityProtocol: "https", host: "a/b.com", port: 443))
+        XCTAssertNil(CredentialOrigin(securityProtocol: "https", host: "b.com#a", port: 443))
+        XCTAssertNil(CredentialOrigin(securityProtocol: "https", host: "fe80::1%en0", port: 443))
+        XCTAssertEqual(
+            CredentialOrigin(securityProtocol: "https", host: "2001:db8::1", port: 8443)?.host, "2001:db8::1")
     }
 
     func testLegacyCredentialDescriptorDecodesAsAWebFormCredential() throws {

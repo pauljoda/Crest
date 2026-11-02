@@ -4742,6 +4742,122 @@
       "category": "fixed",
       "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
     },
+    "quick-window-site-permission-prompts": {
+      "category": "fixed",
+      "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
+    },
+    "chromium-extension-popup-crash": {
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    },
+    "chromium-tall-full-page-capture": {
+      "category": "fixed",
+      "message": "Copy Full Page Capture now copies very tall pages on Mac instead of leaving the page blank."
+    },
+    "chromium-extensions-act-on-page-in-use": {
+      "category": "fixed",
+      "message": "Extensions on Mac now act on the page you're using in a Quick Window, a Peek or the focused side of a split, including from their keyboard shortcuts, instead of on another tab."
+    },
+    "chromium-extension-sign-in-tab": {
+      "category": "fixed",
+      "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
+    },
+    "paste-without-formatting-shortcut": {
+      "category": "improved",
+      "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
+    },
+    "quick-window-browser-controls": {
+      "category": "new",
+      "message": "Quick Windows on Mac now have Back and Forward, Site Controls and the Space's pinned extensions, with the extensions that don't fit behind one button."
+    },
+    "quick-window-open-location-shortcut": {
+      "category": "fixed",
+      "message": "Command-L now selects a Quick Window's address field on Mac."
+    },
+    "quick-window-opens-another": {
+      "category": "new",
+      "message": "On Mac, New Quick Window works while a Quick Window is in front, and a link's menu in a Quick Window or Peek offers Open Link in New Quick Window."
+    },
+    "permission-request-follows-its-page": {
+      "category": "fixed",
+      "message": "A site's permission request on Mac stays open when its page moves from a Quick Window into a browser window, and when the site asks before a Quick Window has finished opening."
+    },
+    "readable-site-controls-and-permission-prompts": {
+      "category": "fixed",
+      "message": "Site Controls and permission requests now stay readable over any page, Space color or surface material."
+    },
+    "peek-dims-page-behind": {
+      "category": "improved",
+      "message": "On Mac, the page behind Peek fades darker as Peek opens while the sidebar keeps its brightness. Settings > Links > Dim the page behind Peek turns it off."
+    },
+    "quick-window-minimum-opening-size": {
+      "category": "fixed",
+      "message": "A Quick Window opened beside Split View on Mac no longer opens narrower than its smallest size."
+    },
+    "quick-window-address-palette": {
+      "category": "new",
+      "message": "On Mac, clicking a Quick Window's address or pressing Command-L opens the command palette right there, starting at the address, with results from the Quick Window's Space. A blank Quick Window opens with it."
+    },
+    "iphone-address-bar-palette": {
+      "category": "new",
+      "message": "On iPhone, tapping the address bar opens the command palette from the bar, with its results rising above it and the best match nearest the bar."
+    },
+    "quick-window-keeps-smallest-size": {
+      "category": "fixed",
+      "message": "A Quick Window on Mac no longer resizes narrower than its toolbar fits, which cut off Open In and slid Back and Forward under the window's buttons."
+    },
+    "palette-results-fit-their-rows": {
+      "category": "fixed",
+      "message": "The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar."
+    },
+    "peek-roomier-floating-card": {
+      "category": "improved",
+      "message": "On Mac, Peek uses more of the page while still floating above it, with a round Close button and pill-shaped Open In, and its controls move with the card as it opens."
+    },
+    "peek-shift-click": {
+      "category": "new",
+      "message": "Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with."
+    },
+    "quick-window-overflow-extension-menus": {
+      "category": "fixed",
+      "message": "Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
+    },
+    "iphone-palette-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes."
+    },
+    "window-shows-tab-without-device-lock": {
+      "category": "internal",
+      "message": "The check for whether a window shows a tab no longer reads the session while holding the device lock."
+    },
+    "device-lock-taken-last": {
+      "category": "internal",
+      "message": "The recent tabs a window switches between and the first search catalog also read the session before the device takes its own lock, so the device and session locks are always taken in one order, and Debug builds check it."
+    },
+    "saved-passwords-survive-interrupted-writes": {
+      "category": "fixed",
+      "message": "Saved passwords are no longer lost when Crest quits partway through importing or deleting them, or through turning iCloud Keychain on or off for a Space."
+    },
+    "earlier-ip-passwords-fill": {
+      "category": "fixed",
+      "message": "Passwords imported earlier for a site at an IP address written in a long or unusual form, such as 127.1, now fill on that site too."
+    },
+    "palette-provider-chips-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
+    },
+    "quick-window-remembers-size": {
+      "category": "improved",
+      "message": "On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest."
+    },
+    "quick-window-size-after-contents-change": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window goes on remembering the size you give it after its contents change."
+    },
+    "password-import-errors-say-what-happened": {
+      "category": "fixed",
+      "message": "When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed."
+    },
     "reopen-pages-after-quit-choice": {
       "category": "fixed",
       "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out."

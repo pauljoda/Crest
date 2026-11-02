@@ -30,7 +30,15 @@ struct BrowserTransientCardStack<WebContent: View>: View {
                 actionBar
             }
         }
-        .padding(arrangement.contentInsets(safeAreaInsets: safeAreaInsets))
+        // A card the person pulls carries its controls with it as it grows
+        // and springs into place.
+        .modifier(
+            BrowserTransientMotionTransform(
+                state: state.motionState, containerSize: availableSize, reduceMotion: state.reduceMotion
+            )
+        )
+        // The page's frame is the part of the overlay the scrim dims.
+        .padding(arrangement.contentInsets(safeAreaInsets: safeAreaInsets, pageInsets: state.scrimInsets))
         .modifier(BrowserTransientContentRegion(region: contentRegion))
     }
 
@@ -69,10 +77,6 @@ struct BrowserTransientCardStack<WebContent: View>: View {
             anchor: state.sourceTransform.anchor
         )
         .opacity(state.opacity(for: .pageCard))
-        .modifier(
-            BrowserTransientMotionTransform(
-                state: state.motionState, containerSize: availableSize, reduceMotion: state.reduceMotion
-            ))
     }
 
     /// The region the stack is laid out inside, once the shell's own leading
@@ -133,7 +137,7 @@ private struct BrowserTransientControlBarWidth: ViewModifier {
     func body(content: Content) -> some View {
         if arrangement.constrainsControlBarToMaximumWidth {
             content
-                .frame(maxWidth: BrowserPeekActionBar.width)
+                .frame(maxWidth: BrowserPeekActionBar.maximumWidth)
                 .padding(arrangement.controlBarPadding)
         } else {
             content.frame(width: BrowserPeekActionBar.width)

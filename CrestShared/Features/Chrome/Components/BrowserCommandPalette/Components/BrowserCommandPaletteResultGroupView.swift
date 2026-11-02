@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserCommandPaletteResultGroupView: View {
     let model: BrowserCommandPaletteModel
     let group: BrowserCommandPaletteGroup
+    var listsUpward = false
 
     @ViewBuilder
     var body: some View {
@@ -18,10 +19,10 @@ struct BrowserCommandPaletteResultGroupView: View {
                         .horizontal,
                         BrowserCommandPaletteMetrics.resultHeaderHorizontalPadding
                     )
-                BrowserCommandPaletteResultRows(model: model, group: group)
+                BrowserCommandPaletteResultRows(model: model, group: group, listsUpward: listsUpward)
             }
         } else {
-            BrowserCommandPaletteResultRows(model: model, group: group)
+            BrowserCommandPaletteResultRows(model: model, group: group, listsUpward: listsUpward)
         }
     }
 }

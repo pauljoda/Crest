@@ -17,19 +17,20 @@ internal sealed partial class Device {
 
     #region Actions - Queries
 
-    /// The palette of a window at `now`: over the Space it shows, unless that
-    /// Space is locked or being deleted, leaving out the tab it shows there,
-    /// under the device's app-wide preferences and with what the palette of
-    /// the Space's group remembers, offering the workspace's other Spaces to
+    /// The palette of a window at `now`: over the Space it shows, leaving out
+    /// the tab it shows there, or over `asked` for a page outside its tabs,
+    /// leaving out none, unless that Space is locked or being deleted; under
+    /// the device's app-wide preferences and with what the palette of the
+    /// Space's group remembers, offering the workspace's other Spaces to
     /// switch to. It searches the whole group's history.
-    public Palette Palette(Guid windowId, bool allowsInternalPages, DateTimeOffset now) {
+    public Palette Palette(Guid windowId, Guid? asked, bool allowsInternalPages, DateTimeOffset now) {
         var window = Opened(windowId);
         var authority = Workspace(window.WorkspaceId);
         Guid spaceId;
         Guid? shown;
         lock (gate) {
-            spaceId = window.ShownSpaceId;
-            shown = window.Tab(spaceId);
+            spaceId = asked ?? window.ShownSpaceId;
+            shown = asked is null ? window.Tab(spaceId) : null;
         }
         var session = authority.Current;
         var space = Available(session, spaceId);
@@ -65,7 +66,8 @@ internal sealed partial class Device {
     /// While it has listed no other tab there, as after a launch or in a new
     /// window, the Space's tab used last stands second, a split as one item,
     /// unless another open window shows it. A locked Space lists nothing, as
-    /// its palette offers none of its tabs.
+    /// its palette offers none of its tabs. Called without the device lock,
+    /// since it reads whether the Space is locked.
     internal IReadOnlyList<RecentTabItem> RecentItems(Window window, SpaceState space) {
         if (Workspace(window.WorkspaceId).IsLocked(space)) return [];
         lock (gate) {
@@ -121,14 +123,15 @@ internal sealed partial class Device {
     /// screen: the Space is the one it shows, and it shows the tab or another
     /// member of the tab's split.
     internal bool Shows(Guid workspaceId, Guid spaceId, Guid tabId) {
-        lock (gate) {
-            if (workspaces.GetValueOrDefault(workspaceId)?.Current.ViewedSpace(spaceId) is not { } space)
-                return false;
-            var split = space.Tabs.FirstOrDefault(tab => tab.Id == tabId)?.SplitGroupId;
+        // The session is read outside the device lock, so the two locks are not nested here.
+        NativeSessionAuthority? workspace;
+        lock (gate) workspace = workspaces.GetValueOrDefault(workspaceId);
+        if (workspace?.Current.ViewedSpace(spaceId) is not { } space) return false;
+        var split = space.Tabs.FirstOrDefault(tab => tab.Id == tabId)?.SplitGroupId;
+        lock (gate)
             return open.Values.Any(window => window.WorkspaceId == workspaceId && window.ShownSpaceId == spaceId
                 && window.Tab(spaceId) is { } shown
                 && (shown == tabId || split is not null && space.Tabs.Any(tab => tab.Id == shown && tab.SplitGroupId == split)));
-        }
     }
 
     /// The Space of `profileId` the person may see; see `ShowableSpaceOf`.
