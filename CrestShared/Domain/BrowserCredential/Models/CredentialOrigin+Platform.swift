@@ -44,9 +44,14 @@ extension CredentialOrigin {
         self.init(scheme: webScheme.name, host: canonicalHost, port: resolvedPort)
     }
 
+    /// The origin of `rawHost` for a protocol and port, as an authentication
+    /// challenge or a stored password names them. A host holding a character
+    /// that parsing it into an address would read as a delimiter or an escape,
+    /// such as `a@b.com`, names no origin.
     init?(securityProtocol rawProtocol: String, host rawHost: String, port rawPort: Int) {
         guard let webScheme = WebScheme.named(rawProtocol.lowercased()),
-            !rawHost.isEmpty
+            !rawHost.isEmpty,
+            !rawHost.unicodeScalars.contains(where: Self.reparsedHostCharacters.contains)
         else {
             return nil
         }
