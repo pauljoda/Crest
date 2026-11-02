@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// The shared Window group, plus the window choices only the desktop has:
-/// light or dark, how far dark dims Space colors, Space page motion, the
-/// sidebar hover area and whether it stays live over a page in full screen.
+/// light or dark, how far dark dims Space colors, the address bar above pages,
+/// Space page motion, the sidebar hover area and whether it stays live over a
+/// page in full screen.
 struct BrowserPlatformAppearanceSettingsSection: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -25,12 +26,16 @@ struct BrowserPlatformAppearanceSettingsSection: View {
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
 
+        let pageToolbar = CrestSettingValue(
+            $appearance.showsPageToolbar, default: BrowserLookAndFeelDefaults.pageToolbar)
+
         return BrowserWindowAppearanceGroup(
             space: space,
             showsPreview: showsPreview,
             extraSettings: [
                 mode.resettable("Appearance"),
                 dimming.resettable("Dim Space colors in dark"),
+                pageToolbar.resettable("Address bar above pages"),
                 motion.resettable("Animate pages when switching Spaces"),
                 revealWidth.resettable("Sidebar hover area"),
                 fullscreenReveal.resettable("Show sidebar on hover in full screen"),
@@ -54,6 +59,12 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 readout: .percent(zero: "Off", full: "Full"),
                 identifier: "dark-space-dimming"
             )
+
+            CrestSettingRow("Address bar above pages", setting: pageToolbar.resettable("Address bar above pages")) {
+                Toggle("Address bar above pages", isOn: pageToolbar.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("page-toolbar")
+            }
 
             CrestSettingRow(
                 "Animate pages when switching Spaces",

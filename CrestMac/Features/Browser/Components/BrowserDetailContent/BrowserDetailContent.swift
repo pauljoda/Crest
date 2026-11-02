@@ -17,7 +17,19 @@ struct BrowserDetailContent: View {
     /// The window's commands, for the Start Page's palette.
     let commands: BrowserCommandPaletteCommandRegistry
 
+    @Environment(\.browserPageToolbar) private var toolbarContext
+
     var body: some View {
+        VStack(spacing: 0) {
+            if let toolbarContext, let tab, let space, pagePresentation != .nativeContent {
+                BrowserPageToolbar(context: toolbarContext, tab: tab, space: space, page: page)
+            }
+            pageContent
+        }
+    }
+
+    @ViewBuilder
+    private var pageContent: some View {
         if let tab, let space, !spaceAccess.isLocked(space), pages.isMirroringPage(for: tab.id) {
             BrowserMirroredPageContent(tabID: tab.id, pages: pages)
         } else {
