@@ -44,6 +44,9 @@ public enum CredentialSaveValidity { Accepted, InsecureOrigin, Stale }
 /// The record a credential rule chose, or null when none qualifies.
 public sealed record CredentialChoice(Guid? CredentialId);
 
+/// Whether each saved origin a fill question named fills its page, in order.
+public sealed record CredentialFills(IReadOnlyList<bool> Fills);
+
 #endregion
 
 #region Rejections
