@@ -4862,6 +4862,10 @@
       "category": "fixed",
       "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out."
     },
+    "sidebar-scroll-freeze": {
+      "category": "fixed",
+      "message": "Scrolling the sidebar no longer makes Crest stop responding, with or without folders open."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
