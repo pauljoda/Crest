@@ -222,7 +222,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         compactTransitionEnded: finishCompactTransition,
                         transientBrowsing: transientBrowsing,
                         didPromoteTransientPage: model.activateSelectedTab,
-                        showHistory: presentHistoryFromCommand
+                        showHistory: presentHistoryFromCommand,
+                        paletteMode: $commandPaletteMode,
+                        openLocation: openLocation
                     )
                 )
                 // The page covers the window while it shows, so Settings,

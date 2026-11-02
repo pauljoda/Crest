@@ -25,6 +25,17 @@ public sealed class LinkNavigationDecisionTests {
             Decide(peek: peek, newTab: newTab, shift: true));
     }
 
+    [Theory]
+    [InlineData(false, true, "peekModifier")]
+    [InlineData(true, true, "foregroundTab")]
+    [InlineData(true, false, "backgroundTab")]
+    [InlineData(false, false, "navigate")]
+    public void ShiftOpensPeekButYieldsToCommandForNewTabs(bool command, bool shift, string expectedName) {
+        var held = Held(command, option: false) | (shift ? ShortcutModifiers.Shift : ShortcutModifiers.None);
+        var (peek, newTab) = LinkPeekModifier.Shift.Intent(held, isMiddleClick: false);
+        Assert.Equal(LinkNavigationDecision.Named(expectedName), Decide(peek: peek, newTab: newTab, shift: shift, automatic: false));
+    }
+
     [Fact]
     public void EngineNavigationsAndMissingSavedContextNeverBecomeAutomaticPeek() {
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(userLink: false));

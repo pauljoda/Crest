@@ -17,19 +17,20 @@ internal sealed partial class Device {
 
     #region Actions - Queries
 
-    /// The palette of a window at `now`: over the Space it shows, unless that
-    /// Space is locked or being deleted, leaving out the tab it shows there,
-    /// under the device's app-wide preferences and with what the palette of
-    /// the Space's group remembers, offering the workspace's other Spaces to
+    /// The palette of a window at `now`: over the Space it shows, leaving out
+    /// the tab it shows there, or over `asked` for a page outside its tabs,
+    /// leaving out none, unless that Space is locked or being deleted; under
+    /// the device's app-wide preferences and with what the palette of the
+    /// Space's group remembers, offering the workspace's other Spaces to
     /// switch to. It searches the whole group's history.
-    public Palette Palette(Guid windowId, bool allowsInternalPages, DateTimeOffset now) {
+    public Palette Palette(Guid windowId, Guid? asked, bool allowsInternalPages, DateTimeOffset now) {
         var window = Opened(windowId);
         var authority = Workspace(window.WorkspaceId);
         Guid spaceId;
         Guid? shown;
         lock (gate) {
-            spaceId = window.ShownSpaceId;
-            shown = window.Tab(spaceId);
+            spaceId = asked ?? window.ShownSpaceId;
+            shown = asked is null ? window.Tab(spaceId) : null;
         }
         var session = authority.Current;
         var space = Available(session, spaceId);

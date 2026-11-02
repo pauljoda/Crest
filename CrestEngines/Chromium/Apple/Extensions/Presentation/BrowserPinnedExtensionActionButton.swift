@@ -12,12 +12,19 @@ struct BrowserPinnedExtensionActionButton: View {
     let perform: (BrowserExtensionPopupAnchor?) -> Void
     var prepare: () -> Void = {}
     var presentMenu: (BrowserExtensionPopupAnchor?) -> Void = { _ in }
+    /// Runs the action as soon as the button is on screen to open its popup
+    /// from, as when a Quick Window moves it out of its overflow to run it.
+    var performsOnceAnchored = false
 
     @State private var isHovering = false
     @State private var popupAnchor: BrowserExtensionPopupAnchor?
 
     var body: some View {
         anchoredButton
+            .onChange(of: [performsOnceAnchored, popupAnchor != nil], initial: true) { _, state in
+                guard state.allSatisfy({ $0 }) else { return }
+                performAction()
+            }
             .background(
                 .quaternary.opacity(isHovering ? 1 : 0),
                 in: .rect(cornerRadius: 7)

@@ -23,7 +23,10 @@ struct BrowserQuickWindowPageSurface: View {
 
     private var frameInsets: EdgeInsets {
         var insets = appearance.pageInsets(docked: false, direction: layoutDirection)
-        insets.top = max(insets.top, BrowserQuickWindowLayout.toolbarTopPadding)
+        // The page shows as far below the toolbar as the toolbar sits below
+        // the window's top, its seam included, so the controls sit centred
+        // between the two.
+        insets.top = BrowserQuickWindowLayout.toolbarTopPadding - appearance.seamWidth
         return insets
     }
 }

@@ -24,6 +24,12 @@ struct MobileBrowserDetailSurface: View {
     var transientBrowsing: BrowserTransientBrowsingCoordinator?
     var didPromoteTransientPage: () -> Void = {}
     var showHistory: () -> Void = {}
+    /// The command palette that rises from the compact address bar, which a
+    /// compact window shows there instead of over its page; nil where the bar
+    /// edits in place.
+    var paletteMode: Binding<BrowserCommandPaletteMode?>?
+    /// Opens the palette, as Open Location does.
+    var openLocation: (() -> Void)?
 
     var body: some View {
         MobileBrowserDetailView(
@@ -49,7 +55,9 @@ struct MobileBrowserDetailSurface: View {
             compactTransitionEnded: compactTransitionEnded,
             transientBrowsing: transientBrowsing,
             didPromoteTransientPage: didPromoteTransientPage,
-            showHistory: showHistory
+            showHistory: showHistory,
+            paletteMode: paletteMode,
+            openLocation: openLocation
         )
     }
 }

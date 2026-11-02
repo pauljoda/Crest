@@ -29,7 +29,7 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         let field = NSTextField(string: model.query)
         field.isBordered = false
         field.drawsBackground = false
-        field.font = .preferredFont(forTextStyle: .title2)
+        field.font = .preferredFont(forTextStyle: presentation.input.platformTextStyle)
         field.placeholderString = String(localized: "Search or Enter URL…")
         field.lineBreakMode = .byClipping
         field.maximumNumberOfLines = 1
@@ -78,11 +78,12 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         coordinator.dismantle(field)
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(model: model) }
+    func makeCoordinator() -> Coordinator { Coordinator(model: model, presentation: presentation) }
 
     @MainActor
     final class Coordinator: NSObject, NSTextFieldDelegate {
         let model: BrowserCommandPaletteModel
+        let presentation: BrowserCommandPalettePresentation
         weak var field: NSTextField?
         let suffixLabel = CompletionLabel(
             rootView: BrowserURLCompletionSuffix(text: "", font: .title2, isVisible: false))
@@ -90,8 +91,9 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         /// Watches the modifier keys and modified Returns while the field edits.
         private var keyMonitor: Any?
 
-        init(model: BrowserCommandPaletteModel) {
+        init(model: BrowserCommandPaletteModel, presentation: BrowserCommandPalettePresentation = .overlay) {
             self.model = model
+            self.presentation = presentation
             super.init()
             suffixLabel.sizingOptions = []
             suffixLabel.setAccessibilityElement(false)
@@ -266,11 +268,11 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
                 model.pressReturn()
                 return true
             case #selector(NSResponder.moveDown(_:)):
-                model.pressDown()
+                if presentation.listsUpward { model.moveSelection(by: -1) } else { model.pressDown() }
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveUp(_:)):
-                model.moveSelection(by: -1)
+                if presentation.listsUpward { model.pressDown() } else { model.moveSelection(by: -1) }
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveToEndOfParagraph(_:)):

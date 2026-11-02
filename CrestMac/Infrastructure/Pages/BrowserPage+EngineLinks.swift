@@ -35,6 +35,19 @@ extension BrowserPage {
         return true
     }
 
+    /// Opens `url` in a Quick Window of its own over this page's window, in
+    /// this page's Space, as a person asks from a page without a tab.
+    @discardableResult
+    func openInQuickWindow(_ url: URL) -> Bool {
+        guard ExternalWebLink.accepts(url), let pool = windowRouting?.pool, let present = pool.popupWindowPresenter
+        else { return false }
+        present(
+            BrowserQuickWindowRequest(
+                url: url, spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID),
+                targetWindowID: pool.windowID))
+        return true
+    }
+
     /// Opens the Peek the core chose for a link the engine kept in the page.
     /// A page that has no tab to open it from, or is out of its window, drops
     /// the link its engine staged for the Peek's first load.

@@ -4766,6 +4766,66 @@
       "category": "improved",
       "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
     },
+    "quick-window-browser-controls": {
+      "category": "new",
+      "message": "Quick Windows on Mac now have Back and Forward, Site Controls and the Space's pinned extensions, with the extensions that don't fit behind one button."
+    },
+    "quick-window-open-location-shortcut": {
+      "category": "fixed",
+      "message": "Command-L now selects a Quick Window's address field on Mac."
+    },
+    "quick-window-opens-another": {
+      "category": "new",
+      "message": "On Mac, New Quick Window works while a Quick Window is in front, and a link's menu in a Quick Window or Peek offers Open Link in New Quick Window."
+    },
+    "permission-request-follows-its-page": {
+      "category": "fixed",
+      "message": "A site's permission request on Mac stays open when its page moves from a Quick Window into a browser window, and when the site asks before a Quick Window has finished opening."
+    },
+    "readable-site-controls-and-permission-prompts": {
+      "category": "fixed",
+      "message": "Site Controls and permission requests now stay readable over any page, Space color or surface material."
+    },
+    "peek-dims-page-behind": {
+      "category": "improved",
+      "message": "On Mac, the page behind Peek fades darker as Peek opens while the sidebar keeps its brightness. Settings > Links > Dim the page behind Peek turns it off."
+    },
+    "quick-window-minimum-opening-size": {
+      "category": "fixed",
+      "message": "A Quick Window opened beside Split View on Mac no longer opens narrower than its smallest size."
+    },
+    "quick-window-address-palette": {
+      "category": "new",
+      "message": "On Mac, clicking a Quick Window's address or pressing Command-L opens the command palette right there, starting at the address, with results from the Quick Window's Space. A blank Quick Window opens with it."
+    },
+    "iphone-address-bar-palette": {
+      "category": "new",
+      "message": "On iPhone, tapping the address bar opens the command palette from the bar, with its results rising above it and the best match nearest the bar."
+    },
+    "quick-window-keeps-smallest-size": {
+      "category": "fixed",
+      "message": "A Quick Window on Mac no longer resizes narrower than its toolbar fits, which cut off Open In and slid Back and Forward under the window's buttons."
+    },
+    "palette-results-fit-their-rows": {
+      "category": "fixed",
+      "message": "The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar."
+    },
+    "peek-roomier-floating-card": {
+      "category": "improved",
+      "message": "On Mac, Peek uses more of the page while still floating above it, with a round Close button and pill-shaped Open In, and its controls move with the card as it opens."
+    },
+    "peek-shift-click": {
+      "category": "new",
+      "message": "Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with."
+    },
+    "quick-window-overflow-extension-menus": {
+      "category": "fixed",
+      "message": "Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
+    },
+    "iphone-palette-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."

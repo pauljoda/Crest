@@ -3,11 +3,15 @@ import Foundation
 /// Actions from a window's New Tab surface, before it has a source tab.
 /// Each action revalidates the captured Space and the empty selection.
 @MainActor
-struct BrowserEmptySelectionPaletteActions {
+struct BrowserEmptySelectionPaletteActions: BrowserPaletteDestination {
     let source: BrowserSpaceRuntimeAssignment
     let browser: BrowserStore
     let accessController: BrowserSpaceAccessController
     let didSelectTab: () -> Void
+
+    /// The New Tab surface is the window's own: its palette speaks for the
+    /// Space the window shows.
+    var paletteSpaceID: UUID? { nil }
 
     var isAvailable: Bool {
         guard
