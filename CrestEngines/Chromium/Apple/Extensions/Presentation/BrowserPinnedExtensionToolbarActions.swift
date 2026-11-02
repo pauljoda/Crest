@@ -62,7 +62,8 @@ struct BrowserPinnedExtensionToolbarActions: View {
                         pendingRunID = action.id
                         return true
                     },
-                    perform: perform
+                    perform: perform,
+                    presentMenu: presentMenu
                 )
             }
         }

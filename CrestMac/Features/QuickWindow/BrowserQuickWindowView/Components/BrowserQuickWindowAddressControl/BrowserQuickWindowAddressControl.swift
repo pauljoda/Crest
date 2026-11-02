@@ -89,7 +89,9 @@ struct BrowserQuickWindowAddressControl: View {
             presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
     }
 
-    private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil }
+    /// Whether the palette shows over the field, which needs the Quick
+    /// Window's Space, as the palette's layer does.
+    private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
 
     /// The field's frame, carrying the palette's identity while the field
     /// holds it, so the palette's glass grows out of the field's, as the

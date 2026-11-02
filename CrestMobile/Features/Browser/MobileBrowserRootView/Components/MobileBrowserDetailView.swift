@@ -136,7 +136,7 @@ struct MobileBrowserDetailView: View {
                         showSwipedTab: showSwipedTab,
                         compactTransitionEnded: compactTransitionEnded,
                         openPalette: paletteMode == nil ? nil : openLocation,
-                        isPaletteShown: paletteMode?.wrappedValue != nil,
+                        isPaletteShown: isCompactPaletteShown,
                         commandSurfaceNamespace: compactPaletteNamespace,
                         commandPaletteHandoff: compactPaletteHandoff
                     )
@@ -542,9 +542,16 @@ struct MobileBrowserDetailView: View {
     /// Which of the compact address bar and the palette holds their shared
     /// identity: the palette's glass grows out of the bar's and shrinks back
     /// into it.
+    /// Whether the palette rising from the compact bar shows: one was asked
+    /// for, over a tab it can act on, as its layer requires.
+    private var isCompactPaletteShown: Bool {
+        guard paletteMode?.wrappedValue != nil, let source = browser.shownTabAssignment else { return false }
+        return isPaletteSourceAvailable(source)
+    }
+
     private var compactPaletteHandoff: BrowserCommandPaletteHandoff {
         .resolve(
-            isPaletteShown: paletteMode?.wrappedValue != nil,
+            isPaletteShown: isCompactPaletteShown,
             isFieldOnScreen: isCompact && showsCompactToolbar && !compactToolbarIsHidden,
             animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
         )

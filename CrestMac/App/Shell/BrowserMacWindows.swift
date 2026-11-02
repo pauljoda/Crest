@@ -387,6 +387,15 @@ final class BrowserMacWindows {
         openQuickWindow(.empty(spaceAssignment: request.assignment, targetWindowID: request.targetWindowID))
     }
 
+    /// Opens the key Quick Window's palette from its address field, which a
+    /// Quick Window without a page has no page commands to ask for.
+    func openLocationInKeyQuickWindow() {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID]
+        else { return }
+        quickWindow.chrome.openLocation(quickWindow.model.address)
+    }
+
     /// The Quick Window named `id`, while it is open.
     func quickWindow(_ id: UUID) -> NSWindow? {
         controller(.quick, id: id)?.window

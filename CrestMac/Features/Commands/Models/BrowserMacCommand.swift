@@ -16,7 +16,8 @@ struct BrowserMacCommand {
         run: { $0.openNewWindow() })
     static let newBlankWindow = BrowserMacCommand(.newBlankWindow) { $0.openBlankWindow() }
     static let newTab = BrowserMacCommand(.newTab) { $0.openNewTab() }
-    static let openLocation = BrowserMacCommand(.openLocation, actsOnPage: true) { $0.openLocation() }
+    static let openLocation = BrowserMacCommand(
+        .openLocation, actsOnPage: true, withoutWindow: .opensLocationInKeyQuickWindow, run: { $0.openLocation() })
     static let openFile = BrowserMacCommand(
         .openFile, isAvailable: { $0.supportsEngineCapability(.localFiles) },
         run: { $0.openFile() })
@@ -268,6 +269,10 @@ struct BrowserMacWindowlessCommand {
     /// Opens an empty Quick Window beside the key one, in its Space.
     static let opensQuickWindowBesideKeyQuickWindow = BrowserMacWindowlessCommand(
         isAvailable: { $0.isQuickWindowKey }, run: { $0.openQuickWindowBesideKeyQuickWindow() })
+    /// Opens the key Quick Window's palette from its address field, as Open
+    /// Location does over a page, when the Quick Window has none yet.
+    static let opensLocationInKeyQuickWindow = BrowserMacWindowlessCommand(
+        isAvailable: { $0.isQuickWindowKey }, run: { $0.openLocationInKeyQuickWindow() })
 
     // MARK: - Variables
 

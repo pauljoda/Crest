@@ -15,6 +15,8 @@ struct BrowserPinnedExtensionOverflowButton: View {
     /// whether it could.
     let choose: (BrowserExtensionActionPresentation) -> Bool
     let perform: (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) -> Void
+    /// Shows an action's menu, as its button in the toolbar does.
+    var presentMenu: (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) -> Void = { _, _ in }
 
     @State private var isPresented = false
     @State private var popupAnchor: BrowserExtensionPopupAnchor?
@@ -36,7 +38,8 @@ struct BrowserPinnedExtensionOverflowButton: View {
                     BrowserPinnedExtensionActionButton(
                         action: action,
                         perform: { _ in run(action) },
-                        prepare: { prepare(action) }
+                        prepare: { prepare(action) },
+                        presentMenu: { _ in showMenu(of: action) }
                     )
                 }
             }
@@ -55,5 +58,13 @@ struct BrowserPinnedExtensionOverflowButton: View {
         guard !choose(action) else { return }
         let anchor = popupAnchor
         DispatchQueue.main.async { perform(action, anchor) }
+    }
+
+    /// Closes the overflow and shows `action`'s menu from this button, which
+    /// stays on screen, as a popup run from here does.
+    private func showMenu(of action: BrowserExtensionActionPresentation) {
+        isPresented = false
+        let anchor = popupAnchor
+        DispatchQueue.main.async { presentMenu(action, anchor) }
     }
 }

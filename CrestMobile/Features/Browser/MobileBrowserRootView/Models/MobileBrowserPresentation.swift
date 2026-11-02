@@ -35,8 +35,9 @@ struct MobileBrowserPresentation: Equatable, Sendable {
                 content.model.activateSelectedTab()
             }
             // A page's palette rises from the address bar; the Start Page
-            // searches in its own field.
-            guard content.showsStartPage else {
+            // searches in its own field, and a page shown without the bar
+            // edits its address in place.
+            guard content.showsStartPage || !content.showsCompactPageToolbar else {
                 content.navigation.showCompactToolbar()
                 content.commandPaletteMode = .editLocation(content.address)
                 return

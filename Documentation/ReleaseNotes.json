@@ -4813,6 +4813,10 @@
     "peek-shift-click": {
       "category": "new",
       "message": "Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with."
+    },
+    "quick-window-overflow-extension-menus": {
+      "category": "fixed",
+      "message": "Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
     }
   }
 }
