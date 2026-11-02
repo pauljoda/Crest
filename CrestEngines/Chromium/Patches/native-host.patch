@@ -3228,3 +3228,49 @@
      web_contents()->Close();
    }
  
+--- a/chrome/browser/ui/webui/new_tab_page/new_tab_page_handler.cc
++++ b/chrome/browser/ui/webui/new_tab_page/new_tab_page_handler.cc
+@@ -882,7 +882,11 @@
+ 
+   auto* footer_controller =
+       new_tab_footer::NewTabFooterController::From(browser);
+-  CHECK(footer_controller);
++  // Crest: a Browser hosted by Crest has no BrowserView, which is what creates
++  // the footer controller, so its new tab page has no footer.
++  if (!footer_controller) {
++    return;
++  }
+   OnFooterVisibilityUpdated(footer_controller->GetFooterVisible(web_contents_));
+ #endif  // !BUILDFLAG(IS_ANDROID)
+ }
+@@ -1212,7 +1216,11 @@
+ 
+   auto* footer_controller =
+       new_tab_footer::NewTabFooterController::From(browser);
+-  CHECK(footer_controller);
++  // Crest: a Browser hosted by Crest has no BrowserView, which is what creates
++  // the footer controller, so its new tab page has no footer.
++  if (!footer_controller) {
++    return;
++  }
+   footer_controller_observation_.Observe(footer_controller);
+ #endif  // !BUILDFLAG(IS_ANDROID)
+ }
+--- a/chrome/browser/new_tab_page/feature_promo_helper/new_tab_page_feature_promo_helper.cc
++++ b/chrome/browser/new_tab_page/feature_promo_helper/new_tab_page_feature_promo_helper.cc
+@@ -205,9 +205,12 @@
+     content::WebContents* web_contents) {
+ #if !BUILDFLAG(IS_ANDROID)
+   auto* browser_interface = webui::GetBrowserWindowInterface(web_contents);
+-  if (!browser_interface || SidePanelUI::From(browser_interface)
+-                                ->IsSidePanelEntryShowing(SidePanelEntryKey(
+-                                    SidePanelEntryId::kCustomizeChrome))) {
++  // Crest: a Browser hosted by Crest has no BrowserView, which is what creates
++  // the side panel UI, so its new tab page never offers the promo.
++  SidePanelUI* side_panel =
++      browser_interface ? SidePanelUI::From(browser_interface) : nullptr;
++  if (!side_panel || side_panel->IsSidePanelEntryShowing(SidePanelEntryKey(
++                         SidePanelEntryId::kCustomizeChrome))) {
+     return;
+   }
+ 
