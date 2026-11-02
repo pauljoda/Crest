@@ -4762,6 +4762,10 @@
       "category": "fixed",
       "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
     },
+    "paste-without-formatting-shortcut": {
+      "category": "improved",
+      "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
