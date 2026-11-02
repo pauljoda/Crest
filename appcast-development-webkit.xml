@@ -6,30 +6,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.135</title>
-            <pubDate>Mon, 02 Nov 2026 17:31:32 +0000</pubDate>
+            <title>0.8.137</title>
+            <pubDate>Mon, 02 Nov 2026 18:04:24 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1470</sparkle:version>
-            <sparkle:shortVersionString>0.8.135</sparkle:shortVersionString>
+            <sparkle:version>1472</sparkle:version>
+            <sparkle:shortVersionString>0.8.137</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### Improved
+
+- On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest.
+
 ### Fixed
 
-- Passwords imported earlier for a site at an IP address written in a long or unusual form, such as 127.1, now fill on that site too.
-- On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes.
+- On Mac, a Quick Window goes on remembering the size you give it after its contents change.
+- When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f4694e4e31f751512dcf71ebc0f4bb0de48c2619...8eee50f7364333a3e8ce4302525491e3342c87ae) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.135-2026-11-02-1470-r470.1/Installer-Crest-0.8.135-development-2026-11-02-8eee50f-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/8eee50f7364333a3e8ce4302525491e3342c87ae...40b1e97f98f170c729bdf10d3656c8e35ddd1558) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.137-2026-11-02-1472-r472.1/Installer-Crest-0.8.137-development-2026-11-02-40b1e97-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.135-2026-11-02-1470-r470.1/Installer-Crest-0.8.135-development-2026-11-02-8eee50f-arm64.dmg" length="216749210" type="application/octet-stream" sparkle:edSignature="UG8aBj380SRMQRxyNjgNFwQrsdJdDQPgCego+eV9rOBo/nyGi8GwYOJSDkyPG/EyFJOVIE4xI0uVsJkEZCNACQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.137-2026-11-02-1472-r472.1/Installer-Crest-0.8.137-development-2026-11-02-40b1e97-arm64.dmg" length="216832154" type="application/octet-stream" sparkle:edSignature="VfTaEjAhpdRRIwHtbQiZ8GyWOnpRQAg1A1jt9WyEeH0DxnzQ9mB01uIV4ipePlU/F/i11oqRi1rZKlS3eq8mCA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -61,6 +65,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: nfSyuJ1JHSNvbLu2e0Ge3iw0k3RIHBAensPho1W77lUjMF0W7u/KQN+v3vH5163MEh+EvqDlhkntWPLbUNotDQ==
-length: 4140
+edSignature: be1P3E0Y8lD4g9FNbuNaQpQ7sHlkndgZeuxUSynFjxNJyUt9Fx5+tg6oXHWEgiNXLjlBnHazD+fIMrUqZsVGBg==
+length: 4373
 -->

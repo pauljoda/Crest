@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "palette-provider-chips-larger-text",
+    "development": "password-import-errors-say-what-happened",
     "nightly": "selection-split-other-space"
   }
 }
