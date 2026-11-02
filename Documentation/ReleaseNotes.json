@@ -4865,6 +4865,10 @@
     "sidebar-scroll-freeze": {
       "category": "fixed",
       "message": "Scrolling the sidebar no longer makes Crest stop responding, with or without folders open."
+    },
+    "search-provider-fragment-address": {
+      "category": "fixed",
+      "message": "You can now add a search provider whose address puts the search after a #, such as PubChem’s."
     }
   }
 }
