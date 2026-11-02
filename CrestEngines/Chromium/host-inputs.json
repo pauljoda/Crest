@@ -482,5 +482,9 @@
   "chrome/browser/extensions/extension_tab_util.cc": {
     "before": "33fd97e60845e9fbbef192e04e874fe115a7f07d7fcfba0e29e7fd53c8907815",
     "after": "e999f9149b4cd90dc9943afb6656d82a6844bd4e06adb15028724af25108f0f4"
+  },
+  "chrome/browser/extensions/api/identity/web_auth_flow.cc": {
+    "before": "5f5d505fc60f579f180fcb8a874102b379dffe56eda81a55d67d096ad0ea13a3",
+    "after": "7082aeb60500c678c5875d9dbd4ea2f9723869315200a3cbafed44f7c9de0c34"
   }
 }
