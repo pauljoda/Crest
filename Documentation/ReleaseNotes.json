@@ -4757,6 +4757,10 @@
     "chromium-extensions-act-on-page-in-use": {
       "category": "fixed",
       "message": "Extensions on Mac now act on the page you're using in a Quick Window, a Peek or the focused side of a split, including from their keyboard shortcuts, instead of on another tab."
+    },
+    "chromium-extension-sign-in-tab": {
+      "category": "fixed",
+      "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
     }
   }
 }

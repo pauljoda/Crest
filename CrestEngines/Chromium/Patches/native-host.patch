@@ -3189,3 +3189,42 @@
              content::WebContents* tab_contents =
                  tab_list->GetActiveTab()->GetContents();
              CHECK(tab_contents);
+--- a/chrome/browser/extensions/api/identity/web_auth_flow.cc
++++ b/chrome/browser/extensions/api/identity/web_auth_flow.cc
+@@ -105,15 +105,11 @@
+ 
+ WebAuthFlow::~WebAuthFlow() {
+   DCHECK(!delegate_);
+-  BrowserWindowInterface* popup_browser =
+-      web_contents()
+-          ? browser_window_util::GetBrowserForTabContents(*web_contents())
+-          : nullptr;
+-  if (popup_browser) {
+-    popup_browser->GetWindow()->Close();
+-  } else if (web_contents()) {
+-    // Explicitly close `web_contents()` if it's not displayed in any browser
+-    // window.
++  // Crest: closes only the page, never the window that shows it. Crest shows
++  // the page as a tab beside the person's own, in the same Browser, which
++  // closing the window would close with it. Chrome's popup holds nothing
++  // else, so closing its only tab closes it too.
++  if (web_contents()) {
+     web_contents()->Close();
+   }
+ 
+@@ -497,13 +493,8 @@
+   // already observe Profile destruction, so we can just be silent here.
+   delegate_ = nullptr;
+ 
+-  BrowserWindowInterface* popup_browser =
+-      web_contents()
+-          ? browser_window_util::GetBrowserForTabContents(*web_contents())
+-          : nullptr;
+-  if (popup_browser) {
+-    popup_browser->GetWindow()->Close();
+-  } else if (web_contents()) {
++  // Crest: closes only the page, as the destructor does.
++  if (web_contents()) {
+     web_contents()->Close();
+   }
+ 

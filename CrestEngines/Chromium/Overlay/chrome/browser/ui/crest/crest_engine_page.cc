@@ -564,6 +564,29 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   StateChanged();
 }
 
+// An extension's sign-in page loads before the engine shows it in a tab, so
+// it commits before the core adopts it. The core hears that document now, as
+// it would have heard it commit. The platform, which reveals a page only once
+// it has committed and follows an adopted page only after the core adopts
+// it, hears it when it first shows the page.
+void EnginePage::AdoptCommittedDocument() {
+  content::NavigationEntry* entry =
+      web_contents() ? web_contents()->GetController().GetLastCommittedEntry() : nullptr;
+  if (!entry || entry->IsInitialEntry()) {
+    return;
+  }
+  UpdateTheme();
+  awaits_finish_ = true;
+  Committed(PresentedURL(web_contents()->GetLastCommittedURL()));
+  NoteTitle();
+  FinishIfLoaded();
+  if (!icon_) {
+    PublishIcon(entry->GetFavicon().image, entry->GetFavicon().url);
+  }
+  presents_adopted_commit_ = true;
+  StateChanged();
+}
+
 void EnginePage::DidStartLoading() {
   StateChanged();
 }
@@ -1361,6 +1384,11 @@ bool EnginePage::Answer(const engine::ShowPage&) {
   web_contents()->WasShown();
   web_contents()->Focus();
   binding_->Browsers().Activate(web_contents());
+  if (std::exchange(presents_adopted_commit_, false)) {
+    Present(engine::PageNavigationCommitted{.page_id = id_,
+                                            .url = PresentedURL(web_contents()->GetLastCommittedURL()),
+                                            .is_loading = web_contents()->IsLoading()});
+  }
   if (media_) {
     media_->VisibilityChanged(true);
   }
