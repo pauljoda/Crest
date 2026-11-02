@@ -4858,6 +4858,10 @@
       "category": "fixed",
       "message": "When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed."
     },
+    "reopen-pages-after-quit-choice": {
+      "category": "fixed",
+      "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
