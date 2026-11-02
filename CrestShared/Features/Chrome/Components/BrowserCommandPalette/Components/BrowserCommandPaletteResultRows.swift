@@ -3,9 +3,11 @@ import SwiftUI
 struct BrowserCommandPaletteResultRows: View {
     let model: BrowserCommandPaletteModel
     let group: BrowserCommandPaletteGroup
+    /// The rows run from the bottom, the first nearest the field below.
+    var listsUpward = false
 
     var body: some View {
-        ForEach(group.items) { item in
+        ForEach(listsUpward ? group.items.reversed() : group.items) { item in
             if item.row.kind.isPrimary || group.section == .topHit {
                 BrowserCommandPaletteIntentRow(model: model, item: item)
                     .id(item.id)

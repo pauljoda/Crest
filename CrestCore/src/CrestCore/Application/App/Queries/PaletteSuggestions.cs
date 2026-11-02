@@ -17,11 +17,12 @@ namespace CrestCore.Contracts;
 /// `Pasteboard` is the text the platform's pasteboard held when the palette
 /// opened, while the person has not yet changed the text it opened with and
 /// it may offer it, or null. The palette speaks for the Space
-/// the window shows and leaves out the tab it shows; a locked Space offers
-/// none of its tabs or history.
+/// the window shows and leaves out the tab it shows, or for `SpaceId` when a
+/// page outside the window's tabs asks, such as a Quick Window's, leaving out
+/// no tab; a locked Space offers none of its tabs or history.
 public sealed record PaletteSuggestions(Guid WindowId, string Text, IReadOnlyList<PaletteCommand> Commands,
     IReadOnlyList<PaletteSettingsPage> SettingsPages, IReadOnlyList<string> Remote, SearchProvider? Provider, PaletteScope? Scope,
-    bool AllowsCompletion, string? Pasteboard) : Query<PaletteAnswer> {
+    bool AllowsCompletion, string? Pasteboard, Guid? SpaceId = null) : Query<PaletteAnswer> {
     #region Variables
 
     /// Only reading what the window shows holds the lock; ranking reads immutable records outside it.
@@ -36,7 +37,7 @@ public sealed record PaletteSuggestions(Guid WindowId, string Text, IReadOnlyLis
     /// palette answering on another thread never holds up the window.
     internal override PaletteAnswer Answer(CrestApp app) {
         Palette palette;
-        lock (app.Gate) palette = app.Device.Palette(WindowId, app.Pages.OpensInternalPages, app.Clock.Now);
+        lock (app.Gate) palette = app.Device.Palette(WindowId, SpaceId, app.Pages.OpensInternalPages, app.Clock.Now);
         return palette.Answer(this);
     }
 
