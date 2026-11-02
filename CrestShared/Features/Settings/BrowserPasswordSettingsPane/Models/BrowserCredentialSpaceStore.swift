@@ -324,8 +324,10 @@ final class BrowserCredentialSpaceStore {
             return
         }
         guard plan.matchesExistingInventory(currentInventory) else {
-            errorMessage =
-                "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts."
+            errorMessage = String(
+                localized:
+                    "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts."
+            )
             importReview = nil
             return
         }

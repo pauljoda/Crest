@@ -4,9 +4,9 @@ import Foundation
 /// The core says which Spaces each password goes to, leaving out Spaces that
 /// are gone or locked, and what each account means against the passwords a
 /// Space already keeps; a Space keeps its saved password for an account it
-/// already has. This writes each Space's Keychain inventory. A Space whose
-/// passwords could not be read or written counts them as unsaved, apart from
-/// the ones the review left out.
+/// already has. This writes each Space's Keychain inventory. When a Space's
+/// passwords can't be read or written, the ones it would have taken count as
+/// unsaved: all of them, when its review can't be made.
 @MainActor
 enum BrowserPasswordImportCommitter {
     // MARK: - Actions - Importing
@@ -49,6 +49,7 @@ enum BrowserPasswordImportCommitter {
                 skippedCount += credentials.count
                 continue
             }
+            var taking = credentials.count
             do {
                 let existing = try await browser.credentialInventory(in: spaceID)
                 let plan = try browser.core.query(
@@ -60,13 +61,14 @@ enum BrowserPasswordImportCommitter {
                     synchronizesWithICloud: space.settings.credentialPreferences.syncsCrestPasswordsWithICloud
                 )
                 let resolution = try review.resolvedInventory()
-                if resolution.summary.acceptedCount > 0 {
+                skippedCount += resolution.summary.skippedCount + resolution.summary.rejectedCount
+                taking = resolution.summary.acceptedCount
+                if taking > 0 {
                     try await browser.replaceCredentialInventory(resolution.credentials, in: spaceID)
                 }
-                importedCount += resolution.summary.acceptedCount
-                skippedCount += resolution.summary.skippedCount + resolution.summary.rejectedCount
+                importedCount += taking
             } catch {
-                unsavedCount += credentials.count
+                unsavedCount += taking
             }
         }
         return BrowserPasswordImportResult(

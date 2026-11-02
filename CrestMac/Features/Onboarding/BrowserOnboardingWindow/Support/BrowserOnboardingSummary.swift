@@ -52,13 +52,22 @@ enum BrowserOnboardingSummary {
         )
     }
 
-    /// What setup did, as the core summed it up.
-    static func completed(_ summary: SetupSummary) -> LocalizedStringResource {
-        summary.isImport
+    /// What setup did, as the core summed it up, sentence by sentence: what
+    /// it brought or made, then how many passwords its imports couldn't save.
+    static func completed(_ summary: SetupSummary) -> [LocalizedStringResource] {
+        let did =
+            summary.isImport
             ? completedImport(
-                tabCount: summary.tabCount, passwordCount: summary.passwordCount, spaceCount: summary.spaceCount,
-                unsavedPasswordCount: summary.unsavedPasswordCount)
+                tabCount: summary.tabCount, passwordCount: summary.passwordCount, spaceCount: summary.spaceCount)
             : completedManualSetup(newSpaceCount: summary.spaceCount, addedTabCount: summary.tabCount)
+        let unsaved = max(summary.unsavedPasswordCount, 0)
+        guard unsaved > 0 else { return [did] }
+        return [
+            did,
+            LocalizedStringResource(
+                "\(unsaved) passwords couldn’t be saved.",
+                comment: "Follows the setup completion summary when an import couldn’t save some passwords."),
+        ]
     }
 
     private static func completedManualSetup(
@@ -83,27 +92,11 @@ enum BrowserOnboardingSummary {
     private static func completedImport(
         tabCount: Int,
         passwordCount: Int,
-        spaceCount: Int,
-        unsavedPasswordCount: Int
+        spaceCount: Int
     ) -> LocalizedStringResource {
         let tabs = max(tabCount, 0)
         let passwords = max(passwordCount, 0)
         let spaces = max(spaceCount, 0)
-        let unsaved = max(unsavedPasswordCount, 0)
-        if unsaved > 0, passwords == 0 {
-            return LocalizedStringResource(
-                "Imported \(tabs) reviewed tabs across \(spaces) Spaces. \(unsaved) passwords couldn’t be saved.",
-                comment:
-                    "Browser-import completion summary. Counts are imported tabs, destination Spaces, then passwords that could not be saved."
-            )
-        }
-        if unsaved > 0 {
-            return LocalizedStringResource(
-                "Imported \(tabs) reviewed tabs and \(passwords) passwords across \(spaces) Spaces. \(unsaved) passwords couldn’t be saved.",
-                comment:
-                    "Browser-import completion summary. Counts are imported tabs, imported passwords, destination Spaces, then passwords that could not be saved."
-            )
-        }
         if passwords == 0 {
             return LocalizedStringResource(
                 "Imported \(tabs) reviewed tabs across \(spaces) Spaces.",

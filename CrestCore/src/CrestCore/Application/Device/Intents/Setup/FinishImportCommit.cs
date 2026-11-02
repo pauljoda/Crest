@@ -3,9 +3,10 @@ using CrestCore.Application;
 namespace CrestCore.Contracts;
 
 /// The review is imported, with `PasswordCount` of its passwords, and
-/// `UnsavedPasswordCount` more that could not be saved. Setup goes on to the
-/// next chosen browser; after the last, to setting up Spaces by hand when it
-/// walks the person through Crest, or else to what it did.
+/// `UnsavedPasswordCount` more that could not be saved, which the summary
+/// adds to those the setup's earlier imports could not save. Setup goes on to
+/// the next chosen browser; after the last, to setting up Spaces by hand when
+/// it walks the person through Crest, or else to what it did.
 public sealed record FinishImportCommit(int PasswordCount, int UnsavedPasswordCount) : SetupFlowIntent {
     #region Actions - Device
 
@@ -15,7 +16,8 @@ public sealed record FinishImportCommit(int PasswordCount, int UnsavedPasswordCo
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) => {
         if (flow.Phase != SetupPhase.Committing || flow.Review is not { } review) return flow;
         var summary = new SetupSummary(IsImport: true, review.IncludedTabCount, Math.Max(PasswordCount, 0),
-            review.Spaces.Count(space => space.Included), Math.Max(UnsavedPasswordCount, 0));
+            review.Spaces.Count(space => space.Included),
+            Math.Max(UnsavedPasswordCount, 0) + (flow.Summary?.UnsavedPasswordCount ?? 0));
         var queue = flow.Queue is { } current ? current with { Index = current.Index + 1 } : null;
         var done = flow with {
             Phase = SetupPhase.Idle,

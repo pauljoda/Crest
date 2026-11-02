@@ -89,8 +89,8 @@ final class BrowserOnboardingFlow {
         }
     }
 
-    var completionSummary: LocalizedStringResource? {
-        state?.summary.map(BrowserOnboardingSummary.completed)
+    var completionSummary: [LocalizedStringResource] {
+        state?.summary.map(BrowserOnboardingSummary.completed) ?? []
     }
 
     /// What the review's last Space offers: importing and going on to the

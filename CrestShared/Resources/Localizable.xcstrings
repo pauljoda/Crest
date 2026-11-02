@@ -834,6 +834,29 @@
         }
       }
     },
+    "%lld passwords couldn’t be saved." : {
+      "comment" : "Follows the setup completion summary when an import couldn’t save some passwords.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 password couldn’t be saved."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld passwords couldn’t be saved."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld points" : {
       "localizations" : {
         "ar" : {
@@ -7280,9 +7303,6 @@
         }
       }
     },
-    "Imported %lld reviewed tabs across %lld Spaces. %lld passwords couldn’t be saved." : {
-      "comment" : "Browser-import completion summary. Counts are imported tabs, destination Spaces, then passwords that could not be saved."
-    },
     "Imported %lld reviewed tabs and %lld passwords across %lld Spaces." : {
       "comment" : "Browser-import completion summary. Counts are imported tabs, imported passwords, then destination Spaces.",
       "localizations" : {
@@ -7495,9 +7515,6 @@
           }
         }
       }
-    },
-    "Imported %lld reviewed tabs and %lld passwords across %lld Spaces. %lld passwords couldn’t be saved." : {
-      "comment" : "Browser-import completion summary. Counts are imported tabs, imported passwords, destination Spaces, then passwords that could not be saved."
     },
     "Imported %lld Spaces, %lld tabs, and %lld history entries." : {
       "localizations" : {
@@ -14358,6 +14375,9 @@
       }
     },
     "This site’s certificate is not trusted. Information you send could be read by others." : {
+
+    },
+    "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts." : {
 
     },
     "This Tab" : {
