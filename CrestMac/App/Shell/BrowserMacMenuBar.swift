@@ -93,7 +93,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
             String(localized: "Quit Crest"), #selector(NSApplication.terminate(_:)), key: "q", in: app, target: NSApp)
     }
 
-    private func editMenu(in bar: NSMenu) {
+    private func editMenu(in bar: BrowserMacMainMenu) {
         let edit = submenu(String(localized: "Edit"), in: bar)
         standard(String(localized: "Undo"), Selector(("undo:")), key: "z", in: edit)
         standard(String(localized: "Redo"), Selector(("redo:")), key: "z", modifiers: [.command, .shift], in: edit)
@@ -107,6 +107,8 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         pasteAsPlainText.target = self
         pasteAsPlainText.keyEquivalentModifierMask = [.command, .option, .shift]
         edit.addItem(pasteAsPlainText)
+        // Chrome and Arc paste without formatting with ⇧⌘V.
+        bar.aliases.append((BrowserShortcut(key: .character("v"), modifiers: [.command, .shift]), pasteAsPlainText))
         standard(String(localized: "Delete"), #selector(NSText.delete(_:)), in: edit)
         standard(String(localized: "Select All"), #selector(NSText.selectAll(_:)), key: "a", in: edit)
         edit.addItem(.separator())

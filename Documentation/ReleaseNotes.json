@@ -4749,6 +4749,10 @@
     "chromium-extension-popup-crash": {
       "category": "fixed",
       "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    },
+    "paste-without-formatting-shortcut": {
+      "category": "improved",
+      "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
     }
   }
 }
