@@ -9,6 +9,7 @@
 #include "base/task/sequenced_task_runner.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
+#include "chrome/browser/ui/browser_active_state_manager/browser_active_state_manager.h"
 #include "chrome/browser/ui/browser_manager_service.h"
 #include "chrome/browser/ui/browser_window/public/create_browser_window.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
@@ -167,12 +168,24 @@ bool EngineBrowsers::MoveToWindow(content::WebContents* contents,
   return true;
 }
 
+// Chromium orders its Browsers by when each last became active, and answers
+// an extension's current window from the first of them.
 bool EngineBrowsers::Activate(content::WebContents* contents) {
   KeptBrowser* kept = HoldingKept(contents);
   if (!kept) {
     return false;
   }
-  kept->strip->ActivateTabAt(kept->strip->GetIndexOfWebContents(contents));
+  const int index = kept->strip->GetIndexOfWebContents(contents);
+  if (kept->strip->active_index() != index) {
+    kept->strip->ActivateTabAt(index);
+  }
+  if (active_ != kept->browser) {
+    if (active_) {
+      BrowserActiveStateManager::From(active_)->DidBecomeInactive();
+    }
+    active_ = kept->browser;
+    BrowserActiveStateManager::From(active_)->DidBecomeActive();
+  }
   return true;
 }
 
@@ -299,6 +312,9 @@ void EngineBrowsers::Shown(Browser* browser, bool focused) {
 void EngineBrowsers::Destroyed(Browser* browser) {
   if (bootstrap_ == browser) {
     bootstrap_ = nullptr;
+  }
+  if (active_ == browser) {
+    active_ = nullptr;
   }
   std::erase_if(kept_, [browser](const auto& kept) { return kept->browser.get() == browser; });
 }

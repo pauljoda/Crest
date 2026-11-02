@@ -17,6 +17,7 @@
 #include "base/uuid.h"
 #include "chrome/browser/ui/crest/crest_engine_agent.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
+#include "chrome/browser/ui/crest/crest_engine_browsers.h"
 #include "chrome/browser/ui/crest/crest_engine_content.h"
 #include "chrome/browser/ui/crest/crest_engine_documents.h"
 #include "chrome/browser/ui/crest/crest_engine_infobars.h"
@@ -618,6 +619,12 @@ void EnginePage::DidGetUserInteraction(const blink::WebInputEvent& event) {
   }
   last_interaction_ = now;
   Present(engine::PageInteracted{.page_id = id_});
+}
+
+// A click into a split's other card focuses its page without the platform
+// showing it again, and that page is now the one in use.
+void EnginePage::OnWebContentsFocused(content::RenderWidgetHost*) {
+  binding_->Browsers().Activate(web_contents());
 }
 
 // The main frame takes the bridges as soon as its document element exists;
@@ -1345,12 +1352,15 @@ bool EnginePage::Answer(const engine::ExportPage& request) {
   return true;
 }
 
+// The page shown is the one in use, which extensions find as the active
+// tab, as is a page the platform shows again when its card takes focus.
 bool EnginePage::Answer(const engine::ShowPage&) {
   if (!web_contents()) {
     return false;
   }
   web_contents()->WasShown();
   web_contents()->Focus();
+  binding_->Browsers().Activate(web_contents());
   if (media_) {
     media_->VisibilityChanged(true);
   }
