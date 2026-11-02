@@ -4,10 +4,9 @@ import SwiftUI
 /// standing on it.
 ///
 /// The card grows out of the link it came from. Where that growth is applied
-/// is the one thing the arrangement changes here — a pointer overlay grows the
-/// page alone and leaves its controls in place, a touch overlay grows the card
-/// and its controls together — and the state hands identity to whichever layer
-/// is not growing, so both run the same chain.
+/// is the one thing the arrangement changes here — the card and its controls
+/// together, or the page alone — and the state hands identity to whichever
+/// layer is not growing, so every arrangement runs the same chain.
 struct BrowserTransientSurface<WebContent: View>: View {
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus

@@ -48,8 +48,10 @@ struct BrowserTransientPresentationState {
         arrangement.entranceTarget == target ? cardOpacity : 1
     }
 
+    /// The controls show once the card has grown, and on a card the person
+    /// pulls, which carries them as it grows.
     var controlsOpacity: Double {
-        isCardExpanded ? 1 : 0
+        isCardExpanded || motionState != nil ? 1 : 0
     }
 
     // MARK: - The scrim behind it

@@ -4797,6 +4797,14 @@
     "palette-results-fit-their-rows": {
       "category": "fixed",
       "message": "The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar."
+    },
+    "peek-roomier-floating-card": {
+      "category": "improved",
+      "message": "On Mac, Peek uses more of the page while still floating above it, with a round Close button and pill-shaped Open In, and its controls move with the card as it opens."
+    },
+    "peek-shift-click": {
+      "category": "new",
+      "message": "Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with."
     }
   }
 }

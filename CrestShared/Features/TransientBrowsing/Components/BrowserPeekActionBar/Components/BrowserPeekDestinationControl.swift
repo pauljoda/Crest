@@ -46,7 +46,7 @@ struct BrowserPeekDestinationControl: View {
             )
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: style == .actionBar ? .infinity : nil)
+        .frame(maxWidth: style.fillsWidth ? .infinity : nil)
         .frame(height: style.height)
         .browserReadableForeground(over: spaceTint)
         .contentShape(style.shape)

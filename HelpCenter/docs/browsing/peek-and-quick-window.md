@@ -13,7 +13,7 @@ Peek and Quick Window are transient browsing surfaces. Both use a real Crest Spa
 
 Peek opens a link above the source page. Close it to return immediately, or choose the primary action to promote it into a full tab. **Command-W** closes an open Peek and **Command-O** promotes it.
 
-In **Settings → Links**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click** or **Command-click** explicitly opens Peek; the other modifier opens the link in a new tab.
+In **Settings → Links**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click**, **Command-click** or **Shift-click** explicitly opens Peek. **Command-click** opens the link in a new tab, or **Option-click** when Command opens Peek.
 
 Peek stays attached to its source tab when you open another tab or switch Spaces. Return to the source tab to continue in its Peek. If the source is one card in Split View, promotion and page commands follow that focused card.
 

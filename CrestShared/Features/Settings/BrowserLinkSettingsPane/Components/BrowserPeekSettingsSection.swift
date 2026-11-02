@@ -37,8 +37,8 @@ struct BrowserPeekSettingsSection: View {
         } footer: {
             CrestFormFootnote(
                 dragsLinksToPeek == nil
-                    ? "The other key opens the link in a new tab."
-                    : "The other key opens a new tab. Hold Option to drag the link itself."
+                    ? "Command-click opens a new tab, or Option-click when Command opens Peek."
+                    : "Command-click opens a new tab, or Option-click when Command opens Peek. Hold Option to drag the link itself."
             )
         }
     }
