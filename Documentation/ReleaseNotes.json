@@ -4825,6 +4825,10 @@
     "iphone-palette-larger-text": {
       "category": "fixed",
       "message": "On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes."
+    },
+    "quick-window-remembers-size": {
+      "category": "improved",
+      "message": "On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest."
     }
   }
 }
