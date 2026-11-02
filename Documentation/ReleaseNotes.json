@@ -4761,6 +4761,10 @@
     "chromium-extension-sign-in-tab": {
       "category": "fixed",
       "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
+    },
+    "paste-without-formatting-shortcut": {
+      "category": "improved",
+      "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
     }
   }
 }
