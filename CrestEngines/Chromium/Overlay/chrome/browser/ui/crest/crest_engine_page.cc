@@ -309,9 +309,18 @@ void EnginePage::LoadPending() {
       return;
     }
   }
-  // A link whose window the core refused loads here with its own request.
-  if (binding_->LoadRefusedWindowLink(key_, EngineURL(url))) {
-    return;
+  // A link whose window the core refused loads here with its own request. One
+  // stale by now is never retried as a bare address, which would replace the
+  // page's newer document and lose the link's referrer.
+  switch (binding_->LoadRefusedWindowLink(key_, EngineURL(url))) {
+    case EngineBinding::RefusedLinkLoad::kLoaded:
+      return;
+    case EngineBinding::RefusedLinkLoad::kStale:
+      expected_entry_id_.reset();
+      Interrupted();
+      return;
+    case EngineBinding::RefusedLinkLoad::kNone:
+      break;
   }
   Navigate(url);
 }
