@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Crest's shared launcher, presented either as an overlay or on the Start Page.
+/// Crest's shared launcher, presented as an overlay, on the Start Page, or
+/// grown out of an address field.
 @MainActor
 struct BrowserCommandPalette: View {
     let presentation: BrowserCommandPalettePresentation
@@ -10,6 +11,9 @@ struct BrowserCommandPalette: View {
     let morphNamespace: Namespace.ID?
     let overlayContentLeadingInset: CGFloat
     let overlayContentInsets: EdgeInsets?
+    /// The frame of the address field a palette grows out of, in the space
+    /// the palette is laid out in.
+    let fieldFrame: CGRect?
 
     @State private var model: BrowserCommandPaletteModel
 
@@ -32,7 +36,8 @@ struct BrowserCommandPalette: View {
         morphNamespace: Namespace.ID? = nil,
         overlayContentLeadingInset: CGFloat = 0,
         overlayContentInsets: EdgeInsets? = nil,
-        emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil,
+        fieldFrame: CGRect? = nil,
+        destination: (any BrowserPaletteDestination)? = nil,
         openings: [BrowserCommandPaletteOpening] = [.here],
         readPasteboard: () -> String? = { nil }
     ) {
@@ -40,6 +45,7 @@ struct BrowserCommandPalette: View {
         self.morphNamespace = morphNamespace
         self.overlayContentLeadingInset = overlayContentLeadingInset
         self.overlayContentInsets = overlayContentInsets
+        self.fieldFrame = fieldFrame
         _model = State(
             initialValue: BrowserCommandPaletteModel(
                 browser: browser,
@@ -52,7 +58,7 @@ struct BrowserCommandPalette: View {
                 selectTab: selectTab,
                 openURL: openURL,
                 dismiss: dismiss,
-                emptySelectionActions: emptySelectionActions,
+                destination: destination,
                 openings: openings,
                 readPasteboard: readPasteboard
             ))
@@ -64,7 +70,8 @@ struct BrowserCommandPalette: View {
             presentation: presentation,
             morphNamespace: morphNamespace,
             overlayContentLeadingInset: overlayContentLeadingInset,
-            overlayContentInsets: overlayContentInsets
+            overlayContentInsets: overlayContentInsets,
+            fieldFrame: fieldFrame
         )
         .onChange(of: model.isCompletionSourceAvailable) { _, available in
             if !available { model.invalidateURLCompletion() }

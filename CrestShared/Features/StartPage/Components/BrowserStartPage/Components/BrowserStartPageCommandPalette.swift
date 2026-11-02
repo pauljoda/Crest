@@ -46,7 +46,7 @@ struct BrowserStartPageCommandPalette: View {
             openURL: { source, url, _ in page.openURL(source, url) },
             dismiss: {},
             presentation: .embedded,
-            emptySelectionActions: page.emptySelectionActions
+            destination: page.emptySelectionActions
         )
         .id(
             BrowserCommandPalettePresentationIdentity(

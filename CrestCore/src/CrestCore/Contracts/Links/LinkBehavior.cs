@@ -21,13 +21,17 @@ public sealed class LinkBehavior {
     public static readonly LinkBehavior DragsLinksToPeek = new(name: "dragsLinksToPeek",
         isOn: preferences => preferences.DragsLinksToPeek, setting: (preferences, on) => preferences with { DragsLinksToPeek = on });
 
+    /// The page behind Peek is dimmed on Mac. Off leaves it at full brightness.
+    public static readonly LinkBehavior DimsPageBehindPeek = new(name: "dimsPageBehindPeek",
+        isOn: preferences => preferences.DimsPageBehindPeek, setting: (preferences, on) => preferences with { DimsPageBehindPeek = on });
+
     /// A Quick Window remembers the Space it last opened each site in.
     public static readonly LinkBehavior RemembersSpaceBySite = new(name: "remembersSpaceBySite",
         isOn: preferences => preferences.RemembersSpaceBySite,
         setting: (preferences, on) => preferences with { RemembersSpaceBySite = on });
 
     public static IReadOnlyList<LinkBehavior> All { get; } =
-        [FocusesNewTabs, FollowsMovedTabs, OpensPeekAutomatically, DragsLinksToPeek, RemembersSpaceBySite];
+        [FocusesNewTabs, FollowsMovedTabs, OpensPeekAutomatically, DragsLinksToPeek, DimsPageBehindPeek, RemembersSpaceBySite];
 
     #endregion
 
