@@ -4866,6 +4866,10 @@
       "category": "fixed",
       "message": "Scrolling the sidebar no longer makes Crest stop responding, with or without folders open."
     },
+    "shortcuts-follow-command-keyboard-layout": {
+      "category": "fixed",
+      "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak – QWERTY ⌘, Russian and Greek, so Command-X cuts instead of quitting Crest."
+    },
     "search-provider-fragment-address": {
       "category": "fixed",
       "message": "You can now add a search provider whose address puts the search after a #, such as PubChem’s."
