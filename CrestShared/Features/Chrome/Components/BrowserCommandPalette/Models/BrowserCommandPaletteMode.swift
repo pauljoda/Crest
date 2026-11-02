@@ -14,4 +14,13 @@ enum BrowserCommandPaletteMode: Equatable, Hashable, Sendable {
         case .editLocation(let address): address
         }
     }
+
+    /// The query a palette opened this way over a page at `address` starts
+    /// with, whatever address the mode carries.
+    func initialQuery(over address: String) -> String {
+        switch self {
+        case .newTab: ""
+        case .editLocation: address
+        }
+    }
 }

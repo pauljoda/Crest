@@ -91,38 +91,65 @@ struct BrowserCommandPaletteCard: View {
     }
 
     /// The field, the provider chips while what is typed names some, and the
-    /// results. An overlay card keeps one height whatever the results, so it
-    /// never moves as they change; the chips take their room from the results.
+    /// results, which a palette rising from the bottom of the screen lists
+    /// above the field. An overlay card keeps one height whatever the results,
+    /// so it never moves as they change; the chips take their room from the
+    /// results.
     private var contents: some View {
         VStack(spacing: 0) {
-            BrowserCommandPaletteSearchField(
-                model: model,
-                presentation: presentation,
-                queryIsFocused: queryIsFocused
-            )
-
-            if !model.providerChips.isEmpty {
-                BrowserCommandPaletteProviderChips(model: model)
-            }
-
-            if keepsHeight || !model.groups.isEmpty {
-                Divider()
-                BrowserCommandPaletteResultList(
-                    model: model,
-                    maximumResultAreaHeight: resultAreaHeight,
-                    fillsHeight: keepsHeight
-                )
+            if presentation.listsUpward {
+                if showsResults {
+                    results
+                    Divider()
+                }
+                chips
+                field
+            } else {
+                field
+                chips
+                if showsResults {
+                    Divider()
+                    results
+                }
             }
         }
     }
 
+    private var field: some View {
+        BrowserCommandPaletteSearchField(
+            model: model,
+            presentation: presentation,
+            queryIsFocused: queryIsFocused
+        )
+    }
+
+    @ViewBuilder
+    private var chips: some View {
+        if !model.providerChips.isEmpty {
+            BrowserCommandPaletteProviderChips(model: model)
+        }
+    }
+
+    private var results: some View {
+        BrowserCommandPaletteResultList(
+            model: model,
+            maximumResultAreaHeight: resultAreaHeight,
+            fillsHeight: keepsHeight,
+            listsUpward: presentation.listsUpward
+        )
+    }
+
+    private var showsResults: Bool { keepsHeight || !model.groups.isEmpty }
+
     /// Whether the card keeps one height while its results change.
-    private var keepsHeight: Bool { presentation == .overlay }
+    private var keepsHeight: Bool { presentation.keepsHeight }
 
     /// The height the results may take, less what the provider chips take
-    /// from a card that keeps its height.
+    /// from a card that keeps its height or fills what its field leaves it.
     private var resultAreaHeight: CGFloat {
-        guard keepsHeight, !model.providerChips.isEmpty else { return maximumResultAreaHeight }
+        guard keepsHeight || presentation.growsFromField, !model.providerChips.isEmpty else {
+            return maximumResultAreaHeight
+        }
         return max(0, maximumResultAreaHeight - BrowserCommandPaletteMetrics.providerChipRowHeight)
     }
 
@@ -138,10 +165,7 @@ struct BrowserCommandPaletteCard: View {
     }
 
     private var restingShape: RoundedRectangle {
-        RoundedRectangle(
-            cornerRadius: BrowserCommandPaletteMetrics.cardCornerRadius,
-            style: .continuous
-        )
+        RoundedRectangle(cornerRadius: presentation.cornerRadius, style: .continuous)
     }
 
     /// The contents appear once the frame has nearly settled, and clear

@@ -6,11 +6,14 @@ struct BrowserCommandPalettePresentationView: View {
     let morphNamespace: Namespace.ID?
     let overlayContentLeadingInset: CGFloat
     var overlayContentInsets: EdgeInsets? = nil
+    /// The frame of the address field a palette grows out of, in the space
+    /// the palette is laid out in.
+    var fieldFrame: CGRect? = nil
     let queryIsFocused: FocusState<Bool>.Binding
 
     @ViewBuilder
     var body: some View {
-        if presentation == .overlay {
+        if presentation.centersOverWindow {
             GeometryReader { proxy in
                 let availableHeight =
                     proxy.size.height - contentInsets.top - contentInsets.bottom
@@ -38,6 +41,33 @@ struct BrowserCommandPalettePresentationView: View {
                     .padding(contentInsets)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else if presentation.growsFromField, let fieldFrame {
+            GeometryReader { proxy in
+                let region = BrowserCommandPaletteLayout.fieldRegion(
+                    field: fieldFrame, in: proxy.size, presentation: presentation)
+
+                ZStack(alignment: .topLeading) {
+                    // A click or tap anywhere but the palette closes it.
+                    BrowserPlatformCommandPaletteDismissLayer(dismiss: model.dismiss)
+                        .accessibilityHidden(true)
+                    BrowserCommandPaletteCard(
+                        model: model,
+                        presentation: presentation,
+                        maximumResultAreaHeight: BrowserCommandPaletteLayout.fieldResultAreaHeight(
+                            regionHeight: region.height, presentation: presentation),
+                        morphNamespace: nil,
+                        restingWidth: nil,
+                        queryIsFocused: queryIsFocused
+                    )
+                    // The input line rests on the field; the results grow away
+                    // from it.
+                    .frame(
+                        width: region.width, height: region.height,
+                        alignment: presentation.listsUpward ? .bottom : .top
+                    )
+                    .offset(x: region.minX, y: region.minY)
+                }
             }
         } else {
             BrowserCommandPaletteCard(

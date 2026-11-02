@@ -2968,6 +2968,7 @@ struct ForgetEngineRule: Intent, Equatable, Sendable {
 struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
     let windowID: UUID
     let row: PaletteRow.Seed
+    let spaceID: UUID?
 }
 
 struct GetAgentPreferences: Query, Equatable, Sendable {
@@ -4658,6 +4659,7 @@ struct PaletteSuggestions: Query, Equatable, Sendable {
     let scope: PaletteScope?
     let allowsCompletion: Bool
     let pasteboard: String?
+    let spaceID: UUID?
 }
 
 struct PasskeyAccess: Query, Equatable, Sendable {
@@ -5008,6 +5010,7 @@ struct RecordPaletteChoice: Intent, PaletteIntent, Equatable, Sendable {
     let windowID: UUID
     let text: String
     let row: PaletteRow.Seed
+    let spaceID: UUID?
 }
 
 struct RecordsToUpload: Query, Equatable, Sendable {

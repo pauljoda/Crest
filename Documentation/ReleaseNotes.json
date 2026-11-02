@@ -4777,6 +4777,14 @@
     "quick-window-minimum-opening-size": {
       "category": "fixed",
       "message": "A Quick Window opened beside Split View on Mac no longer opens narrower than its smallest size."
+    },
+    "quick-window-address-palette": {
+      "category": "new",
+      "message": "On Mac, clicking a Quick Window's address or pressing Command-L opens the command palette right there, starting at the address, with results from the Quick Window's Space. A blank Quick Window opens with it."
+    },
+    "iphone-address-bar-palette": {
+      "category": "new",
+      "message": "On iPhone, tapping the address bar opens the command palette from the bar, with its results rising above it and the best match nearest the bar."
     }
   }
 }

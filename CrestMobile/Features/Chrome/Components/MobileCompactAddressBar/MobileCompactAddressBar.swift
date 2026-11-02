@@ -18,6 +18,12 @@ struct MobileCompactAddressBar: View {
     /// Moves to the tab before or after the shown one, which VoiceOver offers
     /// as actions on the address. Nil where the bar walks no tabs.
     var stepTab: ((AdjacentDirection) -> Void)?
+    /// Opens the command palette over the bar, which a tap on the address
+    /// does; without it the address edits in place.
+    var openPalette: (() -> Void)?
+    /// Whether the palette grown out of the bar shows, its input line in the
+    /// bar's place.
+    var isPaletteShown = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -60,6 +66,7 @@ struct MobileCompactAddressBar: View {
             BrowserAddressContent(
                 text: $text,
                 isEditing: $isEditing,
+                activate: openPalette,
                 longPressAction: beginNewTab,
                 submit: submit
             )
@@ -106,6 +113,10 @@ struct MobileCompactAddressBar: View {
                 )
         }
         .glassEffect(.regular.interactive(), in: fieldShape)
+        .anchorPreference(key: MobileCompactCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
+        .opacity(isPaletteShown ? 0 : 1)
+        .allowsHitTesting(!isPaletteShown)
+        .accessibilityHidden(isPaletteShown)
         .modifier(
             MobileCompactChromeTransitionModifier(
                 transition: transition,

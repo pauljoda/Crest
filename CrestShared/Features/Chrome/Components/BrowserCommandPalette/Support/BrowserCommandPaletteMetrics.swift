@@ -15,6 +15,9 @@ enum BrowserCommandPaletteMetrics {
             + CrestLayout.hairline
     }
     static let minimumOverlayResultHeight: CGFloat = 82
+    /// The room a palette grown out of an address field keeps from the edges
+    /// of the space it lies in.
+    static let fieldRegionMargin: CGFloat = 8
     static let maximumCardWidth: CGFloat = 720
     static let cardCornerRadius: CGFloat = 26
     /// How far below full size the card's contents start while the card grows

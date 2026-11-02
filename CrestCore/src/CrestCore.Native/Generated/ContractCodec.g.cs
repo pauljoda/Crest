@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf8, 0xc1, 0x83, 0xf6, 0xb2, 0x8b, 0xe0, 0x60, 0x02, 0x95, 0x34, 0x02, 0x29, 0xb2, 0x18, 0x2b, 0xc9, 0xef, 0xa1, 0xd3, 0xca, 0xd9, 0xb0, 0x3a, 0x3f, 0x26, 0x8a, 0xb0, 0x2a, 0xd0, 0x70, 0xae
+        0x55, 0x34, 0xfc, 0x59, 0x3b, 0xdf, 0x41, 0xe7, 0xd0, 0xb9, 0xfc, 0x86, 0xb5, 0x64, 0x0a, 0x46, 0xfc, 0x5d, 0xcf, 0x15, 0x06, 0xe1, 0xd6, 0xb8, 0x77, 0x4c, 0x24, 0xf8, 0x44, 0x71, 0x16, 0xac
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -9215,7 +9215,8 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(reader);
         return new ForgetPaletteChoices(
             reader.ReadGuid(),
-            ReadPaletteRowSeed(reader));
+            ReadPaletteRowSeed(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
     }
 
     public static void WriteForgetPaletteChoices(WireWriter writer, ForgetPaletteChoices value) {
@@ -9223,6 +9224,12 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.WindowId);
         WritePaletteRowSeed(writer, value.Row);
+        if (value.SpaceId is { } presentSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static GetAgentPreferences ReadGetAgentPreferences(WireReader reader) {
@@ -13122,7 +13129,8 @@ public static class ContractCodec {
             reader.ReadPresence() ? (SearchProvider?)ReadSearchProviderSeed(reader) : null,
             reader.ReadPresence() ? (PaletteScope?)ReadPaletteScope(reader) : null,
             reader.ReadBool(),
-            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
     }
 
     public static void WritePaletteSuggestions(WireWriter writer, PaletteSuggestions value) {
@@ -13158,6 +13166,12 @@ public static class ContractCodec {
         if (value.Pasteboard is { } presentPasteboard) {
             writer.WritePresence(true);
             writer.WriteString(presentPasteboard);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SpaceId is { } presentSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentSpaceId);
         } else {
             writer.WritePresence(false);
         }
@@ -13819,7 +13833,8 @@ public static class ContractCodec {
         return new RecordPaletteChoice(
             reader.ReadGuid(),
             reader.ReadString(),
-            ReadPaletteRowSeed(reader));
+            ReadPaletteRowSeed(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
     }
 
     public static void WriteRecordPaletteChoice(WireWriter writer, RecordPaletteChoice value) {
@@ -13828,6 +13843,12 @@ public static class ContractCodec {
         writer.WriteGuid(value.WindowId);
         writer.WriteString(value.Text);
         WritePaletteRowSeed(writer, value.Row);
+        if (value.SpaceId is { } presentSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static RecordsToUpload ReadRecordsToUpload(WireReader reader) {

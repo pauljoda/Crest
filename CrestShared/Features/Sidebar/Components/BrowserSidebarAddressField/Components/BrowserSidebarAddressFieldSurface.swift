@@ -14,6 +14,9 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     let isLoading: Bool
     let isEditing: Bool
     var branding: SpaceBranding? = nil
+    /// Whether the field stands on Liquid Glass, as the command palette it
+    /// grows into does, rather than the device's surface material.
+    var isGlass = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -28,7 +31,9 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
         )
         .background {
             ZStack(alignment: .leading) {
-                CrestSurfaceLayer(shape: fieldShape)
+                if !isGlass {
+                    CrestSurfaceLayer(shape: fieldShape)
+                }
                 if !reduceTransparency {
                     fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
                 }
@@ -42,6 +47,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
                     )
             }
         }
+        .modifier(GlassLayer(isGlass: isGlass, shape: fieldShape, reduceTransparency: reduceTransparency))
         .overlay {
             fieldShape
                 .strokeBorder(
@@ -79,6 +85,23 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     private var fieldShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
     }
+
+    /// The command palette's own glass under a field that stands on it.
+    private struct GlassLayer: ViewModifier {
+        let isGlass: Bool
+        let shape: RoundedRectangle
+        let reduceTransparency: Bool
+
+        @ViewBuilder
+        func body(content: Content) -> some View {
+            if isGlass {
+                content.modifier(
+                    BrowserCommandPaletteShellMaterial(shape: shape, reduceTransparency: reduceTransparency))
+            } else {
+                content
+            }
+        }
+    }
 }
 
 extension View {
@@ -88,7 +111,8 @@ extension View {
         progress: Double,
         isLoading: Bool,
         isEditing: Bool,
-        branding: SpaceBranding? = nil
+        branding: SpaceBranding? = nil,
+        isGlass: Bool = false
     ) -> some View {
         modifier(
             BrowserSidebarAddressFieldSurface(
@@ -97,7 +121,8 @@ extension View {
                 progress: progress,
                 isLoading: isLoading,
                 isEditing: isEditing,
-                branding: branding
+                branding: branding,
+                isGlass: isGlass
             )
         )
     }

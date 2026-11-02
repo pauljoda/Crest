@@ -34,6 +34,13 @@ struct MobileBrowserPresentation: Equatable, Sendable {
             if content.navigation.defersPageActivation {
                 content.model.activateSelectedTab()
             }
+            // A page's palette rises from the address bar; the Start Page
+            // searches in its own field.
+            guard content.showsStartPage else {
+                content.navigation.showCompactToolbar()
+                content.commandPaletteMode = .editLocation(content.address)
+                return
+            }
             Task { @MainActor in
                 await Task.yield()
                 content.isAddressEditing = true

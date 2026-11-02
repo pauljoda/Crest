@@ -29,6 +29,12 @@ struct MobileBrowserDetailView: View {
     /// Opens History from the compact toolbar's history menus; a detail without
     /// that toolbar never calls it.
     var showHistory: () -> Void = {}
+    /// The command palette that rises from the compact address bar, which a
+    /// compact window shows there instead of over its page; nil where the bar
+    /// edits in place.
+    var paletteMode: Binding<BrowserCommandPaletteMode?>?
+    /// Opens the palette, as Open Location does.
+    var openLocation: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -125,10 +131,27 @@ struct MobileBrowserDetailView: View {
                         canSwipeTabs: swipeShownTab != nil,
                         swipeNeighbors: { browser.swipeNeighbors },
                         showSwipedTab: showSwipedTab,
-                        compactTransitionEnded: compactTransitionEnded
+                        compactTransitionEnded: compactTransitionEnded,
+                        openPalette: paletteMode == nil ? nil : openLocation,
+                        isPaletteShown: paletteMode?.wrappedValue != nil
                     )
                     .safeAreaPadding(.bottom, 0)
                     .zIndex(1)
+                }
+            }
+        }
+        .overlayPreferenceValue(MobileCompactCommandPaletteLayer.FieldAnchor.self) { anchor in
+            if isCompact, let paletteMode {
+                GeometryReader { proxy in
+                    MobileCompactCommandPaletteLayer(
+                        mode: paletteMode,
+                        browser: browser,
+                        commands: commands,
+                        isSourceAvailable: isPaletteSourceAvailable,
+                        selectTab: selectStartPageTab,
+                        openURL: openStartPageURL,
+                        fieldFrame: anchor.map { proxy[$0] }
+                    )
                 }
             }
         }

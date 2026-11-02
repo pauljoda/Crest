@@ -11,6 +11,7 @@ struct BrowserQuickWindowUnlockedContent: View {
     @State private var addressFocusRequest = 0
 
     @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         model: BrowserQuickWindowModel,
@@ -40,6 +41,22 @@ struct BrowserQuickWindowUnlockedContent: View {
                 promote: promote
             )
         }
+        .overlayPreferenceValue(BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self) { anchor in
+            if let chrome {
+                GeometryReader { proxy in
+                    BrowserQuickWindowCommandPaletteLayer(
+                        model: model,
+                        chrome: chrome,
+                        fieldFrame: anchor.map { proxy[$0] },
+                        openBrowserWindow: openBrowserWindow
+                    )
+                }
+                .animation(
+                    CrestMotion.contentReveal.unlessReducingMotion(reduceMotion),
+                    value: chrome.commandPaletteMode
+                )
+            }
+        }
         .modifier(
             BrowserQuickWindowActivityLifecycleModifier(
                 model: model,
@@ -55,13 +72,6 @@ struct BrowserQuickWindowUnlockedContent: View {
             )
         )
         .task { await requestInitialAddressFocus() }
-        .onChange(of: chrome?.commandPaletteMode) { _, mode in
-            // A Quick Window has no command bar: Open Location focuses its
-            // own address field instead.
-            guard mode != nil else { return }
-            chrome?.dismissCommandPalette()
-            addressFocusRequest &+= 1
-        }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .accessibilityElement(children: .contain)
@@ -70,12 +80,18 @@ struct BrowserQuickWindowUnlockedContent: View {
         )
     }
 
+    /// An empty Quick Window opens its palette, as a new tab does, or
+    /// without one selects its address field.
     private func requestInitialAddressFocus() async {
         guard model.presentedRequest.initialURL == nil else { return }
         try? await Task.sleep(
             for: BrowserQuickWindowLayout.initialAddressFocusDelay
         )
-        addressFocusRequest &+= 1
+        if let chrome {
+            chrome.presentCommandPalette()
+        } else {
+            addressFocusRequest &+= 1
+        }
     }
 
     private func promote(_ assignment: BrowserSpaceRuntimeAssignment) {

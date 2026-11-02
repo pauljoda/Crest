@@ -15,6 +15,7 @@ struct BrowserQuickWindowAddressControl: View {
     let addressFocusRequest: Int
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
 
     var body: some View {
         HStack(spacing: 7) {
@@ -31,7 +32,7 @@ struct BrowserQuickWindowAddressControl: View {
                 text: $addressText,
                 isEditing: $isAddressEditing,
                 focusRequest: addressFocusRequest,
-                activate: nil,
+                activate: openPalette,
                 editorAccessibilityLabel: "Quick Window address",
                 editorAccessibilityIdentifier: "quick-window-address",
                 summaryAccessibilityIdentifier: "quick-window-address-display",
@@ -54,9 +55,16 @@ struct BrowserQuickWindowAddressControl: View {
             leadingPadding: BrowserQuickWindowLayout.sourceChipLeadingInset,
             progress: model.page?.estimatedProgress ?? 0,
             isLoading: model.page?.live.isLoading == true,
-            isEditing: isAddressEditing
+            isEditing: isAddressEditing,
+            isGlass: true
         )
         .coordinateSpace(Self.field)
+        .anchorPreference(key: BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
+        // The palette grows out of the field and its input line takes the
+        // field's place until it closes.
+        .opacity(isPaletteShown ? 0 : 1)
+        .allowsHitTesting(!isPaletteShown)
+        .accessibilityHidden(isPaletteShown)
         .frame(
             minWidth: BrowserQuickWindowLayout.addressMinimumWidth,
             maxWidth: .infinity
@@ -72,6 +80,15 @@ struct BrowserQuickWindowAddressControl: View {
         return BrowserSiteControlConfiguration(
             page: page, space: space, selectedTabID: nil, permissionCenter: pages.permissionCenter,
             presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
+    }
+
+    private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil }
+
+    /// Opens the palette over the field, starting at the page's address;
+    /// without one the field edits in place.
+    private var openPalette: (() -> Void)? {
+        guard let chrome else { return nil }
+        return { [model] in chrome.openLocation(model.address) }
     }
 
     // MARK: - Actions - Page
