@@ -4769,6 +4769,10 @@
     "tab-groups-empty-import": {
       "category": "internal",
       "message": "A browser-data import leaves out any group that holds no tabs."
+    },
+    "import-tab-folder-placement": {
+      "category": "internal",
+      "message": "A browser-data import rejects a tab whose folder sits in a different section."
     }
   }
 }

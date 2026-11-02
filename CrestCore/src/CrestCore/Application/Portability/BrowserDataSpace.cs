@@ -70,6 +70,9 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
             tabs.Add(kept);
         }
         if (tabs.Count == 0) tabs.Add(BrowserDataTab.StartPage(ids.Next(), now));
+        var locations = folders.ToDictionary(folder => folder.Id, folder => folder.Location);
+        Require(tabs.All(tab => tab.FolderId is not { } held
+            || locations.TryGetValue(held, out var location) && location == tab.Placement));
         // A group goes with its last tab, so one the file left empty is not kept.
         var heldFolders = tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
         ordered = [.. ordered.Where(folder => !folder.IsGroup || heldFolders.Contains(folder.Id))];
