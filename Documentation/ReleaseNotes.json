@@ -4861,6 +4861,10 @@
     "chromium-held-window-timeout": {
       "category": "internal",
       "message": "A window a link opens on the Chromium engine loads after a few seconds even when Crest never decides where it belongs, instead of staying blank."
+    },
+    "chromium-stale-window-link": {
+      "category": "internal",
+      "message": "A new-window link on the Chromium engine whose Peek or Quick Window has already moved to another page no longer replaces that page."
     }
   }
 }

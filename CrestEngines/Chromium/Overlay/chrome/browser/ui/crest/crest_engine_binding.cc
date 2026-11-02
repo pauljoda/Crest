@@ -911,7 +911,7 @@ bool EngineBinding::LoadStagedLink(const std::string& key, const std::string& to
   return true;
 }
 
-bool EngineBinding::LoadRefusedWindowLink(const std::string& key, const GURL& url) {
+EngineBinding::RefusedLinkLoad EngineBinding::LoadRefusedWindowLink(const std::string& key, const GURL& url) {
   const base::TimeTicks now = base::TimeTicks::Now();
   std::erase_if(refused_window_links_,
                 [now](const auto& refused) { return now - refused.second > kStagedLinkLifetime; });
@@ -919,18 +919,18 @@ bool EngineBinding::LoadRefusedWindowLink(const std::string& key, const GURL& ur
     return entry.first->source == key && entry.first->request.url == url;
   });
   if (refused == refused_window_links_.end()) {
-    return false;
+    return RefusedLinkLoad::kNone;
   }
   const std::unique_ptr<WindowLink> link = std::move(refused->first);
   refused_window_links_.erase(refused);
   EnginePage* page = Find(key);
   if (!page || !page->web_contents() || disposing_ || page->navigation_revision() != link->revision ||
       page->navigation_generation() != link->generation) {
-    return false;
+    return RefusedLinkLoad::kStale;
   }
   // Keeps the link's referrer, initiator and SiteInstance.
   page->web_contents()->GetController().LoadURLWithParams(link->request);
-  return true;
+  return RefusedLinkLoad::kLoaded;
 }
 
 void EngineBinding::DropStagedLink(const std::string& token) {
