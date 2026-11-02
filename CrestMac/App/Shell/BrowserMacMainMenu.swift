@@ -8,9 +8,10 @@ final class BrowserMacMainMenu: NSMenu {
     // MARK: - Variables
 
     weak var shell: BrowserMacShell?
-    /// The items that answer a second chord their menu doesn't show, since an
-    /// item shows one.
-    var aliases: [(chord: BrowserShortcut, item: NSMenuItem)] = []
+    /// Items that answer a second chord their menu doesn't show, since an item
+    /// shows one. AppKit matches these chords as it matches the menu's own, so
+    /// a layout that moves letters while ⌘ is held still finds them.
+    let aliases = NSMenu()
 
     // MARK: - Actions - Key equivalents
 
@@ -24,18 +25,10 @@ final class BrowserMacMainMenu: NSMenu {
         return MainActor.assumeIsolated { shell.handleShortcut(event, pageSeesFirst: false) }
     }
 
-    /// Runs the item `event`'s chord is an alias of, as its own chord would,
-    /// when the item is enabled.
+    /// Runs the alias item `event`'s chord matches, if it is enabled.
     private func performAlias(for event: NSEvent) -> Bool {
         nonisolated(unsafe) let event = event
         nonisolated(unsafe) let aliases = aliases
-        return MainActor.assumeIsolated {
-            guard let chord = BrowserShortcut(event: event),
-                let item = aliases.first(where: { $0.chord == chord })?.item,
-                let action = item.action,
-                (item.target as? NSMenuItemValidation)?.validateMenuItem(item) == true
-            else { return false }
-            return NSApp.sendAction(action, to: item.target, from: item)
-        }
+        return MainActor.assumeIsolated { aliases.performKeyEquivalent(with: event) }
     }
 }
