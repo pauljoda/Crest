@@ -132,6 +132,9 @@ class EnginePage final : public content::WebContentsObserver,
   // Runs what the app asked for before the page existed: the restore, the
   // staged link or the load.
   void LoadPending();
+  // Takes the document the page already shows as committed, for a page the
+  // engine opened and loaded by itself before the core adopted it.
+  void AdoptCommittedDocument();
   // The token of the link staged for the page, which a closing page drops.
   std::optional<std::string> TakeStagedToken();
 
@@ -351,6 +354,9 @@ class EnginePage final : public content::WebContentsObserver,
   std::optional<int64_t> loading_navigation_;
   // A new document committed and has not finished loading.
   bool awaits_finish_ = false;
+  // The page was adopted with a committed document the platform has not
+  // heard of, which it hears when it first shows the page.
+  bool presents_adopted_commit_ = false;
   // The core asked whether the page may go and waits for the answer.
   bool checks_before_unload_ = false;
   // The title last reported.
