@@ -16,17 +16,50 @@ final class BrowserPagePermissionController {
 
     private(set) var current: Request?
     private(set) var generation = UUID()
-    @ObservationIgnored private var isPresentationAvailable = false
+    /// The views that can show this page's requests, each by its own token.
+    /// A page moving between windows gains its new host before or after its
+    /// old one leaves, so only the last host leaving ends its requests.
+    @ObservationIgnored private var hosts: Set<UUID> = []
+    /// The last host's departure, which ends the requests on the next main
+    /// turn unless a host arrives first; a newer departure replaces it.
+    @ObservationIgnored private var pendingDeparture: UUID?
     @ObservationIgnored private var requests: [Request] = []
     /// Who waits on each request, each by its own token, so one that no
     /// longer waits can leave without answering the others.
     @ObservationIgnored private var completions:
         [UUID: [(token: UUID, callback: (BrowserSitePermissionPromptResponse?) -> Void)]] = [:]
 
-    func setPresentationAvailable(_ available: Bool) {
-        isPresentationAvailable = available
-        if !available { cancelAll() }
+    // MARK: - Actions - Presentation
+
+    func attachHost(_ host: UUID) {
+        hosts.insert(host)
+        pendingDeparture = nil
     }
+
+    /// The old window's host can leave before the new one arrives, so the
+    /// last host leaving ends the requests only if no host has arrived by
+    /// the next main turn.
+    func detachHost(_ host: UUID) {
+        guard hosts.remove(host) != nil, hosts.isEmpty else { return }
+        let departure = UUID()
+        pendingDeparture = departure
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.pendingDeparture == departure, self.hosts.isEmpty else { return }
+                self.pendingDeparture = nil
+                self.cancelAll()
+            }
+        }
+    }
+
+    /// The page is going away: no host can show its requests any more.
+    func endPresentation() {
+        hosts.removeAll()
+        pendingDeparture = nil
+        cancelAll()
+    }
+
+    // MARK: - Actions - Requests
 
     func request(
         _ permission: SitePermission,
@@ -36,7 +69,7 @@ final class BrowserPagePermissionController {
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping (BrowserSitePermissionPromptResponse?) -> Void
     ) {
-        guard isPresentationAvailable else {
+        guard !hosts.isEmpty else {
             completion(nil)
             return
         }
