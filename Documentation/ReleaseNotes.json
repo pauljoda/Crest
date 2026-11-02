@@ -4902,6 +4902,14 @@
       "category": "fixed",
       "message": "Clicking an extension's icon while its popup is open now closes the popup instead of opening it again."
     },
+    "chromium-new-tab-page-crash": {
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when a Chromium tab opens the new tab page, as Claude in Chrome does, or keeps quitting at launch while restoring one."
+    },
+    "chromium-new-tab-page-promo-crash": {
+      "category": "fixed",
+      "message": "The new tab page in a Chromium tab no longer quits Crest on Mac when it would offer to customize the page."
+    },
     "sidebar-new-tab-row-height": {
       "category": "fixed",
       "message": "On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them."
