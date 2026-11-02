@@ -4765,6 +4765,10 @@
     "tab-groups": {
       "category": "new",
       "message": "Groups gather open tabs under a simple header that syncs to every device and goes away when its last tab leaves. Make one from a tab's menu, turn a group into a folder and back, and open any folder's or group's actions from the … button on its header."
+    },
+    "tab-groups-empty-import": {
+      "category": "internal",
+      "message": "A browser-data import leaves out any group that holds no tabs."
     }
   }
 }
