@@ -55,10 +55,12 @@ public sealed partial class BrowserContractsTests {
             app.Send(new EditLinkRoute(added, IsEnabled: null, Match: null, Pattern: "news", DestinationSpaceId: null));
             app.Send(new MoveLinkRoute(added, -1));
             app.Send(new SetLinkBehavior(LinkBehavior.DragsLinksToPeek, false));
+            app.Send(new SetLinkBehavior(LinkBehavior.DimsPageBehindPeek, false));
             app.Send(new ChoosePeekModifier(LinkPeekModifier.Command));
             edited = Links(app.Send(new RememberQuickWindowSpace("https://www.Example.net/a", work)));
             Assert.Equal([added, route], edited.Routes.Select(link => link.Id));
             Assert.Equal(new RememberedSite("example.net", work), edited.RememberedSites[^1]);
+            Assert.False(edited.DimsPageBehindPeek);
             Assert.Equal(new LinkRouteExists(added), Assert.Throws<Rejected>(() => app.Send(new AddLinkRoute(added, work))).Rejection);
             Assert.Empty(app.Send(new MoveLinkRoute(added, -1)).OfType<LinkPreferencesChanged>());
             // An edit of a route another edit removed changes nothing else.

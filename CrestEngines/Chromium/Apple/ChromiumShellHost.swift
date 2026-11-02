@@ -25,8 +25,8 @@
 
         // MARK: - Actions - Shortcuts
 
-        /// Offers the chord to the extensions installed in the active page's
-        /// own Space, as `chrome.commands` bindings.
+        /// Offers the chord to the extensions installed in the page's own
+        /// Space, as `chrome.commands` bindings.
         func handleUnclaimedShortcut(_ event: NSEvent, page: BrowserPage) -> Bool {
             guard let page = page.chromiumPage, let result = host.dispatchExtensionShortcut(event, page: page.pageID)
             else { return false }

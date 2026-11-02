@@ -57,31 +57,20 @@ extension SecurityCredentialKeychainStore: CredentialKeychainStoring {
         return try decodeItem(dictionary)
     }
 
+    /// Changes the item in place, its iCloud setting with it, or adds it when
+    /// the account has none. One update is one step, so no stop leaves the
+    /// account without its password.
     func upsert(
         _ item: CredentialKeychainItem,
         in service: String
     ) async throws {
-        if let existing = try await self.item(account: item.account, in: service),
-            existing.isSynchronizable != item.isSynchronizable
-        {
-            try deleteItem(account: item.account, in: service)
-            do {
-                try add(item, in: service)
-            } catch {
-                try? add(existing, in: service)
-                throw error
-            }
-            return
-        }
-
-        var query = baseQuery(service: service, account: item.account)
-        query[kSecAttrSynchronizable] = item.isSynchronizable
         let attributes: [CFString: Any] = [
             kSecAttrGeneric: item.metadata,
             kSecValueData: item.secret,
             kSecAttrLabel: Self.itemLabel,
+            kSecAttrSynchronizable: item.isSynchronizable,
         ]
-        let status = client.update(query, attributes: attributes)
+        let status = client.update(baseQuery(service: service, account: item.account), attributes: attributes)
         switch status {
         case errSecSuccess:
             return
