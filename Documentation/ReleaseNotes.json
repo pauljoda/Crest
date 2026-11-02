@@ -4745,6 +4745,10 @@
     "quick-window-site-permission-prompts": {
       "category": "fixed",
       "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
+    },
+    "chromium-extension-popup-crash": {
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
     }
   }
 }
