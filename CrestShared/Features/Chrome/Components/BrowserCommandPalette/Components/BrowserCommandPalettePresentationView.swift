@@ -56,8 +56,8 @@ struct BrowserCommandPalettePresentationView: View {
                         presentation: presentation,
                         maximumResultAreaHeight: BrowserCommandPaletteLayout.fieldResultAreaHeight(
                             regionHeight: region.height, presentation: presentation),
-                        morphNamespace: nil,
-                        restingWidth: nil,
+                        morphNamespace: morphNamespace,
+                        restingWidth: region.width,
                         queryIsFocused: queryIsFocused
                     )
                     // The input line rests on the field; the results grow away

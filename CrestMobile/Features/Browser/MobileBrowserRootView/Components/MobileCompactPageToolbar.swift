@@ -24,6 +24,9 @@ struct MobileCompactPageToolbar: View {
     /// Opens the command palette over the address bar.
     var openPalette: (() -> Void)?
     var isPaletteShown = false
+    /// The namespace in which the palette grows out of the address bar.
+    var commandSurfaceNamespace: Namespace.ID?
+    var commandPaletteHandoff = BrowserCommandPaletteHandoff.neither
 
     /// Where Back, Forward and Tabs are: beside the address here, or in the
     /// side toolbar, which leaves the address on its own over the page.
@@ -63,7 +66,9 @@ struct MobileCompactPageToolbar: View {
                     submit: submitAddress,
                     stepTab: tabStep,
                     openPalette: openPalette,
-                    isPaletteShown: isPaletteShown
+                    isPaletteShown: isPaletteShown,
+                    commandSurfaceNamespace: commandSurfaceNamespace,
+                    commandPaletteHandoff: commandPaletteHandoff
                 )
             }
             .modifier(MobileTabSwipeShake(hits: tabSwipe.boundaryHits))

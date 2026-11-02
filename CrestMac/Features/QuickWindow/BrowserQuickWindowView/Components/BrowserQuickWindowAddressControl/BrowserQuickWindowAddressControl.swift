@@ -13,8 +13,11 @@ struct BrowserQuickWindowAddressControl: View {
     @Binding var addressText: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
+    let commandSurfaceNamespace: Namespace.ID
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
 
     var body: some View {
@@ -24,7 +27,6 @@ struct BrowserQuickWindowAddressControl: View {
                 spaces: model.availableSpaceModels.map(\.identity),
                 selectSpace: model.selectSpace
             )
-            Divider().frame(height: 16)
             BrowserQuickWindowAddressSecurityIcon(
                 isSecure: model.page?.live.security.isSecure == true
             )
@@ -41,14 +43,16 @@ struct BrowserQuickWindowAddressControl: View {
                 submit: openAddress
             )
             .padding(.vertical, BrowserQuickWindowLayout.addressVerticalPadding)
-            BrowserQuickWindowAddressTrailingControl(
-                page: model.page,
-                addressText: $addressText,
-                isAddressEditing: isAddressEditing,
-                reloadOrStop: reloadOrStop
-            )
-            if let siteControl {
-                BrowserSiteControlButton(configuration: siteControl)
+            HStack(spacing: BrowserQuickWindowLayout.trailingControlSpacing) {
+                BrowserQuickWindowAddressTrailingControl(
+                    page: model.page,
+                    addressText: $addressText,
+                    isAddressEditing: isAddressEditing,
+                    reloadOrStop: reloadOrStop
+                )
+                if let siteControl {
+                    BrowserSiteControlButton(configuration: siteControl)
+                }
             }
         }
         .browserAddressFieldSurface(
@@ -60,9 +64,12 @@ struct BrowserQuickWindowAddressControl: View {
         )
         .coordinateSpace(Self.field)
         .anchorPreference(key: BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
+        .background { commandPaletteAnchor }
         // The palette grows out of the field and its input line takes the
         // field's place until it closes.
-        .opacity(isPaletteShown ? 0 : 1)
+        .animation(commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)) {
+            $0.opacity(isPaletteShown ? 0 : 1)
+        }
         .allowsHitTesting(!isPaletteShown)
         .accessibilityHidden(isPaletteShown)
         .frame(
@@ -83,6 +90,22 @@ struct BrowserQuickWindowAddressControl: View {
     }
 
     private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil }
+
+    /// The field's frame, carrying the palette's identity while the field
+    /// holds it, so the palette's glass grows out of the field's, as the
+    /// sidebar's field does with a browser window's palette.
+    @ViewBuilder
+    private var commandPaletteAnchor: some View {
+        if commandPaletteHandoff.fieldHoldsMorph, let space = model.spaceModel {
+            Color.clear.matchedGeometryEffect(
+                id: BrowserCommandSurfaceMorph.commandPalette(spaceID: space.id),
+                in: commandSurfaceNamespace,
+                properties: .frame,
+                anchor: .center,
+                isSource: true
+            )
+        }
+    }
 
     /// Opens the palette over the field, starting at the page's address;
     /// without one the field edits in place.

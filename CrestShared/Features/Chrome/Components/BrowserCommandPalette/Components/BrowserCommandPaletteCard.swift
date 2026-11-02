@@ -26,6 +26,10 @@ struct BrowserCommandPaletteCard: View {
     /// Whether the card has arrived, rather than growing in or shrinking away.
     private var isSettled: Bool { transitionPhase.isIdentity }
 
+    /// The edge the query row sits on, which shows first as the card grows.
+    private var queryEdge: UnitPoint { presentation.listsUpward ? .bottom : .top }
+    private var queryAlignment: Alignment { presentation.listsUpward ? .bottom : .top }
+
     /// The identity the card shares with its Space's address field.
     private var morph: BrowserCommandSurfaceMorph? {
         model.space.map { .commandPalette(spaceID: $0.id) }
@@ -48,12 +52,12 @@ struct BrowserCommandPaletteCard: View {
                     $0.opacity(isSettled ? 1 : 0)
                         .scaleEffect(
                             isSettled ? 1 : BrowserCommandPaletteMetrics.morphContentScale,
-                            anchor: .top
+                            anchor: queryEdge
                         )
                 }
                 // Takes whatever frame the morph proposes. The resting
-                // contents overflow it from the top, where the query row is.
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+                // contents overflow it from the query row's edge.
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: queryAlignment)
                 .modifier(
                     BrowserCommandPaletteShellMaterial(
                         shape: morphingShape,

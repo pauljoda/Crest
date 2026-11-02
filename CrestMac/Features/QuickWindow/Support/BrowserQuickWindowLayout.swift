@@ -23,7 +23,11 @@ enum BrowserQuickWindowLayout {
     static let windowControlsCenterY: CGFloat = 26
     static let toolbarTopPadding: CGFloat = windowControlsCenterY - controlHeight / 2
     static let toolbarSpacing: CGFloat = 8
-    static let sourceChipHorizontalPadding: CGFloat = 9
+    /// Reload, its menu and Site Controls at the field's end sit close
+    /// together, each as wide as its glyph needs.
+    static let trailingControlSpacing: CGFloat = 2
+    static let reloadControlSize = CGSize(width: 24, height: minimumMacHitTarget)
+    static let reloadMenuControlSize = CGSize(width: 14, height: minimumMacHitTarget)
     static let sourceChipLeadingInset: CGFloat = (controlHeight - CrestLayout.minimumHitTarget) / 2
     static let windowControlClearance: CGFloat = 92
     static let spacePickerWidth: CGFloat = 240

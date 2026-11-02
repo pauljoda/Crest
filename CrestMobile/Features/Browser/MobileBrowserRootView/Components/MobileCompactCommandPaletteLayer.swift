@@ -24,6 +24,8 @@ struct MobileCompactCommandPaletteLayer: View {
     let selectTab: (BrowserTabRuntimeAssignment, BrowserTabRuntimeAssignment) -> Bool
     let openURL: (BrowserTabRuntimeAssignment, URL) -> Bool
     let fieldFrame: CGRect?
+    /// The namespace in which the palette grows out of the address bar.
+    let morphNamespace: Namespace.ID
 
     @ViewBuilder
     var body: some View {
@@ -39,6 +41,7 @@ struct MobileCompactCommandPaletteLayer: View {
                 openURL: { source, url, _ in openURL(source, url) },
                 dismiss: { self.mode = nil },
                 presentation: .rising,
+                morphNamespace: morphNamespace,
                 fieldFrame: fieldFrame
             )
             .id(BrowserCommandPalettePresentationIdentity(mode: mode, space: browser.shownSpace, source: source))

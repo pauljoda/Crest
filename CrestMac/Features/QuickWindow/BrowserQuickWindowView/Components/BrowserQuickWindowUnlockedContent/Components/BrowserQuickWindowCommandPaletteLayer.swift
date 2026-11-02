@@ -22,6 +22,8 @@ struct BrowserQuickWindowCommandPaletteLayer: View {
     let model: BrowserQuickWindowModel
     let chrome: BrowserChromeState
     let fieldFrame: CGRect?
+    /// The namespace in which the palette grows out of the address field.
+    let morphNamespace: Namespace.ID
     let openBrowserWindow: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
@@ -40,6 +42,7 @@ struct BrowserQuickWindowCommandPaletteLayer: View {
                 openURL: { _, _, _ in false },
                 dismiss: chrome.dismissCommandPalette,
                 presentation: .dropping,
+                morphNamespace: morphNamespace,
                 fieldFrame: fieldFrame,
                 destination: BrowserQuickWindowPaletteDestination(
                     model: model, isActive: scenePhase == .active, showTab: showTab),

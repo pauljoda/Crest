@@ -48,6 +48,9 @@ struct MobileBrowserDetailView: View {
     /// The address bar's swipe through the shown Space's tabs, which moves
     /// the page area and the bar together.
     @State private var tabSwipe = MobileTabSwipe()
+    /// The namespace in which the command palette grows out of the compact
+    /// address bar.
+    @Namespace private var compactPaletteNamespace
 
     var body: some View {
         let pageActions = MobileSelectedPageActionPort(
@@ -133,7 +136,9 @@ struct MobileBrowserDetailView: View {
                         showSwipedTab: showSwipedTab,
                         compactTransitionEnded: compactTransitionEnded,
                         openPalette: paletteMode == nil ? nil : openLocation,
-                        isPaletteShown: paletteMode?.wrappedValue != nil
+                        isPaletteShown: paletteMode?.wrappedValue != nil,
+                        commandSurfaceNamespace: compactPaletteNamespace,
+                        commandPaletteHandoff: compactPaletteHandoff
                     )
                     .safeAreaPadding(.bottom, 0)
                     .zIndex(1)
@@ -150,7 +155,8 @@ struct MobileBrowserDetailView: View {
                         isSourceAvailable: isPaletteSourceAvailable,
                         selectTab: selectStartPageTab,
                         openURL: openStartPageURL,
-                        fieldFrame: anchor.map { proxy[$0] }
+                        fieldFrame: anchor.map { proxy[$0] },
+                        morphNamespace: compactPaletteNamespace
                     )
                 }
             }
@@ -531,6 +537,17 @@ struct MobileBrowserDetailView: View {
         // Relocking deactivates its page; that must never trigger auto-restore.
         guard let space = browser.shownSpace, !spaceAccess.isLocked(space) else { return }
         pages.select()
+    }
+
+    /// Which of the compact address bar and the palette holds their shared
+    /// identity: the palette's glass grows out of the bar's and shrinks back
+    /// into it.
+    private var compactPaletteHandoff: BrowserCommandPaletteHandoff {
+        .resolve(
+            isPaletteShown: paletteMode?.wrappedValue != nil,
+            isFieldOnScreen: isCompact && showsCompactToolbar && !compactToolbarIsHidden,
+            animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
+        )
     }
 
     private var emptySelectionPaletteActions: BrowserEmptySelectionPaletteActions? {

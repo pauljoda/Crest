@@ -24,6 +24,9 @@ struct MobileCompactAddressBar: View {
     /// Whether the palette grown out of the bar shows, its input line in the
     /// bar's place.
     var isPaletteShown = false
+    /// The namespace in which the palette grows out of the bar.
+    var commandSurfaceNamespace: Namespace.ID?
+    var commandPaletteHandoff = BrowserCommandPaletteHandoff.neither
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -114,7 +117,10 @@ struct MobileCompactAddressBar: View {
         }
         .glassEffect(.regular.interactive(), in: fieldShape)
         .anchorPreference(key: MobileCompactCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
-        .opacity(isPaletteShown ? 0 : 1)
+        .background { commandPaletteAnchor }
+        .animation(commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)) {
+            $0.opacity(isPaletteShown ? 0 : 1)
+        }
         .allowsHitTesting(!isPaletteShown)
         .accessibilityHidden(isPaletteShown)
         .modifier(
@@ -123,6 +129,21 @@ struct MobileCompactAddressBar: View {
                 transitionEnded: transitionEnded
             )
         )
+    }
+
+    /// The bar's frame, carrying the palette's identity while the bar holds
+    /// it, so the palette's glass grows out of the bar's.
+    @ViewBuilder
+    private var commandPaletteAnchor: some View {
+        if commandPaletteHandoff.fieldHoldsMorph, let commandSurfaceNamespace, let space = browser.shownSpace {
+            Color.clear.matchedGeometryEffect(
+                id: BrowserCommandSurfaceMorph.commandPalette(spaceID: space.id),
+                in: commandSurfaceNamespace,
+                properties: .frame,
+                anchor: .center,
+                isSource: true
+            )
+        }
     }
 
     private var offersTranslation: Bool {

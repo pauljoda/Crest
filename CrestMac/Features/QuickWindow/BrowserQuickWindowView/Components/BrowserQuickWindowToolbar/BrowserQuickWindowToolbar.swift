@@ -5,6 +5,8 @@ struct BrowserQuickWindowToolbar: View {
     @Binding var addressText: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
+    let commandSurfaceNamespace: Namespace.ID
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let promote: (BrowserSpaceRuntimeAssignment) -> Void
 
     var body: some View {
@@ -19,7 +21,9 @@ struct BrowserQuickWindowToolbar: View {
                     model: model,
                     addressText: $addressText,
                     isAddressEditing: $isAddressEditing,
-                    addressFocusRequest: addressFocusRequest
+                    addressFocusRequest: addressFocusRequest,
+                    commandSurfaceNamespace: commandSurfaceNamespace,
+                    commandPaletteHandoff: commandPaletteHandoff
                 )
                 // The field sits under the title bar. A drag across it selects
                 // its text, while the strip around it still moves the window.

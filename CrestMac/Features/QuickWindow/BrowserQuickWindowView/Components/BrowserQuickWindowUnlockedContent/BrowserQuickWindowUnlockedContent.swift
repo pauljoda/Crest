@@ -9,6 +9,9 @@ struct BrowserQuickWindowUnlockedContent: View {
     @State private var addressText: String
     @State private var isAddressEditing = false
     @State private var addressFocusRequest = 0
+    /// The window's command-surface namespace, in which the palette grows out
+    /// of the address field.
+    @Namespace private var commandSurfaceNamespace
 
     @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,6 +41,8 @@ struct BrowserQuickWindowUnlockedContent: View {
                 addressText: $addressText,
                 isAddressEditing: $isAddressEditing,
                 addressFocusRequest: addressFocusRequest,
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: commandPaletteHandoff,
                 promote: promote
             )
         }
@@ -48,15 +53,16 @@ struct BrowserQuickWindowUnlockedContent: View {
                         model: model,
                         chrome: chrome,
                         fieldFrame: anchor.map { proxy[$0] },
+                        morphNamespace: commandSurfaceNamespace,
                         openBrowserWindow: openBrowserWindow
                     )
                 }
-                .animation(
-                    CrestMotion.contentReveal.unlessReducingMotion(reduceMotion),
-                    value: chrome.commandPaletteMode
-                )
             }
         }
+        .animation(
+            BrowserCommandSurfaceMorph.commandPaletteAnimation(reduceMotion: reduceMotion),
+            value: isPaletteShown
+        )
         .modifier(
             BrowserQuickWindowActivityLifecycleModifier(
                 model: model,
@@ -77,6 +83,19 @@ struct BrowserQuickWindowUnlockedContent: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
             "Quick Window using \(model.spaceModel?.settings.name ?? "Space")"
+        )
+    }
+
+    private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
+
+    /// Which of the address field and the palette holds their shared
+    /// identity: the palette's glass grows out of the field's and shrinks
+    /// back into it.
+    private var commandPaletteHandoff: BrowserCommandPaletteHandoff {
+        .resolve(
+            isPaletteShown: isPaletteShown,
+            isFieldOnScreen: true,
+            animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
         )
     }
 

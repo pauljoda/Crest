@@ -4785,6 +4785,10 @@
     "iphone-address-bar-palette": {
       "category": "new",
       "message": "On iPhone, tapping the address bar opens the command palette from the bar, with its results rising above it and the best match nearest the bar."
+    },
+    "quick-window-keeps-smallest-size": {
+      "category": "fixed",
+      "message": "A Quick Window on Mac no longer resizes narrower than its toolbar fits, which cut off Open In and slid Back and Forward under the window's buttons."
     }
   }
 }
