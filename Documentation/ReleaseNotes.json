@@ -4777,6 +4777,10 @@
     "create-group-needs-tabs": {
       "category": "internal",
       "message": "Creating a group now requires at least one tab, so an empty group is never made."
+    },
+    "groups-sync-review-fixes": {
+      "category": "internal",
+      "message": "A group emptied on another device now goes on every device, and only groups the person removed sync as deleted."
     }
   }
 }

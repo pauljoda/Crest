@@ -18,7 +18,9 @@ struct BrowserFolderHeaderControl: View {
     private var showsTabCounts: Bool {
         folder.isGroup ? appearance.groupsShowTabCounts : appearance.foldersShowTabCounts
     }
-    private var alwaysVisible: Bool { appearance.foldersAlwaysVisible }
+    private var alwaysVisible: Bool {
+        folder.isGroup ? appearance.groupsAlwaysVisible : appearance.foldersAlwaysVisible
+    }
     private var tintsTitle: Bool { folder.isGroup ? appearance.groupsTintTitle : appearance.foldersTintTitle }
     private var textScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 

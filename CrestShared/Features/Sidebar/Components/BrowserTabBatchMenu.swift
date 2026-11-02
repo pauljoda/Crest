@@ -35,10 +35,13 @@ struct BrowserTabBatchMenu: View {
                 count == 1 ? "Pin Tab" : "Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
         }
-        Menu("Move to Group", systemImage: "rectangle.stack.badge.plus") {
-            action("New Group", browser.filingInNewFolder(request, in: .current, isGroup: true))
-            ForEach(groupChoices) { choice in
-                action(named: choice.pathTitle, browser.filing(request, .current, folder: choice.id))
+        // A group holds only tabs, so a selection with folders has none to offer.
+        if request.folderIDs.isEmpty {
+            Menu("Move to Group", systemImage: "rectangle.stack.badge.plus") {
+                action("New Group", browser.filingInNewFolder(request, in: .current, isGroup: true))
+                ForEach(groupChoices) { choice in
+                    action(named: choice.pathTitle, browser.filing(request, .current, folder: choice.id))
+                }
             }
         }
         Menu("Move to Folder", systemImage: "folder") {

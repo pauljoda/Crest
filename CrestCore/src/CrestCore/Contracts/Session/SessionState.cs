@@ -191,7 +191,8 @@ public sealed record SessionState(
     internal SessionState ClearingEmptiedGroups(SessionState previous) {
         var cleared = false;
         var spaces = Spaces.Select(space => {
-            if (previous.Space(space.Id) is not { } before) return space;
+            if (previous.Space(space.Id) is not { } before || ReferenceEquals(space.Tabs, before.Tabs)
+                || !space.Folders.Any(folder => folder.IsGroup)) return space;
             var held = before.Tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
             var holding = space.Tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
             var emptied = space.Folders.Where(folder => folder.IsGroup && held.Contains(folder.Id) && !holding.Contains(folder.Id))
@@ -203,12 +204,15 @@ public sealed record SessionState(
         return cleared ? this with { Spaces = spaces } : this;
     }
 
-    /// The groups `previous` held that this session holds no more, which went
-    /// on the person's behalf: emptied, or deleted.
+    /// The groups `previous` held that this session holds no more, from Spaces
+    /// it still holds: emptied, deleted or ungrouped on the person's behalf. A
+    /// group that left with its Space keeps the reason the Space went for.
     internal IReadOnlyList<Guid> GroupsRemovedSince(SessionState previous) {
+        var gone = previous.Spaces.Where(before => Space(before.Id) is { } space && !ReferenceEquals(space.Folders, before.Folders))
+            .SelectMany(before => before.Folders.Where(folder => folder.IsGroup)).Select(folder => folder.Id).ToList();
+        if (gone.Count == 0) return [];
         var kept = Spaces.SelectMany(space => space.Folders).Select(folder => folder.Id).ToHashSet();
-        return [.. previous.Spaces.SelectMany(space => space.Folders).Where(folder => folder.IsGroup && !kept.Contains(folder.Id))
-            .Select(folder => folder.Id)];
+        return [.. gone.Where(id => !kept.Contains(id))];
     }
 
     #endregion
