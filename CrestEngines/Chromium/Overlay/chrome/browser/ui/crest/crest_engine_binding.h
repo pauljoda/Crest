@@ -223,11 +223,15 @@ class EngineBinding {
   // applies.
   bool LoadStagedLink(const std::string& page, const std::string& token, const GURL& url);
   void DropStagedLink(const std::string& token);
+  // What a load of a link whose window the core refused came to: no such
+  // link was waiting, the link loaded, or it was stale, its page having moved
+  // on from the document the link was in.
+  enum class RefusedLinkLoad { kNone, kLoaded, kStale };
   // Loads, in `page`, the request of a link whose window the core refused,
   // when `url` is its address and `page` is the page it was in, still showing
   // the document the link was in, so the link keeps its referrer and
-  // initiator. False when no such link applies.
-  bool LoadRefusedWindowLink(const std::string& page, const GURL& url);
+  // initiator.
+  RefusedLinkLoad LoadRefusedWindowLink(const std::string& page, const GURL& url);
 
  private:
   friend class base::NoDestructor<EngineBinding>;
