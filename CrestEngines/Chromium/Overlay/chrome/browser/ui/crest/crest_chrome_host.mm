@@ -1329,6 +1329,16 @@ void EnsureCrestUIStarted(Browser* browser) {
   const crest_engine_pages_t pages = binding.Pages();
   const auto& fingerprint = crest::EngineBinding::Fingerprint();
   start([[CrestChromiumMacShell alloc] init], &table, fingerprint.data(), fingerprint.size(), &pages);
+  // A window that comes into use brings the page in use there with it: a page
+  // shown while its window was in the background did not come into use then.
+  [[NSNotificationCenter defaultCenter] addObserverForName:NSWindowDidBecomeKeyNotification object:nil
+      queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification* notification) {
+    if (State().disposing || State().quitting) return;
+    NSWindow* window = notification.object;
+    crest::EngineBinding::Get().Browsers().WindowInUse([window](content::WebContents* contents) {
+      return contents->GetTopLevelNativeWindow().GetNativeNSWindow() == window;
+    });
+  }];
   auto pending = std::move(State().pending_authentication_sessions);
   State().pending_authentication_sessions.clear();
   for (ASWebAuthenticationSessionRequest* request : pending) StartAuthenticationSession(request);

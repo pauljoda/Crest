@@ -58,11 +58,13 @@ class EngineBrowsers final {
   // window `window`, keeping its history, renderer and extension identity,
   // and makes it that Browser's active tab.
   bool MoveToWindow(content::WebContents* contents, const std::string& profile_id, const std::string& window);
-  // Makes `contents` its Browser's active tab, and that Browser the one
-  // Chromium last saw in use, which an extension's active tab and current
-  // window resolve to. A Browser holds only its own profile's pages in its
-  // own window, so nothing moves between Spaces or windows. False when no
-  // Browser the binding keeps holds it.
+  // Makes `contents` its Browser's active tab and, while the window showing it
+  // is in use, that Browser the one Chromium last saw in use, which an
+  // extension's active tab and current window resolve to. A page shown in a
+  // window in the background waits for its window (see WindowInUse). A
+  // Browser holds only its own profile's pages in its own window, so nothing
+  // moves between Spaces or windows. False when no Browser the binding keeps
+  // holds it.
   bool Activate(content::WebContents* contents);
   // Deletes `contents` from the Browser that holds it.
   void Destroy(content::WebContents* contents);
@@ -95,6 +97,10 @@ class EngineBrowsers final {
   void Created(Browser* browser);
   void Shown(Browser* browser, bool focused);
   void Destroyed(Browser* browser);
+  // What the platform reports when a window comes into use: the Browser of
+  // the page in use there, as `in_window` picks out its pages, becomes the one
+  // Chromium last saw in use.
+  void WindowInUse(base::FunctionRef<bool(content::WebContents*)> in_window);
   // Whether the engine may create a Browser for itself in `profile`, which
   // `chrome.windows.create` asks before it creates one. A normal window gets a
   // Crest window of its own, and a popup a tab in the window the person is
@@ -108,6 +114,8 @@ class EngineBrowsers final {
   KeptBrowser* Find(const Browser* browser) const;
   KeptBrowser* HoldingKept(content::WebContents* contents) const;
   KeptBrowser* WindowBrowser(const std::string& profile_id, const std::string& window) const;
+  // Makes `kept`'s Browser the one Chromium last saw in use.
+  void Use(KeptBrowser& kept);
   // Places a Browser the engine created for itself in the Crest window the
   // platform reserves for it. False when no Space can host its profile's tabs.
   bool Place(Browser* browser);
@@ -121,7 +129,7 @@ class EngineBrowsers final {
   std::vector<std::unique_ptr<KeptBrowser>> kept_;
   // The Browser Chromium started with, whose profile is the engine's own.
   raw_ptr<Browser> bootstrap_ = nullptr;
-  // The Browser of the page last shown, which Chromium counts as active.
+  // The Browser of the page in use, which Chromium counts as active.
   raw_ptr<Browser> active_ = nullptr;
   std::string creating_window_;
   // The profile `chrome.windows.create` is about to create a Browser in, for
