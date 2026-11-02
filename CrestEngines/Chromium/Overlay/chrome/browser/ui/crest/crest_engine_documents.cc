@@ -37,6 +37,9 @@ constexpr base::TimeDelta kTimeout = base::Seconds(45);
 // The tallest band of a full-page image the GPU draws at once, in image
 // pixels: half the 16,384-pixel texture limit of the GPUs Crest runs on.
 constexpr int kMaximumBandHeight = 8192;
+// The most pixels a full-page image may have. Joining its bands holds them all
+// at once: a gigabyte of decoded pixels at this size.
+constexpr double kMaximumImagePixels = 256.0 * 1024 * 1024;
 
 // Joins the bands of a full-page image, top to bottom, into one PNG `height`
 // pixels tall. Decoding and encoding a tall page's pixels takes a while, so
@@ -152,7 +155,14 @@ void PageDocuments::DispatchProtocolMessage(content::DevToolsAgentHost*, base::s
     capture_width_ = width;
     capture_scale_ = target / width;
     pixels_per_css_pixel_ = capture_scale_ * (view ? view->GetDeviceScaleFactor() : 1);
-    image_height_ = std::max(1, static_cast<int>(std::lround(height * pixels_per_css_pixel_)));
+    // A width larger than the page's scales the image up, so its size is
+    // checked before anything is captured.
+    const double image_height = height * pixels_per_css_pixel_;
+    if (width * pixels_per_css_pixel_ * image_height > kMaximumImagePixels) {
+      Finish(std::nullopt, engine::PageExportFailure::kTooLarge);
+      return;
+    }
+    image_height_ = std::max(1, static_cast<int>(std::lround(image_height)));
     bands_.clear();
     CaptureBand(0);
     return;

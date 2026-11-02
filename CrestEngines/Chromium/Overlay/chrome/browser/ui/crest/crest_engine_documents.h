@@ -34,7 +34,9 @@ namespace crest {
 //
 // The GPU draws a capture into one surface, which can be no taller than its
 // texture limit, so a full-page image taller than a band is captured band by
-// band and the bands joined into one image.
+// band and the bands joined into one image. Joining holds the whole image at
+// once, so an image with more pixels than that allows is refused as too large
+// before any capture.
 class PageDocuments final : public content::WebContentsObserver,
                             public content::DevToolsAgentHostClient {
  public:
