@@ -29,6 +29,7 @@ struct BrowserQuickWindowToolbar: View {
                 style: .toolbar,
                 openInSpace: promote
             )
+            .fixedSize()
         }
         .padding(.leading, BrowserQuickWindowLayout.windowControlClearance)
         .padding(.trailing, BrowserQuickWindowLayout.horizontalPadding)

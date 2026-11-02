@@ -73,7 +73,8 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         let size = CGSize(
             width: max(frame.width, BrowserQuickWindowLayout.minimumWidth),
             height: max(frame.height, BrowserQuickWindowLayout.minimumHeight))
-        return CGRect(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2, width: size.width, height: size.height)
+        return CGRect(
+            x: frame.midX - size.width / 2, y: frame.midY - size.height / 2, width: size.width, height: size.height)
     }
 
     func updateWindowGeometry() {
