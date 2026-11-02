@@ -3158,3 +3158,34 @@
  -----END CERTIFICATE-----
  
  # bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893
+--- a/chrome/browser/extensions/api/extension_action/extension_action_api.cc
++++ b/chrome/browser/extensions/api/extension_action/extension_action_api.cc
+@@ -122,8 +122,14 @@
+ bool HasPopupOnActiveTab(BrowserWindowInterface& browser,
+                          content::BrowserContext* browser_context,
+                          const Extension& extension) {
+-  content::WebContents* web_contents =
+-      TabListInterface::From(&browser)->GetActiveTab()->GetContents();
++  // Crest: a Browser can have no tabs, as the one a page-less extension click
++  // opens its popup against, so it can have no active tab either.
++  tabs::TabInterface* active_tab =
++      TabListInterface::From(&browser)->GetActiveTab();
++  if (!active_tab) {
++    return false;
++  }
++  content::WebContents* web_contents = active_tab->GetContents();
+   ExtensionAction* extension_action =
+       ExtensionActionManager::Get(browser_context)
+           ->GetExtensionAction(extension);
+--- a/chrome/browser/extensions/extension_tab_util.cc
++++ b/chrome/browser/extensions/extension_tab_util.cc
+@@ -1032,7 +1032,8 @@
+         if (browser_profile == profile ||
+             browser_profile == incognito_profile) {
+           TabListInterface* tab_list = TabListInterface::From(browser);
+-          if (tab_list) {
++          // Crest: a Browser can have no tabs, and so no active tab.
++          if (tab_list && tab_list->GetActiveTab()) {
+             content::WebContents* tab_contents =
+                 tab_list->GetActiveTab()->GetContents();
+             CHECK(tab_contents);
