@@ -4846,6 +4846,14 @@
       "category": "fixed",
       "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
     },
+    "quick-window-remembers-size": {
+      "category": "improved",
+      "message": "On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest."
+    },
+    "quick-window-size-after-contents-change": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window goes on remembering the size you give it after its contents change."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
