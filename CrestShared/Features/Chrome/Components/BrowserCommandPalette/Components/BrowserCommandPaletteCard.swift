@@ -23,6 +23,10 @@ struct BrowserCommandPaletteCard: View {
     let restingWidth: CGFloat?
     let queryIsFocused: FocusState<Bool>.Binding
 
+    /// How much taller than its minimum the input line has grown at a larger
+    /// text size.
+    @State private var fieldExcessHeight: CGFloat = 0
+
     /// Whether the card has arrived, rather than growing in or shrinking away.
     private var isSettled: Bool { transitionPhase.isIdentity }
 
@@ -125,6 +129,11 @@ struct BrowserCommandPaletteCard: View {
             presentation: presentation,
             queryIsFocused: queryIsFocused
         )
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            fieldExcessHeight = max(0, $0 - presentation.input.minimumHeight)
+        }
     }
 
     @ViewBuilder
@@ -149,12 +158,13 @@ struct BrowserCommandPaletteCard: View {
     private var keepsHeight: Bool { presentation.keepsHeight }
 
     /// The height the results may take, less what the provider chips take
-    /// from a card that keeps its height or fills what its field leaves it.
+    /// from a card that keeps its height or fills what its field leaves it,
+    /// and less what a larger text size adds to that field's input line.
     private var resultAreaHeight: CGFloat {
-        guard keepsHeight || presentation.growsFromField, !model.providerChips.isEmpty else {
-            return maximumResultAreaHeight
-        }
-        return max(0, maximumResultAreaHeight - BrowserCommandPaletteMetrics.providerChipRowHeight)
+        guard keepsHeight || presentation.growsFromField else { return maximumResultAreaHeight }
+        let chips = model.providerChips.isEmpty ? 0 : BrowserCommandPaletteMetrics.providerChipRowHeight
+        let grownField = presentation.growsFromField ? fieldExcessHeight : 0
+        return max(0, maximumResultAreaHeight - chips - grownField)
     }
 
     /// The card's own outline at rest, and the field's while the card is

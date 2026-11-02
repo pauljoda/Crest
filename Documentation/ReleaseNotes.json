@@ -4817,6 +4817,10 @@
     "quick-window-overflow-extension-menus": {
       "category": "fixed",
       "message": "Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
+    },
+    "iphone-palette-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes."
     }
   }
 }

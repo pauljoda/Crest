@@ -77,7 +77,8 @@ enum BrowserCommandPaletteLayout {
     }
 
     /// The height the results of a palette in a field region `regionHeight`
-    /// tall may take beside its input line.
+    /// tall may take beside its input line at its minimum height. The card
+    /// takes from it what a larger text size adds to that line.
     static func fieldResultAreaHeight(
         regionHeight: CGFloat, presentation: BrowserCommandPalettePresentation
     ) -> CGFloat {
