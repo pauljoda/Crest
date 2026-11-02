@@ -26,6 +26,9 @@ struct BrowserCommandPaletteCard: View {
     /// How much taller than its minimum the input line has grown at a larger
     /// text size.
     @State private var fieldExcessHeight: CGFloat = 0
+    /// How tall the provider chips' row is, which a larger text size makes
+    /// taller than its least height.
+    @State private var chipRowHeight = BrowserCommandPaletteMetrics.providerChipRowHeight
 
     /// Whether the card has arrived, rather than growing in or shrinking away.
     private var isSettled: Bool { transitionPhase.isIdentity }
@@ -140,6 +143,11 @@ struct BrowserCommandPaletteCard: View {
     private var chips: some View {
         if !model.providerChips.isEmpty {
             BrowserCommandPaletteProviderChips(model: model)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    chipRowHeight = $0
+                }
         }
     }
 
@@ -162,7 +170,7 @@ struct BrowserCommandPaletteCard: View {
     /// and less what a larger text size adds to that field's input line.
     private var resultAreaHeight: CGFloat {
         guard keepsHeight || presentation.growsFromField else { return maximumResultAreaHeight }
-        let chips = model.providerChips.isEmpty ? 0 : BrowserCommandPaletteMetrics.providerChipRowHeight
+        let chips = model.providerChips.isEmpty ? 0 : chipRowHeight
         let grownField = presentation.growsFromField ? fieldExcessHeight : 0
         return max(0, maximumResultAreaHeight - chips - grownField)
     }

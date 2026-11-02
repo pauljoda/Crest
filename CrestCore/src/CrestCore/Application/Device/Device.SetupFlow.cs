@@ -93,7 +93,8 @@ internal sealed partial class Device {
 
     /// Setup finished as `finish` said: this device has completed setup, no
     /// launch gate holds for the rest of this run, the flow shows what it did,
-    /// and the platform opens the guide in `guideSpaceId` when it names one.
+    /// still counting the passwords its imports could not save, and the
+    /// platform opens the guide in `guideSpaceId` when it names one.
     public void FinishedSetup(SetupFinish finish, Guid? guideSpaceId, ChangeFeed changes) {
         ArgumentNullException.ThrowIfNull(finish);
         ArgumentNullException.ThrowIfNull(changes);
@@ -108,7 +109,9 @@ internal sealed partial class Device {
                 Publish(flow with {
                     Step = SetupStep.Complete,
                     Phase = SetupPhase.Idle,
-                    Summary = finish.AppliesManualSetup ? new SetupSummary(IsImport: false, 0, 0, finish.CreatedSpaces) : flow.Summary
+                    Summary = finish.AppliesManualSetup
+                        ? new SetupSummary(IsImport: false, 0, 0, finish.CreatedSpaces, flow.Summary?.UnsavedPasswordCount ?? 0)
+                        : flow.Summary
                 }, changes);
             changes.Publish(new SetupFinished(finish.WorkspaceId, guideSpaceId));
         }

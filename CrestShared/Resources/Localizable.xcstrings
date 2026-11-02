@@ -897,6 +897,29 @@
         }
       }
     },
+    "%lld passwords couldn’t be saved." : {
+      "comment" : "Follows the setup completion summary when an import couldn’t save some passwords.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 password couldn’t be saved."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld passwords couldn’t be saved."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld points" : {
       "localizations" : {
         "ar" : {
@@ -4553,10 +4576,19 @@
         }
       }
     },
+    "Crest couldn’t finish the import or restore the original Keychain inventory. Review this Space before trying again." : {
+
+    },
+    "Crest couldn’t import these passwords. This Space’s passwords are unchanged." : {
+
+    },
     "Crest couldn’t open itself to agents. Turn agents off and on again to try again." : {
 
     },
     "Crest couldn't open your session" : {
+
+    },
+    "Crest couldn’t read that password file." : {
 
     },
     "Crest couldn’t read the iCloud sync state an earlier version saved." : {
@@ -4574,6 +4606,9 @@
           }
         }
       }
+    },
+    "Crest couldn’t read this Space’s passwords. Nothing was imported." : {
+
     },
     "Crest couldn’t remove the passwords it can’t read." : {
 
@@ -4707,6 +4742,9 @@
     },
     "Crest preview" : {
       "extractionState" : "manual"
+    },
+    "Crest quit unexpectedly while reopening your pages." : {
+
     },
     "Crest reads its data when you continue, which may ask for access" : {
 
@@ -5376,6 +5414,9 @@
     "Division" : {
 
     },
+    "Do you want to try to reopen them?" : {
+
+    },
     "Dock Sidebar" : {
 
     },
@@ -5383,6 +5424,9 @@
 
     },
     "Don’t ask again until it disconnects" : {
+
+    },
+    "Don’t Reopen" : {
 
     },
     "Don't Share" : {
@@ -14403,6 +14447,9 @@
       }
     },
     "This site’s certificate is not trusted. Information you send could be read by others." : {
+
+    },
+    "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts." : {
 
     },
     "This Tab" : {

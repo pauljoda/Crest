@@ -1311,6 +1311,9 @@ struct BeginDownload: Intent, DownloadIntent, Equatable, Sendable {
 struct BeginImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
 }
 
+struct BeginReopeningPages: Intent, WindowIntent, Equatable, Sendable {
+}
+
 struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -1922,6 +1925,10 @@ struct CredentialFillDecision: Equatable, Sendable {
     let isAllowed: Bool
 }
 
+struct CredentialFills: Equatable, Sendable {
+    let fills: [Bool]
+}
+
 struct CredentialFormFacts: Equatable, Sendable {
     var event: CredentialCaptureEvent
     var frameOrigin: CredentialOrigin
@@ -2049,6 +2056,13 @@ struct CredentialUsernameHint: Equatable, Sendable {
     var origin: CredentialOrigin
     var topLevelOrigin: CredentialOrigin
     var capturedAt: Double
+}
+
+struct CredentialsFillingPage: Query, Equatable, Sendable {
+    typealias Answer = CredentialFills
+
+    let page: CredentialOrigin
+    let saved: [CredentialOrigin]
 }
 
 struct CrestCharge: Equatable, Sendable {
@@ -2854,6 +2868,10 @@ struct FinishDownload: Intent, DownloadIntent, Equatable, Sendable {
 
 struct FinishImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
     let passwordCount: Int
+    let unsavedPasswordCount: Int
+}
+
+struct FinishReopeningPages: Intent, WindowIntent, Equatable, Sendable {
 }
 
 struct FinishSetup: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -3555,6 +3573,7 @@ struct LaunchWindowPlan: Equatable, Sendable {
     let windowIDs: [UUID]
     let startupWindowID: UUID
     let setup: SetupEntry?
+    let quitWhileReopening: Bool
 }
 
 struct LaunchWindows: Query, Equatable, Sendable {
@@ -5919,6 +5938,7 @@ struct SetupSummary: Equatable, Sendable {
     let tabCount: Int
     let passwordCount: Int
     let spaceCount: Int
+    let unsavedPasswordCount: Int
 }
 
 struct ShareSourcesOffered: Equatable, Sendable {
