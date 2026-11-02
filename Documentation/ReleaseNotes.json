@@ -4858,6 +4858,10 @@
       "category": "fixed",
       "message": "On the Chromium engine, a new-window link in a Peek or Quick Window now loads once, and still tells the site which page it came from."
     },
+    "chromium-held-window-timeout": {
+      "category": "internal",
+      "message": "A window a link opens on the Chromium engine loads after a few seconds even when Crest never decides where it belongs, instead of staying blank."
+    },
     "extension-popups-stay-open-for-system-prompts": {
       "category": "fixed",
       "message": "Extension popups, such as a password manager's, now stay open while macOS asks for Touch ID or another app is in front, so unlocking with Touch ID completes."
