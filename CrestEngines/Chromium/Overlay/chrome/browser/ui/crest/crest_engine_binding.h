@@ -337,6 +337,9 @@ class EngineBinding {
   void CloseWithheld(base::WeakPtr<content::WebContents> contents);
   // Forgets the links modified clicks sent to new tabs this turn.
   void ForgetRoutedTabs();
+  // Lets a held window's first navigation go ahead: the core adopted the
+  // window, or it waited too long for the core.
+  void ReleaseHeldWindow(base::WeakPtr<content::WebContents> contents);
   void CreateNow(const std::string& page);
   void ProfileLoaded(const std::string& page, Profile* profile);
   void Created(const std::string& page, content::WebContents* contents);
