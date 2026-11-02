@@ -4854,6 +4854,10 @@
       "category": "fixed",
       "message": "On the Chromium engine, a link that opens a new window now opens in the Peek or Quick Window it was clicked in."
     },
+    "chromium-new-window-links-keep-request": {
+      "category": "fixed",
+      "message": "On the Chromium engine, a new-window link in a Peek or Quick Window now loads once, and still tells the site which page it came from."
+    },
     "extension-popups-stay-open-for-system-prompts": {
       "category": "fixed",
       "message": "Extension popups, such as a password manager's, now stay open while macOS asks for Touch ID or another app is in front, so unlocking with Touch ID completes."

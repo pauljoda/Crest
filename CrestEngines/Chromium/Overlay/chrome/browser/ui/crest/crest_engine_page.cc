@@ -309,6 +309,10 @@ void EnginePage::LoadPending() {
       return;
     }
   }
+  // A link whose window the core refused loads here with its own request.
+  if (binding_->LoadRefusedWindowLink(key_, EngineURL(url))) {
+    return;
+  }
   Navigate(url);
 }
 
