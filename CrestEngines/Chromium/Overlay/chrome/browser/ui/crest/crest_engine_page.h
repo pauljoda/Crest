@@ -259,6 +259,7 @@ class EnginePage final : public content::WebContentsObserver,
   void DidChangeThemeColor() override;
   void PrimaryMainFrameRenderProcessGone(base::TerminationStatus status) override;
   void DidGetUserInteraction(const blink::WebInputEvent& event) override;
+  void OnWebContentsFocused(content::RenderWidgetHost* render_widget_host) override;
   void PrimaryMainDocumentElementAvailable() override;
   void DOMContentLoaded(content::RenderFrameHost* frame) override;
   void CrestKeySystemUnavailable(content::RenderFrameHost* frame, const std::string& key_system) override;
