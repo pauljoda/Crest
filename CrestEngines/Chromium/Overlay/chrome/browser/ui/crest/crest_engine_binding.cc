@@ -525,11 +525,13 @@ void EngineBinding::Stage(const engine::StageNavigation& staging) {
 }
 
 // The page has its WebContents: the platform hears its view is ready, the
-// core hears the page is live, and then it loads what it was asked to.
+// core hears the page is live and what it already shows, and then it loads
+// what it was asked to.
 void EngineBinding::Live(EnginePage& page, content::WebContents* contents) {
   DisableEnginePasswordManager(contents);
   page.Start(contents);
   Report(engine::PageCreated{.page_id = page.id()});
+  page.AdoptCommittedDocument();
   page.LoadPending();
 }
 
