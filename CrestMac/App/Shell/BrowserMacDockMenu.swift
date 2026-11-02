@@ -66,12 +66,14 @@ final class BrowserMacDockMenu: NSObject {
         return menu
     }
 
-    /// Runs `command` from the window the core names now, as choosing it
-    /// from the menu would, and brings Crest forward from the app in front.
-    func run(_ command: DockMenuCommand) {
+    /// Opens a blank Quick Window in the Space of the window the core names
+    /// now, as the menu's New Quick Window does, but over the window the
+    /// person is in in the app in front. Crest comes forward once the Quick
+    /// Window is key, so only the Quick Window comes forward with it.
+    func openQuickWindowWherePersonIs() {
         let content = try? application.browser.core.query(DockMenu(windowIDs: application.stackedWindowIDs))
+        actions(from: content?.windowID).openQuickWindow(wherePersonIs: true)
         NSApp.activate(ignoringOtherApps: true)
-        actions(from: content?.windowID).perform(command.command)
     }
 
     // MARK: - Actions - Choices

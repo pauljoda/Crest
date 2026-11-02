@@ -173,10 +173,11 @@ final class BrowserMacShell {
     }
 
     /// The New Quick Window keys, pressed in another app. No Crest window is
-    /// key there, so they run as the Dock menu does.
+    /// key there, so they run as the Dock menu does, over the window the
+    /// person is in.
     private func quickWindowShortcutPressed() {
         guard let running, !running.quit.isQuitting else { return }
-        running.dockMenu.run(.newQuickWindow)
+        running.dockMenu.openQuickWindowWherePersonIs()
     }
 
     // MARK: - Actions - External opens
