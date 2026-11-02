@@ -12,6 +12,7 @@ struct SpacePageObjects {
     let softwareUpdates: BrowserSoftwareUpdateService?
     let agentEndpoint: BrowserAgentEndpointStatus?
     let core: CrestCore?
+    let sidebarBands: SpaceSidebarBands?
 }
 
 /// Reads the objects a window shares with its views where a Space pager sits,
@@ -32,6 +33,7 @@ struct SpacePageEnvironment: DynamicProperty {
     @Environment(BrowserSoftwareUpdateService.self) private var softwareUpdates: BrowserSoftwareUpdateService?
     @Environment(BrowserAgentEndpointStatus.self) private var agentEndpoint: BrowserAgentEndpointStatus?
     @Environment(CrestCore.self) private var core: CrestCore?
+    @Environment(\.spaceSidebarBands) private var sidebarBands
 
     /// The objects as they are now. Read it while the pager updates; pages it
     /// builds later keep this value.
@@ -39,6 +41,6 @@ struct SpacePageEnvironment: DynamicProperty {
         SpacePageObjects(
             sidebarInteraction: sidebarInteraction, extensionSidePanel: extensionSidePanel,
             downloadFeedback: downloadFeedback, passkeyAccess: passkeyAccess, softwareUpdates: softwareUpdates,
-            agentEndpoint: agentEndpoint, core: core)
+            agentEndpoint: agentEndpoint, core: core, sidebarBands: sidebarBands)
     }
 }

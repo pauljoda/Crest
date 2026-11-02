@@ -95,7 +95,7 @@ final class MobileBrowserWindowSceneModel {
                 accessController: spaceAccess),
             browser.spaceModels.first?.id == space.id,
             browser.selectedTabID(in: space.id) == assignment.tabID,
-            space.tabs.model(assignment.tabID)?.nativeTabContent == .gettingStarted
+            space.shownTab(assignment.tabID)?.nativeTabContent == .gettingStarted
         else { return false }
         pages.select()
         navigation.presentSelectedTabAfterSetup()

@@ -33,17 +33,22 @@ extension BrowserPlatformPage {
 
     func reload() { enginePage.reload(bypassingCache: false) }
 
-    func clearSiteDataAndReload() async {
-        // Every engine clears the site from the page's profile, not only the
-        // engine that shows it.
-        guard let targetURL = live.displayURL ?? pageEngine.currentURL, let host = targetURL.host(), !host.isEmpty,
-            await corePage.eraseSiteData(host: host, profileID: profileID)
-        else { return }
+    /// Clears what the site the page shows keeps in `categories`, from every
+    /// engine's store for the page's profile, not only the engine that shows
+    /// it, then reloads the page from the network so it holds nothing it
+    /// kept. Only memory is touched when the profile is `ephemeral`. Answers
+    /// whether every engine cleared it, or nil when the page shows no site.
+    func clearSiteData(_ categories: [BrowsingDataCategory], ephemeral: Bool) async -> Bool? {
+        guard let targetURL = live.displayURL ?? pageEngine.currentURL, let host = targetURL.host(), !host.isEmpty
+        else { return nil }
+        let cleared = await corePage.eraseSiteData(
+            hosts: [host], categories: categories, profileID: profileID, ephemeral: ephemeral)
         if pageEngine.currentURL == nil {
             corePage.load(targetURL)
         } else {
             enginePage.reload(bypassingCache: true)
         }
+        return cleared
     }
 
     func performReload(_ mode: BrowserPageReloadMode) {

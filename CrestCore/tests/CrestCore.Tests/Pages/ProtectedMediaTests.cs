@@ -64,4 +64,18 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(next, Assert.IsType<CreatePage>(webKitBinding.Commands[^1]).PageId);
     }
 
+    [Fact]
+    public void AVideoServiceThatRefusesChromiumsWidevineOpensWhereProtectedMediaPlaysUnlessThePersonChoseAnEngine() {
+        var (app, chromium, chromiumBinding, webKit, webKitBinding, _, workspace, window, space, _) = ChromiumPage();
+        using var disposal = app;
+        const string netflix = "https://www.netflix.com/browse";
+
+        var (_, service) = LiveTab(app, webKit, workspace, window, space, netflix);
+        Assert.Equal(EngineKind.WebKit, CreatedOn(service, chromiumBinding, webKitBinding));
+
+        app.Send(new ChooseSiteEngine(space, new WebAddress(netflix).Origin!, EngineKind.Chromium));
+        var (_, chosen) = LiveTab(app, chromium, workspace, window, space, netflix);
+        Assert.Equal(EngineKind.Chromium, CreatedOn(chosen, chromiumBinding, webKitBinding));
+    }
+
 }

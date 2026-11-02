@@ -22,9 +22,12 @@ final class BrowserMacWindowModel {
     var id: UUID { request.id }
     var isTemporary: Bool { request.kind == .temporary }
 
+    /// `utilityDefaults` is where the window's utility lists keep what the
+    /// person chose for them, shared with every other window's.
     init(
         request: BrowserMacWindowRequest, browser: BrowserStore, pages: BrowserPagePool,
-        transientBrowsing: BrowserTransientBrowsingCoordinator, windowState: BrowserWindowStateStore
+        transientBrowsing: BrowserTransientBrowsingCoordinator, windowState: BrowserWindowStateStore,
+        utilityDefaults: UserDefaults?
     ) {
         self.request = request
         self.browser = browser
@@ -47,6 +50,6 @@ final class BrowserMacWindowModel {
         }
         chrome = BrowserChromeState(
             sidebarIsPresented: windowState.sidebarIsPresented ?? true,
-            utilityPresentation: BrowserUtilityPresentationState(defaults: nil))
+            utilityPresentation: BrowserUtilityPresentationState(defaults: utilityDefaults))
     }
 }

@@ -4,7 +4,7 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 /// One repair of a detached session under way: the identities it has given
-/// Spaces, profiles and tabs so far, so every one is its own, and where each
+/// Spaces, their own profiles and tabs so far, so every one is its own, and where each
 /// repaired tab's native assets come from. Each Space is either kept as it was,
 /// while its deletion is under way, or repaired: its folder tree, its tabs'
 /// sections, folders and saved addresses, its split runs and metadata, its
@@ -38,7 +38,8 @@ internal sealed class SessionRepair(IIdSource ids, DateTimeOffset now) {
     internal static SpaceState Empty(SpaceState? emptySpace, IIdSource ids, DateTimeOffset now) =>
         (emptySpace ?? BlankSpace()) with {
             Id = ids.Next(),
-            ProfileId = ids.Next(),
+            OwnProfileId = ids.Next(),
+            Membership = null,
             Folders = [],
             Tabs = [TabState.NewStartPage(ids.Next(), now)],
             SplitGroups = [],
@@ -49,7 +50,7 @@ internal sealed class SessionRepair(IIdSource ids, DateTimeOffset now) {
     /// `space`, at `spaceIndex`, kept exactly as it was while its cleanup is
     /// under way, its identities claimed so no other Space can take them.
     internal SpaceState Kept(SpaceState space, int spaceIndex) {
-        if (spaceIds.Claim(space.Id) != space.Id || profiles.Claim(space.ProfileId) != space.ProfileId)
+        if (spaceIds.Claim(space.Id) != space.Id || profiles.Claim(space.OwnProfileId) != space.OwnProfileId)
             throw new BrowserRuleException(BrowserRule.InvalidDeletionIntent);
         foreach (var (tab, tabIndex) in space.Tabs.Select((tab, index) => (tab, index))) {
             _ = tabIds.Claim(tab.Id);
@@ -63,7 +64,7 @@ internal sealed class SessionRepair(IIdSource ids, DateTimeOffset now) {
     /// made: its folder tree, its tabs, its split runs, its archive, its
     /// history and its split metadata.
     internal SpaceState Repaired(SpaceState space, int spaceIndex) {
-        var identified = space with { Id = spaceIds.Claim(space.Id), ProfileId = profiles.Claim(space.ProfileId) };
+        var identified = space with { Id = spaceIds.Claim(space.Id), OwnProfileId = profiles.Claim(space.OwnProfileId) };
         var folders = Folders(space);
         var tabs = Tabs(space, spaceIndex, folders);
         var groups = SplitMember.Repair(tabs.Select(tab => new SplitMember(tab.SplitGroupId, tab.Placement, tab.FolderId)).ToArray());

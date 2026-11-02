@@ -1,8 +1,8 @@
 import SwiftUI
 
-// The three places where an engine contributes its own site-scoped content to
-// a shared surface: the Site Settings permission list, the Site Controls
-// popover, and the top of a Space's sidebar. The presentation layer composes
+// The places where an engine contributes its own site-scoped content to a
+// shared surface: the Site Settings permission list, the Site Controls
+// popover, the top of a Space's sidebar, and a Quick Window's toolbar. The presentation layer composes
 // these names and never mentions an engine's types; each engine's module
 // supplies its own implementation of them. The declarations below are the
 // WebKit composition — the Chromium framework has its own file, and neither is
@@ -43,6 +43,15 @@ struct BrowserEngineSidebarAccessory: View {
     let space: SpaceModel
     let browser: BrowserStore
     let pages: BrowserPagePool
+
+    var body: some View { EmptyView() }
+}
+
+/// No pinned extension actions in a Quick Window's toolbar without extensions.
+struct BrowserEngineToolbarAccessory: View {
+    let page: BrowserPage?
+    let space: SpaceModel
+    let browser: BrowserStore
 
     var body: some View { EmptyView() }
 }

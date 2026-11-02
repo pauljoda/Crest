@@ -204,7 +204,7 @@ internal static class RecordedIntents {
         bool Flag(string key) => environment[key]!.GetValue<bool>();
         return new(workspace, DevicePlatform.Named(request["platform"]!.GetValue<string>())!, new(Flag("testRuntime"),
             Flag("previewRuntime"), Flag("isolatedSession"), Flag("namedProfile"), Flag("isolatedCloudSync"), Flag("resetSession"),
-            Flag("showcase"), Flag("inMemoryCredentials"), Flag("onboardingWelcome"), Flag("desktopSetup"), Flag("mobileSetup"),
+            Flag("showcase"), environment["subSpaces"]?.GetValue<bool>() ?? false, Flag("inMemoryCredentials"), Flag("onboardingWelcome"), Flag("desktopSetup"), Flag("mobileSetup"),
             Flag("updateTestFeed")));
     }
 

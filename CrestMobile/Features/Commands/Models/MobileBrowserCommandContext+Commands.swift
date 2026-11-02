@@ -38,6 +38,13 @@ extension MobileBrowserCommandContext {
         Task { await toggleContentBlocking() }
     }
 
+    /// Clears what the active page's site keeps in `category`, without
+    /// waiting for it.
+    @MainActor
+    func beginClearingSiteData(_ category: BrowsingDataCategory) {
+        Task { await clearSiteData(category) }
+    }
+
     /// Runs `command` as the platform does, when it has an answer for it and
     /// can run it now.
     @MainActor

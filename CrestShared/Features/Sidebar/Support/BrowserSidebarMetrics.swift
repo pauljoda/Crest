@@ -69,17 +69,20 @@ enum BrowserSidebarMetrics {
     ///
     /// A top-level layer wears the setting plus ``containerPadding``, so the
     /// rows a container holds can wear the setting itself and the two curves
-    /// stay parallel; each level inward is ``containerPadding`` tighter. A
-    /// setting below the padding grows the outer corner by no more than the
-    /// setting, so Square stays square at every depth and the slider stays
-    /// continuous. No corner grows past `capsuleRadius`, half a row's height:
-    /// at Capsule a single row is a capsule, and a Split View or open folder,
-    /// which a capsule's corners cannot fit, keeps exactly that quarter circle
-    /// so it matches the capsules around it.
+    /// stay parallel; each level inward is ``containerPadding`` tighter, but
+    /// never tighter than the setting, so a tab deep in nested folders keeps
+    /// the corners the person chose rather than squaring off. A setting below
+    /// the padding grows the outer corner by no more than the setting, so
+    /// Square stays square at every depth and the slider stays continuous. No
+    /// corner grows past `capsuleRadius`, half a row's height: at Capsule a
+    /// single row is a capsule, and a Split View or open folder, which a
+    /// capsule's corners cannot fit, keeps exactly that quarter circle so it
+    /// matches the capsules around it.
     static func layerCornerRadius(depth: Int, userRadius: Double, capsuleRadius: CGFloat) -> CGFloat {
         let setting = userRadius.isFinite ? max(CGFloat(userRadius), 0) : 0
-        let outer = min(setting + min(setting, containerPadding), max(0, capsuleRadius))
-        return max(0, outer - containerPadding * CGFloat(max(0, depth)))
+        let capsule = max(0, capsuleRadius)
+        let outer = min(setting + min(setting, containerPadding), capsule)
+        return max(min(setting, capsule), outer - containerPadding * CGFloat(max(0, depth)))
     }
 
     /// Half the height of one sidebar row at `tabScale`: the radius of a

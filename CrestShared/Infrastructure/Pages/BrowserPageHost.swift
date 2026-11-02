@@ -40,6 +40,10 @@ final class BrowserPageHost {
     /// Takes a tab's card off every window that presents it, once its page or
     /// native content went.
     @ObservationIgnored var dropPresentation: @MainActor (UUID) -> Void = { _ in }
+    /// Whether a Space shows a tab, as one it holds or a pinned tab its group
+    /// shares. The host's owner reads it from the read model; a host told
+    /// nothing knows only the Spaces its pages name.
+    @ObservationIgnored var showsTab: @MainActor (_ spaceID: UUID, _ tabID: UUID) -> Bool = { _, _ in false }
     @ObservationIgnored private(set) var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
     @ObservationIgnored private var peekLeases: [UUID: PeekLease] = [:]
     /// The pages the core adopted as windows pages asked for, by page, until
@@ -88,13 +92,22 @@ final class BrowserPageHost {
         runtimes[tabID]?.page
     }
 
-    /// The tab's resident page while it belongs to the Space and profile
-    /// `assignment` names.
+    /// The tab's resident page while it serves the Space and profile
+    /// `assignment` names; see `serves(_:tabID:spaceID:profileID:)`.
     func page(matching assignment: BrowserTabRuntimeAssignment) -> BrowserPlatformPage? {
-        guard let page = runtimes[assignment.tabID]?.page, page.spaceID == assignment.spaceID,
-            page.profileID == assignment.profileID
+        guard let page = runtimes[assignment.tabID]?.page,
+            serves(page, tabID: assignment.tabID, spaceID: assignment.spaceID, profileID: assignment.profileID)
         else { return nil }
         return page
+    }
+
+    /// Whether `page`, the page of the tab `tabID`, serves that tab in the
+    /// Space `spaceID` with the profile `profileID`: it belongs to that Space,
+    /// or the tab is a pinned tab a group shares, which its page shows in
+    /// every Space of the group that shows the tab.
+    func serves(_ page: BrowserPlatformPage, tabID: UUID, spaceID: UUID, profileID: UUID) -> Bool {
+        page.profileID == profileID
+            && (page.spaceID == spaceID || showsTab(page.spaceID, tabID) && showsTab(spaceID, tabID))
     }
 
     /// The tab whose resident page `page` is.
@@ -128,7 +141,7 @@ final class BrowserPageHost {
         for tabID: UUID, matching assignment: BrowserSpaceRuntimeAssignment? = nil
     ) async -> (data: Data, iconAccent: BrowserTabIconAccent?)? {
         guard let page = runtimes[tabID]?.page,
-            assignment.map({ page.spaceID == $0.spaceID && page.profileID == $0.profileID }) ?? true,
+            assignment.map({ serves(page, tabID: tabID, spaceID: $0.spaceID, profileID: $0.profileID) }) ?? true,
             let data = await page.pullFavicon(),
             runtimes[tabID]?.page === page
         else { return nil }
@@ -322,7 +335,7 @@ final class BrowserPageHost {
         guard !nativeTabs.tabIDs.contains(assignment.tabID) || nativeTabs.contains(assignment) else { return false }
         guard
             runtimes[assignment.tabID].map({
-                $0.page.spaceID == assignment.spaceID && $0.page.profileID == assignment.profileID
+                serves($0.page, tabID: assignment.tabID, spaceID: assignment.spaceID, profileID: assignment.profileID)
             }) ?? true
         else { return false }
         unloadPage(for: assignment.tabID, preservingTabState: !discardState)
@@ -392,38 +405,43 @@ final class BrowserPageHost {
 
     // MARK: - Actions - Data
 
-    /// Lets go of every page of `space` or its profile, and of its native
-    /// content, and waits until nothing shows them.
-    func releasePages(of space: BrowserSpaceRuntimeAssignment) async {
-        let nativeTabIDs = nativeTabs.tabIDs(in: space.spaceID)
-        nativeTabs.remove(in: space.spaceID)
+    /// Lets go of every page of the Space `deletion` names or of a profile it
+    /// erases, and of the Space's native content, and waits until nothing
+    /// shows them. A profile another Space browses with keeps its pages.
+    func releasePages(of deletion: SpaceDeletionState) async {
+        let nativeTabIDs = nativeTabs.tabIDs(in: deletion.spaceID)
+        nativeTabs.remove(in: deletion.spaceID)
         let tabIDs = Set(
             runtimes.compactMap { tabID, runtime in
-                runtime.page.spaceID == space.spaceID || runtime.page.profileID == space.profileID ? tabID : nil
+                let erased = deletion.erasing.contains(runtime.page.profileID)
+                return runtime.page.spaceID == deletion.spaceID || erased ? tabID : nil
             }
         ).union(nativeTabIDs)
-        let probes = releasePages(for: tabIDs) + releaseTransientPages(in: space.spaceID)
+        let probes = releasePages(for: tabIDs) + releaseTransientPages(in: deletion.spaceID)
         await BrowserSpaceDataReleaseBarrier.waitForRetainedViews(probes)
     }
 
-    /// Deletes what the host keeps of `space` before the Space goes: `release`
-    /// lets go of its pages and what the platform keeps besides, then every
-    /// engine erases its profile through `core`, `ephemeral` when this launch
-    /// keeps it in memory only. Throws when an engine could not erase it.
+    /// Deletes what the host keeps of the Space `deletion` names before it
+    /// goes: `release` lets go of its pages and what the platform keeps
+    /// besides, then every engine erases each profile the deletion erases
+    /// through `core`, `ephemeral` when this launch keeps it in memory only.
+    /// Throws when an engine could not erase one.
     func deleteData(
-        for space: BrowserSpaceRuntimeAssignment, on core: CrestCore, ephemeral: Bool, release: () async -> Void
+        for deletion: SpaceDeletionState, on core: CrestCore, ephemeral: Bool, release: () async -> Void
     ) async throws {
-        guard spacesDeletingData.insert(space.spaceID).inserted else { return }
-        defer { spacesDeletingData.remove(space.spaceID) }
+        guard spacesDeletingData.insert(deletion.spaceID).inserted else { return }
+        defer { spacesDeletingData.remove(deletion.spaceID) }
         await release()
-        await BrowserFaviconFallbackLoader.shared.removeAll(for: space.profileID)
-        // Nothing may outlive the profile it describes.
-        tabState.removeStates(profileID: space.profileID)
-        // Every engine erases the profile, started or not; the Space's
-        // deletion finishes only once each has.
-        let erased = await core.deleteData(
-            DeleteProfileData(requestID: UUID(), profileID: space.profileID, ephemeral: ephemeral))
-        guard erased else { throw BrowserSpaceDeletionError.dataNotErased }
+        for profileID in deletion.erasing {
+            await BrowserFaviconFallbackLoader.shared.removeAll(for: profileID)
+            // Nothing may outlive the profile it describes.
+            tabState.removeStates(profileID: profileID)
+            // Every engine erases the profile, started or not; the Space's
+            // deletion finishes only once each has.
+            let erased = await core.deleteData(
+                DeleteProfileData(requestID: UUID(), profileID: profileID, ephemeral: ephemeral))
+            guard erased else { throw BrowserSpaceDeletionError.dataNotErased }
+        }
     }
 
     /// Lets go of every page a private workspace kept.

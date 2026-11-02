@@ -14,10 +14,11 @@ extension BrowserStore {
         return spaceModel(spaceID)
     }
 
-    /// The tab this window shows in the Space it shows, or nil for none.
+    /// The tab this window shows in the Space it shows, or nil for none: one
+    /// the Space holds, or a pinned tab its group shares.
     var shownTab: TabStateModel? {
         guard let space = shownSpace, let tabID = selectedTabID(in: space.id) else { return nil }
-        return space.tabs.model(tabID)
+        return space.shownTab(tabID)
     }
 
     /// The Spaces of this window's workspace, in order.
@@ -43,7 +44,7 @@ extension BrowserStore {
     /// The tabs this window's content shows side by side in `space`, in
     /// column order, or none where it shows no tab there.
     func cards(in space: SpaceModel) -> [TabStateModel] {
-        (windowModel?.cards(in: space.id)?.tabIDs ?? []).compactMap { space.tabs.model($0) }
+        (windowModel?.cards(in: space.id)?.tabIDs ?? []).compactMap { space.shownTab($0) }
     }
 
     /// The split the window shows in `space`, or nil for a tab shown alone.

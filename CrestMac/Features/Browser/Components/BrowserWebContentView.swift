@@ -13,6 +13,7 @@ struct BrowserWebContentView: View {
 
     @Environment(\.browserWebFocusRestorationGate)
     private var browserFocusRestorationGate
+    @Environment(\.browserWebFocusWindow) private var focusWindow
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +30,7 @@ struct BrowserWebContentView: View {
                     isPageActive: isQuickWindowPage || pages.commandPage === page,
                     focusRestorationGate: focusRestorationGate,
                     tabPlacement: tabPlacement(ofPage:),
+                    offersPage: offersPage(_:),
                     goToSharingCounterpart: sharingCounterpartActivation
                 )
                 .frame(width: layout.contentSize.width, height: layout.contentSize.height)
@@ -76,6 +78,17 @@ struct BrowserWebContentView: View {
         }
     }
 
+    /// Whether the page that asks to share may offer the page `pageID`: one
+    /// whose tab the asking page's Space shows, so the Spaces of a group,
+    /// which share one profile, never offer each other's tabs. A page that
+    /// holds no tab is offered as before.
+    private func offersPage(_ pageID: UUID) -> Bool {
+        guard let held = pages.livePages.first(where: { $0.corePage.id == pageID }),
+            let tabID = held.navigationContext?.tabID
+        else { return true }
+        return browser.spaceModel(page.spaceID)?.shownTab(tabID) != nil
+    }
+
     /// Where the tab holding the page `pageID` sits in its Space's tabs, and
     /// what the sidebar calls it.
     private func tabPlacement(ofPage pageID: UUID) -> BrowserShareSourceOffer.TabPlacement? {
@@ -90,7 +103,8 @@ struct BrowserWebContentView: View {
     private var focusRestorationGate: BrowserWebFocusRestorationGate {
         BrowserWebFocusRestorationGate(
             browserChromeOwnsFocus:
-                browserFocusRestorationGate.browserChromeOwnsFocus,
+                browserFocusRestorationGate.browserChromeOwnsFocus
+                || focusWindow?.chromeOwnsFocus == true,
             pageChromeOwnsFocus:
                 page.isFindPresented
                 || page.credentialFillRequest != nil

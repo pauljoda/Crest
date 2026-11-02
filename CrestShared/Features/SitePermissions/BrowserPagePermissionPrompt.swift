@@ -5,6 +5,7 @@ struct BrowserPagePermissionPrompt: View {
     let controller: BrowserPagePermissionController
 
     @State private var remembersChoice = true
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -51,15 +52,20 @@ struct BrowserPagePermissionPrompt: View {
                     Text("Deny").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                // Deny is the plain choice beside Allow, never a second accent.
+                .tint(.primary)
                 Button {
                     controller.resolve(
                         request.id,
                         response: remembersChoice ? .grantPersistently : .allowOnce
                     )
                 } label: {
-                    Text("Allow").frame(maxWidth: .infinity)
+                    Text("Allow")
+                        .frame(maxWidth: .infinity)
+                        .browserReadableForeground(over: allowTint)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(allowTint)
             }
             .controlSize(.large)
         }
@@ -67,23 +73,37 @@ struct BrowserPagePermissionPrompt: View {
         .frame(width: 280, alignment: .leading)
         .onChange(of: request.id) { remembersChoice = true }
     }
+
+    /// Allow wears Crest's accent, never a Space's, whose tint can be as light
+    /// as the label on it; the label takes whichever ink reads on the tint.
+    private var allowTint: Color {
+        CrestBrandTheme.accent(colorScheme)
+    }
 }
 
+/// Lets a view show its page's permission requests while it is on screen.
+/// Each host attaches by its own identity, so a page that moves to another
+/// window keeps the new window's host whichever leaves or arrives first.
 private struct BrowserPagePermissionHost: ViewModifier {
     let controller: BrowserPagePermissionController?
+    @State private var identity = UUID()
     @State private var attachedController: BrowserPagePermissionController?
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: controller.map(ObjectIdentifier.init), initial: true) {
-                attachedController?.setPresentationAvailable(false)
-                attachedController = controller
-                controller?.setPresentationAvailable(true)
-            }
+            .onAppear(perform: attach)
+            .onChange(of: controller.map(ObjectIdentifier.init)) { attach() }
             .onDisappear {
-                attachedController?.setPresentationAvailable(false)
+                attachedController?.detachHost(identity)
                 attachedController = nil
             }
+    }
+
+    private func attach() {
+        guard attachedController !== controller else { return }
+        attachedController?.detachHost(identity)
+        attachedController = controller
+        controller?.attachHost(identity)
     }
 }
 

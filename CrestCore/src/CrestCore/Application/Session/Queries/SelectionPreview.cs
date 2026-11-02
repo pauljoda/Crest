@@ -18,7 +18,10 @@ public sealed record SelectionPreview(Guid WorkspaceId, Guid SpaceId, IReadOnlyL
     /// before it acts on them. A locked Space is read as a person sees it.
     private SelectedTabs Answer(NativeSessionAuthority workspace) {
         SpaceState space;
-        lock (NativeSessionAuthority.Gate) space = workspace.AcceptedSession.KnownSpace(SpaceId);
+        lock (NativeSessionAuthority.Gate) {
+            var session = workspace.AcceptedSession;
+            space = session.Viewed(session.KnownSpace(SpaceId));
+        }
         var resolved = BrowserTabCollection.Restore(space).Preview(TabIds, FolderIds);
         var positions = space.Sidebar.Positions();
         int Place(Guid id) => positions.GetValueOrDefault(id, int.MaxValue);

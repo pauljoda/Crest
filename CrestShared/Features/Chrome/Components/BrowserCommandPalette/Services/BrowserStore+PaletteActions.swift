@@ -18,7 +18,7 @@ extension BrowserStore {
     ) -> (space: SpaceModel, tab: TabStateModel)? {
         guard target.spaceID == source.spaceID, target.profileID == source.profileID,
             let (space, _) = selectedPaletteSource(matching: source, accessController: accessController),
-            let tab = space.tabs.model(target.tabID)
+            let tab = space.shownTab(target.tabID)
         else { return nil }
         return (space, tab)
     }
@@ -32,7 +32,7 @@ extension BrowserStore {
                 matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
                 accessController: accessController),
             selectedTabID(in: space.id) == source.tabID,
-            let tab = space.tabs.model(source.tabID)
+            let tab = space.shownTab(source.tabID)
         else { return nil }
         return (space, tab)
     }

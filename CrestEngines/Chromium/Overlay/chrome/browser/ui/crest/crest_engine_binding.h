@@ -161,6 +161,10 @@ class EngineBinding {
   // The page that follows `contents`, for the engine's own hooks, or nullptr
   // when no page does.
   EnginePage* PageFor(content::WebContents* contents);
+  // The page that opened `contents`: its opener's, or for a window a link
+  // opened without one, as target="_blank" does, the page the link was in.
+  // nullptr when no page Crest follows opened it.
+  EnginePage* SourceOf(content::WebContents* contents);
   // The page the platform names `page`, or nullptr.
   EnginePage* Find(const std::string& page);
   // Every page the binding follows that has its WebContents.
@@ -290,6 +294,8 @@ class EngineBinding {
   void Handle(const engine::ApproveEngineDownload& command);
   void Handle(const engine::EraseProfileData& command);
   void Handle(const engine::EraseSiteData& command);
+  void Handle(const engine::EraseBrowsingData& command);
+  void Handle(const engine::ReadSiteData& command);
   void Handle(const engine::AdoptOfferedPage& command);
   void Handle(const engine::RejectOfferedPage& command);
   void Handle(const engine::StageNavigation& command);
@@ -323,6 +329,15 @@ class EngineBinding {
   // one site's, whether or not any page shows it, and reports DataErased.
   void Erase(const engine::EraseProfileData& erasing);
   void Erase(const engine::EraseSiteData& erasing);
+  void Erase(const engine::EraseBrowsingData& erasing);
+  void Read(const engine::ReadSiteData& reading);
+  // Runs `use` with the profile `id` names once its data can be read: a
+  // loaded one, or a regular one on disk loaded for it. A private profile
+  // that is not open, or a regular one never created, keeps nothing: `use`
+  // gets nullptr and false. One that would not load gets nullptr and true.
+  void WithStoredData(const std::string& id, bool ephemeral, base::OnceCallback<void(Profile*, bool)> use);
+  // Answers erasure `erasure` with whether it erased all it covers.
+  base::OnceCallback<void(bool)> ErasureAnswer(const engine::Guid& erasure);
   void Forget(const std::string& page);
   // Destroys `contents`, the WebContents of `page`, after the shell drops
   // the views beside it.
@@ -351,6 +366,9 @@ class EngineBinding {
   // The links modified clicks sent to the new tabs the engine opens next,
   // with the pages they were followed in, until the turn ends.
   std::vector<std::pair<std::string, std::string>> routed_tabs_;
+  // The windows links opened without an opener, with the pages the links
+  // were in, until the core is offered them.
+  std::vector<std::pair<base::WeakPtr<content::WebContents>, std::string>> link_sources_;
   std::unique_ptr<EngineProfiles> profiles_;
   std::unique_ptr<EngineBrowsers> browsers_;
   std::unique_ptr<EngineTabGroups> tab_groups_;

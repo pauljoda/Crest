@@ -12,7 +12,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let preferredSidebarWidth: CGFloat
     let isCommandPalettePresented: Bool
     let isURLCopiedFeedbackVisible: Bool
-    let pageZoomFeedbackLabel: String?
+    let pageFeedback: MobilePageFeedback?
     let reduceMotion: Bool
     let didPromoteTransientPage: () -> Void
     let compact: Compact
@@ -82,9 +82,9 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                     isVisible: isURLCopiedFeedbackVisible,
                     topPadding: presentation.overlayTopPadding
                 )
-                if let pageZoomFeedbackLabel {
-                    MobilePageZoomFeedback(
-                        label: pageZoomFeedbackLabel,
+                if let pageFeedback {
+                    MobilePageFeedbackCapsule(
+                        feedback: pageFeedback,
                         topPadding: presentation.overlayTopPadding
                     )
                 }

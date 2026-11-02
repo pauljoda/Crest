@@ -21,7 +21,7 @@ struct BrowserLinkDestinationHost {
                     spaceID: source.spaceID, profileID: source.profileID
                 ), accessController: spaceAccess)
         else { return false }
-        return space.tabs.model(source.tabID) != nil
+        return space.shownTab(source.tabID) != nil
     }
 
     func otherSpaces(from source: BrowserTabRuntimeAssignment) -> [SpaceModel] {
@@ -30,6 +30,12 @@ struct BrowserLinkDestinationHost {
             from: BrowserSpaceRuntimeAssignment(
                 spaceID: source.spaceID, profileID: source.profileID
             ), accessController: spaceAccess)
+    }
+
+    /// The other Spaces a link from `source` opens in, split where one group
+    /// ends and the next begins, as menus that list Spaces separate them.
+    func otherSpaceGroups(from source: BrowserTabRuntimeAssignment) -> [[SpaceModel]] {
+        browser?.grouped(otherSpaces(from: source)) ?? []
     }
 
     func selectionSearch(

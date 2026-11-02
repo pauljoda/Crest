@@ -8,6 +8,7 @@ struct MobileSpacePrivateBrowsingButton: View {
     var body: some View {
         Button(action: action) {
             MobileSpaceUtilityButtonLabel(
+                title: isPrivateBrowsing ? "Leave Private Browsing" : "Private Browsing",
                 systemImage: BrowserPrivateBrowsingAppearance.symbol
             )
         }

@@ -89,7 +89,7 @@ extension BrowserStore {
             selecting ? openNewTab(url: url, in: spaceID, selecting: true) : openBackgroundTab(url: url, in: spaceID)
         guard let tabID = opened,
             let space = spaceModel(spaceID),
-            let tab = space.tabs.model(tabID)
+            let tab = space.shownTab(tabID)
         else { return nil }
         return BrowserModifiedLinkRegistration(tab: tab, space: space)
     }
@@ -99,7 +99,7 @@ extension BrowserStore {
     /// which retires the page first, so this path leaves it alone.
     @discardableResult
     func closeTab(_ id: UUID, in spaceID: UUID) -> Bool {
-        guard let space = spaceModel(spaceID), let tab = space.tabs.model(id), !tab.placement.isDurable
+        guard let space = spaceModel(spaceID), let tab = space.shownTab(id), !tab.placement.isDurable
         else { return false }
         let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: spaceID, profileID: space.profileID)
         // The core asks the tab's page whether it may go before it closes the tab.
@@ -139,7 +139,7 @@ extension BrowserStore {
 
     @discardableResult
     func closeTab(_ id: UUID) -> Bool {
-        guard let space = shownSpace, space.tabs.model(id)?.placement == .current else { return false }
+        guard let space = shownSpace, space.shownTab(id)?.placement == .current else { return false }
         return closeTab(id, in: space.id)
     }
 
@@ -153,7 +153,7 @@ extension BrowserStore {
         _ id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return false }
         return closeTab(id, in: assignment.spaceID)
     }
 
@@ -202,7 +202,7 @@ extension BrowserStore {
         for id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return false }
         return setTabCustomTitle(title, for: id, in: assignment.spaceID)
     }
 
@@ -218,7 +218,7 @@ extension BrowserStore {
         for id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return false }
         return setSessionTabIcon(.emoji, emoji: emoji, tabID: id, in: assignment.spaceID)
     }
 
@@ -242,7 +242,7 @@ extension BrowserStore {
         for id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return false }
         return setSessionTabIcon(
             .pulled, faviconData: faviconData, iconAccent: iconAccent, tabID: id, in: assignment.spaceID)
     }
@@ -256,7 +256,7 @@ extension BrowserStore {
         for id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return false }
         return setSessionTabIcon(.automatic, tabID: id, in: assignment.spaceID)
     }
 
@@ -274,7 +274,7 @@ extension BrowserStore {
         in spaceID: UUID
     ) -> URL? {
         guard returnSessionTabToSavedAddress(tabID: id, in: spaceID) else { return nil }
-        return spaceModel(spaceID)?.tabs.model(id)?.address
+        return spaceModel(spaceID)?.shownTab(id)?.address
     }
 
     /// Archives the tab this window shows, where the core allows it.
@@ -330,7 +330,7 @@ extension BrowserStore {
         for id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return false }
         return setTabKeepsPageLoaded(
             keepsPageLoaded,
             for: id,

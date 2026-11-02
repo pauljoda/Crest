@@ -34,7 +34,7 @@ final class BrowserGettingStartedPractice {
     /// The cards the practice shows: the members of the split the selected
     /// tab shows in, or the selected tab alone, or none.
     var members: [TabStateModel] {
-        guard let selectedTabID, let tab = space.tabs.model(selectedTabID) else { return [] }
+        guard let selectedTabID, let tab = space.shownTab(selectedTabID) else { return [] }
         guard let groupID = space.shownSplit(containing: selectedTabID) else { return [tab] }
         return space.splitMembers(of: groupID)
     }

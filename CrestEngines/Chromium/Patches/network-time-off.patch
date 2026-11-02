@@ -1,0 +1,18 @@
+# Crest: the browser doesn't ask Google for the time. Adapted from
+# ungoogled-chromium's disable-network-time-tracker.patch (BSD-3-Clause; see
+# ThirdParty/Chromium-LICENSE.txt).
+
+--- a/components/network_time/network_time_tracker.cc
++++ b/components/network_time/network_time_tracker.cc
+@@ -451,8 +451,9 @@
+ }
+ 
+ bool NetworkTimeTracker::AreTimeFetchesEnabled() const {
+-  return is_initialized() &&
+-         base::FeatureList::IsEnabled(kNetworkTimeServiceQuerying);
++  // Crest: no time queries to Google. A certificate error from a wrong clock
++  // shows the ordinary certificate error.
++  return false;
+ }
+ 
+ NetworkTimeTracker::FetchBehavior NetworkTimeTracker::GetFetchBehavior() const {

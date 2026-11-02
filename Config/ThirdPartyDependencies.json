@@ -37,11 +37,11 @@
   "bundledComponents": [
     {
       "identity": "chromium",
-      "name": "Chromium (ungoogled-chromium-macos build)",
-      "version": "152.0.7977.82",
+      "name": "Chromium",
+      "version": "156.0.8078.80",
       "license": "BSD-3-Clause, with bundled third-party licenses listed at chrome://credits",
       "notice": "ThirdParty/Chromium-LICENSE.txt",
-      "source": "https://github.com/ungoogled-software/ungoogled-chromium-macos",
+      "source": "https://chromium.googlesource.com/chromium/src",
       "usedBy": "Crest's Chromium build"
     },
     {

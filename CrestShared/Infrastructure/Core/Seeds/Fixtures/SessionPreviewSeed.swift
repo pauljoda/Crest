@@ -10,6 +10,33 @@ enum SessionPreviewSeed {
         SessionState.Seed(spaces: [makeWorkSpace(), makePersonalSpace()])
     }
 
+    /// The preview session with two Sub-Spaces of Work, which share its
+    /// sign-ins, history and pinned tabs: Client A, which keeps a pinned tab
+    /// of its own that shows once the group separates pinned tabs, and Client B.
+    static func makeGrouped() -> SessionState.Seed {
+        let work = makeWorkSpace()
+        func joined(_ space: SpaceState.Seed) -> SpaceState.Seed {
+            var space = space
+            space.membership = SpaceMembership(
+                primaryID: work.id, sharedProfileID: work.ownProfileID,
+                modifiedAt: Date(timeIntervalSince1970: 1_800_000_000))
+            return space
+        }
+        let clientA = joined(
+            SpaceState.Seed(
+                name: "Client A", symbol: "building.2.fill", accent: .teal, branding: SpaceAccent.teal.house,
+                tabs: [
+                    tab("Figma", "https://figma.com", "pencil.and.outline", .pinned),
+                    tab("Client A docs", "https://developer.apple.com/documentation", "doc.text.fill", .saved),
+                    tab("Swift.org", "https://swift.org", "swift", .current),
+                ]))
+        let clientB = joined(
+            SpaceState.Seed(
+                name: "Client B", symbol: "shippingbox.fill", accent: .rose, branding: SpaceAccent.orange.house,
+                tabs: [tab("WWDC", "https://developer.apple.com/wwdc", "sparkles", .current)]))
+        return SessionState.Seed(spaces: [work, clientA, clientB, makePersonalSpace()])
+    }
+
     private static func makeWorkSpace() -> SpaceState.Seed {
         let folder = FolderState.Seed(title: "Build the Browser", symbol: "folder.fill")
         return SpaceState.Seed(
@@ -65,6 +92,9 @@ extension SessionState.Seed {
 
     /// The session previews, isolated runs and tests open by default.
     static let preview = SessionPreviewSeed.make()
+
+    /// The preview session with a group: Work leads Client A and Client B.
+    static let subSpaces = SessionPreviewSeed.makeGrouped()
 }
 
 extension SpaceModel {

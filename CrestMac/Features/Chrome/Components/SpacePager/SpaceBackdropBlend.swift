@@ -85,6 +85,7 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         self.makeRoot = makeRoot
         self.presentation = presentation
 
+        hosts.follow(spaces)
         let valid = Set(spaces.map(BrowserSpaceRuntimeAssignment.init(space:)))
         for key in hosts.keys where !valid.contains(key) {
             hosts.removeValue(forKey: key)?.removeFromSuperview()

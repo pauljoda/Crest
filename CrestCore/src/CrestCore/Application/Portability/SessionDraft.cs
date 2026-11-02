@@ -8,9 +8,12 @@ namespace CrestCore.Application;
 /// and the name, symbol, accent and look it gave the Space, where it gave
 /// any. `Ordinal` counts the browser's windows or Spaces from one. A browser
 /// that keeps a profile for each Space, as Arc does, names the folder of the
-/// Space's own profile, `Profile`, when it is not the browser's first.
+/// Space's own profile, `Profile`, when it is not the browser's first. Drafts
+/// that name one `Group` shared one session where they came from, as the
+/// Spaces of one Arc profile or the workspaces of one Zen profile do, and come
+/// in as one group.
 internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<SessionFolder> Folders, IReadOnlyList<SessionTab> Tabs,
-    string? Symbol = null, SpaceAccent? Accent = null, SpaceBranding? Branding = null, string? Profile = null) {
+    string? Symbol = null, SpaceAccent? Accent = null, SpaceBranding? Branding = null, string? Profile = null, string? Group = null) {
     #region Static Variables
 
     /// The most tabs one window or Space brings.
@@ -30,7 +33,9 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
     /// from `ids`. A tab with no usable time is dated `importedAt`. At most
     /// `room` Spaces come, each with the draft it came from; a draft past
     /// them, holding more than a Space keeps or naming a folder twice or out
-    /// of place is left out in `leftOut`, with why.
+    /// of place is left out in `leftOut`, with why. Of the drafts that name
+    /// one `Group`, the first Space made leads and each later one is its
+    /// Sub-Space.
     public static IReadOnlyList<(SpaceState Space, SessionDraft Draft)> Spaces(IReadOnlyList<SessionDraft> drafts, ImportSource source,
         ImportSpaceNames names, IIdSource ids, DateTimeOffset importedAt, int room, ICollection<ImportLeftOut> leftOut) {
         ArgumentNullException.ThrowIfNull(leftOut);
@@ -47,6 +52,15 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             } catch (Rejected rejected) {
                 leftOut.Add(new(draft.ShownName(names, numbered), rejected.Rejection));
             }
+        }
+        Dictionary<string, SpaceState> leaders = new(StringComparer.Ordinal);
+        for (int index = 0; index < made.Count; index++) {
+            var (space, draft) = made[index];
+            if (draft.Group is not { } group) continue;
+            if (leaders.TryGetValue(group, out var leader))
+                made[index] = (space with { Membership = SpaceMembership.Joining(leader, importedAt) }, draft);
+            else
+                leaders[group] = space;
         }
         return made;
     }

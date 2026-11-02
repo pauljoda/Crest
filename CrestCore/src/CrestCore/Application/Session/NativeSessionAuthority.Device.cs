@@ -22,6 +22,7 @@ public sealed partial class NativeSessionAuthority {
     /// The accepted session, for readers outside the command path.
     internal SessionState Current {
         get {
+            RequireDeviceLockNotHeldHere();
             lock (Gate) return session;
         }
     }
@@ -32,6 +33,7 @@ public sealed partial class NativeSessionAuthority {
     /// Whether `spaceId` is being deleted here or, for a borrowed workspace, in
     /// the workspace it borrows from, which owns the Space's profile.
     internal bool IsDeleting(Guid spaceId) {
+        RequireDeviceLockNotHeldHere();
         lock (Gate) return session.PendingDeletion(spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true;
     }
 
@@ -76,6 +78,16 @@ public sealed partial class NativeSessionAuthority {
         attached?.TurnEnded();
     }
 
+    /// Throws when this thread holds the lock of the device that shows this
+    /// session, which is taken last: a session read under it takes the two
+    /// locks in the order opposite to an intent's, which reads the device
+    /// while it holds the gate. Only builds with cross-checks look.
+    [System.Diagnostics.Conditional("CREST_CROSS_CHECKS")]
+    private void RequireDeviceLockNotHeldHere() {
+        if (device?.Gate.IsHeldByCurrentThread == true)
+            throw new System.Diagnostics.UnreachableException("A session was read while this thread holds the device lock.");
+    }
+
     /// Tells the device the session accepted `next` in place of `previous`,
     /// with what the command chose for the window that issued it and what it
     /// did that the two states cannot tell. Called with no lock held.
@@ -98,7 +110,7 @@ public sealed partial class NativeSessionAuthority {
         SessionState previous, next;
         lock (Gate) {
             if (!TakesEdits() || session.PendingDeletion(spaceId) is not null
-                || session.Space(spaceId) is not { } space
+                || session.ViewedSpace(spaceId) is not { } space
                 || space.Tabs.All(tab => tab.Id != tabId)) return null;
             if (IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
             // The stored spelling of the time, so the next load reads the same value.
@@ -114,13 +126,24 @@ public sealed partial class NativeSessionAuthority {
 
     /// Whether this process holds no grant to show `space`.
     internal bool IsLocked(SpaceState space) {
+        RequireDeviceLockNotHeldHere();
         lock (Gate) return IsLockedUnderGate(space);
     }
 
+    /// A Space is locked while this process holds no grant for it, or for
+    /// another Space that stays and browses with its profile: the gate guards
+    /// the session, which a group shares.
     private bool IsLockedUnderGate(SpaceState space) {
         if (access is null) return false;
-        lock (access) return access.IsLocked(new SpaceAccessAssignment(space.Id, space.ProfileId), space.Settings.RequiresAuthentication);
+        lock (access)
+            return Locked(space) || session.Spaces.Any(other => other.Id != space.Id && other.ProfileId == space.ProfileId
+                && session.PendingDeletion(other.Id) is null && Locked(other));
     }
+
+    /// Whether this process holds no grant for `space` itself. The caller
+    /// holds the grants' lock.
+    private bool Locked(SpaceState space) =>
+        access!.IsLocked(new SpaceAccessAssignment(space.Id, space.OwnProfileId), space.Settings.RequiresAuthentication);
 
     #endregion
 }

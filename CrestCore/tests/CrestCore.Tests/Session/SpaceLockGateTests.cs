@@ -22,7 +22,7 @@ public sealed partial class BrowserContractsTests {
         Guid.Parse(session["spaces"]![0]!["profile"]!["id"]!.GetValue<string>()));
     private static void Grant(SpaceAccessAuthority access, SpaceAccessAssignment identity) {
         var request = Guid.NewGuid();
-        Assert.Equal([identity], access.Begin(identity, true, request));
+        Assert.Equal([identity], access.Begin([identity], true, request));
         access.Finish(identity.Space, request, authenticated: true);
     }
 
@@ -44,6 +44,15 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Leaked"))).Rejection);
         Assert.Equal(1UL, core.Revision);
+        // A locked Space's website data is the grant's to list or erase.
+        Intent[] websiteData = [
+            new ReadWebsiteData(Guid.NewGuid(), identity.Profile, Ephemeral: false, Host: null),
+            new DeleteSiteData(Guid.NewGuid(), identity.Profile, Ephemeral: false, ["example.com"], [BrowsingDataCategory.SiteData]),
+            new DeleteBrowsingData(Guid.NewGuid(), identity.Profile, Ephemeral: false, BrowsingDataRange.AllTime,
+                [BrowsingDataCategory.SiteData])
+        ];
+        foreach (var intent in websiteData)
+            Assert.Equal(identity.Space, Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(intent)).Rejection).SpaceId);
         // A setup that would rename a locked Space is refused.
         device.Send(new StartSetup(device.Workspace, SetupEntry.ManualSetup));
         device.Send(new CustomizeSetupSpace(identity.Space,
@@ -56,6 +65,7 @@ public sealed partial class BrowserContractsTests {
 
         Unlock(device.Send, device.Workspace, identity.Space);
         device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Granted"));
+        Assert.Single(device.Send(websiteData[0]).OfType<WebsiteDataRead>());
         Assert.Equal(2UL, core.Revision);
 
         device.Send(new LockSpace(identity.Space));
@@ -70,12 +80,31 @@ public sealed partial class BrowserContractsTests {
         // history is an edit the grant guards.
         device.Send(new SetSpaceAccess(device.Workspace, identity.Space, SpaceAccessPolicy.DeviceOwnerAuthentication));
         Assert.Equal(identity.Space, Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
-            device.Send(new ClearHistory(device.Workspace, identity.Space))).Rejection).SpaceId);
+            device.Send(new ClearHistory(device.Workspace, identity.Space, BrowsingDataRange.AllTime))).Rejection).SpaceId);
         device.Send(new SweepExpiredRecords(device.Workspace));
         device.Send(new CleanUpCurrentTabs(device.Workspace, identity.Space));
         Unlock(device.Send, device.Workspace, identity.Space);
         device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"));
         Assert.Equal("After relock", core.Current.Spaces[0].Tabs[0].CustomTitle);
+    }
+
+    [Fact]
+    public void AWebsiteDataListingTheSpaceLocksBeforeItEndsListsNoSite() {
+        var session = GuardedSession();
+        using var device = new TestDevice(session);
+        var identity = Identity(session);
+        var binding = new RecordingEngine();
+        device.Register(binding);
+        Unlock(device.Send, device.Workspace, identity.Space);
+
+        var request = Guid.NewGuid();
+        Assert.Empty(device.Send(new ReadWebsiteData(request, identity.Profile, Ephemeral: false, Host: null)).OfType<WebsiteDataRead>());
+        var reading = Assert.Single(binding.Commands.OfType<ReadSiteData>());
+        device.Send(new LockSpace(identity.Space));
+        var read = Assert.Single(device.Report(new SiteDataRead(reading.ReadingId,
+            [new StoredSite("example.com", [WebsiteDataKind.Cookies])], Read: true)).OfType<WebsiteDataRead>());
+        Assert.Equal((request, false), (read.RequestId, read.Complete));
+        Assert.Empty(read.Sites);
     }
 
     [Fact]

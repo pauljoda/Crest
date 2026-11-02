@@ -117,6 +117,7 @@ struct BrowserSidebar<Content: View>: View {
 
     private func toggleUtilitySwitcher() {
         utilityPresentation.toggleSwitcher(
+            for: browser.shownSpace?.id,
             hasNewDownloads: !newUtilityDownloads.isEmpty
         )
     }

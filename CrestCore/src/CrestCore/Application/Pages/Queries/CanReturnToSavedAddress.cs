@@ -14,7 +14,7 @@ public sealed record CanReturnToSavedAddress(Guid WorkspaceId, Guid WindowId, Gu
     /// A tab that belongs nowhere, is gone or lives in a locked Space does not.
     internal override SavedAddressReturn Answer(CrestApp app) {
         var workspace = app.Pages.Device.Workspace(WorkspaceId);
-        if (workspace.Current.Space(SpaceId) is not { } space
+        if (workspace.Current.ViewedSpace(SpaceId) is not { } space
             || workspace.IsLocked(space)
             || space.Tabs.FirstOrDefault(tab => tab.Id == TabId) is not { SavedAddress: { } saved } tab)
             return new(ChangesPage: false);

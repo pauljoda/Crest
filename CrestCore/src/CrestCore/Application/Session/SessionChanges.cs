@@ -51,9 +51,11 @@ internal static class SessionChanges {
         var resent = new HashSet<Guid>();
         foreach (var space in next.Spaces) {
             if (!before.TryGetValue(space.Id, out var old) || ReferenceEquals(old, space)) continue;
-            // A Space whose profile changed, or whose changed records cannot be
-            // told apart by identity, arrives again whole.
-            if (old.ProfileId == space.ProfileId && SpaceChanged(workspaceId, old, space) is { } changed) spaceChanges.AddRange(changed);
+            // A Space whose profile, group or pinned tabs' owner changed, or
+            // whose changed records cannot be told apart by identity, arrives
+            // again whole.
+            if (old.OwnProfileId == space.OwnProfileId && old.Membership == space.Membership && old.PinOwnerId == space.PinOwnerId
+                && SpaceChanged(workspaceId, old, space) is { } changed) spaceChanges.AddRange(changed);
             else resent.Add(space.Id);
         }
         var retained = next.Spaces.Select(space => space.Id).Where(id => before.ContainsKey(id) && !resent.Contains(id)).ToHashSet();

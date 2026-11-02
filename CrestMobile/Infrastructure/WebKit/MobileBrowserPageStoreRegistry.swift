@@ -44,15 +44,15 @@ final class MobileBrowserPageStoreRegistry: BrowserSpaceDataDeleting {
             .filter { $0 !== primary }
     }
 
-    func deleteData(for space: BrowserSpaceRuntimeAssignment) async throws {
-        guard spacesDeletingData.insert(space.spaceID).inserted else { return }
-        defer { spacesDeletingData.remove(space.spaceID) }
+    func deleteData(for deletion: SpaceDeletionState) async throws {
+        guard spacesDeletingData.insert(deletion.spaceID).inserted else { return }
+        defer { spacesDeletingData.remove(deletion.spaceID) }
 
         stores = stores.filter { $0.value.value != nil }
         let liveStores = stores.values.compactMap(\.value)
         for store in liveStores where store !== primary {
-            await store.releaseWindowRuntime(for: space)
+            await store.releaseWindowRuntime(for: deletion)
         }
-        try await primary.deleteData(for: space)
+        try await primary.deleteData(for: deletion)
     }
 }

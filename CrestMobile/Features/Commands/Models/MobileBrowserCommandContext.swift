@@ -6,6 +6,8 @@ struct MobileBrowserCommandContext {
     let canGoForward: Bool
     let hasSelectedTab: Bool
     let hasActivePage: Bool
+    /// The active page shows a site, whose data the site commands clear.
+    let showsSite: Bool
     let isLoading: Bool
     let canDismissSelectedTab: Bool
     let canArchiveSelectedTab: Bool
@@ -71,6 +73,9 @@ struct MobileBrowserCommandContext {
     let copyPageLink: () -> Void
     let copyPageLinkAsMarkdown: () -> Void
     let printPage: () -> Void
+    /// Clears what the active page's site keeps in a category, reloads it,
+    /// and says how it went.
+    let clearSiteData: (BrowsingDataCategory) async -> Void
     let toggleSidebar: () -> Void
     let presentHistory: () -> Void
     let presentArchive: () -> Void

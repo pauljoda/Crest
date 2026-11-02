@@ -20,8 +20,9 @@ shared transition, and a binding reports what the engine did.
 
 Rules every engine keeps:
 
-- A Space is one profile on every engine. No path may share a profile across
-  Spaces, or create a page, transfer, export or network request for a locked
+- A Space browses with one profile on every engine: its own, or, as a
+  Sub-Space, its primary's. No path may share a profile across Spaces outside
+  a group, or create a page, transfer, export or network request for a locked
   Space without a grant. The core gate covers intents and borrowing; the
   presentation layer must not build content for a locked Space.
 - A private window is incognito on every engine. Its profile is new each time

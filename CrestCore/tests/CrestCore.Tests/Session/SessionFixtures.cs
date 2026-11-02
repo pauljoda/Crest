@@ -57,6 +57,18 @@ public sealed partial class BrowserContractsTests {
         public Engine Register(params EngineCapability[] capabilities) => engine = app.RegisterEngine(
             new EngineRegistration(EngineKind.WebKit, [.. EngineCapability.Required, .. capabilities], IsDefault: true), _ => { });
 
+        /// Registers the default engine, which records what the core asks in `binding`.
+        public Engine Register(RecordingEngine binding) => engine = app.RegisterEngine(
+            new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true), binding.Run);
+
+        /// Reports `engineEvent` from the device's engine and answers what changed.
+        public IReadOnlyList<Change> Report(EngineEvent engineEvent) {
+            app.Report(engine ??= Register(), engineEvent);
+            var changes = app.Drain();
+            Record(changes);
+            return changes;
+        }
+
         /// A window on the first session showing `space`, and `tabs` in the Spaces they name.
         public Guid Open(Guid? space, params (Guid Space, Guid? Tab)[] tabs) => OpenIn(Workspace, space, tabs);
 

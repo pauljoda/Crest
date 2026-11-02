@@ -32,7 +32,7 @@ struct BrowserRootCommandPaletteLayer: View {
                 dismiss: model.chrome.dismissCommandPalette,
                 morphNamespace: commandSurfaceNamespace,
                 overlayContentInsets: contentInsets,
-                emptySelectionActions: model.emptySelectionPaletteActions,
+                destination: model.emptySelectionPaletteActions,
                 openings: BrowserCommandPaletteOpening.all,
                 readPasteboard: { NSPasteboard.general.string(forType: .string) }
             )

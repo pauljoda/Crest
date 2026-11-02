@@ -99,9 +99,10 @@ final class BrowserPagePool:
     @ObservationIgnored let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
-    /// Opens a Quick Window for a window a page asked for; the window's
-    /// presentation installs it. Without one, such a page has nowhere to show
-    /// and goes.
+    /// Opens a Quick Window over this pool's window: for a window a page asked
+    /// for, or for a link or page the person opens in another Space's session.
+    /// The window's presentation installs it. Without one, such a page has
+    /// nowhere to show and goes.
     @ObservationIgnored var popupWindowPresenter: ((BrowserQuickWindowRequest) -> Void)?
     /// Whether a Peek is open for the person rather than staged while they
     /// still drag its link; the window's transient browsing answers.
@@ -207,6 +208,7 @@ final class BrowserPagePool:
         }
         core.followAdoptedWindows(self) { [weak self] in self?.popupWindowAdopted($0) }
         core.followClosedTransientPages(self) { [weak self] in self?.transientPageClosed($0) }
+        host.showsTab = { [weak browser] spaceID, tabID in browser?.spaceModel(spaceID)?.shownTab(tabID) != nil }
     }
 
     var nativeTabs: BrowserNativeTabStore { runtimeStore.nativeTabs }
@@ -492,7 +494,7 @@ final class BrowserPagePool:
     ) -> UUID? {
         let opener = tabRuntimes[tabID]?.page.corePage.id
         guard let openedID = splitLinkHost.openLink(url, tabID, assignment) else { return nil }
-        if let space = browser.spaceModel(matching: assignment), let tab = space.tabs.model(openedID) {
+        if let space = browser.spaceModel(matching: assignment), let tab = space.shownTab(openedID) {
             let pageTab = BrowserPageTab(tab, images: browser.core.state.favicons)
             if let page = page(for: pageTab, space: space, opener: opener) { loadInitialURL(for: pageTab, into: page) }
         }
@@ -633,12 +635,12 @@ final class BrowserPagePool:
             guard seen.insert(tabID).inserted, let page = tabRuntimes[tabID]?.page else {
                 return false
             }
-            return page.spaceID == space.id && page.profileID == space.profileID
+            return host.serves(page, tabID: tabID, spaceID: space.id, profileID: space.profileID)
         }
     }
 
     func styleVisitedLinks(in space: SpaceModel) async {
-        let history = space.history.entries
+        let history = space.groupHistory
         for tabID in visitedLinkStylingTabIDs(in: space) {
             await tabRuntimes[tabID]?.page.styleVisitedLinks(history: history)
         }
@@ -695,7 +697,7 @@ final class BrowserPagePool:
         retainResidentPage(page, for: tabID)
         residencyRevision &+= 1
         activate(tabID)
-        if let tab = space.tabs.model(tabID) {
+        if let tab = space.shownTab(tabID) {
             page.updateNavigationContext(tab: BrowserPageTab(tab, images: browser.core.state.favicons))
         }
         return true
@@ -924,9 +926,7 @@ final class BrowserPagePool:
     /// refuses the tab a page.
     private func page(for tab: BrowserPageTab, space: SpaceModel, opener: UUID? = nil) -> BrowserPage? {
         if let existingPage = tabRuntimes[tab.id]?.page {
-            if existingPage.spaceID == space.id,
-                existingPage.profileID == space.profileID
-            {
+            if host.serves(existingPage, tabID: tab.id, spaceID: space.id, profileID: space.profileID) {
                 let page = existingPage
                 page.setCredentialAccessEnabled(
                     space.settings.credentialPreferences.isEnabled
@@ -1060,8 +1060,7 @@ final class BrowserPagePool:
         guard let tab = browser.shownTab, let space = browser.shownSpace else { return false }
         let residentPage = tabRuntimes[tab.id]?.page
         let canReloadResidentPage =
-            residentPage?.spaceID == space.id
-            && residentPage?.profileID == space.profileID
+            residentPage.map { host.serves($0, tabID: tab.id, spaceID: space.id, profileID: space.profileID) } == true
             && residentPage?.live.documentURL != nil
         select()
         return canReloadResidentPage

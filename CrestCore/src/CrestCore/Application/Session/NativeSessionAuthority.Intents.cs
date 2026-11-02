@@ -116,17 +116,29 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// The Space an intent edits: one `basis` holds that is not being deleted,
-    /// and, unless the edit only maintains it, one this process may read.
+    /// and, unless the edit only maintains it, one this process may read. It
+    /// is the Space as its sidebar shows it, with the pinned tabs its group
+    /// shares, which `SessionState.Replacing` stores back where they belong.
     internal SpaceState Editable(SessionState basis, Guid spaceId, bool maintains = false) {
         var space = basis.KnownSpace(spaceId);
         if (basis.PendingDeletion(spaceId) is not null) throw new Rejected(new SpaceBeingDeleted(spaceId));
         if (!maintains && IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
-        return space;
+        return basis.Viewed(space);
+    }
+
+    /// The Space `spaceId` names, as `Editable` reads it, then every other
+    /// Space of its group that stays, as it is stored: those an edit of what
+    /// the group shares changes.
+    internal IReadOnlyList<SpaceState> GroupEditable(SessionState basis, Guid spaceId, bool maintains = false) {
+        var space = Editable(basis, spaceId, maintains);
+        return [space, .. basis.GroupOf(spaceId)?.Members.Where(member => member.Id != spaceId && basis.PendingDeletion(member.Id) is null)
+            .Select(member => Editable(basis, member.Id, maintains)).Select(member => basis.Space(member.Id)!) ?? []];
     }
 
     /// The Spaces an intent that names none edits: every one `basis` holds that
     /// is not being deleted, and, unless the edit only maintains them, that
-    /// this process may read.
+    /// this process may read. Each is the Space as it is stored, since a pin
+    /// its group shares is the primary's to edit.
     internal IEnumerable<SpaceState> EditableSpaces(SessionState basis, bool maintains = false) =>
         basis.Spaces.Where(space => basis.PendingDeletion(space.Id) is null && (maintains || !IsLockedUnderGate(space)));
 

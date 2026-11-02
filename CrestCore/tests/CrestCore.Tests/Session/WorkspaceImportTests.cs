@@ -106,6 +106,92 @@ public sealed partial class BrowserContractsTests {
             device.Authority.Current.DisposableSeedMarker));
     }
 
+    /// Spaces that shared one session where they came from come in as one
+    /// group: the first brought leads, a Sub-Space leaves the pinned tabs the
+    /// primary holds to it and keeps its own as saved tabs, and one the review
+    /// separates comes in alone, as it was.
+    [Fact]
+    public void SpacesThatSharedASessionComeInAsOneGroupUnlessTheReviewSeparatesThem() {
+        var session = SavedSession().Document["session"]!.AsObject();
+        session.Remove("disposableSeedMarker");
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var work = ImportedSpace("Work", ImportedTab("https://favorite.example/", "pinned"), ImportedTab("https://work.example/"));
+        var client = ImportedSpace("Client", ImportedTab("https://favorite.example/", "pinned"),
+            ImportedTab("https://own-pin.example/", "pinned"), ImportedTab("https://client.example/"));
+        var school = ImportedSpace("School", ImportedTab("https://favorite.example/", "pinned"), ImportedTab("https://school.example/"));
+        foreach (var joined in new[] { client, school }) {
+            joined["primarySpaceID"] = work["id"]!.DeepClone();
+            joined["sharedProfileID"] = work["profile"]!["id"]!.DeepClone();
+            joined["membershipModifiedAt"] = 800000000.0;
+        }
+        Reviewing(device, work, client, school);
+        device.Send(new SeparateImportSpace(SpaceId(school)));
+        device.Send(new BeginImportCommit());
+
+        var changes = device.Send(new ImportReviewedSpaces(device.Workspace, window));
+
+        var current = device.Authority.Current;
+        SpaceState Named(string name) => current.Spaces.Single(space => space.Settings.Name == name);
+        var (leader, member, alone) = (Named("Work"), Named("Client"), Named("School"));
+        Assert.Null(leader.Membership);
+        Assert.Equal((leader.Id, leader.ProfileId), (member.Membership!.PrimaryId, member.ProfileId));
+        Assert.Equal([("https://own-pin.example/", TabPlacement.Saved), ("https://client.example/", TabPlacement.Current)],
+            member.Tabs.Select(tab => (tab.Url, tab.Placement)));
+        // The pin that became a saved tab still wears the image it came with.
+        Assert.Contains(changes.OfType<TabsImported>().Single().Tabs, imported => imported.TabId == member.Tabs[0].Id);
+        Assert.Null(alone.Membership);
+        Assert.NotEqual(leader.ProfileId, alone.ProfileId);
+        Assert.Equal(TabPlacement.Pinned, alone.Tabs[0].Placement);
+    }
+
+    /// When the review brings one of the Spaces that shared a session where
+    /// they came from into an existing Space, the others join that Space's
+    /// group, which stays as it was: they browse with its session, take its
+    /// settings and its primary's pinned tabs, and open with it where it is
+    /// open. Their passwords go once to the group's primary.
+    [Fact]
+    public void SpacesThatSharedASessionJoinTheGroupOfTheExistingSpaceOneOfThemJoins() {
+        var (reading, notes) = (Fixed(5_100), Fixed(5_101));
+        var session = SessionOf(Locked(SpaceOf(reading, Fixed(5_190), "Reading",
+                tabs: [TabOf(Fixed(5_110), "Mail", "https://mail.example/", placement: "pinned")])),
+            SpaceOf(notes, Fixed(5_191), "Notes", tabs: [TabOf(Fixed(5_111))]));
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        Unlock(device.Send, device.Workspace, reading);
+        device.Send(new JoinSpace(device.Workspace, notes, reading));
+        var work = ImportedSpace("Work", ImportedTab("https://mail.example/", "pinned"), ImportedTab("https://own-pin.example/", "pinned"),
+            ImportedTab("https://shared.example/"));
+        var merged = ImportedSpace("notes", ImportedTab("https://notes.example/"));
+        var design = ImportedSpace("Design", ImportedTab("https://shared.example/design"));
+        foreach (var member in new[] { merged, design }) {
+            member["primarySpaceID"] = work["id"]!.DeepClone();
+            member["sharedProfileID"] = work["profile"]!["id"]!.DeepClone();
+            member["membershipModifiedAt"] = 800000000.0;
+        }
+
+        var review = Reviewing(device, work, merged, design);
+        Assert.Equal((null, notes, null), (review.Spaces[0].DestinationId, review.Spaces[1].DestinationId, review.Spaces[2].DestinationId));
+        Assert.All(review.Spaces, space => Assert.Equal(reading, space.JoinsGroupOf));
+        device.Send(new BeginImportCommit());
+        device.Send(new ImportReviewedSpaces(device.Workspace, window));
+
+        var current = device.Authority.Current;
+        var primary = current.Space(reading)!;
+        SpaceState Named(string name) => current.Spaces.Single(space => space.Settings.Name == name);
+        Assert.Equal([reading, notes, SpaceId(work), SpaceId(design)], current.GroupOf(reading)!.Members.Select(member => member.Id));
+        Assert.All(current.GroupOf(reading)!.Members, member => Assert.Equal(primary.ProfileId, member.ProfileId));
+        Assert.Null(primary.Membership);
+        Assert.True(Named("Work").Settings.RequiresAuthentication);
+        Assert.Equal([("https://own-pin.example/", TabPlacement.Saved), ("https://shared.example/", TabPlacement.Current)],
+            Named("Work").Tabs.Select(tab => (tab.Url, tab.Placement)));
+        // The group stays open here, so its new Sub-Spaces open with it.
+        device.Send(new RenameTab(device.Workspace, SpaceId(work), Named("Work").Tabs[1].Id, "Renamed"));
+        ImportPasswordSource[] passwords = [new("Arc", "shared.example"), new("Arc", "notes.example")];
+        Assert.Equal([[reading], [reading]],
+            device.Query(new ImportPasswordDestinations(device.Workspace, passwords)).Routes.Select(route => route.SpaceIds));
+    }
+
     [Fact]
     public void AReviewedImportJoinsTheSpaceItNamesAndMakesTheRestNewSpaces() {
         var fixture = SavedSession();

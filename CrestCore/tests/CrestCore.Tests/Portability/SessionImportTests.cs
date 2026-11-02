@@ -67,6 +67,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((SpaceBannerPattern.Diagonal, SpaceThemeMode.Gradient, 3),
             (gradient.Settings.Branding!.BannerPattern, gradient.Settings.Branding.ThemeMode, gradient.Settings.Branding.Colors.Colors.Count));
         Assert.Equal(("globe.americas.fill", SpaceAccent.Teal), (spaces[2].Settings.Symbol, spaces[2].Settings.Accent));
+        // Each Space is on a profile of its own, so none shares a session.
+        Assert.All(spaces, space => Assert.Null(space.Membership));
     }
 
     [Fact]
@@ -90,6 +92,9 @@ public sealed partial class BrowserContractsTests {
             (theme.BannerPattern, theme.ThemeMode, theme.Colors.Colors.Count, theme.BannerStrength, theme.ShowsTexture));
         Assert.Equal(["Shared Essential", "Play"], spaces[1].Tabs.Select(tab => tab.Title));
         Assert.Equal(SpaceAccent.Orange, spaces[1].Settings.Accent);
+        // The workspaces of one profile share its session: the first leads.
+        Assert.Null(work.Membership);
+        Assert.Equal((work.Id, work.ProfileId), (spaces[1].Membership!.PrimaryId, spaces[1].ProfileId));
     }
 
     [Fact]

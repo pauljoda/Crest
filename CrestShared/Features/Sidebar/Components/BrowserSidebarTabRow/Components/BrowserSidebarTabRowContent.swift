@@ -6,6 +6,8 @@ struct BrowserSidebarTabRowContent: View {
     let configuration: BrowserSidebarTabRowConfiguration
     let interaction: BrowserSidebarTabRowInteractionContext
 
+    @Environment(\.sidebarRowContentIndent) private var folderIndent
+
     var body: some View {
         HStack(spacing: configuration.metrics.contentSpacing) {
             leadingContent
@@ -25,7 +27,7 @@ struct BrowserSidebarTabRowContent: View {
                 favicons: configuration.favicons,
                 profileID: configuration.profileID,
                 metrics: configuration.metrics,
-                leadingInset: configuration.metrics.contentLeadingInset,
+                leadingInset: configuration.metrics.contentLeadingInset + folderIndent,
                 draftTitle: interaction.draftTitle,
                 isTitleFocused: interaction.isTitleFocused,
                 commitTitle: interaction.commitTitle,
@@ -39,7 +41,7 @@ struct BrowserSidebarTabRowContent: View {
                 isSelected: configuration.isSelected,
                 isLoaded: configuration.isLoaded,
                 metrics: configuration.metrics,
-                leadingInset: configuration.metrics.contentLeadingInset,
+                leadingInset: configuration.metrics.contentLeadingInset + folderIndent,
                 restoreSavedLocation: configuration.restoreSavedLocation,
                 iconCustomization: BrowserIconCustomizationPresentation(
                     isPresented: interaction.isChoosingIcon,

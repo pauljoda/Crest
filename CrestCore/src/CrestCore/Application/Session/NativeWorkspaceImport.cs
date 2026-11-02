@@ -104,7 +104,9 @@ internal sealed class NativeWorkspaceImport {
         foreach (var space in this.spaces) Track(space.State, source: null);
         originalFolderIds = this.spaces.ToDictionary(space => space, space => space.State.Folders.Select(f => f.Id).ToHashSet());
         originalHistoryIds = this.spaces.ToDictionary(space => space, space => space.State.History.Select(h => h.Id).ToHashSet());
-        inputs = [.. spaces.Select(space => new Draft(space, isOriginal: false))];
+        // An imported Space arrives on its own: the group it had where it was
+        // exported never joins it to one here.
+        inputs = [.. spaces.Select(space => new Draft(space with { Membership = null }, isOriginal: false))];
         for (int index = 0; index < inputs.Count; index++) Track(inputs[index].State, index);
         foreach (var input in inputs)
             SplitMember.RequireWellFormed(
@@ -206,10 +208,10 @@ internal sealed class NativeWorkspaceImport {
             var destination = created ? input : spaces.FirstOrDefault(s => s.Id == id);
             if (destination is null) continue; // A setup cannot recreate an existing Space deleted elsewhere.
             Available(id);
-            if (!created && destination.State.ProfileId != input.State.ProfileId) throw new Rejected(new SpaceProfileChanged(id));
+            if (!created && destination.State.OwnProfileId != input.State.OwnProfileId) throw new Rejected(new SpaceProfileChanged(id));
             if (created && spaces.Any(s => s.Id == id)) throw new Rejected(new SpaceAlreadyExists(id));
-            if (created && spaces.Any(s => s.State.ProfileId == input.State.ProfileId))
-                throw new Rejected(new ProfileInUse(input.State.ProfileId));
+            if (created && spaces.Any(s => s.State.OwnProfileId == input.State.OwnProfileId || s.State.ProfileId == input.State.OwnProfileId))
+                throw new Rejected(new ProfileInUse(input.State.OwnProfileId));
             Customize(destination, draft.Customization);
             if (!created) continue;
             spaces.Add(destination);
@@ -223,25 +225,60 @@ internal sealed class NativeWorkspaceImport {
         seedMarker = null;
     }
 
-    /// Imports the reviewed Spaces the review includes, in their order; see
-    /// `ImportReviewedSpaces`. New identities come from `ids`.
-    internal void ImportReviewed(IReadOnlyList<SetupReviewSpace> reviews, IIdSource ids) {
-        var included = Pair(reviews, review => review.Source.Id).Where(pair => pair.Choice.Included).ToArray();
+    /// Imports the Spaces `review` includes, in their order; see
+    /// `ImportReviewedSpaces`. New identities come from `ids`, and a group the
+    /// import makes or joins is chosen at `now`.
+    internal void ImportReviewed(SetupImportReview review, IIdSource ids, DateTimeOffset now) {
+        var included = Pair(review.Spaces, space => space.Source.Id).Where(pair => pair.Choice.Included).ToArray();
         if (included.Length == 0) throw new Rejected(new NoIncludedSpaces());
         bool replaceSeed = seedMarker is not null;
         SessionState.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count,
             included.Count(pair => pair.Choice.DestinationId is null));
         if (replaceSeed) ReplaceSeed();
-        foreach (var (input, review) in included) {
-            var destination = review.DestinationId is { } destinationId ? spaces.FirstOrDefault(s => s.Id == destinationId) : input;
+        foreach (var (input, space) in included) {
+            var destination = space.DestinationId is { } destinationId ? spaces.FirstOrDefault(s => s.Id == destinationId) : input;
             if (destination is null) continue;
             Available(destination.Id);
-            Customize(destination, review.Customization);
-            Import(review, input, destination, isNew: review.DestinationId is null, ids);
-            if (review.DestinationId is null) spaces.Add(destination);
+            Customize(destination, space.Customization);
+            Import(space, input, destination, isNew: space.DestinationId is null, ids);
+            if (space.DestinationId is null) spaces.Add(destination);
             affected ??= destination;
         }
+        Regroup(review, [.. included.Where(pair => pair.Choice.DestinationId is null)], now);
         if (affected is not null) seedMarker = null;
+    }
+
+    /// The new Spaces `brought` that shared one session where they came from
+    /// keep sharing one, chosen at `now`. When `review` brings one of them
+    /// into a Space the workspace holds, the others join that Space's group,
+    /// which itself stays as it was; otherwise the first of them leads and
+    /// each later one joins it.
+    private void Regroup(SetupImportReview review, IReadOnlyList<(Draft Input, SetupReviewSpace Review)> brought, DateTimeOffset now) {
+        Dictionary<Guid, Draft> leaders = [];
+        foreach (var (input, space) in brought) {
+            var leader = review.GroupDestination(space) is { } id && spaces.FirstOrDefault(s => s.Id == id) is { } destination
+                ? spaces.FirstOrDefault(s => s.Id == destination.State.PrimaryId) ?? destination
+                : leaders.GetValueOrDefault(space.SourceGroupId);
+            if (leader is null) leaders[space.SourceGroupId] = input;
+            else input.State = Joining(input.State, leader.State, now);
+        }
+    }
+
+    /// `space` as a Sub-Space of `primary` from `now`: it takes the group's
+    /// shared settings, and while the group shows its primary's pinned tabs
+    /// it leaves a pinned tab the primary also holds to the primary alone and
+    /// keeps one the primary lacks as a saved tab.
+    private SpaceState Joining(SpaceState space, SpaceState primary, DateTimeOffset now) {
+        var settings = GroupSetting.All.Aggregate(space.Settings, (value, setting) => setting.Copied(primary.Settings, value));
+        var joined = space.Configured(settings) with { Membership = SpaceMembership.Joining(primary, now) };
+        if (settings.SeparatesPinnedTabs) return joined;
+        var shared = primary.Tabs.Where(tab => tab.IsPinned).Select(tab => tab.SavedAddress ?? tab.Url).OfType<string>()
+            .ToHashSet(StringComparer.Ordinal);
+        return joined with {
+            Tabs = [.. space.Tabs
+                .Where(tab => !tab.IsPinned || (tab.SavedAddress ?? tab.Url) is not { } address || !shared.Contains(address))
+                .Select(tab => tab.IsPinned ? Copied(tab, tab with { Placement = TabPlacement.Pinned.OverflowsTo! }) : tab)]
+        };
     }
 
     /// Removes a first launch's disposable Spaces, which an import takes the

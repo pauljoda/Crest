@@ -46,7 +46,7 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
 
     /// The tab the window shows in this Space.
     private var shownTab: TabStateModel? {
-        model.browser.selectedTabID(in: space.id).flatMap { space.tabs.model($0) }
+        model.browser.selectedTabID(in: space.id).flatMap { space.shownTab($0) }
     }
 
     private var surfacePage: BrowserPage? {
@@ -76,10 +76,15 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         let presentation = pageSurfacePresentation
         return surface(presentation)
             // Every edge of the window's frame around this Space's pages moves
-            // the window, except where Peek covers it.
+            // the window.
             .overlay { BrowserPageFrameTitleBarSurface(docked: model.sidebarPresentation.reservesSidebarWidth) }
             .overlay {
-                BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
+                BrowserRootPeekLayer(
+                    model: model,
+                    transientBrowsing: transientBrowsing,
+                    space: space,
+                    docked: model.sidebarPresentation.reservesSidebarWidth
+                )
             }
             .environment(\.browserPagePresentationWindowID, model.windowState?.id)
             .environment(\.spaceContentIsInteractive, isInteractive)
@@ -90,12 +95,14 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                 assignment: isSelectedSpace ? presentation.dropAssignment : nil,
                 state: model.sidebarInteraction.sidebarReorderState
             )
+            // The window's own focus is read only where a page takes focus
+            // back, so the window gaining or losing it never re-renders the
+            // Space's pages.
             .environment(
                 \.browserWebFocusRestorationGate,
-                BrowserWebFocusRestorationGate(
-                    browserChromeOwnsFocus: !isInteractive || !model.isWindowFocused
-                        || model.isAddressEditing || model.chrome.isCommandPalettePresented,
-                    pageChromeOwnsFocus: false))
+                BrowserWebFocusRestorationGate(browserChromeOwnsFocus: !isInteractive, pageChromeOwnsFocus: false)
+            )
+            .environment(\.browserWebFocusWindow, model)
     }
 
     @ViewBuilder

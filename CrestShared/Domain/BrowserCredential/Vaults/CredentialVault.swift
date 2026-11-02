@@ -25,3 +25,19 @@ protocol CredentialVault: Sendable {
     /// Removes the items `unreadableCredentialCount(in:)` counts.
     func deleteUnreadableCredentials(in spaceID: UUID) async throws
 }
+
+extension CredentialVault {
+    // MARK: - Actions - Moving
+
+    /// Saves every credential the Space `source` keeps into the Space
+    /// `destination`'s, each with its identity, leaving the source's in place.
+    /// Copying again after an interruption skips the credentials already
+    /// copied, so it never replaces an edit made to a copy since.
+    func copyAll(from source: UUID, to destination: UUID) async throws {
+        let copied = Set(try await descriptors(in: destination).map(\.id))
+        for descriptor in try await descriptors(in: source) where !copied.contains(descriptor.id) {
+            guard let credential = try await credential(id: descriptor.id, in: source) else { continue }
+            try await save(credential.moved(to: destination), in: destination)
+        }
+    }
+}

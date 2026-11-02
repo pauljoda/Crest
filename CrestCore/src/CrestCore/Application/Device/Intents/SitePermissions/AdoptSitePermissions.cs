@@ -16,8 +16,10 @@ public sealed record AdoptSitePermissions(byte[]? Records) : SitePermissionInten
 
     /// Carries the choices an installed release kept into the device store
     /// once, merged after any the store already holds, and saves them before
-    /// returning. Every call publishes each Space that holds a choice.
+    /// returning. Every call publishes each Space that holds a choice, and
+    /// the other Spaces of its group.
     internal override void Apply(Device device, DeviceTurn turn) {
+        var groups = device.PermissionGroups();
         lock (device.Gate) {
             if (device.Storage is { } target && !device.Adopted.Contains(DeviceAdoption.SitePermissions)) {
                 var merged = new SitePermissionLedger();
@@ -33,8 +35,8 @@ public sealed record AdoptSitePermissions(byte[]? Records) : SitePermissionInten
                 // Records handed to the store before this carry nothing adopted; these supersede them.
                 target.EnqueueDevice(device.Records());
             }
-            foreach (var space in device.KeptPermissions.Spaces.Union(device.PassingPermissions.Spaces))
-                turn.Changes.Publish(new SitePermissionsChanged(space, device.PermissionRecords(space), []));
+            foreach (var space in device.KeptPermissions.Spaces.Union(device.PassingPermissions.Spaces).SelectMany(groups).Distinct())
+                turn.Changes.Publish(new SitePermissionsChanged(space, device.PermissionRecords(space, groups), []));
         }
     }
 

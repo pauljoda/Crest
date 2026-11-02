@@ -18,6 +18,15 @@ struct MobileCompactAddressBar: View {
     /// Moves to the tab before or after the shown one, which VoiceOver offers
     /// as actions on the address. Nil where the bar walks no tabs.
     var stepTab: ((AdjacentDirection) -> Void)?
+    /// Opens the command palette over the bar, which a tap on the address
+    /// does; without it the address edits in place.
+    var openPalette: (() -> Void)?
+    /// Whether the palette grown out of the bar shows, its input line in the
+    /// bar's place.
+    var isPaletteShown = false
+    /// The namespace in which the palette grows out of the bar.
+    var commandSurfaceNamespace: Namespace.ID?
+    var commandPaletteHandoff = BrowserCommandPaletteHandoff.neither
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -60,6 +69,7 @@ struct MobileCompactAddressBar: View {
             BrowserAddressContent(
                 text: $text,
                 isEditing: $isEditing,
+                activate: openPalette,
                 longPressAction: beginNewTab,
                 submit: submit
             )
@@ -78,7 +88,7 @@ struct MobileCompactAddressBar: View {
                     reloadOrStop: performReloadOrStop,
                     reload: performReload,
                     reloadFromOrigin: performReloadFromOrigin,
-                    clearSiteDataAndReload: clearSiteDataAndReload,
+                    clearCookiesAndReload: clearCookiesAndReload,
                     isEnabled: pageActions?.isAvailable == true,
                     reloadControlSize: MobileCompactAddressBarLayout.reloadControlSize,
                     menuControlSize: MobileCompactAddressBarLayout.reloadMenuControlSize
@@ -97,7 +107,7 @@ struct MobileCompactAddressBar: View {
         .contentShape(.capsule)
         .background {
             fieldShape
-                .fill(.tint.opacity(isLoading ? 0.2 : 0))
+                .fill(.tint.opacity(isLoading ? BrowserSidebarAddressFieldMetrics.loadingFillOpacity : 0))
                 .scaleEffect(x: loadingProgress, anchor: .leading)
                 .mask(fieldShape)
                 .animation(
@@ -105,13 +115,38 @@ struct MobileCompactAddressBar: View {
                     value: loadingProgress
                 )
         }
-        .glassEffect(.regular.interactive(), in: fieldShape)
+        // The palette grown out of the bar takes its place. The bar's glass
+        // container draws the glass, so the glass itself steps aside rather
+        // than fading with the bar's contents.
+        .animation(commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)) {
+            $0.opacity(isPaletteShown ? 0 : 1)
+        }
+        .glassEffect(isPaletteShown ? .identity : .regular.interactive(), in: fieldShape)
+        .anchorPreference(key: MobileCompactCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
+        .background { commandPaletteAnchor }
+        .allowsHitTesting(!isPaletteShown)
+        .accessibilityHidden(isPaletteShown)
         .modifier(
             MobileCompactChromeTransitionModifier(
                 transition: transition,
                 transitionEnded: transitionEnded
             )
         )
+    }
+
+    /// The bar's frame, carrying the palette's identity while the bar holds
+    /// it, so the palette's glass grows out of the bar's.
+    @ViewBuilder
+    private var commandPaletteAnchor: some View {
+        if commandPaletteHandoff.fieldHoldsMorph, let commandSurfaceNamespace, let space = browser.shownSpace {
+            Color.clear.matchedGeometryEffect(
+                id: BrowserCommandSurfaceMorph.commandPalette(spaceID: space.id),
+                in: commandSurfaceNamespace,
+                properties: .frame,
+                anchor: .center,
+                isSource: true
+            )
+        }
     }
 
     private var offersTranslation: Bool {
@@ -150,7 +185,7 @@ struct MobileCompactAddressBar: View {
         pageActions?.reloadFromOrigin()
     }
 
-    private func clearSiteDataAndReload() async {
-        await pageActions?.clearSiteDataAndReload()
+    private func clearCookiesAndReload() async {
+        await pageActions?.clearSiteData(.siteData)
     }
 }

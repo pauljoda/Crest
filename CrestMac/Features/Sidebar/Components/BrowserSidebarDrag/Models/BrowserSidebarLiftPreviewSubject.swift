@@ -87,6 +87,8 @@ struct BrowserSidebarSelectionPreviewRow: Equatable, Identifiable {
     let frame: CGRect
     var folder: FolderStateModel? = nil
     var folderRows: [BrowserFolderDragPreviewRow] = []
+    /// How far the row moves its icon and title in for the folders around it.
+    var contentIndent: CGFloat = 0
     var isSplit: Bool {
         if case .splitGroup = id { return true }
         return false
@@ -94,12 +96,19 @@ struct BrowserSidebarSelectionPreviewRow: Equatable, Identifiable {
 
     // MARK: - Actions - Resolving
 
+    /// The preview rows of `rows` in `space`, each indented as `contentIndent`
+    /// says the sidebar indents it.
     @MainActor
     static func resolve(
         _ rows: [BrowserSidebarReorderRow], in space: SpaceModel,
+        contentIndent: (BrowserSidebarReorderRow) -> CGFloat,
         folderRows: (UUID) -> [BrowserSidebarReorderRow]
     ) -> [Self] {
-        rows.compactMap { row in row.id.selectionPreviewRow(at: row.frame, in: space, folderRows: folderRows) }
+        rows.compactMap { row in
+            var preview = row.id.selectionPreviewRow(at: row.frame, in: space, folderRows: folderRows)
+            preview?.contentIndent = contentIndent(row)
+            return preview
+        }
     }
 
     // MARK: - Actions - Stacking
@@ -124,6 +133,7 @@ struct BrowserSidebarSelectionPreviewRow: Equatable, Identifiable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.frame == rhs.frame && lhs.tabs.elementsEqual(rhs.tabs, by: ===)
             && lhs.folder === rhs.folder && lhs.folderRows.map(\.id) == rhs.folderRows.map(\.id)
+            && lhs.contentIndent == rhs.contentIndent
     }
 }
 
@@ -137,7 +147,7 @@ extension BrowserSidebarReorderItemID {
     ) -> BrowserSidebarSelectionPreviewRow? {
         let tabs: [TabStateModel]
         switch self {
-        case .tab(let id): tabs = space.tabs.model(id).map { [$0] } ?? []
+        case .tab(let id): tabs = space.shownTab(id).map { [$0] } ?? []
         case .splitGroup(let id): tabs = space.splitMembers(of: id)
         case .folder(let id):
             guard let folder = space.folders.model(id) else { return nil }
