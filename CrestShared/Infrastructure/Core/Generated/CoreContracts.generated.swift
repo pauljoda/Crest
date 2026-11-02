@@ -2979,6 +2979,7 @@ struct ForgetEngineRule: Intent, Equatable, Sendable {
 struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
     let windowID: UUID
     let row: PaletteRow.Seed
+    let spaceID: UUID?
 }
 
 struct GetAgentPreferences: Query, Equatable, Sendable {
@@ -3649,6 +3650,7 @@ struct LinkPreferences: Equatable, Sendable {
     let opensPeekAutomatically: Bool
     let peekModifier: LinkPeekModifier
     let dragsLinksToPeek: Bool
+    let dimsPageBehindPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
     let routes: [LinkRoute]
@@ -4668,6 +4670,7 @@ struct PaletteSuggestions: Query, Equatable, Sendable {
     let scope: PaletteScope?
     let allowsCompletion: Bool
     let pasteboard: String?
+    let spaceID: UUID?
 }
 
 struct PasskeyAccess: Query, Equatable, Sendable {
@@ -5018,6 +5021,7 @@ struct RecordPaletteChoice: Intent, PaletteIntent, Equatable, Sendable {
     let windowID: UUID
     let text: String
     let row: PaletteRow.Seed
+    let spaceID: UUID?
 }
 
 struct RecordsToUpload: Query, Equatable, Sendable {
@@ -13939,13 +13943,15 @@ struct LinkBehavior: Hashable, Sendable {
     static let followsMovedTabs = LinkBehavior(tag: 1, name: "followsMovedTabs")
     static let opensPeekAutomatically = LinkBehavior(tag: 2, name: "opensPeekAutomatically")
     static let dragsLinksToPeek = LinkBehavior(tag: 3, name: "dragsLinksToPeek")
-    static let remembersSpaceBySite = LinkBehavior(tag: 4, name: "remembersSpaceBySite")
+    static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
+    static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
         followsMovedTabs,
         opensPeekAutomatically,
         dragsLinksToPeek,
+        dimsPageBehindPeek,
         remembersSpaceBySite
     ]
 
@@ -14088,6 +14094,7 @@ struct LinkPeekModifier: Hashable, Sendable {
     var clickTitle: LocalizedStringResource { facts.clickTitle }
     var peekKey: ShortcutModifiers { facts.peekKey }
     var newTabKey: ShortcutModifiers { facts.newTabKey }
+    var yieldsToNewTabKey: Bool { facts.yieldsToNewTabKey }
     private let facts: Facts
 
     private init(
@@ -14096,10 +14103,18 @@ struct LinkPeekModifier: Hashable, Sendable {
         title: LocalizedStringResource,
         clickTitle: LocalizedStringResource,
         peekKey: ShortcutModifiers,
-        newTabKey: ShortcutModifiers
+        newTabKey: ShortcutModifiers,
+        yieldsToNewTabKey: Bool
     ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, clickTitle: clickTitle, peekKey: peekKey, newTabKey: newTabKey)
+        facts = Facts(
+            name: name,
+            title: title,
+            clickTitle: clickTitle,
+            peekKey: peekKey,
+            newTabKey: newTabKey,
+            yieldsToNewTabKey: yieldsToNewTabKey
+        )
     }
 
     static let option = LinkPeekModifier(
@@ -14108,7 +14123,8 @@ struct LinkPeekModifier: Hashable, Sendable {
         title: LocalizedStringResource("Option (⌥)"),
         clickTitle: LocalizedStringResource("Option-click"),
         peekKey: [.option],
-        newTabKey: [.command]
+        newTabKey: [.command],
+        yieldsToNewTabKey: false
     )
     static let command = LinkPeekModifier(
         tag: 1,
@@ -14116,10 +14132,20 @@ struct LinkPeekModifier: Hashable, Sendable {
         title: LocalizedStringResource("Command (⌘)"),
         clickTitle: LocalizedStringResource("Command-click"),
         peekKey: [.command],
-        newTabKey: [.option]
+        newTabKey: [.option],
+        yieldsToNewTabKey: false
+    )
+    static let shift = LinkPeekModifier(
+        tag: 2,
+        name: "shift",
+        title: LocalizedStringResource("Shift (⇧)"),
+        clickTitle: LocalizedStringResource("Shift-click"),
+        peekKey: [.shift],
+        newTabKey: [.command],
+        yieldsToNewTabKey: true
     )
 
-    static let all: [LinkPeekModifier] = [option, command]
+    static let all: [LinkPeekModifier] = [option, command, shift]
 
     static func named(_ name: String?) -> LinkPeekModifier? {
         all.first { $0.name == name }
@@ -14139,19 +14165,22 @@ struct LinkPeekModifier: Hashable, Sendable {
         let clickTitle: LocalizedStringResource
         let peekKey: ShortcutModifiers
         let newTabKey: ShortcutModifiers
+        let yieldsToNewTabKey: Bool
 
         init(
             name: String,
             title: LocalizedStringResource,
             clickTitle: LocalizedStringResource,
             peekKey: ShortcutModifiers,
-            newTabKey: ShortcutModifiers
+            newTabKey: ShortcutModifiers,
+            yieldsToNewTabKey: Bool
         ) {
             self.name = name
             self.title = title
             self.clickTitle = clickTitle
             self.peekKey = peekKey
             self.newTabKey = newTabKey
+            self.yieldsToNewTabKey = yieldsToNewTabKey
         }
     }
 }

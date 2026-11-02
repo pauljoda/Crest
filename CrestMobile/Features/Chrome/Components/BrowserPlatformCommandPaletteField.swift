@@ -38,7 +38,7 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
     func makeField(coordinator: Coordinator) -> CompletionField {
         let field = CompletionField()
         field.text = model.query
-        field.font = .preferredFont(forTextStyle: .title2)
+        field.font = .preferredFont(forTextStyle: presentation.input.platformTextStyle)
         field.adjustsFontForContentSizeCategory = true
         field.placeholder = String(localized: "Search or Enter URL…")
         // A URL keyboard would remove the space bar multi-word searches need.

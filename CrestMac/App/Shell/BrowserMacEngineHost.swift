@@ -15,7 +15,7 @@ protocol BrowserMacEngineHost: AnyObject {
     func windowClosed(_ windowID: UUID, releasingProfiles profileIDs: [UUID])
 
     /// Offers a key equivalent no Crest command claimed to the engine for
-    /// `page`, the active page, such as an extension's shortcut. Answers
+    /// `page`, the page in front, such as an extension's shortcut. Answers
     /// whether the engine took it.
     func handleUnclaimedShortcut(_ event: NSEvent, page: BrowserPage) -> Bool
 

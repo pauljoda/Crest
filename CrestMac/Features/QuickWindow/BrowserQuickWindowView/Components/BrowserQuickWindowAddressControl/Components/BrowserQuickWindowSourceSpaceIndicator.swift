@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The Space the Quick Window browses, which opens the Spaces it may switch
-/// to: choosing one reopens the page with that Space's website data and
-/// passwords.
+/// The Space the Quick Window browses, shown by its crest, which opens the
+/// Spaces it may switch to: choosing one reopens the page with that Space's
+/// website data and passwords.
 struct BrowserQuickWindowSourceSpaceIndicator: View {
     let space: BrowserSpaceIdentity?
     let spaces: [BrowserSpaceIdentity]
@@ -14,21 +14,15 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
         Button {
             isPickerPresented.toggle()
         } label: {
-            HStack(spacing: 7) {
+            Group {
                 if let space {
                     BrowserSpaceSymbolArtwork(space: space, size: 20, lockSize: 5)
                 } else {
                     Image(systemName: "square.grid.2x2")
                 }
-                Text(space?.name ?? "Space")
-                    .lineLimit(1)
             }
             .font(.callout.weight(.semibold))
-            .padding(
-                .horizontal,
-                BrowserQuickWindowLayout.sourceChipHorizontalPadding
-            )
-            .frame(height: CrestLayout.minimumHitTarget)
+            .frame(width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget)
             .background(
                 CrestColor.hover,
                 in: .rect(cornerRadius: CrestRadius.compact, style: .continuous)
@@ -39,6 +33,7 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
         )
         .disabled(space == nil)
         .fixedSize()
+        .help(space?.name ?? String(localized: "Space"))
         .accessibilityLabel("Current Quick Window Space")
         .accessibilityValue(space?.name ?? "Space")
         .accessibilityIdentifier("quick-window-source-space")
@@ -46,12 +41,12 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
             if let space {
                 BrowserQuickWindowSpacePicker(
                     spaces: spaces,
-                    selectedSpaceID: space.id,
-                    purpose: .browsingSpace
+                    selectedSpaceID: space.id
                 ) { candidate in
                     isPickerPresented = false
                     selectSpace(candidate.assignment)
                 }
+                .crestFlyoutStyle()
             }
         }
     }

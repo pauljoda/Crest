@@ -43,6 +43,86 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         XCTAssertEqual(refreshed, [.location])
     }
 
+    /// A page no window shows waits for one only as long as the grace: a
+    /// Quick Window's page asking during its first load is shown once the
+    /// window draws, and a page nobody shows ends its request unanswered.
+    func testARequestWaitsForAWindowOnlyAsLongAsTheGrace() {
+        let controller = BrowserPagePermissionController(hostGrace: .milliseconds(100))
+        let origin = SiteOrigin(scheme: "https", host: "meet.example", port: 443)
+        var answers: [BrowserSitePermissionPromptResponse?] = []
+
+        controller.request(.camera, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
+            answers.append($0)
+        }
+        let quickWindow = UUID()
+        controller.attachHost(quickWindow)
+        waitPast(.milliseconds(150))
+        XCTAssertEqual(controller.current?.permission, .camera)
+        XCTAssertTrue(answers.isEmpty)
+
+        controller.detachHost(quickWindow)
+        waitPast(.milliseconds(150))
+        XCTAssertNil(controller.current)
+        XCTAssertEqual(answers.count, 1)
+        XCTAssertNil(answers[0])
+    }
+
+    /// A page moving from a Quick Window into a browser window keeps its
+    /// request whichever window's view arrives first: the new one before the
+    /// old one leaves, or a moment after it.
+    func testARequestSurvivesItsPageChangingWindows() {
+        let controller = BrowserPagePermissionController(hostGrace: .milliseconds(100))
+        let origin = SiteOrigin(scheme: "https", host: "meet.example", port: 443)
+        let (quickWindow, mainWindow, otherWindow) = (UUID(), UUID(), UUID())
+        var answers: [BrowserSitePermissionPromptResponse?] = []
+
+        controller.attachHost(quickWindow)
+        controller.request(.microphone, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
+            answers.append($0)
+        }
+        controller.attachHost(mainWindow)
+        controller.detachHost(quickWindow)
+        controller.detachHost(mainWindow)
+        controller.attachHost(otherWindow)
+        waitPast(.milliseconds(150))
+        XCTAssertEqual(controller.current?.permission, .microphone)
+        XCTAssertTrue(answers.isEmpty)
+    }
+
+    /// Lets the controller's grace pass on the main actor.
+    private func waitPast(_ duration: Duration) {
+        let passed = expectation(description: "grace passed")
+        Task { @MainActor in
+            try? await Task.sleep(for: duration)
+            passed.fulfill()
+        }
+        wait(for: [passed], timeout: 5)
+    }
+
+    /// Answering the first of two queued requests answers only it; the next
+    /// one waits for its own answer.
+    func testAnsweringOneRequestLeavesTheNextPending() {
+        let controller = BrowserPagePermissionController()
+        let origin = SiteOrigin(scheme: "https", host: "meet.example", port: 443)
+        controller.attachHost(UUID())
+        var microphone: [BrowserSitePermissionPromptResponse?] = []
+        var camera: [BrowserSitePermissionPromptResponse?] = []
+        controller.request(.microphone, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
+            microphone.append($0)
+        }
+        controller.request(.camera, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
+            camera.append($0)
+        }
+
+        let first = controller.current
+        XCTAssertEqual(first?.permission, .microphone)
+        controller.resolve(first!.id, response: .allowOnce)
+
+        XCTAssertEqual(microphone.count, 1)
+        XCTAssertEqual(microphone.first??.grants, true)
+        XCTAssertEqual(controller.current?.permission, .camera)
+        XCTAssertTrue(camera.isEmpty)
+    }
 }
 
 /// An engine's direct path that records the site decisions carried to it.
