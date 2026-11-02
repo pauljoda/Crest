@@ -4761,6 +4761,10 @@
     "chromium-extension-sign-in-tab": {
       "category": "fixed",
       "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
+    },
+    "chromium-new-tab-page-crash": {
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when a Chromium tab opens the new tab page, as Claude in Chrome does, or keeps quitting at launch while restoring one."
     }
   }
 }
