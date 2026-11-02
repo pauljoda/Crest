@@ -80,12 +80,22 @@ internal sealed record SearchTemplate(string Pattern) {
 
     #region Actions - Validation
 
-    /// `value` trimmed and checked as an address a person typed for a
-    /// provider: HTTPS on a public host and the standard port, exactly one
-    /// placeholder outside the fragment, no credentials, secrets or stray
-    /// percent signs, at most `MaximumLength` characters. Throws `Rejected`
-    /// with `InvalidSearchEngine` naming the first flaw found.
-    public static SearchTemplate Admit(string value) {
+    /// `value` trimmed and checked as the results address a person typed for
+    /// a provider: HTTPS on a public host and the standard port, exactly one
+    /// placeholder, no credentials, secrets or stray percent signs, at most
+    /// `MaximumLength` characters. The placeholder may sit in the fragment,
+    /// which the results page reads for itself. Throws `Rejected` with
+    /// `InvalidSearchEngine` naming the first flaw found.
+    public static SearchTemplate Admit(string value) => Admitted(value, allowsFragmentPlaceholder: true);
+
+    /// `value` trimmed as an optional suggestions address: null when blank,
+    /// else admitted as a results address is, with its placeholder outside
+    /// the fragment. Crest requests suggestions itself, and a request never
+    /// carries its fragment, so a query there would never reach the provider.
+    public static SearchTemplate? AdmitSuggestions(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : Admitted(value, allowsFragmentPlaceholder: false);
+
+    private static SearchTemplate Admitted(string value, bool allowsFragmentPlaceholder) {
         ArgumentNullException.ThrowIfNull(value);
         value = value.Trim();
         if (value.Length > MaximumLength) throw Flawed(SearchEngineFlaw.TemplateTooLong);
@@ -111,15 +121,15 @@ internal sealed record SearchTemplate(string Pattern) {
         if (uri.UserInfo.Length != 0) throw Flawed(SearchEngineFlaw.CredentialsInTemplate);
         if (uri.Port != scheme.DefaultPort) throw Flawed(SearchEngineFlaw.NonstandardPort);
         if (!IsPublicHost(uri.Host)) throw Flawed(SearchEngineFlaw.UnsafeHost);
-        if (uri.Fragment.Contains(ProbeMarker, StringComparison.Ordinal)) throw Flawed(SearchEngineFlaw.PlaceholderInFragment);
-        foreach (string parameter in uri.Query.TrimStart('?').Split('&'))
+        if (!allowsFragmentPlaceholder && uri.Fragment.Contains(ProbeMarker, StringComparison.Ordinal))
+            throw Flawed(SearchEngineFlaw.PlaceholderInFragment);
+        // A page that reads its query from the fragment reads the rest of it
+        // there too, so the fragment's parameters keep no secrets either.
+        foreach (string parameter in uri.Query.TrimStart('?').Split('&').Concat(uri.Fragment.TrimStart('#').Split('&')))
             if (SecretParameters.Contains(Uri.UnescapeDataString(parameter.Split('=')[0]), StringComparer.OrdinalIgnoreCase))
                 throw Flawed(SearchEngineFlaw.SecretInTemplate);
         return new(value);
     }
-
-    /// `value` trimmed as an optional template: null when blank, else admitted.
-    public static SearchTemplate? AdmitOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : Admit(value);
 
     private static Rejected Flawed(SearchEngineFlaw flaw) => new(new InvalidSearchEngine(flaw));
 

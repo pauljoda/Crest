@@ -1309,6 +1309,9 @@ struct BeginDownload: Intent, DownloadIntent, Equatable, Sendable {
 struct BeginImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
 }
 
+struct BeginReopeningPages: Intent, WindowIntent, Equatable, Sendable {
+}
+
 struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -2858,6 +2861,10 @@ struct FinishDownload: Intent, DownloadIntent, Equatable, Sendable {
 
 struct FinishImportCommit: Intent, SetupFlowIntent, Equatable, Sendable {
     let passwordCount: Int
+    let unsavedPasswordCount: Int
+}
+
+struct FinishReopeningPages: Intent, WindowIntent, Equatable, Sendable {
 }
 
 struct FinishSetup: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -3550,6 +3557,7 @@ struct LaunchWindowPlan: Equatable, Sendable {
     let windowIDs: [UUID]
     let startupWindowID: UUID
     let setup: SetupEntry?
+    let quitWhileReopening: Bool
 }
 
 struct LaunchWindows: Query, Equatable, Sendable {
@@ -5907,6 +5915,7 @@ struct SetupSummary: Equatable, Sendable {
     let tabCount: Int
     let passwordCount: Int
     let spaceCount: Int
+    let unsavedPasswordCount: Int
 }
 
 struct ShareSourcesOffered: Equatable, Sendable {
@@ -16513,7 +16522,7 @@ struct SearchEngineFlaw: Hashable, Sendable {
     static let placeholderInFragment = SearchEngineFlaw(
         tag: 11,
         name: "placeholderInFragment",
-        message: LocalizedStringResource("Put the query placeholder in the path or query, not the fragment.")
+        message: LocalizedStringResource("Put the suggestions URL’s placeholder in the path or query, not the fragment.")
     )
     static let secretInTemplate = SearchEngineFlaw(
         tag: 12,
