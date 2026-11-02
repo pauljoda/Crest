@@ -4846,6 +4846,34 @@
       "category": "fixed",
       "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
     },
+    "quick-window-remembers-size": {
+      "category": "improved",
+      "message": "On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest."
+    },
+    "quick-window-size-after-contents-change": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window goes on remembering the size you give it after its contents change."
+    },
+    "password-import-errors-say-what-happened": {
+      "category": "fixed",
+      "message": "When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed."
+    },
+    "reopen-pages-after-quit-choice": {
+      "category": "fixed",
+      "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out."
+    },
+    "sidebar-scroll-freeze": {
+      "category": "fixed",
+      "message": "Scrolling the sidebar no longer makes Crest stop responding, with or without folders open."
+    },
+    "shortcuts-follow-command-keyboard-layout": {
+      "category": "fixed",
+      "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak – QWERTY ⌘, Russian and Greek, so Command-X cuts instead of quitting Crest."
+    },
+    "search-provider-fragment-address": {
+      "category": "fixed",
+      "message": "You can now add a search provider whose address puts the search after a #, such as PubChem’s."
+    },
     "chromium-shift-click-peek": {
       "category": "fixed",
       "message": "With Shift chosen in Settings > Links > Open Peek with, Shift-click now opens links in Peek on the Chromium engine instead of a new tab."

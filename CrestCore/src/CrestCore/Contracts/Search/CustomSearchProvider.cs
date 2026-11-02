@@ -62,7 +62,7 @@ public sealed record CustomSearchProvider(Guid Id, string Name, string SearchUrl
         return this with {
             Name = name,
             SearchUrlTemplate = SearchTemplate.Admit(SearchUrlTemplate).Pattern,
-            SuggestionUrlTemplate = SearchTemplate.AdmitOptional(SuggestionUrlTemplate)?.Pattern,
+            SuggestionUrlTemplate = SearchTemplate.AdmitSuggestions(SuggestionUrlTemplate)?.Pattern,
             Shortcuts = AdmittedShortcuts(Shortcuts),
             Color = Color is { } color ? color with { Alpha = 1 } : null
         };
