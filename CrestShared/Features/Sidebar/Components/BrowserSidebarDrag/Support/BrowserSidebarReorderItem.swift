@@ -133,7 +133,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
     /// selection of it does. Splits never span Spaces, so a lift from
     /// elsewhere is refused here rather than relocated first.
     func joinsCards(shownIn assignment: BrowserSpaceRuntimeAssignment) -> Bool {
-        if selection != nil { return true }
+        if selection != nil { return spaceAssignment == assignment }
         return dragged.joinsCardsAlone(shownIn: assignment)
     }
 }

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -47,19 +48,21 @@ namespace crest {
 
 namespace {
 
+// Seconds from the Unix epoch to 1 January 2001, where the wire counts dates from.
+constexpr double kReferenceDateOffset = 978307200;
 // The longest link address the binding asks the core about or stages.
 constexpr size_t kLinkBytes = 8192;
 // The most links staged at once, and how long one waits for its Peek.
 constexpr size_t kStagedLinks = 32;
 constexpr base::TimeDelta kStagedLinkLifetime = base::Seconds(30);
-// The modifier bits Blink records for a trusted click on a link, and those of
-// them that make it a modified click: Command, Option or the middle button.
+// The modifier bits Blink records for a trusted click on a link. Any of them
+// makes it a modified click for the core to decide, Shift included, since it
+// can be the key that opens Peek.
 constexpr uint32_t kLinkCommand = 1;
 constexpr uint32_t kLinkOption = 2;
 constexpr uint32_t kLinkShift = 4;
 constexpr uint32_t kLinkMiddleButton = 8;
-constexpr uint32_t kLinkModified = kLinkCommand | kLinkOption | kLinkMiddleButton;
-constexpr uint32_t kLinkModifiers = kLinkModified | kLinkShift;
+constexpr uint32_t kLinkModifiers = kLinkCommand | kLinkOption | kLinkShift | kLinkMiddleButton;
 
 // How a person followed a link: a trusted top-level click, with the keys and
 // button Blink recorded.
@@ -383,6 +386,14 @@ void EngineBinding::Handle(const engine::EraseSiteData& command) {
   Erase(command);
 }
 
+void EngineBinding::Handle(const engine::EraseBrowsingData& command) {
+  Erase(command);
+}
+
+void EngineBinding::Handle(const engine::ReadSiteData& command) {
+  Read(command);
+}
+
 void EngineBinding::Handle(const engine::AdoptOfferedPage& command) {
   Adopt(command);
 }
@@ -514,11 +525,13 @@ void EngineBinding::Stage(const engine::StageNavigation& staging) {
 }
 
 // The page has its WebContents: the platform hears its view is ready, the
-// core hears the page is live, and then it loads what it was asked to.
+// core hears the page is live and what it already shows, and then it loads
+// what it was asked to.
 void EngineBinding::Live(EnginePage& page, content::WebContents* contents) {
   DisableEnginePasswordManager(contents);
   page.Start(contents);
   Report(engine::PageCreated{.page_id = page.id()});
+  page.AdoptCommittedDocument();
   page.LoadPending();
 }
 
@@ -600,11 +613,11 @@ void EngineBinding::Offer(content::WebContents* contents,
     return;
   }
   std::optional<engine::Guid> source;
-  if (content::RenderFrameHost* opener = contents->GetOpener()) {
-    if (EnginePage* page = PageFor(content::WebContents::FromRenderFrameHost(opener))) {
-      source = page->id();
-    }
+  if (EnginePage* page = SourceOf(contents)) {
+    source = page->id();
   }
+  std::erase_if(link_sources_,
+                [contents](const auto& entry) { return !entry.first || entry.first.get() == contents; });
   const engine::Guid offer = RandomGuid();
   offers_.emplace(GuidText(offer), OfferedPage{.contents = contents->GetWeakPtr(), .profile = profile});
   const GURL url = contents->GetVisibleURL();
@@ -620,7 +633,7 @@ void EngineBinding::Offer(content::WebContents* contents,
 bool EngineBinding::FollowModifiedLink(content::WebContents* contents, content::OpenURLParams& params) {
   EnginePage* page = PageFor(contents);
   if (!page || params.crest_link_modifiers > kLinkModifiers ||
-      !(params.crest_link_modifiers & kLinkModified) || !params.is_renderer_initiated || !params.user_gesture ||
+      !(params.crest_link_modifiers & kLinkModifiers) || !params.is_renderer_initiated || !params.user_gesture ||
       params.triggering_event_info != blink::mojom::TriggeringEventInfo::kFromTrustedEvent ||
       params.started_from_context_menu || params.post_data || !params.url.SchemeIsHTTPOrHTTPS() ||
       params.url.spec().size() > kLinkBytes) {
@@ -719,6 +732,12 @@ bool EngineBinding::KeepsWindowLinkForPeek(content::NavigationHandle& navigation
   EnginePage* source = source_contents && source_contents != contents ? PageFor(source_contents) : nullptr;
   if (!source) {
     return false;
+  }
+  // A window without an opener can't name the page it came from by the time
+  // the core is offered it, so its offer names the page the link was in.
+  if (!contents->GetOpener()) {
+    std::erase_if(link_sources_, [](const auto& entry) { return !entry.first; });
+    link_sources_.emplace_back(contents->GetWeakPtr(), source->key());
   }
   // A new tab a modified click asked for stays a tab.
   const auto routed = std::find(routed_tabs_.begin(), routed_tabs_.end(),
@@ -830,6 +849,18 @@ EnginePage* EngineBinding::PageFor(content::WebContents* contents) {
     }
   }
   return nullptr;
+}
+
+EnginePage* EngineBinding::SourceOf(content::WebContents* contents) {
+  if (!contents) {
+    return nullptr;
+  }
+  if (content::RenderFrameHost* opener = contents->GetOpener()) {
+    return PageFor(content::WebContents::FromRenderFrameHost(opener));
+  }
+  const auto recorded = std::find_if(link_sources_.begin(), link_sources_.end(),
+                                     [contents](const auto& entry) { return entry.first.get() == contents; });
+  return recorded == link_sources_.end() ? nullptr : Find(recorded->second);
 }
 
 std::vector<EnginePage*> EngineBinding::LivePages() {
@@ -1133,33 +1164,86 @@ void EngineBinding::Erase(const engine::EraseProfileData& erasing) {
 // A private profile keeps a site's data only while it is open; a regular one
 // on disk is loaded to clear it, and one never created has nothing to clear.
 void EngineBinding::Erase(const engine::EraseSiteData& erasing) {
-  const std::string id = GuidText(erasing.profile_id);
-  auto done = base::BindOnce(
+  WithStoredData(GuidText(erasing.profile_id), erasing.ephemeral,
+                 base::BindOnce(
+                     [](std::vector<std::string> hosts, std::vector<engine::BrowsingDataCategory> categories,
+                        base::OnceCallback<void(bool)> done, Profile* profile, bool kept) {
+                       if (!profile) {
+                         std::move(done).Run(!kept);
+                         return;
+                       }
+                       crest::SiteData::Clear(profile, hosts, categories, std::move(done));
+                     },
+                     erasing.hosts, erasing.categories, ErasureAnswer(erasing.erasure_id)));
+}
+
+// What changed in a time range goes the way a site's data does.
+void EngineBinding::Erase(const engine::EraseBrowsingData& erasing) {
+  std::optional<base::Time> since;
+  if (erasing.since) {
+    since = base::Time::FromSecondsSinceUnixEpoch(erasing.since->seconds_since_2001 + kReferenceDateOffset);
+  }
+  WithStoredData(GuidText(erasing.profile_id), erasing.ephemeral,
+                 base::BindOnce(
+                     [](std::optional<base::Time> since, std::vector<engine::BrowsingDataCategory> categories,
+                        base::OnceCallback<void(bool)> done, Profile* profile, bool kept) {
+                       if (!profile) {
+                         std::move(done).Run(!kept);
+                         return;
+                       }
+                       crest::SiteData::Clear(profile, since, categories, std::move(done));
+                     },
+                     since, erasing.categories, ErasureAnswer(erasing.erasure_id)));
+}
+
+// A profile that keeps nothing lists no site; one that would not load could
+// list none of its own.
+void EngineBinding::Read(const engine::ReadSiteData& reading) {
+  auto answer = base::BindOnce(
+      [](base::WeakPtr<EngineBinding> binding, engine::Guid id, bool read, std::vector<engine::StoredSite> sites) {
+        if (binding) {
+          binding->Report(engine::SiteDataRead{.reading_id = id, .sites = std::move(sites), .read = read});
+        }
+      },
+      weak_factory_.GetWeakPtr(), reading.reading_id);
+  WithStoredData(GuidText(reading.profile_id), reading.ephemeral,
+                 base::BindOnce(
+                     [](base::OnceCallback<void(bool, std::vector<engine::StoredSite>)> answer, Profile* profile,
+                        bool kept) {
+                       if (!profile) {
+                         std::move(answer).Run(!kept, {});
+                         return;
+                       }
+                       crest::SiteData::Read(profile, base::BindOnce(std::move(answer), true));
+                     },
+                     std::move(answer)));
+}
+
+void EngineBinding::WithStoredData(const std::string& id,
+                                   bool ephemeral,
+                                   base::OnceCallback<void(Profile*, bool)> use) {
+  if (Profile* loaded = Profiles().Find(id)) {
+    std::move(use).Run(loaded, true);
+    return;
+  }
+  if (ephemeral || !Profiles().HasStore(id)) {
+    std::move(use).Run(nullptr, false);
+    return;
+  }
+  Profiles().Load(id, /*is_private=*/false,
+                  base::BindOnce([](base::OnceCallback<void(Profile*, bool)> use,
+                                    Profile* profile) { std::move(use).Run(profile, true); },
+                                 std::move(use)));
+}
+
+base::OnceCallback<void(bool)> EngineBinding::ErasureAnswer(const engine::Guid& erasure) {
+  return base::BindOnce(
       [](base::WeakPtr<EngineBinding> binding, engine::Guid erasure, bool erased) {
         if (binding) {
           binding->Report(engine::DataErased{.erasure_id = erasure, .erased = erased});
         }
       },
-      weak_factory_.GetWeakPtr(), erasing.erasure_id);
-  const GURL site("https://" + erasing.host + "/");
-  if (Profile* loaded = Profiles().Find(id)) {
-    crest::ClearSiteData(loaded, site, std::move(done));
-    return;
-  }
-  if (erasing.ephemeral || !Profiles().HasStore(id)) {
-    std::move(done).Run(true);
-    return;
-  }
-  Profiles().Load(id, /*is_private=*/false,
-                  base::BindOnce(
-                      [](GURL site, base::OnceCallback<void(bool)> done, Profile* profile) {
-                        if (!profile) {
-                          std::move(done).Run(false);
-                          return;
-                        }
-                        crest::ClearSiteData(profile, site, std::move(done));
-                      },
-                      site, std::move(done)));
+      weak_factory_.GetWeakPtr(), erasure);
 }
 
 // Reports and presentations.

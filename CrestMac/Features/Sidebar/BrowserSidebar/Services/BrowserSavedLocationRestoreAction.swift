@@ -23,7 +23,7 @@ struct BrowserSavedLocationRestoreAction {
                     spaceID: assignment.spaceID,
                     profileID: assignment.profileID
                 ), accessController: spaceAccess),
-            let tab = space.tabs.model(assignment.tabID),
+            let tab = space.shownTab(assignment.tabID),
             browser.returnsToSavedAddress(tab.id, in: space.id),
             !pages.containsResidentPage(for: tab.id) || pages.containsResidentPage(matching: assignment)
         else { return false }

@@ -17,6 +17,7 @@
 #include "base/uuid.h"
 #include "chrome/browser/ui/crest/crest_engine_agent.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
+#include "chrome/browser/ui/crest/crest_engine_browsers.h"
 #include "chrome/browser/ui/crest/crest_engine_content.h"
 #include "chrome/browser/ui/crest/crest_engine_documents.h"
 #include "chrome/browser/ui/crest/crest_engine_infobars.h"
@@ -379,8 +380,11 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
     return false;
   }
   auto& controller = web_contents()->GetController();
-  // Restoration is only for a new page, never a replacement of live work.
-  if (!controller.IsInitialNavigation()) {
+  // Restoration is only for a new page, never a replacement of live work. A
+  // page whose restored history never committed a document is still on its
+  // initial navigation, and restoring it again would add a second copy.
+  if (!controller.IsInitialNavigation() || controller.GetEntryCount() != 1 ||
+      !controller.GetLastCommittedEntry()->IsInitialEntry()) {
     return false;
   }
   auto iterator = base::PickleIterator::WithData(base::span(state));
@@ -541,6 +545,9 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   }
   UpdateTheme();
   if (navigation->IsSameDocument()) {
+    if (media_) {
+      media_->AddressChanged();
+    }
     MovedWithinDocument(PresentedURL(committed));
   } else {
     awaits_finish_ = true;
@@ -554,6 +561,29 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
       .page_id = id_, .url = PresentedURL(committed), .is_loading = web_contents()->IsLoading()});
   NoteTitle();
   FinishIfLoaded();
+  StateChanged();
+}
+
+// An extension's sign-in page loads before the engine shows it in a tab, so
+// it commits before the core adopts it. The core hears that document now, as
+// it would have heard it commit. The platform, which reveals a page only once
+// it has committed and follows an adopted page only after the core adopts
+// it, hears it when it first shows the page.
+void EnginePage::AdoptCommittedDocument() {
+  content::NavigationEntry* entry =
+      web_contents() ? web_contents()->GetController().GetLastCommittedEntry() : nullptr;
+  if (!entry || entry->IsInitialEntry()) {
+    return;
+  }
+  UpdateTheme();
+  awaits_finish_ = true;
+  Committed(PresentedURL(web_contents()->GetLastCommittedURL()));
+  NoteTitle();
+  FinishIfLoaded();
+  if (!icon_) {
+    PublishIcon(entry->GetFavicon().image, entry->GetFavicon().url);
+  }
+  presents_adopted_commit_ = true;
   StateChanged();
 }
 
@@ -614,6 +644,12 @@ void EnginePage::DidGetUserInteraction(const blink::WebInputEvent& event) {
   Present(engine::PageInteracted{.page_id = id_});
 }
 
+// A click into a split's other card focuses its page without the platform
+// showing it again, and that page is now the one in use.
+void EnginePage::OnWebContentsFocused(content::RenderWidgetHost*) {
+  binding_->Browsers().Activate(web_contents());
+}
+
 // The main frame takes the bridges as soon as its document element exists;
 // frames below it once their document is parsed. The bridges' world guards
 // itself against a second setup in the same document.
@@ -667,7 +703,7 @@ void EnginePage::DidUpdateAudioMutingState(bool muted) {
 
 void EnginePage::MediaStartedPlaying(const MediaPlayerInfo& info, const content::MediaPlayerId& id) {
   if (media_) {
-    media_->PlayerStarted(id, info.has_video);
+    media_->PlayerStarted(id, info.has_video, info.has_audio);
   }
   StateChanged();
 }
@@ -679,6 +715,18 @@ void EnginePage::MediaStoppedPlaying(const MediaPlayerInfo& info,
     media_->PlayerStopped(id);
   }
   StateChanged();
+}
+
+void EnginePage::MediaMetadataChanged(const MediaPlayerInfo& info, const content::MediaPlayerId& id) {
+  if (media_) {
+    media_->PlayerChanged(id, info.has_video, info.has_audio);
+  }
+}
+
+void EnginePage::MediaDestroyed(const content::MediaPlayerId& id) {
+  if (media_) {
+    media_->PlayerDestroyed(id);
+  }
 }
 
 void EnginePage::MediaPictureInPictureChanged(bool is_picture_in_picture) {
@@ -1327,12 +1375,20 @@ bool EnginePage::Answer(const engine::ExportPage& request) {
   return true;
 }
 
+// The page shown is the one in use, which extensions find as the active
+// tab, as is a page the platform shows again when its card takes focus.
 bool EnginePage::Answer(const engine::ShowPage&) {
   if (!web_contents()) {
     return false;
   }
   web_contents()->WasShown();
   web_contents()->Focus();
+  binding_->Browsers().Activate(web_contents());
+  if (std::exchange(presents_adopted_commit_, false)) {
+    Present(engine::PageNavigationCommitted{.page_id = id_,
+                                            .url = PresentedURL(web_contents()->GetLastCommittedURL()),
+                                            .is_loading = web_contents()->IsLoading()});
+  }
   if (media_) {
     media_->VisibilityChanged(true);
   }

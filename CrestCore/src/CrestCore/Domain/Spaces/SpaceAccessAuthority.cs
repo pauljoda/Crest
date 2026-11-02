@@ -4,13 +4,14 @@ namespace CrestCore.Domain;
 
 /// Process-local grants for exact Space and profile identities. The platform
 /// owns the authentication prompt; only the result of the request still
-/// pending can grant access. Callers serialize access. Nothing in this
-/// authority is saved or synced.
+/// pending can grant access, and it grants every Space it was made for, as
+/// one unlock opens every Space of a group. Callers serialize access. Nothing
+/// in this authority is saved or synced.
 public sealed class SpaceAccessAuthority {
     #region Variables
 
     private readonly HashSet<SpaceAccessAssignment> unlocked = [];
-    private (Guid Request, SpaceAccessAssignment Assignment)? pending;
+    private (Guid Request, IReadOnlyList<SpaceAccessAssignment> Assignments)? pending;
 
     #endregion
 
@@ -23,39 +24,46 @@ public sealed class SpaceAccessAuthority {
     public bool IsUnlocked(SpaceAccessAssignment assignment) => unlocked.Contains(assignment);
 
     /// Whether a request to unlock `assignment` is waiting.
-    public bool IsAuthenticating(SpaceAccessAssignment assignment) => pending?.Assignment == assignment;
+    public bool IsAuthenticating(SpaceAccessAssignment assignment) => pending?.Assignments.Contains(assignment) == true;
 
-    /// Makes `request` the one waiting to unlock `assignment`, and answers the
-    /// assignments whose access changed: none when the Space needs no
-    /// authentication. Throws `Rejected` with `AuthenticationBusy` while
-    /// another request is waiting.
-    public IReadOnlyList<SpaceAccessAssignment> Begin(SpaceAccessAssignment assignment, bool requiresAuthentication, Guid request) {
-        if (!IsLocked(assignment, requiresAuthentication)) return [];
+    /// Makes `request` the one waiting to unlock `assignments`, the Spaces of
+    /// one group, and answers the assignments whose access changed: none when
+    /// they need no authentication. Throws `Rejected` with
+    /// `AuthenticationBusy` while another request is waiting.
+    public IReadOnlyList<SpaceAccessAssignment> Begin(IReadOnlyList<SpaceAccessAssignment> assignments, bool requiresAuthentication,
+        Guid request) {
+        if (!assignments.Any(assignment => IsLocked(assignment, requiresAuthentication))) return [];
         if (pending is not null) throw new Rejected(new AuthenticationBusy());
-        pending = (request, assignment);
-        return [assignment];
+        pending = (request, [.. assignments]);
+        return [.. assignments];
     }
 
-    /// Ends the waiting request `request` for `space`, granting its profile
-    /// when the device owner authenticated. Throws `Rejected` with
-    /// `StaleUnlockRequest` for any other request, which cannot consume the
-    /// one waiting.
+    /// Ends the waiting request `request` made for `space`, granting every
+    /// Space it was made for when the device owner authenticated. Throws
+    /// `Rejected` with `StaleUnlockRequest` for any other request, which
+    /// cannot consume the one waiting.
     public IReadOnlyList<SpaceAccessAssignment> Finish(Guid space, Guid request, bool authenticated) {
-        if (pending is not { } current || current.Request != request || current.Assignment.Space != space)
+        if (pending is not { } current || current.Request != request || current.Assignments.All(assignment => assignment.Space != space))
             throw new Rejected(new StaleUnlockRequest(request));
         pending = null;
-        if (authenticated) unlocked.Add(current.Assignment);
-        return [current.Assignment];
+        if (authenticated) unlocked.UnionWith(current.Assignments);
+        return current.Assignments;
     }
 
-    /// Explicit locking always revokes: every grant for `space`, and the
-    /// request waiting for it.
-    public IReadOnlyList<SpaceAccessAssignment> Lock(Guid space) {
-        var revoked = unlocked.Where(assignment => assignment.Space == space).ToList();
+    /// Grants `joining` while this process holds the grant for `member`, a
+    /// Space of the group it joins, so a Space added to or joining an unlocked
+    /// group opens with it. Answers the assignment it granted.
+    public IReadOnlyList<SpaceAccessAssignment> Extend(SpaceAccessAssignment member, SpaceAccessAssignment joining) =>
+        unlocked.Contains(member) && unlocked.Add(joining) ? [joining] : [];
+
+    /// Explicit locking always revokes: every grant for `spaces`, the Spaces
+    /// of one group, and a request waiting for any of them.
+    public IReadOnlyList<SpaceAccessAssignment> Lock(IReadOnlySet<Guid> spaces) {
+        var revoked = unlocked.Where(assignment => spaces.Contains(assignment.Space)).ToList();
         unlocked.ExceptWith(revoked);
-        if (pending?.Assignment is { } waiting && waiting.Space == space) {
+        if (pending?.Assignments is { } waiting && waiting.Any(assignment => spaces.Contains(assignment.Space))) {
             pending = null;
-            if (!revoked.Contains(waiting)) revoked.Add(waiting);
+            revoked.AddRange(waiting.Where(assignment => !revoked.Contains(assignment)));
         }
         return revoked;
     }
@@ -66,7 +74,7 @@ public sealed class SpaceAccessAuthority {
     public IReadOnlyList<SpaceAccessAssignment> LockAll(bool sceneWentInactive) {
         if (sceneWentInactive && pending is not null) return [];
         var revoked = unlocked.ToList();
-        if (pending?.Assignment is { } waiting && !revoked.Contains(waiting)) revoked.Add(waiting);
+        if (pending?.Assignments is { } waiting) revoked.AddRange(waiting.Where(assignment => !revoked.Contains(assignment)));
         pending = null;
         unlocked.Clear();
         return revoked;

@@ -50,8 +50,8 @@ def main():
         parser.error("Expected an immutable base commit")
     policy = read_json(REPO / ENGINE / "fork.json")
     base = policy["integrationBranch"]
-    tag = read_json(REPO / ENGINE / "source.lock.json")["ungoogledMac"]["tag"]
-    branch = f"codex/chromium-upstream-{tag}-{args.base_sha[:12]}"
+    version = read_json(REPO / ENGINE / "source.lock.json")["chromium"]["version"]
+    branch = f"codex/chromium-upstream-{version}-{args.base_sha[:12]}"
     allowed_paths = {str(ENGINE / "source.lock.json"), str(ENGINE / "host-inputs.json")}
     changed = set(run("git", "diff", "--name-only", capture=True).splitlines())
     if not changed or not changed <= allowed_paths:
@@ -65,23 +65,23 @@ def main():
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
     run(REPO / "Scripts/set-version.sh", "--patch")
     notes_path = REPO / "Documentation/ReleaseNotes.json"
-    entry = f"chromium-upstream-{tag.replace('.', '-')}-{args.base_sha[:12]}"
-    note = {"category": "fixed", "message": f"Chromium is updated to {tag.split('-')[0]} with upstream security and compatibility fixes."}
+    entry = f"chromium-upstream-{version.replace('.', '-')}-{args.base_sha[:12]}"
+    note = {"category": "fixed", "message": f"Chromium is updated to {version} with upstream security and compatibility fixes."}
     try:
         notes_path.write_text(append_release_note(notes_path.read_text(), entry, note))
     except ValueError as error:
         parser.error(str(error))
     run("git", "add", *sorted(allowed_paths), "Config/Version.xcconfig", "Documentation/ReleaseNotes.json")
     run(REPO / "Scripts/check-version.sh", "--fix-commit")
-    run("git", "commit", "-m", f"Update Chromium to {tag}")
+    run("git", "commit", "-s", "-m", f"Update Chromium to {version}")
     head = run("git", "rev-parse", "HEAD", capture=True).strip()
     # A branch is never pushed until its engine is available by the exact input key.
     run(sys.executable, REPO / "Scripts/control-plane/publish-chromium-engine.py",
         "--source", args.source, "--ninja", args.ninja, "--repository", args.repository)
     run("git", "push", "origin", f"HEAD:refs/heads/{branch}")
-    body = (f"Updates the maintained Chromium fork to upstream {tag}"
+    body = (f"Updates the maintained Chromium fork to Chrome {version}"
             f"{', a new Chromium milestone' if args.major_update else ''}.\n\n"
-            "The unchanged Crest patch set applied without fuzz, and the performance engine built successfully. "
+            "Crest's unchanged patches applied without fuzz, and the performance engine built successfully. "
             f"Engine: `{chromium_engine.release_tag(chromium_engine.engine_key(REPO))}`.\n\n"
             "A compiled engine alone does not verify native browsing behavior. To try it, check out this branch "
             "and run `Scripts/install-local-macos-release.sh`, which installs Crest with this published engine. "
@@ -89,7 +89,7 @@ def main():
     existing = json.loads(run("gh", "pr", "list", "--repo", args.repository, "--head", branch,
                               "--base", base, "--state", "open", "--json", "url", capture=True))
     url = existing[0]["url"] if existing else run("gh", "pr", "create", "--repo", args.repository,
-        "--base", base, "--head", branch, "--title", f"Update Chromium to {tag}", "--body", body, capture=True).strip()
+        "--base", base, "--head", branch, "--title", f"Update Chromium to {version}", "--body", body, capture=True).strip()
     default_branch = json.loads(run("gh", "api", f"repos/{args.repository}", capture=True))["default_branch"]
     promote = automatic_release_allowed(policy, enabled=os.environ.get("CHROMIUM_AUTO_RELEASE"),
         default_branch=default_branch, major_update=args.major_update)

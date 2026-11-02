@@ -22,7 +22,7 @@ public sealed partial class BrowserContractsTests {
     private static JsonArray SavedHistory(NativeSessionAuthority core, Guid space) => JsonNode.Parse(core.Checkpoint().Read(space.ToString()))!.AsArray();
 
     [Fact]
-    public void HistoryRemovalMatchesAddressesWithoutTheirFragment() {
+    public void HistoryRemovalMatchesAddressesWithoutTheirFragmentAndClearingKeepsWhatARangeLeavesOut() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         space["history"] = new JsonArray([.. new[] { 10.0, 30.0 }.Select(time => (JsonNode)Visit(time, $"https://example.org/{time}"))]);
         using var device = new TestDevice(session);
@@ -32,11 +32,17 @@ public sealed partial class BrowserContractsTests {
         var retained = Assert.Single(SavedHistory(core, f.Space));
         Assert.Equal(10.0, retained!["lastVisitedAt"]!.GetValue<double>());
 
-        space["history"] = new JsonArray(Visit(40, "https://example.org/40"));
+        // Clearing a time range removes the addresses visited within it,
+        // then all time removes the rest.
+        space["history"] = new JsonArray(Visit(800000000, "https://example.org/recent"), Visit(799990000, "https://example.org/older"));
         using var other = new TestDevice(session);
         var cleared = other.Authority;
-        Assert.IsType<UnknownSpace>(Assert.Throws<Rejected>(() => other.Send(new ClearHistory(other.Workspace, Guid.NewGuid()))).Rejection);
-        other.Send(new ClearHistory(other.Workspace, f.Space));
+        other.Clock.Now = StoredSessionCodec.Date(800000100);
+        Assert.IsType<UnknownSpace>(Assert.Throws<Rejected>(() =>
+            other.Send(new ClearHistory(other.Workspace, Guid.NewGuid(), BrowsingDataRange.AllTime))).Rejection);
+        other.Send(new ClearHistory(other.Workspace, f.Space, BrowsingDataRange.LastHour));
+        Assert.Equal("https://example.org/older", Assert.Single(SavedHistory(cleared, f.Space))!["url"]!.GetValue<string>());
+        other.Send(new ClearHistory(other.Workspace, f.Space, BrowsingDataRange.AllTime));
         Assert.Empty(SavedHistory(cleared, f.Space));
     }
 

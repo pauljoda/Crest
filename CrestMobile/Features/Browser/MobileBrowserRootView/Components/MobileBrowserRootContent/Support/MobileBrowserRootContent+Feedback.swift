@@ -4,7 +4,7 @@ extension MobileBrowserRootContent {
     func presentURLCopyFeedback(revision: Int) {
         guard revision > 0 else { return }
         withAnimation(chromeAnimation(CrestMotion.feedbackPresentation)) {
-            visiblePageZoomFeedbackLabel = nil
+            visiblePageFeedback = nil
             isURLCopiedFeedbackVisible = true
         }
         Task { @MainActor in
@@ -18,19 +18,19 @@ extension MobileBrowserRootContent {
         }
     }
 
-    func presentPageZoomFeedback(revision: Int) {
+    func presentPageFeedback(revision: Int) {
         guard revision > 0 else { return }
         withAnimation(chromeAnimation(CrestMotion.feedbackPresentation)) {
             isURLCopiedFeedbackVisible = false
-            visiblePageZoomFeedbackLabel = pages.pageZoomFeedbackLabel
+            visiblePageFeedback = pages.pageFeedback
         }
         Task { @MainActor in
             try? await Task.sleep(
                 for: MobileBrowserRootLayout.feedbackVisibilityDuration
             )
-            guard pages.pageZoomFeedbackRevision == revision else { return }
+            guard pages.pageFeedbackRevision == revision else { return }
             withAnimation(chromeAnimation(CrestMotion.dismissal)) {
-                visiblePageZoomFeedbackLabel = nil
+                visiblePageFeedback = nil
             }
         }
     }

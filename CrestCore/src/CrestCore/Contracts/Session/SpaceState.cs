@@ -4,19 +4,24 @@ using CrestCore.Domain;
 namespace CrestCore.Contracts;
 
 /// <summary>
-/// A Space: one browsing profile with its <see cref="Settings"/>, its tabs, folders
-/// and split metadata, and the history and archive it keeps. Space and profile are
-/// one to one.
+/// A Space: its <see cref="Settings"/>, its tabs, folders and split metadata, and the
+/// history and archive it keeps. Every Space has a profile of its own,
+/// <see cref="OwnProfileId"/>, which never changes and no other Space has. A Space
+/// browses with <see cref="ProfileId"/>: its own, unless its
+/// <see cref="Membership"/> makes it a Sub-Space of another Space's session, while its
+/// own profile waits unused. <see cref="Membership"/> is null for a Space that never
+/// joined a group.
 /// </summary>
 public sealed record SpaceState(
     Guid Id,
-    Guid ProfileId,
+    Guid OwnProfileId,
     SpaceSettings Settings,
     IReadOnlyList<FolderState> Folders,
     IReadOnlyList<TabState> Tabs,
     IReadOnlyList<SplitGroupState> SplitGroups,
     IReadOnlyList<ArchivedTabState> ArchivedTabs,
-    IReadOnlyList<HistoryEntryState> History) {
+    IReadOnlyList<HistoryEntryState> History,
+    SpaceMembership? Membership = null) {
     #region Types
 
     /// An outline with the lists it was resolved from.
@@ -55,6 +60,29 @@ public sealed record SpaceState(
         init => field = [.. value];
     } = [.. History];
 
+    /// <summary>The profile the Space browses with: the session it shares as a
+    /// Sub-Space, or took over as a primary, otherwise its own.</summary>
+    [Resolved]
+    public Guid ProfileId => Membership?.SharedProfileId ?? OwnProfileId;
+
+    /// <summary>The Space whose pinned tabs the Space's sidebar shows in place of its
+    /// own, which it keeps hidden meanwhile: its primary, while it is a Sub-Space whose
+    /// group shares pinned tabs; null while it shows its own.</summary>
+    [Resolved]
+    public Guid? PinOwnerId => Membership?.PrimaryId is { } primary && !Settings.SeparatesPinnedTabs ? primary : null;
+
+    /// The primary whose session the Space joined, or null for a primary or a
+    /// Space on its own.
+    internal Guid? PrimaryId => Membership?.PrimaryId;
+
+    /// For the Space as its sidebar shows it, the Space whose pinned tabs it
+    /// holds in place of its own; null for the Space as it is stored. See
+    /// `SessionState.Viewed`.
+    internal Guid? ViewsPinsOf { get; init; }
+
+    /// When a tab of the Space was last shown, or the earliest time when it
+    /// holds none.
+    internal DateTimeOffset LastShownAt => Tabs.Count == 0 ? DateTimeOffset.MinValue : Tabs.Max(tab => tab.LastActivatedAt);
 
     /// <summary>What the Space's sidebar lists, resolved from its tabs and folders. It is
     /// resolved once for the lists it reads; a copy made with <c>with</c> keeps it only
@@ -199,7 +227,8 @@ public sealed record SpaceState(
 
     public bool Equals(SpaceState? other) => ReferenceEquals(this, other) || other is not null
         && Id == other.Id
-        && ProfileId == other.ProfileId
+        && OwnProfileId == other.OwnProfileId
+        && Membership == other.Membership
         && Settings == other.Settings
         && Folders.SequenceEqual(other.Folders)
         && Tabs.SequenceEqual(other.Tabs)
@@ -207,7 +236,7 @@ public sealed record SpaceState(
         && ArchivedTabs.SequenceEqual(other.ArchivedTabs)
         && History.SequenceEqual(other.History);
 
-    public override int GetHashCode() => HashCode.Combine(Id, ProfileId, Settings.Name, Tabs.Count, Settings.AccessPolicy);
+    public override int GetHashCode() => HashCode.Combine(Id, OwnProfileId, Settings.Name, Tabs.Count, Settings.AccessPolicy);
 
     #endregion
 }

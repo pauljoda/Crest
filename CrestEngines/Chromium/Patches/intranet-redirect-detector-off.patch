@@ -1,0 +1,42 @@
+# Crest: no probes of random hostnames at startup and on network changes.
+# The detector only serves the omnibox's handling of single-word input, which
+# Crest's address field does itself. Adapted from ungoogled-chromium's
+# disable-intranet-redirect-detector.patch (BSD-3-Clause; see
+# ThirdParty/Chromium-LICENSE.txt).
+
+--- a/chrome/browser/intranet_redirect_detector.cc
++++ b/chrome/browser/intranet_redirect_detector.cc
+@@ -66,9 +66,8 @@
+ 
+ // static
+ GURL IntranetRedirectDetector::RedirectOrigin() {
+-  const IntranetRedirectDetector* const detector =
+-      g_browser_process->intranet_redirect_detector();
+-  return detector ? detector->redirect_origin_ : GURL();
++  // Crest: the detector never runs, so no origin redirects.
++  return GURL();
+ }
+ 
+ // static
+--- a/chrome/browser/chrome_browser_main.cc
++++ b/chrome/browser/chrome_browser_main.cc
+@@ -2024,19 +2024,6 @@
+   net::NetModule::SetResourceProvider(ChromeNetResourceProvider);
+   media::SetLocalizedStringProvider(ChromeMediaLocalizedStringProvider);
+ 
+-  // In unittest mode, this will do nothing.  In normal mode, this will create
+-  // the global IntranetRedirectDetector instance, which will promptly go to
+-  // sleep for seven seconds (to avoid slowing startup), and wake up afterwards
+-  // to see if it should do anything else.
+-  //
+-  // A simpler way of doing all this would be to have some function which could
+-  // give the time elapsed since startup, and simply have this object check that
+-  // when asked to initialize itself, but this doesn't seem to exist.
+-  //
+-  // This can't be created in the BrowserProcessImpl constructor because it
+-  // needs to read prefs that get set after that runs.
+-  browser_process_->intranet_redirect_detector();
+-
+ #if BUILDFLAG(ENABLE_PDF)
+   chrome_pdf::features::SetIsOopifPdfPolicyEnabled(
+       g_browser_process->local_state()->GetBoolean(

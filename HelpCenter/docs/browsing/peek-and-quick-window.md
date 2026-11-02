@@ -13,7 +13,7 @@ Peek and Quick Window are transient browsing surfaces. Both use a real Crest Spa
 
 Peek opens a link above the source page. Close it to return immediately, or choose the primary action to promote it into a full tab. **Command-W** closes an open Peek and **Command-O** promotes it.
 
-In **Settings → Links**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click** or **Command-click** explicitly opens Peek; the other modifier opens the link in a new tab.
+In **Settings → Links**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click**, **Command-click** or **Shift-click** explicitly opens Peek. **Command-click** opens the link in a new tab, or **Option-click** when Command opens Peek.
 
 Peek stays attached to its source tab when you open another tab or switch Spaces. Return to the source tab to continue in its Peek. If the source is one card in Split View, promotion and page commands follow that focused card.
 
@@ -23,13 +23,19 @@ Drag a webpage link to pull out a live preview that follows your gesture and fad
 
 Choose this behavior in **Settings → Links → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
 
+On Mac, Peek dims only the page behind it by default. Turn off **Settings → Links → Dim the page behind Peek** to keep that page at full brightness.
+
 On iPhone and iPad, touch and hold webpage links for the native link preview and actions, including opening a link in another Space. Touch and hold an image for image actions such as saving it.
 
 ## Quick Window
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
 
-Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+To see a link under another account on Mac, right-click it and choose a Space from **Open Link in**: it opens in a Quick Window with that Space's sign-ins, and **Keep** moves it into that Space. **Open This Page in** in Site Controls does the same for the current page.
+
+On Mac, a Quick Window has a browser window's controls: Back and Forward, Site Controls for the page's permissions and extensions, and the Space's pinned extensions, with the ones that don't fit behind **»**. Click its address or press **Command-L** to search or go somewhere else in the same Quick Window. Right-click a link and choose **Open Link in New Quick Window** to open it in another Quick Window.
+
+Open a blank Quick Window with **Option-Shift-Command-N** on Mac, including from another Quick Window. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
 ### Sign-in and other popup windows
 

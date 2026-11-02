@@ -12,7 +12,11 @@ struct BrowserOnboardingStage<Content: View>: View {
 
     var body: some View {
         ZStack {
-            BrowserOnboardingBackdrop(branding: branding)
+            // The welcome drifts slowly from one template's field to the
+            // next; a field the person's choice changes follows quickly.
+            BrowserOnboardingBackdrop(
+                branding: branding,
+                fade: step == .welcome ? CrestMotion.onboardingBackdrop : CrestMotion.onboardingBackdropChange)
             VStack(spacing: 0) {
                 BrowserOnboardingStageHeader(step: step)
                 content

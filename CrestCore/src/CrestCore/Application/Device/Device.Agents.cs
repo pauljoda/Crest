@@ -113,6 +113,18 @@ internal sealed partial class Device {
 
     #region Actions - Reach
 
+    /// The Spaces of the person's own session that agents reach with
+    /// `spaceId`: every Space of its group that stays, or the Space alone.
+    /// Called without the device lock, since it reads the session.
+    internal IReadOnlyList<Guid> AgentGroup(Guid spaceId) =>
+        Persistent() is (_, var authority) && authority.Current.GroupOf(spaceId) is { } group
+            ? [.. group.Members.Where(member => !authority.IsDeleting(member.Id)).Select(member => member.Id)] : [spaceId];
+
+    /// `spaceId` takes the agent choice of the group whose primary
+    /// `primaryId` names, which its whole group shares.
+    internal void ShareAgents(Guid spaceId, Guid primaryId, ChangeFeed changes) =>
+        ReviseAgents(changes, preferences => preferences.Allowing(spaceId, preferences.SpaceIds.Contains(primaryId)));
+
     /// Whether agents may be allowed to reach `spaceId`: a Space of the
     /// person's own session that is not being deleted. Called without the
     /// device lock, since it reads the session.
@@ -151,13 +163,19 @@ internal sealed partial class Device {
 
     /// The Spaces agents reach now, each with whether this process may show
     /// it, or null while agents are off or the person's own session is not
-    /// open. Called without the device lock.
+    /// open. A Space of a group is reached while agents reach its primary,
+    /// which holds the group's choice; a pinned tab the group shares is listed
+    /// once, with the primary that keeps it, and a Sub-Space's own pinned tabs,
+    /// which its sidebar hides while it shows the group's, are not listed.
+    /// Called without the device lock.
     private IReadOnlyList<(SpaceState Space, bool IsLocked)>? ReachedSpaces() {
         var preferences = Agents;
         if (!preferences.IsOn || Persistent() is not (_, var authority)) return null;
-        return [.. authority.Current.Spaces
-            .Where(space => preferences.SpaceIds.Contains(space.Id) && !authority.IsDeleting(space.Id))
-            .Select(space => (space, authority.IsLocked(space)))];
+        var session = authority.Current;
+        return [.. session.Spaces
+            .Where(space => preferences.SpaceIds.Contains(session.RecordsOwner(space).Id) && !authority.IsDeleting(space.Id))
+            .Select(space => (space.PinOwnerId is null ? space : space with { Tabs = [.. space.Tabs.Where(tab => !tab.IsPinned)] },
+                authority.IsLocked(space)))];
     }
 
     #endregion

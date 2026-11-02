@@ -1,0 +1,30 @@
+# Crest: the browser never asks Google which accounts a page's google.com
+# cookies are signed in to. Crest has no browser sign-in to reconcile.
+
+--- a/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
++++ b/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
+@@ -525,21 +525,9 @@
+ }
+ 
+ void GaiaCookieManagerService::TriggerListAccounts() {
+-  // Callers suspect that a check to Gaia needs to be done, don't rely on the
+-  // in progress request, conditions might have changed while the request is
+-  // in-flight.
+-  // Note: /ListAccounts requests is optimized in `OptimizeListAccounts()`
+-  // called in `HandleNextRequest()`. Only if there are no other requests in the
+-  // queue that `HandleNextRequest()` won't be called before executing
+-  // /ListAccounts.
+-  requests_.push_back(GaiaCookieRequest::CreateListAccountsRequest());
+-  if (requests_.size() == 1) {
+-    fetcher_retries_ = 0;
+-    listAccountsUnexpectedServerResponseRetried_ = false;
+-    signin_client_->DelayNetworkCall(
+-        base::BindOnce(&GaiaCookieManagerService::StartFetchingListAccounts,
+-                       weak_ptr_factory_.GetWeakPtr()));
+-  }
++  // Crest: /ListAccounts sends the person's google.com cookies to Google for
++  // a browser sign-in Crest doesn't have, on every change to those cookies.
++  // The accounts in the cookie jar stay unknown to the browser.
+ }
+ 
+ void GaiaCookieManagerService::TriggerListAccountsIfStale() {

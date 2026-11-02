@@ -36,19 +36,28 @@ internal static partial class StoredSessionCodec {
                 Flag(value[Key.IsSavedTabsExpanded]) ?? true,
                 OptionalDate(value[Key.SavedTabsExpansionModifiedAt]),
                 OptionalDate(value[Key.CredentialsEnabledModifiedAt]),
-                OptionalDate(value[Key.AccessPolicyModifiedAt])),
+                OptionalDate(value[Key.AccessPolicyModifiedAt]),
+                Flag(value[Key.SeparatesPinnedTabs]) ?? false,
+                OptionalDate(value[Key.SeparatesPinnedTabsModifiedAt]),
+                OptionalDate(value[Key.ProtectionModifiedAt])),
             [.. Items(value[Key.Folders]).Select(DecodeFolder)],
             [.. Items(value[Key.Tabs]).Select(DecodeTab)],
             [.. Items(value[Key.SplitGroups]).Select(DecodeSplitGroup)],
             [.. Items(value[Key.ArchivedTabs]).Select(DecodeArchivedTab)],
-            [.. Items(value[Key.History]).Select(DecodeHistoryEntry)]);
+            [.. Items(value[Key.History]).Select(DecodeHistoryEntry)],
+            DecodeMembership(value));
     }
+
+    /// A Space's membership, or null for a Space that never joined a group:
+    /// one stored without a time is as good as none.
+    private static SpaceMembership? DecodeMembership(JsonObject value) => OptionalDate(value[Key.MembershipModifiedAt]) is { } modifiedAt
+        ? new(OptionalIdentity(value[Key.PrimarySpaceId]), OptionalIdentity(value[Key.SharedProfileId]), modifiedAt) : null;
 
     internal static JsonObject Encode(SpaceState space) {
         var settings = space.Settings;
         var value = new JsonObject {
             [Key.Id] = WrappedIdentity(space.Id),
-            [Key.Profile] = new JsonObject { [Key.Id] = BareIdentity(space.ProfileId) },
+            [Key.Profile] = new JsonObject { [Key.Id] = BareIdentity(space.OwnProfileId) },
             [Key.Name] = settings.Name,
             [Key.Symbol] = settings.Symbol,
             [Key.Accent] = settings.Accent.Name
@@ -66,6 +75,14 @@ internal static partial class StoredSessionCodec {
         Put(value, Key.SavedTabsExpansionModifiedAt, settings.SavedTabsExpansionModifiedAt);
         Put(value, Key.CredentialsEnabledModifiedAt, settings.CredentialsEnabledModifiedAt);
         Put(value, Key.AccessPolicyModifiedAt, settings.AccessPolicyModifiedAt);
+        if (settings.SeparatesPinnedTabs) value[Key.SeparatesPinnedTabs] = true;
+        Put(value, Key.SeparatesPinnedTabsModifiedAt, settings.SeparatesPinnedTabsModifiedAt);
+        Put(value, Key.ProtectionModifiedAt, settings.ProtectionModifiedAt);
+        if (space.Membership is { } membership) {
+            if (membership.PrimaryId is { } primary) value[Key.PrimarySpaceId] = WrappedIdentity(primary);
+            if (membership.SharedProfileId is { } profile) value[Key.SharedProfileId] = BareIdentity(profile);
+            Put(value, Key.MembershipModifiedAt, membership.ModifiedAt);
+        }
         return value;
     }
 
@@ -109,16 +126,24 @@ internal static partial class StoredSessionCodec {
     internal static IReadOnlyList<SpaceDeletionState>? DecodeSpaceDeletions(JsonNode? node) => node switch {
         null => null,
         JsonArray intents => [.. intents.Select(intent => intent is JsonObject value
-            ? new SpaceDeletionState(Identity(value[Key.OperationId]), Identity(value[Key.SpaceId]), Identity(value[Key.ProfileId]))
+            ? new SpaceDeletionState(Identity(value[Key.OperationId]), Identity(value[Key.SpaceId]), Identity(value[Key.ProfileId]),
+                value[Key.ErasedProfileIds] is JsonArray erased ? [.. erased.Select(Identity)] : null,
+                value[Key.SuccessorSpaceId] is { } successor ? Identity(successor) : null)
             : throw new BrowserRuleException(BrowserRule.InvalidDeletionIntent))],
         _ => throw new BrowserRuleException(BrowserRule.InvalidDeletionIntent)
     };
 
-    internal static JsonObject Encode(SpaceDeletionState deletion) => new() {
-        [Key.SpaceId] = WrappedIdentity(deletion.SpaceId),
-        [Key.ProfileId] = BareIdentity(deletion.ProfileId),
-        [Key.OperationId] = BareIdentity(deletion.Id)
-    };
+    internal static JsonObject Encode(SpaceDeletionState deletion) {
+        var value = new JsonObject {
+            [Key.SpaceId] = WrappedIdentity(deletion.SpaceId),
+            [Key.ProfileId] = BareIdentity(deletion.ProfileId),
+            [Key.OperationId] = BareIdentity(deletion.Id)
+        };
+        if (deletion.ErasedProfileIds is { } erased)
+            value[Key.ErasedProfileIds] = new JsonArray([.. erased.Select(profile => (JsonNode?)BareIdentity(profile))]);
+        if (deletion.SuccessorId is { } successor) value[Key.SuccessorSpaceId] = BareIdentity(successor);
+        return value;
+    }
 
     private static JsonArray EncodeAll<T>(IEnumerable<T> records, Func<T, JsonObject> encode) =>
         new(records.Select(record => (JsonNode?)encode(record)).ToArray());

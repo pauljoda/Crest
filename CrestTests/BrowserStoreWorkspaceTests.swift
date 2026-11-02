@@ -30,7 +30,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
 private final class WorkspaceDataDeleter: BrowserSpaceDataDeleting {
     var wasCalled = false
 
-    func deleteData(for space: BrowserSpaceRuntimeAssignment) async throws {
+    func deleteData(for deletion: SpaceDeletionState) async throws {
         wasCalled = true
     }
 }

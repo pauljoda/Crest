@@ -6,11 +6,14 @@ namespace CrestCore.Contracts;
 /// placements they move to, its saved passwords, and the extensions it offers
 /// with those left on. `DuplicateTabIds` are its tabs the destination
 /// already holds, which it leaves out until the person asks for them;
-/// `MatchedTabIds` are the destination's tabs it matches.
+/// `MatchedTabIds` are the destination's tabs it matches. `JoinsGroupOf` is
+/// the primary of the workspace's group the Space comes into, when it joins a
+/// Space of that group or comes in with a Space it shared a session with
+/// that does.
 public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? DestinationId, SpaceCustomization Customization,
     IReadOnlyList<Guid> IncludedTabIds, IReadOnlyList<Guid> DuplicateTabIds, IReadOnlyList<Guid> MatchedTabIds,
     IReadOnlyList<TabPlacementChoice> Placements, bool IncludesPasswords, int PasswordCount, IReadOnlyList<ImportExtension> Extensions,
-    IReadOnlyList<string> IncludedExtensionIds) {
+    IReadOnlyList<string> IncludedExtensionIds, Guid? JoinsGroupOf) {
     #region Variables
 
     /// The name the Space shows and takes once imported: the one chosen,
@@ -33,6 +36,10 @@ public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? De
     /// workspace, rather than joining one it holds.
     internal bool MakesNewSpace => Included && DestinationId is null;
 
+    /// The reviewed Space that leads the Spaces this one shared a session
+    /// with where it came from: that Space, or itself.
+    internal Guid SourceGroupId => Source.PrimaryId ?? Source.Id;
+
     #endregion
 
     #region Actions - Review
@@ -48,7 +55,7 @@ public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? De
         var duplicates = match is null ? [] : space.TabsAlsoIn(match).ToHashSet();
         return new(space, included, match?.Id, match?.Customization ?? look.Applying(space.Customization),
             included ? [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)] : [], [], [], [],
-            IncludesPasswords: true, passwordCount, offered, [.. offered.Select(extension => extension.ExtensionId)]);
+            IncludesPasswords: true, passwordCount, offered, [.. offered.Select(extension => extension.ExtensionId)], JoinsGroupOf: null);
     }
 
     /// The Space with what joining `destination` means: its tabs the

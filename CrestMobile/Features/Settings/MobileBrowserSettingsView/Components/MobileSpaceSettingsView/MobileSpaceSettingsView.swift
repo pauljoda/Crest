@@ -13,6 +13,8 @@ struct MobileSpaceSettingsView: View {
     @State private var editorSection = BrowserSpaceEditorSection.appearance
     @State private var editingAppearanceSpace: SpaceModel?
     @State private var forgeStep = BrowserCrestStudioStep.shape
+    @State private var pendingGroupChange: BrowserSpaceGroupChange?
+    @State private var pendingDeletion: BrowserSpaceDeletionRequest?
 
     var body: some View {
         Group {
@@ -23,6 +25,11 @@ struct MobileSpaceSettingsView: View {
             }
         }
         .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        .browserSpaceGroupChangeConfirmation($pendingGroupChange, browser: browser, spaceAccess: spaceAccess)
+        .browserSpaceDeletionConfirmation(
+            $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
+        )
+        .onDisappear { BrowserSpaceGroupNotices.shared.dismiss() }
         .fullScreenCover(item: $editingAppearanceSpace) { requested in
             NavigationStack {
                 appearanceWorkspace(for: requested)
@@ -41,8 +48,17 @@ struct MobileSpaceSettingsView: View {
         BrowserSettingsPane(.spaces) {
             MobileSpaceSelectionSection(
                 browser: browser,
-                selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) })
+                selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) }),
+                addSubSpace: addSubSpace,
+                requestGroupChange: { pendingGroupChange = $0 },
+                requestDeletion: { pendingDeletion = $0 }
             )
+
+            if let space, !browser.isPrivateBrowsing {
+                Section {
+                    groupCrestRow(for: space)
+                }
+            }
 
             if let space, canReveal(space) {
                 MobileSpaceCustomizationSection(
@@ -66,8 +82,27 @@ struct MobileSpaceSettingsView: View {
             MobileSpaceSettingsWorkspaceToolbar(
                 browser: browser,
                 selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) }),
-                section: $editorSection)
+                section: $editorSection,
+                addSubSpace: addSubSpace,
+                requestGroupChange: { pendingGroupChange = $0 },
+                requestDeletion: { pendingDeletion = $0 })
+            if let space, !browser.isPrivateBrowsing {
+                groupCrestRow(for: space)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    .background(BrowserSettingsCanvas.card)
+            }
             Divider()
+            if BrowserSpaceGroupNotices.shared.current != nil {
+                BrowserSpaceGroupNoticeLabel()
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, CrestSpacing.small)
+                    .background(BrowserSettingsCanvas.card)
+            }
             if let space {
                 if canReveal(space) {
                     Group {
@@ -97,6 +132,22 @@ struct MobileSpaceSettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(BrowserSettingsCanvas.background)
+    }
+
+    /// The crests of `space`'s group, which pick the Space these settings
+    /// edit, start a Sub-Space and, from each crest's menu, change the group.
+    private func groupCrestRow(for space: SpaceModel) -> some View {
+        BrowserSpaceGroupCrestRow(
+            browser: browser, space: space, style: .touch, metrics: .touch, draggedSpaceID: .constant(nil),
+            select: { selectEditedSpace($0) }, addSubSpace: addSubSpace,
+            requestGroupChange: { pendingGroupChange = $0 }, requestDeletion: { pendingDeletion = $0 })
+    }
+
+    /// Starts a Sub-Space after `spaceID`, in its group, and edits it.
+    private func addSubSpace(after spaceID: UUID) {
+        guard browser.addSubSpace(after: spaceID) else { return }
+        BrowserSpaceGroupNotices.formed()
+        selectEditedSpace(browser.selectedSpaceID)
     }
 
     private func detailSections(for space: SpaceModel) -> some View {

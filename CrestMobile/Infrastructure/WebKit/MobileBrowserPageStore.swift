@@ -50,8 +50,9 @@ final class MobileBrowserPageStore:
     var presentedTabIDsAcrossWindows: Set<UUID> { Set(presentedTabIDs) }
     var residencyRevision: Int { host.revision }
     private(set) var urlCopyFeedbackRevision = 0
-    private(set) var pageZoomFeedbackLabel = "100%"
-    private(set) var pageZoomFeedbackRevision = 0
+    /// What the page's feedback capsule says last, which each new revision shows.
+    private(set) var pageFeedback = MobilePageFeedback.pageZoom("100%")
+    private(set) var pageFeedbackRevision = 0
     let downloadCenter: BrowserDownloadCenter
     let downloadRiskConfirmation: MobileDownloadRiskConfirmationCoordinator
     /// The answers to the core's questions about this mode's downloads, which
@@ -101,6 +102,7 @@ final class MobileBrowserPageStore:
         // A private store's tabs leave no state on disk, even if an archive is
         // handed in.
         host = BrowserPageHost(archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive)
+        host.showsTab = { [weak browser] spaceID, tabID in browser?.spaceModel(spaceID)?.shownTab(tabID) != nil }
         self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
         self.permissionCenter = permissionCenter
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
@@ -276,7 +278,7 @@ final class MobileBrowserPageStore:
     @discardableResult
     func prepareResidentPage(for tabID: UUID, at time: Date = .now) -> MobileBrowserPage? {
         guard let space = browser.shownSpace,
-            let tab = space.tabs.model(tabID)
+            let tab = space.shownTab(tabID)
         else { return nil }
 
         if tab.nativeContent != nil {
@@ -384,7 +386,7 @@ final class MobileBrowserPageStore:
     }
 
     func styleVisitedLinks(in space: SpaceModel) async {
-        await activePage?.styleVisitedLinks(history: space.history.entries)
+        await activePage?.styleVisitedLinks(history: space.groupHistory)
     }
 
     /// A visit the core recorded in the Space the active page shows restyles
@@ -476,7 +478,7 @@ final class MobileBrowserPageStore:
         as tabID: UUID,
         in space: SpaceModel
     ) -> Bool {
-        guard let tab = space.tabs.model(tabID),
+        guard let tab = space.shownTab(tabID),
             let page = host.adoptTransientPage(lease, as: tabID, in: space, through: browser, prepare: { _ in true })
         else { return false }
         page.adopt(tabID: tabID, tab: BrowserPageTab(tab, images: browser.core.state.favicons))
@@ -528,20 +530,23 @@ final class MobileBrowserPageStore:
 
     func zoomIn() {
         guard activePage?.zoomIn() == true else { return }
-        pageZoomFeedbackLabel = pageZoomLabel
-        pageZoomFeedbackRevision &+= 1
+        showFeedback(.pageZoom(pageZoomLabel))
     }
 
     func zoomOut() {
         guard activePage?.zoomOut() == true else { return }
-        pageZoomFeedbackLabel = pageZoomLabel
-        pageZoomFeedbackRevision &+= 1
+        showFeedback(.pageZoom(pageZoomLabel))
     }
 
     func resetZoom() {
         guard activePage?.resetZoom() == true else { return }
-        pageZoomFeedbackLabel = pageZoomLabel
-        pageZoomFeedbackRevision &+= 1
+        showFeedback(.pageZoom(pageZoomLabel))
+    }
+
+    /// Shows `feedback` in the page's capsule.
+    func showFeedback(_ feedback: MobilePageFeedback) {
+        pageFeedback = feedback
+        pageFeedbackRevision &+= 1
     }
 
     @discardableResult

@@ -40,6 +40,7 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
             layoutDirection: environment.layoutDirection,
             presentation: environment.spacePagerPresentation,
             contentTopInsets: environment.spacePagerContentTopInsets,
+            bands: environment.spaceSidebarBands,
             selectSpace: selectSpace
         ) { space, isSelected in
             SpacePageRoot(

@@ -108,6 +108,17 @@ struct MobilePageActionsContent: View {
             .task { await page.translation.refreshInstalledLanguages() }
         }
 
+        if pages.activeURL?.host()?.isEmpty == false {
+            Section {
+                Button(ShortcutCommand.clearSiteCookies) {
+                    Task { await pages.clearSiteData(.siteData) }
+                }
+                Button(ShortcutCommand.clearSiteCache) {
+                    Task { await pages.clearSiteData(.cache) }
+                }
+            }
+        }
+
         Button(ShortcutCommand.findInPage) {
             pages.presentFind()
         }

@@ -169,6 +169,12 @@
         }
       }
     },
+    "%@ and its data are removed from every Space in this group." : {
+
+    },
+    "%@ and its data will be removed from every Space in this group." : {
+
+    },
     "%@ and its Space-local data will be removed. Other Spaces are unchanged." : {
 
     },
@@ -277,6 +283,9 @@
     "%@ is using this tab" : {
       "comment" : "The bar on a page an agent uses."
     },
+    "%@ Keeps the Group" : {
+
+    },
     "%@ of %@ · %@" : {
       "localizations" : {
         "en" : {
@@ -369,6 +378,12 @@
     "%@ stopped using Crest" : {
 
     },
+    "%@ will use %@’s sign-ins, history and extensions. Its own sign-ins and website data stay on this device and come back if you separate it." : {
+
+    },
+    "%@ will use sign-ins and extensions of its own. It keeps its tabs." : {
+
+    },
     "%@, %@" : {
       "localizations" : {
         "en" : {
@@ -407,6 +422,9 @@
           }
         }
       }
+    },
+    "%@: %@. Other Spaces aren’t affected." : {
+
     },
     "%@. Press Tab to enter a query." : {
 
@@ -1631,6 +1649,9 @@
     "A Space has more pinned tabs than it can hold." : {
 
     },
+    "A Space with Sub-Spaces can't become a Sub-Space." : {
+
+    },
     "A Space’s profile changed." : {
 
     },
@@ -1977,6 +1998,9 @@
 
     },
     "All tabs" : {
+
+    },
+    "All Time" : {
 
     },
     "Allow" : {
@@ -2482,6 +2506,9 @@
     "Available destination" : {
 
     },
+    "Available Space" : {
+
+    },
     "Avoid entering private information until the site fixes its certificate." : {
       "localizations" : {
         "ar" : {
@@ -2915,7 +2942,16 @@
     "Building your review…" : {
 
     },
-    "Built on ungoogled-chromium, with Google integrations removed. Smooth browsing and extensions." : {
+    "Cache" : {
+
+    },
+    "Cache Cleared" : {
+
+    },
+    "Cached Images and Files" : {
+
+    },
+    "cached images files empty delete remove" : {
 
     },
     "Calculator" : {
@@ -3264,6 +3300,9 @@
     "Choose Language" : {
 
     },
+    "Choose Quick Window Space" : {
+
+    },
     "Choose SF Symbol" : {
 
     },
@@ -3271,6 +3310,9 @@
 
     },
     "Choose the focused card" : {
+
+    },
+    "Choose the Space that keeps %@’s sign-ins, history, passwords and pinned tabs." : {
 
     },
     "Choose what to bring over" : {
@@ -3301,6 +3343,9 @@
       "comment" : "The name of a browser engine. Keep the product name as it is."
     },
     "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility" : {
+
+    },
+    "Chromium without Google’s data collection. Smooth browsing and extensions." : {
 
     },
     "Claude Code" : {
@@ -3336,6 +3381,27 @@
         }
       }
     },
+    "Clear browsing data" : {
+
+    },
+    "Clear browsing data in “%@”?" : {
+
+    },
+    "Clear Cache" : {
+
+    },
+    "Clear Cache for This Site" : {
+
+    },
+    "Clear Cookies" : {
+
+    },
+    "Clear Cookies and Reload" : {
+
+    },
+    "Clear Cookies for This Site" : {
+
+    },
     "Clear Cookies, Storage, and Reload" : {
       "localizations" : {
         "ar" : {
@@ -3344,7 +3410,8 @@
             "value" : "مسح ملفات تعريف الارتباط والتخزين وإعادة التحميل"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
     },
     "Clear History" : {
       "localizations" : {
@@ -3419,6 +3486,12 @@
       }
     },
     "Clear what the palette learned?" : {
+
+    },
+    "Clear…" : {
+
+    },
+    "Cleared" : {
 
     },
     "Click a shortcut, then press the new keys." : {
@@ -3751,6 +3824,12 @@
     "Command-click" : {
 
     },
+    "Command-click opens a new tab, or Option-click when Command opens Peek." : {
+
+    },
+    "Command-click opens a new tab, or Option-click when Command opens Peek. Hold Option to drag the link itself." : {
+
+    },
     "Comments" : {
 
     },
@@ -3861,7 +3940,11 @@
             "value" : "حظر المحتوى الإعلانات أدوات التتبع الكاميرا الميكروفون الوصول إلى المواقع السجل ملفات تعريف الارتباط البيانات"
           }
         }
-      }
+      },
+      "extractionState" : "stale"
+    },
+    "content blocking ads trackers camera microphone site access history cookies data website cache clear browsing" : {
+
     },
     "Continue" : {
 
@@ -3879,7 +3962,16 @@
     "Control your browsing data" : {
 
     },
+    "Cookies" : {
+
+    },
+    "Cookies and Site Data" : {
+
+    },
     "Cookies and website data" : {
+
+    },
+    "Cookies Cleared" : {
 
     },
     "Copied" : {
@@ -3997,6 +4089,15 @@
           }
         }
       }
+    },
+    "Couldn’t Clear Cache" : {
+
+    },
+    "Couldn’t Clear Cookies" : {
+
+    },
+    "Couldn’t clear everything" : {
+
     },
     "Couldn’t Complete Extension Action" : {
       "localizations" : {
@@ -4863,6 +4964,15 @@
         }
       }
     },
+    "Delete “%@” and its %lld Sub-Spaces?" : {
+
+    },
+    "Delete “%@” and its Sub-Space?" : {
+
+    },
+    "Delete “%@” and Its Sub-Spaces…" : {
+
+    },
     "Delete “%@”?" : {
       "localizations" : {
         "ar" : {
@@ -4886,6 +4996,9 @@
           }
         }
       }
+    },
+    "Delete %@" : {
+
     },
     "Delete %@?" : {
       "localizations" : {
@@ -4973,6 +5086,12 @@
         }
       }
     },
+    "Delete Spaces and Data" : {
+
+    },
+    "Delete Sub-Space" : {
+
+    },
     "Delete Tab" : {
       "localizations" : {
         "ar" : {
@@ -4993,6 +5112,15 @@
 
     },
     "Deletes everything in this Space except downloaded files." : {
+
+    },
+    "Deletes its tabs. %@’s sign-ins, history, passwords and extensions stay." : {
+
+    },
+    "Deletes this Space’s tabs. The Space chosen above keeps its group’s sign-ins, history and passwords." : {
+
+    },
+    "Deletes this Sub-Space’s tabs. Its group keeps its sign-ins, history and passwords." : {
 
     },
     "Deleting Space…" : {
@@ -5123,6 +5251,9 @@
 
     },
     "Dim unloaded tabs" : {
+
+    },
+    "Dim the page behind Peek" : {
 
     },
     "Direwolf" : {
@@ -5482,6 +5613,9 @@
     "Each Space keeps its own history, site permissions and blocking." : {
 
     },
+    "Each Space of %@’s group shows its own pinned tabs." : {
+
+    },
     "Eagle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5694,6 +5828,9 @@
 
     },
     "Every Crest command will return to its default shortcut." : {
+
+    },
+    "Every Space of %@’s group shows %@’s pinned tabs." : {
 
     },
     "Everyday Use" : {
@@ -7590,6 +7727,9 @@
     "Keep work, personal browsing, and projects in separate Spaces." : {
 
     },
+    "Keeps the Group" : {
+
+    },
     "Key" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7656,6 +7796,15 @@
     "Large Phone" : {
 
     },
+    "Last 4 Weeks" : {
+
+    },
+    "Last 7 Days" : {
+
+    },
+    "Last 24 Hours" : {
+
+    },
     "Last attempt" : {
       "localizations" : {
         "ar" : {
@@ -7675,6 +7824,9 @@
           }
         }
       }
+    },
+    "Last Hour" : {
+
     },
     "Last successful sync" : {
       "localizations" : {
@@ -7948,6 +8100,9 @@
     "macOS has not returned a location decision. Respond to its prompt, or open System Settings > Privacy & Security > Location Services to allow Crest." : {
 
     },
+    "Make “%@” a Sub-Space of “%@”?" : {
+
+    },
     "Make Crest your own" : {
 
     },
@@ -7955,6 +8110,12 @@
 
     },
     "Make Lower Case" : {
+
+    },
+    "Make Sub-Space" : {
+
+    },
+    "Make Sub-Space of" : {
 
     },
     "Make this Space yours" : {
@@ -7979,6 +8140,9 @@
           }
         }
       }
+    },
+    "Makes every site ask again in this Space and the others of its group" : {
+
     },
     "Manage" : {
 
@@ -8363,6 +8527,9 @@
         }
       }
     },
+    "New primary" : {
+
+    },
     "New Private Window" : {
       "localizations" : {
         "ar" : {
@@ -8407,6 +8574,9 @@
       }
     },
     "New Space…" : {
+
+    },
+    "New Sub-Space" : {
 
     },
     "New tab" : {
@@ -8719,6 +8889,9 @@
     "No username" : {
 
     },
+    "No website data" : {
+
+    },
     "No website rules" : {
 
     },
@@ -8894,6 +9067,9 @@
     "One-time macOS permission · No folder search" : {
 
     },
+    "Only a Sub-Space can be separated." : {
+
+    },
     "Onyx" : {
 
     },
@@ -9051,12 +9227,12 @@
     "Open Last Active Tab" : {
 
     },
-    "Open Link in Another Space" : {
+    "Open Link in" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "فتح الرابط في مساحة أخرى"
+            "value" : "فتح الرابط في"
           }
         }
       }
@@ -9151,6 +9327,16 @@
     "Open tabs cleared" : {
 
     },
+    "Open This Page in" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فتح هذه الصفحة في"
+          }
+        }
+      }
+    },
     "Open Translate…" : {
 
     },
@@ -9164,6 +9350,9 @@
 
     },
     "Opened in %@ for protected video" : {
+
+    },
+    "Opened in Background Tab" : {
 
     },
     "Opening %@…" : {
@@ -9387,6 +9576,9 @@
           }
         }
       }
+    },
+    "Page zoom %@" : {
+
     },
     "Pale" : {
       "extractionState" : "stale",
@@ -10085,6 +10277,9 @@
     "Private windows" : {
 
     },
+    "Private windows can't have Sub-Spaces." : {
+
+    },
     "Proceed Anyway" : {
       "localizations" : {
         "ar" : {
@@ -10113,6 +10308,9 @@
     },
     "Profiles, bookmarks, open tabs, and passwords" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
+    "Protected video, with WebKit fallback" : {
+
     },
     "Pull and Merge" : {
 
@@ -10525,6 +10723,15 @@
     "Remove Accent Color" : {
 
     },
+    "Remove All" : {
+
+    },
+    "Remove all website data in “%@”?" : {
+
+    },
+    "Remove All…" : {
+
+    },
     "Remove Background Color" : {
       "localizations" : {
         "ar" : {
@@ -10534,6 +10741,9 @@
           }
         }
       }
+    },
+    "Remove data for %@" : {
+
     },
     "Remove Download" : {
       "localizations" : {
@@ -11701,6 +11911,9 @@
     "Search URL" : {
 
     },
+    "Search Websites" : {
+
+    },
     "Search with" : {
 
     },
@@ -11860,6 +12073,12 @@
         }
       }
     },
+    "Separate" : {
+
+    },
+    "Separate “%@” from “%@”?" : {
+
+    },
     "Separate All Tabs" : {
       "localizations" : {
         "ar" : {
@@ -11869,6 +12088,12 @@
           }
         }
       }
+    },
+    "Separate from “%@”…" : {
+
+    },
+    "Separate Pinned Tabs" : {
+
     },
     "Separate Selected Splits" : {
 
@@ -12026,6 +12251,9 @@
     "Shared" : {
       "comment" : "A tab's mark while another page shares it."
     },
+    "Shared by %@’s Sub-Spaces." : {
+
+    },
     "Sharing a Tab" : {
       "comment" : "A tab's mark while its page shares another tab."
     },
@@ -12056,6 +12284,12 @@
           }
         }
       }
+    },
+    "Shift (⇧)" : {
+
+    },
+    "Shift-click" : {
+
     },
     "shift" : {
       "localizations" : {
@@ -12317,6 +12551,9 @@
     "Signed by %@." : {
 
     },
+    "Signs you out of most sites." : {
+
+    },
     "Silver" : {
 
     },
@@ -12342,6 +12579,9 @@
       }
     },
     "Site Controls" : {
+
+    },
+    "site data storage local session indexeddb service workers sign out delete remove" : {
 
     },
     "Site permissions" : {
@@ -12447,10 +12687,16 @@
     "Some content on this page was not delivered securely." : {
 
     },
+    "Some data couldn’t be removed" : {
+
+    },
     "Some iCloud records can’t be read. Update Crest on all your devices and try again." : {
 
     },
     "Some of this browsing session can’t be synced." : {
+
+    },
+    "Some sites may be missing." : {
 
     },
     "Songs" : {
@@ -12947,6 +13193,9 @@
     "Stopping every agent disconnects it and keeps it out of the tabs it used until Crest quits." : {
 
     },
+    "Storage" : {
+
+    },
     "Store" : {
 
     },
@@ -13062,6 +13311,19 @@
           }
         }
       }
+    },
+    "Sub-Space of %@" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحة فرعية من %@"
+          }
+        }
+      }
+    },
+    "Sub-Spaces" : {
+
     },
     "Substitutions" : {
 
@@ -13584,12 +13846,6 @@
         }
       }
     },
-    "The other key opens a new tab. Hold Option to drag the link itself." : {
-
-    },
-    "The other key opens the link in a new tab." : {
-
-    },
     "The page could not be exported." : {
 
     },
@@ -13764,6 +14020,9 @@
           }
         }
       }
+    },
+    "This clears the history %@ and its Sub-Spaces share." : {
+
     },
     "This credential belongs to the embedded %@ frame, not %@." : {
       "localizations" : {
@@ -14002,6 +14261,12 @@
     "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
 
     },
+    "This permanently removes their tabs and browser data from Crest. Downloaded files you already saved are kept." : {
+
+    },
+    "This permanently removes this Space’s browser data from Crest. Downloaded files you already saved are kept." : {
+
+    },
     "This policy applies only to %arg. Eligible tabs remain recoverable from Archive." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14101,6 +14366,9 @@
 
     },
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
+
+    },
+    "Time range" : {
 
     },
     "Tint Folder Title" : {
@@ -14685,6 +14953,9 @@
     "Update Check Failed" : {
 
     },
+    "Update Crest on your other devices to share sign-ins there." : {
+
+    },
     "Update error" : {
 
     },
@@ -15175,9 +15446,6 @@
     "WebKit Chromium experimental preview testable developer stable runtime flags features" : {
 
     },
-    "WebKit fallback for protected video" : {
-
-    },
     "Webpages" : {
 
     },
@@ -15192,6 +15460,9 @@
       }
     },
     "Website colors for pins" : {
+
+    },
+    "Website data" : {
 
     },
     "Website release" : {
@@ -15305,6 +15576,12 @@
         }
       }
     },
+    "With %lld Sub-Spaces" : {
+
+    },
+    "With a Sub-Space" : {
+
+    },
     "Wolf Grey" : {
 
     },
@@ -15367,6 +15644,12 @@
 
     },
     "You chose this before" : {
+
+    },
+    "You’ll be signed out of every site in this Space and the others of its group." : {
+
+    },
+    "You’ll be signed out of every site in this Space." : {
 
     },
     "You’re offline" : {
@@ -15432,9 +15715,6 @@
           }
         }
       }
-    },
-    "Opened in Background Tab" : {
-
     }
   },
   "version" : "1.3"

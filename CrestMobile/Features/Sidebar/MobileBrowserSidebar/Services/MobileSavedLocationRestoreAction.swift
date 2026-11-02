@@ -14,7 +14,7 @@ struct MobileSavedLocationRestoreAction {
             space.id == assignment.spaceID,
             space.profileID == assignment.profileID,
             !spaceAccess.isLocked(space),
-            space.tabs.contains(assignment.tabID),
+            space.shownTab(assignment.tabID) != nil,
             browser.returnsToSavedAddress(assignment.tabID, in: space.id),
             !pages.containsResidentPage(for: assignment.tabID) || pages.containsResidentPage(matching: assignment)
         else { return false }

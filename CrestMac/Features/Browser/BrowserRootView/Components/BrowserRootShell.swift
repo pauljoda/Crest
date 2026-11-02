@@ -88,16 +88,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // per tab through the tree between them.
         .environment(downloadFeedback)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
-        .environment(
-            \.browserWebFocusRestorationGate,
-            BrowserWebFocusRestorationGate(
-                browserChromeOwnsFocus:
-                    !model.isWindowFocused
-                    || model.isAddressEditing
-                    || model.chrome.isCommandPalettePresented,
-                pageChromeOwnsFocus: false
-            )
-        )
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
         .animation(
             chromeAnimation(

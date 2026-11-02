@@ -55,7 +55,7 @@ enum BrowserSidebarSelection {
                 if let kept { walk(inside, keeping: kept) }
             }
         }
-        walk(space.sidebar.section(.pinned))
+        walk(space.pinSource.sidebar.section(.pinned))
         if space.settings.isSavedTabsExpanded { walk(space.sidebar.section(.saved)) }
         walk(space.sidebar.section(.current))
         return units
@@ -112,7 +112,7 @@ enum BrowserSidebarSelection {
         guard selection.isEngaged else { return false }
         var parent: UUID? =
             switch item {
-            case .tab(let id): space.tabs.model(id)?.folderID
+            case .tab(let id): space.shownTab(id)?.folderID
             case .folder(let id): space.folders.model(id)?.parentID
             }
         var visited: Set<UUID> = []

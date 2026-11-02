@@ -19,6 +19,7 @@ const sidebars = {
       collapsed: false,
       items: [
         'spaces/spaces-and-isolation',
+        'spaces/sub-spaces',
         'spaces/customize-spaces',
         'tabs/organize-tabs-and-folders',
         'tabs/split-view',
@@ -49,6 +50,7 @@ const sidebars = {
       items: [
         'privacy/content-blocking-and-site-permissions',
         'privacy/history-archive-and-downloads',
+        'privacy/clear-website-data',
       ],
     },
     {

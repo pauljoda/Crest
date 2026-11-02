@@ -73,10 +73,10 @@ struct BrowserSidebarListItem: Identifiable, Equatable {
             if row.kind.opensList {
                 content = space.folders.model(row.id).map(Content.folder)
             } else if row.kind.groupsTabs {
-                let members = row.members.compactMap { space.tabs.model($0) }
+                let members = row.members.compactMap { space.shownTab($0) }
                 content = members.isEmpty ? nil : .split(row.id, members: members)
             } else {
-                content = space.tabs.model(row.id).map(Content.tab)
+                content = space.shownTab(row.id).map(Content.tab)
             }
             guard let content else { continue }
             items.append(

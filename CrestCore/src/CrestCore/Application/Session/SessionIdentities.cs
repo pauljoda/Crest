@@ -1,20 +1,22 @@
 using System.Diagnostics;
 
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
 /// The identities an accepted session holds, kept up to date as each state is
 /// accepted, so the state an edit makes is checked only for what the edit
 /// changed. A workspace holds a session only when every Space, profile, tab and
-/// Space deletion has an identity, no two Spaces share an identity or a
-/// profile, no two tabs share an identity, and each Space deletion names a
-/// Space the session holds, with its profile, once.
+/// Space deletion has an identity, no two Spaces share an identity or a profile
+/// of their own, the Spaces' groups break no rule of `SpaceGroup`, no two tabs
+/// share an identity, and each Space deletion names a Space the session holds,
+/// with its own profile, once.
 ///
 /// An edit keeps every Space it leaves alone as the same object, so the rules
-/// about Spaces are checked again only when a Space's identity or profile, the
-/// list of Spaces or the deletions changed, and they read only the Spaces'
-/// headers. Tab identities are checked only in the Spaces an edit replaced, and
+/// about Spaces are checked again only when a Space's identity, profile or
+/// membership, the list of Spaces or the deletions changed, and they read only
+/// the Spaces' headers. Tab identities are checked only in the Spaces an edit replaced, and
 /// only between the first and the last tab whose identity changed there,
 /// against the identities every other tab keeps. A state that breaks a rule is
 /// named by the full check, so an edit is refused for the same flaw a whole
@@ -70,18 +72,17 @@ internal sealed class SessionIdentities {
     private static SessionFlaw? Flaw(SessionState value, HashSet<Guid> tabs) {
         var ids = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in value.Spaces) {
-            if (space.Id == Guid.Empty || space.ProfileId == Guid.Empty || space.Tabs.Any(tab => tab.Id == Guid.Empty))
+            if (space.Id == Guid.Empty || space.OwnProfileId == Guid.Empty || space.Tabs.Any(tab => tab.Id == Guid.Empty))
                 return SessionFlaw.MissingIdentity;
             if (!ids.Add(space.Id)) return SessionFlaw.DuplicateSpace;
-            // A Space is exactly one profile and a profile belongs to exactly one
-            // Space. Two Spaces sharing a profile would share cookies, credentials
-            // and extension access across an isolation boundary the user relies on,
-            // and would make "which Space owns this profile" unanswerable.
-            if (!profiles.Add(space.ProfileId)) return SessionFlaw.SharedProfile;
+            // Every Space keeps a profile of its own that no other Space has, so
+            // "which Space owns this profile" always has one answer, and older
+            // builds, which read that profile alone, never see two Spaces share one.
+            if (!profiles.Add(space.OwnProfileId)) return SessionFlaw.SharedProfile;
             foreach (var tab in space.Tabs)
                 if (!tabs.Add(tab.Id)) return SessionFlaw.DuplicateTab;
         }
-        return DeletionFlaw(value);
+        return SpaceGroup.Flaw(value.Spaces, Deleting(value)) ?? DeletionFlaw(value);
     }
 
     #endregion
@@ -144,7 +145,7 @@ internal sealed class SessionIdentities {
             for (var index = 0; index < after.Count; index++) {
                 var (was, space) = (before[index], after[index]);
                 if (ReferenceEquals(was, space)) continue;
-                headersChanged |= was.ProfileId != space.ProfileId;
+                headersChanged |= was.OwnProfileId != space.OwnProfileId || was.Membership != space.Membership;
                 Compare(was, space, removed, added, examined);
             }
         } else {
@@ -163,8 +164,11 @@ internal sealed class SessionIdentities {
             }
         }
         if (headersChanged && HeaderFlaw(next) is not null) return null;
-        if ((headersChanged || !ReferenceEquals(basis.SpaceDeletions, next.SpaceDeletions)
-            && !basis.SpaceDeletions.SequenceEqual(next.SpaceDeletions)) && DeletionFlaw(next) is not null) return null;
+        var deletionsChanged = !ReferenceEquals(basis.SpaceDeletions, next.SpaceDeletions)
+            && !basis.SpaceDeletions.SequenceEqual(next.SpaceDeletions);
+        // A deletion under way takes its Space out of the groups' rules.
+        if (deletionsChanged && !headersChanged && SpaceGroup.Flaw(next.Spaces, Deleting(next)) is not null) return null;
+        if ((headersChanged || deletionsChanged) && DeletionFlaw(next) is not null) return null;
         // Every identity the basis holds is unique, and every one the edit kept
         // stays: an identity it put in must be new, or one it took out.
         if (added.Count > 0) {
@@ -198,17 +202,20 @@ internal sealed class SessionIdentities {
 
     #region Actions - Rules
 
-    /// The first rule the Spaces' own identities and profiles break, reading
-    /// only each Space's header.
+    /// The first rule the Spaces' own identities, profiles and groups break,
+    /// reading only each Space's header.
     private static SessionFlaw? HeaderFlaw(SessionState value) {
         var ids = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in value.Spaces) {
-            if (space.Id == Guid.Empty || space.ProfileId == Guid.Empty) return SessionFlaw.MissingIdentity;
+            if (space.Id == Guid.Empty || space.OwnProfileId == Guid.Empty) return SessionFlaw.MissingIdentity;
             if (!ids.Add(space.Id)) return SessionFlaw.DuplicateSpace;
-            if (!profiles.Add(space.ProfileId)) return SessionFlaw.SharedProfile;
+            if (!profiles.Add(space.OwnProfileId)) return SessionFlaw.SharedProfile;
         }
-        return null;
+        return SpaceGroup.Flaw(value.Spaces, Deleting(value));
     }
+
+    /// The Spaces whose deletion is under way.
+    private static HashSet<Guid> Deleting(SessionState value) => [.. value.SpaceDeletions.Select(deletion => deletion.SpaceId)];
 
     /// The first rule the Space deletions break against the Spaces the session
     /// holds.
@@ -218,7 +225,7 @@ internal sealed class SessionIdentities {
             if (deletion.Id == Guid.Empty || deletion.SpaceId == Guid.Empty || deletion.ProfileId == Guid.Empty)
                 return SessionFlaw.MissingIdentity;
             if (!pendingIds.Add(deletion.SpaceId)
-                || !value.Spaces.Any(space => space.Id == deletion.SpaceId && space.ProfileId == deletion.ProfileId))
+                || !value.Spaces.Any(space => space.Id == deletion.SpaceId && space.OwnProfileId == deletion.ProfileId))
                 return SessionFlaw.UnknownDeletion;
         }
         // An empty temporary workspace and a briefly stale window selection are

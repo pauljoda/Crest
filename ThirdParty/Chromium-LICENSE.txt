@@ -1,4 +1,4 @@
-Chromium 152.0.7977.82
+Chromium 156.0.8078.80
 https://www.chromium.org/
 
 // Copyright 2015 The Chromium Authors
@@ -31,8 +31,8 @@ https://www.chromium.org/
 
 ----------------------------------------------------------------------
 
-ungoogled-chromium and ungoogled-chromium-macos 152.0.7977.82-1.1
-https://github.com/ungoogled-software/ungoogled-chromium-macos
+Some of Crest's Chromium patches are adapted from ungoogled-chromium.
+https://github.com/ungoogled-software/ungoogled-chromium
 
 Copyright 2023 The ungoogled-chromium Authors. All rights reserved.
 

@@ -28,7 +28,7 @@ def main():
     if not arguments.is_file() or not gn.is_file():
         parser.error("Prepare the pinned source before configuring it")
     lock = json.loads((REPO / "CrestEngines/Chromium/source.lock.json").read_text())
-    settings = dict(lock[f"{args.configuration}BuildArguments"])
+    settings = {**lock["buildArguments"], **lock[f"{args.configuration}BuildArguments"]}
     if args.configuration == "performance":
         if args.sdk is None or args.pgo_profile is None:
             parser.error("Performance builds require --sdk and --pgo-profile")
@@ -63,9 +63,9 @@ def main():
     elif args.sdk or args.pgo_profile:
         parser.error("--sdk and --pgo-profile apply only to performance builds")
 
-    # Replace only preset-owned scalar arguments, including prior duplicates.
-    # Keep independent downstream flags such as the native-host integration.
-    owned = set(lock["developmentBuildArguments"]) | set(lock["performanceBuildArguments"])
+    # Replace only the lock's scalar arguments, including prior duplicates.
+    # Keep independent flags a contributor added for a local build.
+    owned = set(lock["buildArguments"]) | set(lock["developmentBuildArguments"]) | set(lock["performanceBuildArguments"])
     owned.update(["mac_sdk_path", "pgo_data_path"])
     previous = arguments.read_text()
     retained = []

@@ -6,6 +6,7 @@ struct BrowserCommandPaletteContent: View {
     let morphNamespace: Namespace.ID?
     let overlayContentLeadingInset: CGFloat
     var overlayContentInsets: EdgeInsets? = nil
+    var fieldFrame: CGRect? = nil
 
     @FocusState private var queryIsFocused: Bool
     @Environment(\.spaceContentIsInteractive) private var spaceContentIsInteractive
@@ -20,6 +21,7 @@ struct BrowserCommandPaletteContent: View {
             morphNamespace: morphNamespace,
             overlayContentLeadingInset: overlayContentLeadingInset,
             overlayContentInsets: overlayContentInsets,
+            fieldFrame: fieldFrame,
             queryIsFocused: $queryIsFocused
         )
         .task(id: canFocus) {
@@ -33,16 +35,16 @@ struct BrowserCommandPaletteContent: View {
         }
         .onKeyPress(.downArrow) {
             guard !model.completionEditing.isComposing else { return .ignored }
-            model.moveSelection(by: 1)
+            model.moveSelection(by: presentation.listsUpward ? -1 : 1)
             return .handled
         }
         .onKeyPress(.upArrow) {
             guard !model.completionEditing.isComposing else { return .ignored }
-            model.moveSelection(by: -1)
+            model.moveSelection(by: presentation.listsUpward ? 1 : -1)
             return .handled
         }
         .browserPaletteExitCommand(
-            presentation == .overlay ? model.dismiss : {}
+            presentation.closesOnExit ? model.dismiss : {}
         )
     }
 }

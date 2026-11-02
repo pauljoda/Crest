@@ -132,6 +132,9 @@ class EnginePage final : public content::WebContentsObserver,
   // Runs what the app asked for before the page existed: the restore, the
   // staged link or the load.
   void LoadPending();
+  // Takes the document the page already shows as committed, for a page the
+  // engine opened and loaded by itself before the core adopted it.
+  void AdoptCommittedDocument();
   // The token of the link staged for the page, which a closing page drops.
   std::optional<std::string> TakeStagedToken();
 
@@ -259,6 +262,7 @@ class EnginePage final : public content::WebContentsObserver,
   void DidChangeThemeColor() override;
   void PrimaryMainFrameRenderProcessGone(base::TerminationStatus status) override;
   void DidGetUserInteraction(const blink::WebInputEvent& event) override;
+  void OnWebContentsFocused(content::RenderWidgetHost* render_widget_host) override;
   void PrimaryMainDocumentElementAvailable() override;
   void DOMContentLoaded(content::RenderFrameHost* frame) override;
   void CrestKeySystemUnavailable(content::RenderFrameHost* frame, const std::string& key_system) override;
@@ -268,6 +272,8 @@ class EnginePage final : public content::WebContentsObserver,
   void MediaStoppedPlaying(const MediaPlayerInfo& info,
                            const content::MediaPlayerId& id,
                            content::WebContentsObserver::MediaStoppedReason reason) override;
+  void MediaMetadataChanged(const MediaPlayerInfo& info, const content::MediaPlayerId& id) override;
+  void MediaDestroyed(const content::MediaPlayerId& id) override;
   void MediaPictureInPictureChanged(bool is_picture_in_picture) override;
   void WebContentsDestroyed() override;
 
@@ -348,6 +354,9 @@ class EnginePage final : public content::WebContentsObserver,
   std::optional<int64_t> loading_navigation_;
   // A new document committed and has not finished loading.
   bool awaits_finish_ = false;
+  // The page was adopted with a committed document the platform has not
+  // heard of, which it hears when it first shows the page.
+  bool presents_adopted_commit_ = false;
   // The core asked whether the page may go and waits for the answer.
   bool checks_before_unload_ = false;
   // The title last reported.

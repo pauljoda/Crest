@@ -100,6 +100,7 @@
 #include "extensions/browser/extension_registry.h"
 #include "extensions/browser/extension_util.h"
 #include "extensions/common/extension.h"
+#include "extensions/common/extension_urls.h"
 #include "extensions/common/manifest.h"
 #include "components/sessions/content/session_tab_helper.h"
 #include "content/public/browser/render_frame_host.h"
@@ -718,10 +719,10 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
 }
 
 // One Chrome Web Store package download, made by the Space's own profile with
-// the request Chromium's Web Store installer sends. The ungoogled baseline
-// empties that installer and rewrites Google's hosts in its sources, so the
-// update service is named here. Chromium's CrxInstaller judges the package;
-// nothing here limits or inspects it. Deletes itself once it has reported.
+// the request Chromium's Web Store installer sends. Crest downloads it here
+// rather than through that installer, so the package can be installed into
+// the Spaces the person picks, and Chromium's CrxInstaller judges it; nothing
+// here limits or inspects it. Deletes itself once it has reported.
 class WebStoreDownload {
  public:
   WebStoreDownload(void (^progress)(double), void (^completion)(NSString*, NSString*))
@@ -739,7 +740,7 @@ class WebStoreDownload {
 
   void Start(Profile* profile, const std::string& extension_id) {
     auto request = std::make_unique<network::ResourceRequest>();
-    request->url = GURL("https://clients2.google.com/service/update2/crx?response=redirect&" +
+    request->url = GURL(extension_urls::GetWebstoreUpdateUrl().spec() + "?response=redirect&" +
         update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
         base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
     request->credentials_mode = network::mojom::CredentialsMode::kOmit;
@@ -960,6 +961,9 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
                                     extensions::CommandService::REGULAR, &named)) continue;
     for (const auto& [name, command] : named) {
       if (command.accelerator() != accelerator) continue;
+      // The extension may find its page as the active tab rather than read
+      // the one the command names, as a click on its button finds it.
+      crest::EngineBinding::Get().Browsers().Activate(contents);
       DeliverExtensionCommand(profile, *extension, name, contents);
       return [[CrestExtensionShortcutResult alloc] init];
     }
@@ -1321,6 +1325,16 @@ void EnsureCrestUIStarted(Browser* browser) {
   const crest_engine_pages_t pages = binding.Pages();
   const auto& fingerprint = crest::EngineBinding::Fingerprint();
   start([[CrestChromiumMacShell alloc] init], &table, fingerprint.data(), fingerprint.size(), &pages);
+  // A window that comes into use brings the page in use there with it: a page
+  // shown while its window was in the background did not come into use then.
+  [[NSNotificationCenter defaultCenter] addObserverForName:NSWindowDidBecomeKeyNotification object:nil
+      queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification* notification) {
+    if (State().disposing || State().quitting) return;
+    NSWindow* window = notification.object;
+    crest::EngineBinding::Get().Browsers().WindowInUse([window](content::WebContents* contents) {
+      return contents->GetTopLevelNativeWindow().GetNativeNSWindow() == window;
+    });
+  }];
   auto pending = std::move(State().pending_authentication_sessions);
   State().pending_authentication_sessions.clear();
   for (ASWebAuthenticationSessionRequest* request : pending) StartAuthenticationSession(request);

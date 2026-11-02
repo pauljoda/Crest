@@ -20,8 +20,11 @@ extension BrowserStore {
         clearHistory(in: selectedSpaceID)
     }
 
-    func clearHistory(in spaceID: UUID) {
-        sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID))
+    /// Removes the addresses a Space's history holds that were visited within
+    /// `range`, every one by default.
+    @discardableResult
+    func clearHistory(in spaceID: UUID, range: BrowsingDataRange = .allTime) -> Bool {
+        sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID, range: range))
     }
 
     @discardableResult
@@ -29,7 +32,7 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard spaceModel(matching: assignment) != nil else { return false }
-        return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID))
+        return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID, range: .allTime))
     }
 
     /// Removes `address` from a Space's history, every visit to it.

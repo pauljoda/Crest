@@ -31,23 +31,25 @@ internal sealed partial class Device {
     /// Runs one palette intent.
     public void Handle(PaletteIntent intent, DeviceTurn turn) => intent.Apply(this, turn);
 
-    /// Remembers that a person in `windowId` picked `row` after typing `text`.
-    internal void RecordPaletteChoice(Guid windowId, string text, PaletteRow row, DateTimeOffset now) {
-        if (PersistentSpace(windowId) is not { } owner) return;
-        var (space, preferences) = owner;
+    /// Remembers that a person in `windowId`, in its palette for `spaceId` or
+    /// for the Space it shows, picked `row` after typing `text`.
+    internal void RecordPaletteChoice(Guid windowId, Guid? spaceId, string text, PaletteRow row, DateTimeOffset now) {
+        if (PersistentSpace(windowId, spaceId) is not { } owner) return;
+        var (space, memoryId, preferences) = owner;
         var destination = row.Kind.Destination(row, TabAddress(space));
         if (destination is null) return;
         string? address = destination.Kind == PaletteDestinationKind.Address
             ? row.Address ?? (row.TabId is { } tab ? TabAddress(space)(tab) : null) : null;
         var before = address is not null && new WebAddress(address).Normalized is { } normalized
             ? AddressIndex.Of(space.History).Entry(normalized) : null;
-        Remember(space.Id, now, memory => memory.Chose(text, destination, address, before, now, preferences.Palette.LearnsChoices));
+        Remember(memoryId, now, memory => memory.Chose(text, destination, address, before, now, preferences.Palette.LearnsChoices));
     }
 
-    /// Forgets the picks that led to `row` in the Space `windowId` shows.
-    internal void ForgetPaletteChoices(Guid windowId, PaletteRow row) {
-        if (PersistentSpace(windowId) is not { } owner || row.Kind.Destination(row, TabAddress(owner.Space)) is not { } destination) return;
-        Remember(owner.Space.Id, null, memory => memory.Forgetting(destination));
+    /// Forgets the picks that led to `row` in `spaceId`, or in the Space
+    /// `windowId` shows.
+    internal void ForgetPaletteChoices(Guid windowId, Guid? spaceId, PaletteRow row) {
+        if (PersistentSpace(windowId, spaceId) is not { } owner || row.Kind.Destination(row, TabAddress(owner.Space)) is not { } destination) return;
+        Remember(owner.MemoryId, null, memory => memory.Forgetting(destination));
     }
 
     /// Forgets what every palette learned.
@@ -131,14 +133,18 @@ internal sealed partial class Device {
         }
     }
 
-    /// The Space window `windowId` shows and the device's preferences, when
-    /// that Space belongs to a persistent session, which keeps what it
-    /// learns; null for a private or borrowed window. Called with no lock held.
-    private (SpaceState Space, AppPreferences Preferences)? PersistentSpace(Guid windowId) {
-        if (Showing(windowId, null) is not { } shown || Attached(shown.WorkspaceId) is not { Kind.KeepsAppPreferences: true } authority)
+    /// The Space window `windowId` shows, or `spaceId` of its workspace when
+    /// the palette spoke for that one, as a search over it reads it, the
+    /// Space whose palette memory its group keeps, which is the one that keeps
+    /// its records, and the device's preferences, when that Space belongs to a
+    /// persistent session, which keeps what it learns; null for a private or
+    /// borrowed window. Called with no lock held.
+    private (SpaceState Space, Guid MemoryId, AppPreferences Preferences)? PersistentSpace(Guid windowId, Guid? spaceId) {
+        if (Showing(windowId, spaceId) is not { } shown || Attached(shown.WorkspaceId) is not { Kind.KeepsAppPreferences: true } authority)
             return null;
         var state = authority.Current;
-        return state?.Space(shown.SpaceId) is { } space ? (space, state.AppPreferences ?? AppPreferences.Default) : null;
+        return state?.Space(shown.SpaceId) is { } space
+            ? (state.Searched(space), state.RecordsOwner(space).Id, state.AppPreferences ?? AppPreferences.Default) : null;
     }
 
     /// Reads the address a tab of `space` shows or keeps.

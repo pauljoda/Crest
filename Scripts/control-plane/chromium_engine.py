@@ -13,6 +13,7 @@ configure and build it. Anything else
 import argparse
 import hashlib
 from pathlib import Path
+import re
 
 INPUTS = (
     "CrestEngines/Chromium/source.lock.json",
@@ -43,6 +44,46 @@ def engine_key(repo: Path) -> str:
             digest.update(relative.encode() + b"\0")
             digest.update(hashlib.sha256(file.read_bytes()).hexdigest().encode() + b"\n")
     return digest.hexdigest()
+
+
+SECTION = re.compile(r"^--- a/(\S+)\n\+\+\+ b/(\S+)\n", re.MULTILINE)
+
+
+def patch_sections(text: str) -> list[tuple[str, str]]:
+    """Each file a unified diff changes, as (path, that file's diff), in order."""
+    starts = list(SECTION.finditer(text))
+    sections = []
+    for index, start in enumerate(starts):
+        if start[1] != start[2]:
+            raise ValueError(f"A host patch section renames {start[1]}")
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(text)
+        sections.append((start[1], text[start.start():end]))
+    return sections
+
+
+def host_patch(repo: Path) -> str:
+    """The host patches in `Patches/series`, as one diff in the order they apply.
+
+    A file may appear in more than one patch; a later section applies to the
+    earlier ones' result, so reversing the host reverses the sections' order.
+    """
+    patches = repo / "CrestEngines/Chromium/Patches"
+    combined = []
+    for line in (patches / "series").read_text().splitlines():
+        name = line.split("#", 1)[0].strip()
+        if not name:
+            continue
+        sections = patch_sections((patches / name).read_text())
+        files = [path for path, _ in sections]
+        if not sections or len(set(files)) != len(files):
+            raise ValueError(f"{name} must change each of its files exactly once")
+        combined += [section for _, section in sections]
+    return "".join(combined)
+
+
+def reversed_patch(text: str) -> str:
+    """`text` with its sections in reverse order, for `patch -R`."""
+    return "".join(section for _, section in reversed(patch_sections(text)))
 
 
 def release_tag(key: str) -> str:

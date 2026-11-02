@@ -16,10 +16,10 @@ class WebContents;
 
 namespace crest {
 
-// A Chrome Web Store listing in a page. The store's own Add to Chrome button
-// is inert in this baseline, so Crest owns that affordance: a script in an
-// isolated world on the store's own host relabels the button and asks Crest
-// to run its install review. The script is not a general scripting entry
+// A Chrome Web Store listing in a page. Crest owns the store's Add to Chrome
+// button, so an install goes through Crest's review and Spaces rather than
+// Chromium's own installer: a script in an isolated world on the store's own
+// host relabels the button and asks Crest to run its install review. The script is not a general scripting entry
 // point — it is injected only into the store's own main frame in a regular
 // profile, where a Space's persistent extensions live, and the only request
 // it can make is for the extension the page's own URL names.

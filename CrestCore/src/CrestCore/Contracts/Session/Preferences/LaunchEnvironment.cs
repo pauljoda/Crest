@@ -14,6 +14,7 @@ public sealed record LaunchEnvironment(
     bool RequestsIsolatedCloudSync,
     bool ResetsSession,
     bool PresentsShowcase,
+    bool PresentsSubSpaces,
     bool UsesInMemoryCredentials,
     bool ForcesOnboardingWelcome,
     bool ForcesDesktopSetup,
@@ -23,7 +24,7 @@ public sealed record LaunchEnvironment(
 
     /// An installed launch that asks for nothing special.
     public static LaunchEnvironment Installed { get; } = new(false, false, false, false, false, false, false, false, false, false,
-        false, false);
+        false, false, false);
 
     #endregion
 
@@ -31,7 +32,7 @@ public sealed record LaunchEnvironment(
 
     /// Every test, preview, fixture and review launch is isolated.
     internal bool RequiresIsolation => IsTestRuntime || IsPreviewRuntime || RequestsIsolatedSession
-        || RequestsIsolatedCloudSync || ResetsSession || PresentsShowcase
+        || RequestsIsolatedCloudSync || ResetsSession || PresentsShowcase || PresentsSubSpaces
         || UsesInMemoryCredentials || ForcesOnboardingWelcome || ForcesDesktopSetup
         || ForcesMobileSetup || UsesUpdateTestFeed;
 

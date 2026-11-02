@@ -333,6 +333,18 @@ final class WebKitEngineBinding: EngineBinding {
 
     // MARK: - Actions - Data
 
+    /// The store the profile's pages use now, or for one that keeps nothing
+    /// in memory only, its store on disk once looked up, when it has one.
+    /// Never creates a store the profile does not have.
+    func existingStore(for profileID: UUID, ephemeral: Bool) -> () async -> WKWebsiteDataStore? {
+        let live = memoryStores[profileID] ?? liveStores[profileID]?.value
+        let looksOnDisk = live == nil && !ephemeral && !keepsProfilesInMemory
+        return {
+            if let live { return live }
+            return looksOnDisk ? await Self.storeOnDisk(for: profileID) : nil
+        }
+    }
+
     /// The profile's store on disk, when it has one.
     static func storeOnDisk(for profileID: UUID) async -> WKWebsiteDataStore? {
         let identifier = BrowserLaunchEnvironment.current.websiteDataStoreIdentifier(forProfileID: profileID)

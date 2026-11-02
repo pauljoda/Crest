@@ -1,0 +1,120 @@
+# Crest: Safe Browsing never sends Google page or download details. Its
+# local list checks stay available for when Crest has a key; the reports that
+# carry a URL, a file or a certificate to Google are off whatever the setting:
+# download pings, extended reporting, enhanced protection's real-time lookups,
+# client-side phishing reports and SCT auditing.
+
+--- a/components/safe_browsing/core/common/safe_browsing_prefs.cc
++++ b/components/safe_browsing/core/common/safe_browsing_prefs.cc
+@@ -167,10 +167,8 @@
+ }
+ 
+ bool IsEnhancedProtectionEnabled(const PrefService& prefs) {
+-  // SafeBrowsingEnabled is checked too due to devices being out
+-  // of sync or not on a version that includes SafeBrowsingEnhanced pref.
+-  return prefs.GetBoolean(prefs::kSafeBrowsingEnhanced) &&
+-         IsSafeBrowsingEnabled(prefs);
++  // Crest: enhanced protection sends each URL and its reports to Google.
++  return false;
+ }
+ 
+ ExtendedReportingLevel GetExtendedReportingLevel(const PrefService& prefs) {
+@@ -191,12 +189,8 @@
+ }
+ 
+ bool IsExtendedReportingEnabled(const PrefService& prefs) {
+-  if (IsExtendedReportingDeprecated()) {
+-    return IsEnhancedProtectionEnabled(prefs);
+-  }
+-  return (IsSafeBrowsingEnabled(prefs) &&
+-          prefs.GetBoolean(prefs::kSafeBrowsingScoutReportingEnabled)) ||
+-         IsEnhancedProtectionEnabled(prefs);
++  // Crest: extended reporting sends pages and downloads to Google.
++  return false;
+ }
+ 
+ bool IsExtendedReportingPolicyManaged(const PrefService& prefs) {
+--- a/chrome/browser/safe_browsing/download_protection/download_protection_delegate_desktop.cc
++++ b/chrome/browser/safe_browsing/download_protection/download_protection_delegate_desktop.cc
+@@ -68,23 +68,14 @@
+ 
+ bool DownloadProtectionDelegateDesktop::MayCheckClientDownload(
+     download::DownloadItem* item) const {
+-  if (!IsSafeBrowsingEnabledForDownloadProfile(item)) {
+-    return false;
+-  }
+-  return IsSupportedDownload(*item, item->GetTargetFilePath()) !=
+-         MayCheckDownloadResult::kMayNotCheckDownload;
++  // Crest: a download check sends the file's URL, referrers and name to Google.
++  return false;
+ }
+ 
+ bool DownloadProtectionDelegateDesktop::MayCheckFileSystemAccessWrite(
+     content::FileSystemAccessWriteItem* item) const {
+-  Profile* profile = Profile::FromBrowserContext(item->browser_context);
+-  if (!profile || !IsSafeBrowsingEnabled(*profile->GetPrefs())) {
+-    return false;
+-  }
+-  DownloadCheckResultReason ignored_reason = REASON_MAX;
+-  return CheckFileSystemAccessWriteRequest::IsSupportedDownload(
+-             item->target_file_path, &ignored_reason) !=
+-         MayCheckDownloadResult::kMayNotCheckDownload;
++  // Crest: as for downloads, a written file's details stay on the device.
++  return false;
+ }
+ 
+ MayCheckDownloadResult DownloadProtectionDelegateDesktop::IsSupportedDownload(
+--- a/chrome/browser/safe_browsing/client_side_detection_service_factory.cc
++++ b/chrome/browser/safe_browsing/client_side_detection_service_factory.cc
+@@ -52,23 +52,8 @@
+ std::unique_ptr<KeyedService>
+ ClientSideDetectionServiceFactory::BuildServiceInstanceForBrowserContext(
+     content::BrowserContext* context) const {
+-  if (!g_browser_process || !g_browser_process->safe_browsing_service()) {
+-    return nullptr;
+-  }
+-
+-  Profile* profile = Profile::FromBrowserContext(context);
+-
+-  auto* holder_service =
+-      OptimizationGuideGlobalStateHolderKeyedServiceFactory::GetForProfile(
+-          Profile::FromBrowserContext(context));
+-  if (!holder_service) {
+-    return nullptr;
+-  }
+-  auto& opt_guide = holder_service->GetGlobalState().model_provider();
+-
+-  return std::make_unique<ClientSideDetectionService>(
+-      std::make_unique<ChromeClientSideDetectionServiceDelegate>(profile),
+-      &opt_guide);
++  // Crest: client-side phishing detection reports pages to Google.
++  return nullptr;
+ }
+ 
+ bool ClientSideDetectionServiceFactory::ServiceIsCreatedWithBrowserContext()
+--- a/chrome/browser/ssl/sct_reporting_service.cc
++++ b/chrome/browser/ssl/sct_reporting_service.cc
+@@ -215,22 +215,7 @@
+ SCTReportingService::~SCTReportingService() = default;
+ 
+ network::mojom::SCTAuditingMode SCTReportingService::GetReportingMode() {
+-  bool is_sct_auditing_enabled = false;
+-#if !BUILDFLAG(IS_ANDROID)
+-  is_sct_auditing_enabled =
+-      SystemNetworkContextManager::IsCertificateTransparencyEnabled();
+-#endif
+-  if (profile_->IsOffTheRecord() || !is_sct_auditing_enabled) {
+-    return network::mojom::SCTAuditingMode::kDisabled;
+-  }
+-  if (safe_browsing::IsSafeBrowsingEnabled(*pref_service_)) {
+-    if (safe_browsing::IsExtendedReportingEnabled(*pref_service_)) {
+-      return network::mojom::SCTAuditingMode::kEnhancedSafeBrowsingReporting;
+-    }
+-    if (base::FeatureList::IsEnabled(features::kSCTAuditingHashdance)) {
+-      return network::mojom::SCTAuditingMode::kHashdance;
+-    }
+-  }
++  // Crest: SCT auditing sends sites' certificates, or their hashes, to Google.
+   return network::mojom::SCTAuditingMode::kDisabled;
+ }
+ 

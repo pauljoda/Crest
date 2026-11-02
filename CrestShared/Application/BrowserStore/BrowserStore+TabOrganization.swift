@@ -12,13 +12,13 @@ extension BrowserStore {
     }
 
     func pinTab(_ id: UUID) {
-        guard let tab = shownSpace?.tabs.model(id), tab.placement != .pinned else { return }
+        guard let tab = shownSpace?.shownTab(id), tab.placement != .pinned else { return }
         togglePin(id)
     }
 
     func saveTab(_ id: UUID) {
         let folderID = shownSpace?.folders.models.first { $0.location == .saved }?.id
-        guard let tab = shownSpace?.tabs.model(id), tab.placement != .saved || tab.folderID != folderID else { return }
+        guard let tab = shownSpace?.shownTab(id), tab.placement != .saved || tab.folderID != folderID else { return }
         moveTab(id, to: .saved, folderID: folderID)
     }
 
@@ -74,7 +74,7 @@ extension BrowserStore {
         before destinationTabID: UUID? = nil
     ) -> Bool {
         guard let space = spaceModel(matching: assignment), selectedSpaceID == assignment.spaceID,
-            space.tabs.model(id) != nil
+            space.shownTab(id) != nil
         else { return false }
         return moveSessionTab(id, in: assignment.spaceID, to: placement, folderID: folderID, before: destinationTabID)
     }
@@ -101,7 +101,7 @@ extension BrowserStore {
         matching destinationAssignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         let sourceAssignment = item.spaceAssignment
-        guard let source = spaceModel(matching: sourceAssignment), source.tabs.model(item.tabID) != nil,
+        guard let source = spaceModel(matching: sourceAssignment), source.shownTab(item.tabID) != nil,
             spaceModel(matching: destinationAssignment) != nil, selectedSpaceID == destinationAssignment.spaceID
         else { return false }
 
@@ -128,7 +128,7 @@ extension BrowserStore {
 
     func canMoveTab(_ id: UUID, from sourceSpaceID: UUID, into destinationSpaceID: UUID) -> Bool {
         guard !isDeleting(sourceSpaceID), !isDeleting(destinationSpaceID), sourceSpaceID != destinationSpaceID,
-            spaceModel(sourceSpaceID)?.tabs.contains(id) == true, spaceModel(destinationSpaceID) != nil
+            spaceModel(sourceSpaceID)?.shownTab(id) != nil, spaceModel(destinationSpaceID) != nil
         else { return false }
         return family.canSend(
             MoveTabToSpace(
@@ -143,7 +143,7 @@ extension BrowserStore {
         matching sourceAssignment: BrowserSpaceRuntimeAssignment,
         into destinationAssignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard let source = spaceModel(matching: sourceAssignment), source.tabs.model(id) != nil,
+        guard let source = spaceModel(matching: sourceAssignment), source.shownTab(id) != nil,
             spaceModel(matching: destinationAssignment) != nil
         else { return false }
         return canMoveTab(
@@ -160,7 +160,7 @@ extension BrowserStore {
         into destinationSpaceID: UUID
     ) -> Bool {
         guard !isDeleting(sourceSpaceID), !isDeleting(destinationSpaceID),
-            let sourceSpace = spaceModel(sourceSpaceID), sourceSpace.tabs.contains(id)
+            let sourceSpace = spaceModel(sourceSpaceID), sourceSpace.shownTab(id) != nil
         else { return false }
         let source = BrowserTabRuntimeAssignment(tabID: id, spaceID: sourceSpaceID, profileID: sourceSpace.profileID)
         guard moveTabBetweenSpaces(id, from: sourceSpaceID, into: destinationSpaceID),
@@ -258,7 +258,7 @@ extension BrowserStore {
         _ id: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> UUID? {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return nil }
+        guard spaceModel(matching: assignment)?.shownTab(id) != nil else { return nil }
         return duplicateTab(id, in: assignment.spaceID)
     }
 
@@ -358,7 +358,7 @@ extension BrowserStore {
         containing tabID: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard let space = spaceModel(matching: assignment), let groupID = space.tabs.model(tabID)?.splitGroupID else {
+        guard let space = spaceModel(matching: assignment), let groupID = space.shownTab(tabID)?.splitGroupID else {
             return false
         }
         return family.send(
@@ -503,7 +503,7 @@ extension BrowserStore {
         joining tabID: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard let space = spaceModel(matching: assignment), space.id == selectedSpaceID, space.tabs.model(tabID) != nil
+        guard let space = spaceModel(matching: assignment), space.id == selectedSpaceID, space.shownTab(tabID) != nil
         else { return false }
         return family.canSend(
             OpenLinkInSplit(

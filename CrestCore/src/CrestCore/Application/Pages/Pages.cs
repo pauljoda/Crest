@@ -202,9 +202,13 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     internal Engine? Chosen(SpaceState space, TabState? tab) => tab?.Url is { } url ? Chosen(space, url) : null;
 
     /// The registered engine chosen in `space` for the site `url` belongs to,
-    /// or null when none is.
-    internal Engine? Chosen(SpaceState space, string url) =>
-        new WebAddress(url).Origin is { } origin && device.ChosenEngine(space.Id, origin) is { } kind ? engines.Registered(kind) : null;
+    /// or null when none is. The person's choice comes first; a protected
+    /// video service otherwise opens in an engine that plays its media.
+    internal Engine? Chosen(SpaceState space, string url) {
+        if (new WebAddress(url).Origin is not { } origin) return null;
+        if (device.ChosenEngine(space.Id, origin) is { } kind) return engines.Registered(kind);
+        return ProtectedMediaService.Serving(origin) is not null ? engines.PlayingProtectedMedia(except: null) : null;
+    }
 
     #endregion
 
@@ -469,13 +473,13 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// is not being deleted and this process may show it; null otherwise.
     internal SpaceState? Shown(Page page) =>
         device.Attached(page.WorkspaceId) is { } workspace && !workspace.IsDeleting(page.SpaceId)
-            && workspace.Current.Space(page.SpaceId) is { } space && !workspace.IsLocked(space)
+            && workspace.Current.ViewedSpace(page.SpaceId) is { } space && !workspace.IsLocked(space)
             ? space : null;
 
     /// A tab its Space still holds, in a Space that is not being deleted.
     private TabState? Held(Guid workspaceId, Guid spaceId, Guid tabId) =>
         device.Attached(workspaceId) is { } workspace && !workspace.IsDeleting(spaceId)
-            && workspace.Current.Space(spaceId) is { } space
+            && workspace.Current.ViewedSpace(spaceId) is { } space
             ? space.Tabs.FirstOrDefault(tab => tab.Id == tabId) : null;
 
     #endregion
@@ -556,10 +560,11 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// being deleted, here or in the workspace a borrowed one borrows from, and
     /// that this process may show.
     internal SpaceState Hosting(NativeSessionAuthority workspace, Guid spaceId) {
-        var space = workspace.Current.KnownSpace(spaceId);
+        var session = workspace.Current;
+        var space = session.KnownSpace(spaceId);
         if (workspace.IsDeleting(spaceId)) throw new Rejected(new SpaceBeingDeleted(spaceId));
         if (workspace.IsLocked(space)) throw new Rejected(new SpaceLocked(spaceId));
-        return space;
+        return session.Viewed(space);
     }
 
     /// A window hosts one page for a tab at a time. Whether the workspace holds
