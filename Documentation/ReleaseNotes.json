@@ -4873,6 +4873,10 @@
     "search-provider-fragment-address": {
       "category": "fixed",
       "message": "You can now add a search provider whose address puts the search after a #, such as PubChem’s."
+    },
+    "chromium-shift-click-peek": {
+      "category": "fixed",
+      "message": "With Shift chosen in Settings > Links > Open Peek with, Shift-click now opens links in Peek on the Chromium engine instead of a new tab."
     }
   }
 }
