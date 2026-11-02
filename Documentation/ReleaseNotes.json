@@ -4741,6 +4741,10 @@
     "fullscreen-video-without-black-frames": {
       "category": "fixed",
       "message": "Videos and other pages go into and out of full screen without a few black frames on Chromium pages."
+    },
+    "fullscreen-page-shown-once-in-window": {
+      "category": "fixed",
+      "message": "Entering or leaving full screen on Mac no longer briefly blanks a Chromium page that was still being placed in its window."
     }
   }
 }

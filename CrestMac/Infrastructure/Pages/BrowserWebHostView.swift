@@ -370,6 +370,10 @@ final class BrowserWebHostView: NSView {
     private var focusRestorationAttemptGeneration = 0
     /// When this host claimed `hostedWebView`: the newest claim is the largest.
     private var claim = 0
+    /// Whether this host claimed `hostedWebView` before it had a window, and
+    /// shows it once it joins one. Adding a page view to a host outside any
+    /// window takes it out of its window, which hides its page from the engine.
+    private var isAwaitingWindow = false
     /// The page view this host showed before `hostedWebView`, still shown
     /// above it while the new one draws its first frames; see
     /// `holdsReplacedPageUntilDrawn`.
@@ -393,6 +397,10 @@ final class BrowserWebHostView: NSView {
             return
         }
         if hostedWebView === webView {
+            if isAwaitingWindow, window == nil {
+                self.focusRestoration = focusRestoration
+                return
+            }
             if webView.superview === self {
                 self.focusRestoration = focusRestoration
                 return
@@ -436,6 +444,11 @@ final class BrowserWebHostView: NSView {
         claim = Self.claimCount
         hostedWebView = webView
         Self.claimants.add(self)
+        if window == nil {
+            isAwaitingWindow = true
+            self.focusRestoration = focusRestoration
+            return
+        }
         show(webView, focusRestoration: focusRestoration, below: replaced)
         if let replaced { holdUntilReplacementDraws(replaced) }
     }
@@ -445,6 +458,7 @@ final class BrowserWebHostView: NSView {
     /// claims it.
     func detach() {
         releaseReplacedWebView()
+        isAwaitingWindow = false
         guard let hostedWebView else { return }
         Self.claimants.remove(self)
         let showsHostedWebView = hostedWebView.superview === self
@@ -477,7 +491,7 @@ final class BrowserWebHostView: NSView {
     /// newest claim.
     private static func successor(for webView: NSView, in window: NSWindow?) -> BrowserWebHostView? {
         claimants.allObjects
-            .filter { $0.hostedWebView === webView && $0.isPlaced(with: window) }
+            .filter { $0.hostedWebView === webView && !$0.isAwaitingWindow && $0.isPlaced(with: window) }
             .max { ($0.isDrawn ? 1 : 0, $0.claim) < ($1.isDrawn ? 1 : 0, $1.claim) }
     }
 
@@ -514,6 +528,7 @@ final class BrowserWebHostView: NSView {
         Self.claimants.remove(self)
         hostedWebView = nil
         focusRestoration = nil
+        isAwaitingWindow = false
         isPageActive = false
         focusRestorationAttemptGeneration &+= 1
     }
@@ -553,6 +568,7 @@ final class BrowserWebHostView: NSView {
     private func show(
         _ webView: NSView, focusRestoration: BrowserWebFocusRestorationController?, below replaced: NSView? = nil
     ) {
+        isAwaitingWindow = false
         self.focusRestoration = focusRestoration ?? self.focusRestoration
 
         let removeInterval = Self.lifecycleSignposter.beginInterval(
@@ -732,6 +748,9 @@ final class BrowserWebHostView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if let window { lastWindow = window }
+        if window != nil, isAwaitingWindow, let hostedWebView {
+            show(hostedWebView, focusRestoration: focusRestoration)
+        }
         trackTitleBarPointer()
         guard isPageActive else { return }
         scheduleFocusRestoration()
