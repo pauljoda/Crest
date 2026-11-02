@@ -4877,6 +4877,22 @@
     "chromium-shift-click-peek": {
       "category": "fixed",
       "message": "With Shift chosen in Settings > Links > Open Peek with, Shift-click now opens links in Peek on the Chromium engine instead of a new tab."
+    },
+    "chromium-new-window-links-in-peek": {
+      "category": "fixed",
+      "message": "On the Chromium engine, a link that opens a new window now opens in the Peek or Quick Window it was clicked in."
+    },
+    "chromium-new-window-links-keep-request": {
+      "category": "fixed",
+      "message": "On the Chromium engine, a new-window link in a Peek or Quick Window now loads once, and still tells the site which page it came from."
+    },
+    "chromium-held-window-timeout": {
+      "category": "internal",
+      "message": "A window a link opens on the Chromium engine loads after a few seconds even when Crest never decides where it belongs, instead of staying blank."
+    },
+    "chromium-stale-window-link": {
+      "category": "internal",
+      "message": "A new-window link on the Chromium engine whose Peek or Quick Window has already moved to another page no longer replaces that page."
     }
   }
 }

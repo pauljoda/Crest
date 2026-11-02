@@ -17,6 +17,7 @@
 #include "base/memory/raw_ptr_exclusion.h"
 #include "base/memory/weak_ptr.h"
 #include "base/no_destructor.h"
+#include "base/time/time.h"
 #include "chrome/browser/ui/crest/crest_engine.h"
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
 #include "components/permissions/permission_prompt.h"
@@ -142,6 +143,12 @@ class EngineBinding {
   // tab in front or behind, which `params` then asks of the engine, or Peek,
   // for which the link is staged. Answers whether the binding took the link.
   bool FollowModifiedLink(content::WebContents* contents, content::OpenURLParams& params);
+  // Holds `navigation`, the first of a window a link opened without an
+  // opener from the page it was in, as target="_blank" does, before its
+  // request goes out, until the core adopts the window, when `resume` lets it
+  // go, or refuses it, when that page may load the request instead. Answers
+  // whether it held it.
+  bool HoldsWindowLink(content::NavigationHandle& navigation, base::OnceClosure resume);
   // A person's plain click on the link to `url` in `contents`: answers
   // whether it opens Peek instead, as the core decides for a link leaving a
   // saved tab's site, which the platform then hears.
@@ -161,6 +168,10 @@ class EngineBinding {
   // The page that follows `contents`, for the engine's own hooks, or nullptr
   // when no page does.
   EnginePage* PageFor(content::WebContents* contents);
+  // The page that opened `contents`: its opener's, or for a window a link
+  // opened without one, as target="_blank" does, the page the link was in.
+  // nullptr when no page Crest follows opened it.
+  EnginePage* SourceOf(content::WebContents* contents);
   // The page the platform names `page`, or nullptr.
   EnginePage* Find(const std::string& page);
   // Every page the binding follows that has its WebContents.
@@ -212,6 +223,15 @@ class EngineBinding {
   // applies.
   bool LoadStagedLink(const std::string& page, const std::string& token, const GURL& url);
   void DropStagedLink(const std::string& token);
+  // What a load of a link whose window the core refused came to: no such
+  // link was waiting, the link loaded, or it was stale, its page having moved
+  // on from the document the link was in.
+  enum class RefusedLinkLoad { kNone, kLoaded, kStale };
+  // Loads, in `page`, the request of a link whose window the core refused,
+  // when `url` is its address and `page` is the page it was in, still showing
+  // the document the link was in, so the link keeps its referrer and
+  // initiator.
+  RefusedLinkLoad LoadRefusedWindowLink(const std::string& page, const GURL& url);
 
  private:
   friend class base::NoDestructor<EngineBinding>;
@@ -223,6 +243,11 @@ class EngineBinding {
   };
   // A link followed in `source`, kept for a Peek's first load.
   struct StagedLink;
+  // The request of a window's first navigation, which a link in `source`
+  // started.
+  struct WindowLink;
+  // A window a link opened, held before its request goes out.
+  struct HeldWindow;
 
   EngineBinding();
   ~EngineBinding();
@@ -316,6 +341,9 @@ class EngineBinding {
   void CloseWithheld(base::WeakPtr<content::WebContents> contents);
   // Forgets the links modified clicks sent to new tabs this turn.
   void ForgetRoutedTabs();
+  // Lets a held window's first navigation go ahead: the core adopted the
+  // window, or it waited too long for the core.
+  void ReleaseHeldWindow(base::WeakPtr<content::WebContents> contents);
   void CreateNow(const std::string& page);
   void ProfileLoaded(const std::string& page, Profile* profile);
   void Created(const std::string& page, content::WebContents* contents);
@@ -362,6 +390,13 @@ class EngineBinding {
   // The links modified clicks sent to the new tabs the engine opens next,
   // with the pages they were followed in, until the turn ends.
   std::vector<std::pair<std::string, std::string>> routed_tabs_;
+  // The windows links opened without an opener, with the pages the links
+  // were in, until the core is offered them.
+  std::vector<std::pair<base::WeakPtr<content::WebContents>, std::string>> link_sources_;
+  // The windows links opened, held until the core decides, and the links of
+  // windows it refused, with when, for the next load of the page each was in.
+  std::vector<std::unique_ptr<HeldWindow>> held_windows_;
+  std::vector<std::pair<std::unique_ptr<WindowLink>, base::TimeTicks>> refused_window_links_;
   std::unique_ptr<EngineProfiles> profiles_;
   std::unique_ptr<EngineBrowsers> browsers_;
   std::unique_ptr<EngineTabGroups> tab_groups_;
