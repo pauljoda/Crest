@@ -4842,6 +4842,10 @@
       "category": "fixed",
       "message": "Passwords imported earlier for a site at an IP address written in a long or unusual form, such as 127.1, now fill on that site too."
     },
+    "palette-provider-chips-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
