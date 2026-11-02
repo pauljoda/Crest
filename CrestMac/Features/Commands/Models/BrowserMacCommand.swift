@@ -16,7 +16,7 @@ struct BrowserMacCommand {
         run: { $0.openNewWindow() })
     static let newBlankWindow = BrowserMacCommand(.newBlankWindow) { $0.openBlankWindow() }
     static let newTab = BrowserMacCommand(.newTab) { $0.openNewTab() }
-    static let openLocation = BrowserMacCommand(.openLocation) { $0.openLocation() }
+    static let openLocation = BrowserMacCommand(.openLocation, actsOnPage: true) { $0.openLocation() }
     static let openFile = BrowserMacCommand(
         .openFile, isAvailable: { $0.supportsEngineCapability(.localFiles) },
         run: { $0.openFile() })

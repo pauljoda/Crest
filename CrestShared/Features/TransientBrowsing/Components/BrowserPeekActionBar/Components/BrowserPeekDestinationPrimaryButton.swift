@@ -3,14 +3,13 @@ import SwiftUI
 struct BrowserPeekDestinationPrimaryButton: View {
     // MARK: - Static Variables
 
-    private static let leadingInset: CGFloat = 16
     private static let contentSpacing = CrestSpacing.small
-    private static let iconSize: CGFloat = 22
     private static let title = "Open In…"
 
     // MARK: - Variables
 
     let selectedSpace: BrowserSpaceIdentity?
+    var style = BrowserPeekControlStyle.actionBar
     let openInSelectedSpace: () -> Void
 
     var body: some View {
@@ -19,7 +18,7 @@ struct BrowserPeekDestinationPrimaryButton: View {
                 if let selectedSpace {
                     BrowserSpaceIdentityIcon(
                         identity: selectedSpace,
-                        size: Self.iconSize
+                        size: style.iconSize
                     )
                 } else {
                     Image(systemName: "square.grid.2x2")
@@ -27,9 +26,10 @@ struct BrowserPeekDestinationPrimaryButton: View {
                 Text(Self.title)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.leading, Self.leadingInset)
-            .frame(height: BrowserPeekActionBar.controlHeight)
+            .frame(maxWidth: style == .actionBar ? .infinity : nil)
+            .padding(.leading, style.leadingInset)
+            .padding(.trailing, style == .actionBar ? 0 : CrestSpacing.small)
+            .frame(height: style.height)
             .contentShape(.rect)
         }
         .keyboardShortcut("o", modifiers: .command)

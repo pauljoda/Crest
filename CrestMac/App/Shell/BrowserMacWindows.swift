@@ -366,6 +366,10 @@ final class BrowserMacWindows {
                 .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
                 .modifier(BrowserChromeAppearancePersistence())
                 .environment(application.softwareUpdates)
+                .environment(\.browserSiteControlAnchor, application.siteControlAnchor)
+                // Open Location in a key Quick Window asks its own chrome,
+                // which the window answers by focusing its address field.
+                .environment(quickWindow.chrome)
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))
             },
             closed: { [weak self] controller in self?.quickWindowClosed(controller) })

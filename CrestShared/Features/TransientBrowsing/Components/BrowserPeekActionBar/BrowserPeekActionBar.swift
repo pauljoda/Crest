@@ -3,7 +3,6 @@ import SwiftUI
 struct BrowserPeekActionBar: View {
     // MARK: - Static Variables
 
-    static let controlHeight: CGFloat = 48
     private static let closeControlWidth: CGFloat = 206
     private static let openControlWidth: CGFloat = 206
     private static let controlSpacing: CGFloat = 10

@@ -54,7 +54,7 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             return frame
         }
         if let referenceFrame = usable(sourceWebContentFrame) ?? usable(sourceWindowFrame) {
-            return BrowserTransientCardArrangement.centeredWindowContentFrame(in: referenceFrame)
+            return atLeastMinimumSize(BrowserTransientCardArrangement.centeredWindowContentFrame(in: referenceFrame))
         }
         let proposed = BrowserTransientCardArrangement.centeredWindowContentFrame(in: fallbackVisibleFrame)
         let size = CGSize(
@@ -64,6 +64,16 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             x: fallbackVisibleFrame.midX - size.width / 2,
             y: fallbackVisibleFrame.midY - size.height / 2,
             width: size.width, height: size.height)
+    }
+
+    /// `frame` grown to the window's smallest size, about the same centre: one
+    /// side of a split, or a small window, would otherwise open a window its
+    /// toolbar does not fit.
+    private static func atLeastMinimumSize(_ frame: CGRect) -> CGRect {
+        let size = CGSize(
+            width: max(frame.width, BrowserQuickWindowLayout.minimumWidth),
+            height: max(frame.height, BrowserQuickWindowLayout.minimumHeight))
+        return CGRect(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2, width: size.width, height: size.height)
     }
 
     func updateWindowGeometry() {

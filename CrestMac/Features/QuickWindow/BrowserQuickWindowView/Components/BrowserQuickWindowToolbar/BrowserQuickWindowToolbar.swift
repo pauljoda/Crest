@@ -9,6 +9,7 @@ struct BrowserQuickWindowToolbar: View {
 
     var body: some View {
         HStack(spacing: BrowserQuickWindowLayout.toolbarSpacing) {
+            BrowserQuickWindowNavigationControls(model: model)
             BrowserQuickWindowAddressControl(
                 model: model,
                 addressText: $addressText,
@@ -22,9 +23,11 @@ struct BrowserQuickWindowToolbar: View {
                 BrowserWindowTitleBarControlArea()
                     .accessibilityHidden(true)
             }
-            BrowserQuickWindowDestinationControl(
-                model: model,
-                promote: promote
+            BrowserPeekDestinationControl(
+                spaces: model.availableSpaceModels.map(\.identity),
+                selectedSpaceID: model.selectedAssignment.spaceID,
+                style: .toolbar,
+                openInSpace: promote
             )
         }
         .padding(.leading, BrowserQuickWindowLayout.windowControlClearance)

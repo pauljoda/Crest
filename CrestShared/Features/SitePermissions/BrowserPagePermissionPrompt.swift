@@ -5,6 +5,7 @@ struct BrowserPagePermissionPrompt: View {
     let controller: BrowserPagePermissionController
 
     @State private var remembersChoice = true
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -57,15 +58,24 @@ struct BrowserPagePermissionPrompt: View {
                         response: remembersChoice ? .grantPersistently : .allowOnce
                     )
                 } label: {
-                    Text("Allow").frame(maxWidth: .infinity)
+                    Text("Allow")
+                        .frame(maxWidth: .infinity)
+                        .browserReadableForeground(over: allowTint)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(allowTint)
             }
             .controlSize(.large)
         }
         .padding(14)
         .frame(width: 280, alignment: .leading)
         .onChange(of: request.id) { remembersChoice = true }
+    }
+
+    /// Allow wears Crest's accent, never a Space's, whose tint can be as light
+    /// as the label on it; the label takes whichever ink reads on the tint.
+    private var allowTint: Color {
+        CrestBrandTheme.accent(colorScheme)
     }
 }
 
