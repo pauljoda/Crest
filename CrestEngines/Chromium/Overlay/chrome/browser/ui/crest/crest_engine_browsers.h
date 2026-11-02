@@ -58,8 +58,11 @@ class EngineBrowsers final {
   // window `window`, keeping its history, renderer and extension identity,
   // and makes it that Browser's active tab.
   bool MoveToWindow(content::WebContents* contents, const std::string& profile_id, const std::string& window);
-  // Makes `contents` its Browser's active tab, as an extension action run on
-  // it expects. False when no Browser the binding keeps holds it.
+  // Makes `contents` its Browser's active tab, and that Browser the one
+  // Chromium last saw in use, which an extension's active tab and current
+  // window resolve to. A Browser holds only its own profile's pages in its
+  // own window, so nothing moves between Spaces or windows. False when no
+  // Browser the binding keeps holds it.
   bool Activate(content::WebContents* contents);
   // Deletes `contents` from the Browser that holds it.
   void Destroy(content::WebContents* contents);
@@ -118,6 +121,8 @@ class EngineBrowsers final {
   std::vector<std::unique_ptr<KeptBrowser>> kept_;
   // The Browser Chromium started with, whose profile is the engine's own.
   raw_ptr<Browser> bootstrap_ = nullptr;
+  // The Browser of the page last shown, which Chromium counts as active.
+  raw_ptr<Browser> active_ = nullptr;
   std::string creating_window_;
   // The profile `chrome.windows.create` is about to create a Browser in, for
   // the one turn between asking and creating: that Browser is the extension's

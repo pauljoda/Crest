@@ -965,6 +965,9 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
                                     extensions::CommandService::REGULAR, &named)) continue;
     for (const auto& [name, command] : named) {
       if (command.accelerator() != accelerator) continue;
+      // The extension may find its page as the active tab rather than read
+      // the one the command names, as a click on its button finds it.
+      crest::EngineBinding::Get().Browsers().Activate(contents);
       DeliverExtensionCommand(profile, *extension, name, contents);
       return [[CrestExtensionShortcutResult alloc] init];
     }
