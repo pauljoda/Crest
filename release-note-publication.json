@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "shortcuts-follow-command-keyboard-layout",
+    "development": "chromium-new-tab-page-promo-crash",
     "nightly": "reopen-pages-after-quit-choice"
   }
 }
