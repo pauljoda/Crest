@@ -4865,6 +4865,10 @@
     "chromium-new-tab-page-crash": {
       "category": "fixed",
       "message": "Crest on Mac no longer quits when a Chromium tab opens the new tab page, as Claude in Chrome does, or keeps quitting at launch while restoring one."
+    },
+    "chromium-new-tab-page-promo-crash": {
+      "category": "fixed",
+      "message": "The new tab page in a Chromium tab no longer quits Crest on Mac when it would offer to customize the page."
     }
   }
 }
