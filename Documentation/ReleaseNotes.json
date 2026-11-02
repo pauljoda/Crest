@@ -4758,6 +4758,10 @@
       "category": "fixed",
       "message": "Extensions on Mac now act on the page you're using in a Quick Window, a Peek or the focused side of a split, including from their keyboard shortcuts, instead of on another tab."
     },
+    "chromium-extension-sign-in-tab": {
+      "category": "fixed",
+      "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
