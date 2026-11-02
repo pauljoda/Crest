@@ -13,6 +13,9 @@ enum BrowserQuickWindowLayout {
     static let controlHeight: CGFloat = BrowserChromeLayout.addressHeight
     static let minimumMacHitTarget: CGFloat = 28
     static let addressMinimumWidth: CGFloat = 220
+    /// The width the address field keeps before pinned extensions show
+    /// beside it, so its address stays readable at the window's smallest.
+    static let addressWidthBeforeExtensions: CGFloat = 300
     static let addressVerticalPadding: CGFloat = 6
     static let horizontalPadding: CGFloat = 10
     static let toolbarTopPadding: CGFloat = horizontalPadding

@@ -10,19 +10,27 @@ struct BrowserQuickWindowToolbar: View {
     var body: some View {
         HStack(spacing: BrowserQuickWindowLayout.toolbarSpacing) {
             BrowserQuickWindowNavigationControls(model: model)
-            BrowserQuickWindowAddressControl(
-                model: model,
-                addressText: $addressText,
-                isAddressEditing: $isAddressEditing,
-                addressFocusRequest: addressFocusRequest
-            )
-            .layoutPriority(1)
-            // The field sits under the title bar. A drag across it selects
-            // its text, while the strip around it still moves the window.
-            .background {
-                BrowserWindowTitleBarControlArea()
-                    .accessibilityHidden(true)
+            BrowserQuickWindowFieldLayout(
+                fieldMinimumWidth: BrowserQuickWindowLayout.addressWidthBeforeExtensions,
+                spacing: BrowserQuickWindowLayout.toolbarSpacing
+            ) {
+                BrowserQuickWindowAddressControl(
+                    model: model,
+                    addressText: $addressText,
+                    isAddressEditing: $isAddressEditing,
+                    addressFocusRequest: addressFocusRequest
+                )
+                // The field sits under the title bar. A drag across it selects
+                // its text, while the strip around it still moves the window.
+                .background {
+                    BrowserWindowTitleBarControlArea()
+                        .accessibilityHidden(true)
+                }
+                if let space = model.spaceModel {
+                    BrowserEngineToolbarAccessory(page: model.page, space: space, browser: model.browser)
+                }
             }
+            .layoutPriority(1)
             BrowserPeekDestinationControl(
                 spaces: model.availableSpaceModels.map(\.identity),
                 selectedSpaceID: model.selectedAssignment.spaceID,

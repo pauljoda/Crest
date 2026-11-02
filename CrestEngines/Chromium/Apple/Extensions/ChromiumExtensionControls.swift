@@ -1,10 +1,25 @@
 import SwiftUI
 
 struct BrowserPinnedExtensionStrip: View {
+    // MARK: - Types
+
+    /// Where a Space's pinned actions are shown: in a strip above the
+    /// sidebar's tabs, or in a Quick Window's toolbar, where the actions that
+    /// do not fit go behind an overflow button.
+    struct Placement: Hashable, Sendable {
+        static let sidebar = Placement(overflows: false)
+        static let toolbar = Placement(overflows: true)
+
+        let overflows: Bool
+    }
+
+    // MARK: - Variables
+
     let page: ChromiumNativePage?
     /// The Space whose row this is, in the read model.
     let space: SpaceModel
     let browser: BrowserStore
+    var placement = Placement.sidebar
     private var store: ChromiumExtensionStore { ChromiumComposition.extensions }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(BrowserExtensionSidePanelHost.self) private var sidePanel: BrowserExtensionSidePanelHost?
@@ -19,18 +34,17 @@ struct BrowserPinnedExtensionStrip: View {
         // show: hanging the preparation off the populated row alone left a
         // Space that had never opened a page with a row that never filled.
         VStack(spacing: 0) {
-            if !actions.isEmpty {
+            if !actions.isEmpty, placement.overflows {
+                BrowserPinnedExtensionToolbarActions(
+                    actions: actions,
+                    perform: run,
+                    presentMenu: presentMenu
+                )
+            } else if !actions.isEmpty {
                 BrowserPinnedExtensionStripContent(
                     actions: actions,
                     perform: run,
-                    presentMenu: { action, anchor in
-                        store.presentMenu(
-                            action, space: space.identity, anchor: anchor,
-                            isPrivate: page?.isPrivateBrowsing ?? false,
-                            openSidePanel: page.flatMap {
-                                BrowserExtensionSidePanelHost.opener(action, page: $0, host: sidePanel)
-                            })
-                    }
+                    presentMenu: presentMenu
                 )
                 .padding(.top, BrowserSidebarMetrics.topSectionSpacing)
                 // Pinned tabs below hold the same gap above themselves. A
@@ -53,6 +67,15 @@ struct BrowserPinnedExtensionStrip: View {
     private struct PreparationKey: Equatable {
         let space: UUID
         let profile: UUID
+    }
+
+    private func presentMenu(_ action: BrowserExtensionActionPresentation, anchor: BrowserExtensionPopupAnchor?) {
+        store.presentMenu(
+            action, space: space.identity, anchor: anchor,
+            isPrivate: page?.isPrivateBrowsing ?? false,
+            openSidePanel: page.flatMap {
+                BrowserExtensionSidePanelHost.opener(action, page: $0, host: sidePanel)
+            })
     }
 
     private func run(
