@@ -102,6 +102,7 @@ final class MobileBrowserPageStore:
         // A private store's tabs leave no state on disk, even if an archive is
         // handed in.
         host = BrowserPageHost(archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive)
+        host.showsTab = { [weak browser] spaceID, tabID in browser?.spaceModel(spaceID)?.shownTab(tabID) != nil }
         self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
         self.permissionCenter = permissionCenter
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
@@ -277,7 +278,7 @@ final class MobileBrowserPageStore:
     @discardableResult
     func prepareResidentPage(for tabID: UUID, at time: Date = .now) -> MobileBrowserPage? {
         guard let space = browser.shownSpace,
-            let tab = space.tabs.model(tabID)
+            let tab = space.shownTab(tabID)
         else { return nil }
 
         if tab.nativeContent != nil {
@@ -385,7 +386,7 @@ final class MobileBrowserPageStore:
     }
 
     func styleVisitedLinks(in space: SpaceModel) async {
-        await activePage?.styleVisitedLinks(history: space.history.entries)
+        await activePage?.styleVisitedLinks(history: space.groupHistory)
     }
 
     /// A visit the core recorded in the Space the active page shows restyles
@@ -477,7 +478,7 @@ final class MobileBrowserPageStore:
         as tabID: UUID,
         in space: SpaceModel
     ) -> Bool {
-        guard let tab = space.tabs.model(tabID),
+        guard let tab = space.shownTab(tabID),
             let page = host.adoptTransientPage(lease, as: tabID, in: space, through: browser, prepare: { _ in true })
         else { return false }
         page.adopt(tabID: tabID, tab: BrowserPageTab(tab, images: browser.core.state.favicons))

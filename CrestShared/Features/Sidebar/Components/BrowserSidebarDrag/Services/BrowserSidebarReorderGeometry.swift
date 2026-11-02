@@ -3,6 +3,11 @@ import Foundation
 import Observation
 
 /// Resting measurements for one window; registrations retain their view owner.
+///
+/// Rows and cards are kept per Space. The Spaces of a group show the pinned
+/// tabs they share under the same IDs, and the pager keeps the pages beside
+/// the shown one alive, so a Sub-Space's page measuring a shared pin must not
+/// take the place of the shown Space's tile.
 @Observable
 @MainActor
 final class BrowserSidebarReorderGeometry {
@@ -26,6 +31,12 @@ final class BrowserSidebarReorderGeometry {
         let frame: CGRect
     }
 
+    /// One Space's registration of an item: a row, or the card showing a tab.
+    struct Key<ID: Hashable>: Hashable {
+        let id: ID
+        let space: BrowserSpaceRuntimeAssignment
+    }
+
     // MARK: - Static Variables
 
     /// Rows within this vertical distance share a selection line.
@@ -37,7 +48,10 @@ final class BrowserSidebarReorderGeometry {
     /// Advances with every change to the rows, so what is worked out from
     /// them can be kept until they change.
     @ObservationIgnored private(set) var rowsRevision = 0
-    @ObservationIgnored private(set) var rows: [BrowserSidebarReorderItemID: RegisteredRow] = [:] {
+    /// Each Space's rows, by item.
+    @ObservationIgnored private var rows:
+        [BrowserSpaceRuntimeAssignment: [BrowserSidebarReorderItemID: RegisteredRow]] = [:]
+    {
         didSet { rowsRevision &+= 1 }
     }
     /// Registrations a later one replaced while their view was still on
@@ -45,42 +59,61 @@ final class BrowserSidebarReorderGeometry {
     /// for a moment, and the departing one can measure itself again during its
     /// exit, after the arriving one did; when it leaves, the item falls back to
     /// the view that stays instead of losing its frame.
-    @ObservationIgnored private var replacedRows: [BrowserSidebarReorderItemID: [UUID: RegisteredRow]] = [:]
+    @ObservationIgnored private var replacedRows: [Key<BrowserSidebarReorderItemID>: [UUID: RegisteredRow]] = [:]
+    /// The Space each view measured its row in, so a view whose Space changes
+    /// profile takes its registration along rather than leaving it behind.
+    @ObservationIgnored private var rowSpaces: [UUID: BrowserSpaceRuntimeAssignment] = [:]
     @ObservationIgnored private(set) var zones: [UUID: RegisteredZone] = [:]
     @ObservationIgnored private(set) var scrollRegions: [UUID: CGRect] = [:]
     @ObservationIgnored private(set) var sidebarViewports: [UUID: CGRect] = [:]
-    @ObservationIgnored private(set) var splitCards: [UUID: SplitCard] = [:]
+    @ObservationIgnored private(set) var splitCards: [Key<UUID>: SplitCard] = [:]
+
+    /// `space`'s registration of the item.
+    func row(_ id: BrowserSidebarReorderItemID, in space: BrowserSpaceRuntimeAssignment) -> RegisteredRow? {
+        rows[space]?[id]
+    }
+
+    /// `space`'s rows, by item.
+    func rows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderItemID: RegisteredRow] {
+        rows[space] ?? [:]
+    }
 
     func register(row: BrowserSidebarReorderRow, owner: UUID, scrollRegionID: UUID?) {
-        if let current = rows[row.id] {
-            if current.owner != owner { replacedRows[row.id, default: [:]][current.owner] = current }
+        if let previous = rowSpaces[owner], previous != row.space { removeRow(row.id, owner: owner) }
+        rowSpaces[owner] = row.space
+        let key = Key(id: row.id, space: row.space)
+        if let current = rows[row.space]?[row.id] {
+            if current.owner != owner { replacedRows[key, default: [:]][current.owner] = current }
         } else {
             selectionRowsRevision &+= 1
         }
-        replacedRows[row.id]?[owner] = nil
-        rows[row.id] = RegisteredRow(owner: owner, row: row, scrollRegionID: scrollRegionID)
+        replacedRows[key]?[owner] = nil
+        rows[row.space, default: [:]][row.id] = RegisteredRow(owner: owner, row: row, scrollRegionID: scrollRegionID)
     }
 
     /// Forgets `owner`'s registration of the item. When it was the one in
-    /// use, the item keeps the registration of a view still showing it, if
-    /// any.
+    /// use, the item keeps the registration of a view still showing it in
+    /// the same Space, if any.
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
-        defer { if replacedRows[id]?.isEmpty == true { replacedRows[id] = nil } }
-        guard rows[id]?.owner == owner else {
-            replacedRows[id]?[owner] = nil
+        guard let space = rowSpaces.removeValue(forKey: owner) else { return }
+        let key = Key(id: id, space: space)
+        defer { if replacedRows[key]?.isEmpty == true { replacedRows[key] = nil } }
+        guard rows[space]?[id]?.owner == owner else {
+            replacedRows[key]?[owner] = nil
             return
         }
-        if let remaining = replacedRows[id]?.first?.value {
-            replacedRows[id]?[remaining.owner] = nil
-            rows[id] = remaining
+        if let remaining = replacedRows[key]?.first?.value {
+            replacedRows[key]?[remaining.owner] = nil
+            rows[space]?[id] = remaining
         } else {
-            rows[id] = nil
+            rows[space]?[id] = nil
+            if rows[space]?.isEmpty == true { rows[space] = nil }
             selectionRowsRevision &+= 1
         }
     }
 
     func registeredRows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderRow] {
-        rows.values.map(\.row).filter { $0.space == space && $0.parentItemID == nil }
+        (rows[space] ?? [:]).values.map(\.row).filter { $0.parentItemID == nil }
     }
 
     /// Range selection includes offscreen rows of expanded lists.
@@ -114,13 +147,20 @@ final class BrowserSidebarReorderGeometry {
 
     func removeScrollRegion(for id: UUID) {
         scrollRegions[id] = nil
-        let previousCount = rows.count
-        rows = rows.filter { $0.value.scrollRegionID != id }
+        var removedRows: [UUID] = []
+        var removedReplacements: [UUID] = []
+        rows = rows.compactMapValues { spaceRows in
+            removedRows += spaceRows.values.filter { $0.scrollRegionID == id }.map(\.owner)
+            let kept = spaceRows.filter { $0.value.scrollRegionID != id }
+            return kept.isEmpty ? nil : kept
+        }
         replacedRows = replacedRows.compactMapValues { views in
+            removedReplacements += views.values.filter { $0.scrollRegionID == id }.map(\.owner)
             let kept = views.filter { $0.value.scrollRegionID != id }
             return kept.isEmpty ? nil : kept
         }
-        if rows.count != previousCount { selectionRowsRevision &+= 1 }
+        for owner in removedRows + removedReplacements { rowSpaces[owner] = nil }
+        if !removedRows.isEmpty { selectionRowsRevision &+= 1 }
         zones = zones.filter { $0.value.scrollRegionID != id }
     }
 
@@ -134,9 +174,8 @@ final class BrowserSidebarReorderGeometry {
                 parentItemID: registration.row.parentItemID)
             return registration
         }
-        for key in Array(rows.keys) where rows[key]?.scrollRegionID == id {
-            guard let registration = rows[key] else { continue }
-            rows[key] = moved(registration)
+        rows = rows.mapValues { spaceRows in
+            spaceRows.mapValues { $0.scrollRegionID == id ? moved($0) : $0 }
         }
         replacedRows = replacedRows.mapValues { views in
             views.mapValues { $0.scrollRegionID == id ? moved($0) : $0 }
@@ -152,12 +191,13 @@ final class BrowserSidebarReorderGeometry {
         splitCardFrame frame: CGRect, for tabID: UUID, in space: BrowserSpaceRuntimeAssignment,
         owner: UUID
     ) {
-        splitCards[tabID] = SplitCard(owner: owner, space: space, frame: frame)
+        splitCards[Key(id: tabID, space: space)] = SplitCard(owner: owner, space: space, frame: frame)
     }
 
     func removeSplitCardFrame(for tabID: UUID, owner: UUID) {
-        guard splitCards[tabID]?.owner == owner else { return }
-        splitCards[tabID] = nil
+        for key in splitCards.keys where key.id == tabID && splitCards[key]?.owner == owner {
+            splitCards[key] = nil
+        }
     }
 
     func restingZone(for section: BrowserSidebarReorderSection, inColumn frame: CGRect)

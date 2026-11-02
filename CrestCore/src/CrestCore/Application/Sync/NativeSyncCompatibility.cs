@@ -57,6 +57,7 @@ internal static class NativeSyncCompatibility {
     private static readonly Dictionary<string, Shape> Values = new() {
         [SyncRecordKind.Space.Name] = new(SpacePayload.Members, new() {
             [StoredSessionCodec.Key.Id] = Identity,
+            [StoredSessionCodec.Key.PrimarySpaceId] = Identity,
             [StoredSessionCodec.Key.Branding] = Branding,
             [StoredSessionCodec.Key.BrowsingPreferences] = Browsing,
             [StoredSessionCodec.Key.SplitGroups] = List(Group, true)

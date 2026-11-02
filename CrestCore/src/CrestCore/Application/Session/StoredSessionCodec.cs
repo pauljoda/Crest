@@ -64,6 +64,7 @@ internal static partial class StoredSessionCodec {
         public const string DisposableSeedMarker = "disposableSeedMarker";
         public const string Downloads = "downloads";
         public const string EdgeColorIndex = "edgeColorIndex";
+        public const string ErasedProfileIds = "erasedProfileIDs";
         public const string FaviconUrl = "faviconURL";
         public const string FieldDivision = "fieldDivision";
         public const string Finish = "finish";
@@ -94,6 +95,7 @@ internal static partial class StoredSessionCodec {
         public const string LegacySelectedTab = "selectedTabID";
         public const string Limit = "limit";
         public const string Location = "location";
+        public const string MembershipModifiedAt = "membershipModifiedAt";
         public const string Name = "name";
         public const string NativeContent = "nativeContent";
         public const string OffersTranslation = "offersTranslation";
@@ -106,6 +108,8 @@ internal static partial class StoredSessionCodec {
         public const string Placement = "placement";
         public const string PositionModifiedAt = "positionModifiedAt";
         public const string PrefersOpenTabs = "prefersOpenTabs";
+        public const string PrimarySpaceId = "primarySpaceID";
+        public const string ProtectionModifiedAt = "protectionModifiedAt";
         public const string ProviderSpaceTrigger = "providerSpaceTrigger";
         public const string Profile = "profile";
         public const string ProfileId = "profileID";
@@ -127,6 +131,9 @@ internal static partial class StoredSessionCodec {
         public const string SearchUrlTemplate = "searchURLTemplate";
         public const string SecondaryFieldColorIndex = "secondaryFieldColorIndex";
         public const string SelectedSearchProviderId = "selectedSearchProviderID";
+        public const string SeparatesPinnedTabs = "separatesPinnedTabs";
+        public const string SeparatesPinnedTabsModifiedAt = "separatesPinnedTabsModifiedAt";
+        public const string SharedProfileId = "sharedProfileID";
         public const string ShowsOutline = "showsOutline";
         public const string ShowsReasons = "showsReasons";
         public const string ShowsRecentTabs = "showsRecentTabs";
@@ -144,6 +151,7 @@ internal static partial class StoredSessionCodec {
         public const string StartupBehavior = "startupBehavior";
         public const string StoredIconMode = "storedIconMode";
         public const string Style = "style";
+        public const string SuccessorSpaceId = "successorSpaceID";
         public const string SuggestionsFollowDefault = "suggestionsFollowDefault";
         public const string SuggestionUrlTemplate = "suggestionURLTemplate";
         public const string Symbol = "symbol";

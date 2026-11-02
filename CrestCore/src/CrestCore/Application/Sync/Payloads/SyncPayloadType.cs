@@ -121,6 +121,21 @@ internal abstract class SyncPayloadType {
         Copy(result, source, timestamp);
     }
 
+    /// Copies `fields` of the object at `member`, and `timestamp`, into
+    /// `result` from whichever of `first` and `second` changed them last,
+    /// leaving the rest of that object as `result` holds it.
+    private static void LatestNestedFields(JsonObject result, JsonObject first, JsonObject second, string timestamp, string member,
+        params string[] fields) {
+        if (SyncRecordStamp.Later(NativeSyncEvaluator.Date(first, timestamp), NativeSyncEvaluator.Date(second, timestamp)) is not { } winner)
+            return;
+        var source = winner == 0 ? first : second;
+        if (source[member] is JsonObject from) {
+            if (result[member] is JsonObject to) Copy(to, from, fields);
+            else result[member] = from.DeepClone();
+        }
+        Copy(result, source, timestamp);
+    }
+
     private static JsonNode? MergeGroups(JsonArray? first, JsonArray? second, int winner) {
         if (first is null || second is null) return (first ?? second)?.DeepClone();
         var preferred = winner == 0 ? first : second;
@@ -160,6 +175,11 @@ internal abstract class SyncPayloadType {
             LatestFields(result, first, second, StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded);
             LatestFields(result, first, second, StoredSessionCodec.Key.CredentialsEnabledModifiedAt, SyncPayload.Key.CredentialsEnabled);
             LatestFields(result, first, second, StoredSessionCodec.Key.AccessPolicyModifiedAt, StoredSessionCodec.Key.AccessPolicy);
+            LatestFields(result, first, second, StoredSessionCodec.Key.MembershipModifiedAt, StoredSessionCodec.Key.PrimarySpaceId,
+                StoredSessionCodec.Key.SharedProfileId);
+            LatestFields(result, first, second, StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, StoredSessionCodec.Key.SeparatesPinnedTabs);
+            LatestNestedFields(result, first, second, StoredSessionCodec.Key.ProtectionModifiedAt, StoredSessionCodec.Key.BrowsingPreferences,
+                StoredSessionCodec.Key.ContentBlockingPolicy, StoredSessionCodec.Key.DataRetention);
             const string groups = StoredSessionCodec.Key.SplitGroups;
             result[groups] = MergeGroups(first[groups] as JsonArray, second[groups] as JsonArray, winner);
         }

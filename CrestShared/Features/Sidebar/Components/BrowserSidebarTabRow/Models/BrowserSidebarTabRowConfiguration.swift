@@ -95,14 +95,14 @@ struct BrowserSidebarTabRowConfiguration {
     /// remain guarded by the live selected Space below.
     var isAvailableForDisplay: Bool {
         guard let spacePresentation else { return isCurrentAndUnlocked }
-        return spacePresentation.isAvailable(matching: assignment) && context.space.tabs.contains(tab.id)
+        return spacePresentation.isAvailable(matching: assignment) && context.space.shownTab(tab.id) != nil
     }
 
     /// Every action this row offers is refused unless the window shows the
     /// Space the row was drawn for, unlocked, with the same profile, and the
     /// Space still holds the tab.
     var isCurrentAndUnlocked: Bool {
-        context.isCurrent(assignment) && context.space.tabs.contains(tab.id)
+        context.isCurrent(assignment) && context.space.shownTab(tab.id) != nil
     }
 
     // MARK: - Initializers

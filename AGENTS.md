@@ -15,6 +15,10 @@ and the pull request template asks the author to confirm that it did.
 `CONTRIBUTING.md` and `Documentation/RepositoryGuardrails.md` remain the base
 contract for setup, validation and change discipline.
 
+Someone who isn't a vetted contributor can have only one pull request open
+at a time (see "Who can contribute code" in `CONTRIBUTING.md`). Keep their
+work in that one pull request.
+
 ## Versioning completed work
 
 - Every committed app-code change advances `MARKETING_VERSION` with

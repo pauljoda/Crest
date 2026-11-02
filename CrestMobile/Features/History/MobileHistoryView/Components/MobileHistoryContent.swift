@@ -26,15 +26,24 @@ struct MobileHistoryContent: View {
             ) {
                 Button("Clear History", role: .destructive, action: clearHistory)
             } message: {
-                Text("History in other Spaces is not affected.")
+                Text(clearingMessage)
             }
         }
+    }
+
+    /// What clearing reaches: the history the Space's whole group shares, or
+    /// the Space's alone.
+    private var clearingMessage: String {
+        guard let members = space?.groupMembers, members.count > 1, let primary = members.first else {
+            return String(localized: "History in other Spaces is not affected.")
+        }
+        return String(localized: "This clears the history \(primary.settings.name) and its Sub-Spaces share.")
     }
 
     @ToolbarContentBuilder
     private var historyToolbar: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
-            if space?.history.entries.isEmpty == false {
+            if space?.groupHistory.isEmpty == false {
                 Button("Clear", role: .destructive) { confirmsClear = true }
             }
         }

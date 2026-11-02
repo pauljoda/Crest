@@ -35,14 +35,17 @@ Most browsers put every login, tab, and distraction into one long-lived containe
 
 Switching Spaces changes more than the color of the window. It changes the browsing context.
 
+When several Spaces should share one set of sign-ins, make them **Sub-Spaces**: each keeps its own tabs and look while the group shares cookies, history, passwords, and extensions. [Read the Sub-Spaces guide.](https://crestbrowser.com/guides/sub-spaces/)
+
 ## Two engines on Mac
 
-Crest for Mac opens pages in **Chromium** by default. Its engine is built on
-[ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium),
-with Google integrations removed, and runs Chrome Web Store extensions. Any
-website or page can open in **WebKit** instead, which adds Reader, whole-page
-translation, built-in content blocking, and FairPlay video. When a page needs
-protected video, Crest switches to WebKit automatically, respecting any
+Crest for Mac opens pages in **Chromium** by default. Its engine is Chromium
+with Crest's privacy changes, which keep your browsing, form and account data
+away from Google, and runs Chrome Web Store extensions. Any website or page can
+open in **WebKit** instead, which adds Reader, whole-page translation, built-in
+content blocking, and FairPlay video. Chromium plays Widevine video; Netflix,
+Disney+, Max and Prime Video open in WebKit, and a page that needs protected
+video Chromium can't play switches to WebKit automatically, respecting any
 unsaved-changes prompt before moving it. Choose the default engine and
 per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine
@@ -195,7 +198,8 @@ reproducible bugs and concrete tracked outcomes. Security concerns belong in a
 never a public post. [SUPPORT.md](SUPPORT.md) explains each route in detail.
 
 Crest is one of several open source projects built by Paul Davis. You can
-support the work through [Ko-fi](https://ko-fi.com/pauljoda/tiers) or
+support the work through [Ko-fi](https://ko-fi.com/pauljoda/tiers),
+[Patreon](https://www.patreon.com/CrestBrowser) or
 [GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not
 buy roadmap priority or private access.
 
@@ -209,10 +213,12 @@ Paul's open source projects. Sponsors can be recognized in the public
 - **Sustainer — $10/month:** higher placement with an optional approved link.
 - **Supporter — $3/month:** name in the public roll.
 
-Recognition is optional. A listing is a thank-you, not an endorsement or a way
-to buy roadmap priority, private support, or project ownership. See the
-[membership tiers on Ko-fi](https://ko-fi.com/pauljoda/tiers) to become a
-monthly sponsor.
+Every level can also have a sponsor flair on
+[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Recognition is
+optional. A listing is a thank-you, not an endorsement or a way to buy roadmap
+priority, private support, or project ownership. See the membership tiers on
+[Ko-fi](https://ko-fi.com/pauljoda/tiers) or
+[Patreon](https://www.patreon.com/CrestBrowser) to become a monthly sponsor.
 
 ## AI usage
 
@@ -247,10 +253,13 @@ there are some areas that desperately need help.
 - **Security:** I have some background in cyber security, mainly red team/blue team and some as a dev, so I welcome any and all security audits and improvements. Please report findings through the built-in security reporting.
 - **Engine guru:** if you have lots of experience with Chromium and browser engines in general, I would love any input or help.
 
-While those are the larger needed roles, anyone is free to contribute. Please
-follow the guidelines and make sure your work is well done and aligns with the
-product. If you have a more drastic change, you can always fork it to try it
-out, then share it to see whether it would be a good fit to merge in.
+Anyone can have one pull request open at a time. To open more, become a
+vetted contributor: read
+[Who can contribute code](CONTRIBUTING.md#who-can-contribute-code) and message
+me on [Discord](https://discord.gg/gjrM5qMB6x). Please follow the guidelines and make sure your
+work is well done and aligns with the product. If you have a more drastic
+change, you can always fork it to try it out, then share it to see whether it
+would be a good fit to merge in.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline,
 [GOVERNANCE.md](GOVERNANCE.md) for project ownership, and the

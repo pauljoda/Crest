@@ -120,7 +120,7 @@ struct MobileBrowserCommandController {
     /// Shows the tab a numbered command leads to, in the Space this window shows.
     @discardableResult
     func selectNumberedTab(_ tabID: UUID) -> UUID? {
-        guard browser.shownSpace?.tabs.model(tabID) != nil else { return nil }
+        guard browser.shownSpace?.shownTab(tabID) != nil else { return nil }
         return selectTab(tabID)
     }
 

@@ -226,9 +226,13 @@ Crest can run more than one engine at a time.
 - Each page belongs to one engine. Capabilities are read from the page's
   engine, not the app's, so the UI offers Reader on a WebKit page and
   extensions on a Chromium page.
-- A Space is one profile on every engine. The profile's Chromium directory and
-  its WebKit website data store share the profile's identifier. Deleting the
-  Space erases both, and the locked-Space gate covers both.
+- A Space browses with one profile on every engine: its own, or, as a
+  Sub-Space, its primary's. Every Space keeps a profile of its own that no
+  other Space has, and sync carries only that one. The profile's Chromium
+  directory and its WebKit website data store share the profile's identifier.
+  Deleting a Space erases its own profile and the one it browses with, unless
+  a Space that stays browses with it, and the locked-Space gate covers every
+  Space of a profile.
 - Clearing one site's data, or a time range's, asks every registered engine
   for its part, started or not, and succeeds only when each erased all of it.
   A site is its registrable domain, with what its third parties stored
@@ -264,9 +268,13 @@ address.
 
 ### Protected media fallback
 
-Crest's Chromium has no Widevine. WebKit plays FairPlay through the system's
-own content decryption, so a page whose video needs DRM can move to WebKit.
-Crest licenses nothing for this: it uses the platform's WebKit.
+Crest's Chromium plays Widevine once its module has downloaded, but not for
+services that require Widevine's verified media path, which only Google
+Chrome's signature carries; `ProtectedMediaService` names those, and their
+sites open in WebKit unless the person chose an engine. WebKit plays FairPlay
+through the system's own content decryption, so a page whose video needs a key
+system Chromium lacks can also move to WebKit. Crest licenses nothing for this:
+it uses the platform's WebKit.
 
 1. A page asks for a key system Chromium cannot provide. The Chromium binding
    reports `ProtectedMediaUnavailable(page, keySystem)`.

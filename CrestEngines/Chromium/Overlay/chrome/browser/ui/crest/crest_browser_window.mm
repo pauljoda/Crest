@@ -840,6 +840,11 @@ ui::AcceleratorProvider* CrestBrowserWindow::GetAcceleratorProvider() {
   return nullptr;
 }
 
+// Crest's toolbar is its own, so this window pins no Chromium toolbar actions.
+PinnedToolbarActions* CrestBrowserWindow::GetPinnedToolbarActions() {
+  return nullptr;
+}
+
 void CrestBrowserWindow::SetFocusToLocationBar(bool is_user_initiated) {
   [crest::MacUI() focusLocation];
 }

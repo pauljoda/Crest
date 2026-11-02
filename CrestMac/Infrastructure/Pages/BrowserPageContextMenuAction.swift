@@ -54,7 +54,8 @@ struct BrowserPageContextMenuAction {
 
     // MARK: - Actions - Rows
 
-    /// Opens `linkURL` in `space`, another Space of the window.
+    /// Opens `linkURL` in a Quick Window in the session of `space`, another
+    /// Space of the window. Keep moves it into that Space as a tab.
     @MainActor static func space(_ space: SpaceModel, opening linkURL: URL) -> BrowserPageContextMenuAction {
         let id = space.id
         return BrowserPageContextMenuAction(
@@ -63,8 +64,7 @@ struct BrowserPageContextMenuAction {
         ) { page, _, source in
             guard let space = page.linkDestinationHost.otherSpaces(from: source).first(where: { $0.id == id })
             else { return false }
-            return page.linkDestinationHost.openLink(
-                linkURL, from: source, in: BrowserSpaceRuntimeAssignment(space: space))
+            return page.openInQuickWindow(linkURL, in: space)
         }
     }
 
@@ -115,7 +115,7 @@ protocol BrowserPageContextMenuHost: AnyObject {
 }
 
 /// Crest's rows in an engine's context menu for one page: the other Spaces a
-/// link opens in grouped under one row, then the page's own rows, ahead of the
+/// link opens in grouped under one row, a separator between their groups, then the page's own rows, ahead of the
 /// engine's rows. A row runs only while the page's view is still in the window
 /// the menu opened in.
 @MainActor
@@ -167,11 +167,17 @@ struct BrowserPageContextMenu {
         var items: [NSMenuItem] = []
         let spaceActions = actions.filter(\.isSpaceDestination)
         if !spaceActions.isEmpty {
-            let group = NSMenuItem(
-                title: String(localized: "Open Link in Another Space"), action: nil, keyEquivalent: "")
+            let group = NSMenuItem(title: String(localized: "Open Link in"), action: nil, keyEquivalent: "")
             group.image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: nil)
             let submenu = NSMenu()
-            for action in spaceActions { submenu.addItem(item(for: action)) }
+            for (index, action) in spaceActions.enumerated() {
+                // The Spaces of one group browse with one profile; a separator
+                // stands where the next group begins.
+                if index > 0, action.space?.profileID != spaceActions[index - 1].space?.profileID {
+                    submenu.addItem(.separator())
+                }
+                submenu.addItem(item(for: action))
+            }
             group.submenu = submenu
             items.append(group)
         }

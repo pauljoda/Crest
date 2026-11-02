@@ -9,6 +9,16 @@ enum CrestSpaceIconPickerMetrics {
     static let trackFillOpacity = CrestOpacity.hover
     static let trackBorderOpacity = CrestOpacity.border
     static let selectionFillOpacity = 0.20
+    static let selectionStroke: CGFloat = 1.5
+    /// A group's outline: half the selection's fill, the selection's stroke,
+    /// and the selection set inside it by the track's padding.
+    static let groupOutlineFillOpacity = selectionFillOpacity / 2
+    static let groupOutlineStroke: CGFloat = selectionStroke
+    /// How far the selection's and a group's strokes move from the Space's
+    /// colour toward the reading colour, so they hold against a backdrop of
+    /// the same hue.
+    static let strokeLift: CGFloat = 0.3
+    static let groupSelectionInset: CGFloat = trackPadding
     static let overflowButtonWidth: CGFloat = 28
 }
 

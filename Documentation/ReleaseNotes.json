@@ -4590,6 +4590,158 @@
       "category": "internal",
       "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
     },
+    "browser-window-focus-redraw": {
+      "category": "improved",
+      "message": "On Mac, a browser window responds sooner when an alert closes and when the window comes back to the front."
+    },
+    "sub-spaces": {
+      "category": "new",
+      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
+    },
+    "sub-spaces-pinned-tabs": {
+      "category": "new",
+      "message": "The Spaces of a group show their primary's pinned tabs, and one pinned tab opens the same page in each. Turn on Separate Pinned Tabs for each to show its own."
+    },
+    "sub-spaces-delete-and-lock": {
+      "category": "new",
+      "message": "Deleting a Space that leads Sub-Spaces asks which of them keeps the group, with its sign-ins, history, passwords and pinned tabs, or deletes the whole group. Locking any Space of a group locks the group."
+    },
+    "open-link-in-space": {
+      "category": "new",
+      "message": "Open Link in opens a link in a Quick Window in another Space's session, and Site Controls can open the current page in another Space, for the same site under another account. Keep moves it into that Space."
+    },
+    "sub-spaces-import-groups": {
+      "category": "new",
+      "message": "Importing from Arc brings the Spaces of one Arc profile as one group, and importing from Zen brings a profile's workspaces as one. The review outlines each group and can bring a Space in on its own."
+    },
+    "sub-spaces-older-devices": {
+      "category": "improved",
+      "message": "Devices that run an earlier Crest keep syncing and show each Sub-Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices."
+    },
+    "sub-spaces-group-records": {
+      "category": "internal",
+      "message": "A Space keeps its own profile while it browses with its group's, so separating it brings its own data back. Site permission choices, saved passwords, history and protection settings are kept for the group, and deleting a Sub-Space erases only what is its own."
+    },
+    "space-picker-stronger-selection": {
+      "category": "improved",
+      "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    },
+    "import-keeps-shared-sessions": {
+      "category": "improved",
+      "message": "Importing from Arc or Zen keeps Spaces that shared sign-ins together. When one of them joins a Space you already have, the rest become Sub-Spaces of that Space's group, Zen workspaces that share a container come in as a group of their own, and imported passwords are saved once for the group."
+    },
+    "import-review-smoother": {
+      "category": "improved",
+      "message": "Moving between Spaces in setup's import review is smoother, setup's animations are quicker, and each Space in a group shows which group it joins, with room for Separate."
+    },
+    "sub-space-switch-keeps-shared": {
+      "category": "improved",
+      "message": "Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move."
+    },
+    "chromium-plain-156-privacy": {
+      "category": "improved",
+      "message": "Chromium is updated to 156 and now built from Chromium itself with Crest's privacy changes. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, protected video and your extensions up to date."
+    },
+    "chromium-widevine-video": {
+      "category": "new",
+      "message": "Chromium plays protected video that uses Widevine. Netflix, Disney+, Max and Prime Video open in WebKit, which plays them with FairPlay, unless you choose an engine for them."
+    },
+    "chromium-third-party-cookies": {
+      "category": "improved",
+      "message": "Chromium allows third-party cookies as Chrome does, except in private windows, so embedded sign-ins and payments work."
+    },
+    "chromium-webrtc-udp": {
+      "category": "fixed",
+      "message": "Calls in Chromium can use UDP again, so they connect faster and sound better, while sites still can't see your device's local network addresses."
+    },
+    "media-widget-ignores-previews": {
+      "category": "fixed",
+      "message": "The sidebar's media controls and Now Playing keep showing what you play when a site previews another video under the pointer, as YouTube does on thumbnails."
+    },
+    "sub-space-pinned-drag": {
+      "category": "fixed",
+      "message": "Dragging a pinned tab in a Space whose group shares its pinned tabs works again: the tile lifts under the pointer, the other pins move aside, and it lands where you let go."
+    },
+    "drag-preview-under-pointer-at-screen-top": {
+      "category": "fixed",
+      "message": "A pinned tab you drag stays under the pointer when the window sits at the top of the screen, instead of drawing a row or two below it."
+    },
+    "sidebar-folder-cleanup": {
+      "category": "improved",
+      "message": "Sidebar folders indent the tabs and folders they hold, a closed folder is as tall as a tab, tabs deep in nested folders keep rounded corners, and opening a folder that holds open folders slides its contents in smoothly."
+    },
+    "nested-folder-opening-smooth": {
+      "category": "fixed",
+      "message": "Opening a folder inside another folder slides its contents in smoothly instead of showing them all at once."
+    },
+    "folder-opens-without-jump": {
+      "category": "fixed",
+      "message": "Opening a folder no longer makes the rows below it jump up for a moment before it slides open."
+    },
+    "drag-previews-true-to-row": {
+      "category": "fixed",
+      "message": "A tab dragged out of a folder keeps its icon and title in place, and dragging several pinned tabs a Sub-Space shares with its group shows them under the pointer."
+    },
+    "touch-folder-height": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a closed folder is as tall as a tab, and its whole row still opens it."
+    },
+    "selected-folder-tabs-drag-in-place": {
+      "category": "fixed",
+      "message": "Dragging several selected tabs keeps the icon and title of each tab from inside a folder in place as they lift."
+    },
+    "closing-folder-click-through": {
+      "category": "fixed",
+      "message": "A click on a folder that is closing reaches the row sliding up in its place instead of a tab inside the folder."
+    },
+    "selection-split-other-space": {
+      "category": "fixed",
+      "message": "Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them."
+    },
+    "mobile-floating-new-tab": {
+      "category": "new",
+      "message": "On iPhone and iPad, a New Tab button floats at the bottom of the sidebar beside the sidebar button, so a new tab is always a tap away."
+    },
+    "sub-space-shared-pin-page": {
+      "category": "fixed",
+      "message": "Switching between Sub-Spaces that show the same pinned tab keeps its page on screen instead of leaving it blank, and with extensions pinned, the pinned tabs stay still as you switch."
+    },
+    "address-field-loading-indicator": {
+      "category": "improved",
+      "message": "Pages show their loading progress as a stronger fill in the address field, and the thin loading line along the top of the page on Mac is gone."
+    },
+    "smaller-mac-windows": {
+      "category": "improved",
+      "message": "Browser windows on Mac resize much smaller, so two fit side by side on a laptop screen, and the pinned tabs keep their place in a short window."
+    },
+    "mobile-page-zoom-fit": {
+      "category": "fixed",
+      "message": "Zooming a page out on iPhone and iPad fits it to the window instead of leaving a blank band down the side."
+    },
+    "duo-top-bar-controls": {
+      "category": "improved",
+      "message": "On iPhone Duo held upright, the page and Space controls move into the bar across the top, leaving the sidebar more room, and the controls that don't fit fold into a menu, Settings first. Back and Forward always show on iPhone and iPad, dimmed until there is somewhere to go."
+    },
+    "duo-top-bar-keyboard": {
+      "category": "fixed",
+      "message": "On iPhone Duo held upright, the controls stay in the top bar while the keyboard is open."
+    },
+    "chromium-update-deps-conditions": {
+      "category": "internal",
+      "message": "Automatic Chromium updates read only the CIPD packages that apply to the Mac build, and versions that DEPS keeps in a file, so the Chromium 157 update can prepare its source."
+    },
+    "chromium-lens-menu-crash": {
+      "category": "fixed",
+      "message": "Choosing Google Lens from a page's right-click menu on Mac no longer quits Crest. Lens isn't offered there any more, and images keep their plain image search."
+    },
+    "chromium-restore-history-crash": {
+      "category": "fixed",
+      "message": "Going back to a restored tab on Mac no longer quits Crest when that tab's page never finished opening, such as one that turned into a download or that you stopped."
+    },
+    "sub-space-switch-steady-pins": {
+      "category": "fixed",
+      "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
+    },
     "quick-window-site-permission-prompts": {
       "category": "fixed",
       "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."

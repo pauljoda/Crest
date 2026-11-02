@@ -28,6 +28,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
     var selectedTabID: UUID?
     var loadedTabIDs: Set<UUID> = []
     @State private var landedFrame: CGRect?
+    @State private var landedIndent: CGFloat?
     @State private var previewOpacity = 1.0
     @State private var stackHasGathered = false
 
@@ -74,6 +75,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
         .onChange(of: lift.landing, initial: true) { _, landing in
             guard let landing else {
                 landedFrame = nil
+                landedIndent = nil
                 previewOpacity = 1
                 return
             }
@@ -93,6 +95,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 completionCriteria: .removed
             ) {
                 landedFrame = landing.frame
+                landedIndent = landing.contentIndent
             } completion: {
                 onLandingArrived(landing.id)
             }
@@ -133,7 +136,8 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 rowWidth: rowWidth,
                 pinnedSize: pinnedSize,
                 isSelected: tab.id == selectedTabID,
-                isLoaded: loadedTabIDs.contains(tab.id)
+                isLoaded: loadedTabIDs.contains(tab.id),
+                contentIndent: landedIndent ?? lift.contentIndent
             )
         case .folder(let folder, let rows):
             BrowserFolderDragPreview(
@@ -190,7 +194,8 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 targetShape: lift.shape == .pinnedTile ? .pinnedTile : .row,
                 progress: lift.shape == .pinnedTile ? 1 : 0,
                 rowWidth: rowWidth, pinnedSize: pinnedSize,
-                isSelected: tab.id == selectedTabID, isLoaded: loadedTabIDs.contains(tab.id))
+                isSelected: tab.id == selectedTabID, isLoaded: loadedTabIDs.contains(tab.id),
+                contentIndent: row.contentIndent)
         }
     }
 }

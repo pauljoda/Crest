@@ -4,9 +4,10 @@ using CrestCore.Domain;
 namespace CrestCore.Contracts;
 
 /// Removes a Space whose deletion `OperationId` began, once the platform has
-/// erased its profile's data, and saves that before it returns. The Space
-/// that takes its place becomes the launch Space when it was one, and the
-/// window that asked moves there when it showed the removed one.
+/// erased the data its deletion erases, and saves that before it returns. The
+/// Space that takes its place becomes the launch Space when it was one, and
+/// the window that asked moves there when it showed the removed one; the
+/// Sub-Spaces of a primary that goes stay together, led by the first of them.
 public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid OperationId)
     : SessionIntent(WorkspaceId) {
     #region Actions - Session
@@ -19,7 +20,8 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
         if (pending is null || pending.Id != OperationId) throw new Rejected(new WrongDeletionOperation(space.Id));
         SessionState.RequireRemovable(turn.Basis.Spaces.Count);
         var index = turn.Basis.Spaces.ToList().IndexOf(space);
-        IReadOnlyList<SpaceState> spaces = [.. turn.Basis.Spaces.Where(candidate => candidate.Id != space.Id)];
+        var remaining = turn.Basis.SpaceDeletions.Where(deletion => deletion != pending).Select(deletion => deletion.SpaceId).ToHashSet();
+        var spaces = SpaceGroup.Regrouped([.. turn.Basis.Spaces.Where(candidate => candidate.Id != space.Id)], remaining);
         var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Id;
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (followUp.Window?.ShownSpaceId == space.Id) followUp.ShowSpace(neighbor);
@@ -34,15 +36,19 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
 
     #region Actions - Routing
 
-    /// A Space's deletion finishes only once this run erased its profile's
-    /// data on every registered engine; a Space the session no longer holds is
-    /// the session's to refuse. A deleted Space leaves nothing in this device's
-    /// link or agent preferences.
+    /// A Space's deletion finishes only once this run erased, on every
+    /// registered engine, the data of each profile its deletion erases; a
+    /// Space the session no longer holds is the session's to refuse. A deleted
+    /// Space leaves nothing in this device's link, agent or site preferences,
+    /// except the site choices a primary kept for the group it handed over,
+    /// which its successor keeps.
     internal override void Commit(CrestApp app, ChangeFeed changes) {
-        if (app.Device.Workspace(WorkspaceId).Current.Space(SpaceId) is { } space
-            && !app.DataDeletions.Erased(space.ProfileId))
-            throw new Rejected(new SpaceDataNotErased(space.Id));
+        var deletion = app.Device.Workspace(WorkspaceId).Current.PendingDeletion(SpaceId);
+        if (deletion is not null && deletion.Erasing.Any(profile => !app.DataDeletions.Erased(profile)))
+            throw new Rejected(new SpaceDataNotErased(SpaceId));
         base.Commit(app, changes);
+        if (deletion?.SuccessorId is { } successor) app.Device.HandOverSitePermissions(SpaceId, successor, changes);
+        app.Device.ForgetSitePermissions(SpaceId, changes);
         app.Device.ForgetLinks(SpaceId, changes);
         app.Device.ForgetAgents(SpaceId, changes);
     }

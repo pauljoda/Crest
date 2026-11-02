@@ -15,7 +15,7 @@ Agents are off until you turn them on.
 
 1. Open **Settings > Agents**.
 2. Turn on **Allow agents to use Crest**.
-3. Under **Spaces**, turn on each Space agents may use.
+3. Under **Spaces**, turn on each Space agents may use. Turning on a Space of a [Sub-Space](../spaces/sub-spaces.md) group turns on the whole group.
 4. Under **Connect an Agent**, choose **Copy Setup** for your agent, and paste it in your agent's terminal or settings.
 
 Crest must be open while an agent works. Before an agent opens a window, Crest asks you; you can let it open windows without asking until it disconnects, except private windows, which Crest always asks about.

@@ -45,11 +45,17 @@ internal sealed class SyncWireField {
     public static readonly SyncWireField LastVisitedAt = new(StoredSessionCodec.Key.LastVisitedAt, Kinds.Timestamp);
     public static readonly SyncWireField CredentialsEnabledModifiedAt = new(StoredSessionCodec.Key.CredentialsEnabledModifiedAt, Kinds.Timestamp);
     public static readonly SyncWireField AccessPolicyModifiedAt = new(StoredSessionCodec.Key.AccessPolicyModifiedAt, Kinds.Timestamp);
+    public static readonly SyncWireField SharedProfileId = new(StoredSessionCodec.Key.SharedProfileId, Kinds.Identity);
+    public static readonly SyncWireField MembershipModifiedAt = new(StoredSessionCodec.Key.MembershipModifiedAt, Kinds.Timestamp);
+    public static readonly SyncWireField SeparatesPinnedTabsModifiedAt =
+        new(StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, Kinds.Timestamp);
+    public static readonly SyncWireField ProtectionModifiedAt = new(StoredSessionCodec.Key.ProtectionModifiedAt, Kinds.Timestamp);
 
     public static IReadOnlyList<SyncWireField> All { get; } = [
         Id, RawValue, ProfileId, SpaceId, DeviceId, FolderId, ParentId, OrderAnchorTabId, SplitGroupId, LastActivatedAt,
         PositionModifiedAt, TitleModifiedAt, SavedTabsExpansionModifiedAt, CollapseModifiedAt, IconModifiedAt, TintModifiedAt,
-        ArchivedAt, DeletedAt, FirstVisitedAt, LastVisitedAt, CredentialsEnabledModifiedAt, AccessPolicyModifiedAt
+        ArchivedAt, DeletedAt, FirstVisitedAt, LastVisitedAt, CredentialsEnabledModifiedAt, AccessPolicyModifiedAt, SharedProfileId,
+        MembershipModifiedAt, SeparatesPinnedTabsModifiedAt, ProtectionModifiedAt
     ];
 
     /// Every member by its key, since every field of every compared record

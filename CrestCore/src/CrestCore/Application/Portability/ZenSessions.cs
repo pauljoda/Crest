@@ -12,8 +12,10 @@ namespace CrestCore.Application;
 /// Zen keeps a split view as a group of its own, which is no folder: a pinned
 /// tab in one is saved in the folder holding the split, or outside any folder
 /// for a split among the Space's pinned tabs, and the split comes along as a
-/// split of its tabs. A Space's icon is one of Zen's own, read as the SF
-/// Symbol that draws the same thing, or an emoji.
+/// split of its tabs. The Spaces share the profile's session and come in as
+/// one group, and those that open their tabs in one container share that
+/// container's and come in as a group of their own. A Space's icon is one of
+/// Zen's own, read as the SF Symbol that draws the same thing, or an emoji.
 internal static class ZenSessions {
     #region Static Variables
 
@@ -114,6 +116,11 @@ internal static class ZenSessions {
     };
     private const string UntitledFolder = "Untitled Folder";
     private const double DefaultOpacity = 0.65;
+    /// The group of the workspaces that share the profile's session.
+    private const string SharedSession = "profile";
+    /// The group of the workspaces that open their tabs in one container, by
+    /// its number.
+    private const string ContainerSession = "container:";
 
     #endregion
 
@@ -167,8 +174,12 @@ internal static class ZenSessions {
                     spaceTabs.Add(decoded);
             var theme = ImportJson.Member(space, "theme");
             var colors = Colors(theme);
+            // The workspaces of one profile share its session, and those that
+            // open their tabs in one container share that container's.
+            var container = ImportJson.Integer(ImportJson.Member(space, "containerTabId"));
             drafts.Add(new SessionDraft(index + 1, name, spaceFolders, spaceTabs, Icon(ImportJson.Text(ImportJson.Member(space, "icon"))),
-                colors.Count == 0 ? SpaceAccent.Indigo : SpaceAccent.Nearest(colors[0]), Look(colors, theme)));
+                colors.Count == 0 ? SpaceAccent.Indigo : SpaceAccent.Nearest(colors[0]), Look(colors, theme),
+                Group: container is > 0 ? ContainerSession + container.Value.ToString(CultureInfo.InvariantCulture) : SharedSession));
         }
         return drafts;
     }

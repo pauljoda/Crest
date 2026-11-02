@@ -181,7 +181,7 @@ extension MobileBrowserRootModel {
 
 extension MobileBrowserRootModel {
     func selectTab(_ id: UUID) {
-        guard let space = browser.shownSpace, !spaceAccess.isLocked(space), let tab = space.tabs.model(id) else {
+        guard let space = browser.shownSpace, !spaceAccess.isLocked(space), let tab = space.shownTab(id) else {
             return
         }
         if settings.destination(for: tab) == .settings {
@@ -470,7 +470,7 @@ extension MobileBrowserRootModel {
     /// Settings tab opens Settings instead, as a tap on it does.
     private func showInPlace(_ tabID: UUID) {
         guard tabID != browser.shownTab?.id, let space = browser.shownSpace, !spaceAccess.isLocked(space),
-            let tab = space.tabs.model(tabID)
+            let tab = space.shownTab(tabID)
         else { return }
         if settings.destination(for: tab) == .settings {
             presentSettings(

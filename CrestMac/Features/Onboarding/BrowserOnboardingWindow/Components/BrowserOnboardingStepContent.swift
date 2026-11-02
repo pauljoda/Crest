@@ -40,7 +40,7 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
         BrowserOnboardingLookPage(
             look: flow.look,
             choose: { look in
-                withAnimation(motion(CrestMotion.onboardingBackdrop)) { flow.chooseLook(look) }
+                withAnimation(motion(CrestMotion.onboardingProgress)) { flow.chooseLook(look) }
             },
             back: back,
             continueSetup: continueSetup

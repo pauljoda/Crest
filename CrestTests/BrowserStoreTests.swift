@@ -234,12 +234,12 @@ private final class RecordingSpaceDataDeleter: BrowserSpaceDataDeleting {
         self.error = error
     }
 
-    func deleteData(for space: BrowserSpaceRuntimeAssignment) async throws {
-        deletedSpaces.append(space)
+    func deleteData(for deletion: SpaceDeletionState) async throws {
+        deletedSpaces.append(BrowserSpaceRuntimeAssignment(spaceID: deletion.spaceID, profileID: deletion.profileID))
         if let error {
             throw error
         }
-        try await core.eraseProfile(of: space)
+        try await core.eraseProfiles(of: deletion)
     }
 }
 

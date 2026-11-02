@@ -1,0 +1,57 @@
+# Crest: Manifest V2 extensions keep loading and running, without Chromium's
+# deprecation warnings. Adapted from ungoogled-chromium's
+# extensions-manifestv2.patch (BSD-3-Clause; see ThirdParty/Chromium-LICENSE.txt).
+
+--- a/extensions/browser/manifest_v2_handler.cc
++++ b/extensions/browser/manifest_v2_handler.cc
+@@ -109,12 +109,8 @@
+ 
+ // Returns true if legacy extensions should be disabled.
+ bool ShouldDisableLegacyExtensions() {
+-  if (g_allow_mv2_for_testing) {
+-    // We allow legacy MV2 extensions for testing purposes.
+-    return false;
+-  }
+-
+-  return true;
++  // Crest keeps Manifest V2 extensions working.
++  return false;
+ }
+ 
+ }  // namespace
+--- a/extensions/common/extension.cc
++++ b/extensions/common/extension.cc
+@@ -97,12 +97,7 @@
+   // Supported versions are always safe.
+   if (manifest_version >= kMinimumSupportedManifestVersion &&
+       manifest_version <= kMaximumSupportedManifestVersion) {
+-    // Emit a warning for unpacked extensions on Manifest V2 warning that
+-    // MV2 is deprecated.
+-    if (type == Manifest::Type::kExtension && manifest_version == 2 &&
+-        Manifest::IsUnpackedLocation(location)) {
+-      *warning = errors::kManifestV2IsDeprecatedWarning;
+-    }
++    // Crest keeps Manifest V2, so unpacked ones carry no deprecation warning.
+     return true;
+   }
+ 
+--- a/chrome/browser/extensions/api/developer_private/extension_info_generator.cc
++++ b/chrome/browser/extensions/api/developer_private/extension_info_generator.cc
+@@ -897,16 +897,7 @@
+         toolbar_actions_model->IsActionPinned(extension.id());
+   }
+ 
+-  // MV2 deprecation.
+-  ManifestV2Handler* mv2_handler = ManifestV2Handler::Get(profile);
+-  CHECK(mv2_handler);
+-  info.is_affected_by_mv2_deprecation =
+-      mv2_handler->IsExtensionAffected(extension);
+-  if (info.web_store_url.length() > 0) {
+-    info.recommendations_url =
+-        extension_urls::GetNewWebstoreItemRecommendationsUrl(extension.id())
+-            .spec();
+-  }
++  // Crest keeps Manifest V2, so no extension is marked for its deprecation.
+ 
+   info.can_upload_as_account_extension =
+       AccountExtensionTracker::Get(profile)->CanUploadAsAccountExtension(

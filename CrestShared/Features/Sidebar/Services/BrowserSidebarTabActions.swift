@@ -95,6 +95,6 @@ struct BrowserSidebarTabActions {
         guard
             let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
         else { return false }
-        return space.tabs.model(tabID) != nil
+        return space.shownTab(tabID) != nil
     }
 }

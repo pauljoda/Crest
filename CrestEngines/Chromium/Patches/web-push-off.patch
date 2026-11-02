@@ -1,0 +1,68 @@
+# Crest: Web Push subscriptions fail at once. Chromium's push service is
+# Google's GCM, which gives the browser a persistent device identity.
+
+--- a/chrome/browser/push_messaging/push_messaging_service_impl.cc
++++ b/chrome/browser/push_messaging/push_messaging_service_impl.cc
+@@ -1014,57 +1014,11 @@
+         blink::mojom::PushRegistrationStatus::PERMISSION_DENIED);
+     return;
+   }
+-
+-  std::string application_server_key_string(
+-      options->application_server_key.begin(),
+-      options->application_server_key.end());
+-
+-  // TODO(peter): Move this check to the renderer process & Mojo message
+-  // validation once the flag is always enabled, and remove the
+-  // |render_process_id| and |render_frame_id| parameters from this method.
+-  if (!push_messaging::IsVapidKey(application_server_key_string)) {
+-    content::RenderFrameHost* render_frame_host =
+-        content::RenderFrameHost::FromID(render_process_id, render_frame_id);
+-    if (base::FeatureList::IsEnabled(
+-            features::kPushMessagingDisallowSenderIDs)) {
+-      if (render_frame_host) {
+-        render_frame_host->AddMessageToConsole(
+-            blink::mojom::ConsoleMessageLevel::kError,
+-            kSenderIdRegistrationDisallowedMessage);
+-      }
+-      SubscribeEndWithError(
+-          std::move(register_callback),
+-          blink::mojom::PushRegistrationStatus::UNSUPPORTED_GCM_SENDER_ID);
+-      return;
+-    } else if (render_frame_host) {
+-      render_frame_host->AddMessageToConsole(
+-          blink::mojom::ConsoleMessageLevel::kWarning,
+-          kSenderIdRegistrationDeprecatedMessage);
+-    }
+-  }
+-
+-  IncreasePushSubscriptionCount(1, true /* is_pending */);
+-
+-  // Set time to live for GCM registration
+-  base::TimeDelta ttl = base::TimeDelta();
+-
+-  if (base::FeatureList::IsEnabled(
+-          features::kPushSubscriptionWithExpirationTime)) {
+-    app_identifier.set_expiration_time(
+-        base::Time::Now() + kPushSubscriptionExpirationPeriodTimeDelta);
+-    DCHECK(app_identifier.expiration_time());
+-    ttl = kPushSubscriptionExpirationPeriodTimeDelta;
+-  }
+-
+-  GetInstanceIDDriver()
+-      ->GetInstanceID(app_identifier.app_id())
+-      ->GetToken(
+-          push_messaging::NormalizeSenderInfo(application_server_key_string),
+-          kGCMScope, ttl, {} /* flags */,
+-          base::BindOnce(&PushMessagingServiceImpl::DidSubscribe,
+-                         weak_factory_.GetWeakPtr(), app_identifier,
+-                         application_server_key_string,
+-                         std::move(register_callback)));
++  // Crest: a subscription would register this browser with Google's GCM,
++  // which issues it a persistent device identity, so none is made.
++  SubscribeEndWithError(
++      std::move(register_callback),
++      blink::mojom::PushRegistrationStatus::SERVICE_NOT_AVAILABLE);
+ }
+ 
+ void PushMessagingServiceImpl::SubscribeEnd(

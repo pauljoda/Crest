@@ -61,10 +61,10 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
             self.core = core
             self.action = action
         }
-        func deleteData(for space: BrowserSpaceRuntimeAssignment) async throws {
-            calls.append(space.spaceID)
-            try action(space)
-            try await core.eraseProfile(of: space)
+        func deleteData(for deletion: SpaceDeletionState) async throws {
+            calls.append(deletion.spaceID)
+            try action(BrowserSpaceRuntimeAssignment(spaceID: deletion.spaceID, profileID: deletion.profileID))
+            try await core.eraseProfiles(of: deletion)
         }
     }
 

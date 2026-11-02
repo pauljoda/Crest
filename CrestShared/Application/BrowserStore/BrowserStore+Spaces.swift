@@ -17,15 +17,19 @@ extension BrowserStore {
     }
 
     /// Deletes a Space in two steps the core saves before each returns: the
-    /// deletion begins, the platform erases the profile's data and its
-    /// passwords, then the Space goes. A relaunch resumes a deletion that
-    /// began, with the operation it recorded. Throws the rule the core applied
-    /// or why erasing failed; the Space is then kept.
+    /// deletion begins, the platform erases the data of the profiles it
+    /// erases and the Space's passwords, then the Space goes. A primary that
+    /// leads Sub-Spaces hands its group to `newPrimaryID`, one of them, or to
+    /// the first, which takes the group's passwords before the primary's are
+    /// erased. A relaunch resumes a deletion that began, with the operation it
+    /// recorded. Throws the rule the core applied or why erasing failed; the
+    /// Space is then kept.
     func deleteSpace(
         _ id: UUID,
+        newPrimaryID: UUID? = nil,
         dataDeleter: any BrowserSpaceDataDeleting
     ) async throws {
-        guard let space = spaceModel(id).map(BrowserSpaceRuntimeAssignment.init(space:)) else {
+        guard spaceModel(id) != nil else {
             throw BrowserSpaceDeletionError.missingSpace
         }
         guard family.beginDeletingSpace(id) else {
@@ -37,10 +41,16 @@ extension BrowserStore {
         try family.commit(
             BeginDeletingSpace(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: id,
-                operationID: operationID),
+                operationID: operationID, newPrimaryID: newPrimaryID),
             from: self)
+        guard let deletion = workspaceModel?.spaceDeletions.first(where: { $0.spaceID == id }) else {
+            throw BrowserSpaceDeletionError.missingSpace
+        }
 
-        try await dataDeleter.deleteData(for: space)
+        if let successorID = deletion.successorID {
+            try await credentialVault.copyAll(from: id, to: successorID)
+        }
+        try await dataDeleter.deleteData(for: deletion)
         try await credentialVault.deleteAll(in: id)
 
         try family.commit(

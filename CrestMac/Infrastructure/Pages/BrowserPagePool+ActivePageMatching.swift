@@ -29,8 +29,7 @@ extension BrowserPagePool {
     ) -> BrowserPage? {
         guard activeTabID == assignment.tabID,
             let page = activePage,
-            page.spaceID == assignment.spaceID,
-            page.profileID == assignment.profileID
+            host.serves(page, tabID: assignment.tabID, spaceID: assignment.spaceID, profileID: assignment.profileID)
         else { return nil }
         return page
     }
@@ -47,8 +46,7 @@ extension BrowserPagePool {
         matching assignment: BrowserTabRuntimeAssignment
     ) -> BrowserPage? {
         guard let page = presentedPage(for: assignment.tabID),
-            page.spaceID == assignment.spaceID,
-            page.profileID == assignment.profileID
+            host.serves(page, tabID: assignment.tabID, spaceID: assignment.spaceID, profileID: assignment.profileID)
         else { return nil }
         return page
     }

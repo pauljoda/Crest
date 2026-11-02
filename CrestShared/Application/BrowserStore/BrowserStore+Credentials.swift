@@ -24,20 +24,26 @@ extension BrowserStore {
         return try await credentialSuggestions(for: url, in: spaceID)
     }
 
+    /// The passwords the Space's group keeps: the ones its primary keeps for
+    /// the group and the ones each Sub-Space saved before it joined.
     func savedCredentialDescriptors(in spaceID: UUID) async throws -> [CredentialDescriptor] {
         guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        return try await credentialVault.descriptors(in: spaceID)
+        return try await groupDescriptors(of: spaceID) { try await credentialVault.descriptors(in: $0) }
     }
 
-    /// How many saved passwords in the Space no longer read back, which every
-    /// list and suggestion leaves out.
+    /// How many saved passwords of the Space's group no longer read back,
+    /// which every list and suggestion leaves out.
     func unreadableCredentialCount(in spaceID: UUID) async throws -> Int {
         guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        return try await credentialVault.unreadableCredentialCount(in: spaceID)
+        var count = 0
+        for vault in credentialSpaceIDs(of: spaceID) {
+            count += try await credentialVault.unreadableCredentialCount(in: vault)
+        }
+        return count
     }
 
     func credentialSuggestions(
@@ -52,7 +58,9 @@ extension BrowserStore {
             throw CredentialVaultError.invalidOrigin
         }
         guard origin.isSecure else { return [] }
-        return try await credentialVault.descriptors(matching: origin, in: spaceID)
+        return try await groupDescriptors(of: spaceID) {
+            try await credentialVault.descriptors(matching: origin, in: $0)
+        }
     }
 
     func credential(id: UUID) async throws -> BrowserCredential? {
@@ -62,11 +70,15 @@ extension BrowserStore {
         return try await credential(id: id, in: spaceID)
     }
 
+    /// The password `id` names among the ones the Space's group keeps.
     func credential(id: UUID, in spaceID: UUID) async throws -> BrowserCredential? {
         guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        return try await credentialVault.credential(id: id, in: spaceID)
+        for vault in credentialSpaceIDs(of: spaceID) {
+            if let credential = try await credentialVault.credential(id: id, in: vault) { return credential }
+        }
+        return nil
     }
 
     func credentialInventory(in spaceID: UUID) async throws -> [BrowserCredential] {
@@ -101,15 +113,38 @@ extension BrowserStore {
         }
         guard space.settings.credentialPreferences.isEnabled else { return nil }
         guard protectionSpace.origin.isSecure else { return nil }
-        let descriptors = try await credentialVault.descriptors(
-            matching: protectionSpace,
-            in: spaceID
-        )
+        let descriptors = try await groupDescriptors(of: spaceID) {
+            try await credentialVault.descriptors(matching: protectionSpace, in: $0)
+        }
         // Without a recency answer from the core, nothing is filled.
         guard let descriptor = try? core.mostRecentCredential(descriptors) else {
             return nil
         }
-        return try await credentialVault.credential(id: descriptor.id, in: spaceID)
+        return try await credentialVault.credential(id: descriptor.id, in: descriptor.spaceID)
+    }
+
+    // MARK: - Actions - Groups
+
+    /// What `read` answers for each vault of the group of `spaceID`, the
+    /// primary's first.
+    private func groupDescriptors(
+        of spaceID: UUID, _ read: (UUID) async throws -> [CredentialDescriptor]
+    ) async throws -> [CredentialDescriptor] {
+        var descriptors: [CredentialDescriptor] = []
+        for vault in credentialSpaceIDs(of: spaceID) { descriptors += try await read(vault) }
+        return descriptors
+    }
+
+    /// The vault of the group of `spaceID` that keeps `existing`, or the one
+    /// that keeps the group's new passwords. Throws when `existing` belongs to
+    /// another group.
+    private func credentialVaultID(of spaceID: UUID, keeping existing: CredentialDescriptor?) throws -> UUID {
+        let vaults = credentialSpaceIDs(of: spaceID)
+        guard let existing else { return vaults[0] }
+        guard vaults.contains(existing.spaceID) else {
+            throw CredentialVaultError.spaceMismatch(expected: vaults[0], actual: existing.spaceID)
+        }
+        return existing.spaceID
     }
 }
 
@@ -174,7 +209,9 @@ extension BrowserStore {
         }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
 
-        try await credentialVault.setSynchronizable(isSynchronizable, in: spaceID)
+        for vault in credentialSpaceIDs(of: spaceID) {
+            try await credentialVault.setSynchronizable(isSynchronizable, in: vault)
+        }
         guard let current = spaceModel(matching: assignment)?.settings.credentialPreferences else {
             throw CredentialVaultError.missingSpace
         }
@@ -205,10 +242,9 @@ extension BrowserStore {
         now: Date = .now
     ) async throws -> any BrowserCredentialSavePlan {
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
-        let descriptors = try await credentialVault.descriptors(
-            matching: candidate.origin,
-            in: spaceID
-        )
+        let descriptors = try await groupDescriptors(of: spaceID) {
+            try await credentialVault.descriptors(matching: candidate.origin, in: $0)
+        }
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
         let descriptor: CredentialDescriptor?
         do {
@@ -220,7 +256,7 @@ extension BrowserStore {
         if let descriptor {
             let credential = try await credentialVault.credential(
                 id: descriptor.id,
-                in: spaceID
+                in: descriptor.spaceID
             )
             try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
             storedPasswordMatches = credential.map { $0.password == candidate.password }
@@ -329,14 +365,10 @@ extension BrowserStore {
             throw CredentialVaultError.insecureOrigin
         }
 
+        // A group keeps new passwords in its primary, and each one where it is.
+        let vaultID = try credentialVaultID(of: spaceID, keeping: existing)
         let descriptor: CredentialDescriptor
         if var existing {
-            guard existing.spaceID == spaceID else {
-                throw CredentialVaultError.spaceMismatch(
-                    expected: spaceID,
-                    actual: existing.spaceID
-                )
-            }
             guard existing.origin == origin else {
                 throw CredentialVaultError.invalidOrigin
             }
@@ -347,7 +379,7 @@ extension BrowserStore {
             descriptor = existing
         } else {
             descriptor = CredentialDescriptor(
-                spaceID: spaceID,
+                spaceID: vaultID,
                 origin: origin,
                 username: username,
                 displayName: displayName?.nilIfEmpty,
@@ -357,7 +389,7 @@ extension BrowserStore {
         }
         try await credentialVault.save(
             BrowserCredential(descriptor: descriptor, password: password),
-            in: spaceID
+            in: vaultID
         )
         return descriptor
     }
@@ -384,14 +416,9 @@ extension BrowserStore {
             throw CredentialVaultError.insecureOrigin
         }
 
+        let vaultID = try credentialVaultID(of: spaceID, keeping: existing)
         let descriptor: CredentialDescriptor
         if var existing {
-            guard existing.spaceID == spaceID else {
-                throw CredentialVaultError.spaceMismatch(
-                    expected: spaceID,
-                    actual: existing.spaceID
-                )
-            }
             guard existing.origin == protectionSpace.origin,
                 existing.scope == protectionSpace.credentialScope
             else {
@@ -405,7 +432,7 @@ extension BrowserStore {
             descriptor = existing
         } else {
             descriptor = CredentialDescriptor(
-                spaceID: spaceID,
+                spaceID: vaultID,
                 origin: protectionSpace.origin,
                 scope: protectionSpace.credentialScope,
                 username: username,
@@ -417,7 +444,7 @@ extension BrowserStore {
         }
         try await credentialVault.save(
             BrowserCredential(descriptor: descriptor, password: password),
-            in: spaceID
+            in: vaultID
         )
         return descriptor
     }
@@ -429,18 +456,25 @@ extension BrowserStore {
         try await deleteCredential(id: id, in: spaceID)
     }
 
+    /// Deletes the password `id` names from whichever vault of the Space's
+    /// group keeps it.
     func deleteCredential(id: UUID, in spaceID: UUID) async throws {
         guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        try await credentialVault.delete(id: id, in: spaceID)
+        for vault in credentialSpaceIDs(of: spaceID) {
+            guard try await credentialVault.descriptors(in: vault).contains(where: { $0.id == id }) else { continue }
+            try await credentialVault.delete(id: id, in: vault)
+        }
     }
 
     func deleteUnreadableCredentials(in spaceID: UUID) async throws {
         guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        try await credentialVault.deleteUnreadableCredentials(in: spaceID)
+        for vault in credentialSpaceIDs(of: spaceID) {
+            try await credentialVault.deleteUnreadableCredentials(in: vault)
+        }
     }
 
     func replaceCredentialInventory(

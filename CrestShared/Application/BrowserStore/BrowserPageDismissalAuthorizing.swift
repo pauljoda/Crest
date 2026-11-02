@@ -23,7 +23,7 @@ extension BrowserStore {
                     self.spaceModel(
                         matching: BrowserSpaceRuntimeAssignment(
                             spaceID: assignment.spaceID, profileID: assignment.profileID)
-                    )?.tabs.contains(assignment.tabID) == true
+                    )?.shownTab(assignment.tabID) != nil
                 })
             else { return false }
             return operation()

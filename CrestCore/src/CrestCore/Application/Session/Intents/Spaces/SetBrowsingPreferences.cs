@@ -1,11 +1,13 @@
 using CrestCore.Application;
+using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
 /// Sets when a Space cleans up open tabs, how it blocks content and how long
-/// it keeps what it browses. A Space whose cleanup or retention changed is
-/// swept under the new rules in the same edit. What it searches with and
-/// whether it suggests searches is `SetSpaceSearch`'s.
+/// it keeps what it browses; the last two are its group's, so every Space of
+/// the group takes them. A Space whose cleanup or retention changed is swept
+/// under the new rules in the same edit. What it searches with and whether it
+/// suggests searches is `SetSpaceSearch`'s.
 public sealed record SetBrowsingPreferences(Guid WorkspaceId, Guid SpaceId, CurrentTabCleanup CurrentTabCleanup,
     ContentBlockingPolicy ContentBlocking, DataRetentionPreferences DataRetention)
     : SessionIntent(WorkspaceId) {
@@ -23,13 +25,24 @@ public sealed record SetBrowsingPreferences(Guid WorkspaceId, Guid SpaceId, Curr
             ContentBlocking = ContentBlocking,
             DataRetention = DataRetention
         };
-        var configured = space.Configured(space.Settings with { BrowsingPreferences = preferences });
+        var protects = before.ContentBlocking != ContentBlocking || before.DataRetention != DataRetention;
+        var configured = space.Configured(space.Settings with {
+            BrowsingPreferences = preferences,
+            ProtectionModifiedAt = protects
+                ? SpaceSettings.Chosen(space.Settings.ProtectionModifiedAt, turn.Now) : space.Settings.ProtectionModifiedAt
+        });
+        var shared = protects ? turn.Basis.Sharing(configured, GroupSetting.Protection) : turn.Basis.Replacing(configured);
         if (before.CurrentTabCleanup == preferences.CurrentTabCleanup && before.DataRetention == preferences.DataRetention)
-            return new(turn.Basis.Replacing(configured), SyncStaging.Edit);
+            return new(shared, SyncStaging.Edit);
+        // The Space sweeps its tabs under its cleanup, and every Space of its
+        // group its records under the retention they now share.
         var kept = workspace.TabsCleanupKeeps(turn);
-        var swept = configured.CleanedUp(turn.Now, kept).Retained(turn.Now);
-        return new(turn.Basis.Replacing(swept),
-            workspace.SameRecords(configured, swept) ? SyncStaging.Edit : SyncStaging.Expiry);
+        var swept = shared.Replacing(configured.CleanedUp(turn.Now, kept));
+        var members = swept.GroupOf(space.Id)?.Members ?? [swept.KnownSpace(space.Id)];
+        var retained = swept.Replacing([.. members.Where(member => swept.PendingDeletion(member.Id) is null)
+            .Select(member => member.Retained(turn.Now))]);
+        return new(retained, members.All(member => workspace.SameRecords(shared.KnownSpace(member.Id), retained.KnownSpace(member.Id)))
+            ? SyncStaging.Edit : SyncStaging.Expiry);
     }
 
     #endregion

@@ -11,7 +11,7 @@ struct BrowserSettingsSpaceSelectionAction {
             let sourceSpace = browser.selectedUnlockedSpace(
                 matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
                 accessController: spaceAccess),
-            sourceSpace.tabs.model(source.tabID)?.nativeTabContent == .settings,
+            sourceSpace.shownTab(source.tabID)?.nativeTabContent == .settings,
             let destination = browser.availableSpaces.first(where: { $0.id == id }),
             !spaceAccess.isLocked(destination)
         else { return nil }

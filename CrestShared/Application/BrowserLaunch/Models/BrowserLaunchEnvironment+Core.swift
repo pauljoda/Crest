@@ -7,7 +7,8 @@ extension BrowserLaunchEnvironment {
             isTestRuntime: isXCTestRuntime, isPreviewRuntime: isSwiftUIPreviewRuntime,
             requestsIsolatedSession: explicitlyRequiresIsolation, hasNamedProfile: persistentIsolationID != nil,
             requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession,
-            presentsShowcase: presentsShowcaseSession, usesInMemoryCredentials: usesInMemoryCredentialVault,
+            presentsShowcase: presentsShowcaseSession, presentsSubSpaces: presentsSubSpacesSession,
+            usesInMemoryCredentials: usesInMemoryCredentialVault,
             forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesMacOnboardingSetup,
             forcesMobileSetup: forcesMobileOnboardingSetup,
             usesUpdateTestFeed: isolatedSoftwareUpdateFeedURL != nil)

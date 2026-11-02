@@ -7,7 +7,7 @@
         var sessionSeed: SessionState.Seed {
             SessionState.Seed(
                 spaces: spaces.models.map(\.value.seed), defaultSpaceID: defaultSpaceID, disposableSeedMarker: nil,
-                spaceDeletions: spaceDeletions, appPreferences: appPreferences)
+                spaceDeletions: spaceDeletions.map(\.seed), appPreferences: appPreferences)
         }
     }
 #endif

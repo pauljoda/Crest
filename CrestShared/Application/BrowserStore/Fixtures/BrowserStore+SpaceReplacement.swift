@@ -15,7 +15,7 @@
                 try family.commit(
                     BeginDeletingSpace(
                         workspaceID: family.workspaceID, windowID: window, spaceID: spaceID,
-                        operationID: operation), from: self)
+                        operationID: operation, newPrimaryID: nil), from: self)
                 eraseProfileForTesting(profileID)
                 try family.commit(
                     FinishDeletingSpace(
@@ -60,7 +60,7 @@
             let shownTab = selectedTabID(in: spaceID)
             let seed = space.seed
             let replacement = SpaceState.Seed(
-                id: seed.id, profileID: profileID, settings: seed.settings, folders: seed.folders, tabs: seed.tabs,
+                id: seed.id, ownProfileID: profileID, settings: seed.settings, folders: seed.folders, tabs: seed.tabs,
                 splitGroups: seed.splitGroups, archivedTabs: seed.archivedTabs, history: seed.history)
             // A Space is never the last one while it goes.
             let placeholder = UUID()

@@ -178,9 +178,9 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
     }
 
     /// The Space a download belongs to: its page's, while the page lives in a
-    /// Space of the download's profile, or else the one Space of that profile
-    /// the person may see.
-    internal Guid? SpaceOf(EngineDownload reported) => PageSpaceOf(reported) ?? device.OnlySpaceOf(reported.ProfileId);
+    /// Space of the download's profile, or else the Space of that profile the
+    /// person may see, of a group the one used last.
+    internal Guid? SpaceOf(EngineDownload reported) => PageSpaceOf(reported) ?? device.SpaceOf(reported.ProfileId);
 
     /// The Space of the page a download came from, while that page lives in a
     /// Space of the download's profile the person may see; null for a download

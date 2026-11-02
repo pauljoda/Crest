@@ -89,10 +89,11 @@ struct BrowserSidebarListContext {
     }
 
     /// Whether a row drawn for the tab `assignment` names may act on it: the
-    /// window shows its Space, unlocked, and the Space still holds the tab.
+    /// window shows its Space, unlocked, and the Space's sidebar still shows
+    /// the tab, as one it holds or a pinned tab its group shares.
     @MainActor func isTabCurrent(_ assignment: BrowserTabRuntimeAssignment) -> Bool {
         isCurrent(BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID))
-            && space.tabs.contains(assignment.tabID)
+            && space.shownTab(assignment.tabID) != nil
     }
 
     // MARK: - Actions - Tabs
@@ -100,7 +101,7 @@ struct BrowserSidebarListContext {
     /// The tab at the other end of the tab sharing the tab's page takes part
     /// in, when Crest knows it and the Space holds it.
     @MainActor func tabSharingCounterpart(of tabID: UUID) -> TabStateModel? {
-        pageAccess.tabSharingCounterpartID(runtimeAssignment(of: tabID)).flatMap { space.tabs.model($0) }
+        pageAccess.tabSharingCounterpartID(runtimeAssignment(of: tabID)).flatMap { space.shownTab($0) }
     }
 
     /// Stops every tab sharing the tab's page takes part in.

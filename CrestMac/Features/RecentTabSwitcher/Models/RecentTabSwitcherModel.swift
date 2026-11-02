@@ -59,7 +59,7 @@ final class RecentTabSwitcherModel {
     /// The tabs of `item` as the window's Space holds them, in display order.
     func tabs(of item: RecentTabItem) -> [TabStateModel] {
         guard let space = browser.shownSpace else { return [] }
-        return item.tabIDs.compactMap { space.tabs.model($0) }
+        return item.tabIDs.compactMap { space.shownTab($0) }
     }
 
     /// What VoiceOver says for the item at `index`.
