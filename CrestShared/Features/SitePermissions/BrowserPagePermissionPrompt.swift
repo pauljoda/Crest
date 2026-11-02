@@ -5,6 +5,7 @@ struct BrowserPagePermissionPrompt: View {
     let controller: BrowserPagePermissionController
 
     @State private var remembersChoice = true
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -51,21 +52,32 @@ struct BrowserPagePermissionPrompt: View {
                     Text("Deny").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                // Deny is the plain choice beside Allow, never a second accent.
+                .tint(.primary)
                 Button {
                     controller.resolve(
                         request.id,
                         response: remembersChoice ? .grantPersistently : .allowOnce
                     )
                 } label: {
-                    Text("Allow").frame(maxWidth: .infinity)
+                    Text("Allow")
+                        .frame(maxWidth: .infinity)
+                        .browserReadableForeground(over: allowTint)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(allowTint)
             }
             .controlSize(.large)
         }
         .padding(14)
         .frame(width: 280, alignment: .leading)
         .onChange(of: request.id) { remembersChoice = true }
+    }
+
+    /// Allow wears Crest's accent, never a Space's, whose tint can be as light
+    /// as the label on it; the label takes whichever ink reads on the tint.
+    private var allowTint: Color {
+        CrestBrandTheme.accent(colorScheme)
     }
 }
 
@@ -95,46 +107,8 @@ private struct BrowserPagePermissionHost: ViewModifier {
     }
 }
 
-/// Shows a page's permission requests in a popover from this view, for a
-/// surface with no site controls of its own to present them.
-private struct BrowserPagePermissionPopover: ViewModifier {
-    let controller: BrowserPagePermissionController?
-
-    func body(content: Content) -> some View {
-        // Read here, not only inside the binding, so a new request updates
-        // this view and opens the popover.
-        let shown = controller?.current
-        content
-            .popover(item: requestBinding(shown), arrowEdge: .bottom) { request in
-                if let controller {
-                    BrowserPagePermissionPrompt(request: request, controller: controller)
-                }
-            }
-            .pagePermissionHost(controller)
-    }
-
-    /// Closing the popover on `shown` without an answer dismisses the
-    /// waiting requests, which saves nothing. Once `shown` is answered the
-    /// popover closes for it on its way to the next request, which must
-    /// keep waiting, so only a close while `shown` still waits dismisses.
-    private func requestBinding(
-        _ shown: BrowserPagePermissionController.Request?
-    ) -> Binding<BrowserPagePermissionController.Request?> {
-        Binding {
-            shown
-        } set: { request in
-            guard request == nil, let shown, controller?.current?.id == shown.id else { return }
-            controller?.cancelAll()
-        }
-    }
-}
-
 extension View {
     func pagePermissionHost(_ controller: BrowserPagePermissionController?) -> some View {
         modifier(BrowserPagePermissionHost(controller: controller))
-    }
-
-    func pagePermissionPopover(_ controller: BrowserPagePermissionController?) -> some View {
-        modifier(BrowserPagePermissionPopover(controller: controller))
     }
 }

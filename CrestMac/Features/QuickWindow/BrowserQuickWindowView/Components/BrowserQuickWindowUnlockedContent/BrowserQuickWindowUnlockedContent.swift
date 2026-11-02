@@ -10,6 +10,8 @@ struct BrowserQuickWindowUnlockedContent: View {
     @State private var isAddressEditing = false
     @State private var addressFocusRequest = 0
 
+    @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
+
     init(
         model: BrowserQuickWindowModel,
         spaceAccess: BrowserSpaceAccessController,
@@ -53,6 +55,13 @@ struct BrowserQuickWindowUnlockedContent: View {
             )
         )
         .task { await requestInitialAddressFocus() }
+        .onChange(of: chrome?.commandPaletteMode) { _, mode in
+            // A Quick Window has no command bar: Open Location focuses its
+            // own address field instead.
+            guard mode != nil else { return }
+            chrome?.dismissCommandPalette()
+            addressFocusRequest &+= 1
+        }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .accessibilityElement(children: .contain)

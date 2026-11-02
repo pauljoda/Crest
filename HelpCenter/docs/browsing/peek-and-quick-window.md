@@ -23,6 +23,8 @@ Drag a webpage link to pull out a live preview that follows your gesture and fad
 
 Choose this behavior in **Settings → Links → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
 
+On Mac, Peek dims only the page behind it by default. Turn off **Settings → Links → Dim the page behind Peek** to keep that page at full brightness.
+
 On iPhone and iPad, touch and hold webpage links for the native link preview and actions, including opening a link in another Space. Touch and hold an image for image actions such as saving it.
 
 ## Quick Window
@@ -31,7 +33,9 @@ Quick Window handles a link from another app without dropping it immediately int
 
 To see a link under another account on Mac, right-click it and choose a Space from **Open Link in**: it opens in a Quick Window with that Space's sign-ins, and **Keep** moves it into that Space. **Open This Page in** in Site Controls does the same for the current page.
 
-Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+On Mac, a Quick Window has a browser window's controls: Back and Forward, Site Controls for the page's permissions and extensions, and the Space's pinned extensions, with the ones that don't fit behind **»**. **Command-L** selects its address field. Right-click a link and choose **Open Link in New Quick Window** to open it in another Quick Window.
+
+Open a blank Quick Window with **Option-Shift-Command-N** on Mac, including from another Quick Window. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
 ### Sign-in and other popup windows
 

@@ -4,6 +4,9 @@ struct BrowserRootPeekLayer: View {
     let model: BrowserRootModel
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let space: SpaceModel
+    /// Whether the pages meet a docked sidebar, which leaves no frame on that
+    /// edge.
+    let docked: Bool
 
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -22,7 +25,9 @@ struct BrowserRootPeekLayer: View {
                 coordinator: transientBrowsing,
                 reservedLeadingWidth: 0,
                 layoutDirection: layoutDirection,
-                spaceAccess: model.spaceAccess
+                spaceAccess: model.spaceAccess,
+                frameInsets: BrowserChromeAppearance.device(windowCornerRadius: nil)
+                    .pageInsets(docked: docked, direction: layoutDirection)
             )
             .environment(
                 \.browserWebFocusRestorationGate,

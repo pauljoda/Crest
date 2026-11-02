@@ -46,12 +46,12 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
             if let space {
                 BrowserQuickWindowSpacePicker(
                     spaces: spaces,
-                    selectedSpaceID: space.id,
-                    purpose: .browsingSpace
+                    selectedSpaceID: space.id
                 ) { candidate in
                     isPickerPresented = false
                     selectSpace(candidate.assignment)
                 }
+                .crestFlyoutStyle()
             }
         }
     }

@@ -4749,6 +4749,34 @@
     "chromium-extension-popup-crash": {
       "category": "fixed",
       "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    },
+    "quick-window-browser-controls": {
+      "category": "new",
+      "message": "Quick Windows on Mac now have Back and Forward, Site Controls and the Space's pinned extensions, with the extensions that don't fit behind one button."
+    },
+    "quick-window-open-location-shortcut": {
+      "category": "fixed",
+      "message": "Command-L now selects a Quick Window's address field on Mac."
+    },
+    "quick-window-opens-another": {
+      "category": "new",
+      "message": "On Mac, New Quick Window works while a Quick Window is in front, and a link's menu in a Quick Window or Peek offers Open Link in New Quick Window."
+    },
+    "permission-request-follows-its-page": {
+      "category": "fixed",
+      "message": "A site's permission request on Mac stays open when its page moves from a Quick Window into a browser window, and when the site asks before a Quick Window has finished opening."
+    },
+    "readable-site-controls-and-permission-prompts": {
+      "category": "fixed",
+      "message": "Site Controls and permission requests now stay readable over any page, Space color or surface material."
+    },
+    "peek-dims-page-behind": {
+      "category": "improved",
+      "message": "On Mac, the page behind Peek fades darker as Peek opens while the sidebar keeps its brightness. Settings > Links > Dim the page behind Peek turns it off."
+    },
+    "quick-window-minimum-opening-size": {
+      "category": "fixed",
+      "message": "A Quick Window opened beside Split View on Mac no longer opens narrower than its smallest size."
     }
   }
 }

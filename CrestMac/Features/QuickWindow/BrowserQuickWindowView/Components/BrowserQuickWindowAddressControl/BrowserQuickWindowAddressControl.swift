@@ -27,9 +27,6 @@ struct BrowserQuickWindowAddressControl: View {
             BrowserQuickWindowAddressSecurityIcon(
                 isSecure: model.page?.live.security.isSecure == true
             )
-            // The Quick Window has no site controls, so its page asks for
-            // permissions from the site's own icon.
-            .pagePermissionPopover(model.page?.sitePermissionRequests)
             BrowserAddressContent(
                 text: $addressText,
                 isEditing: $isAddressEditing,
@@ -49,6 +46,9 @@ struct BrowserQuickWindowAddressControl: View {
                 isAddressEditing: isAddressEditing,
                 reloadOrStop: reloadOrStop
             )
+            if let siteControl {
+                BrowserSiteControlButton(configuration: siteControl)
+            }
         }
         .browserAddressFieldSurface(
             leadingPadding: BrowserQuickWindowLayout.sourceChipLeadingInset,
@@ -61,6 +61,17 @@ struct BrowserQuickWindowAddressControl: View {
             minWidth: BrowserQuickWindowLayout.addressMinimumWidth,
             maxWidth: .infinity
         )
+    }
+
+    /// The page's Site Controls, as a browser window's address field offers
+    /// them: its site settings, permission requests and extensions.
+    private var siteControl: BrowserSiteControlConfiguration? {
+        guard let page = model.page, page.live.displayURL != nil, let space = model.spaceModel,
+            let pages = model.pages
+        else { return nil }
+        return BrowserSiteControlConfiguration(
+            page: page, space: space, selectedTabID: nil, permissionCenter: pages.permissionCenter,
+            presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
     }
 
     // MARK: - Actions - Page

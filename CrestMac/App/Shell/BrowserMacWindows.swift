@@ -366,10 +366,25 @@ final class BrowserMacWindows {
                 .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
                 .modifier(BrowserChromeAppearancePersistence())
                 .environment(application.softwareUpdates)
+                .environment(\.browserSiteControlAnchor, application.siteControlAnchor)
+                // Open Location in a key Quick Window asks its own chrome,
+                // which the window answers by focusing its address field.
+                .environment(quickWindow.chrome)
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))
             },
             closed: { [weak self] controller in self?.quickWindowClosed(controller) })
         return request.id
+    }
+
+    /// Opens an empty Quick Window beside the key one, in its Space, which
+    /// opens its pages in the same browser window. The person asked for it,
+    /// so a Quick Window never needs a browser window in front to open another.
+    func openQuickWindowBesideKeyQuickWindow() {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID]
+        else { return }
+        let request = quickWindow.request.value
+        openQuickWindow(.empty(spaceAssignment: request.assignment, targetWindowID: request.targetWindowID))
     }
 
     /// The Quick Window named `id`, while it is open.

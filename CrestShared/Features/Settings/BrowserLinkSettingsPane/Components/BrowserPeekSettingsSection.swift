@@ -5,6 +5,8 @@ struct BrowserPeekSettingsSection: View {
     @Binding var clickModifier: LinkPeekModifier
     /// Absent where links can't be dragged out of a page.
     var dragsLinksToPeek: Binding<Bool>? = nil
+    /// Absent where the page behind Peek is not dimmed.
+    var dimsPageBehindPeek: Binding<Bool>? = nil
 
     var body: some View {
         Section {
@@ -24,6 +26,11 @@ struct BrowserPeekSettingsSection: View {
             if let dragsLinksToPeek {
                 Toggle("Drag links to Peek", isOn: dragsLinksToPeek)
                     .accessibilityIdentifier("drag-links-to-peek-toggle")
+            }
+
+            if let dimsPageBehindPeek {
+                Toggle("Dim the page behind Peek", isOn: dimsPageBehindPeek)
+                    .accessibilityIdentifier("dim-page-behind-peek-toggle")
             }
         } header: {
             Text("Peek")

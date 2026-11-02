@@ -11,6 +11,7 @@ struct BrowserPeekDestinationControl: View {
 
     let spaces: [BrowserSpaceIdentity]
     let selectedSpaceID: UUID
+    var style = BrowserPeekControlStyle.actionBar
     let openInSpace: (BrowserSpaceRuntimeAssignment) -> Void
 
     private var selectedSpace: BrowserSpaceIdentity? {
@@ -25,6 +26,7 @@ struct BrowserPeekDestinationControl: View {
         HStack(spacing: 0) {
             BrowserPeekDestinationPrimaryButton(
                 selectedSpace: selectedSpace,
+                style: style,
                 openInSelectedSpace: openInSelectedSpace
             )
 
@@ -39,17 +41,18 @@ struct BrowserPeekDestinationControl: View {
             BrowserPeekDestinationMenu(
                 spaces: spaces,
                 selectedSpace: selectedSpace,
+                style: style,
                 openInSpace: openInSpace
             )
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: .infinity)
-        .frame(height: BrowserPeekActionBar.controlHeight)
+        .frame(maxWidth: style == .actionBar ? .infinity : nil)
+        .frame(height: style.height)
         .browserReadableForeground(over: spaceTint)
-        .contentShape(.capsule)
+        .contentShape(style.shape)
         .glassEffect(
             .regular.tint(spaceTint).interactive(),
-            in: .capsule
+            in: style.shape
         )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("peek-space-control")

@@ -5,16 +5,19 @@ struct BrowserPeekUnlockedContent: View {
     let reservedLeadingWidth: CGFloat
     let layoutDirection: LayoutDirection
     let installsKeyboardMonitor: Bool
+    let frameInsets: EdgeInsets
 
     init(
         model: BrowserPeekModel,
         reservedLeadingWidth: CGFloat,
         layoutDirection: LayoutDirection,
+        frameInsets: EdgeInsets,
         installsKeyboardMonitor: Bool = true
     ) {
         self.model = model
         self.reservedLeadingWidth = reservedLeadingWidth
         self.layoutDirection = layoutDirection
+        self.frameInsets = frameInsets
         self.installsKeyboardMonitor = installsKeyboardMonitor
         _retainedMotionState = State(initialValue: model.motionState)
     }
@@ -84,7 +87,9 @@ struct BrowserPeekUnlockedContent: View {
             sourcePresentation: .resolved(model.request.sourcePresentation),
             // Keep the outgoing card and its presentation intact while
             // the coordinator removes the request and SwiftUI fades it out.
-            motionState: model.motionState ?? retainedMotionState
+            motionState: model.motionState ?? retainedMotionState,
+            dimsBackground: model.browser.linkPreferences.preferences.dimsPageBehindPeek,
+            scrimInsets: frameInsets
         )
     }
 

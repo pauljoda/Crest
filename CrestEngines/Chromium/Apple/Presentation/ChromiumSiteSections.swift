@@ -66,6 +66,21 @@
         }
     }
 
+    /// The pinned extension actions in a Quick Window's toolbar, run on its page.
+    struct BrowserEngineToolbarAccessory: View {
+        let page: BrowserPage?
+        /// The Space the Quick Window browses, in the read model.
+        let space: SpaceModel
+        let browser: BrowserStore
+
+        var body: some View {
+            if browser.core.state.defaultEngineSupports(.extensions) || page?.chromiumPage != nil {
+                BrowserPinnedExtensionStrip(
+                    page: page?.chromiumPage, space: space, browser: browser, placement: .toolbar)
+            }
+        }
+    }
+
     /// The Extensions settings destination, composed by the engine that has them.
     struct BrowserEngineExtensionSettingsPane: View {
         let browser: BrowserStore

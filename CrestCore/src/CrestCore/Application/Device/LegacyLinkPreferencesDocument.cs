@@ -22,6 +22,7 @@ internal static class LegacyLinkPreferencesDocument {
     private const string OpensPeekAutomatically = "automaticallyOpensPeek";
     private const string PeekModifier = "peekClickModifier";
     private const string DragsLinksToPeek = "dragsLinksToPeek";
+    private const string DimsPageBehindPeek = "dimsPageBehindPeek";
     private const string ArchivePolicy = "quickWindowArchivePolicy";
     private const string RemembersSpaceBySite = "remembersQuickWindowSpaceBySite";
     private const string Routes = "routes";
@@ -62,6 +63,7 @@ internal static class LegacyLinkPreferencesDocument {
             foreach (var (behavior, key) in new[] {
                 (LinkBehavior.FocusesNewTabs, FocusesNewTabs), (LinkBehavior.FollowsMovedTabs, FollowsMovedTabs),
                 (LinkBehavior.OpensPeekAutomatically, OpensPeekAutomatically), (LinkBehavior.DragsLinksToPeek, DragsLinksToPeek),
+                (LinkBehavior.DimsPageBehindPeek, DimsPageBehindPeek),
                 (LinkBehavior.RemembersSpaceBySite, RemembersSpaceBySite)
             })
                 if (Member(root, key) is { ValueKind: JsonValueKind.True or JsonValueKind.False } flag)
