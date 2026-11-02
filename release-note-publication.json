@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "chromium-extension-sign-in-tab",
+    "development": "paste-without-formatting-shortcut",
     "nightly": "selection-split-other-space"
   }
 }
