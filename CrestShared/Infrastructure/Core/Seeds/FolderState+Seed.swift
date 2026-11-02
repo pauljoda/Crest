@@ -5,7 +5,7 @@ extension FolderState.Seed {
 
     /// A folder to seed a Space with, among the saved tabs unless placed
     /// elsewhere, at the top level unless `parentID` names its parent, and
-    /// open.
+    /// open, and a folder unless `isGroup`.
     init(
         id: UUID = UUID(),
         title: String,
@@ -15,10 +15,12 @@ extension FolderState.Seed {
         parentID: UUID? = nil,
         isCollapsed: Bool = false,
         collapseModifiedAt: Date? = nil,
-        orderAnchorTabID: UUID? = nil
+        orderAnchorTabID: UUID? = nil,
+        isGroup: Bool = false
     ) {
         self.init(
             id: id, location: location, title: title, symbol: symbol, color: color, parentID: parentID,
-            isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID)
+            isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup)
     }
 }

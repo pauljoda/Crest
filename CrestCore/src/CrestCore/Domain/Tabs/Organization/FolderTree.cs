@@ -48,7 +48,18 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
             accepted.Add(repaired);
             parents[folder.Id] = (parent is { } id ? parents[id].Depth + 1 : 0, repaired.Location);
         }
-        return new FolderTree(accepted).DisplayOrder();
+        return SettledGroups(new FolderTree(accepted).DisplayOrder());
+    }
+
+    /// `source` with every group that breaks a group's shape made a folder: one
+    /// inside a folder, one holding a folder, or one outside the open tabs, as
+    /// a client that knows no groups can leave it. Every device settles them
+    /// alike, so none needs to write the change back.
+    public static IReadOnlyList<FolderState> SettledGroups(IReadOnlyList<FolderState> source) {
+        var parents = source.Select(folder => folder.ParentId).OfType<Guid>().ToHashSet();
+        bool Misshapen(FolderState folder) => folder.IsGroup
+            && (folder.ParentId is not null || parents.Contains(folder.Id) || folder.Location != TabPlacement.Current);
+        return source.Any(Misshapen) ? [.. source.Select(folder => Misshapen(folder) ? folder with { IsGroup = false } : folder)] : source;
     }
 
     /// Throws `BrowserRuleException` with `InvalidFolderTree` unless the

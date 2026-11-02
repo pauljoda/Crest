@@ -92,13 +92,16 @@ extension BrowserStore {
             reselection: .items)
     }
 
-    /// Files the selection into a new folder at the top level of `placement`'s section.
-    func filingInNewFolder(_ request: BrowserCapturedSelection, in placement: TabPlacement) -> BrowserTabBatch {
+    /// Files the selection into a new folder at the top level of `placement`'s
+    /// section, or a new group of open tabs when `isGroup`.
+    func filingInNewFolder(
+        _ request: BrowserCapturedSelection, in placement: TabPlacement, isGroup: Bool = false
+    ) -> BrowserTabBatch {
         BrowserTabBatch(
             FolderTabs(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
                 selection: request.selection,
-                placement: placement, title: Self.newFolderTitle),
+                placement: placement, title: isGroup ? Self.newGroupTitle : Self.newFolderTitle, isGroup: isGroup),
             reselection: .items)
     }
 
@@ -109,7 +112,7 @@ extension BrowserStore {
             FolderTabsAround(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
                 selection: request.selection,
-                tabID: tabID, title: Self.newFolderTitle),
+                tabID: tabID, title: Self.newFolderTitle, isGroup: false),
             reselection: .items)
     }
 

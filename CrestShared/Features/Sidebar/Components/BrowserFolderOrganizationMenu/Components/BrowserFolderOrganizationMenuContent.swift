@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// A folder's actions, and a group's: a group holds no folders and sits in
+/// none, so it offers neither, and moving it to the saved tabs makes it a
+/// folder there, which its menu item says.
 struct BrowserFolderOrganizationMenuContent: View {
     let folder: FolderStateModel
     let context: BrowserSidebarListContext
@@ -24,6 +27,51 @@ struct BrowserFolderOrganizationMenuContent: View {
     private var browser: BrowserStore { context.browser }
 
     var body: some View {
+        if folder.isGroup {
+            groupActions
+        } else {
+            folderActions
+        }
+        if folder.location == .current {
+            Divider()
+            Button("Archive Tabs", systemImage: "archivebox") {
+                performIfCurrent(archiveTabs)
+            }
+            .disabled(archiving.map { !batchActions.isAvailable($0.batch) } ?? true)
+        }
+
+        Divider()
+        if folder.isGroup {
+            Button("Ungroup", systemImage: "rectangle.stack.badge.minus") {
+                performIfCurrent(deleteFolder)
+            }
+        } else {
+            Button("Delete Folder", systemImage: "trash", role: .destructive) {
+                performIfCurrent(deleteFolder)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var groupActions: some View {
+        Button("Rename Group", systemImage: "pencil") {
+            performIfCurrent(renameFolder)
+        }
+        Button("Group Color…", systemImage: "paintpalette") {
+            performIfCurrent(changeColor)
+        }
+        Button("Convert to Folder", systemImage: "folder") {
+            performIfCurrent { browser.setSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: false) }
+        }
+        Button("Move to Saved Tabs as Folder", systemImage: "bookmark") {
+            performIfCurrent {
+                browser.moveFolder(folder.id, matching: assignment.spaceAssignment, to: .saved)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var folderActions: some View {
         Button("New Nested Folder", systemImage: "folder.badge.plus") {
             performIfCurrent(createNestedFolder)
         }
@@ -36,6 +84,14 @@ struct BrowserFolderOrganizationMenuContent: View {
         }
         Button("Folder Color…", systemImage: "paintpalette") {
             performIfCurrent(changeColor)
+        }
+        if folder.location == .current {
+            Button("Convert to Group", systemImage: "rectangle.stack") {
+                performIfCurrent { browser.setSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: true) }
+            }
+            .disabled(
+                !isCurrentAndUnlocked
+                    || !browser.canSetSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: true))
         }
 
         Button(
@@ -91,11 +147,25 @@ struct BrowserFolderOrganizationMenuContent: View {
             }
             .crestMenuActionLabelStyle()
         }
+    }
 
-        Divider()
-        Button("Delete Folder", systemImage: "trash", role: .destructive) {
-            performIfCurrent(deleteFolder)
-        }
+    private var batchActions: BrowserTabBatchActions {
+        BrowserTabBatchActions(browser: browser, spaceAccess: context.spaceAccess)
+    }
+
+    /// Archiving every tab the folder holds, as a selection of those tabs.
+    private var archiving: (request: BrowserCapturedSelection, batch: BrowserTabBatch)? {
+        guard isCurrentAndUnlocked else { return nil }
+        let tabs = context.space.tabIDs(inFolder: folder.id)
+        guard !tabs.isEmpty,
+            let request = BrowserSidebarSelection.capture(tabs.map { .tab($0) }, in: browser)
+        else { return nil }
+        return (request, browser.closing(request))
+    }
+
+    private func archiveTabs() {
+        guard let archiving else { return }
+        _ = batchActions.perform(archiving.batch, for: archiving.request)
     }
 
     private var isCurrentAndUnlocked: Bool {

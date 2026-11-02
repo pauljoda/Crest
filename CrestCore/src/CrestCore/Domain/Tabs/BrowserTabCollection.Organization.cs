@@ -14,19 +14,36 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Organization
 
-    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null) {
+    /// Adds a folder, or a group when `isGroup`: a group sits at the top level
+    /// of the open tabs, and no folder goes inside one.
+    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null, bool isGroup = false) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new Rejected(new FolderLimitReached(FolderTree.MaximumCount));
         if (folders.Any(f => f.Id == id)) throw new Rejected(new FolderAlreadyExists(id));
         location ??= TabPlacement.Saved;
-        if (!location.HoldsFolders) throw new Rejected(new InvalidFolderPlacement());
+        if (!location.HoldsFolders || isGroup && (location != TabPlacement.Current || parent is not null))
+            throw new Rejected(new InvalidFolderPlacement());
         int insertion = folders.Count;
         if (parent is { } p) {
+            if (KnownFolder(p).IsGroup) throw new Rejected(new GroupHoldsOnlyTabs(p));
             location = KnownFolder(p).Location;
             if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new Rejected(new FolderDepthLimitReached(FolderTree.MaximumDepth));
             var subtree = tree.Subtree(p); insertion = folders.FindLastIndex(f => subtree.Contains(f.Id)) + 1;
         }
-        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent));
+        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent, IsGroup: isGroup));
+    }
+
+    /// Whether the folder turned into a group, or back into a folder. Only a
+    /// folder of open tabs at the top level that holds tabs and no folders
+    /// becomes a group; refused with `CannotBecomeGroup` for any other.
+    public bool SetFolderGroup(Guid id, bool isGroup) {
+        var folder = KnownFolder(id);
+        if (folder.IsGroup == isGroup) return false;
+        if (isGroup && (folder.Location != TabPlacement.Current || folder.ParentId is not null
+            || folders.Any(f => f.ParentId == id) || !tabs.Any(t => t.FolderId == id)))
+            throw new Rejected(new CannotBecomeGroup(id));
+        folders[folders.IndexOf(folder)] = folder with { IsGroup = isGroup };
+        return true;
     }
 
     public void RenameFolder(Guid id, string name) {
@@ -127,7 +144,7 @@ public sealed partial class BrowserTabCollection {
     public void MoveFolder(Guid id, TabPlacement? location, Guid? parent, DateTimeOffset now,
         Guid? beforeFolder = null, Guid? beforeTab = null) {
         var tree = new FolderTree(folders); var source = KnownFolder(id);
-        if (parent is { } named) _ = KnownFolder(named);
+        if (parent is { } named && KnownFolder(named).IsGroup) throw new Rejected(new GroupHoldsOnlyTabs(named));
         var movingIds = tree.Subtree(id);
         if (parent is { } p && movingIds.Contains(p)) throw new Rejected(new FolderCycle(id));
         int destinationDepth = parent is { } parentId ? tree.Depth(parentId) + 1 : 0;
@@ -146,7 +163,8 @@ public sealed partial class BrowserTabCollection {
         var remainingTree = new FolderTree(nextFolders);
         var anchor = beforeFolder is { } target ? remainingTree.TabAnchor(target, remaining) : beforeTab;
         var predecessors = remainingTree.EmptyPredecessors(beforeFolder, anchor, parent, destination, remaining);
-        var moving = nextFolders.Where(f => movingIds.Contains(f.Id)).Select(f => f with { Location = destination, ParentId = f.Id == id ? parent : f.ParentId, OrderAnchorTabId = f.Id == id ? anchor : f.OrderAnchorTabId }).ToArray();
+        // A group moved into a folder or out of the open tabs becomes a folder.
+        var moving = nextFolders.Where(f => movingIds.Contains(f.Id)).Select(f => f with { Location = destination, ParentId = f.Id == id ? parent : f.ParentId, OrderAnchorTabId = f.Id == id ? anchor : f.OrderAnchorTabId, IsGroup = f.IsGroup && parent is null && destination == TabPlacement.Current }).ToArray();
         nextFolders.RemoveAll(f => movingIds.Contains(f.Id));
         int folderInsertion = beforeFolder is { } bf ? nextFolders.FindIndex(f => f.Id == bf)
             : parent is { } parentFolder ? nextFolders.FindLastIndex(f => tree.Subtree(parentFolder).Contains(f.Id)) + 1 : nextFolders.Count;

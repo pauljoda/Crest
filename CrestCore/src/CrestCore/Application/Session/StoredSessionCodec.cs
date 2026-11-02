@@ -82,6 +82,7 @@ internal static partial class StoredSessionCodec {
         public const string Id = "id";
         public const string IsCollapsed = "isCollapsed";
         public const string IsEnabled = "isEnabled";
+        public const string IsGroup = "isGroup";
         public const string IsSavedTabsExpanded = "isSavedTabsExpanded";
         public const string KeepsControlsReadable = "keepsControlsReadable";
         public const string KeepsPageLoaded = "keepsPageLoaded";

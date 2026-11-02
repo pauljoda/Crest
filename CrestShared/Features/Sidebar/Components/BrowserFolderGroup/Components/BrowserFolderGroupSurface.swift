@@ -27,41 +27,26 @@ struct BrowserFolderGroupSurface: View {
         }
         .contextMenu {
             if configuration.capabilities.supportsOrganization {
-                BrowserFolderOrganizationMenu(
-                    folder: folder,
-                    context: configuration.context,
-                    assignment: configuration.folderRuntimeAssignment,
-                    createNestedFolder: interaction.beginCreatingChild,
-                    renameFolder: interaction.beginRenaming,
-                    changeColor: {
-                        interaction.isChoosingColor.wrappedValue = true
-                    },
-                    changeIcon: {
-                        interaction.isChoosingIcon.wrappedValue = true
-                    },
-                    deleteFolder: {
-                        interaction.isConfirmingDeletion.wrappedValue = true
+                BrowserFolderOrganizationMenu(configuration: configuration, interaction: interaction)
+                    .tint(.primary)
+                    // A long press opens this menu out of the same gesture that would
+                    // otherwise lift the folder. Telling the drag state the menu has
+                    // the press is what keeps the two from both claiming it.
+                    .onAppear {
+                        sidebarInteraction.folderDragState.contextMenuDidOpen(
+                            for: dragItem
+                        )
+                        // And the reorder state, which is where a touch lift lives and
+                        // which no drag session will report back to once the menu has
+                        // the press. See `yieldToCompetingInteraction`.
+                        sidebarInteraction.sidebarReorderState
+                            .yieldToCompetingInteraction()
                     }
-                )
-                .tint(.primary)
-                // A long press opens this menu out of the same gesture that would
-                // otherwise lift the folder. Telling the drag state the menu has
-                // the press is what keeps the two from both claiming it.
-                .onAppear {
-                    sidebarInteraction.folderDragState.contextMenuDidOpen(
-                        for: dragItem
-                    )
-                    // And the reorder state, which is where a touch lift lives and
-                    // which no drag session will report back to once the menu has
-                    // the press. See `yieldToCompetingInteraction`.
-                    sidebarInteraction.sidebarReorderState
-                        .yieldToCompetingInteraction()
-                }
-                .onDisappear {
-                    sidebarInteraction.folderDragState.contextMenuDidClose(
-                        for: dragItem
-                    )
-                }
+                    .onDisappear {
+                        sidebarInteraction.folderDragState.contextMenuDidClose(
+                            for: dragItem
+                        )
+                    }
             }
         }
         .popover(

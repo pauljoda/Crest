@@ -4757,6 +4757,10 @@
     "chromium-extensions-act-on-page-in-use": {
       "category": "fixed",
       "message": "Extensions on Mac now act on the page you're using in a Quick Window, a Peek or the focused side of a split, including from their keyboard shortcuts, instead of on another tab."
+    },
+    "tab-groups": {
+      "category": "new",
+      "message": "Groups gather open tabs under a simple header that syncs to every device and goes away when its last tab leaves. Make one from a tab's menu, turn a group into a folder and back, and open any folder's or group's actions from the … button on its header."
     }
   }
 }

@@ -3,9 +3,12 @@ import Foundation
 extension BrowserStore {
 
     @discardableResult
-    func createTabFolder(_ tabs: [UUID], in spaceID: UUID, detachesSplitMembers: Bool = false) -> UUID? {
+    func createTabFolder(
+        _ tabs: [UUID], in spaceID: UUID, detachesSplitMembers: Bool = false, isGroup: Bool = false
+    ) -> UUID? {
         guard !isDeleting(spaceID),
-            let id = createSessionTabFolder(tabs, in: spaceID, detachesSplitMembers: detachesSplitMembers)
+            let id = createSessionTabFolder(
+                tabs, in: spaceID, detachesSplitMembers: detachesSplitMembers, isGroup: isGroup)
         else { return nil }
         return id
     }

@@ -6,16 +6,19 @@ namespace CrestCore.Contracts;
 /// the core makes at the top level of `Placement`'s section, named `Title`,
 /// which the app sends in its own language, in the default folder color. A selected folder moves in whole, as a
 /// folder of the new one. Refused with `InvalidFolderPlacement` for a section
-/// that holds no folders.
+/// that holds no folders. With `IsGroup` it makes a group of open tabs,
+/// refused with `SelectionHoldsFolders` for a selection holding folders and
+/// with `InvalidFolderPlacement` outside the open tabs.
 public sealed record FolderTabs(
-    Guid WorkspaceId, Guid WindowId, Guid SpaceId, TabSelection Selection, TabPlacement Placement, string? Title = null)
+    Guid WorkspaceId, Guid WindowId, Guid SpaceId, TabSelection Selection, TabPlacement Placement, string? Title = null,
+    bool IsGroup = false)
     : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var batch = workspace.Selecting(turn.Basis, WindowId, SpaceId, Selection);
         batch.Edited.FolderSelected(batch.Selected, Placement, NativeSessionAuthority.FolderTitle(Title), FolderState.DefaultColor, turn.Ids,
-            turn.Now);
+            turn.Now, IsGroup);
         return batch.Result(turn.Basis, SyncStaging.Batch);
     }
 

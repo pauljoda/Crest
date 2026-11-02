@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Renames in place: Return or focus loss commits, and Escape cancels.
+/// Renames in place: Return or focus loss commits, and Escape cancels. A
+/// group's header shows its name alone, in small secondary text. Either kind
+/// keeps a `…` button at its trailing edge that opens the folder's menu: on
+/// hover where a pointer can reveal it, and always on a touch shell.
 struct BrowserFolderHeaderControl: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -10,9 +13,13 @@ struct BrowserFolderHeaderControl: View {
     private var folder: FolderStateModel { configuration.folder }
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var showsTabCounts: Bool { BrowserDeviceAppearanceStore.shared.foldersShowTabCounts }
-    private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
-    private var tintsTitle: Bool { BrowserDeviceAppearanceStore.shared.foldersTintTitle }
+    @State private var isHovering = false
+    private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
+    private var showsTabCounts: Bool {
+        folder.isGroup ? appearance.groupsShowTabCounts : appearance.foldersShowTabCounts
+    }
+    private var alwaysVisible: Bool { appearance.foldersAlwaysVisible }
+    private var tintsTitle: Bool { folder.isGroup ? appearance.groupsTintTitle : appearance.foldersTintTitle }
     private var textScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     private var isEditing: Bool {
@@ -58,21 +65,30 @@ struct BrowserFolderHeaderControl: View {
                     interaction.toggleExpansion()
                 } label: {
                     HStack(spacing: 7) {
-                        BrowserFolderIcon(
-                            folder: folder,
-                            isExpanded: interaction.isExpanded.wrappedValue,
-                            metrics: configuration.headerMetrics
-                        )
+                        if folder.isGroup {
+                            BrowserGroupHeaderTitle(folder: folder, tintsTitle: tintsTitle)
+                        } else {
+                            BrowserFolderIcon(
+                                folder: folder,
+                                isExpanded: interaction.isExpanded.wrappedValue,
+                                metrics: configuration.headerMetrics
+                            )
 
-                        BrowserFolderHeaderTitle(
-                            folder: folder, context: configuration.context, tintsTitle: tintsTitle,
-                            emphasizesShownTab: alwaysVisible
-                        )
-                        .equatable()
+                            BrowserFolderHeaderTitle(
+                                folder: folder, context: configuration.context, tintsTitle: tintsTitle,
+                                emphasizesShownTab: alwaysVisible
+                            )
+                            .equatable()
+                        }
 
                         Spacer(minLength: 8)
                         if showsTabCounts {
                             BrowserFolderTabCount(folder: folder, space: configuration.context.space).equatable()
+                        }
+                        if showsMenuButton {
+                            // Room for the `…` button drawn over the header, so
+                            // the count never sits under it.
+                            Color.clear.frame(width: menuMetrics.controlSize.width, height: 1)
                         }
                     }
                     .browserSavedFolderHeaderLayout(configuration: configuration)
@@ -82,11 +98,99 @@ struct BrowserFolderHeaderControl: View {
                         Rectangle().inset(by: capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
                 }
                 .buttonStyle(BrowserFolderHeaderButtonStyle())
+                // On the disclosure alone, so the `…` button beside it keeps
+                // its own label.
+                .accessibilityLabel(accessibilityLabel)
+                .accessibilityValue(
+                    BrowserChromeAccessibility.folderValue(isExpanded: interaction.isExpanded.wrappedValue)
+                )
+                .accessibilityHint(accessibilityHint)
+                .overlay(alignment: .trailing) {
+                    if showsMenuButton {
+                        BrowserFolderMenuButton(
+                            configuration: configuration, interaction: interaction, metrics: menuMetrics,
+                            isRevealed: menuMetrics.isRevealed(isHovering: isHovering, isSelected: false)
+                        )
+                        .padding(.trailing, configuration.headerMetrics.contentTrailingInset)
+                    }
+                }
+                .onHover { isHovering = $0 }
             }
         }
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
     }
 
+    private var accessibilityLabel: LocalizedStringKey {
+        folder.isGroup ? "\(folder.shownTitle) group" : "\(folder.shownTitle) folder"
+    }
+
+    private var accessibilityHint: LocalizedStringKey {
+        switch (folder.isGroup, interaction.isExpanded.wrappedValue) {
+        case (true, true): "Collapses this group"
+        case (true, false): "Expands this group"
+        case (false, true): "Collapses this folder"
+        case (false, false): "Expands this folder"
+        }
+    }
+
+    /// Whether the header offers its menu as a button: wherever the shell
+    /// organizes folders, as the context menu does.
+    private var showsMenuButton: Bool { capabilities.supportsOrganization }
+
+    /// The size and reveal rule a tab row's trailing control follows, so the
+    /// header's matches it.
+    private var menuMetrics: BrowserTabTrailingControlMetrics { capabilities.trailingControlMetrics }
+}
+
+/// The `…` button at a folder or group header's trailing edge, which opens
+/// the same menu its context menu does.
+private struct BrowserFolderMenuButton: View {
+    let configuration: BrowserFolderGroupConfiguration
+    let interaction: BrowserFolderGroupInteractionContext
+    let metrics: BrowserTabTrailingControlMetrics
+    let isRevealed: Bool
+
+    var body: some View {
+        Menu {
+            BrowserFolderOrganizationMenu(configuration: configuration, interaction: interaction)
+        } label: {
+            BrowserSidebarTabTrailingControlLabel(systemName: "ellipsis", metrics: metrics)
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
+        .crestMenuActionLabelStyle()
+        .tint(.primary)
+        .foregroundStyle(.secondary)
+        .opacity(isRevealed ? 1 : 0)
+        .allowsHitTesting(isRevealed)
+        .disabled(!configuration.isAvailableForDisplay)
+        .accessibilityLabel(title)
+        .help(title)
+    }
+
+    private var title: LocalizedStringKey { configuration.folder.isGroup ? "Group actions" : "Folder actions" }
+}
+
+/// A group's name: small, semibold and secondary, or in the group's color
+/// where the person asked for it.
+private struct BrowserGroupHeaderTitle: View {
+    let folder: FolderStateModel
+    let tintsTitle: Bool
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text(folder.shownTitle)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(
+                tintsTitle
+                    ? folder.displayColor.folderTitleColor(onDarkBackground: colorScheme == .dark).color
+                    : .secondary
+            )
+            .lineLimit(1)
+            .modifier(BrowserFolderTitlePressFeedback())
+    }
 }
 
 /// The folder's title, in its color where the person asked for it, and bold

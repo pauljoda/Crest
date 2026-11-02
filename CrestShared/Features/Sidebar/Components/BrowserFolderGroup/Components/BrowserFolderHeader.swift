@@ -17,17 +17,6 @@ struct BrowserFolderHeader: View {
             configuration: configuration,
             interaction: interaction
         )
-        .accessibilityLabel("\(folder.shownTitle) folder")
-        .accessibilityValue(
-            BrowserChromeAccessibility.folderValue(
-                isExpanded: interaction.isExpanded.wrappedValue
-            )
-        )
-        .accessibilityHint(
-            interaction.isExpanded.wrappedValue
-                ? "Collapses this folder"
-                : "Expands this folder"
-        )
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         // Inside the folder's padding, as a Split View's header is inside its own.
         .padding(.horizontal, BrowserSidebarMetrics.layerInset + BrowserSidebarMetrics.containerPadding)

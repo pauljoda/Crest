@@ -50,6 +50,7 @@ struct BrowserLookAndFeelSettingsPane: View {
             BrowserTabStatusAppearanceGroup()
             BrowserAddressAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
             BrowserFolderAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
+            BrowserGroupAppearanceGroup()
             if usesLiveSidebar {
                 BrowserDefaultPageZoomSettingsSection(preferences: .shared, space: space, showsPreview: false)
             }

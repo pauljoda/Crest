@@ -256,6 +256,23 @@ final class BrowserDeviceAppearanceStore {
     var foldersTintTitle: Bool {
         didSet { saveSoon() }
     }
+    /// Whether groups keep their highlight when the pointer is elsewhere and
+    /// none of their tabs is selected.
+    var groupsAlwaysVisible: Bool {
+        didSet { saveSoon() }
+    }
+    /// Whether group headers show how many tabs they hold.
+    var groupsShowTabCounts: Bool {
+        didSet { saveSoon() }
+    }
+    /// Whether groups draw a border in their color.
+    var groupsShowBorders: Bool {
+        didSet { saveSoon() }
+    }
+    /// Whether group names take the group's color.
+    var groupsTintTitle: Bool {
+        didSet { saveSoon() }
+    }
     /// The scheme the windows draw in now, as the platform reports it once
     /// ``mode`` and the system's own appearance are applied.
     var shownColorScheme = ColorScheme.light {
@@ -348,6 +365,18 @@ final class BrowserDeviceAppearanceStore {
         foldersTintTitle =
             defaults.object(forKey: BrowserFolderAppearancePreference.tintsTitleKey) as? Bool
             ?? BrowserLookAndFeelDefaults.foldersTintTitle
+        groupsAlwaysVisible =
+            defaults.object(forKey: BrowserFolderAppearancePreference.groupsAlwaysVisibleKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.groupsAlwaysVisible
+        groupsShowTabCounts =
+            defaults.object(forKey: BrowserFolderAppearancePreference.groupsShowsTabCountsKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.groupsShowTabCounts
+        groupsShowBorders =
+            defaults.object(forKey: BrowserFolderAppearancePreference.groupsShowsBordersKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.groupsShowBorders
+        groupsTintTitle =
+            defaults.object(forKey: BrowserFolderAppearancePreference.groupsTintsTitleKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.groupsTintTitle
         dimsSpaceColors = Self.dims(in: shownColorScheme, by: darkSpaceDimming)
         observeChanges()
         // A choice made just before the app quits or steps aside, or leaves
@@ -389,6 +418,10 @@ final class BrowserDeviceAppearanceStore {
         write(foldersShowBorders, forKey: BrowserFolderAppearancePreference.showsBordersKey, in: defaults)
         write(foldersIconOnly, forKey: BrowserFolderAppearancePreference.iconOnlyKey, in: defaults)
         write(foldersTintTitle, forKey: BrowserFolderAppearancePreference.tintsTitleKey, in: defaults)
+        write(groupsAlwaysVisible, forKey: BrowserFolderAppearancePreference.groupsAlwaysVisibleKey, in: defaults)
+        write(groupsShowTabCounts, forKey: BrowserFolderAppearancePreference.groupsShowsTabCountsKey, in: defaults)
+        write(groupsShowBorders, forKey: BrowserFolderAppearancePreference.groupsShowsBordersKey, in: defaults)
+        write(groupsTintTitle, forKey: BrowserFolderAppearancePreference.groupsTintsTitleKey, in: defaults)
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)

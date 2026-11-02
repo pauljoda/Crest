@@ -82,7 +82,7 @@ public sealed partial class NativeSessionAuthority {
         receivingTabs.PruneSplitMetadata();
         leaving.ShowTab(space.Id, shown);
         arriving.ShowTab(there.Id, intent.TabId).ShowSpace(there.Id);
-        var next = basis.Replacing(edited.Capture(space));
+        var next = basis.Replacing(edited.Capture(space)).ClearingEmptiedGroups(basis);
         var nextThere = theirs.Replacing(receivingTabs.Capture(there));
         Validate(basis, next);
         ValidateBorrowedSession(next);
@@ -101,7 +101,7 @@ public sealed partial class NativeSessionAuthority {
         NativeSyncTransaction? staged = null;
         try {
             if (keeper is { Workspace: var owner, Previous: var previous, Reserved: var kept }) {
-                staged = owner.StageWithSave(previous, kept.Session, SyncStaging.Transfer.Reason);
+                staged = owner.StageWithSave(previous, kept.Session, SyncStaging.Transfer.Deleting(kept.Session.GroupsRemovedSince(previous)));
                 if (staged is not null) kept.BindSync(staged);
                 owner.storage?.Save(kept.Session, kept.Revision, kept.SyncTransaction?.Journal, kept.Checkpoint);
             }

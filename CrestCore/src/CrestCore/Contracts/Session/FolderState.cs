@@ -7,6 +7,8 @@ namespace CrestCore.Contracts;
 /// <see cref="ParentId"/>, and a child always shares its parent's <see cref="Location"/>.
 /// <see cref="Symbol"/> and <see cref="Color"/> are null until someone chooses them.
 /// <see cref="OrderAnchorTabId"/> is the tab an empty folder keeps its place before.
+/// <see cref="IsGroup"/> marks a group: a single-level folder of open tabs that
+/// holds no folders, sits in no folder, and goes when its last tab leaves it.
 /// </summary>
 [Observed]
 public sealed record FolderState(
@@ -18,7 +20,8 @@ public sealed record FolderState(
     Guid? ParentId = null,
     bool IsCollapsed = false,
     DateTimeOffset? CollapseModifiedAt = null,
-    Guid? OrderAnchorTabId = null) {
+    Guid? OrderAnchorTabId = null,
+    bool IsGroup = false) {
     #region Static Variables
 
     /// The most folders deep a folder may nest, counting the folder itself.

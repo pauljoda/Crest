@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// One hover boundary for a folder's header and all of its visible contents,
-/// held the container padding in from every edge of the folder's surface.
+/// held the container padding in from every edge of the folder's surface. A
+/// group follows the group appearance choices in place of the folder ones.
 struct BrowserFolderSectionSurface: ViewModifier {
     let color: BrandColor
+    var isGroup = false
     var intensity: Double = 0
     var textColorMode: SpaceTextColorMode = .automatic
     /// How many folders hold this one.
@@ -17,8 +19,9 @@ struct BrowserFolderSectionSurface: ViewModifier {
     private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
-    private var showsBorders: Bool { BrowserDeviceAppearanceStore.shared.foldersShowBorders }
+    private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
+    private var alwaysVisible: Bool { isGroup ? appearance.groupsAlwaysVisible : appearance.foldersAlwaysVisible }
+    private var showsBorders: Bool { isGroup ? appearance.groupsShowBorders : appearance.foldersShowBorders }
 
     func body(content: Content) -> some View {
         content

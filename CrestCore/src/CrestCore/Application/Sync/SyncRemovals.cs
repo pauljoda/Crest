@@ -9,9 +9,10 @@ namespace CrestCore.Application;
 internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
     #region Types
 
-    /// One accepted edit: the state it replaced, the state it made and the
-    /// reason the records it removed are deleted for.
-    internal sealed record Edit(SessionState Previous, SessionState Next, SyncDeletionReason Reason);
+    /// One accepted edit: the state it replaced, the state it made, the
+    /// reason the records it removed are deleted for, and the records it
+    /// deleted explicitly whatever that reason.
+    internal sealed record Edit(SessionState Previous, SessionState Next, SyncDeletionReason Reason, IReadOnlySet<string>? Deleted = null);
 
     #endregion
 
@@ -33,13 +34,16 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
     public SyncRemovals Joining(SyncRemovals later) => new([.. Edits, .. later.Edits.Where(edit => !Edits.Contains(edit))]);
 
     /// The reason each record the edits removed is deleted for, by its record
-    /// name: the reason of the newest edit that removed it. Empty when every
-    /// edit was made for `reason`, which the stage then gives each removal.
+    /// name: the reason of the newest edit that removed it, or an explicit
+    /// deletion for one that edit deleted on the person's behalf. Empty when
+    /// every edit was made for `reason` and deleted nothing explicitly, which
+    /// the stage then gives each removal.
     public IReadOnlyDictionary<string, SyncDeletionReason> Reasons(SyncDeletionReason reason) {
-        if (Edits.All(edit => edit.Reason == reason)) return Unnamed;
+        if (Edits.All(edit => edit.Reason == reason && edit.Deleted is not { Count: > 0 })) return Unnamed;
         var reasons = new Dictionary<string, SyncDeletionReason>(StringComparer.Ordinal);
         foreach (var edit in Edits)
-            foreach (var name in Removed(edit.Previous, edit.Next)) reasons[name] = edit.Reason;
+            foreach (var name in Removed(edit.Previous, edit.Next))
+                reasons[name] = edit.Deleted?.Contains(name) == true ? SyncDeletionReason.ExplicitDelete : edit.Reason;
         return reasons;
     }
 

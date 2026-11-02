@@ -35,11 +35,17 @@ struct BrowserTabBatchMenu: View {
                 count == 1 ? "Pin Tab" : "Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
         }
+        Menu("Move to Group", systemImage: "rectangle.stack.badge.plus") {
+            action("New Group", browser.filingInNewFolder(request, in: .current, isGroup: true))
+            ForEach(groupChoices) { choice in
+                action(named: choice.pathTitle, browser.filing(request, .current, folder: choice.id))
+            }
+        }
         Menu("Move to Folder", systemImage: "folder") {
             action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
             action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
             action("Saved Tabs", browser.filing(request, .saved))
-            ForEach(folderChoices) { choice in
+            ForEach(folderChoices.filter { !$0.folder.isGroup }) { choice in
                 action(named: choice.pathTitle, browser.filing(request, choice.folder.location, folder: choice.id))
             }
         }
@@ -106,7 +112,7 @@ struct BrowserTabBatchMenu: View {
             Menu("Move to Folder", systemImage: "folder") {
                 action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
                 action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
-                ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) }) { choice in
+                ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) && !$0.folder.isGroup }) { choice in
                     action(named: choice.pathTitle, browser.filing(request, choice.folder.location, folder: choice.id))
                 }
             }
@@ -146,5 +152,10 @@ struct BrowserTabBatchMenu: View {
     /// sidebar lists them.
     private var folderChoices: [SpaceModel.FolderChoice] {
         browser.spaceModel(request.spaceID)?.folderChoices(in: [.saved, .current]) ?? []
+    }
+
+    /// Every group of the selection's Space, in the order the sidebar lists them.
+    private var groupChoices: [SpaceModel.FolderChoice] {
+        browser.spaceModel(request.spaceID)?.folderChoices(in: [.current]).filter(\.folder.isGroup) ?? []
     }
 }

@@ -7,6 +7,8 @@ namespace CrestCore.Application;
 internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgency) {
     #region Static Variables
 
+    private static readonly IReadOnlySet<string> NoRecords = new HashSet<string>(StringComparer.Ordinal);
+
     /// A launch stages the session it loaded; what the file lost while the app
     /// was closed was removed by retention.
     public static SyncStaging Launch { get; } = new(SyncDeletionReason.Retention, SyncUrgency.Immediate);
@@ -57,6 +59,22 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// Spaces were imported, saved with their journal before the import
     /// returns, because an upload follows.
     public static SyncStaging Import { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
+
+    #endregion
+
+    #region Variables
+
+    /// The records the edit deleted on the person's behalf whatever its
+    /// reason, by record name: the groups that went with their last tab.
+    public IReadOnlySet<string> Deleted { get; init; } = NoRecords;
+
+    #endregion
+
+    #region Actions - Deletion
+
+    /// This staging, deleting the folders `folders` names explicitly as well.
+    public SyncStaging Deleting(IReadOnlyCollection<Guid> folders) => folders.Count == 0 ? this
+        : this with { Deleted = new HashSet<string>(Deleted.Concat(folders.Select(SyncRecordKind.Folder.RecordName)), StringComparer.Ordinal) };
 
     #endregion
 }

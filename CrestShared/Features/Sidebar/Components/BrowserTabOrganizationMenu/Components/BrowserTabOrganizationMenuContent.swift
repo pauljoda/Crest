@@ -105,6 +105,29 @@ struct BrowserTabOrganizationMenuContent: View {
         }
 
         if !tab.placement.isDurable, !tab.isStartPage {
+            Menu("Add to Group", systemImage: "rectangle.stack.badge.plus") {
+                Group {
+                    Button("New Group", systemImage: "rectangle.stack.badge.plus") {
+                        performIfCurrent {
+                            browser.createTabFolder([tab.id], in: assignment.spaceID, isGroup: true)
+                        }
+                    }
+                    let groups = context.space.folderChoices(in: [.current]).map(\.folder).filter(\.isGroup)
+                    if !groups.isEmpty { Divider() }
+                    ForEach(groups, id: \.id) { group in
+                        Button {
+                            performIfCurrent {
+                                browser.fileTabs(
+                                    [tab.id], matching: sourceAssignment, into: group.id, location: .current)
+                            }
+                        } label: {
+                            Text(verbatim: group.shownTitle)
+                        }
+                        .disabled(group.id == tab.folderID)
+                    }
+                }
+                .crestMenuActionLabelStyle()
+            }
             Menu("Add to Current Tabs Folder", systemImage: "folder.badge.plus") {
                 Group {
                     Button("New Folder", systemImage: "folder.badge.plus") {
@@ -112,7 +135,7 @@ struct BrowserTabOrganizationMenuContent: View {
                             browser.createTabFolder([tab.id], in: assignment.spaceID)
                         }
                     }
-                    let folders = context.space.folderChoices(in: [.current]).map(\.folder)
+                    let folders = context.space.folderChoices(in: [.current]).map(\.folder).filter { !$0.isGroup }
                     if !folders.isEmpty { Divider() }
                     ForEach(folders, id: \.id) { folder in
                         Button {
@@ -132,8 +155,12 @@ struct BrowserTabOrganizationMenuContent: View {
                 }
                 .crestMenuActionLabelStyle()
             }
-            if tab.folderID != nil {
-                Button("Remove from Folder", systemImage: "folder.badge.minus") {
+            if let folderID = tab.folderID {
+                Button(
+                    context.space.folders.model(folderID)?.isGroup == true
+                        ? LocalizedStringKey("Remove from Group") : LocalizedStringKey("Remove from Folder"),
+                    systemImage: "folder.badge.minus"
+                ) {
                     performIfCurrent {
                         browser.fileTabs([tab.id], matching: sourceAssignment, into: nil, location: .current)
                     }

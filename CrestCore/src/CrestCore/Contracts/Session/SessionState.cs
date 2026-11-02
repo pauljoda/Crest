@@ -182,6 +182,37 @@ public sealed record SessionState(
 
     #endregion
 
+    #region Actions - Groups
+
+    /// This session without the groups `previous` showed holding tabs that
+    /// hold none here: a group goes with its last tab, whether it closed, was
+    /// archived or moved out. A group that held no tabs before stays, since
+    /// its tabs may not have arrived from another device yet.
+    internal SessionState ClearingEmptiedGroups(SessionState previous) {
+        var cleared = false;
+        var spaces = Spaces.Select(space => {
+            if (previous.Space(space.Id) is not { } before) return space;
+            var held = before.Tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
+            var holding = space.Tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
+            var emptied = space.Folders.Where(folder => folder.IsGroup && held.Contains(folder.Id) && !holding.Contains(folder.Id))
+                .Select(folder => folder.Id).ToHashSet();
+            if (emptied.Count == 0) return space;
+            cleared = true;
+            return space with { Folders = [.. space.Folders.Where(folder => !emptied.Contains(folder.Id))] };
+        }).ToArray();
+        return cleared ? this with { Spaces = spaces } : this;
+    }
+
+    /// The groups `previous` held that this session holds no more, which went
+    /// on the person's behalf: emptied, or deleted.
+    internal IReadOnlyList<Guid> GroupsRemovedSince(SessionState previous) {
+        var kept = Spaces.SelectMany(space => space.Folders).Select(folder => folder.Id).ToHashSet();
+        return [.. previous.Spaces.SelectMany(space => space.Folders).Where(folder => folder.IsGroup && !kept.Contains(folder.Id))
+            .Select(folder => folder.Id)];
+    }
+
+    #endregion
+
     #region Actions - Equality
 
     public bool Equals(SessionState? other) => ReferenceEquals(this, other) || other is not null

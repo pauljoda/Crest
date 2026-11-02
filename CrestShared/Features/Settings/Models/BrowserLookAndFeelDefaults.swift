@@ -27,6 +27,10 @@ enum BrowserLookAndFeelDefaults {
     static let foldersShowBorders = true
     static let foldersIconOnly = false
     static let foldersTintTitle = false
+    static let groupsAlwaysVisible = false
+    static let groupsShowTabCounts = false
+    static let groupsShowBorders = false
+    static let groupsTintTitle = false
 
     /// Puts every device-wide appearance choice this pane owns back.
     ///
@@ -53,6 +57,10 @@ enum BrowserLookAndFeelDefaults {
         appearance.foldersShowBorders = foldersShowBorders
         appearance.foldersIconOnly = foldersIconOnly
         appearance.foldersTintTitle = foldersTintTitle
+        appearance.groupsAlwaysVisible = groupsAlwaysVisible
+        appearance.groupsShowTabCounts = groupsShowTabCounts
+        appearance.groupsShowBorders = groupsShowBorders
+        appearance.groupsTintTitle = groupsTintTitle
         appearance.saveNow()
     }
 }

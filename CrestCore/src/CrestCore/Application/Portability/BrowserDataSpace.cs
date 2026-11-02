@@ -51,7 +51,7 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
             : null)).ToArray();
         IReadOnlyList<FolderState> ordered;
         try {
-            ordered = new FolderTree(folders).DisplayOrder();
+            ordered = FolderTree.SettledGroups(new FolderTree(folders).DisplayOrder());
         } catch (BrowserRuleException) {
             throw BrowserDataValue.Invalid();
         }

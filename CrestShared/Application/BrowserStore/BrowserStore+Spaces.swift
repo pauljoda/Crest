@@ -233,7 +233,7 @@ extension BrowserStore {
                 CreateFolder(
                     workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID,
                     placement: .saved, parentID: parentID, title: title, color: color, symbol: "folder",
-                    tabIDs: [], leavesSplits: false),
+                    tabIDs: [], leavesSplits: false, isGroup: false),
                 from: self)
         else { return nil }
         return folderID
@@ -247,7 +247,7 @@ extension BrowserStore {
             CreateFolder(
                 workspaceID: family.workspaceID, spaceID: assignment.spaceID, folderID: UUID(),
                 placement: .saved, parentID: parentID, title: nil, color: nil, symbol: nil, tabIDs: [],
-                leavesSplits: false),
+                leavesSplits: false, isGroup: false),
             from: self)
     }
 
