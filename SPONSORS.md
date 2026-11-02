@@ -6,11 +6,12 @@ Ko-fi or Patreon membership level and ordered alphabetically within each level.
 
 ## Sponsor — $25/month
 
-- Jesus Rojas: [https://jesusvr.dev/](https://jesusvr.dev/) 
+- Jesus Rojas: [https://jesusvr.dev/](https://jesusvr.dev/)
+- James Q. Berry: [www.youtube.com/GuamPhotography](www.youtube.com/GuamPhotography)
 
 ## Sustainer — $10/month
 
-_No public sustainers yet._
+- yeliaBdE
 
 ## Supporter — $3/month
 
