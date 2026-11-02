@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.138</title>
-            <pubDate>Mon, 02 Nov 2026 18:42:40 +0000</pubDate>
+            <title>0.8.139</title>
+            <pubDate>Mon, 02 Nov 2026 20:39:22 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1473</sparkle:version>
-            <sparkle:shortVersionString>0.8.138</sparkle:shortVersionString>
+            <sparkle:version>1476</sparkle:version>
+            <sparkle:shortVersionString>0.8.139</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out.
+- Scrolling the sidebar no longer makes Crest stop responding, with or without folders open.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/40b1e97f98f170c729bdf10d3656c8e35ddd1558...8c54c4111351d62a7c7acc806c78d89855757417) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.138-2026-11-02-1473-r473.1/Installer-Crest-0.8.138-development-2026-11-02-8c54c41-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/8c54c4111351d62a7c7acc806c78d89855757417...07699fdc713e2d799f54bb6e3f9009f1df60526d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.139-2026-11-02-1476-r476.1/Installer-Crest-0.8.139-development-2026-11-02-07699fd-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.138-2026-11-02-1473-r473.1/Installer-Crest-0.8.138-development-2026-11-02-8c54c41-arm64.dmg" length="216791194" type="application/octet-stream" sparkle:edSignature="vKl7l6was/M8wRZQMJvIW51sUqJ0W2dwrA/fKDUS3JwSj2VlPMZvqsc6MayAnFOsWoVGd+Ve44JaiMEODQqKDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.139-2026-11-02-1476-r476.1/Installer-Crest-0.8.139-development-2026-11-02-07699fd-arm64.dmg" length="216830106" type="application/octet-stream" sparkle:edSignature="L7rlHUoaa0Xut+fsuPOZntuYziJcjC5Wjv8grkPgwwNoBuqh/KnTprSX9R+8wrLVyn9ZJ3cpp7HG3sxKh4KOCQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: PPYQB3JyjiFcV1uEkIBB50O8aJ9huOj0Gdlh74x+DWD7f8QjTTMtph8t/WnDDdg8ftKOrTX5GDCR3ru5BlxcBA==
-length: 4148
+edSignature: Trx4OQ0uhQTN5qBeFGgz5edM5AOYiREtRqHV5zHEHpJdsXmJnHGZ6Vrkfm+u0aA35kVqvu+ADigEY+rmNxeNBA==
+length: 3989
 -->
