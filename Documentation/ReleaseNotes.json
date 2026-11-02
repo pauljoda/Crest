@@ -4773,6 +4773,10 @@
     "import-tab-folder-placement": {
       "category": "internal",
       "message": "A browser-data import rejects a tab whose folder sits in a different section."
+    },
+    "create-group-needs-tabs": {
+      "category": "internal",
+      "message": "Creating a group now requires at least one tab, so an empty group is never made."
     }
   }
 }
