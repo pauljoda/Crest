@@ -56,6 +56,9 @@ constexpr size_t kLinkBytes = 8192;
 // The most links staged at once, and how long one waits for its Peek.
 constexpr size_t kStagedLinks = 32;
 constexpr base::TimeDelta kStagedLinkLifetime = base::Seconds(30);
+// How long a window a link opened waits for the core before it loads anyway,
+// as it would without waiting, so one the core never hears of isn't left blank.
+constexpr base::TimeDelta kHeldWindowLifetime = base::Seconds(5);
 // The modifier bits Blink records for a trusted click on a link. Any of them
 // makes it a modified click for the core to decide, Shift included, since it
 // can be the key that opens Peek.
@@ -532,12 +535,18 @@ void EngineBinding::Adopt(const engine::AdoptOfferedPage& adoption) {
                           .first->second;
   Live(page, contents);
   // A held window's link goes ahead in the page the core adopted.
-  const auto held = std::find_if(held_windows_.begin(), held_windows_.end(),
-                                 [contents](const auto& window) { return window->contents.get() == contents; });
+  ReleaseHeldWindow(contents->GetWeakPtr());
+}
+
+void EngineBinding::ReleaseHeldWindow(base::WeakPtr<content::WebContents> contents) {
+  const auto held = std::find_if(held_windows_.begin(), held_windows_.end(), [&contents](const auto& window) {
+    return contents && window->contents.get() == contents.get();
+  });
   if (held != held_windows_.end()) {
     base::SequencedTaskRunner::GetCurrentDefault()->PostTask(FROM_HERE, std::move((*held)->resume));
     held_windows_.erase(held);
   }
+  std::erase_if(held_windows_, [](const auto& window) { return !window->contents; });
 }
 
 // The page the core refused closes. A held window's request never went out,
@@ -783,6 +792,10 @@ bool EngineBinding::HoldsWindowLink(content::NavigationHandle& navigation, base:
   std::erase_if(held_windows_, [](const auto& window) { return !window->contents; });
   held_windows_.push_back(std::make_unique<HeldWindow>(
       HeldWindow{.contents = contents->GetWeakPtr(), .link = std::move(link), .resume = std::move(resume)}));
+  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(&EngineBinding::ReleaseHeldWindow, weak_factory_.GetWeakPtr(), contents->GetWeakPtr()),
+      kHeldWindowLifetime);
   return true;
 }
 
