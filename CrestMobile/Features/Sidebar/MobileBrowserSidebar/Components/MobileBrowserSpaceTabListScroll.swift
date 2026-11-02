@@ -7,6 +7,11 @@ import SwiftUI
 /// screen with a real resting frame before the morph starts. The lists are lazy,
 /// and scrolling to the shown tab's row by its identity makes that row before
 /// the morph reads its frame.
+///
+/// The list's sections are stacked as they are: each makes its own rows lazily,
+/// and a lazy stack around them would size every section from an estimate,
+/// which with the section's own lazy rows inside could keep the sidebar's
+/// layout from ever settling.
 struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -20,7 +25,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
-                        LazyVStack(spacing: 0) {
+                        VStack(spacing: 0) {
                             content()
                         }
                         .sidebarScrollContent()
