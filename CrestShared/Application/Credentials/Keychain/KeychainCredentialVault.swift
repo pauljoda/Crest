@@ -13,6 +13,9 @@ actor KeychainCredentialVault: CredentialVault {
     private let store: any CredentialKeychainStoring
     private let servicePrefix: String
     private let codec = CredentialKeychainCodec()
+    /// Whether passwords saved for each origin fill a page at the first, in
+    /// order, which the core answers in production.
+    private let fills: @Sendable (CredentialOrigin, [CredentialOrigin]) throws -> [Bool]
     /// Whether a write holds the vault, and the writes waiting their turn.
     private var isWriting = false
     private var waitingWrites: [CheckedContinuation<Void, Never>] = []
@@ -21,10 +24,14 @@ actor KeychainCredentialVault: CredentialVault {
 
     init(
         store: any CredentialKeychainStoring,
-        servicePrefix: String = CredentialKeychainNamespace.productionPrefix
+        servicePrefix: String = CredentialKeychainNamespace.productionPrefix,
+        fills: @escaping @Sendable (CredentialOrigin, [CredentialOrigin]) throws -> [Bool] = { page, saved in
+            saved.map { $0 == page }
+        }
     ) {
         self.store = store
         self.servicePrefix = servicePrefix
+        self.fills = fills
     }
 
     // MARK: - Actions - Reading
@@ -38,8 +45,7 @@ actor KeychainCredentialVault: CredentialVault {
         matching origin: CredentialOrigin,
         in spaceID: UUID
     ) async throws -> [CredentialDescriptor] {
-        try await readableDescriptors(in: spaceID)
-            .filter { $0.origin == origin && $0.scope == .webForm }
+        try filling(origin, from: await readableDescriptors(in: spaceID).filter { $0.scope == .webForm })
             .sorted(by: Self.descriptorOrder)
     }
 
@@ -47,12 +53,11 @@ actor KeychainCredentialVault: CredentialVault {
         matching protectionSpace: BrowserHTTPAuthenticationProtectionSpace,
         in spaceID: UUID
     ) async throws -> [CredentialDescriptor] {
-        try await readableDescriptors(in: spaceID)
-            .filter {
-                $0.origin == protectionSpace.origin
-                    && $0.scope == protectionSpace.credentialScope
-            }
-            .sorted(by: Self.descriptorOrder)
+        try filling(
+            protectionSpace.origin,
+            from: await readableDescriptors(in: spaceID).filter { $0.scope == protectionSpace.credentialScope }
+        )
+        .sorted(by: Self.descriptorOrder)
     }
 
     func unreadableCredentialCount(in spaceID: UUID) async throws -> Int {
@@ -228,6 +233,25 @@ actor KeychainCredentialVault: CredentialVault {
     private func readableDescriptors(in spaceID: UUID) async throws -> [CredentialDescriptor] {
         try await store.descriptorItems(in: service(for: spaceID))
             .compactMap { try? codec.descriptor(from: $0, expectedSpaceID: spaceID) }
+    }
+
+    /// The descriptors among `descriptors` whose passwords fill a page at
+    /// `origin`: those saved for it, and those whose origin the core reads as
+    /// it, such as an IP address an earlier import kept in another spelling.
+    private func filling(
+        _ origin: CredentialOrigin,
+        from descriptors: [CredentialDescriptor]
+    ) throws -> [CredentialDescriptor] {
+        let others = descriptors.filter { $0.origin != origin }
+        let othersFill: [Bool]
+        do {
+            othersFill = try fills(origin, others.map(\.origin))
+        } catch Rejection.invalidCredentialOrigin {
+            // No page has such an origin, but if one did, its own passwords still fill it.
+            othersFill = []
+        }
+        let filling = Set(zip(others, othersFill).filter(\.1).map(\.0.id))
+        return descriptors.filter { $0.origin == origin || filling.contains($0.id) }
     }
 
     private func reads(_ item: CredentialKeychainDescriptorItem, in spaceID: UUID) -> Bool {
