@@ -49,6 +49,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
                 BrowserTransientScrim(
                     opacity: state.scrimOpacity,
                     allowsDismissal: state.arrangement.allowsScrimDismissal,
+                    insets: state.scrimInsets,
+                    fadesIn: state.arrangement.fadesScrim,
                     dismiss: actions.dismiss
                 )
                 BrowserTransientCardStack(

@@ -4,6 +4,7 @@ struct BrowserPeekOverlay: View {
     let reservedLeadingWidth: CGFloat
     let layoutDirection: LayoutDirection
     let spaceAccess: BrowserSpaceAccessController
+    let frameInsets: EdgeInsets
 
     @State private var model: BrowserPeekModel
 
@@ -14,11 +15,13 @@ struct BrowserPeekOverlay: View {
         coordinator: BrowserTransientBrowsingCoordinator,
         reservedLeadingWidth: CGFloat,
         layoutDirection: LayoutDirection,
-        spaceAccess: BrowserSpaceAccessController
+        spaceAccess: BrowserSpaceAccessController,
+        frameInsets: EdgeInsets
     ) {
         self.reservedLeadingWidth = reservedLeadingWidth
         self.layoutDirection = layoutDirection
         self.spaceAccess = spaceAccess
+        self.frameInsets = frameInsets
         _model = State(
             initialValue: BrowserPeekModel(
                 request: request,
@@ -34,11 +37,13 @@ struct BrowserPeekOverlay: View {
         model: BrowserPeekModel,
         reservedLeadingWidth: CGFloat,
         layoutDirection: LayoutDirection,
-        spaceAccess: BrowserSpaceAccessController
+        spaceAccess: BrowserSpaceAccessController,
+        frameInsets: EdgeInsets
     ) {
         self.reservedLeadingWidth = reservedLeadingWidth
         self.layoutDirection = layoutDirection
         self.spaceAccess = spaceAccess
+        self.frameInsets = frameInsets
         _model = State(initialValue: model)
     }
 
@@ -55,7 +60,8 @@ struct BrowserPeekOverlay: View {
             BrowserPeekUnlockedContent(
                 model: model,
                 reservedLeadingWidth: reservedLeadingWidth,
-                layoutDirection: layoutDirection
+                layoutDirection: layoutDirection,
+                frameInsets: frameInsets
             )
         }
         .onChange(of: sourceIsLocked, initial: true) { _, isLocked in
