@@ -44,16 +44,19 @@ struct BrowserTabBatchMenu: View {
             }
         }
         Menu("Move to Space", systemImage: "square.grid.2x2") {
-            ForEach(
-                browser.availableTabMoveDestinationSpaces(from: request.assignment, accessController: spaceAccess)
-            ) { space in
-                let moving = browser.moving(request, to: BrowserSpaceRuntimeAssignment(space: space))
-                Button {
-                    actions.perform(moving, for: request)
-                } label: {
-                    BrowserSpaceIdentityLabel(space: space)
+            let destinations = browser.availableTabMoveDestinationSpaces(
+                from: request.assignment, accessController: spaceAccess)
+            ForEach(Array(browser.grouped(destinations).enumerated()), id: \.offset) { index, group in
+                if index > 0 { Divider() }
+                ForEach(group) { space in
+                    let moving = browser.moving(request, to: BrowserSpaceRuntimeAssignment(space: space))
+                    Button {
+                        actions.perform(moving, for: request)
+                    } label: {
+                        BrowserSpaceIdentityLabel(space: space)
+                    }
+                    .disabled(!actions.isAvailable(moving))
                 }
-                .disabled(!actions.isAvailable(moving))
             }
         }
         action("Combine in Split View", systemImage: "rectangle.split.2x1", browser.splitting(request))

@@ -21,8 +21,47 @@ public sealed record CannotDeleteLastSpace() : Rejection {
 /// The order does not name each of the workspace's Spaces exactly once.
 public sealed record InvalidSpaceOrder() : Rejection;
 
+/// The Space a deletion names to lead the group of the primary it deletes is
+/// not one of that group's Sub-Spaces that stay.
+public sealed record InvalidNewPrimary(Guid SpaceId) : Rejection;
+
 /// Only a private workspace starts over.
 public sealed record NotPrivateWorkspace(Guid WorkspaceId) : Rejection;
+
+/// The Space leads Sub-Spaces, or browses with a session it took over from a
+/// primary that was deleted, so it cannot join another group.
+public sealed record PrimaryCannotJoin(Guid SpaceId) : Rejection {
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "A Space with Sub-Spaces can't become a Sub-Space.";
+
+    #endregion
+}
+
+/// Only a Sub-Space separates from its group; a primary leaves it only when it
+/// is deleted.
+public sealed record PrimaryCannotSeparate(Guid SpaceId) : Rejection {
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "Only a Sub-Space can be separated.";
+
+    #endregion
+}
+
+/// A private window's Space is a fresh session every time, which no Space shares.
+public sealed record PrivateSpaceCannotShare(Guid WorkspaceId) : Rejection {
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "Private windows can't have Sub-Spaces.";
+
+    #endregion
+}
 
 /// The workspace already holds a Space with this identity.
 public sealed record SpaceAlreadyExists(Guid SpaceId) : Rejection {

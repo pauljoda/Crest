@@ -14,12 +14,16 @@ struct CredentialKeychainCodec {
                 actual: credential.descriptor.spaceID
             )
         }
-        return CredentialKeychainItem(
+        let item = CredentialKeychainItem(
             account: account(for: credential.descriptor.id),
             metadata: try encoder.encode(credential.descriptor),
             secret: Data(credential.password.utf8),
             isSynchronizable: credential.descriptor.isSynchronizable
         )
+        // Reading a Space decodes every item, so an item that would not read
+        // back is refused here instead of making the whole Space unreadable.
+        _ = try descriptor(from: item, expectedSpaceID: expectedSpaceID)
+        return item
     }
 
     func descriptor(

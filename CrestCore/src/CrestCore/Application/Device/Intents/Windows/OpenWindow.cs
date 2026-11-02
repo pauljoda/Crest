@@ -35,7 +35,7 @@ public sealed record OpenWindow(Guid WindowId, Guid WorkspaceId, bool Saved, Gui
                     : Window.Launching(WindowId, WorkspaceId, Saved, session,
                         WorkspaceId == device.PersistentWorkspace ? device.LegacyShownTabs : new Dictionary<Guid, Guid>());
             if (!RestoresTabs) window.ForgetTabs();
-            foreach (var shown in ShowingTabs) window.ShowTab(shown.SpaceId, shown.TabId, moves: false);
+            foreach (var shown in ShowingTabs) window.Adopt(shown.SpaceId, shown.TabId);
             if (ShowingSpaceId is { } showing && session.Space(showing) is not null) window.MoveTo(showing);
             window.Repair(session);
             device.OpenWindows[window.Id] = window;

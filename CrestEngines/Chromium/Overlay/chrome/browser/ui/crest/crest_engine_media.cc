@@ -14,6 +14,7 @@
 #include "base/sequence_checker.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/sequenced_task_runner.h"
+#include "base/time/time.h"
 #include "chrome/browser/media/webrtc/media_capture_devices_dispatcher.h"
 #include "chrome/browser/media/webrtc/media_stream_capture_indicator.h"
 #include "chrome/browser/ui/crest/crest_engine_page.h"
@@ -51,6 +52,10 @@ constexpr int kArtworkPixels = 512;
 
 // The smallest artwork Crest takes. Any image the page gives beats none.
 constexpr int kArtworkMinimumPixels = 0;
+
+// How long what a page names waits for the player it belongs to. A preview's
+// muted player loads its media well within it.
+constexpr base::TimeDelta kHold = base::Seconds(2);
 
 std::optional<std::string> Text(const std::u16string& value) {
   return value.empty() ? std::nullopt : std::optional<std::string>(base::UTF16ToUTF8(value));
@@ -331,14 +336,56 @@ engine::PageMediaActivity PageMedia::Activity() const {
   return activity;
 }
 
-void PageMedia::PlayerStarted(const content::MediaPlayerId& id, bool has_video) {
+void PageMedia::PlayerStarted(const content::MediaPlayerId& id, bool has_video, bool has_audio) {
   if (has_video) {
     playing_videos_.insert(id);
   }
+  playing_players_.insert(id);
+  PlayerChanged(id, has_video, has_audio);
 }
 
 void PageMedia::PlayerStopped(const content::MediaPlayerId& id) {
   playing_videos_.erase(id);
+  playing_players_.erase(id);
+  sounding_.erase(id);
+  if (previews_.erase(id)) {
+    Publish();
+  }
+}
+
+// A player with sound shows what the page named for it. A video without sound
+// that never had any is a preview, and what the page named just before it is
+// the preview's, until the person gives that video sound.
+void PageMedia::PlayerChanged(const content::MediaPlayerId& id, bool has_video, bool has_audio) {
+  const bool playing = playing_players_.contains(id);
+  if (has_audio) {
+    sounded_.insert(id);
+    previews_.erase(id);
+    if (playing) {
+      sounding_.insert(id);
+      if (hold_.IsRunning() || previewed_ == id) {
+        Show();
+      }
+    }
+  } else {
+    sounding_.erase(id);
+    if (has_video && !sounded_.contains(id)) {
+      if (playing) {
+        previews_.insert(id);
+      }
+      if (hold_.IsRunning()) {
+        Drop(id);
+      }
+    }
+  }
+  Publish();
+}
+
+void PageMedia::PlayerDestroyed(const content::MediaPlayerId& id) {
+  sounded_.erase(id);
+  if (previewed_ == id) {
+    previewed_.reset();
+  }
 }
 
 void PageMedia::AudioChanged() {
@@ -351,6 +398,20 @@ void PageMedia::DocumentChanged() {
   last_playing_ = false;
   playing_videos_.clear();
   played_before_hidden_ = false;
+  hold_.Stop();
+  previewed_.reset();
+  playing_players_.clear();
+  sounding_.clear();
+  previews_.clear();
+  sounded_.clear();
+}
+
+// Opening the video a preview showed names nothing new, so what the page named
+// for the preview waits for its player again.
+void PageMedia::AddressChanged() {
+  if (previewed_) {
+    Hold();
+  }
 }
 
 void PageMedia::VisibilityChanged(bool visible) {
@@ -486,7 +547,7 @@ void PageMedia::MediaSessionInfoChanged(media_session::mojom::MediaSessionInfoPt
 
 void PageMedia::MediaSessionMetadataChanged(const std::optional<media_session::MediaMetadata>& metadata) {
   metadata_ = metadata;
-  Publish();
+  Hold();
 }
 
 void PageMedia::MediaSessionActionsChanged(const std::vector<media_session::mojom::MediaSessionAction>& actions) {
@@ -508,7 +569,6 @@ void PageMedia::MediaSessionImagesChanged(
   }
   artwork_image_ = std::move(picked);
   ++artwork_generation_;
-  const bool showed_artwork = artwork_.has_value();
   artwork_.reset();
   if (artwork_image_) {
     if (auto* session = content::MediaSession::GetIfExists(contents_)) {
@@ -517,9 +577,7 @@ void PageMedia::MediaSessionImagesChanged(
           base::BindOnce(&PageMedia::ArtworkLoaded, weak_factory_.GetWeakPtr(), artwork_generation_));
     }
   }
-  if (showed_artwork) {
-    Publish();
-  }
+  Hold();
 }
 
 void PageMedia::ArtworkLoaded(uint64_t generation, const SkBitmap& bitmap) {
@@ -527,9 +585,38 @@ void PageMedia::ArtworkLoaded(uint64_t generation, const SkBitmap& bitmap) {
     return;
   }
   artwork_ = gfx::PNGCodec::EncodeBGRASkBitmap(bitmap, /*discard_transparency=*/false);
-  if (artwork_) {
+  if (artwork_ && generation == shown_artwork_generation_) {
+    shown_artwork_ = artwork_;
     Publish();
   }
+}
+
+// No player claimed what the page named within the hold, as when the page names
+// the next song of a stream that plays on, so it shows.
+void PageMedia::Hold() {
+  previewed_.reset();
+  if (!hold_.IsRunning()) {
+    hold_.Start(FROM_HERE, kHold,
+                base::BindOnce(
+                    [](PageMedia* media) {
+                      media->Show();
+                      media->Publish();
+                    },
+                    base::Unretained(this)));
+  }
+}
+
+void PageMedia::Show() {
+  hold_.Stop();
+  previewed_.reset();
+  shown_metadata_ = metadata_;
+  shown_artwork_generation_ = artwork_generation_;
+  shown_artwork_ = artwork_;
+}
+
+void PageMedia::Drop(const content::MediaPlayerId& preview) {
+  hold_.Stop();
+  previewed_ = preview;
 }
 
 void PageMedia::MediaSessionPositionChanged(const std::optional<media_session::MediaPosition>&) {}
@@ -546,6 +633,10 @@ void PageMedia::Publish() {
     last_playing_ = info_->playback_state == media_session::mojom::MediaPlaybackState::kPlaying;
   }
   const bool active = engine_active || (info_ && seen_active_ && contents_->IsAudioMuted());
+  // A page declares a preview playing too.
+  if (!hold_.IsRunning() || !sounding_.empty()) {
+    shown_playing_ = last_playing_ && (!sounding_.empty() || previews_.empty());
+  }
   engine::MediaSessionChanged session{
       .page_id = page_,
       .document = document_,
@@ -554,18 +645,18 @@ void PageMedia::Publish() {
       .active = active,
       // While muted the engine reports no playback; the last state it did
       // report stands.
-      .playback = !active        ? engine::MediaPlayback::kNone
-                  : last_playing_ ? engine::MediaPlayback::kPlaying
-                                  : engine::MediaPlayback::kPaused,
+      .playback = !active         ? engine::MediaPlayback::kNone
+                  : shown_playing_ ? engine::MediaPlayback::kPlaying
+                                   : engine::MediaPlayback::kPaused,
       .audible = contents_->IsCurrentlyAudible(),
       .muted = contents_->IsAudioMuted(),
   };
-  if (metadata_) {
-    session.title = Text(metadata_->title);
-    session.artist = Text(metadata_->artist);
-    session.album = Text(metadata_->album);
+  if (shown_metadata_) {
+    session.title = Text(shown_metadata_->title);
+    session.artist = Text(shown_metadata_->artist);
+    session.album = Text(shown_metadata_->album);
   }
-  session.artwork = artwork_;
+  session.artwork = shown_artwork_;
   for (auto action : actions_) {
     switch (action) {
       case media_session::mojom::MediaSessionAction::kPlay:

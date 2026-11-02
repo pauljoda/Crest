@@ -19,6 +19,10 @@ actor PrivateBrowsingCredentialVault: CredentialVault {
         []
     }
 
+    func unreadableCredentialCount(in spaceID: UUID) async throws -> Int {
+        0
+    }
+
     func credential(
         id: UUID,
         in spaceID: UUID
@@ -41,4 +45,6 @@ actor PrivateBrowsingCredentialVault: CredentialVault {
     func delete(id: UUID, in spaceID: UUID) async throws {}
 
     func deleteAll(in spaceID: UUID) async throws {}
+
+    func deleteUnreadableCredentials(in spaceID: UUID) async throws {}
 }

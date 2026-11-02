@@ -57,6 +57,7 @@ final class SpaceBackdropBlendController<Background: View>: UIViewController {
         self.spaces = spaces
         self.selectedSpace = selectedSpace
         self.makeBackground = makeBackground
+        hosts.follow(spaces)
         let valid = Set(spaces.map(BrowserSpaceRuntimeAssignment.init(space:)))
         for key in hosts.keys where !valid.contains(key) { remove(hosts.removeValue(forKey: key)) }
         for space in spaces { hosts[BrowserSpaceRuntimeAssignment(space: space)]?.rootView = makeBackground(space) }

@@ -70,6 +70,22 @@ final class BrowserRootModel {
         set { publish(newValue, into: \.isWindowFocusedStorage, as: \.isWindowFocused) }
     }
     @ObservationIgnored private var isWindowFocusedStorage = true
+    /// Built once, like the address bindings, so the shell that hands it to
+    /// its focus bridge never observes the window's focus itself.
+    @ObservationIgnored private(set) lazy var isWindowFocusedBinding = Binding<Bool>(
+        get: { @MainActor [weak self] in self?.isWindowFocused ?? false },
+        set: { @MainActor [weak self] isFocused in
+            guard let self, self.isWindowFocused != isFocused else { return }
+            self.isWindowFocused = isFocused
+            if isFocused { self.registerForNotices() }
+        }
+    )
+    /// Whether the window's chrome holds keyboard focus rather than its
+    /// pages: the window is not key, or the address field or the command
+    /// palette has focus.
+    var chromeOwnsFocus: Bool {
+        !isWindowFocused || isAddressEditing || chrome.isCommandPalettePresented
+    }
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Live widths stay local until the divider drag commits.
     var splitWidthTransaction = BrowserSplitWidthTransaction(
@@ -103,6 +119,7 @@ final class BrowserRootModel {
         )
         _ = addressBinding
         _ = isAddressEditingBinding
+        _ = isWindowFocusedBinding
         registerForNotices()
     }
 
@@ -170,21 +187,6 @@ extension BrowserRootModel {
         for space in browser.spaceModels where spaceIDs.contains(space.id) {
             pages.relockProtectedSpace(space)
         }
-    }
-}
-
-// MARK: - Bindings
-
-extension BrowserRootModel {
-    var isWindowFocusedBinding: Binding<Bool> {
-        Binding(
-            get: { self.isWindowFocused },
-            set: { isFocused in
-                guard self.isWindowFocused != isFocused else { return }
-                self.isWindowFocused = isFocused
-                if isFocused { self.registerForNotices() }
-            }
-        )
     }
 }
 

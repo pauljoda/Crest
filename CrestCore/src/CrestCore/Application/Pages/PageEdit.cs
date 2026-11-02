@@ -9,7 +9,8 @@ namespace CrestCore.Application;
 internal sealed record PageIcon(string Url, TabIconAccent? Accent);
 
 /// What a page's engine reported at `At` that edits the Space the page lives
-/// in. The workspace's session applies each as one revision, or, while a
+/// in, as its sidebar shows it, and the history of the Space that keeps its
+/// records. The workspace's session applies each as one revision, or, while a
 /// transaction holds the session, once it ends, in the order they arrived.
 internal abstract record PageEdit(Guid PageId, Guid SpaceId, DateTimeOffset At) {
     #region Abstract Methods
@@ -22,6 +23,15 @@ internal abstract record PageEdit(Guid PageId, Guid SpaceId, DateTimeOffset At) 
     /// What the edit tells readers of `workspaceId` beyond the session's own
     /// changes.
     public abstract IEnumerable<Change> Announced(Guid workspaceId);
+
+    #endregion
+
+    #region Actions - History
+
+    /// `history`, the history of the Space that keeps the page's records, with
+    /// what the edit records in it, stamped `now`, or null when it records
+    /// nothing there.
+    public virtual IReadOnlyList<HistoryEntryState>? Recorded(IReadOnlyList<HistoryEntryState> history, DateTimeOffset now) => null;
 
     #endregion
 
@@ -64,8 +74,12 @@ internal sealed record NavigationRecord(Guid PageId, Guid SpaceId, DateTimeOffse
             if (Icon is { } icon && tab.WearPageIcon(Url, icon.Accent)) favicon = new(tabId, Adopts: true, PageId);
             space = Replacing(space, index, tab);
         }
-        return (space with { History = HistoryEntryState.Visit(space.History, Url, Title, now, VisitId) ?? space.History }, favicon);
+        return (space, favicon);
     }
+
+    /// The history holds a visit.
+    public override IReadOnlyList<HistoryEntryState>? Recorded(IReadOnlyList<HistoryEntryState> history, DateTimeOffset now) =>
+        HistoryEntryState.Visit(history, Url, Title, now, VisitId);
 
     public override IEnumerable<Change> Announced(Guid workspaceId) => [new NavigationRecorded(PageId, workspaceId, SpaceId, TabId, Url)];
 
@@ -90,9 +104,12 @@ internal sealed record TitleRecord(Guid PageId, Guid SpaceId, DateTimeOffset At,
                 space = Replacing(space, index, tab);
             }
         }
-        if (Visit && HistoryEntryState.Retitle(space.History, Url, Title) is { } history) space = space with { History = history };
         return (space, null);
     }
+
+    /// The address's entry takes the title when `Visit`.
+    public override IReadOnlyList<HistoryEntryState>? Recorded(IReadOnlyList<HistoryEntryState> history, DateTimeOffset now) =>
+        Visit ? HistoryEntryState.Retitle(history, Url, Title) : null;
 
     public override IEnumerable<Change> Announced(Guid workspaceId) => [];
 

@@ -18,13 +18,20 @@ public enum SessionFlaw {
     MissingIdentity,
     /// Two Spaces share an identity.
     DuplicateSpace,
-    /// Two Spaces share a profile, which would share its website data across them.
+    /// Two Spaces share a profile of their own, or two groups browse with one
+    /// profile, which would share its website data across them.
     SharedProfile,
     /// Two tabs share an identity.
     DuplicateTab,
     /// A Space deletion names a Space, or a profile, the session does not hold,
     /// or names one Space twice.
-    UnknownDeletion
+    UnknownDeletion,
+    /// A Sub-Space names a primary the session does not hold, itself, or
+    /// another Sub-Space.
+    UnknownPrimary,
+    /// A Sub-Space sits apart from its primary's group, or browses with
+    /// another profile than its primary.
+    ScatteredGroup
 }
 
 /// The core keeps no session file, or its file holds no session yet, so a

@@ -26,8 +26,9 @@ when it changes what another person can reproduce.
 
 The [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
 the [release milestones](https://github.com/pauljoda/Crest/milestones) are the
-public view of currently planned outcomes. Scope may evolve as engine and
-physical-device validation clarify the correct behavior.
+public view of currently planned outcomes. Only the maintainer adds items to
+them, so opening an issue doesn't put it on the roadmap. Scope may evolve as
+engine and physical-device validation clarify the correct behavior.
 
 ## Security vulnerabilities
 
@@ -40,9 +41,10 @@ Do not post suspected vulnerabilities on Reddit or in a public issue. See
 
 Crest is one of several open source projects built by Paul Davis. If the
 project is useful to you, you can support the work through
-[Ko-fi memberships](https://ko-fi.com/pauljoda/tiers), make a
+[Ko-fi memberships](https://ko-fi.com/pauljoda/tiers) or
+[Patreon](https://www.patreon.com/CrestBrowser), make a
 [one-time contribution](https://ko-fi.com/pauljoda), or use
 [GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not buy
 roadmap priority, private support, or access to security information. Active
 monthly sponsors who want public recognition are listed in
-[SPONSORS.md](SPONSORS.md).
+[SPONSORS.md](SPONSORS.md), and can have a sponsor flair on r/CrestBrowser.

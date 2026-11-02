@@ -113,6 +113,7 @@ internal sealed partial class Device {
         agents = records.Agents;
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
+        reopeningPages = quitWhileReopening = records.ReopeningPages;
         adopted.UnionWith(records.Adopted);
         keptTabGroups.AddRange(records.TabGroups);
         paletteMemories = records.PaletteMemories.ToImmutableDictionary();
@@ -236,6 +237,9 @@ internal sealed partial class Device {
             changes.AddRange(Changing(open.Values.Where(window => window.WorkspaceId == workspaceId), window => {
                 if (followUp is not null && window.Id == followUp.Window?.Id) window.Apply(followUp);
                 window.Repair(next);
+                if (followUp is not null)
+                    foreach (var (_, spaceId, tabId) in followUp.Departed.Where(gone => gone.WindowId == window.Id))
+                        window.Depart(spaceId, tabId);
             }, next));
             if (FollowingSpaces(workspaceId, next) is { } setup) changes.Add(setup);
             owner = workspaces.GetValueOrDefault(workspaceId);
@@ -340,7 +344,8 @@ internal sealed partial class Device {
         new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
         PaletteMemories = paletteMemories,
         SearchCatalog = searchCatalog,
-        Agents = agents
+        Agents = agents,
+        ReopeningPages = reopeningPages
     };
 
     #endregion

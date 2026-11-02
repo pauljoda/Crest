@@ -77,6 +77,7 @@ struct MobileBrowserCommands: Commands {
             alias(.previousTab, "Previous Tab (Bracket)", "[", modifiers: [.command, .shift])
             alias(.nextTab, "Next Tab (Bracket)", "]", modifiers: [.command, .shift])
             button(.mostRecentTab)
+            button(.mostRecentTabBackward)
 
             Divider()
 

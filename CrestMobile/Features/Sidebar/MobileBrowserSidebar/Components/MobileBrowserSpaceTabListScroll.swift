@@ -74,7 +74,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     private var selectedPromotionTarget: MobileTabPromotionTarget? {
         let spaceID = context.space.id
         guard let tabID = context.window.shownTabs.first(where: { $0.spaceID == spaceID })?.tabID,
-            let tab = context.space.tabs.model(tabID)
+            let tab = context.space.shownTab(tabID)
         else { return nil }
         return MobileTabPromotionTarget(shownTab: tab)
     }

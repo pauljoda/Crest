@@ -59,7 +59,7 @@ struct MobileBrowserSidebarBottomChromeLayout<Content: View>: View {
         _ assignment: BrowserTabRuntimeAssignment
     ) -> Data? {
         let browser = configuration.context.browser
-        guard browser.spaceModel(matching: assignment.spaceAssignment)?.tabs.model(assignment.tabID) != nil else {
+        guard browser.spaceModel(matching: assignment.spaceAssignment)?.shownTab(assignment.tabID) != nil else {
             return nil
         }
         return browser.core.state.favicons.image(of: assignment.tabID)
@@ -72,7 +72,7 @@ struct MobileBrowserSidebarBottomChromeLayout<Content: View>: View {
             guard
                 configuration.pages.containsResidentPage(matching: assignment),
                 let space = configuration.context.browser.spaceModel(matching: assignment.spaceAssignment),
-                space.tabs.model(assignment.tabID) != nil,
+                space.shownTab(assignment.tabID) != nil,
                 await configuration.context.spaceAccess.unlock(space)
             else { return }
             configuration.context.selectSpace(assignment.spaceID)

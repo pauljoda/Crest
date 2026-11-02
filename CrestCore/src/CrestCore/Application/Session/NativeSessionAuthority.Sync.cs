@@ -11,7 +11,7 @@ namespace CrestCore.Application;
 /// What one intent of the cloud transport needs: the sync component the
 /// session stages into, the time it runs at, where the identities repair gives
 /// come from, and the lock the host's intents take, which a merge or
-/// replacement commits holding.
+/// replacement commits holding, taken before its journal transaction.
 internal sealed record CloudSyncTurn(NativeSyncAuthority Sync, DateTimeOffset Now, IIdSource Ids, Lock CommitGate);
 
 #endregion
@@ -74,60 +74,74 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// Merges `records` into the session and its journal, or replaces both
-    /// with them. The journal transaction begins before any lock is taken:
-    /// waiting for one in progress releases the gate. The result is computed
-    /// holding no lock, from the session as it was, and committed holding
-    /// `commitGate`, then the gate, when the session has not moved meanwhile;
-    /// otherwise it is computed again, a few times, then holding both. The
-    /// commit reserves, saves the session and its journal, and publishes both
-    /// before `commitGate` is released. The stages still queued are superseded
-    /// before each computation, and a merge deletes each record their edits
-    /// removed for the reason of the edit that removed it; a transaction that
-    /// never commits queues them again.
+    /// with them. The result is computed holding no lock and no journal
+    /// transaction, from the session and the journal as they were once no
+    /// transaction was in progress, and committed holding `commitGate`, then
+    /// a transaction, then the gate, when neither moved and no stage was
+    /// queued meanwhile; otherwise it is computed again, a few times, then
+    /// holding all three. An intent saved with its journal holds `commitGate`
+    /// while it waits for a transaction, so a merge never waits for
+    /// `commitGate` holding one. The commit reserves, saves the session and
+    /// its journal, and publishes both before `commitGate` is released. The
+    /// stages still queued are superseded before each computation, and a
+    /// merge deletes each record their edits removed for the reason of the
+    /// edit that removed it; a merge that never commits queues them again.
     internal void Converging(NativeSyncAuthority sync, IncomingSyncRecords records, bool replacing, DateTimeOffset now,
         IIdSource ids, Lock commitGate, bool seedOnly = false) {
+        // The stages this merge superseded, until the transaction that commits it takes them over.
         var superseded = sync.Supersede();
-        var transaction = sync.BeginTransaction();
-        transaction.Superseded = superseded;
         NativeSessionReplacement? reserved = null;
         try {
-            if (!replacing) records.RequireSameSpaces(transaction.Journal);
             for (int attempt = 0; ; attempt++) {
                 Convergence? computed = null;
+                NativeSyncJournal? journal = null;
                 ulong revision = 0;
                 if (attempt < ConvergenceAttempts) {
                     SessionState basis;
                     lock (Gate) {
-                        Supersede(sync, transaction);
+                        journal = sync.Settled();
+                        superseded = SyncStager.Request.Covering(superseded, sync.Supersede());
                         (basis, revision) = (IntentBasis(), Revision);
                     }
                     if (seedOnly && basis.DisposableSeedMarker is null) {
-                        transaction.Dispose();
+                        sync.Requeue(superseded);
                         return;
                     }
-                    computed = Converge(transaction, basis, records, replacing, now, ids);
+                    computed = Converge(journal, superseded, basis, records, replacing, now, ids);
                 }
+                sync.RequireNoTransactionHeldHere();
                 lock (commitGate) {
-                    lock (Gate) {
-                        if (computed is null) {
+                    var transaction = sync.BeginTransaction();
+                    transaction.Superseded = superseded;
+                    superseded = null;
+                    try {
+                        lock (Gate) {
+                            var covered = transaction.Superseded?.Sequence;
                             Supersede(sync, transaction);
-                            var basis = IntentBasis();
-                            if (seedOnly && basis.DisposableSeedMarker is null) {
-                                transaction.Dispose();
-                                return;
+                            if (computed is null) {
+                                var basis = IntentBasis();
+                                if (seedOnly && basis.DisposableSeedMarker is null) {
+                                    transaction.Dispose();
+                                    return;
+                                }
+                                computed = Converge(transaction.Journal, transaction.Superseded, basis, records, replacing, now, ids);
+                            } else if (Revision != revision || !ReferenceEquals(transaction.Journal, journal)
+                                || transaction.Superseded?.Sequence != covered) {
+                                superseded = transaction.Abandon();
+                                continue;
                             }
-                            computed = Converge(transaction, basis, records, replacing, now, ids);
-                        } else if (Revision != revision) {
-                            continue;
+                            reserved = Reserving(transaction, computed);
                         }
-                        reserved = Reserving(transaction, computed);
+                    } catch {
+                        transaction.Dispose();
+                        throw;
                     }
                     Committing(sync, transaction, reserved);
                     return;
                 }
             }
         } catch (Exception error) when (reserved is null) {
-            transaction.Dispose();
+            sync.Requeue(superseded);
             throw Refusal(error);
         }
     }
@@ -152,13 +166,14 @@ public sealed partial class NativeSessionAuthority {
     private static void Supersede(NativeSyncAuthority sync, NativeSyncTransaction transaction) =>
         transaction.Superseded = SyncStager.Request.Covering(transaction.Superseded, sync.Supersede());
 
-    /// The journal and session `records` make of `basis` and the journal
-    /// `transaction` holds, at `now`, with the tabs repair gave a new identity.
-    private Convergence Converge(NativeSyncTransaction transaction, SessionState basis, IncomingSyncRecords records,
-        bool replacing, DateTimeOffset now, IIdSource ids) {
-        var journal = transaction.Journal;
+    /// The journal and session `records` make of `basis` and `journal`, once
+    /// the edits of the stages `superseded` replaced are deleted for their
+    /// reasons, at `now`, with the tabs repair gave a new identity.
+    private Convergence Converge(NativeSyncJournal journal, SyncStager.Request? superseded, SessionState basis,
+        IncomingSyncRecords records, bool replacing, DateTimeOffset now, IIdSource ids) {
+        if (!replacing) records.RequireSameSpaces(journal);
         var emptySpace = SpaceTemplate.Ordinary.Make(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid, number: 1, now);
-        var removals = (transaction.Superseded?.Removals ?? SyncRemovals.None).Reasons(SyncDeletionReason.Superseded);
+        var removals = (superseded?.Removals ?? SyncRemovals.None).Reasons(SyncDeletionReason.Superseded);
         var result = NativeSyncSessionTransition.Prepare(journal, basis, records.Batch(), replacing, now, emptySpace, Access, ids, removals);
         _ = result.Journal.Read();
         return new(result.Journal, result.Session, new(Copies(basis, result.Session, result.Origins), Favicon: null));

@@ -73,6 +73,9 @@ public sealed record TabState(
     /// and no sidebar lists it.</summary>
     public bool IsStartPage => Surface == TabSurface.StartPage;
 
+    /// The tab is one of its Space's pinned tabs.
+    internal bool IsPinned => Placement == TabPlacement.Pinned;
+
     #endregion
 
     #region Actions - Repair

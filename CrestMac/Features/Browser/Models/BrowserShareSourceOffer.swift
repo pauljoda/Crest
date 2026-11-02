@@ -68,6 +68,11 @@ struct BrowserShareSourceOffer: Identifiable, Equatable {
 
     // MARK: - Actions - Ordering
 
+    /// The offer with only the tabs whose page `keeps` keeps.
+    func keeping(_ keeps: (UUID) -> Bool) -> BrowserShareSourceOffer {
+        BrowserShareSourceOffer(id: id, site: site, tabs: tabs.filter { keeps($0.id) }, asksAudio: asksAudio)
+    }
+
     /// The offer's tabs in the order the sidebar lists them, named as it
     /// names them. `placement` answers where the tab holding a page sits in
     /// its Space and what it is called; a page it cannot place keeps the

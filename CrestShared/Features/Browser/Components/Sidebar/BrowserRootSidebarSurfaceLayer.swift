@@ -58,10 +58,16 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                     // stay over the page it slid away from, where it would
                     // take the page's cursor updates.
                     if presentation.showsSidebar {
+                        // A floating card keeps its hover over a margin of the
+                        // page beside it. The tracker never takes hits, so the
+                        // page still gets every click and scroll there.
                         BrowserSidebarHoverTracker(
                             isRevealedByPointer: isRevealedByPointer,
+                            exitMargin: presentation.exitMargin,
+                            exitEdge: pageEdge,
                             onHoverChange: hoverChanged
                         )
+                        .padding(pageEdge == .leading ? .leading : .trailing, -presentation.exitMargin)
                         .accessibilityHidden(true)
                     }
                 }
@@ -148,6 +154,11 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                 sidebarWidth: width
             )
             : width
+    }
+
+    /// The side of the sidebar the page lies on.
+    private var pageEdge: HorizontalEdge {
+        edge == .leading ? .trailing : .leading
     }
 
     private var hiddenOffset: CGFloat {

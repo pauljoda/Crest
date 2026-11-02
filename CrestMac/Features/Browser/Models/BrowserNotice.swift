@@ -29,6 +29,15 @@ struct BrowserNotice: Equatable, Hashable {
         BrowserNotice(message: label, systemImage: "textformat.size")
     }
 
+    /// What the window says once clearing one site's `category` ended:
+    /// cleared by every engine, or not.
+    static func siteData(_ category: BrowsingDataCategory, cleared: Bool) -> BrowserNotice {
+        let title = (cleared ? category.clearedTitle : category.failedTitle) ?? category.title
+        return BrowserNotice(
+            message: String(localized: title),
+            systemImage: cleared ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+    }
+
     /// Long enough to read: short confirmations leave quickly, sentences stay,
     /// and one that offers an action stays longest, so the person can take it.
     var duration: Duration {

@@ -142,10 +142,12 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     ) -> some View {
         BrowserSpaceSwitcherCommonListsButton(
             isExpanded: commonLists.isExpanded,
+            surface: commonLists.surface,
             downloads: downloads.items,
             newDownloads: downloads.newItems,
             badgeColor: downloads.badgeColor,
             action: commonLists.toggle,
+            choose: commonLists.choose,
             recordFrame: commonLists.recordTriggerFrame
         )
     }

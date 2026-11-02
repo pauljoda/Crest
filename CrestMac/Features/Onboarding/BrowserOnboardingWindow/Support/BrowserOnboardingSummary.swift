@@ -52,12 +52,22 @@ enum BrowserOnboardingSummary {
         )
     }
 
-    /// What setup did, as the core summed it up.
-    static func completed(_ summary: SetupSummary) -> LocalizedStringResource {
-        summary.isImport
+    /// What setup did, as the core summed it up, sentence by sentence: what
+    /// it brought or made, then how many passwords its imports couldn't save.
+    static func completed(_ summary: SetupSummary) -> [LocalizedStringResource] {
+        let did =
+            summary.isImport
             ? completedImport(
                 tabCount: summary.tabCount, passwordCount: summary.passwordCount, spaceCount: summary.spaceCount)
             : completedManualSetup(newSpaceCount: summary.spaceCount, addedTabCount: summary.tabCount)
+        let unsaved = max(summary.unsavedPasswordCount, 0)
+        guard unsaved > 0 else { return [did] }
+        return [
+            did,
+            LocalizedStringResource(
+                "\(unsaved) passwords couldn’t be saved.",
+                comment: "Follows the setup completion summary when an import couldn’t save some passwords."),
+        ]
     }
 
     private static func completedManualSetup(

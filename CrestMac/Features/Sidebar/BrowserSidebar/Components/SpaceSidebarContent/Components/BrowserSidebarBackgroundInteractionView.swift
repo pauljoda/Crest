@@ -3,6 +3,8 @@ import SwiftUI
 struct BrowserSidebarBackgroundInteractionView: View {
     let editSpace: () -> Void
     let createSpace: (() -> Void)?
+    /// Adds a Sub-Space after the sidebar's Space, where its window may.
+    let createSubSpace: (() -> Void)?
 
     var body: some View {
         // Dragging the empty sidebar moves the window. Its double-click opens a
@@ -15,7 +17,7 @@ struct BrowserSidebarBackgroundInteractionView: View {
             .contextMenu {
                 ForEach(
                     BrowserSidebarBackgroundAction.all.filter {
-                        !$0.requiresSpaceCreation || createSpace != nil
+                        !$0.requiresSpaceCreation || createSpace != nil && ($0 != .newSubSpace || createSubSpace != nil)
                     }
                 ) { action in
                     Button(action.title, systemImage: action.symbol) {

@@ -20,7 +20,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var commandPaletteMode: BrowserCommandPaletteMode?
     @State var historyAssignment: BrowserSpaceRuntimeAssignment?
     @State var isURLCopiedFeedbackVisible = false
-    @State var visiblePageZoomFeedbackLabel: String?
+    @State var visiblePageFeedback: MobilePageFeedback?
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
@@ -65,7 +65,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             preferredSidebarWidth: model.sidebarWidth,
             isCommandPalettePresented: commandPaletteMode != nil,
             isURLCopiedFeedbackVisible: isURLCopiedFeedbackVisible,
-            pageZoomFeedbackLabel: visiblePageZoomFeedbackLabel,
+            pageFeedback: visiblePageFeedback,
             reduceMotion: reduceMotion,
             didPromoteTransientPage: model.activateSelectedTab,
             compact: MobileCompactBrowserSurface(
@@ -178,7 +178,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 page: MobileCompactPageSurface(
                     selectedTab: browser.shownTab,
                     isURLCopiedFeedbackVisible: isURLCopiedFeedbackVisible,
-                    pageZoomFeedbackLabel: visiblePageZoomFeedbackLabel,
+                    pageFeedback: visiblePageFeedback,
                     reduceMotion: reduceMotion,
                     tabPromotionNamespace: tabPromotionNamespace,
                     completePagePresentation:
@@ -222,7 +222,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         compactTransitionEnded: finishCompactTransition,
                         transientBrowsing: transientBrowsing,
                         didPromoteTransientPage: model.activateSelectedTab,
-                        showHistory: presentHistoryFromCommand
+                        showHistory: presentHistoryFromCommand,
+                        paletteMode: $commandPaletteMode,
+                        openLocation: openLocation
                     )
                 )
                 // The page covers the window while it shows, so Settings,
@@ -381,8 +383,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: pages.urlCopyFeedbackRevision) { _, revision in
             presentURLCopyFeedback(revision: revision)
         }
-        .onChange(of: pages.pageZoomFeedbackRevision) { _, revision in
-            presentPageZoomFeedback(revision: revision)
+        .onChange(of: pages.pageFeedbackRevision) { _, revision in
+            presentPageFeedback(revision: revision)
         }
         .modifier(
             MobileBrowserRootLifecycleModifier(

@@ -16,11 +16,13 @@ struct BrowserMacCommand {
         run: { $0.openNewWindow() })
     static let newBlankWindow = BrowserMacCommand(.newBlankWindow) { $0.openBlankWindow() }
     static let newTab = BrowserMacCommand(.newTab) { $0.openNewTab() }
-    static let openLocation = BrowserMacCommand(.openLocation) { $0.openLocation() }
+    static let openLocation = BrowserMacCommand(
+        .openLocation, actsOnPage: true, withoutWindow: .opensLocationInKeyQuickWindow, run: { $0.openLocation() })
     static let openFile = BrowserMacCommand(
         .openFile, isAvailable: { $0.supportsEngineCapability(.localFiles) },
         run: { $0.openFile() })
-    static let newQuickWindow = BrowserMacCommand(.newQuickWindow) { $0.openQuickWindow() }
+    static let newQuickWindow = BrowserMacCommand(
+        .newQuickWindow, withoutWindow: .opensQuickWindowBesideKeyQuickWindow, run: { $0.openQuickWindow() })
     static let newPrivateWindow = BrowserMacCommand(
         .newPrivateWindow, withoutWindow: .always { $0.openPrivateWindow() },
         run: { $0.openPrivateWindow() })
@@ -47,7 +49,10 @@ struct BrowserMacCommand {
     static let archiveTab = BrowserMacCommand(.archiveTab) { $0.archiveSelectedTab() }
     static let previousTab = BrowserMacCommand(.previousTab) { $0.selectPreviousTab() }
     static let nextTab = BrowserMacCommand(.nextTab) { $0.selectNextTab() }
-    static let mostRecentTab = BrowserMacCommand(.mostRecentTab) { $0.selectMostRecentTab() }
+    static let mostRecentTab = BrowserMacCommand(
+        .mostRecentTab, recentTabDirection: .forward, run: { $0.selectMostRecentTab() })
+    static let mostRecentTabBackward = BrowserMacCommand(
+        .mostRecentTabBackward, recentTabDirection: .backward, run: { $0.selectLeastRecentTab() })
     static let splitWithNextTab = BrowserMacCommand(.splitWithNextTab) { $0.splitWithNextTab() }
     static let focusNextSplitCard = BrowserMacCommand(.focusNextSplitCard) { $0.focusAdjacentSplitCard(offset: 1) }
     static let focusPreviousSplitCard = BrowserMacCommand(.focusPreviousSplitCard) {
@@ -107,6 +112,12 @@ struct BrowserMacCommand {
         .capturePage, actsOnPage: true, isAvailable: { $0.commandPageSupports(.viewportCapture) },
         isOn: { $0.commandPage?.isRegionCapturePresented == true },
         run: { $0.commandPage?.toggleRegionCapture() })
+    static let clearSiteCookies = BrowserMacCommand(
+        .clearSiteCookies, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
+        run: { $0.clearCommandPageSiteData(.siteData) })
+    static let clearSiteCache = BrowserMacCommand(
+        .clearSiteCache, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
+        run: { $0.clearCommandPageSiteData(.cache) })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
     static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
     static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
@@ -145,13 +156,14 @@ struct BrowserMacCommand {
         closeWindow,
         back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, splitWithNextTab, focusNextSplitCard,
+        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,
         toggleReaderMode, toggleContentBlocking, findInPage, findNext, findPrevious, zoomIn, zoomOut, actualSize,
         copyPageLink,
         copyPageLinkAsMarkdown,
-        sharePage, exportPDF, saveWebArchive, printPage, capturePage,
+        sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
         toggleSidebar, showHistory, showArchive, showDownloads,
         showWebInspector,
         toggleTranslationToolbar, toggleDeveloperToolbar, selectNumbered,
@@ -188,6 +200,11 @@ struct BrowserMacCommand {
     /// as finding again before any search.
     let waitsInPaletteUntilAvailable: Bool
 
+    /// Which way the command goes through the recent tabs when a held key
+    /// begins it, or nil for a command that is not one of them. Chosen from
+    /// the menu bar or the palette it jumps at once.
+    let recentTabDirection: RecentTabSwitchDirection?
+
     // MARK: - Initializers
 
     private init(
@@ -198,11 +215,13 @@ struct BrowserMacCommand {
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
         withoutWindow: BrowserMacWindowlessCommand? = nil,
         waitsInPaletteUntilAvailable: Bool = false,
+        recentTabDirection: RecentTabSwitchDirection? = nil,
         run: @escaping @MainActor (BrowserCommandActions) -> Void
     ) {
         self.init(
             kind, actsOnPage: actsOnPage, isAvailable: { actions, _ in isAvailable(actions) }, title: title,
             isOn: isOn, withoutWindow: withoutWindow, waitsInPaletteUntilAvailable: waitsInPaletteUntilAvailable,
+            recentTabDirection: recentTabDirection,
             run: { actions, _ in run(actions) })
     }
 
@@ -214,6 +233,7 @@ struct BrowserMacCommand {
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
         withoutWindow: BrowserMacWindowlessCommand? = nil,
         waitsInPaletteUntilAvailable: Bool = false,
+        recentTabDirection: RecentTabSwitchDirection? = nil,
         run: @escaping @MainActor (BrowserCommandActions, ShortcutCommand) -> Void
     ) {
         self.kind = kind
@@ -223,6 +243,7 @@ struct BrowserMacCommand {
         self.isOn = isOn
         self.withoutWindow = withoutWindow
         self.waitsInPaletteUntilAvailable = waitsInPaletteUntilAvailable
+        self.recentTabDirection = recentTabDirection
         self.run = run
     }
 
@@ -245,6 +266,13 @@ struct BrowserMacWindowlessCommand {
     /// Closes the key window when it is one the shell opened.
     static let closesShellWindow = BrowserMacWindowlessCommand(
         isAvailable: { $0.isShellWindowKey }, run: { _ in NSApp.keyWindow?.performClose(nil) })
+    /// Opens an empty Quick Window beside the key one, in its Space.
+    static let opensQuickWindowBesideKeyQuickWindow = BrowserMacWindowlessCommand(
+        isAvailable: { $0.isQuickWindowKey }, run: { $0.openQuickWindowBesideKeyQuickWindow() })
+    /// Opens the key Quick Window's palette from its address field, as Open
+    /// Location does over a page, when the Quick Window has none yet.
+    static let opensLocationInKeyQuickWindow = BrowserMacWindowlessCommand(
+        isAvailable: { $0.isQuickWindowKey }, run: { $0.openLocationInKeyQuickWindow() })
 
     // MARK: - Variables
 

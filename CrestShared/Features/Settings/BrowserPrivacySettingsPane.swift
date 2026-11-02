@@ -17,6 +17,8 @@ struct BrowserPrivacySettingsPane: View {
         Binding(get: { selectedSpaceID }, set: { if fixedSpaceID == nil { pickedSpaceID = $0 } })
     }
     @State private var confirmsReset = false
+    /// The sites that keep data in the shown Space, listed once it shows.
+    @State private var websiteData: BrowserWebsiteDataList?
 
     var body: some View {
         BrowserSettingsPane(.privacy) {
@@ -56,6 +58,17 @@ struct BrowserPrivacySettingsPane: View {
                         resetAll: { confirmsReset = true }
                     )
                 }
+
+                if let selectedSpace {
+                    BrowserWebsiteDataSection(
+                        list: websiteData?.profileID == selectedSpace.profileID ? websiteData : nil,
+                        spaceName: selectedSpace.settings.name,
+                        isSharedByGroup: browser.groupMembers(of: selectedSpace).count > 1)
+                    BrowserClearBrowsingDataSection(browser: browser, space: selectedSpace) {
+                        Task { await websiteData?.read() }
+                    }
+                }
+                BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
             } else if let selectedSpace {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: selectedSpace,
@@ -65,6 +78,16 @@ struct BrowserPrivacySettingsPane: View {
             }
         }
         .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)
+        .task(id: canRevealSelectedSpaceData ? selectedSpace?.profileID : nil) {
+            guard canRevealSelectedSpaceData, let selectedSpace else {
+                websiteData = nil
+                return
+            }
+            let list = BrowserWebsiteDataList(
+                core: browser.core, profileID: selectedSpace.profileID, ephemeral: browser.isPrivateBrowsing)
+            websiteData = list
+            await list.read()
+        }
         .onChange(of: canRevealSelectedSpaceData) { _, canReveal in
             if !canReveal {
                 confirmsReset = false
@@ -78,7 +101,11 @@ struct BrowserPrivacySettingsPane: View {
             Button("Reset All", role: .destructive, action: resetAll)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Makes every site ask again in this Space")
+            if selectedSpace.map({ browser.groupMembers(of: $0).count > 1 }) == true {
+                Text("Makes every site ask again in this Space and the others of its group")
+            } else {
+                Text("Makes every site ask again in this Space")
+            }
         }
     }
 

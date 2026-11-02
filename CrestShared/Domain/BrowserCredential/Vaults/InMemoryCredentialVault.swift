@@ -37,6 +37,11 @@ actor InMemoryCredentialVault: CredentialVault {
         )
     }
 
+    /// Every credential this vault holds reads back.
+    func unreadableCredentialCount(in spaceID: UUID) -> Int {
+        0
+    }
+
     func credential(id: UUID, in spaceID: UUID) -> BrowserCredential? {
         credentialsBySpace[spaceID]?[id]
     }
@@ -81,6 +86,8 @@ actor InMemoryCredentialVault: CredentialVault {
     func deleteAll(in spaceID: UUID) {
         credentialsBySpace[spaceID] = nil
     }
+
+    func deleteUnreadableCredentials(in spaceID: UUID) {}
 
     private func sortedDescriptors(_ descriptors: [CredentialDescriptor]) -> [CredentialDescriptor] {
         descriptors.sorted {

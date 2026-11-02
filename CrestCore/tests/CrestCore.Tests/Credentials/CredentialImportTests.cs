@@ -73,6 +73,63 @@ public sealed class CredentialImportTests {
     }
 
     [Fact]
+    public void ABracketedHostMustBeAnIPv6AddressWithoutAZoneId() {
+        var plan = Preview("""
+            url,username,password
+            https://[2001:DB8::1]:8443/,u,s
+            https://[a b]/,u,s
+            https://[a%2Fb]/,u,s
+            https://[%5B::1%5D]/,u,s
+            https://[1.2.3.4]/,u,s
+            https://[v1.x]/,u,s
+            https://[:::]/,u,s
+            https://[fe80::1%25en0]/,u,s
+            https://[fe80::1%41]/,u,s
+            """);
+        Assert.Equal(new CredentialOrigin("https", "2001:db8::1", 8443), Assert.Single(plan.Groups).Origin);
+        Assert.Equal(Enumerable.Range(3, 8).Select(row => new CredentialRowRejection(row, CredentialRowFlaw.InvalidOrigin)), plan.Rejections);
+        // A page never reports a zone ID, so a saved password cannot hold one either.
+        Assert.False(new CredentialOrigin("https", "fe80::1%en0", 443).IsValid);
+    }
+
+    [Fact]
+    public void AnIPAddressIsSpelledAsAPageReportsItSoThePasswordFillsAndMerges() {
+        var saved = Saved("ada", "secret", origin: new("https", "127.0.0.1", 443));
+        var plan = Preview("""
+            url,username,password
+            https://127.1/,ada,secret
+            https://0x7f.0.0.1./,bob,secret
+            https://[2001:db8:0:0:0:0:0:1]/,ada,secret
+            https://[::ffff:1.2.3.4]/,ada,secret
+            https://999.1.1.1/,ada,secret
+            https://1.2.3.4.5/,ada,secret
+            https://08.1.1.1/,ada,secret
+            https://[::ffff:1.2.3.04]/,ada,secret
+            """, saved);
+        Assert.Equal([("127.0.0.1", "ada"), ("127.0.0.1", "bob"), ("2001:db8::1", "ada"), ("::ffff:102:304", "ada")],
+            plan.Groups.Select(group => (group.Origin.Host, group.Username)));
+        Assert.Equal(saved.Id, plan.Groups[0].ExistingId);
+        // A host ending in a number must be an IPv4 address, and an IPv6 address
+        // must spell any IPv4 address it ends in without leading zeros, or no
+        // page can have it.
+        Assert.Equal(Enumerable.Range(6, 4).Select(row => new CredentialRowRejection(row, CredentialRowFlaw.InvalidOrigin)), plan.Rejections);
+        Assert.False(new CredentialOrigin("https", "2001:db8:0:0:0:0:0:1", 443).IsValid);
+        Assert.False(new CredentialOrigin("https", "127.1", 443).IsValid);
+
+        // A password an earlier import saved in such a spelling still fills the
+        // page, which spells the address canonically; a different address,
+        // scheme or port, or a spelling no page reads, does not.
+        CredentialOrigin[] earlier = [new("https", "127.1", 443), new("https", "0x7f.0.0.1", 443), new("https", "127.0.0.2", 443),
+            new("http", "127.1", 443), new("https", "127.1", 8443), new("https", "08.1.1.1", 443)];
+        Assert.Equal([true, true, false, false, false, false],
+            Area.Query(new CredentialsFillingPage(new("https", "127.0.0.1", 443), earlier)).Fills);
+        Assert.Equal([true, true], Area.Query(new CredentialsFillingPage(new("https", "2001:db8::1", 443),
+            [new("https", "2001:db8:0:0:0:0:0:1", 443), new("https", "2001:DB8::1", 443)])).Fills);
+        Assert.Equal(new InvalidCredentialOrigin(),
+            Assert.Throws<Rejected>(() => Area.Query(new CredentialsFillingPage(new("https", "127.1", 443), earlier))).Rejection);
+    }
+
+    [Fact]
     public void AnAccountsRowsGroupAgainstItsMostRecentSavedPassword() {
         var older = Saved("ADA", "old-secret", updatedAt: 3_000);
         var newer = Saved("ada", "current-secret", updatedAt: 1_000, lastUsedAt: 5_000);

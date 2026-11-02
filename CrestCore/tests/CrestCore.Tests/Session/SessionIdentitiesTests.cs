@@ -26,7 +26,7 @@ public sealed class SessionIdentitiesTests {
     public void AnEditThatBreaksARuleIsRefusedForThatRule() {
         var (a, b, c) = (Space(5), Space(5), Space(5));
         var basis = Session(a, b, c);
-        var deleting = new SpaceDeletionState(Guid.NewGuid(), b.Id, b.ProfileId);
+        var deleting = new SpaceDeletionState(Guid.NewGuid(), b.Id, b.OwnProfileId);
         var cases = new (string Edit, SessionState Basis, SessionState Next, SessionFlaw Flaw)[] {
             ("B takes one of A's tabs", basis, Replacing(basis, b with { Tabs = [.. b.Tabs, a.Tabs[2]] }), SessionFlaw.DuplicateTab),
             ("A takes one of C's tabs", basis, Replacing(basis, a with { Tabs = [c.Tabs[4], .. a.Tabs] }), SessionFlaw.DuplicateTab),
@@ -42,21 +42,21 @@ public sealed class SessionIdentitiesTests {
             ("A and B each open one tab with one identity", basis, Twinned(basis, a, b), SessionFlaw.DuplicateTab),
             ("a new tab has no identity", basis, Replacing(basis, b with { Tabs = [.. b.Tabs, b.Tabs[0] with { Id = Guid.Empty }] }),
                 SessionFlaw.MissingIdentity),
-            ("B takes A's profile", basis, Replacing(basis, b with { ProfileId = a.ProfileId }), SessionFlaw.SharedProfile),
-            ("C loses its profile", basis, Replacing(basis, c with { ProfileId = Guid.Empty }), SessionFlaw.MissingIdentity),
+            ("B takes A's profile", basis, Replacing(basis, b with { OwnProfileId = a.OwnProfileId }), SessionFlaw.SharedProfile),
+            ("C loses its profile", basis, Replacing(basis, c with { OwnProfileId = Guid.Empty }), SessionFlaw.MissingIdentity),
             ("a new Space takes A's identity", basis, Adding(basis, Space(1) with { Id = a.Id }), SessionFlaw.DuplicateSpace),
-            ("a new Space takes C's profile", basis, Adding(basis, Space(1) with { ProfileId = c.ProfileId }), SessionFlaw.SharedProfile),
+            ("a new Space takes C's profile", basis, Adding(basis, Space(1) with { OwnProfileId = c.OwnProfileId }), SessionFlaw.SharedProfile),
             ("a new Space holds one of B's tabs", basis, Adding(basis, Space(1) with { Tabs = [b.Tabs[1]] }), SessionFlaw.DuplicateTab),
             ("a deletion names a Space the session lacks", basis,
-                basis with { SpaceDeletions = [new(Guid.NewGuid(), Guid.NewGuid(), a.ProfileId)] }, SessionFlaw.UnknownDeletion),
-            ("a deletion names A with B's profile", basis, basis with { SpaceDeletions = [new(Guid.NewGuid(), a.Id, b.ProfileId)] },
+                basis with { SpaceDeletions = [new(Guid.NewGuid(), Guid.NewGuid(), a.OwnProfileId)] }, SessionFlaw.UnknownDeletion),
+            ("a deletion names A with B's profile", basis, basis with { SpaceDeletions = [new(Guid.NewGuid(), a.Id, b.OwnProfileId)] },
                 SessionFlaw.UnknownDeletion),
             ("two deletions name B", basis with { SpaceDeletions = [deleting] },
                 basis with { SpaceDeletions = [deleting, deleting with { Id = Guid.NewGuid() }] }, SessionFlaw.UnknownDeletion),
             ("a deletion has no identity", basis, basis with { SpaceDeletions = [deleting with { Id = Guid.Empty }] },
                 SessionFlaw.MissingIdentity),
             ("the Space a deletion names takes a new profile", basis with { SpaceDeletions = [deleting] },
-                Replacing(basis, b with { ProfileId = Guid.NewGuid() }) with { SpaceDeletions = [deleting] }, SessionFlaw.UnknownDeletion),
+                Replacing(basis, b with { OwnProfileId = Guid.NewGuid() }) with { SpaceDeletions = [deleting] }, SessionFlaw.UnknownDeletion),
             ("the Space a deletion names goes", basis with { SpaceDeletions = [deleting] },
                 basis with { Spaces = [a, c], SpaceDeletions = [deleting] }, SessionFlaw.UnknownDeletion),
         };
@@ -65,6 +65,49 @@ public sealed class SessionIdentitiesTests {
             var identities = Indexed(before);
             Assert.True(SessionIdentities.Flaw(next) == flaw, $"{edit}: the whole session shows {flaw}");
             Assert.True(identities.Flaw(before, next) == flaw, $"{edit}: the edit is refused for {flaw}");
+        }
+    }
+
+    /// Sub-Spaces browse with their primary's profile while every Space keeps
+    /// a profile of its own: a group whose Sub-Spaces sit right after their
+    /// primary and browse with its profile is one a workspace holds, and an
+    /// edit that breaks a group's rules is refused for the flaw the whole
+    /// session shows. A Sub-Space whose deletion is under way is out of them.
+    [Fact]
+    public void SubSpacesShareTheirPrimarysProfileAndNothingElse() {
+        var (a, b, c, d) = (Space(2), Space(2), Space(2), Space(2));
+        var (joinedB, joinedC) = (Joined(b, a), Joined(c, a));
+        var grouped = Session(a, joinedB, joinedC, d);
+        Assert.Null(SessionIdentities.Flaw(grouped));
+        Assert.Equal(a.OwnProfileId, joinedC.ProfileId);
+        Assert.NotEqual(a.OwnProfileId, joinedC.OwnProfileId);
+        Assert.Equal([a.Id, b.Id, c.Id], grouped.Groups[0].Members.Select(member => member.Id));
+
+        var basis = Session(a, b, c, d);
+        var deleting = new SpaceDeletionState(Guid.NewGuid(), c.Id, c.OwnProfileId);
+        var cases = new (string Edit, SessionState Basis, SessionState Next, SessionFlaw? Flaw)[] {
+            ("B joins A's session", basis, Replacing(basis, joinedB), null),
+            ("A leads B and C, with D apart", basis, grouped, null),
+            ("B names a primary the session lacks", basis,
+                Replacing(basis, b with { Membership = new(Guid.NewGuid(), a.OwnProfileId, Now) }), SessionFlaw.UnknownPrimary),
+            ("B names itself", basis, Replacing(basis, b with { Membership = new(b.Id, a.OwnProfileId, Now) }), SessionFlaw.UnknownPrimary),
+            ("C names B, a Sub-Space", Session(a, joinedB, c, d), Session(a, joinedB, Joined(c, joinedB) with {
+                Membership = new(b.Id, a.OwnProfileId, Now) }, d), SessionFlaw.UnknownPrimary),
+            ("B joins A but browses with its own profile", basis,
+                Replacing(basis, b with { Membership = new(a.Id, null, Now) }), SessionFlaw.ScatteredGroup),
+            ("D sits between A and its Sub-Space C", basis, Session(a, joinedB, d, joinedC), SessionFlaw.ScatteredGroup),
+            ("C sits before its primary", basis, Session(joinedC, a, b, d), SessionFlaw.ScatteredGroup),
+            ("D takes over the profile A browses with", basis,
+                Replacing(basis, d with { Membership = SpaceMembership.Leading(a.ProfileId, Now) }), SessionFlaw.SharedProfile),
+            ("C, whose deletion is under way, names a primary that is gone", basis with { SpaceDeletions = [deleting] },
+                Replacing(basis, c with { Membership = new(Guid.NewGuid(), a.OwnProfileId, Now) }) with { SpaceDeletions = [deleting] },
+                null),
+        };
+
+        foreach (var (edit, before, next, flaw) in cases) {
+            var identities = Indexed(before);
+            Assert.True(SessionIdentities.Flaw(next) == flaw, $"{edit}: the whole session shows {flaw?.ToString() ?? "no flaw"}");
+            Assert.True(identities.Flaw(before, next) == flaw, $"{edit}: the edit shows {flaw?.ToString() ?? "no flaw"}");
         }
     }
 
@@ -109,6 +152,10 @@ public sealed class SessionIdentitiesTests {
         session with { Spaces = [.. session.Spaces.Select(candidate => candidate.Id == space.Id ? space : candidate)] };
 
     private static SessionState Adding(SessionState session, SpaceState space) => session with { Spaces = [.. session.Spaces, space] };
+
+    /// `space` as a Sub-Space of `primary`.
+    private static SpaceState Joined(SpaceState space, SpaceState primary) =>
+        space with { Membership = SpaceMembership.Joining(primary, Now) };
 
     /// Two new tabs with one identity.
     private static TabState[] Twins() {

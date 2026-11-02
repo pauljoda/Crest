@@ -189,6 +189,14 @@ final class BrowserDownloadCenter: NSObject {
         send(RemoveDownload(downloadID: itemID))
     }
 
+    /// Deletes the records of the Space `deletion` names. The core cancels and
+    /// removes the downloads still running in each profile it erases; a
+    /// profile a Space that stays browses with keeps its list.
+    func deleteRecords(of deletion: SpaceDeletionState) {
+        dataSaveAssignments = dataSaveAssignments.filter { $0.value.spaceID != deletion.spaceID }
+        for profileID in deletion.erasing { send(RemoveProfileDownloads(profileID: profileID)) }
+    }
+
     /// Deletes a Space's records. The core cancels and removes the downloads
     /// its profile's engines still run.
     func deleteRecords(profileID: UUID, spaceID: UUID) {

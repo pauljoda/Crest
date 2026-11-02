@@ -69,6 +69,6 @@ struct BrowserSidebarNavigationPort {
     /// Reloads ignoring every cached response.
     let reloadFromOrigin: () -> Void
 
-    /// Clears the site's cookies and storage, then reloads it.
-    let clearSiteDataAndReload: () async -> Void
+    /// Clears the site's cookies and storage, reloads it, and says how it went.
+    let clearCookiesAndReload: () async -> Void
 }

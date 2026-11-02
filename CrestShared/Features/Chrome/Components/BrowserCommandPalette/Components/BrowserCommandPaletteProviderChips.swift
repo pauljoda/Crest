@@ -5,6 +5,8 @@ import SwiftUI
 /// icon and the shortcut that enters it, on one line. The first is the one
 /// Tab enters. Choosing one enters it.
 struct BrowserCommandPaletteProviderChips: View {
+    // MARK: - Variables
+
     let model: BrowserCommandPaletteModel
 
     var body: some View {
@@ -13,7 +15,8 @@ struct BrowserCommandPaletteProviderChips: View {
                 HStack(spacing: CrestSpacing.small) {
                     ForEach(Array(model.providerChips.enumerated()), id: \.element.name) { index, provider in
                         BrowserCommandPaletteProviderChip(
-                            provider: provider, isOffered: index == 0, profileID: model.space?.profileID
+                            provider: provider, isOffered: index == 0 && model.preferences.searchesSitesWithTab,
+                            profileID: model.space?.profileID
                         ) {
                             model.enter(provider)
                         }
@@ -24,7 +27,9 @@ struct BrowserCommandPaletteProviderChips: View {
             }
         }
         .scrollIndicators(.hidden)
-        .frame(height: BrowserCommandPaletteMetrics.providerChipRowHeight)
+        // As tall as its chips, which a larger text size makes taller.
+        .frame(minHeight: BrowserCommandPaletteMetrics.providerChipRowHeight)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Search providers")
         .accessibilityIdentifier("command-palette-provider-chips")
@@ -35,6 +40,8 @@ struct BrowserCommandPaletteProviderChips: View {
 /// the shortcut that enters it, or its name when it has none, with Tab's
 /// glyph on the one Tab enters, on glass in its brand color.
 private struct BrowserCommandPaletteProviderChip: View {
+    // MARK: - Variables
+
     let provider: SearchProvider
     let isOffered: Bool
     var profileID: UUID?

@@ -10,6 +10,8 @@ internal sealed class NativeSyncTransaction : IDisposable {
     #region Variables
 
     internal NativeSyncAuthority Owner { get; }
+    /// The thread that began this transaction, which completes it.
+    internal int ThreadId { get; } = Environment.CurrentManagedThreadId;
     /// The queued stage this transaction stages, which commits only while it
     /// is the newest; null for one that always may.
     internal ulong? Sequence { get; }
@@ -81,6 +83,15 @@ internal sealed class NativeSyncTransaction : IDisposable {
         Owner.Session?.Storage?.SaveJournal(Journal);
         Commit();
         Owner.AnnounceStaged();
+    }
+
+    /// Ends the transaction uncommitted and answers the queued stage it
+    /// replaced, which the caller takes over instead of queuing it again.
+    internal SyncStager.Request? Abandon() {
+        var replaced = Superseded;
+        Superseded = null;
+        Dispose();
+        return replaced;
     }
 
     public void Dispose() {

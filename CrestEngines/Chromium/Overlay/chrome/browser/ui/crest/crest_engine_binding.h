@@ -290,6 +290,8 @@ class EngineBinding {
   void Handle(const engine::ApproveEngineDownload& command);
   void Handle(const engine::EraseProfileData& command);
   void Handle(const engine::EraseSiteData& command);
+  void Handle(const engine::EraseBrowsingData& command);
+  void Handle(const engine::ReadSiteData& command);
   void Handle(const engine::AdoptOfferedPage& command);
   void Handle(const engine::RejectOfferedPage& command);
   void Handle(const engine::StageNavigation& command);
@@ -323,6 +325,15 @@ class EngineBinding {
   // one site's, whether or not any page shows it, and reports DataErased.
   void Erase(const engine::EraseProfileData& erasing);
   void Erase(const engine::EraseSiteData& erasing);
+  void Erase(const engine::EraseBrowsingData& erasing);
+  void Read(const engine::ReadSiteData& reading);
+  // Runs `use` with the profile `id` names once its data can be read: a
+  // loaded one, or a regular one on disk loaded for it. A private profile
+  // that is not open, or a regular one never created, keeps nothing: `use`
+  // gets nullptr and false. One that would not load gets nullptr and true.
+  void WithStoredData(const std::string& id, bool ephemeral, base::OnceCallback<void(Profile*, bool)> use);
+  // Answers erasure `erasure` with whether it erased all it covers.
+  base::OnceCallback<void(bool)> ErasureAnswer(const engine::Guid& erasure);
   void Forget(const std::string& page);
   // Destroys `contents`, the WebContents of `page`, after the shell drops
   // the views beside it.

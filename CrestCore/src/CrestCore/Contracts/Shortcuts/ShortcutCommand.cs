@@ -75,7 +75,10 @@ public sealed class ShortcutCommand {
         OpenFile,
         FindNext,
         FindPrevious,
-        CapturePage
+        CapturePage,
+        MostRecentTabBackward,
+        ClearSiteCookies,
+        ClearSiteCache
     }
 
     #endregion
@@ -149,6 +152,12 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Most Recent Tab", symbol: "arrow.left.arrow.right",
         shortcuts: Everywhere(Special(ShortcutSpecialKey.Tab, Control)), searchTerms: "toggle recent switch tabs",
         reservedFromPages: true);
+    public static readonly ShortcutCommand MostRecentTabBackward = new(Kinds.MostRecentTabBackward,
+        name: "mostRecentTabBackward", ShortcutSection.Tabs, title: "Most Recent Tab Backward",
+        symbol: "arrow.left.arrow.right",
+        shortcuts: [.. DevicePlatform.All.Select(platform =>
+            new ShortcutDefault(platform, Special(ShortcutSpecialKey.Tab, Control | Shift), YieldsToOverrides: true))],
+        searchTerms: "toggle recent switch tabs oldest back", reservedFromPages: true);
     public static readonly ShortcutCommand SelectTab1 = SelectingTab(name: "selectTab1", number: 1);
     public static readonly ShortcutCommand SelectTab2 = SelectingTab(name: "selectTab2", number: 2);
     public static readonly ShortcutCommand SelectTab3 = SelectingTab(name: "selectTab3", number: 3);
@@ -278,6 +287,13 @@ public sealed class ShortcutCommand {
         title: "Capture Page", symbol: "camera", searchTerms: "screenshot snapshot region selection image clipboard",
         shortcuts: [new(DevicePlatform.Desktop, Character("2", Command | Shift), YieldsToOverrides: true)],
         requiredCapability: EngineCapability.ViewportCapture, availableWhen: ShowingWebPage);
+    public static readonly ShortcutCommand ClearSiteCookies = new(Kinds.ClearSiteCookies, name: "clearSiteCookies",
+        ShortcutSection.Page, title: "Clear Cookies for This Site", symbol: "person.crop.circle.badge.xmark",
+        searchTerms: "site data storage local session indexeddb service workers sign out delete remove",
+        availableWhen: ShowingWebPage);
+    public static readonly ShortcutCommand ClearSiteCache = new(Kinds.ClearSiteCache, name: "clearSiteCache",
+        ShortcutSection.Page, title: "Clear Cache for This Site", symbol: "trash",
+        searchTerms: "cached images files empty delete remove", availableWhen: ShowingWebPage);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -289,7 +305,7 @@ public sealed class ShortcutCommand {
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious, CapturePage
+        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache
     ];
 
     public Kinds Kind { get; }

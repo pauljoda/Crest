@@ -16,8 +16,7 @@ struct MobileBrowserSidebarTopChrome: View {
             } else {
                 BrowserSidebarNavigationControls(
                     port: navigationPort,
-                    capabilities: configuration.context.capabilities,
-                    hidesUnavailableForwardControl: true
+                    capabilities: configuration.context.capabilities
                 ) {
                     pageActionsMenu()
                 }
@@ -74,15 +73,19 @@ struct MobileBrowserSidebarTopChrome: View {
         }
     }
 
-    /// The strip's controls as items in the side toolbar's top group, in the
-    /// strip's order.
+    /// The strip's controls as items in the side toolbar's top group, or at
+    /// the start of the top bar, in the strip's order.
     @ToolbarContentBuilder
     private var navigationToolbarItems: some ToolbarContent {
-        ToolbarItemGroup(placement: .topBarTrailing) {
+        ToolbarItem(placement: controlPlacement.pageControlsPlacement) {
             MobileHistoryToolbarControl(direction: .back, port: navigationPort)
-            if navigationPort.canGoForward() {
-                MobileHistoryToolbarControl(direction: .forward, port: navigationPort)
-            }
+        }
+        .collapsing(at: .navigation)
+        ToolbarItem(placement: controlPlacement.pageControlsPlacement) {
+            MobileHistoryToolbarControl(direction: .forward, port: navigationPort)
+        }
+        .collapsing(at: .navigation)
+        ToolbarItem(placement: controlPlacement.pageControlsPlacement) {
             // A system button, which the bar can stand on end; the strip's
             // reload control is a custom view the bar keeps horizontal.
             Button(
@@ -98,14 +101,18 @@ struct MobileBrowserSidebarTopChrome: View {
                         systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
                         action: navigationPort.reloadFromOrigin
                     )
-                    Button("Clear Cookies, Storage, and Reload", systemImage: "trash") {
-                        Task { await navigationPort.clearSiteDataAndReload() }
+                    Button("Clear Cookies and Reload", systemImage: BrowsingDataCategory.siteData.symbol ?? "trash") {
+                        Task { await navigationPort.clearCookiesAndReload() }
                     }
                 }
             }
             .accessibilityIdentifier("reload-control")
+        }
+        .collapsing(at: .navigation)
+        ToolbarItem(placement: controlPlacement.pageControlsPlacement) {
             pageActionsMenu(isToolbarItem: true)
         }
+        .collapsing(at: .pageActions)
     }
 
     @ViewBuilder

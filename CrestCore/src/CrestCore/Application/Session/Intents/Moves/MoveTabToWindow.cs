@@ -22,11 +22,13 @@ public sealed record MoveTabToWindow(Guid WorkspaceId, Guid WindowId, Guid Space
 
     /// Both windows show this workspace, so the tab stays where it is: the
     /// window it moves to shows it and its Space, and the tab's use is
-    /// recorded, as showing a tab records it.
+    /// recorded, as showing a tab records it. The window it leaves keeps
+    /// showing it but no longer lists it among its recent tabs.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         if (space.Tabs.All(tab => tab.Id != TabId)) throw new Rejected(new UnknownTab(TabId));
         var followUp = new WindowFollowUp(workspace.IssuingWindow(DestinationWindowId)).ShowTab(space.Id, TabId).ShowSpace(space.Id);
+        if (WindowId != DestinationWindowId) followUp.Depart(WindowId, space.Id, TabId);
         var used = space with { Tabs = [.. space.Tabs.Select(tab => tab.Id == TabId ? tab with { LastActivatedAt = turn.Now } : tab)] };
         return new(turn.Basis.Replacing(used), SyncStaging.TabUse, followUp);
     }

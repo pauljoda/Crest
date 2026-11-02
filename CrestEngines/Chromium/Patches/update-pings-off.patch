@@ -1,0 +1,41 @@
+# Crest: component and extension update checks carry no active-day or
+# roll-call counters, and installs and updates send no event pings.
+
+--- a/components/update_client/update_checker.cc
++++ b/components/update_client/update_checker.cc
+@@ -242,9 +242,8 @@
+             return {{"install", install_data_index, ""}};
+           }
+         }(crx_component->install_data_index),
+-        MakeProtocolPing(app_id, config_->GetPersistedData(),
+-                         active_ids.contains(app_id)),
+-        std::nullopt));
++        // Crest: no active-day or roll-call counters.
++        std::nullopt, std::nullopt));
+   }
+ 
+   if (sent_ids.empty()) {
+--- a/components/component_updater/configurator_impl.cc
++++ b/components/component_updater/configurator_impl.cc
+@@ -39,7 +39,8 @@
+     : background_downloads_enabled_(config_policy.BackgroundDownloadsEnabled()),
+       deltas_enabled_(config_policy.DeltaUpdatesEnabled()),
+       fast_update_(config_policy.FastUpdate()),
+-      pings_enabled_(config_policy.PingsEnabled()),
++      // Crest: installs and updates send no event pings.
++      pings_enabled_(false),
+       require_encryption_(require_encryption),
+       url_source_override_(config_policy.UrlSourceOverride()),
+       initial_delay_(config_policy.InitialDelay()) {
+--- a/extensions/browser/updater/manifest_fetch_data.cc
++++ b/extensions/browser/updater/manifest_fetch_data.cc
+@@ -107,7 +107,8 @@
+     : base_url_(update_url),
+       full_url_(update_url),
+       brand_code_(brand_code),
+-      ping_mode_(ping_mode),
++      // Crest: update checks carry no active-day or roll-call counters.
++      ping_mode_(NO_PING),
+       fetch_priority_(fetch_priority) {
+   UpdateFullUrl(base_query_params);
+   request_ids_.insert(request_id);

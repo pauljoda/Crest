@@ -66,7 +66,7 @@ struct SpaceSidebarAddressBand: View {
     }
 
     private var selectedTab: TabStateModel? {
-        selectedTabID.flatMap { space.tabs.model($0) }
+        selectedTabID.flatMap { space.shownTab($0) }
     }
 
     private var displayedPage: BrowserPage? {

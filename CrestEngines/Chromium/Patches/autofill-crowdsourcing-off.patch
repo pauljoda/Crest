@@ -1,0 +1,15 @@
+# Crest: Autofill sends no form signatures or field votes to Google's
+# crowdsourcing server. Its predictions come from local heuristics only.
+
+--- a/components/autofill/core/common/autofill_debug_features.cc
++++ b/components/autofill/core/common/autofill_debug_features.cc
+@@ -135,7 +135,8 @@
+ // autofill server API url up to the parent "directory" of the "query" and
+ // "upload" resources.
+ // i.e., https://other.autofill.server:port/tbproxy/af/
+-BASE_FEATURE(kAutofillServerCommunication, base::FEATURE_ENABLED_BY_DEFAULT);
++// Crest: off, so Autofill sends no form signatures or votes to Google.
++BASE_FEATURE(kAutofillServerCommunication, base::FEATURE_DISABLED_BY_DEFAULT);
+ 
+ // When set to a non-zero value, the value is attached as an experiment ID to
+ // all predictions requests to the Autofill server, as if it were an active GWS

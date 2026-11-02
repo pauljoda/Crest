@@ -1,6 +1,7 @@
 import AppKit
 
-/// Owns hover across the sidebar's full region, including its leading inset.
+/// Owns hover across the sidebar's full region, including its leading inset
+/// and, for a floating card, an exit margin over the page beside it.
 ///
 /// Hover is the pointer resting on the region, held open for as long as
 /// something the sidebar opened is still in use: a menu started inside it, a
@@ -42,16 +43,24 @@ final class BrowserSidebarHoverTrackingView: NSView {
     private let heldPopovers = NSHashTable<NSPopover>.weakObjects()
     private let heldWindows = NSHashTable<NSWindow>.weakObjects()
     private var trackingArea: NSTrackingArea?
+    private var sidebarTrackingArea: NSTrackingArea?
+    private var exitMargin: CGFloat = 0
+    private var exitEdge: CGRectEdge = .maxXEdge
     private var firstResponderObservation: NSKeyValueObservation?
     private var trackingMenus: Set<ObjectIdentifier> = []
     private var holdReleaseRevision = 0
     private var isReleasingHold = false
     private var lastReportedHover: Bool?
 
+    /// Whether the pointer is on the region, counting the exit margin only for
+    /// a hover already under way: the margin keeps the sidebar out, but never
+    /// brings it out.
     private var isPointerInside: Bool {
-        guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
-        let location = convert(window.convertPoint(fromScreen: pointerLocation()), from: nil)
-        return trackedRect.contains(location)
+        isPointer(in: lastReportedHover == true ? trackedRect : sidebarRect)
+    }
+
+    private var isPointerOnSidebar: Bool {
+        isPointer(in: sidebarRect)
     }
 
     /// Whether the pointer that revealed the sidebar has gone somewhere a
@@ -81,11 +90,17 @@ final class BrowserSidebarHoverTrackingView: NSView {
         // Contained rather than overlapping: a floating card covers part of the
         // page, and a field of the page's own chrome lying partly beneath it is
         // not one of the sidebar's.
-        return trackedRect.contains(convert(field.convert(field.bounds, to: nil), from: nil))
+        return sidebarRect.contains(convert(field.convert(field.bounds, to: nil), from: nil))
     }
 
     private var trackedRect: NSRect {
         bounds.intersection(visibleRect)
+    }
+
+    /// The part of the region over the sidebar itself, without the exit
+    /// margin over the page beside it.
+    private var sidebarRect: NSRect {
+        bounds.divided(atDistance: exitMargin, from: exitEdge).remainder.intersection(visibleRect)
     }
 
     // MARK: - Initializers
@@ -159,6 +174,21 @@ final class BrowserSidebarHoverTrackingView: NSView {
         )
         addTrackingArea(area)
         trackingArea = area
+        if let sidebarTrackingArea {
+            removeTrackingArea(sidebarTrackingArea)
+            self.sidebarTrackingArea = nil
+        }
+        // A pointer that comes onto the sidebar from the exit margin never
+        // leaves the whole region, so the sidebar itself reports the entry.
+        if exitMargin > 0 {
+            let sidebarArea = NSTrackingArea(
+                rect: bounds.divided(atDistance: exitMargin, from: exitEdge).remainder,
+                options: [.mouseEnteredAndExited, .activeInKeyWindow],
+                owner: self
+            )
+            addTrackingArea(sidebarArea)
+            sidebarTrackingArea = sidebarArea
+        }
         schedulePointerRefresh()
     }
 
@@ -183,6 +213,12 @@ final class BrowserSidebarHoverTrackingView: NSView {
         onHoverChange(isHovering)
     }
 
+    private func isPointer(in rect: NSRect) -> Bool {
+        guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
+        let location = convert(window.convertPoint(fromScreen: pointerLocation()), from: nil)
+        return rect.contains(location)
+    }
+
     func schedulePointerRefresh() {
         // Attachment/layout may run inside SwiftUI's update. Read the settled
         // geometry on the next main-loop turn, without publishing during it.
@@ -195,7 +231,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
 
     @objc private func menuTrackingBegan(_ notification: Notification) {
         guard let menu = notification.object as? NSMenu,
-            !trackingMenus.isEmpty || isPointerInside
+            !trackingMenus.isEmpty || isPointerOnSidebar
         else { return }
         trackingMenus.insert(ObjectIdentifier(menu))
         refreshPointerHover()
@@ -274,5 +310,16 @@ final class BrowserSidebarHoverTrackingView: NSView {
             self.isReleasingHold = false
             self.refreshPointerHover()
         }
+    }
+
+    // MARK: - Mutators
+
+    /// Sets how much of the region along `edge` lies over the page beside the
+    /// sidebar rather than over the sidebar itself.
+    func setExitMargin(_ margin: CGFloat, on edge: CGRectEdge) {
+        guard margin != exitMargin || edge != exitEdge else { return }
+        exitMargin = margin
+        exitEdge = edge
+        updateTrackingAreas()
     }
 }

@@ -46,8 +46,11 @@ struct BrowserPageReconciliation {
         var toArchive: Set<UUID> = []
         var contexts: [(page: BrowserPlatformPage, tab: BrowserPageTab)] = []
         for (tabID, page) in residentPages {
+            // A pinned tab a group shares keeps the page it opened in any
+            // Space of the group that shows it.
             if let entry = tabsByID[tabID], entry.tab.nativeContent == nil,
-                entry.assignment.spaceID == page.spaceID,
+                entry.assignment.spaceID == page.spaceID
+                    || workspace?.spaces.model(page.spaceID)?.shownTab(tabID) != nil,
                 entry.assignment.profileID == page.profileID
             {
                 contexts.append((page, BrowserPageTab(entry.tab, images: images)))

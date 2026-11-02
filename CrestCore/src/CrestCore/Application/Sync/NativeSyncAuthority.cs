@@ -9,6 +9,11 @@ namespace CrestCore.Application;
 /// transport hears `SyncJournalChanged` once the journal holds it. The cloud
 /// transport reaches it only through the session's `CloudSyncIntent`s and
 /// queries.
+///
+/// A transaction begins holding no lock, or holding the lock the host's
+/// intents take, which an intent saved with its journal holds while it waits
+/// for one. So the thread that holds a transaction never waits for that lock:
+/// a merge takes the lock before its transaction, and the session gate after.
 public sealed class NativeSyncAuthority {
     #region Variables
 
@@ -47,17 +52,41 @@ public sealed class NativeSyncAuthority {
     internal SyncStager.Request? Supersede() => stager.Supersede();
 
     /// Starts a transaction the cloud transport asked for once the one in
-    /// progress completes. The caller holds no lock: waiting releases the gate.
+    /// progress completes. The caller holds no lock but, for a merge, the one
+    /// the host's intents take: waiting releases the gate.
     internal NativeSyncTransaction BeginTransaction() => Begin(sequence: null);
 
     /// Starts a transaction once the one in progress completes. The caller
-    /// holds no lock.
+    /// holds no lock but, maybe, the one the host's intents take.
     private NativeSyncTransaction Begin(ulong? sequence) {
         lock (NativeSessionAuthority.Gate) {
             while (pending is not null) Monitor.Wait(NativeSessionAuthority.Gate);
             var value = new NativeSyncTransaction(this, sequence, journal);
             pending = value;
             return value;
+        }
+    }
+
+    /// The journal once no transaction is in progress, which a merge computes
+    /// from without beginning one. The caller holds the gate, which waiting
+    /// releases.
+    internal NativeSyncJournal Settled() {
+        while (pending is not null) Monitor.Wait(NativeSessionAuthority.Gate);
+        return journal;
+    }
+
+    /// Queues again the stage a merge superseded and never committed.
+    internal void Requeue(SyncStager.Request? replaced) => stager.Requeue(replaced);
+
+    /// Throws when this thread holds the transaction in progress, before it
+    /// waits for the lock the host's intents take: an intent holds that lock
+    /// while it waits for the transaction. Only builds with cross-checks look.
+    [System.Diagnostics.Conditional("CREST_CROSS_CHECKS")]
+    internal void RequireNoTransactionHeldHere() {
+        lock (NativeSessionAuthority.Gate) {
+            if (pending is { } held && held.ThreadId == Environment.CurrentManagedThreadId)
+                throw new System.Diagnostics.UnreachableException(
+                    "A thread that holds a sync transaction waits for the lock an intent holds while it waits for that transaction.");
         }
     }
 

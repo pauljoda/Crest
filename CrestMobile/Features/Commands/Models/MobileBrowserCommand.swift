@@ -33,7 +33,9 @@ struct MobileBrowserCommand {
         .previousTab, isEnabled: { $0.tabCount > 1 }, run: { $0.selectPreviousTab() })
     static let nextTab = MobileBrowserCommand(.nextTab, isEnabled: { $0.tabCount > 1 }, run: { $0.selectNextTab() })
     static let mostRecentTab = MobileBrowserCommand(
-        .mostRecentTab, isEnabled: { $0.tabCount > 1 }, run: { $0.selectMostRecentTab() })
+        .mostRecentTab, isEnabled: { $0.canJumpToRecentTab }, run: { $0.selectMostRecentTab() })
+    static let mostRecentTabBackward = MobileBrowserCommand(
+        .mostRecentTabBackward, isEnabled: { $0.canJumpToRecentTab }, run: { $0.selectLeastRecentTab() })
     static let splitWithNextTab = MobileBrowserCommand(
         .splitWithNextTab, isEnabled: { $0.canSplitWithNextTab }, run: { $0.splitWithNextTab() })
     static let focusNextSplitCard = MobileBrowserCommand(
@@ -69,6 +71,10 @@ struct MobileBrowserCommand {
     static let copyPageLinkAsMarkdown = MobileBrowserCommand(
         .copyPageLinkAsMarkdown, isEnabled: { $0.hasActivePage }, run: { $0.copyPageLinkAsMarkdown() })
     static let printPage = MobileBrowserCommand(.printPage, isEnabled: { $0.hasActivePage }, run: { $0.printPage() })
+    static let clearSiteCookies = MobileBrowserCommand(
+        .clearSiteCookies, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.siteData) })
+    static let clearSiteCache = MobileBrowserCommand(
+        .clearSiteCache, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.cache) })
     static let toggleSidebar = MobileBrowserCommand(.toggleSidebar) { $0.toggleSidebar() }
     static let toggleTranslationToolbar = MobileBrowserCommand(
         .toggleTranslationToolbar, isAvailable: { $0.canToggleTranslationToolbar },
@@ -84,12 +90,13 @@ struct MobileBrowserCommand {
     static let all = [
         closeTabOrWindow, back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned,
         duplicateTab,
-        reopenClosedTab, clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, splitWithNextTab,
-        focusNextSplitCard,
+        reopenClosedTab, clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace,
         nextSpace, toggleReaderMode, toggleContentBlocking, findInPage, zoomIn, zoomOut, actualSize, copyPageLink,
-        copyPageLinkAsMarkdown, printPage, toggleSidebar, toggleTranslationToolbar, showHistory, showArchive,
+        copyPageLinkAsMarkdown, printPage, clearSiteCookies, clearSiteCache, toggleSidebar, toggleTranslationToolbar,
+        showHistory, showArchive,
         showDownloads,
     ]
 

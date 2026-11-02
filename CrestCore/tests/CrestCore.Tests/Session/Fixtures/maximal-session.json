@@ -751,6 +751,7 @@
     "automaticallyTranslates" : true,
     "splitFocusFollowsMouse" : true,
     "automaticallyShowsDeveloperToolbar" : false,
+    "showsRecentTabs" : false,
     "savedTabClosePolicy" : "returnToSavedURL",
     "translationRules" : {
       "sources" : {

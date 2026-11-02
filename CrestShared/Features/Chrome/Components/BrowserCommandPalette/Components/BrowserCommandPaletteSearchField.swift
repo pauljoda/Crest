@@ -5,22 +5,34 @@ struct BrowserCommandPaletteSearchField: View {
     let presentation: BrowserCommandPalettePresentation
     let queryIsFocused: FocusState<Bool>.Binding
 
-    @ScaledMetric(relativeTo: .title2) private var fieldHeight = 32.0
+    @ScaledMetric private var fieldHeight: CGFloat
+
+    init(
+        model: BrowserCommandPaletteModel, presentation: BrowserCommandPalettePresentation,
+        queryIsFocused: FocusState<Bool>.Binding
+    ) {
+        self.model = model
+        self.presentation = presentation
+        self.queryIsFocused = queryIsFocused
+        _fieldHeight = ScaledMetric(
+            wrappedValue: presentation.input.fieldHeight, relativeTo: presentation.input.textStyle)
+    }
 
     var body: some View {
         HStack(spacing: BrowserCommandPaletteMetrics.searchFieldSpacing) {
-            Image(systemName: "magnifyingglass")
-                .font(.title2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+            if presentation.input.showsSearchGlyph {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(presentation.input.textStyle, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
 
             activeChip
 
             BrowserPlatformCommandPaletteField(
                 model: model,
                 presentation: presentation,
-                identifier: presentation == .overlay
-                    ? "command-palette-field" : "start-page-command-palette-field",
+                identifier: presentation.fieldIdentifier,
                 focused: queryIsFocused.wrappedValue
             )
             .focused(queryIsFocused)
@@ -28,15 +40,15 @@ struct BrowserCommandPaletteSearchField: View {
 
             offer
 
-            if presentation == .overlay {
+            if presentation.showsCloseButton {
                 Button("Close", systemImage: "xmark", action: model.dismiss)
                     .labelStyle(.iconOnly)
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, BrowserCommandPaletteMetrics.searchFieldHorizontalPadding)
-        .frame(minHeight: BrowserCommandPaletteMetrics.searchFieldMinimumHeight)
+        .padding(.horizontal, presentation.input.horizontalPadding)
+        .frame(minHeight: presentation.input.minimumHeight)
     }
 
     /// The search provider or scope the palette is narrowed to, which leaves

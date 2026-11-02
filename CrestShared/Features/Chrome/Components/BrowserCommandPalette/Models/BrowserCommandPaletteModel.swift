@@ -83,7 +83,8 @@ final class BrowserCommandPaletteModel {
     private let selectTabAction: (BrowserTabRuntimeAssignment, BrowserTabRuntimeAssignment) -> Bool
     private let openURLAction: (BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteOpening) -> Bool
     private let dismissAction: () -> Void
-    private let emptySelectionActions: BrowserEmptySelectionPaletteActions?
+    /// Where the palette opens a pick when it has no tab of its own.
+    private let destination: (any BrowserPaletteDestination)?
     /// Where this platform can open a row, which the modifier keys choose among.
     let openings: [BrowserCommandPaletteOpening]
 
@@ -101,9 +102,12 @@ final class BrowserCommandPaletteModel {
     }
 
     /// The providers the palette offers as chips while what is typed is one
-    /// word, closest first; none once the palette is narrowed.
+    /// word, closest first, when Tab or Space enters them; none once the
+    /// palette is narrowed.
     var providerChips: [SearchProvider] {
-        guard isUnscoped, preferences.searchesSitesWithTab, isCompletionSourceAvailable else { return [] }
+        guard isUnscoped, preferences.searchesSitesWithTab || preferences.providerSpaceTrigger.isEnabled,
+            isCompletionSourceAvailable
+        else { return [] }
         return matchingProviders
     }
 
@@ -122,10 +126,7 @@ final class BrowserCommandPaletteModel {
 
     var isCompletionSourceAvailable: Bool {
         if selectedTabID != nil { return availableSourceAssignment != nil }
-        guard let space, let actions = emptySelectionActions,
-            actions.source == BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID)
-        else { return false }
-        return actions.isAvailable
+        return availableDestination != nil
     }
 
     /// Where Return opens the selected row while the person holds the keys
@@ -165,7 +166,7 @@ final class BrowserCommandPaletteModel {
         selectTab: @escaping (BrowserTabRuntimeAssignment, BrowserTabRuntimeAssignment) -> Bool,
         openURL: @escaping (BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteOpening) -> Bool,
         dismiss: @escaping () -> Void,
-        emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil,
+        destination: (any BrowserPaletteDestination)? = nil,
         openings: [BrowserCommandPaletteOpening] = [.here],
         readPasteboard: () -> String? = { nil }
     ) {
@@ -181,7 +182,7 @@ final class BrowserCommandPaletteModel {
         selectTabAction = selectTab
         openURLAction = openURL
         dismissAction = dismiss
-        self.emptySelectionActions = emptySelectionActions
+        self.destination = destination
         self.openings = openings
         openedWith = initialQuery
         pasteboard = BrowserAppPreferenceStore.shared.preferences.palette.offers(.pasteAndGo) ? readPasteboard() : nil
@@ -369,7 +370,8 @@ final class BrowserCommandPaletteModel {
         if row.kind.forgetsFromHistory, let address = row.address, let space {
             browser.removeHistoryAddress(address, in: space.id)
         }
-        try? browser.core.send(ForgetPaletteChoices(windowID: browser.windowID, row: row.seed))
+        try? browser.core.send(
+            ForgetPaletteChoices(windowID: browser.windowID, row: row.seed, spaceID: destination?.paletteSpaceID))
         requestAnswer()
         return true
     }
@@ -389,7 +391,9 @@ final class BrowserCommandPaletteModel {
         guard BrowserCommandPaletteActivation.of(activation)?.run(row, self) == true, activation.closesPalette else {
             return
         }
-        try? browser.core.send(RecordPaletteChoice(windowID: browser.windowID, text: typed, row: row.seed))
+        try? browser.core.send(
+            RecordPaletteChoice(
+                windowID: browser.windowID, text: typed, row: row.seed, spaceID: destination?.paletteSpaceID))
         dismiss()
     }
 
@@ -404,12 +408,12 @@ final class BrowserCommandPaletteModel {
     // MARK: - Actions - Activation
 
     /// Shows the tab `tabID` names in the palette's Space, from the tab the
-    /// palette opened over or from the window's New Tab surface.
+    /// palette opened over or from its destination.
     func switchToTab(_ tabID: UUID?) -> Bool {
         guard let tabID else { return false }
         if selectedTabID == nil {
-            guard let actions = availableEmptySelectionActions, let space else { return false }
-            return actions.selectTab(
+            guard let destination = availableDestination, let space else { return false }
+            return destination.selectTab(
                 BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
         }
         guard let sourceAssignment = availableSourceAssignment else { return false }
@@ -420,10 +424,10 @@ final class BrowserCommandPaletteModel {
     }
 
     /// Opens `address` where `opening` says, from the tab the palette opened
-    /// over, or in the window's New Tab surface, which opens it in place.
+    /// over, or in its destination, which opens it in place.
     func open(_ address: String?, where opening: BrowserCommandPaletteOpening) -> Bool {
         guard let url = address.flatMap(URL.init(string:)) else { return false }
-        if selectedTabID == nil { return availableEmptySelectionActions?.openURL(url) ?? false }
+        if selectedTabID == nil { return availableDestination?.openURL(url) ?? false }
         guard let sourceAssignment = availableSourceAssignment else { return false }
         return openURLAction(sourceAssignment, url, opening)
     }
@@ -435,21 +439,21 @@ final class BrowserCommandPaletteModel {
             ? BrowserCommandPaletteOpening.held(heldModifiers, among: openings) : .here
     }
 
-    /// The New Tab surface's actions, when the palette opened over it in the
-    /// Space it shows and it can act now.
-    private var availableEmptySelectionActions: BrowserEmptySelectionPaletteActions? {
-        guard let actions = emptySelectionActions, let space,
-            actions.source == BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID),
-            actions.isAvailable
+    /// The palette's destination, when it opens into the palette's Space and
+    /// can act now.
+    private var availableDestination: (any BrowserPaletteDestination)? {
+        guard let destination, let space,
+            destination.source == BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID),
+            destination.isAvailable
         else { return nil }
-        return actions
+        return destination
     }
 
     // MARK: - Actions - Presentation
 
     /// The tab a row shows, for its icon.
     func tab(for row: PaletteRow) -> TabStateModel? {
-        row.tabID.flatMap { space?.tabs.model($0) }
+        row.tabID.flatMap { space?.shownTab($0) }
     }
 
     /// The engine a row's tab runs on, when its icon wears that engine's
@@ -473,7 +477,7 @@ final class BrowserCommandPaletteModel {
             windowID: browser.windowID, text: text, commands: offeredCommands(for: text),
             settingsPages: commands?.settingsPages ?? [], remote: remote, provider: activeProvider?.seed,
             scope: activeScope, allowsCompletion: completionEditing.canPropose(for: text),
-            pasteboard: text.isEmpty || text == openedWith ? pasteboard : nil)
+            pasteboard: text.isEmpty || text == openedWith ? pasteboard : nil, spaceID: destination?.paletteSpaceID)
     }
 
     /// The commands the core may rank for `text`. A palette without resting
@@ -509,7 +513,7 @@ final class BrowserCommandPaletteModel {
                             windowID: question.windowID, text: question.text, commands: question.commands,
                             settingsPages: question.settingsPages, remote: fetched, provider: question.provider,
                             scope: question.scope, allowsCompletion: question.allowsCompletion,
-                            pasteboard: question.pasteboard),
+                            pasteboard: question.pasteboard, spaceID: question.spaceID),
                         from: core),
                     asked == sequence
                 else { return }

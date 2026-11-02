@@ -37,11 +37,6 @@ public sealed record WorkspaceBusy(Guid WorkspaceId) : Rejection;
 /// <summary>Whether a Space opens freely or asks the device owner to authenticate first.</summary>
 public enum SpaceAccessPolicy { Open, DeviceOwnerAuthentication }
 
-/// <summary>A Space deletion under way on this device, identified by its operation.
-/// The Space and its profile stay untouched until the device has erased the profile's
-/// data and removed the Space. It never becomes a sync record.</summary>
-public sealed record SpaceDeletionState(Guid Id, Guid SpaceId, Guid ProfileId);
-
 #endregion
 
 #region Models - Tabs

@@ -77,7 +77,7 @@ struct BrowserUtilityListRequest: Equatable, Sendable {
             surface: surface,
             assignment: BrowserSpaceRuntimeAssignment(space: space),
             archivedTabs: isUnlocked && surface == .archive ? space.archive.entries : [],
-            history: isUnlocked && surface == .history ? space.history.entries : [],
+            history: isUnlocked && surface == .history ? space.groupHistory : [],
             downloads: isUnlocked && surface == .downloads ? downloads : [],
             searchText: searchText,
             filter: filter

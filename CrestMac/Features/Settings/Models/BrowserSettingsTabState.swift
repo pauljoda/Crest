@@ -13,6 +13,9 @@ final class BrowserSettingsTabState {
     var isArrangingSpaces = false
     /// The Space whose name is waiting to be put into editing.
     var renameSpaceID: UUID?
+    /// The Space a person is dragging in Settings, from a group's crest row
+    /// or a sidebar row, which the rows it passes over may take.
+    var draggedSpaceID: UUID?
     let sidebarScroll = BrowserNativeScrollState()
     private(set) var consumedRouteRevision = 0
     @ObservationIgnored private var scrollStates: [String: BrowserNativeScrollState] = [:]

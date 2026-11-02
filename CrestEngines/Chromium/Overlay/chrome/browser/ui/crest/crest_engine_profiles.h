@@ -3,12 +3,16 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "base/time/time.h"
+#include "chrome/browser/ui/crest/crest_engine_contract.h"
 
 class Profile;
 class ScopedProfileKeepAlive;
@@ -93,6 +97,34 @@ class EngineProfiles final {
   std::map<std::string, std::unique_ptr<ScopedProfileKeepAlive>> deletion_holds_;
   std::map<std::string, std::unique_ptr<Deletion>> deletions_;
   base::WeakPtrFactory<EngineProfiles> weak_factory_{this};
+};
+
+// The web data a profile keeps for sites, which Crest clears by site or by
+// time and lists by site. What extensions store is never part of it.
+class SiteData final {
+ public:
+  SiteData() = delete;
+
+  // Clears `categories` of the site of each of `hosts`, its registrable
+  // domain: its cookies, storage and service workers, with the cookies and
+  // storage of its third parties partitioned under it, and its cache. Answers
+  // whether every removal finished without a failure.
+  static void Clear(Profile* profile,
+                    const std::vector<std::string>& hosts,
+                    const std::vector<engine::BrowsingDataCategory>& categories,
+                    base::OnceCallback<void(bool)> done);
+
+  // Clears `categories` of what changed since `since`, or ever without it,
+  // the engine's own record of visits included, then answers as above.
+  static void Clear(Profile* profile,
+                    std::optional<base::Time> since,
+                    const std::vector<engine::BrowsingDataCategory>& categories,
+                    base::OnceCallback<void(bool)> done);
+
+  // Lists the sites that keep data in `profile`, each by its registrable
+  // domain. Data a third party keeps partitioned under a site is that site's,
+  // since clearing the site removes it.
+  static void Read(Profile* profile, base::OnceCallback<void(std::vector<engine::StoredSite>)> done);
 };
 
 }  // namespace crest

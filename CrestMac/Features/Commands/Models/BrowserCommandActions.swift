@@ -56,6 +56,19 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
+    /// Whether the page the page commands act on shows a site, whose data
+    /// the site commands clear.
+    var commandPageShowsSite: Bool {
+        commandPage?.live.displayURL?.host()?.isEmpty == false
+    }
+
+    /// Clears what the command page's site keeps in `category`, and says how
+    /// it went.
+    func clearCommandPageSiteData(_ category: BrowsingDataCategory) {
+        guard let page = commandPage else { return }
+        Task { [chrome] in await page.clearSiteData(category) { chrome.showNotice($0) } }
+    }
+
     /// Copies `text` and says so.
     func copy(_ text: String) {
         NSPasteboard.general.clearContents()
@@ -402,6 +415,17 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     func selectMostRecentTab() {
         guard browser.showMostRecentTab() else { return }
+        pages.select()
+    }
+
+    func selectLeastRecentTab() {
+        guard browser.showLeastRecentTab() else { return }
+        pages.select()
+    }
+
+    /// Shows the tab or split a held Most Recent Tab shortcut chose.
+    func selectRecentTab(_ item: RecentTabItem) {
+        guard browser.showRecentTab(item) else { return }
         pages.select()
     }
 

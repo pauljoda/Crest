@@ -60,9 +60,14 @@ public sealed record NativeSyncSessionTransition {
         // profile. Cleanup remains pending until that device acknowledges it.
         var pending = local.SpaceDeletions.ToList();
         var pendingIds = pending.Select(deletion => deletion.SpaceId).ToHashSet();
-        foreach (var record in records.Where(record => record.Kind == SyncRecordKind.Space && record.Tombstone?.Reason.IsExplicit == true)) {
-            var space = local.Space(record.Id);
-            if (space is not null && pendingIds.Add(space.Id)) pending.Add(new(Guid.NewGuid(), space.Id, space.ProfileId));
+        var deleted = records.Where(record => record.Kind == SyncRecordKind.Space && record.Tombstone?.Reason.IsExplicit == true)
+            .Select(record => local.Space(record.Id)).OfType<SpaceState>().Where(space => !pendingIds.Contains(space.Id)).ToList();
+        // A profile one of them browses with is erased only when no Space that
+        // stays browses with it.
+        var leaving = deleted.Select(space => space.Id).ToHashSet();
+        foreach (var space in deleted) {
+            pendingIds.Add(space.Id);
+            pending.Add(local.Deleting(space, Guid.NewGuid(), leaving));
         }
         local = local with { SpaceDeletions = pending };
         var raw = replacing && incoming.Count == 0 ? local with { Spaces = [], DisposableSeedMarker = null }
@@ -78,6 +83,15 @@ public sealed record NativeSyncSessionTransition {
                 else spaces[index] = original;
             }
             repaired = repaired with { Spaces = spaces, SpaceDeletions = pending };
+            // A primary another device deleted hands its group to the first of its Sub-Spaces.
+            foreach (var space in deleted) {
+                if (repaired.GroupOf(space.Id) is not { SubSpaces: [var first, ..] } group) continue;
+                repaired = repaired.HandingOver(group, first, now);
+                repaired = repaired with {
+                    SpaceDeletions = [.. repaired.SpaceDeletions.Select(deletion => deletion.SpaceId == space.Id
+                        ? deletion with { SuccessorId = first.Id } : deletion)]
+                };
+            }
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
         if (!replacing || removed)

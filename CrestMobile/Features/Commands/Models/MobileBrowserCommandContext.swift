@@ -6,12 +6,16 @@ struct MobileBrowserCommandContext {
     let canGoForward: Bool
     let hasSelectedTab: Bool
     let hasActivePage: Bool
+    /// The active page shows a site, whose data the site commands clear.
+    let showsSite: Bool
     let isLoading: Bool
     let canDismissSelectedTab: Bool
     let canArchiveSelectedTab: Bool
     let canDuplicateSelectedTab: Bool
     let canReopenClosedTab: Bool
     let tabCount: Int
+    /// Whether the window has a second tab or split in its recent order.
+    let canJumpToRecentTab: Bool
     let spaceCount: Int
     /// Where each numbered command leads in this window, per the core.
     let numberedSelections: [ShortcutCommand: NumberedSelection]
@@ -46,6 +50,7 @@ struct MobileBrowserCommandContext {
     let selectPreviousTab: () -> Void
     let selectNextTab: () -> Void
     let selectMostRecentTab: () -> Void
+    let selectLeastRecentTab: () -> Void
     let selectTab: (UUID) -> Void
     let splitWithNextTab: () -> Void
     let focusNextSplitCard: () -> Void
@@ -68,6 +73,9 @@ struct MobileBrowserCommandContext {
     let copyPageLink: () -> Void
     let copyPageLinkAsMarkdown: () -> Void
     let printPage: () -> Void
+    /// Clears what the active page's site keeps in a category, reloads it,
+    /// and says how it went.
+    let clearSiteData: (BrowsingDataCategory) async -> Void
     let toggleSidebar: () -> Void
     let presentHistory: () -> Void
     let presentArchive: () -> Void

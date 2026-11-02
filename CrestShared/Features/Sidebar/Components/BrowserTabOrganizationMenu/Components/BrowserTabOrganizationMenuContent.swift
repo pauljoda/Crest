@@ -199,31 +199,11 @@ struct BrowserTabOrganizationMenuContent: View {
         let otherSpaces = availableDestinationSpaces
         if !otherSpaces.isEmpty {
             Menu("Move to Space", systemImage: "square.grid.2x2") {
-                ForEach(otherSpaces) { space in
-                    Button {
-                        performIfCurrent {
-                            let destinationAssignment =
-                                BrowserSpaceRuntimeAssignment(space: space)
-                            guard
-                                browser.unlockedSpace(matching: destinationAssignment, accessController: spaceAccess)
-                                    != nil
-                            else { return }
-                            browser.moveTab(
-                                tab.id,
-                                matching: sourceAssignment,
-                                into: destinationAssignment
-                            )
-                        }
-                    } label: {
-                        BrowserSpaceIdentityLabel(space: space)
+                ForEach(Array(browser.grouped(otherSpaces).enumerated()), id: \.offset) { index, group in
+                    if index > 0 { Divider() }
+                    ForEach(group) { space in
+                        moveButton(to: space)
                     }
-                    .disabled(
-                        !browser.canMoveTab(
-                            assignment.tabID,
-                            matching: sourceAssignment,
-                            into: BrowserSpaceRuntimeAssignment(space: space)
-                        )
-                    )
                 }
                 .crestMenuActionLabelStyle()
             }
@@ -369,6 +349,34 @@ struct BrowserTabOrganizationMenuContent: View {
         return members.indices.contains(index + offset)
     }
 
+    /// The Move to Space item for `space`.
+    private func moveButton(to space: SpaceModel) -> some View {
+        Button {
+            performIfCurrent {
+                let destinationAssignment =
+                    BrowserSpaceRuntimeAssignment(space: space)
+                guard
+                    browser.unlockedSpace(matching: destinationAssignment, accessController: spaceAccess)
+                        != nil
+                else { return }
+                browser.moveTab(
+                    tab.id,
+                    matching: sourceAssignment,
+                    into: destinationAssignment
+                )
+            }
+        } label: {
+            BrowserSpaceIdentityLabel(space: space)
+        }
+        .disabled(
+            !browser.canMoveTab(
+                assignment.tabID,
+                matching: sourceAssignment,
+                into: BrowserSpaceRuntimeAssignment(space: space)
+            )
+        )
+    }
+
     private var availableDestinationSpaces: [SpaceModel] {
         browser.availableTabMoveDestinationSpaces(from: sourceAssignment, accessController: spaceAccess)
     }
@@ -377,7 +385,7 @@ struct BrowserTabOrganizationMenuContent: View {
     /// unlocked, with the profile the menu was built for, and the Space still
     /// holds the tab.
     private func performIfCurrent(_ action: () -> Void) {
-        guard context.isCurrent(sourceAssignment), context.space.tabs.contains(tab.id) else { return }
+        guard context.isCurrent(sourceAssignment), context.space.shownTab(tab.id) != nil else { return }
         action()
     }
 

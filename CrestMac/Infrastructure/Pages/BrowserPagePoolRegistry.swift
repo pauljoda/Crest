@@ -84,14 +84,14 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
     /// Releases every window's pages in the Space, then its data. The Space's
     /// deletion is already recorded in the session, so the core opens no new
     /// page there while this runs.
-    func deleteData(for space: BrowserSpaceRuntimeAssignment) async throws {
-        guard spacesDeletingData.insert(space.spaceID).inserted else { return }
-        defer { spacesDeletingData.remove(space.spaceID) }
+    func deleteData(for deletion: SpaceDeletionState) async throws {
+        guard spacesDeletingData.insert(deletion.spaceID).inserted else { return }
+        defer { spacesDeletingData.remove(deletion.spaceID) }
 
         for pool in livePools where pool !== primary {
-            await pool.releaseWindowRuntime(for: space)
+            await pool.releaseWindowRuntime(for: deletion)
         }
-        try await primary.deleteData(for: space)
+        try await primary.deleteData(for: deletion)
     }
 }
 

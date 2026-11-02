@@ -5,6 +5,15 @@ import Foundation
 /// member, so every origin is canonicalized here before it reaches the core or
 /// the vault.
 extension CredentialOrigin {
+    // MARK: - Static Variables
+
+    /// Characters that a decoded host must not keep, because parsing it again
+    /// would decode them a second time or read them as authority delimiters.
+    /// A colon is one too, except inside an IPv6 address's brackets.
+    private static let reparsedHostCharacters = CharacterSet(charactersIn: "%@/?#\\")
+        .union(.whitespacesAndNewlines)
+        .union(.controlCharacters)
+
     // MARK: - Variables
 
     var isSecure: Bool { WebScheme.named(scheme)?.isSecure == true }
@@ -15,16 +24,14 @@ extension CredentialOrigin {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
             let webScheme = WebScheme.named(components.scheme?.lowercased()),
             let rawHost = components.host,
-            !rawHost.isEmpty
+            !rawHost.isEmpty,
+            !rawHost.unicodeScalars.contains(where: Self.reparsedHostCharacters.contains),
+            rawHost.hasPrefix("[") || !rawHost.contains(":")
         else {
             return nil
         }
 
-        let authorityHost =
-            rawHost.contains(":") && !rawHost.hasPrefix("[")
-            ? "[\(rawHost)]"
-            : rawHost
-        guard let canonicalizationURL = URL(string: "https://\(authorityHost)"),
+        guard let canonicalizationURL = URL(string: "https://\(rawHost)"),
             let canonicalHost = canonicalizationURL.host(percentEncoded: false)?.lowercased(),
             !canonicalHost.isEmpty
         else {
@@ -37,9 +44,14 @@ extension CredentialOrigin {
         self.init(scheme: webScheme.name, host: canonicalHost, port: resolvedPort)
     }
 
+    /// The origin of `rawHost` for a protocol and port, as an authentication
+    /// challenge or a stored password names them. A host holding a character
+    /// that parsing it into an address would read as a delimiter or an escape,
+    /// such as `a@b.com`, names no origin.
     init?(securityProtocol rawProtocol: String, host rawHost: String, port rawPort: Int) {
         guard let webScheme = WebScheme.named(rawProtocol.lowercased()),
-            !rawHost.isEmpty
+            !rawHost.isEmpty,
+            !rawHost.unicodeScalars.contains(where: Self.reparsedHostCharacters.contains)
         else {
             return nil
         }
@@ -99,15 +111,12 @@ extension CredentialOrigin: Codable {
         let decodedHost = try container.decode(String.self, forKey: .host)
         let decodedPort = try container.decode(Int.self, forKey: .port)
 
-        var components = URLComponents()
-        components.scheme = decodedScheme
-        components.host = decodedHost
-        components.port =
-            decodedPort == WebScheme.named(decodedScheme.lowercased())?.defaultPort
-            ? nil
-            : decodedPort
-        guard let url = components.url,
-            let canonical = CredentialOrigin(url: url),
+        guard
+            let canonical = CredentialOrigin(
+                securityProtocol: decodedScheme,
+                host: decodedHost,
+                port: decodedPort
+            ),
             canonical.scheme == decodedScheme,
             canonical.host == decodedHost,
             canonical.port == decodedPort

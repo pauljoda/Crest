@@ -7,8 +7,10 @@
 #include "base/functional/bind.h"
 #include "base/location.h"
 #include "base/task/sequenced_task_runner.h"
+#include "chrome/browser/platform_util.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
+#include "chrome/browser/ui/browser_active_state_manager/browser_active_state_manager.h"
 #include "chrome/browser/ui/browser_manager_service.h"
 #include "chrome/browser/ui/browser_window/public/create_browser_window.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
@@ -20,6 +22,7 @@
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
 #include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/web_contents.h"
 #include "ui/base/page_transition_types.h"
 
@@ -104,6 +107,9 @@ struct EngineBrowsers::KeptBrowser final : TabStripModelObserver {
   const bool keeps_tabs;
   std::optional<EngineWindow> engine;
   raw_ptr<TabStripModel> strip;
+  // When one of its pages was last shown or focused, in the order of every
+  // Browser's: the latest of a window's Browsers holds the page in use there.
+  uint64_t activated = 0;
 };
 
 EngineBrowsers::EngineBrowsers(EngineBinding& binding) : binding_(binding) {}
@@ -172,7 +178,16 @@ bool EngineBrowsers::Activate(content::WebContents* contents) {
   if (!kept) {
     return false;
   }
-  kept->strip->ActivateTabAt(kept->strip->GetIndexOfWebContents(contents));
+  const int index = kept->strip->GetIndexOfWebContents(contents);
+  if (kept->strip->active_index() != index) {
+    kept->strip->ActivateTabAt(index);
+  }
+  kept->activated = ++activations_;
+  // A page shown in a window in the background leaves the window in use as it
+  // is. Its Browser comes into use with its window.
+  if (platform_util::IsWindowActive(contents->GetTopLevelNativeWindow())) {
+    Use(*kept);
+  }
   return true;
 }
 
@@ -296,9 +311,37 @@ void EngineBrowsers::Shown(Browser* browser, bool focused) {
   }
 }
 
+void EngineBrowsers::WindowInUse(base::FunctionRef<bool(content::WebContents*)> in_window) {
+  // The window's page with focus, or else the one it showed or focused last,
+  // is the one in use there. Its tab is already its Browser's active tab.
+  KeptBrowser* latest = nullptr;
+  for (const auto& kept : kept_) {
+    for (int index = 0; index < kept->strip->count(); ++index) {
+      content::WebContents* contents = kept->strip->GetWebContentsAt(index);
+      if (contents->GetVisibility() != content::Visibility::VISIBLE || !in_window(contents)) {
+        continue;
+      }
+      content::RenderWidgetHostView* view = contents->GetRenderWidgetHostView();
+      if (view && view->HasFocus()) {
+        Use(*kept);
+        return;
+      }
+      if (!latest || kept->activated > latest->activated) {
+        latest = kept.get();
+      }
+    }
+  }
+  if (latest) {
+    Use(*latest);
+  }
+}
+
 void EngineBrowsers::Destroyed(Browser* browser) {
   if (bootstrap_ == browser) {
     bootstrap_ = nullptr;
+  }
+  if (active_ == browser) {
+    active_ = nullptr;
   }
   std::erase_if(kept_, [browser](const auto& kept) { return kept->browser.get() == browser; });
 }
@@ -369,6 +412,19 @@ EngineBrowsers::KeptBrowser* EngineBrowsers::WindowBrowser(const std::string& pr
 // own. A popup it asked for, which Chromium makes an app popup, joins the
 // window the person is using as a tab it keeps, and never holds that window's
 // other pages, which its extension could otherwise close with the popup.
+// Chromium orders its Browsers by when each last became active, and answers
+// an extension's current window from the first of them.
+void EngineBrowsers::Use(KeptBrowser& kept) {
+  if (active_ == kept.browser) {
+    return;
+  }
+  if (active_) {
+    BrowserActiveStateManager::From(active_)->DidBecomeInactive();
+  }
+  active_ = kept.browser;
+  BrowserActiveStateManager::From(active_)->DidBecomeActive();
+}
+
 bool EngineBrowsers::Place(Browser* browser) {
   const bool requested = own_window_profile_ == browser->GetProfile();
   own_window_profile_ = nullptr;

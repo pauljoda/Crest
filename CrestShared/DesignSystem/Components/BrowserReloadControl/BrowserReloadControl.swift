@@ -9,7 +9,7 @@ struct BrowserReloadControl: View {
     let reloadOrStop: () -> Void
     let reload: () -> Void
     let reloadFromOrigin: () -> Void
-    let clearSiteDataAndReload: () async -> Void
+    let clearCookiesAndReload: () async -> Void
     var isEnabled = true
     var reloadControlSize = CGSize(
         width: CrestLayout.minimumHitTarget,
@@ -56,8 +56,8 @@ struct BrowserReloadControl: View {
                         }
                         Divider()
                         Button(
-                            "Clear Cookies, Storage, and Reload",
-                            systemImage: "trash"
+                            "Clear Cookies and Reload",
+                            systemImage: BrowsingDataCategory.siteData.symbol ?? "trash"
                         ) {
                             clearAndReload()
                         }
@@ -114,7 +114,7 @@ struct BrowserReloadControl: View {
         isClearingSiteData = true
         beginReloadFeedback()
         Task { @MainActor in
-            await clearSiteDataAndReload()
+            await clearCookiesAndReload()
             isClearingSiteData = false
         }
     }
@@ -136,7 +136,7 @@ struct BrowserReloadControl: View {
         VStack {
             BrowserReloadControl(
                 isLoading: loading, isDeveloperMode: true, reloadOrStop: { loading.toggle() },
-                reload: { loading = true }, reloadFromOrigin: { loading = true }, clearSiteDataAndReload: {})
+                reload: { loading = true }, reloadFromOrigin: { loading = true }, clearCookiesAndReload: {})
             Toggle("Loading", isOn: $loading)
         }.padding().frame(width: 240)
     }

@@ -45,9 +45,10 @@ public static class NativeSessionMaintenance {
         .Select(origin => (Source: origin.SourceTabId, Copy: repaired.Spaces[origin.SpaceIndex].Tabs[origin.TabIndex].Id))
         .Where(pair => pair.Source != pair.Copy)];
 
-    /// Gives every Space, profile and tab its own identity, repairs folder trees,
-    /// pin limits, split runs and split metadata, keeps a Space that is being
-    /// deleted exactly as it was, and adds a Space when none would remain.
+    /// Gives every Space, its own profile and every tab its own identity,
+    /// repairs folder trees, pin limits, split runs, split metadata and the
+    /// Spaces' groups, keeps a Space that is being deleted exactly as it was,
+    /// and adds a Space when none would remain.
     internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
         out IReadOnlyList<TabOrigin> origins) {
         var pending = source.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
@@ -58,6 +59,14 @@ public static class NativeSessionMaintenance {
         IReadOnlyList<SpaceState> repaired = [.. spaces.Select((space, spaceIndex) =>
             pending.Contains(space.Id) ? repair.Kept(space, spaceIndex) : repair.Repaired(space, spaceIndex))];
         origins = repair.Origins;
+        // Each group gathers where its primary is, so the asset references
+        // follow the Spaces to their places.
+        var grouped = SpaceGroup.Regrouped(repaired, pending);
+        if (!ReferenceEquals(grouped, repaired)) {
+            var places = grouped.Select((space, index) => (space.Id, index)).ToDictionary(pair => pair.Id, pair => pair.index);
+            origins = [.. origins.Select(origin => origin with { SpaceIndex = places[repaired[origin.SpaceIndex].Id] })];
+            repaired = grouped;
+        }
         // A launch Space that is gone falls back to the first Space that stays.
         var active = repaired.Select(space => space.Id).ToHashSet();
         var launch = source.DefaultSpaceId is { } chosen && active.Contains(chosen)

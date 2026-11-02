@@ -4510,6 +4510,358 @@
       "category": "internal",
       "message": "Read and write a sync record's envelope in one place."
     },
+    "independent-search-provider-triggers": {
+      "category": "improved",
+      "message": "Choose in Search settings whether a space after a search shortcut chooses its provider, with or without a $ first, separately from Tab."
+    },
+    "sync-merge-save-freeze": {
+      "category": "fixed",
+      "message": "Crest no longer freezes when an iCloud sync arrives while it’s saving a change, such as deleting a Space, moving or closing several tabs, or importing from another browser."
+    },
+    "recent-tab-switcher-previews": {
+      "category": "new",
+      "message": "Holding Control-Tab on the Mac shows previews of your five most recent tabs in the window, so you can pick one and let go to switch. Control-Shift-Tab goes the other way, and you can turn the previews off in Settings."
+    },
+    "split-view-one-recent-tab": {
+      "category": "fixed",
+      "message": "Control-Tab treats a Split View as one tab, so it reaches your other tabs instead of only switching between the two pages of the split."
+    },
+    "ipv6-saved-password-origin": {
+      "category": "fixed",
+      "message": "Passwords saved for an IPv6 address load again, and one saved password Crest can't read no longer hides a Space's other passwords. Settings can remove it."
+    },
+    "escaped-address-saved-password-origin": {
+      "category": "fixed",
+      "message": "Passwords imported from another browser are no longer saved for the wrong site when the address contains escaped characters."
+    },
+    "import-invalid-ip-address-passwords": {
+      "category": "fixed",
+      "message": "Importing a password file now lists rows with a malformed IP address as invalid instead of saving passwords that could never fill."
+    },
+    "imported-ip-address-passwords-fill": {
+      "category": "fixed",
+      "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    },
+    "find-shift-return-previous-match": {
+      "category": "fixed",
+      "message": "Pressing Shift-Return in Find moves to the previous match."
+    },
+    "toggle-command-bar-shortcut": {
+      "category": "improved",
+      "message": "Pressing Command-T while the command bar is open closes it."
+    },
+    "keyboard-tab-keeps-the-space-on-ipad": {
+      "category": "fixed",
+      "message": "On iPad with a keyboard, pressing Tab in a webpage's form no longer switches to another Space."
+    },
+    "floating-sidebar-exit-margin": {
+      "category": "improved",
+      "message": "The floating sidebar stays open when the pointer drifts just past its edge, and hides once the pointer moves further into the page."
+    },
+    "quick-window-space-switcher": {
+      "category": "new",
+      "message": "Click the Space in a Quick Window’s address bar to switch Spaces. The page reloads in the Space you choose, with that Space’s cookies and passwords, and Crest remembers the choice for that site."
+    },
+    "quick-window-address-drag-selects-text": {
+      "category": "fixed",
+      "message": "Dragging across a Quick Window’s address field selects its text instead of moving the window. The space around the field still moves the window."
+    },
+    "downloads-drag-out-as-files": {
+      "category": "new",
+      "message": "Finished downloads can be dragged out of the Downloads list and dropped into Finder or another app, like any file."
+    },
+    "sidebar-lists-button-choice": {
+      "category": "new",
+      "message": "Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in."
+    },
+    "start-page-command-t-focus": {
+      "category": "fixed",
+      "message": "On a Start Page, Command-T closes an open command bar and puts the cursor back in the Start Page field."
+    },
+    "clear-one-site-cookies-or-cache": {
+      "category": "new",
+      "message": "Site Controls can clear the open site's cookies or its cache. Clearing cookies signs you out of the site and removes everything it stored in that Space, including service workers and what sites embedded in it stored there. Both are also in the command palette and, on iPhone and iPad, the page menu."
+    },
+    "space-website-data-settings": {
+      "category": "new",
+      "message": "Each Space's Privacy settings list the sites that keep data, with Remove and Remove All, and can clear history, cookies and site data, and cached files from the last hour up to all time."
+    },
+    "website-data-locked-space-guard": {
+      "category": "internal",
+      "message": "Listing or clearing a locked Space's website data is refused until it is unlocked, Remove All clears every site's data in the Space, and the site commands on iPhone and iPad need a page that shows a site."
+    },
+    "browser-window-focus-redraw": {
+      "category": "improved",
+      "message": "On Mac, a browser window responds sooner when an alert closes and when the window comes back to the front."
+    },
+    "sub-spaces": {
+      "category": "new",
+      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
+    },
+    "sub-spaces-pinned-tabs": {
+      "category": "new",
+      "message": "The Spaces of a group show their primary's pinned tabs, and one pinned tab opens the same page in each. Turn on Separate Pinned Tabs for each to show its own."
+    },
+    "sub-spaces-delete-and-lock": {
+      "category": "new",
+      "message": "Deleting a Space that leads Sub-Spaces asks which of them keeps the group, with its sign-ins, history, passwords and pinned tabs, or deletes the whole group. Locking any Space of a group locks the group."
+    },
+    "open-link-in-space": {
+      "category": "new",
+      "message": "Open Link in opens a link in a Quick Window in another Space's session, and Site Controls can open the current page in another Space, for the same site under another account. Keep moves it into that Space."
+    },
+    "sub-spaces-import-groups": {
+      "category": "new",
+      "message": "Importing from Arc brings the Spaces of one Arc profile as one group, and importing from Zen brings a profile's workspaces as one. The review outlines each group and can bring a Space in on its own."
+    },
+    "sub-spaces-older-devices": {
+      "category": "improved",
+      "message": "Devices that run an earlier Crest keep syncing and show each Sub-Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices."
+    },
+    "sub-spaces-group-records": {
+      "category": "internal",
+      "message": "A Space keeps its own profile while it browses with its group's, so separating it brings its own data back. Site permission choices, saved passwords, history and protection settings are kept for the group, and deleting a Sub-Space erases only what is its own."
+    },
+    "space-picker-stronger-selection": {
+      "category": "improved",
+      "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    },
+    "import-keeps-shared-sessions": {
+      "category": "improved",
+      "message": "Importing from Arc or Zen keeps Spaces that shared sign-ins together. When one of them joins a Space you already have, the rest become Sub-Spaces of that Space's group, Zen workspaces that share a container come in as a group of their own, and imported passwords are saved once for the group."
+    },
+    "import-review-smoother": {
+      "category": "improved",
+      "message": "Moving between Spaces in setup's import review is smoother, setup's animations are quicker, and each Space in a group shows which group it joins, with room for Separate."
+    },
+    "sub-space-switch-keeps-shared": {
+      "category": "improved",
+      "message": "Switching between Spaces of one group keeps what they share still: the extension toolbar, the pinned tabs while the group shares them, and a shared pinned tab's page. Only the tabs and the Space's look move."
+    },
+    "chromium-plain-156-privacy": {
+      "category": "improved",
+      "message": "Chromium is updated to 156 and now built from Chromium itself with Crest's privacy changes. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, protected video and your extensions up to date."
+    },
+    "chromium-widevine-video": {
+      "category": "new",
+      "message": "Chromium plays protected video that uses Widevine. Netflix, Disney+, Max and Prime Video open in WebKit, which plays them with FairPlay, unless you choose an engine for them."
+    },
+    "chromium-third-party-cookies": {
+      "category": "improved",
+      "message": "Chromium allows third-party cookies as Chrome does, except in private windows, so embedded sign-ins and payments work."
+    },
+    "chromium-webrtc-udp": {
+      "category": "fixed",
+      "message": "Calls in Chromium can use UDP again, so they connect faster and sound better, while sites still can't see your device's local network addresses."
+    },
+    "media-widget-ignores-previews": {
+      "category": "fixed",
+      "message": "The sidebar's media controls and Now Playing keep showing what you play when a site previews another video under the pointer, as YouTube does on thumbnails."
+    },
+    "sub-space-pinned-drag": {
+      "category": "fixed",
+      "message": "Dragging a pinned tab in a Space whose group shares its pinned tabs works again: the tile lifts under the pointer, the other pins move aside, and it lands where you let go."
+    },
+    "drag-preview-under-pointer-at-screen-top": {
+      "category": "fixed",
+      "message": "A pinned tab you drag stays under the pointer when the window sits at the top of the screen, instead of drawing a row or two below it."
+    },
+    "sidebar-folder-cleanup": {
+      "category": "improved",
+      "message": "Sidebar folders indent the tabs and folders they hold, a closed folder is as tall as a tab, tabs deep in nested folders keep rounded corners, and opening a folder that holds open folders slides its contents in smoothly."
+    },
+    "nested-folder-opening-smooth": {
+      "category": "fixed",
+      "message": "Opening a folder inside another folder slides its contents in smoothly instead of showing them all at once."
+    },
+    "folder-opens-without-jump": {
+      "category": "fixed",
+      "message": "Opening a folder no longer makes the rows below it jump up for a moment before it slides open."
+    },
+    "drag-previews-true-to-row": {
+      "category": "fixed",
+      "message": "A tab dragged out of a folder keeps its icon and title in place, and dragging several pinned tabs a Sub-Space shares with its group shows them under the pointer."
+    },
+    "touch-folder-height": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a closed folder is as tall as a tab, and its whole row still opens it."
+    },
+    "selected-folder-tabs-drag-in-place": {
+      "category": "fixed",
+      "message": "Dragging several selected tabs keeps the icon and title of each tab from inside a folder in place as they lift."
+    },
+    "closing-folder-click-through": {
+      "category": "fixed",
+      "message": "A click on a folder that is closing reaches the row sliding up in its place instead of a tab inside the folder."
+    },
+    "selection-split-other-space": {
+      "category": "fixed",
+      "message": "Dragging several selected tabs over a window showing another Space no longer offers a Split View there that would not take them."
+    },
+    "mobile-floating-new-tab": {
+      "category": "new",
+      "message": "On iPhone and iPad, a New Tab button floats at the bottom of the sidebar beside the sidebar button, so a new tab is always a tap away."
+    },
+    "sub-space-shared-pin-page": {
+      "category": "fixed",
+      "message": "Switching between Sub-Spaces that show the same pinned tab keeps its page on screen instead of leaving it blank, and with extensions pinned, the pinned tabs stay still as you switch."
+    },
+    "address-field-loading-indicator": {
+      "category": "improved",
+      "message": "Pages show their loading progress as a stronger fill in the address field, and the thin loading line along the top of the page on Mac is gone."
+    },
+    "smaller-mac-windows": {
+      "category": "improved",
+      "message": "Browser windows on Mac resize much smaller, so two fit side by side on a laptop screen, and the pinned tabs keep their place in a short window."
+    },
+    "mobile-page-zoom-fit": {
+      "category": "fixed",
+      "message": "Zooming a page out on iPhone and iPad fits it to the window instead of leaving a blank band down the side."
+    },
+    "duo-top-bar-controls": {
+      "category": "improved",
+      "message": "On iPhone Duo held upright, the page and Space controls move into the bar across the top, leaving the sidebar more room, and the controls that don't fit fold into a menu, Settings first. Back and Forward always show on iPhone and iPad, dimmed until there is somewhere to go."
+    },
+    "duo-top-bar-keyboard": {
+      "category": "fixed",
+      "message": "On iPhone Duo held upright, the controls stay in the top bar while the keyboard is open."
+    },
+    "chromium-update-deps-conditions": {
+      "category": "internal",
+      "message": "Automatic Chromium updates read only the CIPD packages that apply to the Mac build, and versions that DEPS keeps in a file, so the Chromium 157 update can prepare its source."
+    },
+    "chromium-lens-menu-crash": {
+      "category": "fixed",
+      "message": "Choosing Google Lens from a page's right-click menu on Mac no longer quits Crest. Lens isn't offered there any more, and images keep their plain image search."
+    },
+    "chromium-restore-history-crash": {
+      "category": "fixed",
+      "message": "Going back to a restored tab on Mac no longer quits Crest when that tab's page never finished opening, such as one that turned into a download or that you stopped."
+    },
+    "sub-space-switch-steady-pins": {
+      "category": "fixed",
+      "message": "Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background."
+    },
+    "quick-window-site-permission-prompts": {
+      "category": "fixed",
+      "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
+    },
+    "chromium-extension-popup-crash": {
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    },
+    "chromium-tall-full-page-capture": {
+      "category": "fixed",
+      "message": "Copy Full Page Capture now copies very tall pages on Mac instead of leaving the page blank."
+    },
+    "chromium-extensions-act-on-page-in-use": {
+      "category": "fixed",
+      "message": "Extensions on Mac now act on the page you're using in a Quick Window, a Peek or the focused side of a split, including from their keyboard shortcuts, instead of on another tab."
+    },
+    "chromium-extension-sign-in-tab": {
+      "category": "fixed",
+      "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
+    },
+    "paste-without-formatting-shortcut": {
+      "category": "improved",
+      "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
+    },
+    "quick-window-browser-controls": {
+      "category": "new",
+      "message": "Quick Windows on Mac now have Back and Forward, Site Controls and the Space's pinned extensions, with the extensions that don't fit behind one button."
+    },
+    "quick-window-open-location-shortcut": {
+      "category": "fixed",
+      "message": "Command-L now selects a Quick Window's address field on Mac."
+    },
+    "quick-window-opens-another": {
+      "category": "new",
+      "message": "On Mac, New Quick Window works while a Quick Window is in front, and a link's menu in a Quick Window or Peek offers Open Link in New Quick Window."
+    },
+    "permission-request-follows-its-page": {
+      "category": "fixed",
+      "message": "A site's permission request on Mac stays open when its page moves from a Quick Window into a browser window, and when the site asks before a Quick Window has finished opening."
+    },
+    "readable-site-controls-and-permission-prompts": {
+      "category": "fixed",
+      "message": "Site Controls and permission requests now stay readable over any page, Space color or surface material."
+    },
+    "peek-dims-page-behind": {
+      "category": "improved",
+      "message": "On Mac, the page behind Peek fades darker as Peek opens while the sidebar keeps its brightness. Settings > Links > Dim the page behind Peek turns it off."
+    },
+    "quick-window-minimum-opening-size": {
+      "category": "fixed",
+      "message": "A Quick Window opened beside Split View on Mac no longer opens narrower than its smallest size."
+    },
+    "quick-window-address-palette": {
+      "category": "new",
+      "message": "On Mac, clicking a Quick Window's address or pressing Command-L opens the command palette right there, starting at the address, with results from the Quick Window's Space. A blank Quick Window opens with it."
+    },
+    "iphone-address-bar-palette": {
+      "category": "new",
+      "message": "On iPhone, tapping the address bar opens the command palette from the bar, with its results rising above it and the best match nearest the bar."
+    },
+    "quick-window-keeps-smallest-size": {
+      "category": "fixed",
+      "message": "A Quick Window on Mac no longer resizes narrower than its toolbar fits, which cut off Open In and slid Back and Forward under the window's buttons."
+    },
+    "palette-results-fit-their-rows": {
+      "category": "fixed",
+      "message": "The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar."
+    },
+    "peek-roomier-floating-card": {
+      "category": "improved",
+      "message": "On Mac, Peek uses more of the page while still floating above it, with a round Close button and pill-shaped Open In, and its controls move with the card as it opens."
+    },
+    "peek-shift-click": {
+      "category": "new",
+      "message": "Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with."
+    },
+    "quick-window-overflow-extension-menus": {
+      "category": "fixed",
+      "message": "Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
+    },
+    "iphone-palette-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes."
+    },
+    "window-shows-tab-without-device-lock": {
+      "category": "internal",
+      "message": "The check for whether a window shows a tab no longer reads the session while holding the device lock."
+    },
+    "device-lock-taken-last": {
+      "category": "internal",
+      "message": "The recent tabs a window switches between and the first search catalog also read the session before the device takes its own lock, so the device and session locks are always taken in one order, and Debug builds check it."
+    },
+    "saved-passwords-survive-interrupted-writes": {
+      "category": "fixed",
+      "message": "Saved passwords are no longer lost when Crest quits partway through importing or deleting them, or through turning iCloud Keychain on or off for a Space."
+    },
+    "earlier-ip-passwords-fill": {
+      "category": "fixed",
+      "message": "Passwords imported earlier for a site at an IP address written in a long or unusual form, such as 127.1, now fill on that site too."
+    },
+    "palette-provider-chips-larger-text": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
+    },
+    "quick-window-remembers-size": {
+      "category": "improved",
+      "message": "On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest."
+    },
+    "quick-window-size-after-contents-change": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window goes on remembering the size you give it after its contents change."
+    },
+    "password-import-errors-say-what-happened": {
+      "category": "fixed",
+      "message": "When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed."
+    },
+    "reopen-pages-after-quit-choice": {
+      "category": "fixed",
+      "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out."
+    },
     "shortcuts-follow-command-keyboard-layout": {
       "category": "fixed",
       "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak – QWERTY ⌘, Russian and Greek, so Command-X cuts instead of quitting Crest."

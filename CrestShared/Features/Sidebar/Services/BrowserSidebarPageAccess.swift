@@ -103,7 +103,7 @@ extension BrowserSidebarPageAccess {
             selectPages: selectPages ?? { pages.select(at: .now) },
             deactivatePagePresentation: { pages.deactivatePagePresentation() },
             unloadPage: { tabID, assignment in
-                guard let tab = browser.spaceModel(matching: assignment)?.tabs.model(tabID)
+                guard let tab = browser.spaceModel(matching: assignment)?.shownTab(tabID)
                 else { return }
                 if !tab.placement.isDurable {
                     pages.unloadPage(for: tabID, matching: assignment)

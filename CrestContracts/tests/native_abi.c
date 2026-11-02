@@ -126,26 +126,32 @@ static size_t session_seed(uint8_t* output, size_t capacity, uint8_t deleted) {
         1, 1, 0,       /* offers to save passwords and sync them, not to the system's */
         0, 1, 0,       /* open, saved tabs expanded, never collapsed */
         0,             /* nobody chose whether it uses Crest Passwords */
-        0              /* nobody chose its lock */
+        0,             /* nobody chose its lock */
+        0, 0,          /* its group shares pinned tabs, and nobody chose */
+        0              /* nobody changed how it blocks content or keeps what it browses */
     };
     size_t at = 0;
-    assert(capacity >= 1 + 37 + sizeof(settings) + 4 + 48);
+    assert(capacity >= 1 + 37 + sizeof(settings) + 5 + 50);
     output[at++] = 1;
     memset(output + at, 0x44, 16);
     memset(output + at + 16, 0x55, 16);
     memcpy(output + at + 32, settings, sizeof(settings));
     at += 32 + sizeof(settings);
-    /* No folders, tabs, splits, archived tabs or history, then no default
-     * Space or seed marker. */
-    memset(output + at, 0, 7);
-    at += 7;
-    /* The Space deletions: each its operation, Space and profile. */
+    /* No folders, tabs, splits, archived tabs, history or group, then no
+     * default Space or seed marker. */
+    memset(output + at, 0, 8);
+    at += 8;
+    /* The Space deletions: each its operation, Space and profile, with no
+     * profiles it names to erase, so it erases that one, and no Space that
+     * takes over a group from it. */
     output[at++] = deleted != 0;
     if (deleted != 0) {
         memset(output + at, 0x77, 16);
         memset(output + at + 16, deleted, 16);
         memset(output + at + 32, 0x78, 16);
-        at += 48;
+        output[at + 48] = 0;
+        output[at + 49] = 0;
+        at += 50;
     }
     /* No app preferences. */
     output[at++] = 0;
@@ -282,7 +288,7 @@ static void engine_boundary(void) {
     crest_buffer_free(&buffer);
 
     /* A workspace opened from a seed, with a window open over it. */
-    uint8_t seed[128];
+    uint8_t seed[160];
     size_t size = session_seed(seed, sizeof(seed), 0);
     uint8_t workspace[16];
     open_seeded(app, persistent_kind, seed, size, workspace);

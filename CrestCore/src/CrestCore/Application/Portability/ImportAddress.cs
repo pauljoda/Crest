@@ -79,6 +79,15 @@ internal readonly record struct ImportAddress {
         }
     }
 
+    /// The host between brackets as spelled, escapes kept, or null when the
+    /// host is not in brackets.
+    public string? IPLiteral {
+        get {
+            int start = Spelling.IndexOf("://", StringComparison.Ordinal) + 3;
+            return Spelling[start] == '[' ? Spelling[(start + 1)..Spelling.IndexOf(']', start)] : null;
+        }
+    }
+
     /// The scheme, as spelled.
     public string Scheme => Spelling[..Spelling.IndexOf("://", StringComparison.Ordinal)];
 

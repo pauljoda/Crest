@@ -41,6 +41,17 @@ final class BrowserChromeState {
         set { publish(newValue, into: \.noticeRevisionStorage, as: \.noticeRevision) }
     }
     @ObservationIgnored private var noticeRevisionStorage = 0
+    /// The recent tabs a held Most Recent Tab shortcut shows over the window,
+    /// or nil while none shows.
+    var recentTabs: RecentTabSwitcherModel? {
+        get { observed(\.recentTabsStorage, as: \.recentTabs) }
+        set {
+            guard recentTabsStorage !== newValue else { return }
+            recentTabsStorage = newValue
+            withMutation(keyPath: \.recentTabs) {}
+        }
+    }
+    @ObservationIgnored private var recentTabsStorage: RecentTabSwitcherModel?
 
     var isCommandPalettePresented: Bool {
         commandPaletteMode != nil
@@ -113,6 +124,11 @@ final class BrowserChromeState {
     }
 
     func openNewTab(isStartPageSelected: Bool) {
+        // A Start Page closes the command bar into its own field below.
+        if isCommandPalettePresented, !isStartPageSelected {
+            dismissCommandPalette()
+            return
+        }
         guard isStartPageSelected else {
             presentCommandPalette()
             return

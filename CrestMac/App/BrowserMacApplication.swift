@@ -49,6 +49,10 @@ final class BrowserMacApplication {
     /// The window that opens on `startupBehavior`: the frontmost of the
     /// windows the launch opened. Every other window opens on the tab it left.
     var startupWindowID = BrowserMacWindowRequest.initial.id
+    /// The windows the launch opens on the Start Page instead, while it opens
+    /// them, when the person chose not to reopen pages after a launch that
+    /// ended while it reopened them.
+    var startPageWindowIDs: Set<UUID> = []
     let presentsInstalledApplicationUI: Bool
     /// Whether a tool started Crest in the background, so the launch's
     /// windows open without taking focus.
@@ -268,12 +272,13 @@ final class BrowserMacApplication {
         )
         self.transientBrowsing = transientBrowsing
         self.windowCoordinator = BrowserMacWindowCoordinator(
-            browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts)
+            browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts,
+            utilityDefaults: utilityDefaults)
         self.privateBrowser = privateBrowser
+        // A private window keeps nothing past its session, and its Space is
+        // new each time it opens, so its lists choice stays in memory.
         self.privateChrome = BrowserChromeState(
-            utilityPresentation: BrowserUtilityPresentationState(
-                defaults: utilityDefaults
-            )
+            utilityPresentation: BrowserUtilityPresentationState(defaults: nil)
         )
         self.privateTransientBrowsing = privateTransientBrowsing
         self.spaceAccess = spaceAccess
@@ -332,7 +337,8 @@ final class BrowserMacApplication {
             model: model, coordinator: windowCoordinator,
             pagePoolRegistry: pagePoolRegistry, spaceAccess: spaceAccess,
             spaceSettingsPresentation: spaceSettingsPresentation,
-            startupBehavior: model.id == startupWindowID ? startupBehavior : .lastActiveTab,
+            startupBehavior: startPageWindowIDs.contains(model.id)
+                ? .showStartPage : model.id == startupWindowID ? startupBehavior : .lastActiveTab,
             shortcuts: shortcuts, sidebarWidgets: sidebarWidgets, softwareUpdates: softwareUpdates
         )
         .environment(
@@ -369,7 +375,10 @@ final class BrowserMacApplication {
             \.browserSidebarWidgetRuntime,
             sidebarWidgets
         )
-        .frame(minWidth: 900, minHeight: 600)
+        .frame(
+            minWidth: BrowserMacWindowKind.browserMinimumContentSize.width,
+            minHeight: BrowserMacWindowKind.browserMinimumContentSize.height
+        )
         .preferredColorScheme(.dark)
         .environment(
             \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)

@@ -37,6 +37,9 @@ struct BrowserSidebarFloatingLift: Equatable, Sendable {
     var previewRows: [BrowserSidebarReorderRow] = []
     var pinnedTileSize = BrowserTabDragPreviewLayout.pinnedSize
     var sidebarBounds: CGRect?
+    /// How far the folders around the lifted row move its icon and title in,
+    /// so a tab lifted from a folder keeps them where the row had them.
+    var contentIndent: CGFloat = 0
     var landing: BrowserSidebarReorderLanding?
     var constraintMessage: String?
 
@@ -89,6 +92,9 @@ struct BrowserSidebarFloatingLift: Equatable, Sendable {
 struct BrowserSidebarReorderLanding: Equatable, Sendable {
     var id = UUID()
     var frame: CGRect
+    /// The content indent of the row it lands as, which the preview settles
+    /// into along with the frame.
+    var contentIndent: CGFloat = 0
     var isRevealing = false
 }
 

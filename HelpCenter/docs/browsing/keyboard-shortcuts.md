@@ -41,10 +41,13 @@ On Mac, **Command-L** opens the address editor while keeping a collapsed sidebar
 | Previous Tab | Option-Command-Up Arrow |
 | Next Tab | Option-Command-Down Arrow |
 | Most Recent Tab | Control-Tab |
+| Most Recent Tab Backward | Control-Shift-Tab |
 | Select Tab 1–9 | Command-1 through Command-9 |
 | Previous Space | Option-Command-Left Arrow |
 | Next Space | Option-Command-Right Arrow |
 | Select Space 1–9 | Control-1 through Control-9 |
+
+Tap **Control-Tab** to jump to the tab you used last. On a Mac, hold it to see your recent tabs: press **Tab** or the arrow keys to move through them and let go of **Control** to switch. **Control-Shift-Tab** goes to the tab you used longest ago. A split appears as one card. To skip the previews, turn off **Show recent tabs while switching** in Settings > Tabs.
 
 ## Split View
 

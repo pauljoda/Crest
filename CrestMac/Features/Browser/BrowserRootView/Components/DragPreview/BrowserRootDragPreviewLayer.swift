@@ -37,7 +37,7 @@ struct BrowserRootDragPreviewLayer: View {
     private var splitCardLiftContent: BrowserSplitCardLiftPreviewContent? {
         guard let lift = model.splitCardLift.lift,
             let space = model.browser.shownSpace,
-            let tab = space.tabs.model(lift.tabID)
+            let tab = space.shownTab(lift.tabID)
         else { return nil }
         return BrowserSplitCardLiftPreviewContent(
             favicon: BrowserTabFaviconSubject(tab: tab, image: model.browser.core.state.favicons.icon(of: tab.id)),
@@ -79,13 +79,17 @@ struct BrowserRootDragPreviewLayer: View {
         for item: BrowserSidebarReorderItem,
         in space: SpaceModel
     ) -> BrowserSidebarLiftPreviewSubject? {
-        if item.selection != nil, let lift = model.sidebarInteraction.sidebarReorderState.liftPreview {
-            let rows = BrowserSidebarSelectionPreviewRow.resolve(lift.previewRows, in: space) { folderID in
-                model.sidebarInteraction.sidebarReorderState.folderPreviewRows(
-                    for: .folder(
-                        BrowserFolderDragItem(
-                            folderID: folderID, spaceID: space.id, profileID: space.profileID)))
-            }
+        let reorder = model.sidebarInteraction.sidebarReorderState
+        if item.selection != nil, let lift = reorder.liftPreview {
+            let rows = BrowserSidebarSelectionPreviewRow.resolve(
+                lift.previewRows, in: space,
+                contentIndent: { reorder.contentIndent(of: $0.section, in: $0.space) },
+                folderRows: { folderID in
+                    reorder.folderPreviewRows(
+                        for: .folder(
+                            BrowserFolderDragItem(
+                                folderID: folderID, spaceID: space.id, profileID: space.profileID)))
+                })
             return rows.isEmpty ? nil : .selection(rows)
         }
         return item.liftPreviewSubject(

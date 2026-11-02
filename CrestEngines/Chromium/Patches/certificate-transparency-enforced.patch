@@ -1,0 +1,23 @@
+# Crest: Certificate Transparency is enforced, as in Chrome. Chromium
+# enforces it only in Google Chrome builds. Adapted from ungoogled-chromium's
+# enable-certificate-transparency-and-add-flag.patch (BSD-3-Clause; see
+# ThirdParty/Chromium-LICENSE.txt).
+
+--- a/chrome/browser/browser_features.cc
++++ b/chrome/browser/browser_features.cc
+@@ -41,12 +41,10 @@
+ // should first reach out to chrome-certificate-transparency@google.com.
+ // On builds where CT is enabled, this flag is also used as an emergency kill
+ // switch.
++// Crest enforces CT and keeps its log list current through the component
++// updater, as Chrome does.
+ BASE_FEATURE(kCertificateTransparencyAskBeforeEnabling,
+-#if BUILDFLAG(GOOGLE_CHROME_BRANDING)
+-             base::FEATURE_ENABLED_BY_DEFAULT);
+-#else
+-             base::FEATURE_DISABLED_BY_DEFAULT);
+-#endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
++             base::FEATURE_ENABLED_BY_DEFAULT);
+ 
+ // Enables using network time for certificate verification. If enabled, network
+ // time will be used to verify certificate validity, however certificates that

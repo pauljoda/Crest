@@ -14,8 +14,8 @@ on:
         type: choice
         default: check
         options: [check, build, update]
-      upstream_tag:
-        description: Released ungoogled macOS tag. Empty selects the latest eligible release.
+      upstream_version:
+        description: Chrome release on the fork's channel. Empty selects the latest eligible release.
         type: string
       allow_major:
         description: Allow a milestone update for manual review
@@ -36,7 +36,7 @@ jobs:
     outputs:
       base_sha: ${{ steps.plan.outputs.base_sha }}
       operation: ${{ steps.plan.outputs.operation }}
-      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
       major: ${{ steps.plan.outputs.major }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,7 +48,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           OPERATION: ${{ inputs.operation || 'check' }}
-          UPSTREAM_TAG: ${{ inputs.upstream_tag }}
+          UPSTREAM_VERSION: ${{ inputs.upstream_version }}
           ALLOW_MAJOR: ${{ inputs.allow_major }}
           UPSTREAM_ENABLED: ${{ vars.CHROMIUM_UPSTREAM_ENABLED }}
           BUILD_ENABLED: ${{ vars.CHROMIUM_CI_ENABLED }}
@@ -63,29 +63,29 @@ jobs:
           subprocess.run(['git', 'fetch', '--depth=1', 'origin', f'refs/heads/{branch}'], check=True)
           sha = subprocess.check_output(['git', 'rev-parse', 'FETCH_HEAD'], text=True).strip()
           lock = json.loads(subprocess.check_output(['git', 'show', f'{sha}:CrestEngines/Chromium/source.lock.json'], text=True))
-          releases = upstream_releases(policy['upstreamRepository'])
+          releases = upstream_releases(policy)
           scheduled = os.environ['GITHUB_EVENT_NAME'] == 'schedule'
           allow_major = policy['automaticMajorUpdates'] or (os.environ['ALLOW_MAJOR'] == 'true' and os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch')
-          plan = select_update(lock['ungoogledMac']['tag'], releases, allow_major)
-          tag = os.environ['UPSTREAM_TAG'] or plan['candidate'] or ''
+          plan = select_update(lock['chromium']['version'], releases, allow_major)
+          version = os.environ['UPSTREAM_VERSION'] or plan['candidate'] or ''
           operation = os.environ['OPERATION']
           if scheduled:
               # Fixes on the pinned milestone come first. A newer milestone then
               # opens a review PR as well; the publisher still keeps it from
               # shipping on its own unless fork.json allows major updates.
-              if not tag and plan['majorReviewRequired']:
-                  tag, allow_major = plan['latest'], True
-              operation = 'update' if os.environ['UPSTREAM_ENABLED'] == 'true' and tag else 'check'
+              if not version and plan['majorReviewRequired']:
+                  version, allow_major = plan['latest'], True
+              operation = 'update' if os.environ['UPSTREAM_ENABLED'] == 'true' and version else 'check'
           if operation == 'update':
-              if not tag or release_version(tag) <= release_version(plan['current']):
+              if not version or release_version(version) <= release_version(plan['current']):
                   raise SystemExit('No newer eligible upstream release. Use check to inspect milestones requiring review.')
-              if not any(r['tag_name'] == tag and not r['draft'] and not r['prerelease'] for r in releases):
-                  raise SystemExit('The requested tag is not a published upstream release')
-              if release_version(tag)[0] != release_version(plan['current'])[0] and not allow_major:
+              if version not in releases:
+                  raise SystemExit(f"{version} is not a {policy['upstream']['channel']} release")
+              if release_version(version)[0] != release_version(plan['current'])[0] and not allow_major:
                   raise SystemExit('Milestone updates require allow_major')
           if operation != 'check' and os.environ['BUILD_ENABLED'] != 'true':
               raise SystemExit('Set CHROMIUM_CI_ENABLED=true after configuring the build Mac')
-          major = bool(tag) and release_version(tag)[0] != release_version(plan['current'])[0]
+          major = bool(version) and release_version(version)[0] != release_version(plan['current'])[0]
           note = ''
           if operation == 'update':
               # One review per upstream release: later commits on the base must
@@ -96,16 +96,16 @@ jobs:
                   '--base', branch, '--state', 'all', '--limit', '1000', '--json', 'headRefName,url,state'], text=True))
               prefix = 'codex/chromium-upstream-'
               existing = [review for review in reviews if review['headRefName'].startswith(prefix) and (
-                  review['headRefName'].startswith(f'{prefix}{tag}-') and (review['state'] == 'OPEN' or scheduled)
+                  review['headRefName'].startswith(f'{prefix}{version}-') and (review['state'] == 'OPEN' or scheduled)
                   or scheduled and review['state'] == 'OPEN')]
               if existing:
-                  note = f"Chromium {tag} is available; {existing[0]['url']} is {existing[0]['state'].lower()}."
+                  note = f"Chromium {version} is available; {existing[0]['url']} is {existing[0]['state'].lower()}."
                   operation = 'check'
-          available = tag or (plan['latest'] if plan['majorReviewRequired'] else '')
+          available = version or (plan['latest'] if plan['majorReviewRequired'] else '')
           if note:
               pass
           elif operation == 'update':
-              note = f'Building Chromium {tag}. A review PR opens once its engine is published.'
+              note = f'Building Chromium {version}. A review PR opens once its engine is published.'
           elif operation == 'build':
               note = f"Building and publishing the pinned Chromium {plan['current']} engine."
           elif not available:
@@ -117,7 +117,7 @@ jobs:
               note = f"Chromium {available} is available. Run operation=update{' with allow_major' if milestone else ''} to build it for review."
           print(f'::notice title=Chromium::{note}')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              output.write(f'base_sha={sha}\noperation={operation}\ntag={tag}\nmajor={str(major).lower()}\n')
+              output.write(f'base_sha={sha}\noperation={operation}\nversion={version}\nmajor={str(major).lower()}\n')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
               summary.write(note + '\n\n```json\n' + json.dumps(plan, indent=2) + '\n```\n')
           PY
@@ -159,13 +159,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           OPERATION: ${{ needs.resolve.outputs.operation }}
-          UPSTREAM_TAG: ${{ needs.resolve.outputs.tag }}
+          UPSTREAM_VERSION: ${{ needs.resolve.outputs.version }}
           MAJOR: ${{ needs.resolve.outputs.major }}
           JOBS: ${{ vars.CHROMIUM_BUILD_JOBS || '4' }}
         run: |
           args=("$OPERATION" --sdk "$CHROMIUM_SDK" --jobs "$JOBS")
           if [[ "$OPERATION" == update ]]; then
-            args+=(--tag "$UPSTREAM_TAG")
+            args+=(--version "$UPSTREAM_VERSION")
             if [[ "$MAJOR" == true ]]; then args+=(--allow-major); fi
           fi
           python Scripts/control-plane/chromium-fork.py "${args[@]}"

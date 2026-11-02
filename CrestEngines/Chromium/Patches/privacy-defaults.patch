@@ -1,0 +1,168 @@
+# Crest: privacy defaults. Each is a setting's starting value; a person's own
+# choice still wins. Most keep the defaults Crest's earlier engine took from
+# ungoogled-chromium's 0006-modify-default-prefs.patch (BSD-3-Clause; see
+# ThirdParty/Chromium-LICENSE.txt), so nobody's settings change.
+
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -1630,7 +1630,8 @@
+ void ChromeContentBrowserClient::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(prefs::kDisable3DAPIs, false);
+-  registry->RegisterBooleanPref(prefs::kEnableHyperlinkAuditing, true);
++  // Crest: <a ping> sends no click reports.
++  registry->RegisterBooleanPref(prefs::kEnableHyperlinkAuditing, false);
+   // Register user prefs for mapping SitePerProcess and IsolateOrigins in
+   // user policy in addition to the same named ones in Local State (which are
+   // used for mapping the command-line flags).
+--- a/chrome/browser/content_settings/cookie_settings_factory.cc
++++ b/chrome/browser/content_settings/cookie_settings_factory.cc
+@@ -103,6 +103,8 @@
+ 
+   return new content_settings::CookieSettings(
+       host_content_settings_map, prefs,
+-      profile->IsPrimaryOTRProfileWithRegularParent(),
++      // Crest: each private window has its own off-the-record profile, and
++      // all of them block third-party cookies as incognito does.
++      profile->IsOffTheRecord(),
+       compute_fedcm_sharing_permissions, extension_scheme);
+ }
+--- a/chrome/browser/net/profile_network_context_service.cc
++++ b/chrome/browser/net/profile_network_context_service.cc
+@@ -645,8 +645,9 @@
+ // static
+ void ProfileNetworkContextService::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
++  // Crest: error pages don't send the failed address to Google.
+   registry->RegisterBooleanPref(embedder_support::kAlternateErrorPagesEnabled,
+-                                true);
++                                false);
+   registry->RegisterBooleanPref(prefs::kQuicAllowed, true);
+   registry->RegisterBooleanPref(prefs::kGloballyScopeHTTPAuthCacheEnabled,
+                                 false);
+--- a/chrome/browser/preloading/preloading_prefs.h
++++ b/chrome/browser/preloading/preloading_prefs.h
+@@ -23,7 +23,8 @@
+   kWifiOnlyDeprecated = 1,
+   kDisabled = 2,
+   kExtended = 3,
+-  kDefault = kWifiOnlyDeprecated,
++  // Crest: no preconnects or preloads of pages the person hasn't opened.
++  kDefault = kDisabled,
+ };
+ 
+ // Enum representing possible values of the Preload Pages opt-in state. These
+--- a/chrome/browser/profiles/profile.cc
++++ b/chrome/browser/profiles/profile.cc
+@@ -337,7 +337,8 @@
+ void Profile::RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(
+       prefs::kSearchSuggestEnabled,
+-      true,
++      // Crest: its own address field asks for suggestions.
++      false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+ #if BUILDFLAG(IS_ANDROID)
+   registry->RegisterStringPref(
+--- a/chrome/browser/ui/browser_ui_prefs.cc
++++ b/chrome/browser/ui/browser_ui_prefs.cc
+@@ -145,7 +145,8 @@
+   registry->RegisterBooleanPref(prefs::kWebAppCreateInAppsMenu, true);
+   registry->RegisterBooleanPref(prefs::kWebAppCreateInQuickLaunchBar, true);
+   registry->RegisterBooleanPref(
+-      translate::prefs::kOfferTranslateEnabled, true,
++      // Crest translates pages itself.
++      translate::prefs::kOfferTranslateEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacement);
+   registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacementPopup);
+@@ -157,8 +158,12 @@
+   registry->RegisterBooleanPref(prefs::kPrintPreviewUseSystemDefaultPrinter,
+                                 false);
+ #endif
+-  registry->RegisterStringPref(prefs::kWebRTCIPHandlingPolicy,
+-                               blink::kWebRTCIPHandlingDefault);
++  // Crest: WebRTC uses the default route's public address and never shows a
++  // page the device's local addresses. Crest builds without mDNS, which
++  // Chromium's default needs to hide them.
++  registry->RegisterStringPref(
++      prefs::kWebRTCIPHandlingPolicy,
++      blink::kWebRTCIPHandlingDefaultPublicInterfaceOnly);
+   registry->RegisterListPref(prefs::kWebRTCIPHandlingUrl, base::ListValue());
+   registry->RegisterBooleanPref(prefs::kWebRTCPostQuantumKeyAgreement, false);
+   registry->RegisterStringPref(prefs::kWebRTCUDPPortRange, std::string());
+--- a/components/autofill/core/common/autofill_prefs.cc
++++ b/components/autofill/core/common/autofill_prefs.cc
+@@ -42,7 +42,8 @@
+ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
+   // Synced prefs. Used for cross-device choices, e.g., credit card Autofill.
+   registry->RegisterBooleanPref(
+-      kAutofillProfileEnabled, true,
++      // Crest: off; Crest fills no addresses.
++      kAutofillProfileEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterIntegerPref(
+       kAutofillLastVersionDeduped, 0,
+@@ -73,7 +74,8 @@
+       kAutofillHasSeenIban, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterBooleanPref(
+-      kAutofillCreditCardEnabled, true,
++      // Crest: off; Crest fills no cards.
++      kAutofillCreditCardEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterBooleanPref(
+       kAutofillPaymentCvcStorage, true,
+--- a/components/password_manager/core/browser/password_manager.cc
++++ b/components/password_manager/core/browser/password_manager.cc
+@@ -549,10 +549,11 @@
+ void PasswordManager::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(
+-      prefs::kCredentialsEnableService, true,
++      // Crest: passwords are saved by the person's password manager.
++      prefs::kCredentialsEnableService, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PRIORITY_PREF);
+   registry->RegisterBooleanPref(
+-      prefs::kCredentialsEnableAutosignin, true,
++      prefs::kCredentialsEnableAutosignin, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PRIORITY_PREF);
+   registry->RegisterBooleanPref(
+       prefs::kWasAutoSignInFirstRunExperienceShown, false,
+--- a/components/payments/core/payment_prefs.cc
++++ b/components/payments/core/payment_prefs.cc
+@@ -11,7 +11,8 @@
+ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(kPaymentsFirstTransactionCompleted, false);
+   registry->RegisterBooleanPref(
+-      kCanMakePaymentEnabled, true,
++      // Crest: pages can't ask whether a payment method is saved.
++      kCanMakePaymentEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+ }
+ 
+--- a/components/privacy_sandbox/privacy_sandbox_prefs.cc
++++ b/components/privacy_sandbox/privacy_sandbox_prefs.cc
+@@ -23,7 +23,8 @@
+       prefs::kPrivacySandboxRelatedWebsiteSetsDataAccessAllowedInitialized,
+       false);
+   registry->RegisterBooleanPref(
+-      prefs::kPrivacySandboxRelatedWebsiteSetsEnabled, true,
++      // Crest: sites in a Related Website Set get no shared cookie access.
++      prefs::kPrivacySandboxRelatedWebsiteSetsEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+ }
+ 
+--- a/components/safe_browsing/core/common/safe_browsing_prefs.cc
++++ b/components/safe_browsing/core/common/safe_browsing_prefs.cc
+@@ -276,7 +276,9 @@
+   registry->RegisterTimePref(
+       prefs::kSafeBrowsingEsbProtegoPingWithoutTokenLastLogTime, base::Time());
+   registry->RegisterBooleanPref(
+-      prefs::kSafeBrowsingEnabled, true,
++      // Crest: off. Safe Browsing needs a Google API key Crest doesn't have,
++      // and its reports would reach Google.
++      prefs::kSafeBrowsingEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   if (base::FeatureList::IsEnabled(kEsbAsASyncedSetting)) {
+     registry->RegisterBooleanPref(

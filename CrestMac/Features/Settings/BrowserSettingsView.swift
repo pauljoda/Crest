@@ -44,7 +44,7 @@ struct BrowserSettingsView: View {
         HStack(spacing: 0) {
             BrowserSettingsSidebar(
                 tabState: tabState, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
-                openSpace: openSpaceAction, addSpace: addSpace
+                openSpace: openSpaceAction, addSpace: addSpace, addSubSpace: addSubSpace
             )
             .frame(width: 224)
             Divider()
@@ -108,7 +108,8 @@ struct BrowserSettingsView: View {
             if let space = browser.spaceModel(id) {
                 BrowserSettingsSpacePage(
                     browser: browser, pages: pages, space: space, spaceAccess: spaceAccess,
-                    dataDeleter: dataDeleter, tabState: tabState, openSpace: openSpaceAction
+                    dataDeleter: dataDeleter, tabState: tabState, openSpace: openSpaceAction,
+                    addSubSpace: addSubSpace
                 )
             }
         }
@@ -150,6 +151,21 @@ struct BrowserSettingsView: View {
     private func addSpace() {
         tabState.isArrangingSpaces = false
         browser.addSpace()
+        openAddedSpace()
+    }
+
+    /// Adds a Sub-Space after `spaceID`, in its group, and opens it as a new
+    /// Space opens.
+    private func addSubSpace(after spaceID: UUID) {
+        tabState.isArrangingSpaces = false
+        guard browser.addSubSpace(after: spaceID) else { return }
+        BrowserSpaceGroupNotices.formed()
+        openAddedSpace()
+    }
+
+    /// Opens the Space the window just added on its Appearance page, with its
+    /// name ready to type.
+    private func openAddedSpace() {
         guard let space = browser.spaceModel(browser.selectedSpaceID) else { return }
         guard usesLiveSidebar, tabAssignment != nil else {
             tabState.showSpace(space.id, tab: .appearance, intent: .newSpace)

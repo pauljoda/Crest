@@ -83,12 +83,17 @@ internal sealed record CredentialFile(CredentialFileFormat Format, IReadOnlyList
     }
 
     /// The HTTP(S) origin `site` names, with HTTPS for a site written without
-    /// a scheme, or null for one that is no web address.
+    /// a scheme, or null for one that is no web address. A host in brackets
+    /// is kept as spelled, so an escaped zone ID is refused rather than read
+    /// as part of the address, and it must be an IPv6 address. An IP address
+    /// is spelled as a page's origin spells it, so the password fills there.
     public static CredentialOrigin? Origin(string site) {
         ArgumentNullException.ThrowIfNull(site);
         string spelled = site.Contains("://", StringComparison.Ordinal) ? site : $"https://{site}";
         if (ImportAddress.Read(spelled) is not { } address || WebScheme.Named(address.Scheme) is not { } scheme) return null;
-        var origin = new CredentialOrigin(scheme.Name, address.Host.ToLowerInvariant(), address.Port ?? scheme.DefaultPort);
+        if (address.IPLiteral is { } literal && !literal.Contains(':', StringComparison.Ordinal)) return null;
+        if (CredentialOrigin.CanonicalHost((address.IPLiteral ?? address.Host).ToLowerInvariant()) is not { } host) return null;
+        var origin = new CredentialOrigin(scheme.Name, host, address.Port ?? scheme.DefaultPort);
         return origin.IsValid ? origin : null;
     }
 

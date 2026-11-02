@@ -9,6 +9,7 @@ struct BrowserFolderHeaderControl: View {
 
     private var folder: FolderStateModel { configuration.folder }
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var showsTabCounts: Bool { BrowserDeviceAppearanceStore.shared.foldersShowTabCounts }
     private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
     private var tintsTitle: Bool { BrowserDeviceAppearanceStore.shared.foldersTintTitle }
@@ -45,9 +46,15 @@ struct BrowserFolderHeaderControl: View {
             } else {
                 Button {
                     guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
-                    configuration.browser.tabMultiSelection.click(
-                        .folder(folder.id),
-                        units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
+                    // The folder reads the selection, so a click that moves it
+                    // redraws the folder. Moved with the folder's own motion,
+                    // that redraw carries the opening too, rather than drawing
+                    // it at once with nothing animated.
+                    withAnimation(CrestMotion.disclosure.unlessReducingMotion(reduceMotion)) {
+                        configuration.browser.tabMultiSelection.click(
+                            .folder(folder.id),
+                            units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
+                    }
                     interaction.toggleExpansion()
                 } label: {
                     HStack(spacing: 7) {
@@ -69,7 +76,10 @@ struct BrowserFolderHeaderControl: View {
                         }
                     }
                     .browserSavedFolderHeaderLayout(configuration: configuration)
-                    .contentShape(.rect)
+                    // A finger gets the folder's padding too, so a header
+                    // shorter than a tab row still takes a whole row's touch.
+                    .contentShape(
+                        Rectangle().inset(by: capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
                 }
                 .buttonStyle(BrowserFolderHeaderButtonStyle())
             }

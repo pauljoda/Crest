@@ -5,7 +5,7 @@ struct MobileSpaceSettingsButton: View {
 
     var body: some View {
         Button(action: action) {
-            MobileSpaceUtilityButtonLabel(systemImage: "gearshape")
+            MobileSpaceUtilityButtonLabel(title: "Settings", systemImage: "gearshape")
         }
         .foregroundStyle(.primary)
         .accessibilityLabel("Settings")

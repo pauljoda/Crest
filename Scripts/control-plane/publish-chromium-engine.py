@@ -35,8 +35,9 @@ def main():
     args = parser.parse_args()
 
     source = args.source.resolve()
-    managed = source.parents[2] / "prepared.json"
-    guard = exclusive_workspace(source.parents[4]) if managed.is_file() else nullcontext()
+    # A managed source is <workspace>/sources/<preparation key>/src.
+    managed = source.parent / "prepared.json"
+    guard = exclusive_workspace(source.parents[2]) if managed.is_file() else nullcontext()
     with guard:
         publish(args)
 
@@ -47,8 +48,7 @@ def publish(args):
     lock = read_json(repo / "CrestEngines/Chromium/source.lock.json")
     if not performance_configuration_matches(source, lock):
         raise SystemExit("Published engines require the pinned performance configuration, SDK and PGO profile")
-    run(sys.executable, repo / "Scripts/control-plane/prepare-chromium.py",
-        "--upstream", source.parent.parent, "--verify-only")
+    run(sys.executable, repo / "Scripts/control-plane/prepare-chromium.py", "--source", source, "--verify-only")
     key = chromium_engine.engine_key(repo)
     tag, asset = chromium_engine.release_tag(key), chromium_engine.asset_name(key)
 
@@ -95,7 +95,7 @@ def publish(args):
             return
         provenance = Path(temporary) / f"{asset}.json"
         provenance.write_text(json.dumps({"schemaVersion": 1, "engineKey": key,
-            "chromium": lock["chromium"]["version"], "upstreamCommit": lock["ungoogledMac"]["commit"],
+            "chromium": lock["chromium"]["version"], "sourceArchiveSHA256": lock["chromium"]["sourceArchiveSha256"],
             "configuration": "performance", "sdkVersion": lock["performanceInputs"]["macSDKVersion"],
             "pgoSHA256": lock["performanceInputs"]["pgoSHA256"], "archiveSHA256": digest,
             "sourceCommit": run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()}, indent=2) + "\n")

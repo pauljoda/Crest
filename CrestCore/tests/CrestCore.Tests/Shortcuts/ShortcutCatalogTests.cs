@@ -20,7 +20,8 @@ public sealed class ShortcutCatalogTests {
         "sharePage", "exportPDF", "saveWebArchive", "printPage", "toggleSidebar", "showHistory", "showArchive",
         "showDownloads", "webInspectorInstructions", "splitWithNextTab", "focusNextSplitCard", "focusPreviousSplitCard",
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
-        "toggleTranslationToolbar", "openFile", "findNext", "findPrevious", "capturePage"
+        "toggleTranslationToolbar", "openFile", "findNext", "findPrevious", "capturePage",
+        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;
@@ -50,7 +51,7 @@ public sealed class ShortcutCatalogTests {
     [Fact]
     public void OnlyOpeningClosingAndSwitchingTabsAndWindowsAreReservedFromPages() => Assert.Equal([
         "newWindow", "newTab", "newPrivateWindow", "closeTabOrWindow", "closeWindow", "reopenClosedTab", "previousTab", "nextTab",
-        "mostRecentTab"
+        "mostRecentTab", "mostRecentTabBackward"
     ], ShortcutCommand.All.Where(command => command.IsReservedFromPages).Select(command => command.Name));
 
     [Theory]
@@ -78,5 +79,16 @@ public sealed class ShortcutCatalogTests {
         Assert.True(bindings["showHistory"].IsCustomized);
         Assert.Equal(Key(key, modifiers), overrides.Resetting(ShortcutCommand.Named(owner)!)
             .Effective(ShortcutCommand.Named(displaced)!, Offered, DevicePlatform.Desktop));
+    }
+
+    /// Control-Shift-Tab arrives after people could have customised shortcuts,
+    /// so it stays unbound while a person holds its keys.
+    [Fact]
+    public void TheBackwardMostRecentTabDefaultYieldsToAPersistedCustomChord() {
+        var keys = ShortcutCommand.MostRecentTabBackward.DefaultShortcut(DevicePlatform.Desktop)!.Keys;
+        var overrides = ShortcutOverrides.Restore([new("newTab", ShortcutChord.Of(keys))]);
+        var bindings = overrides.Bindings(Offered, DevicePlatform.Desktop).ToDictionary(binding => binding.Command.Name);
+        Assert.Null(bindings["mostRecentTabBackward"].Keys);
+        Assert.NotNull(ShortcutCommand.MostRecentTabBackward.DefaultShortcut(DevicePlatform.Mobile));
     }
 }

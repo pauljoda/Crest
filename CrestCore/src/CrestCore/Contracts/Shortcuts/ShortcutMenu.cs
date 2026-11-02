@@ -29,7 +29,8 @@ public sealed class ShortcutMenu {
     public static readonly ShortcutMenu Tabs = new(name: "tabs", title: "Tabs", groups: [
         [ShortcutCommand.ToggleSelectedTabPinned, ShortcutCommand.DuplicateTab, ShortcutCommand.ReopenClosedTab,
             ShortcutCommand.ClearUnpinnedTabs, ShortcutCommand.ArchiveTab],
-        [ShortcutCommand.PreviousTab, ShortcutCommand.NextTab, ShortcutCommand.MostRecentTab],
+        [ShortcutCommand.PreviousTab, ShortcutCommand.NextTab, ShortcutCommand.MostRecentTab,
+            ShortcutCommand.MostRecentTabBackward],
         [ShortcutCommand.SplitWithNextTab, ShortcutCommand.FocusNextSplitCard, ShortcutCommand.FocusPreviousSplitCard,
             ShortcutCommand.MoveSplitCardLeft, ShortcutCommand.MoveSplitCardRight, ShortcutCommand.RemoveTabFromSplit,
             ShortcutCommand.SeparateSplitTabs],
@@ -44,7 +45,8 @@ public sealed class ShortcutMenu {
         [ShortcutCommand.FindInPage, ShortcutCommand.FindNext, ShortcutCommand.FindPrevious],
         [ShortcutCommand.ZoomIn, ShortcutCommand.ZoomOut, ShortcutCommand.ActualSize],
         [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF,
-            ShortcutCommand.SaveWebArchive, ShortcutCommand.CapturePage]
+            ShortcutCommand.SaveWebArchive, ShortcutCommand.CapturePage],
+        [ShortcutCommand.ClearSiteCookies, ShortcutCommand.ClearSiteCache]
     ]);
     public static readonly ShortcutMenu Develop = new(name: "develop", title: "Develop", groups: [
         [ShortcutCommand.ToggleDeveloperToolbar],

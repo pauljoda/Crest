@@ -19,12 +19,12 @@ extension BrowserHTTPAuthenticationProtectionSpace {
             return nil
         }
 
-        var components = URLComponents()
-        components.scheme = scheme
-        components.host = protectionSpace.host
-        components.port = protectionSpace.port
-        guard let url = components.url,
-            let origin = CredentialOrigin(url: url)
+        guard
+            let origin = CredentialOrigin(
+                securityProtocol: scheme,
+                host: protectionSpace.host,
+                port: protectionSpace.port
+            )
         else {
             return nil
         }

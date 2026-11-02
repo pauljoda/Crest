@@ -1,0 +1,37 @@
+# Crest: browser requests to Google reach only the services Crest keeps.
+# The policy is services/network/crest_request_policy.cc in the overlay.
+
+--- a/services/network/BUILD.gn
++++ b/services/network/BUILD.gn
+@@ -37,6 +37,8 @@
+     "cors/preflight_controller.h",
+     "cors/preflight_result.cc",
+     "cors/preflight_result.h",
++    "crest_request_policy.cc",
++    "crest_request_policy.h",
+     "data_pipe_element_reader.cc",
+     "data_pipe_element_reader.h",
+     "data_remover_util.cc",
+--- a/services/network/network_service_network_delegate.cc
++++ b/services/network/network_service_network_delegate.cc
+@@ -27,6 +27,7 @@
+ #include "net/url_request/url_request.h"
+ #include "services/network/cookie_manager.h"
+ #include "services/network/cookie_settings.h"
++#include "services/network/crest_request_policy.h"
+ #include "services/network/network_context.h"
+ #include "services/network/network_service.h"
+ #include "services/network/network_service_proxy_delegate.h"
+@@ -98,6 +99,12 @@
+     effective_url = new_url;
+   } else {
+     effective_url = &request->url();
++  }
++
++  // Crest: the browser's own requests reach Google only for the services
++  // Crest keeps. A redirect comes back through here for its new address.
++  if (crest::BlocksRequest(*request, *effective_url)) {
++    return net::ERR_BLOCKED_BY_CLIENT;
+   }
+ 
+   MaybeTruncateReferrer(request, *effective_url);

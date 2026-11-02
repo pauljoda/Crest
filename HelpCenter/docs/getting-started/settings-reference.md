@@ -19,11 +19,11 @@ Make Crest your default browser, choose what happens when Crest opens, and pick 
 
 ## Tabs
 
-Choose whether tabs opened from links get focus with **Switch to tabs opened from links**, and whether to **Follow tabs moved to another Space**. Set what pinned and saved tabs do after you close them, and whether clicking the favicon returns to the saved URL. Tabs also holds sidebar widgets and, on Mac, Split View's **Focus follows pointer**.
+Choose whether tabs opened from links get focus with **Switch to tabs opened from links**, and whether to **Follow tabs moved to another Space**. Set what pinned and saved tabs do after you close them, and whether clicking the favicon returns to the saved URL. Tabs also holds sidebar widgets and, on Mac, Split View's **Focus follows pointer** and **Show recent tabs while switching**, which shows your recent tabs while you hold Control-Tab.
 
 ## Search
 
-- **Default search**: the search engine or AI assistant every Space uses unless it chose its own, the one **Private windows** use, and whether the default gives **Search suggestions**. **Tab to search providers** turns provider names and shortcuts in the command palette on or off.
+- **Default search**: the search engine or AI assistant every Space uses unless it chose its own, the one **Private windows** use, and whether the default gives **Search suggestions**. **Tab to search providers** lets Tab choose a provider by its name or shortcut in the command palette, and **Space to search providers** lets a space after `$` and a shortcut, or after a shortcut alone, choose it.
 
 The command palette settings come next:
 
@@ -49,7 +49,7 @@ A Space's crest, colors, and sidebar background live on the Space's Appearance p
 
 ## Links
 
-Choose what happens to links from other apps, which Space supplies their signed-in session, and how long Quick Windows remain recoverable. Under Peek, choose whether eligible links from pinned or saved pages open in Peek, which modifier click opens it, and, on Mac, whether to **Drag links to Peek**. Link Routing rules live here too.
+Choose what happens to links from other apps, which Space supplies their signed-in session, and how long Quick Windows remain recoverable. Under Peek, choose whether eligible links from pinned or saved pages open in Peek, which modifier click opens it, and, on Mac, whether to **Drag links to Peek** and **Dim the page behind Peek**. Link Routing rules live here too.
 
 ## Engines
 
@@ -83,7 +83,9 @@ Each Space's page has these tabs:
 
 Click **+** next to the Spaces heading to add a Space. Its Appearance page opens with the name ready to type. Click the pencil next to it to rearrange: drag Spaces by their handles, then click the checkmark when done.
 
-Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **Lock Space**, and **Delete**. Crest needs at least one Space.
+Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **New Sub-Space**, **Make Sub-Space of**, **Lock Space**, and **Delete**. Crest needs at least one Space.
+
+[Sub-Spaces](../spaces/sub-spaces.md) are indented under their primary, and a group's page shows the crests of its Spaces, with **+** to add one. Drag a Space onto another, or among a group's Sub-Spaces, to add it to that group; drag it out to separate it. The Privacy and Passwords pages of a group say they are shared by its Sub-Spaces, and its Browsing page has **Separate Pinned Tabs**.
 
 ## Agents
 

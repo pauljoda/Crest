@@ -46,6 +46,8 @@ final class BrowserMacShell {
     /// Takes a mouse's Back and Forward clicks whole in every window, ahead of
     /// any view.
     private let mouseButtons = BrowserMacMouseButtons()
+    /// The recent tabs a held Most Recent Tab shortcut shows.
+    let recentTabSwitcher = BrowserMacRecentTabSwitcher()
 
     /// The application, once the launch built it.
     var application: BrowserMacApplication? { running?.application }
@@ -102,6 +104,7 @@ final class BrowserMacShell {
             return self?.handleShortcut(event, pageSeesFirst: pageSeesFirst) == true ? nil : event
         }
         mouseButtons.start()
+        recentTabSwitcher.start(in: self)
         running?.agents.start()
         Task { await application.cloudSync.start() }
         if !background { NSApp.activate(ignoringOtherApps: true) }

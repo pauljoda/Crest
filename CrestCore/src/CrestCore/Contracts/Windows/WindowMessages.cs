@@ -22,6 +22,16 @@ public enum TearOffRefusal {
 /// about, or null for a Space without tabs.
 public sealed record FallbackTabIndex(int? Index);
 
+/// What a window's person switches between in the Space it shows: up to five
+/// items, the one on screen first, then the rest most recent first. Empty
+/// when the window shows no tab there.
+public sealed record RecentTabList(IReadOnlyList<RecentTabItem> Items);
+
+/// One thing to switch to: a tab, or the tabs of a split, which are one item.
+/// `TabIds` are its tabs in the order they show side by side, and
+/// `FocusedTabId` is the one to show, the one of a split used last.
+public sealed record RecentTabItem(IReadOnlyList<Guid> TabIds, Guid FocusedTabId);
+
 /// The tab "Split With Next Tab" would add, or null when it would add none.
 public sealed record SplitJoinCandidateTab(Guid? TabId);
 
@@ -38,8 +48,10 @@ public sealed record DockMenuContent(IReadOnlyList<DockMenuCommand> Commands, IR
 /// The windows a launch opens, back to front, each a saved window's identity:
 /// the frontmost, `StartupWindowId`, takes the startup choice. `Setup` is the
 /// setup that opens in front of them, and holds them back until it finishes,
-/// or null when none does.
-public sealed record LaunchWindowPlan(IReadOnlyList<Guid> WindowIds, Guid StartupWindowId, SetupEntry? Setup);
+/// or null when none does. `QuitWhileReopening` says the previous launch ended
+/// while it was reopening its windows' pages, so the person can choose not to
+/// reopen them this time.
+public sealed record LaunchWindowPlan(IReadOnlyList<Guid> WindowIds, Guid StartupWindowId, SetupEntry? Setup, bool QuitWhileReopening);
 
 /// The window that comes to the person: an open one, or with `OpensWindow`, a
 /// saved window's identity to open.

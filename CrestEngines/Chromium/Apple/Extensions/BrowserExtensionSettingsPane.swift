@@ -27,6 +27,7 @@ struct BrowserExtensionSettingsPane: View {
                     space: space, accessController: spaceAccess,
                     detail: "Unlock this Space to see its extensions.")
             }
+            BrowserSpaceGroupSharingNote(browser: browser, spaceID: space?.id)
         }
         .onAppear { if selectedSpaceID == nil { selectedSpaceID = browser.selectedSpaceID } }
         .onChange(of: browser.spaceModels.map(\.id)) {
@@ -84,7 +85,11 @@ struct BrowserExtensionsView: View {
             }
             Button("Cancel", role: .cancel) { pendingRemoval = nil }
         } message: { item in
-            Text("\(item.name) and its data are removed from this Space only.")
+            if store.sharesProfile(space) {
+                Text("\(item.name) and its data are removed from every Space in this group.")
+            } else {
+                Text("\(item.name) and its data are removed from this Space only.")
+            }
         }
         .sheet(item: $pendingCopy) { item in BrowserExtensionCopySheet(item: item, space: space, store: store) }
     }
@@ -168,9 +173,13 @@ struct BrowserExtensionCopySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedSpaces: Set<UUID> = []
     @State private var loading = true
+    /// The Spaces a copy may go to, one per profile, which a group's primary
+    /// stands for: never the source's own group, which already has it.
     private var destinations: [BrowserSpaceIdentity] {
-        store.spaces.filter {
-            $0.id != space.id && !(store.installed[$0.profileID] ?? []).contains { $0.id == item.id }
+        var profiles: Set<UUID> = [space.profileID]
+        return store.spaces.filter {
+            profiles.insert($0.profileID).inserted
+                && !(store.installed[$0.profileID] ?? []).contains { $0.id == item.id }
         }
     }
     var body: some View {

@@ -56,6 +56,42 @@ public sealed partial class BrowserContractsTests {
         AssertSameParts(parts, StoredParts(directory.File));
     }
 
+    /// A merge computes holding nothing the host's intents wait for, so an
+    /// intent saved with its journal, such as a Space's deletion, finishes
+    /// while a merge computes, and the merge then commits on top of it. When
+    /// the merge held its journal transaction as it computed, the intent took
+    /// the core's lock and waited for that transaction, which the merge never
+    /// released, since it waited for the lock to commit.
+    [Fact]
+    public async Task AnIntentSavedWithItsJournalFinishesWhileAMergeComputesAndTheMergeCommitsAfterIt() {
+        var session = SessionOf(SpaceOf(Fixed(100), Fixed(101), tabs: [TabOf(Fixed(102))]),
+            SpaceOf(Fixed(200), Fixed(201), "Other", "book", tabs: [TabOf(Fixed(202))]));
+        using var directory = new StorageDirectory();
+        var ids = new PausingIds();
+        // Disposed only once both calls finished: a core that deadlocked never lets go of its lock.
+        var stored = StoredSyncing(directory, new JsonObject { ["session"] = Canonical(session) }, ids: ids);
+        var operation = Guid.NewGuid();
+        var merging = Task.Run(() => {
+            ids.PauseNextDraw();
+            // Another device deleted both Spaces, so the merge draws the identities of the Space that
+            // stands in for them as it computes.
+            stored.App.Send(new MergeSyncRecords([Tombstone(SyncRecordKind.Space, Fixed(100), Fixed(100), clock: 5),
+                Tombstone(SyncRecordKind.Space, Fixed(200), Fixed(200), clock: 5)]));
+        });
+        Assert.True(await FinishesSoon(ids.Paused), "The merge never drew an identity as it computed.");
+
+        var deleting = Task.Run(() => stored.App.Send(new BeginDeletingSpace(stored.Workspace, Guid.NewGuid(), Fixed(200), operation)));
+        bool deleted = await FinishesSoon(deleting);
+        ids.Resume();
+        Assert.True(deleted, "The deletion waited for the merge to compute.");
+        Assert.True(await FinishesSoon(merging), "The merge never committed after the deletion.");
+
+        var deletions = stored.Session.Current.SpaceDeletions;
+        Assert.Contains(deletions, deletion => deletion.Id == operation && deletion.SpaceId == Fixed(200));
+        Assert.Contains(deletions, deletion => deletion.SpaceId == Fixed(100));
+        stored.Dispose();
+    }
+
     /// Records no client of this build's schema reads, and records a newer
     /// build wrote, are left out of a merge and counted in its receipt, and a
     /// merge of nothing else changes nothing. A snapshot that holds one is
@@ -348,17 +384,28 @@ public sealed partial class BrowserContractsTests {
     }
 
     private static StoredSync StoredSyncing(StorageDirectory directory, JsonObject document, bool keepsSeed = false,
-        JsonObject? journal = null, IClock? clock = null) {
+        JsonObject? journal = null, IClock? clock = null, IIdSource? ids = null) {
         var session = document["session"]!.AsObject();
         if (!keepsSeed) session.Remove("disposableSeedMarker");
         var configuration = new AppConfiguration(directory.Path, DevicePlatform.Desktop);
-        var app = clock is null ? new CrestApp(configuration) : new CrestApp(configuration, clock, new TestIds());
+        var app = clock is null && ids is null ? new CrestApp(configuration)
+            : new CrestApp(configuration, clock ?? new SystemClock(), ids ?? new TestIds());
         var answered = app.Send(Adoption(session, journal));
         var (workspace, opened) = TestWorkspaces.OpenStored(app);
         var sync = app.StoredSync!;
         sync.Flush();
         _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(), [.. answered, .. opened]);
         return new(app, workspace, app.Workspace(workspace), sync);
+    }
+
+    /// Whether `task` finishes within ten seconds; what it threw is thrown here.
+    private static async Task<bool> FinishesSoon(Task task) {
+        try {
+            await task.WaitAsync(TimeSpan.FromSeconds(10));
+            return true;
+        } catch (TimeoutException) {
+            return false;
+        }
     }
 
     private static InvalidSyncRecords Invalid(SyncRecordFlaw flaw) => new(flaw, null);

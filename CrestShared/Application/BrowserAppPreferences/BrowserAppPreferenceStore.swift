@@ -76,6 +76,13 @@ final class BrowserAppPreferenceStore {
         set { set { $0.automaticallyShowsDeveloperToolbar = newValue } }
     }
 
+    /// Whether holding a Most Recent Tab shortcut shows the recent tabs, on
+    /// the Mac; off, the shortcut jumps at once.
+    var showsRecentTabs: Bool {
+        get { preferences.showsRecentTabs }
+        set { set { $0.showsRecentTabs = newValue } }
+    }
+
     /// How the command palette ranks and arranges what it offers.
     var palette: PalettePreferences {
         get { preferences.palette }
