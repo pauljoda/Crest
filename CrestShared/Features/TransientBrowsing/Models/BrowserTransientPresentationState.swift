@@ -22,6 +22,11 @@ struct BrowserTransientPresentationState {
     var presentationPhase: BrowserPeekPresentationPhase = .committed
     let sourcePresentation: BrowserPeekSourcePresentation
     var motionState: BrowserPeekMotionState? = nil
+    /// Whether the scrim dims the ground behind the card at all.
+    var dimsBackground: Bool = true
+    /// The part of the overlay the scrim covers. Zero wherever the overlay
+    /// owns the whole of its container.
+    var scrimInsets = EdgeInsets()
 
     var sourceTransform: BrowserTransientSourceTransform {
         BrowserTransientCardLayout.sourceCardTransform(for: sourcePresentation)
@@ -43,8 +48,10 @@ struct BrowserTransientPresentationState {
         arrangement.entranceTarget == target ? cardOpacity : 1
     }
 
+    /// The controls show once the card has grown, and on a card the person
+    /// pulls, which carries them as it grows.
     var controlsOpacity: Double {
-        isCardExpanded ? 1 : 0
+        isCardExpanded || motionState != nil ? 1 : 0
     }
 
     // MARK: - The scrim behind it
@@ -52,8 +59,12 @@ struct BrowserTransientPresentationState {
     /// The scrim rests dimmer while the overlay is only staged behind a press,
     /// and is absent until the card itself is on screen.
     var scrimOpacity: Double {
-        // Pulling the card provides the emphasis without dimming the source.
-        guard motionState == nil else { return 0 }
+        guard dimsBackground else { return 0 }
+        // Pulling the card provides the emphasis without dimming the source,
+        // and a pull that returns to its link never dimmed it. A Peek that has
+        // committed keeps its motion state until it closes, so the state alone
+        // does not mean the card is still being pulled.
+        if let motionState, presentationPhase == .staged || motionState.returnsToSource { return 0 }
         let restingOpacity = presentationPhase == .staged ? 0.08 : 0.34
         return (restingOpacity * (isCardVisible ? 1 : 0)).scrimOpacity(reduceTransparency: reduceTransparency)
     }

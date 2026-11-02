@@ -49,6 +49,10 @@ final class BrowserMacApplication {
     /// The window that opens on `startupBehavior`: the frontmost of the
     /// windows the launch opened. Every other window opens on the tab it left.
     var startupWindowID = BrowserMacWindowRequest.initial.id
+    /// The windows the launch opens on the Start Page instead, while it opens
+    /// them, when the person chose not to reopen pages after a launch that
+    /// ended while it reopened them.
+    var startPageWindowIDs: Set<UUID> = []
     let presentsInstalledApplicationUI: Bool
     /// Whether a tool started Crest in the background, so the launch's
     /// windows open without taking focus.
@@ -333,7 +337,8 @@ final class BrowserMacApplication {
             model: model, coordinator: windowCoordinator,
             pagePoolRegistry: pagePoolRegistry, spaceAccess: spaceAccess,
             spaceSettingsPresentation: spaceSettingsPresentation,
-            startupBehavior: model.id == startupWindowID ? startupBehavior : .lastActiveTab,
+            startupBehavior: startPageWindowIDs.contains(model.id)
+                ? .showStartPage : model.id == startupWindowID ? startupBehavior : .lastActiveTab,
             shortcuts: shortcuts, sidebarWidgets: sidebarWidgets, softwareUpdates: softwareUpdates
         )
         .environment(

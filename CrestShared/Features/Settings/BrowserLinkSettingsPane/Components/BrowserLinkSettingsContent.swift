@@ -21,7 +21,8 @@ struct BrowserLinkSettingsContent: View {
         BrowserPeekSettingsSection(
             automaticallyOpensPeek: automaticPeekBinding,
             clickModifier: peekClickModifierBinding,
-            dragsLinksToPeek: dragsLinksToPeekBinding
+            dragsLinksToPeek: dragsLinksToPeekBinding,
+            dimsPageBehindPeek: dimsPageBehindPeekBinding
         )
 
         if lockedRouteDestinationSpaces.isEmpty {
@@ -117,6 +118,15 @@ struct BrowserLinkSettingsContent: View {
     private var dragsLinksToPeekBinding: Binding<Bool>? {
         #if os(macOS)
             links.binding(.dragsLinksToPeek, reading: \.dragsLinksToPeek)
+        #else
+            nil
+        #endif
+    }
+
+    /// The dim is drawn over the Mac page only, so only the Mac offers it.
+    private var dimsPageBehindPeekBinding: Binding<Bool>? {
+        #if os(macOS)
+            links.binding(.dimsPageBehindPeek, reading: \.dimsPageBehindPeek)
         #else
             nil
         #endif

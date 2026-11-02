@@ -859,14 +859,24 @@ final class SpacePagerViewport<Content: View>: NSView {
             let origin = spaces.first(where: { $0.id == current.origin.spaceID }),
             let destination = spaces.first(where: { $0.id == target.spaceID }),
             let height = bands?.sharedHeight(between: origin, and: destination), height > 0,
-            let host = hosts[current.origin], let image = Self.image(of: host, top: height)
+            let page = hosts[current.origin]?.layer,
+            let still = Self.still(of: page, top: height, scale: window?.backingScaleFactor ?? 2)
         else { return }
         let band = NSView(frame: CGRect(x: 0, y: topInset(at: displayedPosition), width: bounds.width, height: height))
         band.wantsLayer = true
-        band.layer?.contents = image
-        band.layer?.contentsGravity = .resize
         band.setAccessibilityElement(false)
         addSubview(band, positioned: .above, relativeTo: nil)
+        if let layer = band.layer {
+            // A material's copy keeps its whole frame, so the band clips it.
+            layer.masksToBounds = true
+            // The copy's coordinates run the way the page's do, and its top
+            // meets the band's.
+            still.isGeometryFlipped = Self.runsDown(page) != Self.runsDown(layer)
+            still.frame = CGRect(
+                x: 0, y: Self.runsDown(layer) ? 0 : height - page.bounds.height,
+                width: page.bounds.width, height: page.bounds.height)
+            layer.addSublayer(still)
+        }
         heldBand = band
         for host in hosts.values { Self.mask(host, below: height) }
     }
@@ -879,27 +889,128 @@ final class SpacePagerViewport<Content: View>: NSView {
         for host in hosts.values { host.layer?.mask = nil }
     }
 
-    /// An image of the top `height` points of `host`'s page as its layers
-    /// hold it now, drawn at the window's scale. Core Animation draws the
-    /// layers in about half the time AppKit's view drawing takes.
-    private static func image(of host: NSView, top height: CGFloat) -> CGImage? {
-        let scale = host.window?.backingScaleFactor ?? 2
-        guard let layer = host.layer, host.bounds.width > 0, height > 0,
-            let space = CGColorSpace(name: CGColorSpace.sRGB),
+    /// A copy of the top `height` points of `page` as its layers hold them
+    /// now, drawn at `scale`.
+    private static func still(of page: CALayer, top height: CGFloat, scale: CGFloat) -> CALayer? {
+        guard page.bounds.width > 0, height > 0 else { return nil }
+        let top = CGRect(
+            x: page.bounds.minX, y: runsDown(page) ? page.bounds.minY : page.bounds.maxY - height,
+            width: page.bounds.width, height: height)
+        return copy(of: page, inside: top, scale: scale)
+    }
+
+    /// A copy of `layer` and what it holds inside `visible`, a rect in its
+    /// own coordinates. Core Animation draws a layer in about half the time
+    /// AppKit's view drawing takes, but draws it without its filters, so a
+    /// branch that filters nothing becomes one image, while a layer that
+    /// filters keeps a copy of its own carrying the same filters: the faded
+    /// icon of a tab that isn't loaded would otherwise show in full colour,
+    /// and a pin's material in black.
+    private static func copy(of layer: CALayer, inside visible: CGRect, scale: CGFloat) -> CALayer? {
+        let area = extent(of: layer).intersection(visible)
+        guard !layer.isHidden, !area.isEmpty else { return nil }
+        if isMaterial(layer) { return twin(of: layer) }
+        let copy = CALayer()
+        copy.bounds = layer.bounds
+        copy.position = layer.position
+        copy.anchorPoint = layer.anchorPoint
+        copy.zPosition = layer.zPosition
+        copy.transform = layer.transform
+        copy.sublayerTransform = layer.sublayerTransform
+        copy.isGeometryFlipped = layer.isGeometryFlipped
+        copy.masksToBounds = layer.masksToBounds
+        copy.cornerRadius = layer.cornerRadius
+        copy.cornerCurve = layer.cornerCurve
+        copy.maskedCorners = layer.maskedCorners
+        copy.opacity = layer.opacity
+        copy.allowsGroupOpacity = layer.allowsGroupOpacity
+        copy.filters = layer.filters
+        copy.compositingFilter = layer.compositingFilter
+        copy.backgroundFilters = layer.backgroundFilters
+        let sublayers = (layer.sublayers ?? []).filter { !$0.isHidden }
+        let splits = sublayers.contains(where: needsOwnCopy)
+        let shown = splits ? layer.bounds.intersection(visible) : area
+        if !shown.isEmpty {
+            // Whole pixels, so the image is never stretched.
+            let drawn = CALayer()
+            drawn.frame = CGRect(
+                x: shown.minX, y: shown.minY,
+                width: (shown.width * scale).rounded(.up) / scale, height: (shown.height * scale).rounded(.up) / scale)
+            drawn.contents = drawing(of: layer, in: drawn.frame, scale: scale, alone: splits)
+            copy.addSublayer(drawn)
+        }
+        if splits {
+            for sublayer in sublayers {
+                if let part = Self.copy(of: sublayer, inside: sublayer.convert(visible, from: layer), scale: scale) {
+                    copy.addSublayer(part)
+                }
+            }
+        }
+        return copy
+    }
+
+    /// An image of what `layer` draws inside `rect`, a rect in its own
+    /// coordinates: the layer alone when `alone` is set, or with everything
+    /// beneath it. It is drawn at full opacity, which the layer's copy
+    /// carries instead.
+    private static func drawing(of layer: CALayer, in rect: CGRect, scale: CGFloat, alone: Bool) -> CGImage? {
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
             let context = CGContext(
-                data: nil, width: Int((host.bounds.width * scale).rounded()), height: Int((height * scale).rounded()),
+                data: nil, width: Int((rect.width * scale).rounded()), height: Int((rect.height * scale).rounded()),
                 bitsPerComponent: 8, bytesPerRow: 0, space: space,
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.scaleBy(x: scale, y: scale)
         if runsDown(layer) {
-            context.translateBy(x: 0, y: height)
+            context.translateBy(x: 0, y: rect.height)
             context.scaleBy(x: 1, y: -1)
-        } else {
-            context.translateBy(x: 0, y: height - host.bounds.height)
         }
+        context.translateBy(x: -rect.minX, y: -rect.minY)
+        // Drawing skips hidden layers. Both changes are undone before the
+        // transaction ends, so the page never shows them.
+        let shown = alone ? (layer.sublayers ?? []).filter { !$0.isHidden } : []
+        let opacity = layer.opacity
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.opacity = 1
+        for sublayer in shown { sublayer.isHidden = true }
         layer.render(in: context)
+        for sublayer in shown { sublayer.isHidden = false }
+        layer.opacity = opacity
+        CATransaction.commit()
         return context.makeImage()
+    }
+
+    /// Whether `layer` is one of the layers a material draws with, which
+    /// blur, tint and adapt to what lies behind them rather than show what
+    /// they draw.
+    private static func isMaterial(_ layer: CALayer) -> Bool {
+        ["CABackdropLayer", "CAChameleonLayer"].contains { NSClassFromString($0).map(layer.isKind(of:)) ?? false }
+    }
+
+    /// A layer of `layer`'s own kind with every setting it has, including
+    /// the ones of its kind that only an archive carries.
+    private static func twin(of layer: CALayer) -> CALayer? {
+        guard let archive = try? NSKeyedArchiver.archivedData(withRootObject: layer, requiringSecureCoding: true)
+        else { return nil }
+        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: CALayer.self, from: archive)
+    }
+
+    /// Where `layer` and the shown layers beneath it draw, in its own
+    /// coordinates.
+    private static func extent(of layer: CALayer) -> CGRect {
+        (layer.sublayers ?? []).filter { !$0.isHidden }.reduce(layer.bounds) {
+            $0.union(layer.convert(extent(of: $1), from: $1))
+        }
+    }
+
+    /// Whether `layer` or a shown layer beneath it needs a copy of its own:
+    /// one that filters, or one of a material's.
+    private static func needsOwnCopy(_ layer: CALayer) -> Bool {
+        guard !layer.isHidden else { return false }
+        return !(layer.filters ?? []).isEmpty || layer.compositingFilter != nil
+            || !(layer.backgroundFilters ?? []).isEmpty || isMaterial(layer)
+            || (layer.sublayers ?? []).contains(where: needsOwnCopy)
     }
 
     /// Whether `layer`'s own coordinates run down the screen: they do when an

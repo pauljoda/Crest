@@ -48,6 +48,9 @@ extension BrowserMacShell {
             return true
         }
         guard !isQuitting else { return true }
+        // A focused Chromium page keeps the window-cycling key from AppKit,
+        // so it cycles here for every page.
+        if BrowserMacWindowCycling.cycle(for: event) { return true }
         // The application menu runs Settings once a page lets the key go.
         if !pageSeesFirst, shortcut == BrowserShortcut(key: .character(","), modifiers: .command) {
             BrowserMacApplicationAction.settings.perform(in: self)
@@ -68,9 +71,10 @@ extension BrowserMacShell {
             return true
         }
         // What no Crest command claims can belong to the engine, such as an
-        // extension's binding in the active page's Space, which goes ahead of
-        // the page as it does in Chrome.
-        guard let page = context?.pages.activePage else { return false }
+        // extension's binding in the Space of the page in front: a key Quick
+        // Window's page, a Peek, or the active tab. It goes ahead of the page
+        // as it does in Chrome.
+        guard let page = pageActions?.commandPage else { return false }
         return engineHost.handleUnclaimedShortcut(event, page: page)
     }
 

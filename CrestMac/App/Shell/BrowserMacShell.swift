@@ -221,7 +221,7 @@ final class BrowserMacShell {
             running.windows.openQuickWindow(
                 BrowserQuickWindowRequest(
                     id: windowID, url: url, spaceAssignment: destination.assignment,
-                    targetWindowID: destination.quickWindowTarget))
+                    targetWindowID: destination.quickWindowTarget, opensWherePersonIs: true))
             guard let window = running.windows.quickWindow(windowID) else {
                 declined()
                 return

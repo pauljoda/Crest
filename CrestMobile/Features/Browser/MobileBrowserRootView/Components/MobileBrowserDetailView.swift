@@ -29,6 +29,12 @@ struct MobileBrowserDetailView: View {
     /// Opens History from the compact toolbar's history menus; a detail without
     /// that toolbar never calls it.
     var showHistory: () -> Void = {}
+    /// The command palette that rises from the compact address bar, which a
+    /// compact window shows there instead of over its page; nil where the bar
+    /// edits in place.
+    var paletteMode: Binding<BrowserCommandPaletteMode?>?
+    /// Opens the palette, as Open Location does.
+    var openLocation: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -42,6 +48,9 @@ struct MobileBrowserDetailView: View {
     /// The address bar's swipe through the shown Space's tabs, which moves
     /// the page area and the bar together.
     @State private var tabSwipe = MobileTabSwipe()
+    /// The namespace in which the command palette grows out of the compact
+    /// address bar.
+    @Namespace private var compactPaletteNamespace
 
     var body: some View {
         let pageActions = MobileSelectedPageActionPort(
@@ -125,10 +134,30 @@ struct MobileBrowserDetailView: View {
                         canSwipeTabs: swipeShownTab != nil,
                         swipeNeighbors: { browser.swipeNeighbors },
                         showSwipedTab: showSwipedTab,
-                        compactTransitionEnded: compactTransitionEnded
+                        compactTransitionEnded: compactTransitionEnded,
+                        openPalette: paletteMode == nil ? nil : openLocation,
+                        isPaletteShown: isCompactPaletteShown,
+                        commandSurfaceNamespace: compactPaletteNamespace,
+                        commandPaletteHandoff: compactPaletteHandoff
                     )
                     .safeAreaPadding(.bottom, 0)
                     .zIndex(1)
+                }
+            }
+        }
+        .overlayPreferenceValue(MobileCompactCommandPaletteLayer.FieldAnchor.self) { anchor in
+            if isCompact, let paletteMode {
+                GeometryReader { proxy in
+                    MobileCompactCommandPaletteLayer(
+                        mode: paletteMode,
+                        browser: browser,
+                        commands: commands,
+                        isSourceAvailable: isPaletteSourceAvailable,
+                        selectTab: selectStartPageTab,
+                        openURL: openStartPageURL,
+                        fieldFrame: anchor.map { proxy[$0] },
+                        morphNamespace: compactPaletteNamespace
+                    )
                 }
             }
         }
@@ -508,6 +537,24 @@ struct MobileBrowserDetailView: View {
         // Relocking deactivates its page; that must never trigger auto-restore.
         guard let space = browser.shownSpace, !spaceAccess.isLocked(space) else { return }
         pages.select()
+    }
+
+    /// Which of the compact address bar and the palette holds their shared
+    /// identity: the palette's glass grows out of the bar's and shrinks back
+    /// into it.
+    /// Whether the palette rising from the compact bar shows: one was asked
+    /// for, over a tab it can act on, as its layer requires.
+    private var isCompactPaletteShown: Bool {
+        guard paletteMode?.wrappedValue != nil, let source = browser.shownTabAssignment else { return false }
+        return isPaletteSourceAvailable(source)
+    }
+
+    private var compactPaletteHandoff: BrowserCommandPaletteHandoff {
+        .resolve(
+            isPaletteShown: isCompactPaletteShown,
+            isFieldOnScreen: isCompact && showsCompactToolbar && !compactToolbarIsHidden,
+            animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
+        )
     }
 
     private var emptySelectionPaletteActions: BrowserEmptySelectionPaletteActions? {

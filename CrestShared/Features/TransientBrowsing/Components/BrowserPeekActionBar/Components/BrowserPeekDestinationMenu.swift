@@ -1,14 +1,11 @@
 import SwiftUI
 
 struct BrowserPeekDestinationMenu: View {
-    // MARK: - Static Variables
-
-    private static let width: CGFloat = 48
-
     // MARK: - Variables
 
     let spaces: [BrowserSpaceIdentity]
     let selectedSpace: BrowserSpaceIdentity?
+    var style = BrowserPeekControlStyle.actionBar
     let openInSpace: (BrowserSpaceRuntimeAssignment) -> Void
 
     var body: some View {
@@ -27,10 +24,7 @@ struct BrowserPeekDestinationMenu: View {
         } label: {
             Image(systemName: "chevron.down")
                 .font(.caption2.weight(.semibold))
-                .frame(
-                    width: Self.width,
-                    height: BrowserPeekActionBar.controlHeight
-                )
+                .frame(width: style.menuWidth, height: style.height)
                 .contentShape(.rect)
         }
         .crestMenuActionLabelStyle()

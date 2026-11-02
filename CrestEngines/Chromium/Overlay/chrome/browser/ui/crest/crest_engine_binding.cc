@@ -36,6 +36,7 @@
 #include "content/public/browser/global_routing_id.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/navigation_handle.h"
+#include "content/public/common/referrer.h"
 #include "content/public/browser/navigation_throttle.h"
 #include "content/public/browser/navigation_throttle_registry.h"
 #include "content/public/browser/page_navigator.h"
@@ -55,14 +56,17 @@ constexpr size_t kLinkBytes = 8192;
 // The most links staged at once, and how long one waits for its Peek.
 constexpr size_t kStagedLinks = 32;
 constexpr base::TimeDelta kStagedLinkLifetime = base::Seconds(30);
-// The modifier bits Blink records for a trusted click on a link, and those of
-// them that make it a modified click: Command, Option or the middle button.
+// How long a window a link opened waits for the core before it loads anyway,
+// as it would without waiting, so one the core never hears of isn't left blank.
+constexpr base::TimeDelta kHeldWindowLifetime = base::Seconds(5);
+// The modifier bits Blink records for a trusted click on a link. Any of them
+// makes it a modified click for the core to decide, Shift included, since it
+// can be the key that opens Peek.
 constexpr uint32_t kLinkCommand = 1;
 constexpr uint32_t kLinkOption = 2;
 constexpr uint32_t kLinkShift = 4;
 constexpr uint32_t kLinkMiddleButton = 8;
-constexpr uint32_t kLinkModified = kLinkCommand | kLinkOption | kLinkMiddleButton;
-constexpr uint32_t kLinkModifiers = kLinkModified | kLinkShift;
+constexpr uint32_t kLinkModifiers = kLinkCommand | kLinkOption | kLinkShift | kLinkMiddleButton;
 
 // How a person followed a link: a trusted top-level click, with the keys and
 // button Blink recorded.
@@ -125,8 +129,17 @@ class PeekLinkThrottle final : public content::NavigationThrottle {
         binding.KeepsLinkForPeek(navigation->GetWebContents(), navigation->GetURL())) {
       return CANCEL_AND_IGNORE;
     }
-    return binding.KeepsWindowLinkForPeek(*navigation) ? CANCEL_AND_IGNORE : PROCEED;
+    if (binding.KeepsWindowLinkForPeek(*navigation)) {
+      return CANCEL_AND_IGNORE;
+    }
+    return binding.HoldsWindowLink(*navigation,
+                                   base::BindOnce(&PeekLinkThrottle::Resume, weak_factory_.GetWeakPtr()))
+               ? DEFER
+               : PROCEED;
   }
+
+ private:
+  base::WeakPtrFactory<PeekLinkThrottle> weak_factory_{this};
 };
 
 }  // namespace
@@ -138,6 +151,23 @@ struct EngineBinding::StagedLink {
   std::string source;
   uint64_t revision = 0;
   uint64_t generation = 0;
+};
+
+// The request Chromium made for a window's first navigation, with the
+// referrer, initiator and SiteInstance of the link a person followed in
+// `source`, and the document `source` showed then.
+struct EngineBinding::WindowLink {
+  content::NavigationController::LoadURLParams request;
+  std::string source;
+  uint64_t revision = 0;
+  uint64_t generation = 0;
+};
+
+// A window a link opened, whose first navigation waits for the core.
+struct EngineBinding::HeldWindow {
+  base::WeakPtr<content::WebContents> contents;
+  std::unique_ptr<WindowLink> link;
+  base::OnceClosure resume;
 };
 
 std::string GuidText(const engine::Guid& guid) {
@@ -504,13 +534,38 @@ void EngineBinding::Adopt(const engine::AdoptOfferedPage& adoption) {
                                                                       .restore_state = std::nullopt}))
                           .first->second;
   Live(page, contents);
+  // A held window's link goes ahead in the page the core adopted.
+  ReleaseHeldWindow(contents->GetWeakPtr());
 }
 
-// The page the core refused closes.
+void EngineBinding::ReleaseHeldWindow(base::WeakPtr<content::WebContents> contents) {
+  const auto held = std::find_if(held_windows_.begin(), held_windows_.end(), [&contents](const auto& window) {
+    return contents && window->contents.get() == contents.get();
+  });
+  if (held != held_windows_.end()) {
+    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(FROM_HERE, std::move((*held)->resume));
+    held_windows_.erase(held);
+  }
+  std::erase_if(held_windows_, [](const auto& window) { return !window->contents; });
+}
+
+// The page the core refused closes. A held window's request never went out,
+// so the page its link was in can load it, if the core loads the link there.
 void EngineBinding::Reject(const engine::RejectOfferedPage& rejection) {
   auto offer = offers_.extract(GuidText(rejection.offer_id));
-  if (offer && offer.mapped().contents) {
-    Browsers().Destroy(offer.mapped().contents.get());
+  content::WebContents* contents = offer ? offer.mapped().contents.get() : nullptr;
+  const auto held = std::find_if(held_windows_.begin(), held_windows_.end(), [contents](const auto& window) {
+    return contents && window->contents.get() == contents;
+  });
+  if (held != held_windows_.end()) {
+    std::erase_if(refused_window_links_, [now = base::TimeTicks::Now()](const auto& refused) {
+      return now - refused.second > kStagedLinkLifetime;
+    });
+    refused_window_links_.emplace_back(std::move((*held)->link), base::TimeTicks::Now());
+    held_windows_.erase(held);
+  }
+  if (contents) {
+    Browsers().Destroy(contents);
   }
 }
 
@@ -525,11 +580,13 @@ void EngineBinding::Stage(const engine::StageNavigation& staging) {
 }
 
 // The page has its WebContents: the platform hears its view is ready, the
-// core hears the page is live, and then it loads what it was asked to.
+// core hears the page is live and what it already shows, and then it loads
+// what it was asked to.
 void EngineBinding::Live(EnginePage& page, content::WebContents* contents) {
   DisableEnginePasswordManager(contents);
   page.Start(contents);
   Report(engine::PageCreated{.page_id = page.id()});
+  page.AdoptCommittedDocument();
   page.LoadPending();
 }
 
@@ -611,11 +668,11 @@ void EngineBinding::Offer(content::WebContents* contents,
     return;
   }
   std::optional<engine::Guid> source;
-  if (content::RenderFrameHost* opener = contents->GetOpener()) {
-    if (EnginePage* page = PageFor(content::WebContents::FromRenderFrameHost(opener))) {
-      source = page->id();
-    }
+  if (EnginePage* page = SourceOf(contents)) {
+    source = page->id();
   }
+  std::erase_if(link_sources_,
+                [contents](const auto& entry) { return !entry.first || entry.first.get() == contents; });
   const engine::Guid offer = RandomGuid();
   offers_.emplace(GuidText(offer), OfferedPage{.contents = contents->GetWeakPtr(), .profile = profile});
   const GURL url = contents->GetVisibleURL();
@@ -631,7 +688,7 @@ void EngineBinding::Offer(content::WebContents* contents,
 bool EngineBinding::FollowModifiedLink(content::WebContents* contents, content::OpenURLParams& params) {
   EnginePage* page = PageFor(contents);
   if (!page || params.crest_link_modifiers > kLinkModifiers ||
-      !(params.crest_link_modifiers & kLinkModified) || !params.is_renderer_initiated || !params.user_gesture ||
+      !(params.crest_link_modifiers & kLinkModifiers) || !params.is_renderer_initiated || !params.user_gesture ||
       params.triggering_event_info != blink::mojom::TriggeringEventInfo::kFromTrustedEvent ||
       params.started_from_context_menu || params.post_data || !params.url.SchemeIsHTTPOrHTTPS() ||
       params.url.spec().size() > kLinkBytes) {
@@ -703,6 +760,45 @@ bool EngineBinding::KeepsLinkForPeek(content::WebContents* contents, const GURL&
   return true;
 }
 
+// Only a window without an opener that the link throttle traced to the page
+// its link was in waits; a script's window keeps its opener and loads at once.
+// Its request is the one Chromium made from the link, with the link's
+// referrer, initiator and SiteInstance.
+bool EngineBinding::HoldsWindowLink(content::NavigationHandle& navigation, base::OnceClosure resume) {
+  content::WebContents* contents = navigation.GetWebContents();
+  if (!contents || disposing_ || contents->GetOpener() || !contents->GetController().IsInitialNavigation() ||
+      held_windows_.size() >= kStagedLinks) {
+    return false;
+  }
+  EnginePage* source = SourceOf(contents);
+  if (!source) {
+    return false;
+  }
+  auto link = std::make_unique<WindowLink>(WindowLink{.request = content::NavigationController::LoadURLParams(
+                                                          navigation.GetURL()),
+                                                      .source = source->key(),
+                                                      .revision = source->navigation_revision(),
+                                                      .generation = source->navigation_generation()});
+  content::NavigationController::LoadURLParams& request = link->request;
+  request.referrer = content::Referrer(navigation.GetReferrer());
+  request.initiator_origin = navigation.GetInitiatorOrigin();
+  request.initiator_base_url = navigation.GetInitiatorBaseUrl();
+  request.initiator_frame_token = navigation.GetInitiatorFrameToken();
+  request.initiator_process_id = navigation.GetInitiatorProcessId();
+  request.source_site_instance = navigation.GetSourceSiteInstance();
+  request.is_renderer_initiated = navigation.IsRendererInitiated();
+  request.has_user_gesture = navigation.HasUserGesture();
+  request.transition_type = navigation.GetPageTransition();
+  std::erase_if(held_windows_, [](const auto& window) { return !window->contents; });
+  held_windows_.push_back(std::make_unique<HeldWindow>(
+      HeldWindow{.contents = contents->GetWeakPtr(), .link = std::move(link), .resume = std::move(resume)}));
+  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(&EngineBinding::ReleaseHeldWindow, weak_factory_.GetWeakPtr(), contents->GetWeakPtr()),
+      kHeldWindowLifetime);
+  return true;
+}
+
 // The link opens a window of its own, as target="_blank" does: the engine
 // made the window's WebContents and loads the link there first, before the
 // core is offered the window. The page the link was in is the window's
@@ -730,6 +826,12 @@ bool EngineBinding::KeepsWindowLinkForPeek(content::NavigationHandle& navigation
   EnginePage* source = source_contents && source_contents != contents ? PageFor(source_contents) : nullptr;
   if (!source) {
     return false;
+  }
+  // A window without an opener can't name the page it came from by the time
+  // the core is offered it, so its offer names the page the link was in.
+  if (!contents->GetOpener()) {
+    std::erase_if(link_sources_, [](const auto& entry) { return !entry.first; });
+    link_sources_.emplace_back(contents->GetWeakPtr(), source->key());
   }
   // A new tab a modified click asked for stays a tab.
   const auto routed = std::find(routed_tabs_.begin(), routed_tabs_.end(),
@@ -809,6 +911,28 @@ bool EngineBinding::LoadStagedLink(const std::string& key, const std::string& to
   return true;
 }
 
+EngineBinding::RefusedLinkLoad EngineBinding::LoadRefusedWindowLink(const std::string& key, const GURL& url) {
+  const base::TimeTicks now = base::TimeTicks::Now();
+  std::erase_if(refused_window_links_,
+                [now](const auto& refused) { return now - refused.second > kStagedLinkLifetime; });
+  const auto refused = std::find_if(refused_window_links_.begin(), refused_window_links_.end(), [&](const auto& entry) {
+    return entry.first->source == key && entry.first->request.url == url;
+  });
+  if (refused == refused_window_links_.end()) {
+    return RefusedLinkLoad::kNone;
+  }
+  const std::unique_ptr<WindowLink> link = std::move(refused->first);
+  refused_window_links_.erase(refused);
+  EnginePage* page = Find(key);
+  if (!page || !page->web_contents() || disposing_ || page->navigation_revision() != link->revision ||
+      page->navigation_generation() != link->generation) {
+    return RefusedLinkLoad::kStale;
+  }
+  // Keeps the link's referrer, initiator and SiteInstance.
+  page->web_contents()->GetController().LoadURLWithParams(link->request);
+  return RefusedLinkLoad::kLoaded;
+}
+
 void EngineBinding::DropStagedLink(const std::string& token) {
   staged_links_.erase(token);
 }
@@ -841,6 +965,18 @@ EnginePage* EngineBinding::PageFor(content::WebContents* contents) {
     }
   }
   return nullptr;
+}
+
+EnginePage* EngineBinding::SourceOf(content::WebContents* contents) {
+  if (!contents) {
+    return nullptr;
+  }
+  if (content::RenderFrameHost* opener = contents->GetOpener()) {
+    return PageFor(content::WebContents::FromRenderFrameHost(opener));
+  }
+  const auto recorded = std::find_if(link_sources_.begin(), link_sources_.end(),
+                                     [contents](const auto& entry) { return entry.first.get() == contents; });
+  return recorded == link_sources_.end() ? nullptr : Find(recorded->second);
 }
 
 std::vector<EnginePage*> EngineBinding::LivePages() {

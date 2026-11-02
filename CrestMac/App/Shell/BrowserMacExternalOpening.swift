@@ -51,7 +51,8 @@ final class BrowserMacExternalOpening {
         if destination.placement.opensQuickWindow {
             windows.openQuickWindow(
                 BrowserQuickWindowRequest(
-                    url: url, spaceAssignment: destination.assignment, targetWindowID: destination.quickWindowTarget))
+                    url: url, spaceAssignment: destination.assignment, targetWindowID: destination.quickWindowTarget,
+                    opensWherePersonIs: true))
             return true
         }
         guard
