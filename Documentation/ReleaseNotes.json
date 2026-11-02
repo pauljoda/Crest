@@ -4745,10 +4745,6 @@
     "quick-window-site-permission-prompts": {
       "category": "fixed",
       "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
-    },
-    "site-permission-request-survives-window-handoff": {
-      "category": "internal",
-      "message": "A page moving from a Quick Window into a browser window keeps its waiting permission request whichever window updates first."
     }
   }
 }
