@@ -4834,6 +4834,10 @@
       "category": "internal",
       "message": "The recent tabs a window switches between and the first search catalog also read the session before the device takes its own lock, so the device and session locks are always taken in one order, and Debug builds check it."
     },
+    "saved-passwords-survive-interrupted-writes": {
+      "category": "fixed",
+      "message": "Saved passwords are no longer lost when Crest quits partway through importing or deleting them, or through turning iCloud Keychain on or off for a Space."
+    },
     "tab-groups": {
       "category": "new",
       "message": "Groups gather open tabs under a simple header that syncs to every device and goes away when its last tab leaves. Make one from a tab's menu, turn a group into a folder and back, and open any folder's or group's actions from the … button on its header."
