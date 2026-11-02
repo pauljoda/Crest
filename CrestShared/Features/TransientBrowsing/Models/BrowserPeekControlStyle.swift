@@ -6,9 +6,10 @@ import SwiftUI
 struct BrowserPeekControlStyle: Hashable, Sendable {
     // MARK: - Static Variables
 
-    static let actionBar = BrowserPeekControlStyle(height: 48, iconSize: 22, leadingInset: 16, menuWidth: 48)
+    static let actionBar = BrowserPeekControlStyle(
+        height: 48, iconSize: 22, leadingInset: 16, menuWidth: 48, spaceNameWidth: nil)
     static let toolbar = BrowserPeekControlStyle(
-        height: BrowserChromeLayout.addressHeight, iconSize: 18, leadingInset: 10, menuWidth: 30)
+        height: BrowserChromeLayout.addressHeight, iconSize: 18, leadingInset: 10, menuWidth: 30, spaceNameWidth: 118)
 
     // MARK: - Variables
 
@@ -18,6 +19,10 @@ struct BrowserPeekControlStyle: Hashable, Sendable {
     let leadingInset: CGFloat
     /// The width of Open In's menu of other Spaces.
     let menuWidth: CGFloat
+    /// The widest Open In's title may grow when it names the Space, about
+    /// eight characters of the name, or nil where it reads "Open In…". A
+    /// shorter name keeps a shorter title.
+    let spaceNameWidth: CGFloat?
 
     /// The controls' shape: on the Mac the corner radius the person chose in
     /// Look and Feel, as the address field wears, and on iPhone and iPad a

@@ -74,6 +74,23 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         accessibilityVerticalPadding: 0
     )
 
+    /// A Quick Window's toolbar: the pointer shell's controls drawn narrower and
+    /// side by side, since back and forward sit beside the address field
+    /// rather than spread along a strip of their own.
+    static let quickWindow = BrowserSidebarNavigationControlMetrics(
+        controlSpacing: 0,
+        leadingSpacerMinimum: 0,
+        controlSize: CGSize(width: 24, height: BrowserChromeLayout.sidebarNavigationControlHitTarget),
+        reloadMenuControlSize: pointer.reloadMenuControlSize,
+        historySymbolFont: pointer.historySymbolFont,
+        reloadSymbolPointSize: pointer.reloadSymbolPointSize,
+        leadingInset: 0,
+        trailingInset: 0,
+        barHeight: pointer.barHeight,
+        growsWithContent: false,
+        accessibilityVerticalPadding: 0
+    )
+
     /// A touch shell: full 44pt targets, a symmetric gutter, and a strip that
     /// grows with the reader's text.
     ///

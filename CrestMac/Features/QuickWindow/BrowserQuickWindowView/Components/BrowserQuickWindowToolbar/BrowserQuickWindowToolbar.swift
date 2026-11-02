@@ -11,7 +11,8 @@ struct BrowserQuickWindowToolbar: View {
         HStack(spacing: BrowserQuickWindowLayout.toolbarSpacing) {
             BrowserQuickWindowNavigationControls(model: model)
             BrowserQuickWindowFieldLayout(
-                fieldMinimumWidth: BrowserQuickWindowLayout.addressWidthBeforeExtensions,
+                fieldMinimumWidth: BrowserQuickWindowLayout.addressMinimumWidth,
+                widthBeforeExtensions: BrowserQuickWindowLayout.addressWidthBeforeExtensions,
                 spacing: BrowserQuickWindowLayout.toolbarSpacing
             ) {
                 BrowserQuickWindowAddressControl(
@@ -37,7 +38,9 @@ struct BrowserQuickWindowToolbar: View {
                 style: .toolbar,
                 openInSpace: promote
             )
-            .fixedSize()
+            // Names the Space while there is room, and is cut short before
+            // the address field gives up its minimum.
+            .layoutPriority(1)
         }
         .padding(.leading, BrowserQuickWindowLayout.windowControlClearance)
         .padding(.trailing, BrowserQuickWindowLayout.horizontalPadding)

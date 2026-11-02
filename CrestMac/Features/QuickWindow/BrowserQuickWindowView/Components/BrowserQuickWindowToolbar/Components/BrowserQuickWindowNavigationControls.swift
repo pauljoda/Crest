@@ -5,7 +5,7 @@ import SwiftUI
 struct BrowserQuickWindowNavigationControls: View {
     // MARK: - Static Variables
 
-    private static let metrics = BrowserSidebarNavigationControlMetrics.pointer
+    private static let metrics = BrowserSidebarNavigationControlMetrics.quickWindow
 
     // MARK: - Variables
 
