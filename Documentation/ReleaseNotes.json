@@ -4925,6 +4925,10 @@
     "chromium-cycle-windows": {
       "category": "fixed",
       "message": "On Mac, Command-` (Move focus to next window) moves between Crest's windows, Quick Windows included, when a Chromium page has focus."
+    },
+    "quick-window-reused-moves-to-you": {
+      "category": "fixed",
+      "message": "On Mac, a link from another app that opens a Quick Window already open for it brings that Quick Window to the window you're in, and Quick Windows opening at a screen's edge no longer open on top of each other."
     }
   }
 }
