@@ -4857,6 +4857,10 @@
     "chromium-new-window-links-keep-request": {
       "category": "fixed",
       "message": "On the Chromium engine, a new-window link in a Peek or Quick Window now loads once, and still tells the site which page it came from."
+    },
+    "chromium-held-window-timeout": {
+      "category": "internal",
+      "message": "A window a link opens on the Chromium engine loads after a few seconds even when Crest never decides where it belongs, instead of staying blank."
     }
   }
 }
