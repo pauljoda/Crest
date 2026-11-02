@@ -161,6 +161,10 @@ class EngineBinding {
   // The page that follows `contents`, for the engine's own hooks, or nullptr
   // when no page does.
   EnginePage* PageFor(content::WebContents* contents);
+  // The page that opened `contents`: its opener's, or for a window a link
+  // opened without one, as target="_blank" does, the page the link was in.
+  // nullptr when no page Crest follows opened it.
+  EnginePage* SourceOf(content::WebContents* contents);
   // The page the platform names `page`, or nullptr.
   EnginePage* Find(const std::string& page);
   // Every page the binding follows that has its WebContents.
@@ -362,6 +366,9 @@ class EngineBinding {
   // The links modified clicks sent to the new tabs the engine opens next,
   // with the pages they were followed in, until the turn ends.
   std::vector<std::pair<std::string, std::string>> routed_tabs_;
+  // The windows links opened without an opener, with the pages the links
+  // were in, until the core is offered them.
+  std::vector<std::pair<base::WeakPtr<content::WebContents>, std::string>> link_sources_;
   std::unique_ptr<EngineProfiles> profiles_;
   std::unique_ptr<EngineBrowsers> browsers_;
   std::unique_ptr<EngineTabGroups> tab_groups_;

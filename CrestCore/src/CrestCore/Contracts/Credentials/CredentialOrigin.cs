@@ -14,6 +14,9 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
 
     public const int MaximumHostLength = 1_024;
 
+    /// The most saved origins one fill question may carry.
+    internal const int MaximumFillCandidates = 1_024;
+
     /// An IP address host must be spelled as a page's origin spells it: IPv6
     /// compressed, with no zone ID, brackets or escapes, and IPv4 in dotted
     /// decimal.
@@ -45,6 +48,19 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
 
     /// This origin, or the refusal of one that is not `IsValid`.
     internal CredentialOrigin Validated() => IsValid ? this : throw new Rejected(new InvalidCredentialOrigin());
+
+    #endregion
+
+    #region Actions - Filling
+
+    /// Whether a password saved for this origin fills a page at `page`: the
+    /// same scheme, port and host, with an IP address host read as a page
+    /// spells it, since imports before they spelled it so kept `127.1` or a
+    /// long IPv6 address as written.
+    internal bool Fills(CredentialOrigin page) {
+        ArgumentNullException.ThrowIfNull(page);
+        return Scheme == page.Scheme && Port == page.Port && (Host == page.Host || CanonicalHost(Host) == page.Host);
+    }
 
     #endregion
 

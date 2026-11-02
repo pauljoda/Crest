@@ -55,14 +55,14 @@ constexpr size_t kLinkBytes = 8192;
 // The most links staged at once, and how long one waits for its Peek.
 constexpr size_t kStagedLinks = 32;
 constexpr base::TimeDelta kStagedLinkLifetime = base::Seconds(30);
-// The modifier bits Blink records for a trusted click on a link, and those of
-// them that make it a modified click: Command, Option or the middle button.
+// The modifier bits Blink records for a trusted click on a link. Any of them
+// makes it a modified click for the core to decide, Shift included, since it
+// can be the key that opens Peek.
 constexpr uint32_t kLinkCommand = 1;
 constexpr uint32_t kLinkOption = 2;
 constexpr uint32_t kLinkShift = 4;
 constexpr uint32_t kLinkMiddleButton = 8;
-constexpr uint32_t kLinkModified = kLinkCommand | kLinkOption | kLinkMiddleButton;
-constexpr uint32_t kLinkModifiers = kLinkModified | kLinkShift;
+constexpr uint32_t kLinkModifiers = kLinkCommand | kLinkOption | kLinkShift | kLinkMiddleButton;
 
 // How a person followed a link: a trusted top-level click, with the keys and
 // button Blink recorded.
@@ -613,11 +613,11 @@ void EngineBinding::Offer(content::WebContents* contents,
     return;
   }
   std::optional<engine::Guid> source;
-  if (content::RenderFrameHost* opener = contents->GetOpener()) {
-    if (EnginePage* page = PageFor(content::WebContents::FromRenderFrameHost(opener))) {
-      source = page->id();
-    }
+  if (EnginePage* page = SourceOf(contents)) {
+    source = page->id();
   }
+  std::erase_if(link_sources_,
+                [contents](const auto& entry) { return !entry.first || entry.first.get() == contents; });
   const engine::Guid offer = RandomGuid();
   offers_.emplace(GuidText(offer), OfferedPage{.contents = contents->GetWeakPtr(), .profile = profile});
   const GURL url = contents->GetVisibleURL();
@@ -633,7 +633,7 @@ void EngineBinding::Offer(content::WebContents* contents,
 bool EngineBinding::FollowModifiedLink(content::WebContents* contents, content::OpenURLParams& params) {
   EnginePage* page = PageFor(contents);
   if (!page || params.crest_link_modifiers > kLinkModifiers ||
-      !(params.crest_link_modifiers & kLinkModified) || !params.is_renderer_initiated || !params.user_gesture ||
+      !(params.crest_link_modifiers & kLinkModifiers) || !params.is_renderer_initiated || !params.user_gesture ||
       params.triggering_event_info != blink::mojom::TriggeringEventInfo::kFromTrustedEvent ||
       params.started_from_context_menu || params.post_data || !params.url.SchemeIsHTTPOrHTTPS() ||
       params.url.spec().size() > kLinkBytes) {
@@ -732,6 +732,12 @@ bool EngineBinding::KeepsWindowLinkForPeek(content::NavigationHandle& navigation
   EnginePage* source = source_contents && source_contents != contents ? PageFor(source_contents) : nullptr;
   if (!source) {
     return false;
+  }
+  // A window without an opener can't name the page it came from by the time
+  // the core is offered it, so its offer names the page the link was in.
+  if (!contents->GetOpener()) {
+    std::erase_if(link_sources_, [](const auto& entry) { return !entry.first; });
+    link_sources_.emplace_back(contents->GetWeakPtr(), source->key());
   }
   // A new tab a modified click asked for stays a tab.
   const auto routed = std::find(routed_tabs_.begin(), routed_tabs_.end(),
@@ -843,6 +849,18 @@ EnginePage* EngineBinding::PageFor(content::WebContents* contents) {
     }
   }
   return nullptr;
+}
+
+EnginePage* EngineBinding::SourceOf(content::WebContents* contents) {
+  if (!contents) {
+    return nullptr;
+  }
+  if (content::RenderFrameHost* opener = contents->GetOpener()) {
+    return PageFor(content::WebContents::FromRenderFrameHost(opener));
+  }
+  const auto recorded = std::find_if(link_sources_.begin(), link_sources_.end(),
+                                     [contents](const auto& entry) { return entry.first.get() == contents; });
+  return recorded == link_sources_.end() ? nullptr : Find(recorded->second);
 }
 
 std::vector<EnginePage*> EngineBinding::LivePages() {

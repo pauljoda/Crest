@@ -27,7 +27,9 @@ struct BrowserCommandPaletteProviderChips: View {
             }
         }
         .scrollIndicators(.hidden)
-        .frame(height: BrowserCommandPaletteMetrics.providerChipRowHeight)
+        // As tall as its chips, which a larger text size makes taller.
+        .frame(minHeight: BrowserCommandPaletteMetrics.providerChipRowHeight)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Search providers")
         .accessibilityIdentifier("command-palette-provider-chips")

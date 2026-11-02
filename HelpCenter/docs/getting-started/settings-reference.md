@@ -49,7 +49,7 @@ A Space's crest, colors, and sidebar background live on the Space's Appearance p
 
 ## Links
 
-Choose what happens to links from other apps, which Space supplies their signed-in session, and how long Quick Windows remain recoverable. Under Peek, choose whether eligible links from pinned or saved pages open in Peek, which modifier click opens it, and, on Mac, whether to **Drag links to Peek**. Link Routing rules live here too.
+Choose what happens to links from other apps, which Space supplies their signed-in session, and how long Quick Windows remain recoverable. Under Peek, choose whether eligible links from pinned or saved pages open in Peek, which modifier click opens it, and, on Mac, whether to **Drag links to Peek** and **Dim the page behind Peek**. Link Routing rules live here too.
 
 ## Engines
 

@@ -13,9 +13,9 @@ public sealed record RecentTabs(Guid WindowId) : Query<RecentTabList> {
     internal override RecentTabList Answer(CrestApp app) {
         var window = app.Device.Opened(WindowId);
         var session = app.Device.Workspace(window.WorkspaceId).Current;
-        lock (app.Device.Gate)
-            return new(Device.Available(session, window.ShownSpaceId) is { } space
-                ? app.Device.RecentItems(window, space) : []);
+        Guid spaceId;
+        lock (app.Device.Gate) spaceId = window.ShownSpaceId;
+        return new(Device.Available(session, spaceId) is { } space ? app.Device.RecentItems(window, space) : []);
     }
 
     #endregion

@@ -43,63 +43,60 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         XCTAssertEqual(refreshed, [.location])
     }
 
-    /// A page opened from a Quick Window gains the main window's host before
-    /// the Quick Window's host leaves; its request must still be shown, and
-    /// it ends only once no window can show it.
-    func testRequestSurvivesTheOldHostLeavingAfterTheNewOneAttached() {
-        let controller = BrowserPagePermissionController()
+    /// A page no window shows waits for one only as long as the grace: a
+    /// Quick Window's page asking during its first load is shown once the
+    /// window draws, and a page nobody shows ends its request unanswered.
+    func testARequestWaitsForAWindowOnlyAsLongAsTheGrace() {
+        let controller = BrowserPagePermissionController(hostGrace: .milliseconds(100))
         let origin = SiteOrigin(scheme: "https", host: "meet.example", port: 443)
-        let quickWindow = UUID()
-        let mainWindow = UUID()
         var answers: [BrowserSitePermissionPromptResponse?] = []
 
-        controller.request(.microphone, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
-            answers.append($0)
-        }
-        XCTAssertEqual(answers.count, 1, "A page no window shows cannot ask.")
-        XCTAssertNil(answers[0])
-
-        controller.attachHost(quickWindow)
-        controller.request(.microphone, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
-            answers.append($0)
-        }
-        controller.attachHost(mainWindow)
-        controller.detachHost(quickWindow)
-        XCTAssertNotNil(controller.current)
-        XCTAssertEqual(answers.count, 1)
-
-        controller.detachHost(mainWindow)
-        drainMainQueue()
-        XCTAssertNil(controller.current)
-        XCTAssertEqual(answers.count, 2)
-        XCTAssertNil(answers[1])
-    }
-
-    /// The Quick Window's host can leave before the main window's arrives;
-    /// a host arriving within the same main turn keeps the request.
-    func testRequestSurvivesTheOldHostLeavingBeforeTheNewOneAttached() {
-        let controller = BrowserPagePermissionController()
-        let origin = SiteOrigin(scheme: "https", host: "meet.example", port: 443)
-        let quickWindow = UUID()
-        let mainWindow = UUID()
-        var answers: [BrowserSitePermissionPromptResponse?] = []
-
-        controller.attachHost(quickWindow)
         controller.request(.camera, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
             answers.append($0)
         }
+        let quickWindow = UUID()
+        controller.attachHost(quickWindow)
+        waitPast(.milliseconds(150))
+        XCTAssertEqual(controller.current?.permission, .camera)
+        XCTAssertTrue(answers.isEmpty)
+
         controller.detachHost(quickWindow)
+        waitPast(.milliseconds(150))
+        XCTAssertNil(controller.current)
+        XCTAssertEqual(answers.count, 1)
+        XCTAssertNil(answers[0])
+    }
+
+    /// A page moving from a Quick Window into a browser window keeps its
+    /// request whichever window's view arrives first: the new one before the
+    /// old one leaves, or a moment after it.
+    func testARequestSurvivesItsPageChangingWindows() {
+        let controller = BrowserPagePermissionController(hostGrace: .milliseconds(100))
+        let origin = SiteOrigin(scheme: "https", host: "meet.example", port: 443)
+        let (quickWindow, mainWindow, otherWindow) = (UUID(), UUID(), UUID())
+        var answers: [BrowserSitePermissionPromptResponse?] = []
+
+        controller.attachHost(quickWindow)
+        controller.request(.microphone, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
+            answers.append($0)
+        }
         controller.attachHost(mainWindow)
-        drainMainQueue()
-        XCTAssertNotNil(controller.current)
+        controller.detachHost(quickWindow)
+        controller.detachHost(mainWindow)
+        controller.attachHost(otherWindow)
+        waitPast(.milliseconds(150))
+        XCTAssertEqual(controller.current?.permission, .microphone)
         XCTAssertTrue(answers.isEmpty)
     }
 
-    /// Lets work the controller deferred to the next main turn run.
-    private func drainMainQueue() {
-        let drained = expectation(description: "main queue drained")
-        DispatchQueue.main.async { drained.fulfill() }
-        wait(for: [drained], timeout: 1)
+    /// Lets the controller's grace pass on the main actor.
+    private func waitPast(_ duration: Duration) {
+        let passed = expectation(description: "grace passed")
+        Task { @MainActor in
+            try? await Task.sleep(for: duration)
+            passed.fulfill()
+        }
+        wait(for: [passed], timeout: 5)
     }
 
     /// Answering the first of two queued requests answers only it; the next
