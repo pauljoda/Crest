@@ -474,5 +474,13 @@
   "chrome/browser/extensions/api/developer_private/extension_info_generator.cc": {
     "before": "7e7a7df6ab010a60b0eeae22625278e538b046680b8ee9e687419cdc6c480a6a",
     "after": "c44a31f08b48c7292643f8dd39a4543e77347ce12623fda16d26a117788ea7d7"
+  },
+  "chrome/browser/extensions/api/extension_action/extension_action_api.cc": {
+    "before": "f14ef32a347d0f29efcc8c1f9c56e0d821810c2db20c3748f7b37fced40b69aa",
+    "after": "9a2e3e6d9800b70492a02c6280de093be994e6dbb46fc048c86d4e32053d0a7d"
+  },
+  "chrome/browser/extensions/extension_tab_util.cc": {
+    "before": "33fd97e60845e9fbbef192e04e874fe115a7f07d7fcfba0e29e7fd53c8907815",
+    "after": "e999f9149b4cd90dc9943afb6656d82a6844bd4e06adb15028724af25108f0f4"
   }
 }
