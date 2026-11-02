@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xf4, 0xdf, 0x67, 0x27, 0xf8, 0xeb, 0x4b, 0xd9, 0x53, 0x9b, 0x99, 0xd2, 0x81, 0xef, 0x20, 0x1c, 0xf8, 0x0a, 0xf6, 0x6a, 0xe4, 0x6b, 0xcf, 0x51, 0xb8, 0x82, 0x9f, 0xee, 0xa0, 0xc9, 0x9e, 0x26
+        0xc2, 0x31, 0xc6, 0x85, 0xd8, 0x4b, 0xcf, 0x29, 0xc5, 0x40, 0x37, 0x44, 0xb5, 0x7f, 0xd2, 0xa2, 0xa4, 0x51, 0x58, 0x37, 0x9a, 0x72, 0x21, 0x3b, 0xa9, 0xc3, 0xd5, 0x17, 0xca, 0x16, 0xf4, 0x73
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -9771,12 +9771,25 @@ extension ForgetPaletteChoices {
     init(from reader: inout WireReader) throws(WireError) {
         let windowID = try reader.readUUID()
         let row = try PaletteRow.Seed(from: &reader)
-        self.init(windowID: windowID, row: row)
+        let spaceID: UUID?
+        if try reader.readPresence() {
+            let spaceIDValue = try reader.readUUID()
+            spaceID = spaceIDValue
+        } else {
+            spaceID = nil
+        }
+        self.init(windowID: windowID, row: row, spaceID: spaceID)
     }
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(windowID)
         row.encode(into: &writer)
+        if let present0 = spaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -12186,6 +12199,7 @@ extension LinkPreferences {
         let opensPeekAutomatically = try reader.readBool()
         let peekModifier = try LinkPeekModifier(from: &reader)
         let dragsLinksToPeek = try reader.readBool()
+        let dimsPageBehindPeek = try reader.readBool()
         let archivePolicy = try QuickWindowArchivePolicy(from: &reader)
         let remembersSpaceBySite = try reader.readBool()
         let routesCount = try reader.readCount()
@@ -12202,7 +12216,7 @@ extension LinkPreferences {
             let rememberedSitesElement = try RememberedSite(from: &reader)
             rememberedSites.append(rememberedSitesElement)
         }
-        self.init(destination: destination, destinationSpaceID: destinationSpaceID, focusesNewTabs: focusesNewTabs, followsMovedTabs: followsMovedTabs, opensPeekAutomatically: opensPeekAutomatically, peekModifier: peekModifier, dragsLinksToPeek: dragsLinksToPeek, archivePolicy: archivePolicy, remembersSpaceBySite: remembersSpaceBySite, routes: routes, rememberedSites: rememberedSites)
+        self.init(destination: destination, destinationSpaceID: destinationSpaceID, focusesNewTabs: focusesNewTabs, followsMovedTabs: followsMovedTabs, opensPeekAutomatically: opensPeekAutomatically, peekModifier: peekModifier, dragsLinksToPeek: dragsLinksToPeek, dimsPageBehindPeek: dimsPageBehindPeek, archivePolicy: archivePolicy, remembersSpaceBySite: remembersSpaceBySite, routes: routes, rememberedSites: rememberedSites)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -12218,6 +12232,7 @@ extension LinkPreferences {
         writer.writeBool(opensPeekAutomatically)
         peekModifier.encode(into: &writer)
         writer.writeBool(dragsLinksToPeek)
+        writer.writeBool(dimsPageBehindPeek)
         archivePolicy.encode(into: &writer)
         writer.writeBool(remembersSpaceBySite)
         writer.writeCount(routes.count)
@@ -16075,7 +16090,14 @@ extension PaletteSuggestions {
         } else {
             pasteboard = nil
         }
-        self.init(windowID: windowID, text: text, commands: commands, settingsPages: settingsPages, remote: remote, provider: provider, scope: scope, allowsCompletion: allowsCompletion, pasteboard: pasteboard)
+        let spaceID: UUID?
+        if try reader.readPresence() {
+            let spaceIDValue = try reader.readUUID()
+            spaceID = spaceIDValue
+        } else {
+            spaceID = nil
+        }
+        self.init(windowID: windowID, text: text, commands: commands, settingsPages: settingsPages, remote: remote, provider: provider, scope: scope, allowsCompletion: allowsCompletion, pasteboard: pasteboard, spaceID: spaceID)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -16109,6 +16131,12 @@ extension PaletteSuggestions {
         if let present0 = pasteboard {
             writer.writePresence(true)
             writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = spaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
         } else {
             writer.writePresence(false)
         }
@@ -17217,13 +17245,26 @@ extension RecordPaletteChoice {
         let windowID = try reader.readUUID()
         let text = try reader.readString()
         let row = try PaletteRow.Seed(from: &reader)
-        self.init(windowID: windowID, text: text, row: row)
+        let spaceID: UUID?
+        if try reader.readPresence() {
+            let spaceIDValue = try reader.readUUID()
+            spaceID = spaceIDValue
+        } else {
+            spaceID = nil
+        }
+        self.init(windowID: windowID, text: text, row: row, spaceID: spaceID)
     }
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(windowID)
         writer.writeString(text)
         row.encode(into: &writer)
+        if let present0 = spaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 
     func encodeIntent(into writer: inout WireWriter) {

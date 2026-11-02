@@ -13,8 +13,12 @@ struct BrowserQuickWindowAddressControl: View {
     @Binding var addressText: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
+    let commandSurfaceNamespace: Namespace.ID
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
 
     var body: some View {
         HStack(spacing: 7) {
@@ -23,18 +27,14 @@ struct BrowserQuickWindowAddressControl: View {
                 spaces: model.availableSpaceModels.map(\.identity),
                 selectSpace: model.selectSpace
             )
-            Divider().frame(height: 16)
             BrowserQuickWindowAddressSecurityIcon(
                 isSecure: model.page?.live.security.isSecure == true
             )
-            // The Quick Window has no site controls, so its page asks for
-            // permissions from the site's own icon.
-            .pagePermissionPopover(model.page?.sitePermissionRequests)
             BrowserAddressContent(
                 text: $addressText,
                 isEditing: $isAddressEditing,
                 focusRequest: addressFocusRequest,
-                activate: nil,
+                activate: openPalette,
                 editorAccessibilityLabel: "Quick Window address",
                 editorAccessibilityIdentifier: "quick-window-address",
                 summaryAccessibilityIdentifier: "quick-window-address-display",
@@ -43,24 +43,77 @@ struct BrowserQuickWindowAddressControl: View {
                 submit: openAddress
             )
             .padding(.vertical, BrowserQuickWindowLayout.addressVerticalPadding)
-            BrowserQuickWindowAddressTrailingControl(
-                page: model.page,
-                addressText: $addressText,
-                isAddressEditing: isAddressEditing,
-                reloadOrStop: reloadOrStop
-            )
+            HStack(spacing: BrowserQuickWindowLayout.trailingControlSpacing) {
+                BrowserQuickWindowAddressTrailingControl(
+                    page: model.page,
+                    addressText: $addressText,
+                    isAddressEditing: isAddressEditing,
+                    reloadOrStop: reloadOrStop
+                )
+                if let siteControl {
+                    BrowserSiteControlButton(configuration: siteControl)
+                }
+            }
         }
         .browserAddressFieldSurface(
             leadingPadding: BrowserQuickWindowLayout.sourceChipLeadingInset,
             progress: model.page?.estimatedProgress ?? 0,
             isLoading: model.page?.live.isLoading == true,
-            isEditing: isAddressEditing
+            isEditing: isAddressEditing,
+            isGlass: true
         )
         .coordinateSpace(Self.field)
+        .anchorPreference(key: BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
+        .background { commandPaletteAnchor }
+        // The palette grows out of the field and its input line takes the
+        // field's place until it closes.
+        .animation(commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)) {
+            $0.opacity(isPaletteShown ? 0 : 1)
+        }
+        .allowsHitTesting(!isPaletteShown)
+        .accessibilityHidden(isPaletteShown)
         .frame(
             minWidth: BrowserQuickWindowLayout.addressMinimumWidth,
             maxWidth: .infinity
         )
+    }
+
+    /// The page's Site Controls, as a browser window's address field offers
+    /// them: its site settings, permission requests and extensions.
+    private var siteControl: BrowserSiteControlConfiguration? {
+        guard let page = model.page, page.live.displayURL != nil, let space = model.spaceModel,
+            let pages = model.pages
+        else { return nil }
+        return BrowserSiteControlConfiguration(
+            page: page, space: space, selectedTabID: nil, permissionCenter: pages.permissionCenter,
+            presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
+    }
+
+    /// Whether the palette shows over the field, which needs the Quick
+    /// Window's Space, as the palette's layer does.
+    private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
+
+    /// The field's frame, carrying the palette's identity while the field
+    /// holds it, so the palette's glass grows out of the field's, as the
+    /// sidebar's field does with a browser window's palette.
+    @ViewBuilder
+    private var commandPaletteAnchor: some View {
+        if commandPaletteHandoff.fieldHoldsMorph, let space = model.spaceModel {
+            Color.clear.matchedGeometryEffect(
+                id: BrowserCommandSurfaceMorph.commandPalette(spaceID: space.id),
+                in: commandSurfaceNamespace,
+                properties: .frame,
+                anchor: .center,
+                isSource: true
+            )
+        }
+    }
+
+    /// Opens the palette over the field, starting at the page's address;
+    /// without one the field edits in place.
+    private var openPalette: (() -> Void)? {
+        guard let chrome else { return nil }
+        return { [model] in chrome.openLocation(model.address) }
     }
 
     // MARK: - Actions - Page

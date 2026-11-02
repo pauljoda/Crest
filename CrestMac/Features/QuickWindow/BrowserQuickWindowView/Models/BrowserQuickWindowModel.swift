@@ -168,25 +168,27 @@ final class BrowserQuickWindowModel {
         pageLease?.setActive(isActive)
     }
 
-    func open(_ url: URL, isActive: Bool) {
+    /// Opens `url` in the Quick Window's page, answering whether it did.
+    @discardableResult
+    func open(_ url: URL, isActive: Bool) -> Bool {
         guard isCurrentRequest,
             let space = spaceModel,
             BrowserSpaceRuntimeAssignment(space: space)
                 == selectedAssignment,
             !spaceAccess.isLocked(space)
-        else { return }
+        else { return false }
         activityClock.recordActivity(restartsTimerImmediately: true)
         guard
             revisePresentedRequest(
                 url: url,
                 assignment: selectedAssignment
             )
-        else { return }
+        else { return false }
         if let page {
             page.corePage.load(url)
-            return
+            return true
         }
-        guard let pages, let leaseSpace else { return }
+        guard let pages, let leaseSpace else { return false }
         pageLease = pages.makeTransientPageLease(
             url: url,
             in: leaseSpace,
@@ -196,6 +198,7 @@ final class BrowserQuickWindowModel {
             forgetReleasedSnapshot()
         }
         pageLease?.setActive(isActive)
+        return pageLease != nil
     }
 
     /// Moves the Quick Window to the Space `assignment` names, while that

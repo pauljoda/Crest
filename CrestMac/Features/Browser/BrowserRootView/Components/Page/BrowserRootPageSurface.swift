@@ -76,10 +76,15 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         let presentation = pageSurfacePresentation
         return surface(presentation)
             // Every edge of the window's frame around this Space's pages moves
-            // the window, except where Peek covers it.
+            // the window.
             .overlay { BrowserPageFrameTitleBarSurface(docked: model.sidebarPresentation.reservesSidebarWidth) }
             .overlay {
-                BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
+                BrowserRootPeekLayer(
+                    model: model,
+                    transientBrowsing: transientBrowsing,
+                    space: space,
+                    docked: model.sidebarPresentation.reservesSidebarWidth
+                )
             }
             .environment(\.browserPagePresentationWindowID, model.windowState?.id)
             .environment(\.spaceContentIsInteractive, isInteractive)

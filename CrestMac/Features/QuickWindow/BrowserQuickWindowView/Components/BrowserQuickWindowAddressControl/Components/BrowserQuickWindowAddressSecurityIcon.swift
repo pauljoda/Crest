@@ -1,13 +1,16 @@
 import SwiftUI
 
+/// The lock before a secure page's address; nothing for any other.
 struct BrowserQuickWindowAddressSecurityIcon: View {
     let isSecure: Bool
 
     var body: some View {
-        Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
-            .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
-            .accessibilityHidden(true)
+        if isSecure {
+            Image(systemName: "lock.fill")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
     }
 }
 
