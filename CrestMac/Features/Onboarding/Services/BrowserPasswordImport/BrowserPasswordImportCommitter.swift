@@ -4,13 +4,16 @@ import Foundation
 /// The core says which Spaces each password goes to, leaving out Spaces that
 /// are gone or locked, and what each account means against the passwords a
 /// Space already keeps; a Space keeps its saved password for an account it
-/// already has. This writes each Space's Keychain inventory.
+/// already has. This writes each Space's Keychain inventory. When a Space's
+/// passwords can't be read or written, the ones it would have taken count as
+/// unsaved: all of them, when its review can't be made.
 @MainActor
 enum BrowserPasswordImportCommitter {
     // MARK: - Actions - Importing
 
     /// Imports `passwords` for the review setup holds over `browser`'s
-    /// workspace, answering how many each Space took and how many none did.
+    /// workspace, answering how many the Spaces took, how many none did, and
+    /// how many could not be saved.
     static func commit(
         _ passwords: [BrowserImportedPassword],
         browser: BrowserStore
@@ -22,7 +25,7 @@ enum BrowserPasswordImportCommitter {
                 ImportPasswordDestinations(
                     workspaceID: browser.family.workspaceID, passwords: passwords.map(\.routingSource)))
         } catch {
-            return BrowserPasswordImportResult(importedCount: 0, skippedCount: passwords.count)
+            return BrowserPasswordImportResult(importedCount: 0, skippedCount: 0, unsavedCount: passwords.count)
         }
         var credentialsBySpace: [UUID: [ImportedCredential]] = [:]
         var skippedCount = 0
@@ -40,11 +43,13 @@ enum BrowserPasswordImportCommitter {
         }
 
         var importedCount = 0
+        var unsavedCount = 0
         for (spaceID, credentials) in credentialsBySpace {
             guard let space = browser.spaceModel(spaceID) else {
                 skippedCount += credentials.count
                 continue
             }
+            var taking = credentials.count
             do {
                 let existing = try await browser.credentialInventory(in: spaceID)
                 let plan = try browser.core.query(
@@ -56,16 +61,18 @@ enum BrowserPasswordImportCommitter {
                     synchronizesWithICloud: space.settings.credentialPreferences.syncsCrestPasswordsWithICloud
                 )
                 let resolution = try review.resolvedInventory()
-                if resolution.summary.acceptedCount > 0 {
+                skippedCount += resolution.summary.skippedCount + resolution.summary.rejectedCount
+                taking = resolution.summary.acceptedCount
+                if taking > 0 {
                     try await browser.replaceCredentialInventory(resolution.credentials, in: spaceID)
                 }
-                importedCount += resolution.summary.acceptedCount
-                skippedCount += resolution.summary.skippedCount + resolution.summary.rejectedCount
+                importedCount += taking
             } catch {
-                skippedCount += credentials.count
+                unsavedCount += taking
             }
         }
-        return BrowserPasswordImportResult(importedCount: importedCount, skippedCount: skippedCount)
+        return BrowserPasswordImportResult(
+            importedCount: importedCount, skippedCount: skippedCount, unsavedCount: unsavedCount)
     }
 }
 

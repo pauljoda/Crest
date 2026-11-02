@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x7c, 0xd7, 0x6f, 0xb8, 0x0a, 0xb7, 0x77, 0x07, 0x54, 0xf7, 0x9b, 0x22, 0x45, 0xee, 0x9f, 0x36, 0x0c, 0xa7, 0x45, 0xc3, 0xc2, 0x53, 0x5f, 0x8a, 0x9a, 0x0b, 0xcd, 0x54, 0xbf, 0xf4, 0xf7, 0x07
+        0x53, 0x9d, 0xea, 0x0f, 0x2b, 0xc1, 0xb9, 0xd0, 0x9d, 0xba, 0x40, 0x1a, 0xa4, 0x8d, 0x35, 0xd9, 0x74, 0x97, 0x51, 0x8f, 0x62, 0x9b, 0x4d, 0x6f, 0xe2, 0x1a, 0x81, 0xfd, 0xbf, 0xfb, 0x8a, 0xfb
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -9331,11 +9331,13 @@ extension FinishDownload {
 extension FinishImportCommit {
     init(from reader: inout WireReader) throws(WireError) {
         let passwordCount = try reader.readInt()
-        self.init(passwordCount: passwordCount)
+        let unsavedPasswordCount = try reader.readInt()
+        self.init(passwordCount: passwordCount, unsavedPasswordCount: unsavedPasswordCount)
     }
 
     func encode(into writer: inout WireWriter) {
         writer.writeInt(passwordCount)
+        writer.writeInt(unsavedPasswordCount)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -20898,7 +20900,8 @@ extension SetupSummary {
         let tabCount = try reader.readInt()
         let passwordCount = try reader.readInt()
         let spaceCount = try reader.readInt()
-        self.init(isImport: isImport, tabCount: tabCount, passwordCount: passwordCount, spaceCount: spaceCount)
+        let unsavedPasswordCount = try reader.readInt()
+        self.init(isImport: isImport, tabCount: tabCount, passwordCount: passwordCount, spaceCount: spaceCount, unsavedPasswordCount: unsavedPasswordCount)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -20906,6 +20909,7 @@ extension SetupSummary {
         writer.writeInt(tabCount)
         writer.writeInt(passwordCount)
         writer.writeInt(spaceCount)
+        writer.writeInt(unsavedPasswordCount)
     }
 }
 
