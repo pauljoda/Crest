@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.124</title>
-            <pubDate>Sun, 01 Nov 2026 21:53:55 +0000</pubDate>
+            <title>0.8.125</title>
+            <pubDate>Mon, 02 Nov 2026 01:10:05 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1457</sparkle:version>
-            <sparkle:shortVersionString>0.8.124</sparkle:shortVersionString>
+            <sparkle:version>1459</sparkle:version>
+            <sparkle:shortVersionString>0.8.125</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Switching between Spaces of one group on Mac no longer changes how the pinned tabs they share look partway through: tabs that aren't loaded stay faded, and the pins keep their background.
+- Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/3584871dee472c3fef8c1cabffa6b5ce301264d7...81ddde63c5f7f585870ff86aaa215b1a59af61e1) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.124-2026-11-01-1457-r457.1/Installer-Crest-0.8.124-development-2026-11-01-81ddde6-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/81ddde63c5f7f585870ff86aaa215b1a59af61e1...11eee9aa73eb43cd240f8c625dcb5c2d4dccdd6b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.125-2026-11-02-1459-r459.1/Installer-Crest-0.8.125-development-2026-11-02-11eee9a-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.124-2026-11-01-1457-r457.1/Installer-Crest-0.8.124-development-2026-11-01-81ddde6-arm64.dmg" length="216638106" type="application/octet-stream" sparkle:edSignature="ly1sjwGv6/0k4LE3Gnj3qiwPby/FccFNfFuqVEoFwitvnZzNwa78boiDk+JftEHaoos9qYLnYESheaMwSyDjCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.125-2026-11-02-1459-r459.1/Installer-Crest-0.8.125-development-2026-11-02-11eee9a-arm64.dmg" length="216649883" type="application/octet-stream" sparkle:edSignature="rtfbmqLwd8Pk8mPGT2LzwtiISn8fhwjVjuJosMgcuw/+JZzklqJsjpQIpZEqEXBJFHvQlRyjDL+igT75ZJg3CQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: mBaHDW69qnYx87U7B/N4ipa3AouWlRZIcjNLoZ31Qy5tiLJLh/5hzta4edaRJVaH5sjIT+9ZAvSLGuxfQceZBQ==
-length: 4086
+edSignature: NaEpjzXa7c+iHg4DHOOo9FQPIm6gb4W3N7vvtyuJanvhEIxUBTX9z0H5QIgIoEOF4Z+QwJA66PLYt4m6C28bDg==
+length: 4015
 -->
