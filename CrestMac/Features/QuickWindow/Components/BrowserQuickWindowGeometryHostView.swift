@@ -9,12 +9,23 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     /// Where the last size the person gave a Quick Window is kept, beside the
     /// window's other appearance choices and per launch.
     private static let rememberedSizeKey = "crest.quick-window.size"
+    /// What the view hears from the window it placed, and what each tells it.
+    private static let observations: [(name: Notification.Name, selector: Selector)] = [
+        (NSWindow.didResizeNotification, #selector(BrowserQuickWindowGeometryHostView.rememberSize)),
+        (NSWindow.didEndLiveResizeNotification, #selector(BrowserQuickWindowGeometryHostView.rememberSize)),
+        (NSWindow.willEnterFullScreenNotification, #selector(BrowserQuickWindowGeometryHostView.beginFullScreenChange)),
+        (NSWindow.willExitFullScreenNotification, #selector(BrowserQuickWindowGeometryHostView.beginFullScreenChange)),
+        (NSWindow.didEnterFullScreenNotification, #selector(BrowserQuickWindowGeometryHostView.endFullScreenChange)),
+        (NSWindow.didExitFullScreenNotification, #selector(BrowserQuickWindowGeometryHostView.endFullScreenChange)),
+    ]
 
     // MARK: - Variables
 
     private weak var pagePoolRegistry: BrowserPagePoolRegistry?
     private var targetWindowID: UUID?
     private weak var positionedWindow: NSWindow?
+    /// The window whose resizes the view remembers.
+    private weak var observedWindow: NSWindow?
     /// Whether the window is entering or leaving full screen, whose frames
     /// are AppKit's rather than a size the person chose.
     private var isChangingFullScreen = false
@@ -37,14 +48,18 @@ final class BrowserQuickWindowGeometryHostView: NSView {
 
     // MARK: - Actions - Attachment
 
+    /// Stops remembering the window's sizes only when the view leaves it,
+    /// not when it moves within it.
     override func viewWillMove(toWindow newWindow: NSWindow?) {
-        NotificationCenter.default.removeObserver(self)
-        isChangingFullScreen = false
+        if newWindow !== observedWindow { stopObservingSize() }
         super.viewWillMove(toWindow: newWindow)
     }
 
+    /// Back in the window it already placed, the view goes on remembering its
+    /// sizes without placing it again.
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if let window, window === positionedWindow { observeSize(of: window) }
         scheduleGeometryUpdate()
     }
 
@@ -188,16 +203,23 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     }
 
     private func observeSize(of window: NSWindow) {
-        let center = NotificationCenter.default
-        for name in [NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification] {
-            center.addObserver(self, selector: #selector(rememberSize), name: name, object: window)
+        guard observedWindow !== window else { return }
+        stopObservingSize()
+        observedWindow = window
+        for observation in Self.observations {
+            NotificationCenter.default.addObserver(
+                self, selector: observation.selector, name: observation.name, object: window)
         }
-        for name in [NSWindow.willEnterFullScreenNotification, NSWindow.willExitFullScreenNotification] {
-            center.addObserver(self, selector: #selector(beginFullScreenChange), name: name, object: window)
+    }
+
+    private func stopObservingSize() {
+        if let observedWindow {
+            for observation in Self.observations {
+                NotificationCenter.default.removeObserver(self, name: observation.name, object: observedWindow)
+            }
         }
-        for name in [NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification] {
-            center.addObserver(self, selector: #selector(endFullScreenChange), name: name, object: window)
-        }
+        observedWindow = nil
+        isChangingFullScreen = false
     }
 
     /// Keeps the window's size once a resize settles. A live resize is kept
