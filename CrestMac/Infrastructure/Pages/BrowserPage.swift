@@ -514,7 +514,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     private func tearDown() {
-        sitePermissionRequests.setPresentationAvailable(false)
+        sitePermissionRequests.endPresentation()
         translation.reset()
         fileUploadAccess.invalidate()
         userActivityHandler = nil
