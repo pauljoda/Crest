@@ -4901,6 +4901,10 @@
     "extension-icon-click-closes-popup": {
       "category": "fixed",
       "message": "Clicking an extension's icon while its popup is open now closes the popup instead of opening it again."
+    },
+    "sidebar-new-tab-row-height": {
+      "category": "fixed",
+      "message": "On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them."
     }
   }
 }
