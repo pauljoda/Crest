@@ -20,7 +20,8 @@ struct BrowserMacCommand {
     static let openFile = BrowserMacCommand(
         .openFile, isAvailable: { $0.supportsEngineCapability(.localFiles) },
         run: { $0.openFile() })
-    static let newQuickWindow = BrowserMacCommand(.newQuickWindow) { $0.openQuickWindow() }
+    static let newQuickWindow = BrowserMacCommand(
+        .newQuickWindow, withoutWindow: .opensQuickWindowBesideKeyQuickWindow, run: { $0.openQuickWindow() })
     static let newPrivateWindow = BrowserMacCommand(
         .newPrivateWindow, withoutWindow: .always { $0.openPrivateWindow() },
         run: { $0.openPrivateWindow() })
@@ -264,6 +265,9 @@ struct BrowserMacWindowlessCommand {
     /// Closes the key window when it is one the shell opened.
     static let closesShellWindow = BrowserMacWindowlessCommand(
         isAvailable: { $0.isShellWindowKey }, run: { _ in NSApp.keyWindow?.performClose(nil) })
+    /// Opens an empty Quick Window beside the key one, in its Space.
+    static let opensQuickWindowBesideKeyQuickWindow = BrowserMacWindowlessCommand(
+        isAvailable: { $0.isQuickWindowKey }, run: { $0.openQuickWindowBesideKeyQuickWindow() })
 
     // MARK: - Variables
 

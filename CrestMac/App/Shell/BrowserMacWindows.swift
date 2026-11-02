@@ -376,6 +376,17 @@ final class BrowserMacWindows {
         return request.id
     }
 
+    /// Opens an empty Quick Window beside the key one, in its Space, which
+    /// opens its pages in the same browser window. The person asked for it,
+    /// so a Quick Window never needs a browser window in front to open another.
+    func openQuickWindowBesideKeyQuickWindow() {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID]
+        else { return }
+        let request = quickWindow.request.value
+        openQuickWindow(.empty(spaceAssignment: request.assignment, targetWindowID: request.targetWindowID))
+    }
+
     /// The Quick Window named `id`, while it is open.
     func quickWindow(_ id: UUID) -> NSWindow? {
         controller(.quick, id: id)?.window

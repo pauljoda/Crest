@@ -14,11 +14,13 @@ struct BrowserPageContextMenuAction {
         case peek
         case split
         case space(UUID)
+        case quickWindow
     }
 
-    /// Runs the row on the page, answering whether it did.
+    /// Runs the row on the page, answering whether it did. A page without a
+    /// tab, as a Quick Window or Peek shows, has no navigation context.
     typealias Perform =
-        @MainActor (BrowserPage, BrowserPageNavigationContext, BrowserTabRuntimeAssignment) -> Bool
+        @MainActor (BrowserPage, BrowserPageNavigationContext?, BrowserTabRuntimeAssignment?) -> Bool
 
     // MARK: - Variables
 
@@ -62,9 +64,21 @@ struct BrowserPageContextMenuAction {
             kind: .space(id), title: space.settings.name, symbolName: "square.stack.3d.up", linkURL: linkURL,
             selectionText: nil, space: space.identity
         ) { page, _, source in
-            guard let space = page.linkDestinationHost.otherSpaces(from: source).first(where: { $0.id == id })
+            guard let source,
+                let space = page.linkDestinationHost.otherSpaces(from: source).first(where: { $0.id == id })
             else { return false }
             return page.openInQuickWindow(linkURL, in: space)
+        }
+    }
+
+    /// Opens `linkURL` in a Quick Window of its own, in the page's Space, from
+    /// a page without a tab, whose new-tab rows have no tab to open after.
+    static func quickWindow(_ linkURL: URL) -> BrowserPageContextMenuAction {
+        BrowserPageContextMenuAction(
+            kind: .quickWindow, title: String(localized: "Open Link in New Quick Window"),
+            symbolName: "macwindow.badge.plus", linkURL: linkURL, selectionText: nil
+        ) { page, _, _ in
+            page.openInQuickWindow(linkURL)
         }
     }
 
@@ -74,6 +88,7 @@ struct BrowserPageContextMenuAction {
             kind: .peek, title: String(localized: "Open Link in Peek"), symbolName: "rectangle.on.rectangle",
             linkURL: linkURL, selectionText: nil
         ) { page, context, _ in
+            guard let context else { return false }
             page.openPeek(
                 BrowserPeekRequest(
                     url: linkURL, sourceTabID: context.tabID, sourceTitle: context.title,
@@ -99,7 +114,8 @@ struct BrowserPageContextMenuAction {
             kind: .search, title: String(localized: "Search with \(engineTitle)"), symbolName: "magnifyingglass",
             linkURL: nil, selectionText: selectionText
         ) { page, context, source in
-            guard let search = page.linkDestinationHost.selectionSearch(for: selectionText, from: source)
+            guard let context, let source,
+                let search = page.linkDestinationHost.selectionSearch(for: selectionText, from: source)
             else { return false }
             return page.linkDestinationHost.openLink(search.url, from: source, in: context.assignment)
         }
@@ -201,7 +217,10 @@ struct BrowserPageContextMenu {
 
 extension BrowserPage: BrowserPageContextMenuHost {
     func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction] {
-        guard let context = navigationContext else { return [] }
+        guard let context = navigationContext else {
+            guard let linkURL, ExternalWebLink.accepts(linkURL) else { return [] }
+            return [.quickWindow(linkURL)]
+        }
         let source = BrowserTabRuntimeAssignment(
             tabID: context.tabID, spaceID: context.spaceID,
             profileID: context.assignment.profileID)
@@ -232,12 +251,12 @@ extension BrowserPage: BrowserPageContextMenuHost {
     func performContextMenuAction(_ action: BrowserPageContextMenuAction) -> Bool {
         guard
             contextMenuActions(linkURL: action.linkURL, selectionText: action.selectionText)
-                .contains(where: { $0.kind == action.kind }),
-            let context = navigationContext
+                .contains(where: { $0.kind == action.kind })
         else { return false }
-        let source = BrowserTabRuntimeAssignment(
-            tabID: context.tabID, spaceID: context.spaceID,
-            profileID: context.assignment.profileID)
+        let context = navigationContext
+        let source = context.map {
+            BrowserTabRuntimeAssignment(tabID: $0.tabID, spaceID: $0.spaceID, profileID: $0.assignment.profileID)
+        }
         return action.perform(self, context, source)
     }
 }
