@@ -161,7 +161,6 @@ private struct BrowserFolderMenuButton: View {
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
-        .crestMenuActionLabelStyle()
         .tint(.primary)
         .foregroundStyle(.secondary)
         .opacity(isRevealed ? 1 : 0)

@@ -4881,6 +4881,10 @@
     "groups-sync-review-fixes": {
       "category": "internal",
       "message": "A group emptied on another device now goes on every device, and only groups the person removed sync as deleted."
+    },
+    "group-menu-icons": {
+      "category": "internal",
+      "message": "Groups in the Add to Group and Move to Group menus show their icon, and one rule decides where a group may sit."
     }
   }
 }

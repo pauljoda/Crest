@@ -121,7 +121,11 @@ struct BrowserTabOrganizationMenuContent: View {
                                     [tab.id], matching: sourceAssignment, into: group.id, location: .current)
                             }
                         } label: {
-                            Text(verbatim: group.shownTitle)
+                            Label {
+                                Text(verbatim: group.shownTitle)
+                            } icon: {
+                                BrowserFolderMenuIcon(systemName: "rectangle.stack.fill", color: group.displayColor)
+                            }
                         }
                         .disabled(group.id == tab.folderID)
                     }

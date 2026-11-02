@@ -38,11 +38,14 @@ struct BrowserTabBatchMenu: View {
         // A group holds only tabs, so a selection with folders has none to offer.
         if request.folderIDs.isEmpty {
             Menu("Move to Group", systemImage: "rectangle.stack.badge.plus") {
-                action("New Group", browser.filingInNewFolder(request, in: .current, isGroup: true))
+                action(
+                    "New Group", systemImage: "rectangle.stack.badge.plus",
+                    browser.filingInNewFolder(request, in: .current, isGroup: true))
                 ForEach(groupChoices) { choice in
-                    action(named: choice.pathTitle, browser.filing(request, .current, folder: choice.id))
+                    action(group: choice.folder, browser.filing(request, .current, folder: choice.id))
                 }
             }
+            .crestMenuActionLabelStyle()
         }
         Menu("Move to Folder", systemImage: "folder") {
             action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
@@ -147,6 +150,20 @@ struct BrowserTabBatchMenu: View {
     private func action(named title: String, _ batch: BrowserTabBatch) -> some View {
         Button(title) { actions.perform(batch, for: request) }
             .disabled(!actions.isAvailable(batch))
+    }
+
+    /// A menu item titled by a group's own name, beside its icon in its color.
+    private func action(group: FolderStateModel, _ batch: BrowserTabBatch) -> some View {
+        Button {
+            actions.perform(batch, for: request)
+        } label: {
+            Label {
+                Text(verbatim: group.shownTitle)
+            } icon: {
+                BrowserFolderMenuIcon(systemName: "rectangle.stack.fill", color: group.displayColor)
+            }
+        }
+        .disabled(!actions.isAvailable(batch))
     }
 
     private func copyLinks() { actions.copyLinks(request) }
