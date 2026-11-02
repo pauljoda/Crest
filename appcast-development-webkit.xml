@@ -6,48 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.131</title>
-            <pubDate>Mon, 02 Nov 2026 15:28:48 +0000</pubDate>
+            <title>0.8.133</title>
+            <pubDate>Mon, 02 Nov 2026 16:32:04 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1466</sparkle:version>
-            <sparkle:shortVersionString>0.8.131</sparkle:shortVersionString>
+            <sparkle:version>1468</sparkle:version>
+            <sparkle:shortVersionString>0.8.133</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 15 user-facing changes.
-
-### New
-
-- On Mac, clicking a Quick Window's address or pressing Command-L opens the command palette right there, starting at the address, with results from the Quick Window's Space. A blank Quick Window opens with it.
-- On iPhone, tapping the address bar opens the command palette from the bar, with its results rising above it and the best match nearest the bar.
-- Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with.
-
-### Improved
-
-- On Mac, the page behind Peek fades darker as Peek opens while the sidebar keeps its brightness. Settings > Links > Dim the page behind Peek turns it off.
-- On Mac, Peek uses more of the page while still floating above it, with a round Close button and pill-shaped Open In, and its controls move with the card as it opens.
-
 ### Fixed
 
-- A site's permission request on Mac stays open when its page moves from a Quick Window into a browser window, and when the site asks before a Quick Window has finished opening.
-- Site Controls and permission requests now stay readable over any page, Space color or surface material.
-- A Quick Window opened beside Split View on Mac no longer opens narrower than its smallest size.
-- A Quick Window on Mac no longer resizes narrower than its toolbar fits, which cut off Open In and slid Back and Forward under the window's buttons.
-- The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar.
-- Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window.
-- On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes.
+- Saved passwords are no longer lost when Crest quits partway through importing or deleting them, or through turning iCloud Keychain on or off for a Space.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/4fb6416c60137403601f8608d7823bf1354c6366...d6ba6dac685f70659fcb17e91e2bb594565d4c6c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.131-2026-11-02-1466-r466.1/Installer-Crest-0.8.131-development-2026-11-02-d6ba6da-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/d6ba6dac685f70659fcb17e91e2bb594565d4c6c...f4694e4e31f751512dcf71ebc0f4bb0de48c2619) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.133-2026-11-02-1468-r468.1/Installer-Crest-0.8.133-development-2026-11-02-f4694e4-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.131-2026-11-02-1466-r466.1/Installer-Crest-0.8.131-development-2026-11-02-d6ba6da-arm64.dmg" length="216752795" type="application/octet-stream" sparkle:edSignature="0u9L/0kyfVYLUNXuaNVHOtzomr0vznbR59iGL6myWMOX0TuFgjCkfms/gxHPnCRLW6wWsRl6ol9d8Znjh/GWDg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.133-2026-11-02-1468-r468.1/Installer-Crest-0.8.133-development-2026-11-02-f4694e4-arm64.dmg" length="216769690" type="application/octet-stream" sparkle:edSignature="I0L20vu+YXCoNZpIyHXkv1K3kJVAeiqfHlQqUVN9ggbiVlzS66IasD/3HLesxC7NGmmW1P33DdxiLQsihunWBQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -79,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: qY81TD2Z9/DiuKdZtqG610khJVcKtqJ08Yljt4Q4cuzrDGJs/MG0WgPACxW9hZnXhlxJoS5yTiiwzuR7j062Ag==
-length: 5692
+edSignature: xwci3NLQfWxkVD4hJzcJcBvgzvUpRjnFHYruFlMfw3+2QvkrRkU+aKZRmshDg/hig7e48lZwJYMD1V1e49C4CA==
+length: 4052
 -->
