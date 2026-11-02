@@ -465,10 +465,9 @@ void EngineBrowsers::Offer(base::WeakPtr<content::WebContents> contents, bool fo
   }
   KeptBrowser* host = HoldingKept(contents.get());
   // A window the engine created for itself has no Crest window until one of
-  // its tabs needs it. A renderer's popup keeps its opener's window instead:
-  // the core opens its tab beside the page that opened it.
-  content::RenderFrameHost* opener = contents->GetOpener();
-  const bool opened_by_page = opener && binding.PageFor(content::WebContents::FromRenderFrameHost(opener));
+  // its tabs needs it. A window a page opened, by script or by a link, keeps
+  // that page's window instead: the core opens its tab beside the page.
+  const bool opened_by_page = binding.SourceOf(contents.get()) != nullptr;
   if (host && host->engine && !host->engine->presented && !opened_by_page) {
     host->engine->presented = true;
     if (EngineBinding::Shell* shell = binding.shell()) {

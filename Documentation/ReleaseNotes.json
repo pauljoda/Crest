@@ -4849,6 +4849,10 @@
     "chromium-shift-click-peek": {
       "category": "fixed",
       "message": "With Shift chosen in Settings > Links > Open Peek with, Shift-click now opens links in Peek on the Chromium engine instead of a new tab."
+    },
+    "chromium-new-window-links-in-peek": {
+      "category": "fixed",
+      "message": "On the Chromium engine, a link that opens a new window now opens in the Peek or Quick Window it was clicked in."
     }
   }
 }

@@ -613,11 +613,11 @@ void EngineBinding::Offer(content::WebContents* contents,
     return;
   }
   std::optional<engine::Guid> source;
-  if (content::RenderFrameHost* opener = contents->GetOpener()) {
-    if (EnginePage* page = PageFor(content::WebContents::FromRenderFrameHost(opener))) {
-      source = page->id();
-    }
+  if (EnginePage* page = SourceOf(contents)) {
+    source = page->id();
   }
+  std::erase_if(link_sources_,
+                [contents](const auto& entry) { return !entry.first || entry.first.get() == contents; });
   const engine::Guid offer = RandomGuid();
   offers_.emplace(GuidText(offer), OfferedPage{.contents = contents->GetWeakPtr(), .profile = profile});
   const GURL url = contents->GetVisibleURL();
@@ -733,6 +733,12 @@ bool EngineBinding::KeepsWindowLinkForPeek(content::NavigationHandle& navigation
   if (!source) {
     return false;
   }
+  // A window without an opener can't name the page it came from by the time
+  // the core is offered it, so its offer names the page the link was in.
+  if (!contents->GetOpener()) {
+    std::erase_if(link_sources_, [](const auto& entry) { return !entry.first; });
+    link_sources_.emplace_back(contents->GetWeakPtr(), source->key());
+  }
   // A new tab a modified click asked for stays a tab.
   const auto routed = std::find(routed_tabs_.begin(), routed_tabs_.end(),
                                 std::make_pair(source->key(), navigation.GetURL().spec()));
@@ -843,6 +849,18 @@ EnginePage* EngineBinding::PageFor(content::WebContents* contents) {
     }
   }
   return nullptr;
+}
+
+EnginePage* EngineBinding::SourceOf(content::WebContents* contents) {
+  if (!contents) {
+    return nullptr;
+  }
+  if (content::RenderFrameHost* opener = contents->GetOpener()) {
+    return PageFor(content::WebContents::FromRenderFrameHost(opener));
+  }
+  const auto recorded = std::find_if(link_sources_.begin(), link_sources_.end(),
+                                     [contents](const auto& entry) { return entry.first.get() == contents; });
+  return recorded == link_sources_.end() ? nullptr : Find(recorded->second);
 }
 
 std::vector<EnginePage*> EngineBinding::LivePages() {
