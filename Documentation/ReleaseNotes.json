@@ -4845,6 +4845,10 @@
     "palette-provider-chips-larger-text": {
       "category": "fixed",
       "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes."
+    },
+    "chromium-shift-click-peek": {
+      "category": "fixed",
+      "message": "With Shift chosen in Settings > Links > Open Peek with, Shift-click now opens links in Peek on the Chromium engine instead of a new tab."
     }
   }
 }

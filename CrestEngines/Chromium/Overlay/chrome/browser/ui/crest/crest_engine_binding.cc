@@ -55,14 +55,14 @@ constexpr size_t kLinkBytes = 8192;
 // The most links staged at once, and how long one waits for its Peek.
 constexpr size_t kStagedLinks = 32;
 constexpr base::TimeDelta kStagedLinkLifetime = base::Seconds(30);
-// The modifier bits Blink records for a trusted click on a link, and those of
-// them that make it a modified click: Command, Option or the middle button.
+// The modifier bits Blink records for a trusted click on a link. Any of them
+// makes it a modified click for the core to decide, Shift included, since it
+// can be the key that opens Peek.
 constexpr uint32_t kLinkCommand = 1;
 constexpr uint32_t kLinkOption = 2;
 constexpr uint32_t kLinkShift = 4;
 constexpr uint32_t kLinkMiddleButton = 8;
-constexpr uint32_t kLinkModified = kLinkCommand | kLinkOption | kLinkMiddleButton;
-constexpr uint32_t kLinkModifiers = kLinkModified | kLinkShift;
+constexpr uint32_t kLinkModifiers = kLinkCommand | kLinkOption | kLinkShift | kLinkMiddleButton;
 
 // How a person followed a link: a trusted top-level click, with the keys and
 // button Blink recorded.
@@ -633,7 +633,7 @@ void EngineBinding::Offer(content::WebContents* contents,
 bool EngineBinding::FollowModifiedLink(content::WebContents* contents, content::OpenURLParams& params) {
   EnginePage* page = PageFor(contents);
   if (!page || params.crest_link_modifiers > kLinkModifiers ||
-      !(params.crest_link_modifiers & kLinkModified) || !params.is_renderer_initiated || !params.user_gesture ||
+      !(params.crest_link_modifiers & kLinkModifiers) || !params.is_renderer_initiated || !params.user_gesture ||
       params.triggering_event_info != blink::mojom::TriggeringEventInfo::kFromTrustedEvent ||
       params.started_from_context_menu || params.post_data || !params.url.SchemeIsHTTPOrHTTPS() ||
       params.url.spec().size() > kLinkBytes) {
