@@ -69,11 +69,13 @@ public sealed class SearchPolicyTests {
     [InlineData("https://localhost/search?q=%s", "Example", "unsafeHost")]
     [InlineData("https://printer.local/search?q=%s", "Example", "unsafeHost")]
     [InlineData("https://192.168.1.1/search?q=%s", "Example", "unsafeHost")]
-    [InlineData("https://example.com/search#q=%s", "Example", "placeholderInFragment")]
+    [InlineData("https://example.com/#query=%s", "Example", null)]
+    [InlineData("https://example.com/search?q=%s", "Example", "placeholderInFragment", "https://example.com/suggest#q=%s")]
     [InlineData("https://example.com/search?Token=secret&q=%s", "Example", "secretInTemplate")]
     [InlineData("https://example.com/search?api%5Fkey=secret&q=%s", "Example", "secretInTemplate")]
-    public void AddedProviderValidationNamesTheRuleThePersonBroke(string template, string name, string? flaw) {
-        var provider = Added(name, template, suggestions: "  ");
+    [InlineData("https://example.com/#query=%s&access_token=secret", "Example", "secretInTemplate")]
+    public void AddedProviderValidationNamesTheRuleThePersonBroke(string template, string name, string? flaw, string suggestions = "  ") {
+        var provider = Added(name, template, suggestions);
         Assert.Equal(SearchEngineFlaw.Named(flaw) is { } expected ? new InvalidSearchEngine(expected) : null, Refusal(Catalog(), provider));
         if (flaw is null) Assert.Equal(Added("Example", template.Trim()), Catalog().Saving(provider).Custom.Single());
     }
