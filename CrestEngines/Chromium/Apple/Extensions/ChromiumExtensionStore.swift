@@ -19,6 +19,9 @@ final class ChromiumExtensionStore {
         let detail: String
         let icon: NSImage?
         let enabled: Bool
+        /// The person may enable, disable, pin or remove it; one a policy
+        /// manages they may not, and the core refuses each change.
+        let changeable: Bool
         let permissions: [String]
         let webStore: Bool
         let options: String
@@ -29,6 +32,7 @@ final class ChromiumExtensionStore {
             detail = item.description
             self.icon = icon
             enabled = item.enabled
+            changeable = item.changeable
             permissions = item.permissions
             webStore = item.fromWebStore
             options = item.optionsURL ?? ""
@@ -256,19 +260,21 @@ final class ChromiumExtensionStore {
         let record = installedRecord(action.id, in: space)
         // The core decides whether the Space's extensions may change: a
         // private window's never do, so only the navigation verbs are offered
-        // from one.
-        let changeable = mayChange(space)
+        // from one. An extension a policy manages offers no change either.
+        let spaceChanges = mayChange(space)
+        let opensSettings = spaceChanges && (record.map { !$0.options.isEmpty && $0.enabled } ?? true)
+        let changeable = spaceChanges && (record?.changeable ?? true)
         if let openSidePanel {
             menu.addItem(handler.item(String(localized: "Open Side Panel")) { openSidePanel() })
             menu.addItem(.separator())
         }
+        if opensSettings {
+            menu.addItem(
+                handler.item(String(localized: "Extension Settings…")) { [weak self] in
+                    self?.command(.options, extensionID: action.id, space: space)
+                })
+        }
         if changeable {
-            if record.map({ !$0.options.isEmpty && $0.enabled }) ?? true {
-                menu.addItem(
-                    handler.item(String(localized: "Extension Settings…")) { [weak self] in
-                        self?.command(.options, extensionID: action.id, space: space)
-                    })
-            }
             menu.addItem(
                 handler.item(
                     action.isPinned
@@ -286,8 +292,8 @@ final class ChromiumExtensionStore {
                         self?.command(record.enabled ? .disable : .enable, extensionID: action.id, space: space)
                     })
             }
-            menu.addItem(.separator())
         }
+        if opensSettings || changeable { menu.addItem(.separator()) }
         menu.addItem(
             handler.item(String(localized: "Manage Extension…")) { [weak self] in
                 self?.command(.details, extensionID: action.id, space: space)

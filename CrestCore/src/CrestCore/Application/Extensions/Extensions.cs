@@ -161,7 +161,7 @@ internal sealed class Extensions(Device device, Engines engines, Prompts prompts
             }
             if (install.Holds(space.ProfileId)
                 || (!first || install.PreApproved) && Has(install.Engine, space.ProfileId, install.ExtensionId)) continue;
-            install.Begin(space.ProfileId);
+            install.Begin(space.Id, space.ProfileId);
             issue(install.Engine, new InstallExtensionPackage(install.Id, space.ProfileId));
             return;
         }
@@ -234,7 +234,7 @@ internal sealed class Extensions(Device device, Engines engines, Prompts prompts
     public void Prune(ChangeFeed changes, Action<Engine, EngineCommand> issue) {
         foreach (var install in installs.Values.ToArray()) {
             var sourceGone = install.InstalledCount == 0 && Reach(install.SpaceId, install.Engine.Kind, out _) is null;
-            var targetGone = install.InstallingProfile is { } profile && device.LockedSpace(profile) is not null;
+            var targetGone = install.InstallingSpaceId is { } target && Reach(target, install.Engine.Kind, out _) is null;
             if (sourceGone || targetGone) End(install, ExtensionInstallFailure.SpaceUnavailable, changes, issue);
         }
     }

@@ -110,4 +110,24 @@ public sealed partial class BrowserContractsTests {
         app.Report(chromium, new ExtensionInstallRequested(late, install, question));
         Assert.Equal(new SettleExtensionInstall(late, Accepted: false, WithholdsSiteAccess: false), binding.Commands[^1]);
     }
+
+    [Fact]
+    public void ACopyEndsWhenTheSpaceItInstallsInBeginsToBeDeleted() {
+        var (app, chromium, binding, workspace, first, second, firstProfile, secondProfile) = ExtensionHost();
+        using var disposal = app;
+        app.Report(chromium, new ExtensionsListed(firstProfile, []));
+        app.Report(chromium, new ExtensionsListed(secondProfile, []));
+        var install = Guid.NewGuid();
+        app.Send(new InstallExtension(install, first, EngineKind.Chromium, "reader", [second], PreApproved: true));
+        app.Report(chromium, new ExtensionDownloaded(install));
+        app.Report(chromium, new ExtensionInstalled(install, firstProfile));
+        Assert.Equal(new InstallExtensionPackage(install, secondProfile), binding.Commands[^1]);
+        app.Drain();
+
+        var changes = app.Send(new BeginDeletingSpace(workspace, Guid.NewGuid(), second, Guid.NewGuid()));
+        Assert.Equal(new EndExtensionInstall(install), binding.Commands[^1]);
+        var ended = Assert.Single(changes.OfType<ExtensionInstallChanged>()).Install;
+        Assert.Equal((ExtensionInstallStage.Failed, ExtensionInstallFailure.SpaceUnavailable, 1),
+            (ended.Stage, ended.Failure, ended.InstalledCount));
+    }
 }

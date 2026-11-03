@@ -29,9 +29,10 @@ internal sealed class ExtensionInstall {
     public bool HasPackage { get; private set; }
     public ExtensionInstallFailure? Failure { get; private set; }
 
-    /// The profile the engine installs the package in now, or null between
-    /// installs, and whether it is the install's first, whose failure ends
-    /// the install.
+    /// The Space the engine installs the package in now and the profile it
+    /// installs in, or null between installs, and whether it is the install's
+    /// first, whose failure ends the install.
+    public Guid? InstallingSpaceId { get; private set; }
     public Guid? InstallingProfile { get; private set; }
     public bool InstallingFirst { get; private set; }
     private bool begun;
@@ -87,8 +88,10 @@ internal sealed class ExtensionInstall {
     /// Whether this install already put the extension in `profileId`.
     public bool Holds(Guid profileId) => profiles.Contains(profileId);
 
-    /// The engine installs the package in `profileId` now.
-    public void Begin(Guid profileId) {
+    /// The engine installs the package in Space `spaceId`'s profile
+    /// `profileId` now.
+    public void Begin(Guid spaceId, Guid profileId) {
+        InstallingSpaceId = spaceId;
         InstallingProfile = profileId;
         InstallingFirst = !begun;
         begun = true;
@@ -98,12 +101,18 @@ internal sealed class ExtensionInstall {
     public void Installed() {
         if (InstallingProfile is { } profile) profiles.Add(profile);
         InstalledCount++;
-        InstallingProfile = null;
+        Between();
     }
 
     /// The profile the engine installed in refused its copy, which leaves the
     /// others to go.
-    public void Skipped() => InstallingProfile = null;
+    public void Skipped() => Between();
+
+    /// No Space is being installed in until the next one begins.
+    private void Between() {
+        InstallingSpaceId = null;
+        InstallingProfile = null;
+    }
 
     #endregion
 
@@ -143,7 +152,7 @@ internal sealed class ExtensionInstall {
     public void End(ExtensionInstallFailure? failure) {
         Failure = failure;
         Stage = failure is null ? ExtensionInstallStage.Installed : ExtensionInstallStage.Failed;
-        InstallingProfile = null;
+        Between();
     }
 
     #endregion

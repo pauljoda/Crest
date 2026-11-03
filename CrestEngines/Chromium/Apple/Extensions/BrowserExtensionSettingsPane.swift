@@ -132,7 +132,9 @@ struct BrowserExtensionRow: View {
                 if !item.options.isEmpty && item.enabled {
                     Button("Extension Settings", systemImage: "gearshape", action: options)
                 }
-                Button("Remove Extension", systemImage: "trash", role: .destructive, action: remove)
+                if item.changeable {
+                    Button("Remove Extension", systemImage: "trash", role: .destructive, action: remove)
+                }
             }
             .padding(.top, CrestSpacing.medium)
             .padding(.leading, BrowserExtensionsMetrics.expandedContentIndent)
@@ -152,6 +154,7 @@ struct BrowserExtensionRow: View {
                 Spacer(minLength: 0)
                 Toggle("Enabled", isOn: Binding(get: { item.enabled }, set: setEnabled))
                     .labelsHidden().accessibilityLabel("\(item.name) Enabled")
+                    .disabled(!item.changeable)
             }
         }.padding(.vertical, CrestSpacing.extraSmall)
     }
