@@ -35,7 +35,6 @@ internal sealed class ExtensionInstall {
     public Guid? InstallingSpaceId { get; private set; }
     public Guid? InstallingProfile { get; private set; }
     public bool InstallingFirst { get; private set; }
-    private bool begun;
 
     /// The question waiting on the person, by its prompt, and the question.
     public Guid? AskingPromptId { get; private set; }
@@ -90,11 +89,10 @@ internal sealed class ExtensionInstall {
 
     /// The engine installs the package in Space `spaceId`'s profile
     /// `profileId` now.
-    public void Begin(Guid spaceId, Guid profileId) {
+    public void Begin(Guid spaceId, Guid profileId, bool first) {
         InstallingSpaceId = spaceId;
         InstallingProfile = profileId;
-        InstallingFirst = !begun;
-        begun = true;
+        InstallingFirst = first;
     }
 
     /// The engine installed the package in the profile it installed in.

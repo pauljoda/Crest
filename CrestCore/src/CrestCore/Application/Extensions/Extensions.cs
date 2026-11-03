@@ -161,7 +161,7 @@ internal sealed class Extensions(Device device, Engines engines, Prompts prompts
             }
             if (install.Holds(space.ProfileId)
                 || (!first || install.PreApproved) && Has(install.Engine, space.ProfileId, install.ExtensionId)) continue;
-            install.Begin(space.Id, space.ProfileId);
+            install.Begin(space.Id, space.ProfileId, first);
             issue(install.Engine, new InstallExtensionPackage(install.Id, space.ProfileId));
             return;
         }
