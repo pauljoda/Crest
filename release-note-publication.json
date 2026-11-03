@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "settings-space-page-every-window",
+    "development": "extension-icon-control-click-menu",
     "nightly": "reopen-pages-after-quit-choice"
   }
 }
