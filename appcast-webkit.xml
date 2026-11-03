@@ -6,48 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.138</title>
-            <pubDate>Mon, 02 Nov 2026 19:23:25 +0000</pubDate>
+            <title>0.8.153</title>
+            <pubDate>Tue, 03 Nov 2026 17:16:08 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1474</sparkle:version>
-            <sparkle:shortVersionString>0.8.138</sparkle:shortVersionString>
+            <sparkle:version>1491</sparkle:version>
+            <sparkle:shortVersionString>0.8.153</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 38 user-facing changes.
+Showing the 12 most recent highlights from 22 user-facing changes.
 
 ### New
 
-- Shift-click can now open links in Peek. Choose it in Settings > Links > Open Peek with.
+- In Peek on iPhone and iPad, the More button shrinks the page to a preview with Open in New Tab, Copy Link, Share and Download Linked File beneath it.
+- On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size.
 
 ### Improved
 
-- On Mac, Peek uses more of the page while still floating above it, with a round Close button and pill-shaped Open In, and its controls move with the card as it opens.
-- On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest.
+- On Mac, a Quick Window that opens where another already is opens a little below and to the right of it, so both stay in view.
+- On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system’s link preview.
 
 ### Fixed
 
-- The command palette's results now take exactly the height of their rows, so a short list on iPhone no longer cuts off its first result or shows a scroll bar.
-- Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window.
-- On iPhone, the address bar's palette stays below the top of the screen at the largest text sizes.
-- Saved passwords are no longer lost when Crest quits partway through importing or deleting them, or through turning iCloud Keychain on or off for a Space.
-- Passwords imported earlier for a site at an IP address written in a long or unusual form, such as 127.1, now fill on that site too.
-- On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes.
-- On Mac, a Quick Window goes on remembering the size you give it after its contents change.
-- When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed.
-- If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out.
+- On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them.
+- On Mac, a Quick Window for a link from another app opens over the window you're in and on its display, instead of over a Crest window that may be on another display, and comes to the Space you're on.
+- On Mac, Command-` (Move focus to next window) moves between Crest's windows, Quick Windows included, when a Chromium page has focus.
+- On Mac, a link from another app that opens a Quick Window already open for it brings that Quick Window to the window you're in, and Quick Windows opening at a screen's edge no longer open on top of each other.
+- On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it.
+- On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before.
+- A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available.
+- Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f25b2c9fa797333f71c4dc00caad06afdf9cb587...8c54c4111351d62a7c7acc806c78d89855757417) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.138-2026-11-02-1474-r474.1/Installer-Crest-0.8.138-nightly-2026-11-02-8c54c41-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/8c54c4111351d62a7c7acc806c78d89855757417...dce2aa95ab5e59955c0fd454216b639614567aaa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.153-2026-11-03-1491-r491.1/Installer-Crest-0.8.153-nightly-2026-11-03-dce2aa9-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.138-2026-11-02-1474-r474.1/Installer-Crest-0.8.138-nightly-2026-11-02-8c54c41-arm64.dmg" length="216829587" type="application/octet-stream" sparkle:edSignature="utRrw/JK3Lxmmpkml60Om7eiLaMASf6EON9bAkExYoQRDUBA3oH5UOIu37lVQwJWNYD1sEHRfuUPITXodZm0Cg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.153-2026-11-03-1491-r491.1/Installer-Crest-0.8.153-nightly-2026-11-03-dce2aa9-arm64.dmg" length="216801427" type="application/octet-stream" sparkle:edSignature="lx3TasptWg7s9Pzrl/9kBGAXCUjI3rtAaA+ErPLiFfXCHB9ERysZ5FNSY+DIINWBy+k5VghGGnrYMiTv02duDw=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -133,6 +133,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: aevqT8Ncm/hBQVgJdpjMe6EK2KQPucbEHEXZ3XJ5KoDtAtFHQKQbWA3Ha2YeEiO2ldaL1ixoAFNqsWTom3/eBw==
-length: 10051
+edSignature: 8bwBMMhfbNYksMo5RMaB8qClHgwQKtLUC3c6ydATsHJRMyIRdFwPEY7C88vsQ107sVz49MhxTvo8oL4z3a7WAA==
+length: 10139
 -->
