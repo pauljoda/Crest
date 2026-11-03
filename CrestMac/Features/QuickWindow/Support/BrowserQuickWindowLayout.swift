@@ -8,6 +8,13 @@ enum BrowserQuickWindowLayout {
     static let minimumHeight: CGFloat = 400
     static let maximumScreenFallbackWidth: CGFloat = 1_440
     static let maximumScreenFallbackHeight: CGFloat = 1_000
+    /// How far a Quick Window opening where another already is moves down and
+    /// to the right, and how many such steps it takes at most.
+    static let cascadeStep: CGFloat = 22
+    static let cascadeLimit = 8
+    /// The smallest window in another app a Quick Window opens over, which
+    /// leaves out palettes and the invisible windows some apps keep on screen.
+    static let minimumForeignWindowSize: CGFloat = 160
     // The page surface owns the gap below the controls through its frame inset.
     static let toolbarHeight: CGFloat = controlHeight + toolbarTopPadding
     static let controlHeight: CGFloat = BrowserChromeLayout.addressHeight
