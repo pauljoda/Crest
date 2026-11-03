@@ -4989,6 +4989,10 @@
     "refusals-no-longer-sync-errors": {
       "category": "fixed",
       "message": "A locked Space, a full split or another change Crest can’t make no longer shows as a sync failure in Settings › Sync. Adding a Space or Sub-Space past the limit, or pinning a tab when the pinned tabs are full, now says why in a notice."
+    },
+    "space-search-matches-address-bar": {
+      "category": "fixed",
+      "message": "A Space’s Browsing settings and the search providers agents see now name the same search engine the address bar searches with, including for a Space whose own engine is missing or no longer valid."
     }
   }
 }

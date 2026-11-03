@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xb6, 0x0e, 0xdf, 0x46, 0x10, 0x53, 0x33, 0xbf, 0xaf, 0x3b, 0x72, 0xc1, 0x51, 0x0c, 0x7c, 0x6e, 0xe7, 0x18, 0x5b, 0xd0, 0x6b, 0xa1, 0x40, 0xfb, 0x67, 0xcb, 0x12, 0xfe, 0xb2, 0x15, 0xd9, 0xe3
+        0xde, 0x33, 0x76, 0x44, 0x30, 0x56, 0xee, 0x69, 0xb8, 0xec, 0x0e, 0x45, 0x48, 0x3b, 0x30, 0xe2, 0x96, 0x71, 0x9d, 0x89, 0x34, 0x55, 0xfa, 0x6a, 0x65, 0x37, 0x7e, 0x73, 0x3a, 0x25, 0x28, 0x42
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -354,17 +354,19 @@ enum CoreCodec {
         case 70: return try RouteLocalDocument(from: &reader)
         case 71: return try SamePage(from: &reader)
         case 72: return try SchemeHandling(from: &reader)
-        case 73: return try SecureOriginCheck(from: &reader)
-        case 74: return try SelectionPreview(from: &reader)
-        case 75: return try SelectionSearch(from: &reader)
-        case 76: return try SiteDecision(from: &reader)
-        case 77: return try SplitJoinCandidate(from: &reader)
-        case 78: return try StrongPassword(from: &reader)
-        case 79: return try SwipeNeighbors(from: &reader)
-        case 80: return try SystemPasswordOffer(from: &reader)
-        case 81: return try SystemPasswordWriteThrough(from: &reader)
-        case 82: return try TranslationChoice(from: &reader)
-        case 83: return try WindowToReopen(from: &reader)
+        case 73: return try SearchProviderPreview(from: &reader)
+        case 74: return try SecureOriginCheck(from: &reader)
+        case 75: return try SelectionPreview(from: &reader)
+        case 76: return try SelectionSearch(from: &reader)
+        case 77: return try SiteDecision(from: &reader)
+        case 78: return try SpaceSearch(from: &reader)
+        case 79: return try SplitJoinCandidate(from: &reader)
+        case 80: return try StrongPassword(from: &reader)
+        case 81: return try SwipeNeighbors(from: &reader)
+        case 82: return try SystemPasswordOffer(from: &reader)
+        case 83: return try SystemPasswordWriteThrough(from: &reader)
+        case 84: return try TranslationChoice(from: &reader)
+        case 85: return try WindowToReopen(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -19073,6 +19075,27 @@ extension SearchProvider.Seed {
     }
 }
 
+extension SearchProviderPreview {
+    init(from reader: inout WireReader) throws(WireError) {
+        let provider = try CustomSearchProvider(from: &reader)
+        self.init(provider: provider)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        provider.encode(into: &writer)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(73)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> SearchProvider {
+        let answer = try SearchProvider(from: &reader)
+        return answer
+    }
+}
+
 extension SearchProviderSettings {
     init(from reader: inout WireReader) throws(WireError) {
         let provider = try BuiltInSearchProvider(from: &reader)
@@ -19130,7 +19153,7 @@ extension SecureOriginCheck {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(73)
+        writer.writeTag(74)
         encode(into: &writer)
     }
 
@@ -19327,7 +19350,7 @@ extension SelectionPreview {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(74)
+        writer.writeTag(75)
         encode(into: &writer)
     }
 
@@ -19352,7 +19375,7 @@ extension SelectionSearch {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(75)
+        writer.writeTag(76)
         encode(into: &writer)
     }
 
@@ -21601,7 +21624,7 @@ extension SiteDecision {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(76)
+        writer.writeTag(77)
         encode(into: &writer)
     }
 
@@ -22204,6 +22227,42 @@ extension SpaceProfileChanged {
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(spaceID)
+    }
+}
+
+extension SpaceSearch {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let spaceID = try reader.readUUID()
+        self.init(workspaceID: workspaceID, spaceID: spaceID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeUUID(spaceID)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(78)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> SpaceSearchAnswer {
+        let answer = try SpaceSearchAnswer(from: &reader)
+        return answer
+    }
+}
+
+extension SpaceSearchAnswer {
+    init(from reader: inout WireReader) throws(WireError) {
+        let provider = try SearchProvider(from: &reader)
+        let suggestsSearches = try reader.readBool()
+        self.init(provider: provider, suggestsSearches: suggestsSearches)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        provider.encode(into: &writer)
+        writer.writeBool(suggestsSearches)
     }
 }
 
@@ -22964,7 +23023,7 @@ extension SplitJoinCandidate {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(77)
+        writer.writeTag(79)
         encode(into: &writer)
     }
 
@@ -23449,7 +23508,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(78)
+        writer.writeTag(80)
         encode(into: &writer)
     }
 
@@ -23543,7 +23602,7 @@ extension SwipeNeighbors {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(79)
+        writer.writeTag(81)
         encode(into: &writer)
     }
 
@@ -23669,7 +23728,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(80)
+        writer.writeTag(82)
         encode(into: &writer)
     }
 
@@ -23707,7 +23766,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(81)
+        writer.writeTag(83)
         encode(into: &writer)
     }
 
@@ -24557,7 +24616,7 @@ extension TranslationChoice {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(82)
+        writer.writeTag(84)
         encode(into: &writer)
     }
 
@@ -25201,7 +25260,7 @@ extension WindowToReopen {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(83)
+        writer.writeTag(85)
         encode(into: &writer)
     }
 

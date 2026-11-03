@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xb6, 0x0e, 0xdf, 0x46, 0x10, 0x53, 0x33, 0xbf, 0xaf, 0x3b, 0x72, 0xc1, 0x51, 0x0c, 0x7c, 0x6e, 0xe7, 0x18, 0x5b, 0xd0, 0x6b, 0xa1, 0x40, 0xfb, 0x67, 0xcb, 0x12, 0xfe, 0xb2, 0x15, 0xd9, 0xe3
+        0xde, 0x33, 0x76, 0x44, 0x30, 0x56, 0xee, 0x69, 0xb8, 0xec, 0x0e, 0x45, 0x48, 0x3b, 0x30, 0xe2, 0x96, 0x71, 0x9d, 0x89, 0x34, 0x55, 0xfa, 0x6a, 0x65, 0x37, 0x7e, 0x73, 0x3a, 0x25, 0x28, 0x42
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -2598,17 +2598,19 @@ public static class ContractCodec {
             case 70: return ReadRouteLocalDocument(reader);
             case 71: return ReadSamePage(reader);
             case 72: return ReadSchemeHandling(reader);
-            case 73: return ReadSecureOriginCheck(reader);
-            case 74: return ReadSelectionPreview(reader);
-            case 75: return ReadSelectionSearch(reader);
-            case 76: return ReadSiteDecision(reader);
-            case 77: return ReadSplitJoinCandidate(reader);
-            case 78: return ReadStrongPassword(reader);
-            case 79: return ReadSwipeNeighbors(reader);
-            case 80: return ReadSystemPasswordOffer(reader);
-            case 81: return ReadSystemPasswordWriteThrough(reader);
-            case 82: return ReadTranslationChoice(reader);
-            case 83: return ReadWindowToReopen(reader);
+            case 73: return ReadSearchProviderPreview(reader);
+            case 74: return ReadSecureOriginCheck(reader);
+            case 75: return ReadSelectionPreview(reader);
+            case 76: return ReadSelectionSearch(reader);
+            case 77: return ReadSiteDecision(reader);
+            case 78: return ReadSpaceSearch(reader);
+            case 79: return ReadSplitJoinCandidate(reader);
+            case 80: return ReadStrongPassword(reader);
+            case 81: return ReadSwipeNeighbors(reader);
+            case 82: return ReadSystemPasswordOffer(reader);
+            case 83: return ReadSystemPasswordWriteThrough(reader);
+            case 84: return ReadTranslationChoice(reader);
+            case 85: return ReadWindowToReopen(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -2909,48 +2911,56 @@ public static class ContractCodec {
                 writer.WriteTag(72);
                 WriteSchemeHandling(writer, member);
                 break;
-            case SecureOriginCheck member:
+            case SearchProviderPreview member:
                 writer.WriteTag(73);
+                WriteSearchProviderPreview(writer, member);
+                break;
+            case SecureOriginCheck member:
+                writer.WriteTag(74);
                 WriteSecureOriginCheck(writer, member);
                 break;
             case SelectionPreview member:
-                writer.WriteTag(74);
+                writer.WriteTag(75);
                 WriteSelectionPreview(writer, member);
                 break;
             case SelectionSearch member:
-                writer.WriteTag(75);
+                writer.WriteTag(76);
                 WriteSelectionSearch(writer, member);
                 break;
             case SiteDecision member:
-                writer.WriteTag(76);
+                writer.WriteTag(77);
                 WriteSiteDecision(writer, member);
                 break;
+            case SpaceSearch member:
+                writer.WriteTag(78);
+                WriteSpaceSearch(writer, member);
+                break;
             case SplitJoinCandidate member:
-                writer.WriteTag(77);
+                writer.WriteTag(79);
                 WriteSplitJoinCandidate(writer, member);
                 break;
             case StrongPassword member:
-                writer.WriteTag(78);
+                writer.WriteTag(80);
                 WriteStrongPassword(writer, member);
                 break;
             case SwipeNeighbors member:
-                writer.WriteTag(79);
+                writer.WriteTag(81);
                 WriteSwipeNeighbors(writer, member);
                 break;
             case SystemPasswordOffer member:
-                writer.WriteTag(80);
+                writer.WriteTag(82);
                 WriteSystemPasswordOffer(writer, member);
                 break;
             case SystemPasswordWriteThrough member:
-                writer.WriteTag(81);
+                writer.WriteTag(83);
                 WriteSystemPasswordWriteThrough(writer, member);
                 break;
             case TranslationChoice member:
-                writer.WriteTag(82);
+                writer.WriteTag(84);
                 WriteTranslationChoice(writer, member);
                 break;
             case WindowToReopen member:
-                writer.WriteTag(83);
+                writer.WriteTag(85);
                 WriteWindowToReopen(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
@@ -3620,49 +3630,57 @@ public static class ContractCodec {
                 var answer72 = answers.Query(question);
                 WriteSchemeHandled(writer, answer72);
                 break;
-            case SecureOriginCheck question:
+            case SearchProviderPreview question:
                 var answer73 = answers.Query(question);
-                WriteSecureOriginVerdict(writer, answer73);
+                WriteSearchProvider(writer, answer73);
+                break;
+            case SecureOriginCheck question:
+                var answer74 = answers.Query(question);
+                WriteSecureOriginVerdict(writer, answer74);
                 break;
             case SelectionPreview question:
-                var answer74 = answers.Query(question);
-                WriteSelectedTabs(writer, answer74);
+                var answer75 = answers.Query(question);
+                WriteSelectedTabs(writer, answer75);
                 break;
             case SelectionSearch question:
-                var answer75 = answers.Query(question);
-                WriteSelectionSearchAnswer(writer, answer75);
+                var answer76 = answers.Query(question);
+                WriteSelectionSearchAnswer(writer, answer76);
                 break;
             case SiteDecision question:
-                var answer76 = answers.Query(question);
-                WriteSitePermissionAnswer(writer, answer76);
+                var answer77 = answers.Query(question);
+                WriteSitePermissionAnswer(writer, answer77);
+                break;
+            case SpaceSearch question:
+                var answer78 = answers.Query(question);
+                WriteSpaceSearchAnswer(writer, answer78);
                 break;
             case SplitJoinCandidate question:
-                var answer77 = answers.Query(question);
-                WriteSplitJoinCandidateTab(writer, answer77);
+                var answer79 = answers.Query(question);
+                WriteSplitJoinCandidateTab(writer, answer79);
                 break;
             case StrongPassword question:
-                var answer78 = answers.Query(question);
-                WriteStrongPasswordRecipe(writer, answer78);
+                var answer80 = answers.Query(question);
+                WriteStrongPasswordRecipe(writer, answer80);
                 break;
             case SwipeNeighbors question:
-                var answer79 = answers.Query(question);
-                WriteSwipeNeighborTabs(writer, answer79);
+                var answer81 = answers.Query(question);
+                WriteSwipeNeighborTabs(writer, answer81);
                 break;
             case SystemPasswordOffer question:
-                var answer80 = answers.Query(question);
-                WriteSystemPasswordOfferDecision(writer, answer80);
+                var answer82 = answers.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer82);
                 break;
             case SystemPasswordWriteThrough question:
-                var answer81 = answers.Query(question);
-                WriteSystemPasswordWriteThroughSupport(writer, answer81);
+                var answer83 = answers.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer83);
                 break;
             case TranslationChoice question:
-                var answer82 = answers.Query(question);
-                WriteTranslationDecision(writer, answer82);
+                var answer84 = answers.Query(question);
+                WriteTranslationDecision(writer, answer84);
                 break;
             case WindowToReopen question:
-                var answer83 = answers.Query(question);
-                WriteReopenedWindow(writer, answer83);
+                var answer85 = answers.Query(question);
+                WriteReopenedWindow(writer, answer85);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -15080,6 +15098,18 @@ public static class ContractCodec {
         }
     }
 
+    public static SearchProviderPreview ReadSearchProviderPreview(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SearchProviderPreview(
+            ReadCustomSearchProvider(reader));
+    }
+
+    public static void WriteSearchProviderPreview(WireWriter writer, SearchProviderPreview value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCustomSearchProvider(writer, value.Provider);
+    }
+
     public static SearchProviderSettings ReadSearchProviderSettings(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new SearchProviderSettings(
@@ -17297,6 +17327,34 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.SpaceId);
+    }
+
+    public static SpaceSearch ReadSpaceSearch(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceSearch(
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteSpaceSearch(WireWriter writer, SpaceSearch value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+    }
+
+    public static SpaceSearchAnswer ReadSpaceSearchAnswer(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceSearchAnswer(
+            ReadSearchProvider(reader),
+            reader.ReadBool());
+    }
+
+    public static void WriteSpaceSearchAnswer(WireWriter writer, SpaceSearchAnswer value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteSearchProvider(writer, value.Provider);
+        writer.WriteBool(value.SuggestsSearches);
     }
 
     public static SpaceSettings ReadSpaceSettings(WireReader reader) {

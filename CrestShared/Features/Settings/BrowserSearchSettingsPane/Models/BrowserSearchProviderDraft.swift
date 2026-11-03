@@ -42,6 +42,12 @@ struct BrowserSearchProviderDraft: Identifiable, Equatable {
             kind: kind, shortcuts: shortcutList, color: choseColor ? color : nil)
     }
 
+    /// The provider the person adds or added as the device would search with
+    /// it, as the core answers it, for the editor to show.
+    var preview: SearchProvider? {
+        try? CrestCore.answer(SearchProviderPreview(provider: custom))
+    }
+
     // MARK: - Initializers
 
     /// `provider` as its editor opens it, read from `catalog`.

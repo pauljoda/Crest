@@ -5472,6 +5472,12 @@ struct SearchProvider: Equatable, Sendable {
     }
 }
 
+struct SearchProviderPreview: Query, Equatable, Sendable {
+    typealias Answer = SearchProvider
+
+    let provider: CustomSearchProvider
+}
+
 struct SearchProviderSettings: Equatable, Sendable {
     let provider: BuiltInSearchProvider
     let isEnabled: Bool
@@ -6340,6 +6346,18 @@ struct SpaceProfileChanged: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("That Space is no longer available.")
     }
+}
+
+struct SpaceSearch: Query, Equatable, Sendable {
+    typealias Answer = SpaceSearchAnswer
+
+    let workspaceID: UUID
+    let spaceID: UUID
+}
+
+struct SpaceSearchAnswer: Equatable, Sendable {
+    let provider: SearchProvider
+    let suggestsSearches: Bool
 }
 
 struct SpaceSettings: Equatable, Sendable {
