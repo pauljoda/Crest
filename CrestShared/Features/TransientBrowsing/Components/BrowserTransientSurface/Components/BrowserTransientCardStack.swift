@@ -127,7 +127,7 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
     }
 
     private var cardSize: CGSize? {
-        arrangement.cardSize(in: contentRegion?.size ?? availableSize)
+        arrangement.cardSize(in: contentRegion?.size ?? availableSize, share: state.cardShare)
     }
 
     private var pageCardScale: CGSize {
