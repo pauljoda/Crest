@@ -18,6 +18,7 @@ Ko-fi or Patreon membership level and ordered alphabetically within each level.
 - Patrick McCarron
 - techfreaktwo
 - Chris F
+- Chris Youngers
 
 ## How recognition works
 
