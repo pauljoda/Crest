@@ -32,15 +32,15 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     /// The room a pointer card keeps from the page it floats over.
     static let pointerMargin: CGFloat = 24
 
-    /// The shares of the room beside a window's leading chrome a person can
-    /// give a pointer card: from the share a Quick Window takes up to all of
-    /// it, which is where a card starts.
+    /// The shares of the room its controls and margins leave a pointer card
+    /// that a person can give it: from the share a Quick Window takes of its
+    /// own room up to all of it, which is where a card starts.
     static let pointerCardShares: ClosedRange<Double> = Double(windowContentFraction)...1
 
-    /// A card beside a window's reserved leading chrome, filling the share of
-    /// the room there the person chose, less a margin that keeps it floating,
-    /// and dismissed with the pointer or a key. Its controls grow and travel
-    /// with it.
+    /// A card beside a window's reserved leading chrome, filling the room
+    /// there less a margin that keeps it floating, or the share of that room
+    /// the person chose, and dismissed with the pointer or a key. Its controls
+    /// grow and travel with it.
     static let pointer = BrowserTransientCardArrangement(
         name: "pointer", entranceTarget: .assembly, placesControlsAboveCard: true, controlAlignment: .trailing,
         controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0,
@@ -56,7 +56,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
                 height: containerSize.height
             )
         },
-        sizesCard: { room, share in CGSize(width: room.width * share, height: room.height * share) },
+        sizesCard: { _ in nil },
         // As far from each edge of the page it floats over as from the others,
         // whatever border the page keeps.
         insetsContent: { _, page in
@@ -74,7 +74,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         name: "sheet", entranceTarget: .assembly, placesControlsAboveCard: false, controlAlignment: .center,
         controlSpacing: 8, constrainsControlBarToMaximumWidth: true, controlBarPadding: 10,
         framesContent: nil,
-        sizesCard: { _, _ in nil },
+        sizesCard: { _ in nil },
         insetsContent: { safeAreaInsets, _ in
             BrowserTransientCardLayout.cardInsets(
                 safeAreaInsets: safeAreaInsets,
@@ -93,7 +93,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         name: "canvas", entranceTarget: .assembly, placesControlsAboveCard: false, controlAlignment: .trailing,
         controlSpacing: 10, constrainsControlBarToMaximumWidth: true, controlBarPadding: 0,
         framesContent: nil,
-        sizesCard: { contentSize, _ in
+        sizesCard: { contentSize in
             CGSize(
                 width: min(max(contentSize.width * 0.76, 600), 1_180),
                 height: min(max(contentSize.height * 0.78, 430), 820)
@@ -135,7 +135,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
 
     /// How the arrangement measures the region, card size and insets below.
     private let framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?
-    private let sizesCard: @Sendable (CGSize, CGFloat) -> CGSize?
+    private let sizesCard: @Sendable (CGSize) -> CGSize?
     /// The stack's insets from the screen's safe area and the page's frame.
     private let insetsContent: @Sendable (EdgeInsets, EdgeInsets) -> EdgeInsets
 
@@ -167,7 +167,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         controlAlignment: HorizontalAlignment, controlSpacing: CGFloat, constrainsControlBarToMaximumWidth: Bool,
         controlBarPadding: CGFloat,
         framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?,
-        sizesCard: @escaping @Sendable (CGSize, CGFloat) -> CGSize?,
+        sizesCard: @escaping @Sendable (CGSize) -> CGSize?,
         insetsContent: @escaping @Sendable (EdgeInsets, EdgeInsets) -> EdgeInsets,
         cardCornerRadius: CGFloat, cardBorderOpacity: Double, cardShadowOpacity: Double, cardShadowRadius: CGFloat,
         cardShadowOffsetY: CGFloat, fadesScrim: Bool
@@ -202,11 +202,10 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         framesContent?(containerSize, reservedLeadingWidth, layoutDirection)
     }
 
-    /// The card's own size inside that region, given the `share` of it the
-    /// person chose where the arrangement lets them, or `nil` where the card
-    /// takes everything the stack leaves it.
-    func cardSize(in contentSize: CGSize, share: CGFloat) -> CGSize? {
-        sizesCard(contentSize, share)
+    /// The card's own size inside that region, or `nil` where the card takes
+    /// everything the stack leaves it.
+    func cardSize(in contentSize: CGSize) -> CGSize? {
+        sizesCard(contentSize)
     }
 
     /// The stack's insets in a container with `safeAreaInsets`, over a page

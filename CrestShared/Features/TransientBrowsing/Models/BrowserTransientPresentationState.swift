@@ -27,8 +27,8 @@ struct BrowserTransientPresentationState {
     /// The part of the overlay the scrim covers. Zero wherever the overlay
     /// owns the whole of its container.
     var scrimInsets = EdgeInsets()
-    /// The share of its room the card takes, where the arrangement lets the
-    /// person choose it.
+    /// The share the card takes of the room its controls and insets leave
+    /// it, where the shell lets the person choose it.
     var cardShare: CGFloat = 1
 
     var sourceTransform: BrowserTransientSourceTransform {

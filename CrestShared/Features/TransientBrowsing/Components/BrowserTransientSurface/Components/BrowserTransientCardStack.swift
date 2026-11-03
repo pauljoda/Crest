@@ -99,6 +99,7 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
             webContent: webContent
         )
         .modifier(BrowserTransientCardSize(size: cardSize))
+        .modifier(BrowserTransientCardShare(share: state.cardShare))
         .scaleEffect(
             x: pageCardScale.width,
             y: pageCardScale.height,
@@ -127,7 +128,7 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
     }
 
     private var cardSize: CGSize? {
-        arrangement.cardSize(in: contentRegion?.size ?? availableSize, share: state.cardShare)
+        arrangement.cardSize(in: contentRegion?.size ?? availableSize)
     }
 
     private var pageCardScale: CGSize {
@@ -150,6 +151,33 @@ private struct BrowserTransientCardSize: ViewModifier {
                 .frame(maxWidth: size.width, maxHeight: size.height)
         } else {
             content
+        }
+    }
+}
+
+/// The share of the room its controls and insets leave the card that the
+/// person chose, centred in that room, so a share holds at any window size.
+private struct BrowserTransientCardShare: ViewModifier {
+    let share: CGFloat
+
+    func body(content: Content) -> some View {
+        ShareLayout(share: share) { content }
+    }
+
+    private struct ShareLayout: Layout {
+        let share: CGFloat
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            subviews.first?.sizeThatFits(shared(proposal)) ?? .zero
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            subviews.first?.place(
+                at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center, proposal: shared(proposal))
+        }
+
+        private func shared(_ proposal: ProposedViewSize) -> ProposedViewSize {
+            ProposedViewSize(width: proposal.width.map { $0 * share }, height: proposal.height.map { $0 * share })
         }
     }
 }
