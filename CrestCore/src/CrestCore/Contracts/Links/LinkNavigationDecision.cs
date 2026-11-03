@@ -9,7 +9,8 @@ public sealed class LinkNavigationDecision {
 
     public static readonly LinkNavigationDecision Navigate = new(name: "navigate");
     public static readonly LinkNavigationDecision PeekModifier = new(name: "peekModifier", opensPeek: true, stagesLink: true);
-    public static readonly LinkNavigationDecision PeekSavedSite = new(name: "peekSavedSite", opensPeek: true, protectsSavedSite: true);
+    public static readonly LinkNavigationDecision PeekSavedSite = new(name: "peekSavedSite", opensPeek: true, protectsSavedSite: true,
+        stagesLink: true);
     public static readonly LinkNavigationDecision BackgroundTab = new(name: "backgroundTab", opensTab: true);
     public static readonly LinkNavigationDecision ForegroundTab = new(name: "foregroundTab", opensTab: true, selectsTab: true);
 
@@ -32,7 +33,8 @@ public sealed class LinkNavigationDecision {
     public bool SelectsTab { get; }
 
     /// The link's request is staged before it leaves the page, so the Peek it
-    /// opens keeps its initiator's referrer. A saved-site Peek starts afresh.
+    /// opens keeps its initiator's referrer, as a site's own redirect for its
+    /// outbound links can require.
     public bool StagesLink { get; }
 
     #endregion

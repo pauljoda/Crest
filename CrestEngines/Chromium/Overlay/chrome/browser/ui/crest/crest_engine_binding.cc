@@ -91,6 +91,22 @@ bool OpensPeek(engine::LinkNavigationDecision decision) {
          decision == engine::LinkNavigationDecision::kPeekSavedSite;
 }
 
+// The request Chromium made for a link a person followed, which `navigation`
+// carries, with the link's referrer, initiator and SiteInstance.
+content::NavigationController::LoadURLParams LinkRequest(content::NavigationHandle& navigation) {
+  content::NavigationController::LoadURLParams request(navigation.GetURL());
+  request.referrer = content::Referrer(navigation.GetReferrer());
+  request.initiator_origin = navigation.GetInitiatorOrigin();
+  request.initiator_base_url = navigation.GetInitiatorBaseUrl();
+  request.initiator_frame_token = navigation.GetInitiatorFrameToken();
+  request.initiator_process_id = navigation.GetInitiatorProcessId();
+  request.source_site_instance = navigation.GetSourceSiteInstance();
+  request.is_renderer_initiated = navigation.IsRendererInitiated();
+  request.has_user_gesture = navigation.HasUserGesture();
+  request.transition_type = navigation.GetPageTransition();
+  return request;
+}
+
 // Crest's vault owns credentials in every window, so the engine's own password
 // manager never saves, offers fills or shows its bubbles, in a private window
 // as much as in a Space, whether or not a credential bridge is installed. A
@@ -125,8 +141,7 @@ class PeekLinkThrottle final : public content::NavigationThrottle {
       return PROCEED;
     }
     EngineBinding& binding = EngineBinding::Get();
-    if (navigation->WasInitiatedByLinkClick() &&
-        binding.KeepsLinkForPeek(navigation->GetWebContents(), navigation->GetURL())) {
+    if (navigation->WasInitiatedByLinkClick() && binding.KeepsLinkForPeek(*navigation)) {
       return CANCEL_AND_IGNORE;
     }
     if (binding.KeepsWindowLinkForPeek(*navigation)) {
@@ -144,19 +159,18 @@ class PeekLinkThrottle final : public content::NavigationThrottle {
 
 }  // namespace
 
-// The verified request of a link a person followed in `source`, and the
-// document `source` showed then.
+// The request Chromium verified for a link a person followed in `source`,
+// with the link's referrer, initiator and SiteInstance, and the document
+// `source` showed then.
 struct EngineBinding::StagedLink {
-  content::OpenURLParams request;
-  std::string source;
-  uint64_t revision = 0;
-  uint64_t generation = 0;
-};
+  static std::unique_ptr<StagedLink> In(const EnginePage& source,
+                                        content::NavigationController::LoadURLParams request) {
+    return std::make_unique<StagedLink>(StagedLink{.request = std::move(request),
+                                                   .source = source.key(),
+                                                   .revision = source.navigation_revision(),
+                                                   .generation = source.navigation_generation()});
+  }
 
-// The request Chromium made for a window's first navigation, with the
-// referrer, initiator and SiteInstance of the link a person followed in
-// `source`, and the document `source` showed then.
-struct EngineBinding::WindowLink {
   content::NavigationController::LoadURLParams request;
   std::string source;
   uint64_t revision = 0;
@@ -166,7 +180,7 @@ struct EngineBinding::WindowLink {
 // A window a link opened, whose first navigation waits for the core.
 struct EngineBinding::HeldWindow {
   base::WeakPtr<content::WebContents> contents;
-  std::unique_ptr<WindowLink> link;
+  std::unique_ptr<StagedLink> link;
   base::OnceClosure resume;
 };
 
@@ -724,19 +738,11 @@ bool EngineBinding::FollowModifiedLink(content::WebContents* contents, content::
 }
 
 bool EngineBinding::StageForPeek(EnginePage& page, content::OpenURLParams& params) {
-  if (staged_links_.size() >= kStagedLinks) {
+  const auto link = StageLink(StagedLink::In(page, content::NavigationController::LoadURLParams(params)));
+  if (!link) {
     return false;
   }
   params.crest_download_fallback = nullptr;
-  const engine::Guid link = RandomGuid();
-  const std::string token = GuidText(link);
-  staged_links_.emplace(token, std::make_unique<StagedLink>(StagedLink{.request = params,
-                                                                        .source = page.key(),
-                                                                        .revision = page.navigation_revision(),
-                                                                        .generation = page.navigation_generation()}));
-  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
-      FROM_HERE, base::BindOnce(&EngineBinding::DropStagedLink, weak_factory_.GetWeakPtr(), token),
-      kStagedLinkLifetime);
   PresentPeekSoon(page, engine::PeekRequested{.page_id = page.id(),
                                               .url = PresentedURL(params.url),
                                               .decision = engine::LinkNavigationDecision::kPeekModifier,
@@ -744,19 +750,38 @@ bool EngineBinding::StageForPeek(EnginePage& page, content::OpenURLParams& param
   return true;
 }
 
-bool EngineBinding::KeepsLinkForPeek(content::WebContents* contents, const GURL& url) {
-  EnginePage* page = PageFor(contents);
+std::optional<engine::Guid> EngineBinding::StageLink(std::unique_ptr<StagedLink> link) {
+  if (staged_links_.size() >= kStagedLinks) {
+    return std::nullopt;
+  }
+  const engine::Guid id = RandomGuid();
+  const std::string token = GuidText(id);
+  staged_links_.emplace(token, std::move(link));
+  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+      FROM_HERE, base::BindOnce(&EngineBinding::DropStagedLink, weak_factory_.GetWeakPtr(), token),
+      kStagedLinkLifetime);
+  return id;
+}
+
+// The Peek loads the link's own request, as a site's redirect for the links
+// that leave it can require.
+bool EngineBinding::KeepsLinkForPeek(content::NavigationHandle& navigation) {
+  EnginePage* page = PageFor(navigation.GetWebContents());
   if (!page) {
     return false;
   }
+  const std::string url = PresentedURL(navigation.GetURL());
   const auto answer = Ask(engine::LinkActivation{
-      .page_id = page->id(), .url = PresentedURL(url), .gesture = {.user_activated = true, .top_level = true}});
+      .page_id = page->id(), .url = url, .gesture = {.user_activated = true, .top_level = true}});
   if (!answer || !OpensPeek(answer->decision)) {
     return false;
   }
+  const auto link = StageLink(StagedLink::In(*page, LinkRequest(navigation)));
   // Nothing is mounted or moved while Chromium's navigation stack is live.
-  PresentPeekSoon(*page, engine::PeekRequested{
-                             .page_id = page->id(), .url = PresentedURL(url), .decision = answer->decision});
+  PresentPeekSoon(*page, engine::PeekRequested{.page_id = page->id(),
+                                               .url = url,
+                                               .decision = answer->decision,
+                                               .staged_link_id = link});
   return true;
 }
 
@@ -774,21 +799,7 @@ bool EngineBinding::HoldsWindowLink(content::NavigationHandle& navigation, base:
   if (!source) {
     return false;
   }
-  auto link = std::make_unique<WindowLink>(WindowLink{.request = content::NavigationController::LoadURLParams(
-                                                          navigation.GetURL()),
-                                                      .source = source->key(),
-                                                      .revision = source->navigation_revision(),
-                                                      .generation = source->navigation_generation()});
-  content::NavigationController::LoadURLParams& request = link->request;
-  request.referrer = content::Referrer(navigation.GetReferrer());
-  request.initiator_origin = navigation.GetInitiatorOrigin();
-  request.initiator_base_url = navigation.GetInitiatorBaseUrl();
-  request.initiator_frame_token = navigation.GetInitiatorFrameToken();
-  request.initiator_process_id = navigation.GetInitiatorProcessId();
-  request.source_site_instance = navigation.GetSourceSiteInstance();
-  request.is_renderer_initiated = navigation.IsRendererInitiated();
-  request.has_user_gesture = navigation.HasUserGesture();
-  request.transition_type = navigation.GetPageTransition();
+  auto link = StagedLink::In(*source, LinkRequest(navigation));
   std::erase_if(held_windows_, [](const auto& window) { return !window->contents; });
   held_windows_.push_back(std::make_unique<HeldWindow>(
       HeldWindow{.contents = contents->GetWeakPtr(), .link = std::move(link), .resume = std::move(resume)}));
@@ -850,7 +861,11 @@ bool EngineBinding::KeepsWindowLinkForPeek(content::NavigationHandle& navigation
   withheld_.push_back(contents->GetWeakPtr());
   base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
       FROM_HERE, base::BindOnce(&EngineBinding::CloseWithheld, weak_factory_.GetWeakPtr(), contents->GetWeakPtr()));
-  PresentPeekSoon(*source, engine::PeekRequested{.page_id = source->id(), .url = url, .decision = answer->decision});
+  const auto link = StageLink(StagedLink::In(*source, LinkRequest(navigation)));
+  PresentPeekSoon(*source, engine::PeekRequested{.page_id = source->id(),
+                                                 .url = url,
+                                                 .decision = answer->decision,
+                                                 .staged_link_id = link});
   return true;
 }
 
@@ -906,8 +921,7 @@ bool EngineBinding::LoadStagedLink(const std::string& key, const std::string& to
     return false;
   }
   // Keeps Chromium's verified referrer, initiator, headers and SiteInstance.
-  content::NavigationController::LoadURLParams load(link.request);
-  page->web_contents()->GetController().LoadURLWithParams(load);
+  page->web_contents()->GetController().LoadURLWithParams(link.request);
   return true;
 }
 
@@ -921,7 +935,7 @@ EngineBinding::RefusedLinkLoad EngineBinding::LoadRefusedWindowLink(const std::s
   if (refused == refused_window_links_.end()) {
     return RefusedLinkLoad::kNone;
   }
-  const std::unique_ptr<WindowLink> link = std::move(refused->first);
+  const std::unique_ptr<StagedLink> link = std::move(refused->first);
   refused_window_links_.erase(refused);
   EnginePage* page = Find(key);
   if (!page || !page->web_contents() || disposing_ || page->navigation_revision() != link->revision ||
