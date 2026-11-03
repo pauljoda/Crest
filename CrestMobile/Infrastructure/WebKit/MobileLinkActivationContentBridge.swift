@@ -43,6 +43,9 @@ enum MobileLinkActivationContentBridge {
 
           let activePress = null;
           let pressSequence = 0;
+          // The click that ends a held press is swallowed: the press arms it
+          // once held, and its release opens a short window for that click.
+          let endingClickArmed = false;
           let suppressClickUntil = -Infinity;
 
           const post = payload => {
@@ -63,13 +66,16 @@ enum MobileLinkActivationContentBridge {
               }
             }
             activePress = null;
-            // No click follows a cancelled pointer, so none is left to swallow.
-            if (phase === 'cancelled') suppressClickUntil = -Infinity;
+            // A cancelled press opened no Peek, so a click it ends with follows
+            // the link like any other.
+            suppressClickUntil = phase === 'ended' && endingClickArmed ? performance.now() + 500 : -Infinity;
+            endingClickArmed = false;
             post({ phase, pressID });
           };
 
           globalThis.addEventListener('pointerdown', event => {
             if (!event.isTrusted || (event.button !== undefined && event.button !== 0)) return;
+            suppressClickUntil = -Infinity;
             const target = event.target instanceof Element ? event.target : null;
             const link = event.composedPath().find(
               node => node instanceof Element && node.matches?.('a[href], area[href]')
@@ -122,7 +128,7 @@ enum MobileLinkActivationContentBridge {
               previousStyles,
               holdTimer: setTimeout(() => {
                 if (activePress?.pressID === pressID) {
-                  suppressClickUntil = performance.now() + 900;
+                  endingClickArmed = true;
                   globalThis.getSelection()?.removeAllRanges();
                 }
               }, 280)
@@ -157,6 +163,7 @@ enum MobileLinkActivationContentBridge {
 
           globalThis.addEventListener('pointercancel', event => {
             if (activePress?.pointerID === event.pointerId) finish('cancelled');
+            suppressClickUntil = -Infinity;
           }, { capture: true, passive: true });
 
           globalThis.addEventListener('selectstart', event => {
