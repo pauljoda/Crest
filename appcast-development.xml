@@ -6,33 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.154</title>
-            <pubDate>Tue, 03 Nov 2026 20:23:50 +0000</pubDate>
+            <title>0.8.167</title>
+            <pubDate>Tue, 03 Nov 2026 21:45:33 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1492</sparkle:version>
-            <sparkle:shortVersionString>0.8.154</sparkle:shortVersionString>
+            <sparkle:version>1493</sparkle:version>
+            <sparkle:shortVersionString>0.8.167</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Maintenance
 
-- On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts.
-
-### Improved
-
-- On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/dce2aa95ab5e59955c0fd454216b639614567aaa...68b0bdd194f29f5edcbb90f75e098df8e2992cb6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.154-2026-11-03-1492-r492.1/Installer-Crest-0.8.154-development-2026-11-03-68b0bdd-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/68b0bdd194f29f5edcbb90f75e098df8e2992cb6...abcd7c1ff1aad3c2df5fe9ffd49ac8318ac348b1) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.167-2026-11-03-1493-r493.1/Installer-Crest-0.8.167-development-2026-11-03-abcd7c1-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.154-2026-11-03-1492-r492.1/Installer-Crest-0.8.154-development-2026-11-03-68b0bdd-arm64.dmg" length="216871066" type="application/octet-stream" sparkle:edSignature="lvseKnFiP1IvrPhqQPA1rEI6eH02G1ZZjeeWPSJfozuNUlX0SXso5+h28zrPKY3PjcDkBBeiEz1QgPN8gDvcAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.167-2026-11-03-1493-r493.1/Installer-Crest-0.8.167-development-2026-11-03-abcd7c1-arm64.dmg" length="216703131" type="application/octet-stream" sparkle:edSignature="cb6OyqlFi5ulmJVTVPg99kMiyZs8kFABCt53Cwe5OQUuVFXAgw4wIrTub89ughkoJBYxFMuZ2WQMjO4q8N2HAw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: IxNDQwOO7FIgCbhrscHyzAhEEwvvnLMscfGuw8iK44BVtIIBTFdtECVIbeQelfPjTWtMf0rN1loXfiazfP95Aw==
-length: 4196
+edSignature: ouYoD3tD41DxQX+A5MdwGU3t7fRCIsejnT6cTnJL8ofhV8fz6Nvy7bv70cPI59LQAHQrrfxPbBtSmIU5BkiZBg==
+length: 3943
 -->
