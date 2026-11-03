@@ -61,7 +61,7 @@ private struct BrowserInstalledImportSourceCard: View {
                     .lineLimit(1)
                 Text(accessLabel ?? "")
                     .font(CrestTypography.sans(11, weight: .medium))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
                     .lineLimit(1)
                     .frame(height: 14)
             }

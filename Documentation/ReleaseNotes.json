@@ -4977,6 +4977,10 @@
     "password-and-route-buttons-match": {
       "category": "improved",
       "message": "Reveal Password and Copy Password, and the move and delete buttons of a link route on iPhone and iPad, now look and respond like Crest’s other buttons."
+    },
+    "setup-secondary-text-consistent": {
+      "category": "improved",
+      "message": "Hints, counts and captions in setup on Mac now read at one even strength on every step."
     }
   }
 }

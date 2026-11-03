@@ -20,7 +20,7 @@ struct BrowserOnboardingMakeSection<Accessory: View, Content: View>: View {
             HStack(spacing: 10) {
                 Text(title)
                     .font(CrestTypography.sans(12, weight: .bold))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
                     .accessibilityAddTraits(.isHeader)
                 accessory
             }
@@ -92,7 +92,7 @@ struct BrowserOnboardingMakeSwatch: View {
                     .opacity(isDrawn ? 1 : 0.3)
                 Text(title)
                     .font(CrestTypography.sans(10, weight: .semibold))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.65))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
                     .lineLimit(1)
             }
             .frame(width: 52)

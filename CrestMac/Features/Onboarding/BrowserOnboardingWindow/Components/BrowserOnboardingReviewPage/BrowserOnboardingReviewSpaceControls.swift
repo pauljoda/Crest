@@ -24,7 +24,7 @@ struct BrowserOnboardingReviewChecklist: View {
             }
         }
         .background(
-            CrestBrandPalette.paper.opacity(0.08), in: .rect(cornerRadius: CrestRadius.card, style: .continuous)
+            CrestBrandTheme.quietFill, in: .rect(cornerRadius: CrestRadius.card, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: CrestRadius.card, style: .continuous)
@@ -34,7 +34,7 @@ struct BrowserOnboardingReviewChecklist: View {
             if isOutOfRoom {
                 Text("No room for another Space")
                     .font(CrestTypography.sans(11, weight: .medium))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
                     .offset(y: 22)
             }
         }
@@ -65,7 +65,7 @@ struct BrowserOnboardingReviewChecklist: View {
                     HStack(spacing: 8) {
                         Text(groupLabel)
                             .font(CrestTypography.sans(11, weight: .medium))
-                            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                            .foregroundStyle(CrestBrandTheme.textSecondary)
                             .lineLimit(1)
                         Spacer(minLength: 8)
                         Button {
@@ -95,7 +95,7 @@ struct BrowserOnboardingReviewChecklist: View {
                 if overflowCount > 0 {
                     Text(BrowserOnboardingSummary.overflowCount(overflowCount))
                         .font(CrestTypography.sans(11, weight: .medium))
-                        .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                        .foregroundStyle(CrestBrandTheme.textSecondary)
                 }
             }
         }
@@ -121,7 +121,7 @@ struct BrowserOnboardingReviewChecklist: View {
                         included: review.includedExtensionIDs.count, total: review.extensions.count))
                 Text(review.extensions.map(\.name).joined(separator: ", "))
                     .font(CrestTypography.sans(11, weight: .medium))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
                     .lineLimit(1)
             }
         }
@@ -241,7 +241,7 @@ private struct BrowserOnboardingReviewDestinationMenu: View {
             .padding(.horizontal, 10)
             .frame(height: 28)
             .background(
-                CrestBrandPalette.paper.opacity(0.1), in: .rect(cornerRadius: CrestRadius.compact, style: .continuous)
+                CrestBrandTheme.quietFill, in: .rect(cornerRadius: CrestRadius.compact, style: .continuous)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: CrestRadius.compact, style: .continuous)

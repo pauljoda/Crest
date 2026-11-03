@@ -131,11 +131,11 @@ struct BrowserSpaceSetupWizard: View {
                 }
                 footer
             }
-            .foregroundStyle(BrowserOnboardingPalette.ink)
+            .foregroundStyle(CrestBrandTheme.textDisplay)
             .font(CrestTypography.sans(14))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: step)
             .background {
-                Rectangle().fill(BrowserOnboardingPalette.parchment)
+                Rectangle().fill(CrestBrandTheme.surface)
                 if let draft {
                     RadialGradient(
                         colors: [
@@ -152,9 +152,9 @@ struct BrowserSpaceSetupWizard: View {
 
     private var chromeBackground: Color {
         #if os(iOS)
-            BrowserOnboardingPalette.parchment
+            CrestBrandTheme.surface
         #else
-            BrowserOnboardingPalette.paper
+            CrestBrandTheme.canvas
         #endif
     }
 
@@ -181,7 +181,7 @@ struct BrowserSpaceSetupWizard: View {
         .padding(.vertical, 20)
         .frame(maxWidth: .infinity)
         .background(chromeBackground)
-        .overlay(alignment: .bottom) { Rectangle().fill(BrowserOnboardingPalette.line).frame(height: 1) }
+        .overlay(alignment: .bottom) { Rectangle().fill(CrestBrandTheme.line).frame(height: 1) }
     }
 
     @ViewBuilder private func page(
@@ -277,7 +277,7 @@ struct BrowserSpaceSetupWizard: View {
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
         .background(chromeBackground)
-        .overlay(alignment: .top) { Rectangle().fill(BrowserOnboardingPalette.line).frame(height: 1) }
+        .overlay(alignment: .top) { Rectangle().fill(CrestBrandTheme.line).frame(height: 1) }
     }
 
     private func addSpace() {

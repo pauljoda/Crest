@@ -29,7 +29,7 @@ struct BrowserSourceImportTabRow: View {
                 } else if !included {
                     Image(systemName: duplicate ? "equal.circle.fill" : "minus.circle.fill")
                         .foregroundStyle(
-                            duplicate ? BrowserOnboardingPalette.match : Color.secondary
+                            duplicate ? CrestBrandPalette.match : Color.secondary
                         )
                 }
             }
@@ -46,7 +46,7 @@ struct BrowserSourceImportTabRow: View {
         .frame(height: 40)
         .background(
             duplicate
-                ? BrowserOnboardingPalette.match.opacity(0.16)
+                ? CrestBrandPalette.match.opacity(0.16)
                 : overflows ? CrestColor.dangerFill : .clear,
             in: .rect(cornerRadius: 10, style: .continuous)
         )
@@ -54,7 +54,7 @@ struct BrowserSourceImportTabRow: View {
             if duplicate {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(
-                        BrowserOnboardingPalette.match.opacity(0.52),
+                        CrestBrandPalette.match.opacity(0.52),
                         lineWidth: 0.75
                     )
             }

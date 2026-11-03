@@ -22,7 +22,7 @@ struct BrowserOnboardingModernSheet: View {
             Spacer(minLength: 0)
             Text("Patterns and crests: Settings › Spaces.")
                 .font(CrestTypography.sans(12, weight: .medium))
-                .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.5))
+                .foregroundStyle(CrestBrandTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

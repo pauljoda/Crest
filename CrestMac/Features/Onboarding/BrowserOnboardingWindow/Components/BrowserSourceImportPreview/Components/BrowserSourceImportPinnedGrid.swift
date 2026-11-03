@@ -26,7 +26,7 @@ struct BrowserSourceImportPinnedGrid: View {
                     .frame(height: 47)
                     .background(
                         duplicate
-                            ? BrowserOnboardingPalette.match.opacity(0.2)
+                            ? CrestBrandPalette.match.opacity(0.2)
                             : overflows
                                 ? CrestColor.dangerFill
                                 : Color.primary.opacity(0.075),
@@ -44,7 +44,7 @@ struct BrowserSourceImportPinnedGrid: View {
                             .font(.caption)
                             .foregroundStyle(
                                 duplicate
-                                    ? BrowserOnboardingPalette.match
+                                    ? CrestBrandPalette.match
                                     : overflows ? CrestColor.danger : Color.secondary
                             )
                             .padding(4)
@@ -54,7 +54,7 @@ struct BrowserSourceImportPinnedGrid: View {
                         if duplicate {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .strokeBorder(
-                                    BrowserOnboardingPalette.match.opacity(0.64),
+                                    CrestBrandPalette.match.opacity(0.64),
                                     lineWidth: 1
                                 )
                         }

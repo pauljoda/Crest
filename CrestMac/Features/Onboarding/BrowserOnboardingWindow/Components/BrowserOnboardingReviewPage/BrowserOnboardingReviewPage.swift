@@ -78,7 +78,7 @@ struct BrowserOnboardingReviewPage: View {
                         } else if let summary = flow.reviewSummary() {
                             Text(summary)
                                 .font(CrestTypography.sans(13, weight: .medium))
-                                .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.7))
+                                .foregroundStyle(CrestBrandTheme.textSecondary)
                         }
                         let isLast = review.id == spaces.last?.id
                         BrowserOnboardingContinueButton(reviewActionTitle(isLast: isLast)) {
@@ -154,7 +154,7 @@ private struct BrowserOnboardingReviewHeader: View {
                     .accessibilityAddTraits(.isHeader)
                 Text(progressLabel)
                     .font(CrestTypography.sans(12, weight: .semibold))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
             }
             Spacer(minLength: 20)
         }
@@ -236,7 +236,7 @@ struct BrowserOnboardingReviewLeftOutMenu: View {
                 Image(systemName: "info.circle")
             }
             .font(CrestTypography.sans(12, weight: .semibold))
-            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+            .foregroundStyle(CrestBrandTheme.textSecondary)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
