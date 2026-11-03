@@ -17,7 +17,7 @@ struct BrowserImportSidebarResultTabRow: View {
             if isMatched {
                 Image(systemName: "equal.circle.fill")
                     .font(.caption)
-                    .foregroundStyle(BrowserOnboardingPalette.match)
+                    .foregroundStyle(CrestBrandPalette.match)
             }
             if !tab.placement.isDurable, isSelected {
                 Image(systemName: "xmark")
@@ -30,7 +30,7 @@ struct BrowserImportSidebarResultTabRow: View {
         .frame(height: 40)
         .background(
             isMatched
-                ? BrowserOnboardingPalette.match.opacity(0.16)
+                ? CrestBrandPalette.match.opacity(0.16)
                 : isSelected ? Color.primary.opacity(0.1) : .clear,
             in: .rect(cornerRadius: 10, style: .continuous)
         )
@@ -38,7 +38,7 @@ struct BrowserImportSidebarResultTabRow: View {
             if isMatched {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(
-                        BrowserOnboardingPalette.match.opacity(0.52),
+                        CrestBrandPalette.match.opacity(0.52),
                         lineWidth: 0.75
                     )
             }

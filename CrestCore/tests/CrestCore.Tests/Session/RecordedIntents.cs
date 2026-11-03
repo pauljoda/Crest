@@ -83,9 +83,12 @@ internal static class RecordedIntents {
         return request["operation"]!.GetValue<string>() switch {
             "tab.open" => [Opening(workspace, window ?? Guid.Empty, Id("spaceId"), arguments)],
             "tab.close" => [new CloseTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"))],
-            "tab.transfer" => [new MoveTabToSpace(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"), Id("destinationSpaceId"),
-                arguments["placement"] is { } placement ? TabPlacement.Named(placement.GetValue<string>()) : null, Optional("folderId"),
-                Optional("before"), arguments["select"]?.GetValue<bool>() == true)],
+            // Whether the window follows the tab is the device's link
+            // preference now, which the recording chose per move.
+            "tab.transfer" => [new SetLinkBehavior(LinkBehavior.FollowsMovedTabs, arguments["select"]?.GetValue<bool>() == true),
+                new MoveTabToSpace(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"), Id("destinationSpaceId"),
+                    arguments["placement"] is { } placement ? TabPlacement.Named(placement.GetValue<string>()) : null, Optional("folderId"),
+                    Optional("before"))],
             "archive.restore" => [new RestoreArchivedTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"))],
             "records.sweep" => [new SweepExpiredRecords(workspace)],
             "folder.create" => [new CreateFolder(workspace, Id("spaceId"), Argument("folderId"),

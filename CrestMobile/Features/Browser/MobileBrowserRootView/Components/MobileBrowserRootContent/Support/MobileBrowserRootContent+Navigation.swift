@@ -96,6 +96,11 @@ extension MobileBrowserRootContent {
         )
     }
 
+    func commitRegularSidebarWidth(_ width: CGFloat) {
+        guard let committedWidth = model.commitSidebarWidth(width) else { return }
+        storedRegularSidebarWidth = Double(committedWidth)
+    }
+
     func toggleCompactSidebar() {
         dismissAddressFocus()
         model.toggleSidebar(

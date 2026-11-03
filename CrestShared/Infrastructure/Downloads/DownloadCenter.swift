@@ -46,7 +46,6 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored let resolveDownloadDestination: DownloadDestinationChooser
     @ObservationIgnored private var feedbackExpirationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var dataSaveAssignments: [UUID: BrowserSpaceRuntimeAssignment] = [:]
-    @ObservationIgnored private var lastRetentionSweepAt: Date?
 
     // MARK: - Initializers
 
@@ -133,36 +132,6 @@ final class BrowserDownloadCenter: NSObject {
     @discardableResult
     func acknowledgeItems(for profileID: UUID) -> Int {
         (try? core.send(AcknowledgeDownloads(profileID: profileID)))?.count ?? 0
-    }
-
-    /// Removes only Crest's terminal download records, under the retention of
-    /// each of `spaces`. Files already written to their destination remain
-    /// untouched.
-    @discardableResult
-    func sweepExpiredRecords(
-        in spaces: [SpaceModel],
-        now: Date = .now,
-        force: Bool = false
-    ) -> Bool {
-        guard
-            force
-                || BrowserCurrentTabCleanupSchedule.allowsSweep(
-                    lastSweptAt: lastRetentionSweepAt,
-                    now: now
-                )
-        else {
-            return false
-        }
-        lastRetentionSweepAt = now
-        let expiry = ExpireDownloads(
-            now: now,
-            retentions: spaces.map {
-                DownloadRetention(
-                    profileID: $0.profileID,
-                    lifetime: $0.settings.browsingPreferences.dataRetention.downloads.lifetime)
-            })
-        _ = try? core.send(expiry)
-        return true
     }
 
     /// Cancels a live download. The core cancels one an engine runs on its

@@ -35,6 +35,14 @@ public sealed partial class NativeSessionAuthority {
         return SearchCatalog.For(space.Settings.BrowsingPreferences, Kind.IsPrivate);
     }
 
+    /// Whether a Space of the accepted session suggests searches as a person
+    /// types. Throws `Rejected` with `UnknownSpace` for one it does not hold.
+    internal bool SuggestsSearches(Guid spaceId) {
+        SpaceState space;
+        lock (Gate) space = session.KnownSpace(spaceId);
+        return SearchCatalog.SuggestsFor(space.Settings.BrowsingPreferences);
+    }
+
     #endregion
 
     #region Actions - Browsing preferences

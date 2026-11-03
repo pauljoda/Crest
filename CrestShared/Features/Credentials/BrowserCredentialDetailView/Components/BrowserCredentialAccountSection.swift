@@ -18,7 +18,7 @@ struct BrowserCredentialAccountSection: View {
                     systemImage: "exclamationmark.shield.fill"
                 )
                 .font(.footnote)
-                .foregroundStyle(.orange)
+                .foregroundStyle(CrestColor.warning)
             }
         }
     }

@@ -300,7 +300,7 @@ extension BrowserStore {
         return family.send(
             NavigateTab(
                 workspaceID: family.workspaceID, spaceID: space.id, tabID: tab.id, input: input),
-            from: self, failure: "Core navigation failed")
+            from: self)
     }
 
 }

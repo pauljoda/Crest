@@ -14,7 +14,7 @@ extension EraseProfileData {
         Task { [weak binding] in
             let erased: Bool
             do {
-                try await stores.removeProfile(BrowsingProfile(id: profileID), ephemeral: ephemeral)
+                try await stores.removeProfile(profileID, ephemeral: ephemeral)
                 erased = true
             } catch {
                 erased = false

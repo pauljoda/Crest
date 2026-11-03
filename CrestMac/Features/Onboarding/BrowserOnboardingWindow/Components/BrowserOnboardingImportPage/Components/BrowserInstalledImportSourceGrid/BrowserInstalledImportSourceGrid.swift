@@ -45,7 +45,10 @@ private struct BrowserInstalledImportSourceCard: View {
     let toggleSelection: () -> Void
 
     var body: some View {
-        Button(action: toggleSelection) {
+        CrestSelectableCard(
+            isSelected: isSelected, accessibilityLabel: Text("Import from \(source.title)"), density: .compact,
+            tint: CrestBrandPalette.butter, action: toggleSelection
+        ) {
             VStack(spacing: 12) {
                 Image(nsImage: source.icon)
                     .resizable()
@@ -58,23 +61,11 @@ private struct BrowserInstalledImportSourceCard: View {
                     .lineLimit(1)
                 Text(accessLabel ?? "")
                     .font(CrestTypography.sans(11, weight: .medium))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
                     .lineLimit(1)
                     .frame(height: 14)
             }
-            .frame(width: 196, height: 176)
-            .contentShape(.rect(cornerRadius: CrestRadius.card, style: .continuous))
-            .background {
-                RoundedRectangle(cornerRadius: CrestRadius.card, style: .continuous)
-                    .fill(CrestBrandPalette.paper.opacity(isSelected ? 0.12 : 0.07))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: CrestRadius.card, style: .continuous)
-                    .strokeBorder(
-                        isSelected ? CrestBrandPalette.butter : CrestBrandTheme.line,
-                        lineWidth: isSelected ? 3 : CrestLayout.hairline
-                    )
-            }
+            .frame(width: 180, height: 160)
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Image(systemName: "checkmark")
@@ -82,16 +73,14 @@ private struct BrowserInstalledImportSourceCard: View {
                         .foregroundStyle(CrestBrandPalette.ink)
                         .frame(width: 22, height: 22)
                         .background(CrestBrandPalette.butter, in: .circle)
-                        .padding(10)
+                        .padding(CrestSpacing.extraExtraSmall)
                         .accessibilityHidden(true)
                 }
             }
         }
-        .buttonStyle(.plain)
+        .fixedSize()
         .disabled(isLocked)
-        .accessibilityLabel("Import from \(source.title)")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityHint(accessibilityHint)
     }
 

@@ -60,7 +60,7 @@ struct BrowserOnboardingWelcomePage: View {
                     .accessibilityAddTraits(.isHeader)
                 Text("Internet under your colors.")
                     .font(CrestTypography.sans(21))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.78))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
             }
             BrowserOnboardingWelcomeCallToAction(
                 action: action,

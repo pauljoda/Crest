@@ -9,9 +9,6 @@ extension SetupLook {
     /// The template every look's preview starts from.
     private static let previewHouse = SpaceHouse.winter
 
-    /// The angle a modern gradient runs at: straight down the sidebar.
-    private static let modernGradientAngle = 90.0
-
     // MARK: - Variables
 
     /// The look on the template every preview starts from.
@@ -23,19 +20,13 @@ extension SetupLook {
 
     // MARK: - Actions - Looks
 
-    /// `branding` in this look: its sidebar mode and icon style, keeping its
-    /// colors and crest.
+    /// `branding` in this look: the sidebar mode, gradient angle and icon
+    /// style the core gives the look, keeping its colors and crest.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
         var look = branding
-        switch kind {
-        case .heraldic:
-            look.themeMode = .banner
-            look.iconStyle = .layeredCrest
-        case .modern:
-            look.themeMode = .gradient
-            look.gradientAngle = Self.modernGradientAngle
-            look.iconStyle = .simpleSymbol
-        }
+        look.themeMode = themeMode
+        look.gradientAngle = gradientAngle ?? branding.gradientAngle
+        look.iconStyle = iconStyle
         return look.normalized()
     }
 }

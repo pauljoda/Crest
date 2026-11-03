@@ -31,9 +31,7 @@ struct MobileSpaceArchiveButton: View {
         .modifier(
             MobileSpaceUtilityBadge(
                 count: presentsInline ? newDownloads.count : 0,
-                tint: downloads.contains(where: { $0.phase.needsAttention })
-                    ? .red
-                    : badgeColor,
+                tint: badgeColor,
                 progress: downloads.notificationProgress
             )
         )

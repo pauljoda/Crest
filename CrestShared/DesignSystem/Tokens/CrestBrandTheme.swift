@@ -11,10 +11,11 @@ import SwiftUI
 /// demands: paper and ink simply trade places, and coral is lifted (hue held at
 /// roughly 8°, saturation held near 0.84) so it stays readable on ink without
 /// reading as a different colour. Every pair below clears WCAG AA for text
-/// (4.5:1) or non-text (3:1) in both schemes; `CrestDesignLanguageTests` pins the
-/// measured ratios.
+/// (4.5:1) or non-text (3:1) in both schemes.
 enum CrestBrandTheme {
-    // MARK: - Component pairs
+    // MARK: - Static Variables
+
+    // Component pairs
 
     /// Coral, lifted for dark: same hue family as `CrestBrandPalette.coral`, with
     /// enough luminance to sit on ink.
@@ -40,6 +41,11 @@ enum CrestBrandTheme {
 
     static let textDisplayLightComponents = CrestBrandPalette.inkComponents
     static let textDisplayDarkComponents = CrestBrandPalette.paperComponents
+    /// Display text held back for supporting copy. Ink at 0.7 keeps 5.4:1 or
+    /// more on paper and parchment; paper at 0.6 keeps 5.2:1 or more on ink
+    /// and its soft surface.
+    static let textSecondaryLightOpacity = 0.7
+    static let textSecondaryDarkOpacity = 0.6
 
     static let lineLightComponents = CrestBrandPalette.inkComponents
     static let lineDarkComponents = CrestBrandPalette.paperComponents
@@ -48,7 +54,12 @@ enum CrestBrandTheme {
     static let lineLightOpacity = 0.18
     static let lineDarkOpacity = 0.22
 
-    // MARK: - Semantic roles
+    /// A wash of display ink, faint enough to sit under text without taking
+    /// from its contrast.
+    static let quietFillLightOpacity = 0.05
+    static let quietFillDarkOpacity = 0.08
+
+    // Semantic roles
 
     /// Brand accent for interactive emphasis and tint.
     static let accent = dynamic(light: accentLightComponents, dark: accentDarkComponents)
@@ -66,6 +77,13 @@ enum CrestBrandTheme {
         light: textDisplayLightComponents,
         dark: textDisplayDarkComponents
     )
+    /// Supporting text beside `textDisplay`: captions, counts, hints and notes.
+    static let textSecondary = dynamic(
+        light: textDisplayLightComponents,
+        lightOpacity: textSecondaryLightOpacity,
+        dark: textDisplayDarkComponents,
+        darkOpacity: textSecondaryDarkOpacity
+    )
     /// Hairline separators and control borders.
     static let line = dynamic(
         light: lineLightComponents,
@@ -73,11 +91,19 @@ enum CrestBrandTheme {
         dark: lineDarkComponents,
         darkOpacity: lineDarkOpacity
     )
+    /// The quiet ground of a panel or control that sits on `canvas` without
+    /// rising to `surface`.
+    static let quietFill = dynamic(
+        light: textDisplayLightComponents,
+        lightOpacity: quietFillLightOpacity,
+        dark: textDisplayDarkComponents,
+        darkOpacity: quietFillDarkOpacity
+    )
 
-    // MARK: - Scheme-resolved colors
+    // MARK: - Actions - Resolving
 
-    /// The role values as flat colors, for tests and for surfaces that already
-    /// know which appearance they render in.
+    /// The role values as flat colors, for surfaces that already know which
+    /// appearance they render in.
     static func accent(_ colorScheme: ColorScheme) -> Color {
         components(accentLightComponents, accentDarkComponents, colorScheme).color
     }
@@ -111,7 +137,7 @@ enum CrestBrandTheme {
         colorScheme == .dark ? dark : light
     }
 
-    // MARK: - Dynamic construction
+    // MARK: - Actions - Construction
 
     private static func dynamic(
         light: CrestColorComponents,

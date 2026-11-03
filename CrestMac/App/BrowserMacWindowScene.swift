@@ -109,9 +109,7 @@ struct BrowserMacWindowScene: View {
         // sweeping. Windows share one session, which collapses overlapping sweeps.
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
-            await browser.sweepExpiredBrowsingDataWhileSceneIsActive {
-                pages.downloadCenter.sweepExpiredRecords(in: browser.spaceModels)
-            }
+            await browser.sweepExpiredBrowsingDataWhileSceneIsActive()
         }
         .onChange(of: chrome.columnVisibility, initial: true) { _, visibility in
             windowState.captureSidebar(

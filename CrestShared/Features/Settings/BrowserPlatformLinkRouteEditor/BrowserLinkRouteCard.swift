@@ -58,10 +58,13 @@ struct BrowserLinkRouteCard: View {
             Toggle("Enabled", isOn: binding(route.isEnabled, field: BrowserLinkRouteFieldUpdate.isEnabled))
                 .toggleStyle(.switch).fixedSize()
             Menu {
-                Button("Move Up", systemImage: "arrow.up", action: moveUp).disabled(!canMoveUp)
-                Button("Move Down", systemImage: "arrow.down", action: moveDown).disabled(!canMoveDown)
-                Divider()
-                Button("Delete Route", systemImage: "trash", role: .destructive, action: delete)
+                Group {
+                    Button("Move Up", systemImage: "arrow.up", action: moveUp).disabled(!canMoveUp)
+                    Button("Move Down", systemImage: "arrow.down", action: moveDown).disabled(!canMoveDown)
+                    Divider()
+                    Button("Delete Route", systemImage: "trash", role: .destructive, action: delete)
+                }
+                .crestMenuActionLabelStyle()
             } label: {
                 Image(systemName: "ellipsis").frame(width: 28, height: 28).contentShape(.rect)
             }

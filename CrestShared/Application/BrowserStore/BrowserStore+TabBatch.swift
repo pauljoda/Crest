@@ -65,16 +65,15 @@ extension BrowserStore {
             reselection: .items)
     }
 
-    /// Moves the selected tabs to another Space, which the window follows
-    /// them to when the person's link preferences say so.
+    /// Moves the selected tabs to another Space, which the core has the
+    /// window follow them to when the person's link preferences say so.
     func moving(_ request: BrowserCapturedSelection, to destination: BrowserSpaceRuntimeAssignment) -> BrowserTabBatch {
-        let follows = linkPreferences.preferences.followsMovedTabs
-        return BrowserTabBatch(
+        BrowserTabBatch(
             MoveTabsToSpace(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
                 selection: request.selection,
-                destinationSpaceID: destination.spaceID, follows: follows),
-            reselection: .cleared, following: follows ? destination : nil)
+                destinationSpaceID: destination.spaceID),
+            reselection: .cleared, destination: destination)
     }
 
     /// Files the selection into `folder` or at the top level of `placement`'s
@@ -132,8 +131,10 @@ extension BrowserStore {
             return copied
         }
         if let sources { prepareAcceptedCopies(copies, from: sources) }
-        pendingMovedTabActivation = batch.following.flatMap { destination in
-            selectedTabID(in: destination.spaceID).map {
+        // The window followed the tabs when the core moved it to their Space.
+        pendingMovedTabActivation = batch.destination.flatMap { destination in
+            guard selectedSpaceID == destination.spaceID else { return nil }
+            return selectedTabID(in: destination.spaceID).map {
                 BrowserTabRuntimeAssignment(tabID: $0, spaceID: destination.spaceID, profileID: destination.profileID)
             }
         }

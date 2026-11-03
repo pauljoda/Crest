@@ -1,6 +1,8 @@
 import SwiftUI
 
 /// A horizontal rail of crest-badged Space chips, ending in a dashed add chip.
+/// The chips stand in a row where they fit the width they are offered, and
+/// scroll sideways where there are more than fit.
 struct CrestSpaceChipRail: View {
     let spaces: [CrestSpaceIdentity]
     @Binding var selection: UUID?
@@ -23,22 +25,27 @@ struct CrestSpaceChipRail: View {
     }
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: CrestSpaceChipMetrics.railSpacing) {
-                ForEach(spaces) { identity in
-                    chip(identity)
-                }
-
-                if let add {
-                    addChip(add)
-                }
-            }
-            .padding(.vertical, CrestSpacing.extraExtraSmall)
-            .crestCollectionMotion(ids: spaces.map(\.id))
+        ViewThatFits(in: .horizontal) {
+            chips
+            ScrollView(.horizontal) { chips }
+                .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
         .accessibilityElement(children: .contain)
         .crestAccessibilityIdentifier(accessibilityIdentifier)
+    }
+
+    private var chips: some View {
+        HStack(spacing: CrestSpaceChipMetrics.railSpacing) {
+            ForEach(spaces) { identity in
+                chip(identity)
+            }
+
+            if let add {
+                addChip(add)
+            }
+        }
+        .padding(.vertical, CrestSpacing.extraExtraSmall)
+        .crestCollectionMotion(ids: spaces.map(\.id))
     }
 
     private func chip(_ identity: CrestSpaceIdentity) -> some View {

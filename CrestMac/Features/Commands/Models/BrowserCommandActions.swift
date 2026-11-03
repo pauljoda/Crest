@@ -382,8 +382,16 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     // MARK: - Tabs
 
+    /// Pins or unpins the tab this window shows, and tells the person why
+    /// the core refused it, such as a full pinned section.
     func toggleSelectedTabPinned() {
-        guard let tab = browser.shownTab, browser.togglePin(tab.id) else { return }
+        guard let tab = browser.shownTab else { return }
+        do throws(Rejection) {
+            guard try browser.togglePin(tab.id) else { return }
+        } catch {
+            BrowserNoticeCenter.shared.post(.failure(error.explanation))
+            return
+        }
         pages.select()
     }
 

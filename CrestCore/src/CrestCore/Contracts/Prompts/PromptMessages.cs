@@ -34,11 +34,15 @@ public sealed record UnknownPrompt(Guid PromptId) : Rejection;
 
 #region Models
 
+/// A question a prompt asks the person, whose kind says what answer it
+/// takes.
+public abstract record PromptQuestion;
+
 /// A server a page loads from asked for a user name and password: `Host` and
 /// `Port` of `Url`, in `Realm`, with `Scheme`, after `PreviousFailures` wrong
 /// answers.
 public sealed record AuthenticationQuestion(string Url, string Host, int Port, string? Realm, AuthenticationScheme Scheme,
-    bool IsProxy, int PreviousFailures);
+    bool IsProxy, int PreviousFailures) : PromptQuestion;
 
 /// The HTTP authentication schemes Crest answers.
 public enum AuthenticationScheme {
@@ -52,16 +56,17 @@ public enum AuthenticationScheme {
 /// the person may keep its site access back, and `WithholdsSiteAccess` says
 /// installing does so unless they choose otherwise.
 public sealed record ExtensionInstallQuestion(string ExtensionId, string Name, string Version, string Summary,
-    IReadOnlyList<string> Permissions, byte[]? Icon, bool CanWithholdSiteAccess, bool WithholdsSiteAccess);
+    IReadOnlyList<string> Permissions, byte[]? Icon, bool CanWithholdSiteAccess, bool WithholdsSiteAccess) : PromptQuestion;
 
 /// A document in a page asked for `Permission`, from `Origin` inside
 /// `TopLevelOrigin`.
-public sealed record PermissionQuestion(SitePermission Permission, SiteOrigin Origin, SiteOrigin TopLevelOrigin);
+public sealed record PermissionQuestion(SitePermission Permission, SiteOrigin Origin, SiteOrigin TopLevelOrigin) : PromptQuestion;
 
 /// A document in a page opened a script dialog: an alert, a confirmation, a
 /// prompt with `DefaultText`, or the question whether to leave the page.
 /// `SourceUrl` is the address of the document that opened it.
-public sealed record ScriptDialogQuestion(JavaScriptDialogKind Kind, string Message, string DefaultText, string SourceUrl);
+public sealed record ScriptDialogQuestion(JavaScriptDialogKind Kind, string Message, string DefaultText, string SourceUrl)
+    : PromptQuestion;
 
 /// The script dialogs a page can open.
 public enum JavaScriptDialogKind {

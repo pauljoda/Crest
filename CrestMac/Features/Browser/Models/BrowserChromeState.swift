@@ -7,6 +7,8 @@ final class BrowserChromeState {
     // MARK: - Variables
 
     let utilityPresentation: BrowserUtilityPresentationState
+    /// The notice this window shows at its top.
+    let notices = BrowserNotices()
     var columnVisibility: NavigationSplitViewVisibility {
         get { observed(\.columnVisibilityStorage, as: \.columnVisibility) }
         set { publish(newValue, into: \.columnVisibilityStorage, as: \.columnVisibility) }
@@ -35,12 +37,6 @@ final class BrowserChromeState {
     @ObservationIgnored private var commandPaletteModeStorage: BrowserCommandPaletteMode?
     private(set) var addressFocusRequest = 0
     private(set) var startPageFocusRequest = 0
-    private(set) var notice: BrowserNotice?
-    private(set) var noticeRevision: Int {
-        get { observed(\.noticeRevisionStorage, as: \.noticeRevision) }
-        set { publish(newValue, into: \.noticeRevisionStorage, as: \.noticeRevision) }
-    }
-    @ObservationIgnored private var noticeRevisionStorage = 0
     /// The recent tabs a held Most Recent Tab shortcut shows over the window,
     /// or nil while none shows.
     var recentTabs: RecentTabSwitcherModel? {
@@ -146,8 +142,7 @@ final class BrowserChromeState {
     /// Shows `notice` at the top of this window, replacing any notice already
     /// there.
     func showNotice(_ notice: BrowserNotice) {
-        self.notice = notice
-        noticeRevision &+= 1
+        notices.show(notice)
     }
 
     func showURLCopiedFeedback() {

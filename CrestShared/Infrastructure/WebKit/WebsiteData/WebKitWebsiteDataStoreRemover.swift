@@ -67,15 +67,15 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
         self.acceptsClearedStoreFallback = acceptsClearedStoreFallback
     }
 
-    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
+    func removeProfile(_ profileID: UUID, ephemeral: Bool) async throws {
         guard !ephemeral else { return }
-        try await removePersistentDataStore(for: profile)
+        try await removePersistentDataStore(forProfile: profileID)
     }
 
-    /// Removes the stores this launch opens for `profile`, which in a named
+    /// Removes the stores this launch opens for the profile `profileID`, which in a named
     /// isolated launch are never the installed app's.
-    func removePersistentDataStore(for profile: BrowsingProfile) async throws {
-        let identifier = storeIdentifier(profile.id)
+    func removePersistentDataStore(forProfile profileID: UUID) async throws {
+        let identifier = storeIdentifier(profileID)
         try await removePersistentDataStore(identifier: identifier)
         try await removePersistentDataStore(
             identifier: BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: identifier))

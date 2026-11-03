@@ -53,12 +53,14 @@ struct BrowserSpaceBrowsingSection: View {
 
     // MARK: - Search
 
-    /// The Space's choice: the default while it follows it, else its own.
+    /// The Space's choice: the default while it follows it, else what the
+    /// core says it searches with, as its address bar does.
     private var searchChoice: Binding<BrowserSpaceSearchChoice> {
         Binding {
             BrowserSpaceSearchChoice(
                 provider: currentPreferences.followsDefaultSearch
-                    ? nil : catalog.provider(for: currentPreferences, isPrivate: browser.isPrivateBrowsing))
+                    ? nil
+                    : catalog.search(of: space.id, in: browser.profileSettingsBrowser.family.workspaceID)?.provider)
         } set: { choice in
             dismissKeyboard()
             browser.setSearch(choice.provider, suggestions: suggestionChoice.wrappedValue.enabled, in: space.id)

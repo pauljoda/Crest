@@ -748,7 +748,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func pdfData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await webView.pdf(configuration: WKPDFConfiguration())
+        return try await enginePage.export(.pdf)
     }
 
     func exportPDF(to destination: MobileBrowserFileExportDestination) {
@@ -772,13 +772,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// The page's document and resources, in the archive WebKit keeps.
     func webArchiveData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await withCheckedThrowingContinuation { continuation in
-            webView.createWebArchiveData { result in
-                continuation.resume(with: result)
-            }
-        }
+        return try await enginePage.export(BrowserPageArchiveFormat.webArchive.exportFormat)
     }
 
     func exportWebArchive(to destination: MobileBrowserFileExportDestination) {
@@ -1054,7 +1051,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             media: pageEngine.knownMediaActivity)
     }
 
-    private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+    /// Reads what the credential bridge posted from this page's web view. A
+    /// popup shares this page's controller, so its bridge posts here too: a
+    /// message another page's web view sent goes to that page, whose own
+    /// credential session reads it and fills its own frames.
+    func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+        if let source = scriptMessage.webView, source !== webView {
+            webKitPage.binding?.page(showing: source)?.host?.receiveCredentialMessage(scriptMessage)
+            return
+        }
         credentialSession.receive(scriptMessage, in: webView)
     }
 

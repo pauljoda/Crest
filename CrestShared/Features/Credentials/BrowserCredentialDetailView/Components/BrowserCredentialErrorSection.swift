@@ -10,7 +10,7 @@ struct BrowserCredentialErrorSection: View {
                     message,
                     systemImage: "exclamationmark.triangle.fill"
                 )
-                .foregroundStyle(.red)
+                .foregroundStyle(CrestColor.danger)
             }
         }
     }

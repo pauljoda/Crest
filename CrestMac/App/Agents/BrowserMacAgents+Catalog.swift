@@ -56,11 +56,11 @@ extension BrowserMacAgents {
         func describe(_ provider: SearchProvider) -> SearchCatalog.Provider {
             .init(id: provider.name, name: provider.title, shortcuts: provider.shortcuts, url: provider.searchTemplate)
         }
+        let searched = try reach(call).workspaceID.flatMap { catalog.search(of: space.id, in: $0) }
         return .data(
             SearchCatalog(
                 providers: catalog.providers.filter { catalog.isEnabled($0) }.map(describe),
-                defaultProvider: catalog.provider(for: space.settings.browsingPreferences, isPrivate: false).map(
-                    describe)))
+                defaultProvider: searched.map { describe($0.provider) }))
     }
 
     // MARK: - Actions - History

@@ -17,7 +17,6 @@ struct BrowserSettingsDestinationRouter: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
     let cloudSync: BrowserCloudSyncController
-    let downloadCenter: BrowserDownloadCenter
     let permissionCenter: BrowserSitePermissionCenter
     let contentBlockingErrorDescription: String?
     /// What this shell can offer a reader who wants to set Crest up again.
@@ -91,7 +90,6 @@ struct BrowserSettingsDestinationRouter: View {
             #else
                 BrowserPrivacySettingsPane(
                     browser: browser,
-                    downloadCenter: downloadCenter,
                     spaceAccess: spaceAccess,
                     permissionCenter: permissionCenter,
                     contentBlockingErrorDescription:

@@ -43,13 +43,13 @@ struct BrowserSyncSettingsView: View {
 
                 if let error = cloudSync.errorDescription {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(CrestColor.danger)
                         .accessibilityIdentifier("icloud-sync-error")
                 }
 
                 if let localError = cloudSync.localErrorDescription ?? browser.localSyncErrorDescription {
                     Label(localError, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(CrestColor.danger)
                 }
 
                 if cloudSync.skippedRecordCount > 0 {
@@ -57,7 +57,7 @@ struct BrowserSyncSettingsView: View {
                         "Some changes couldn’t be read. Update Crest on every device, then pull from iCloud.",
                         systemImage: "exclamationmark.icloud"
                     )
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(CrestColor.warning)
                 }
             }
 

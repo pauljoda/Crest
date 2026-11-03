@@ -112,7 +112,7 @@ final class BrowserSidebarDropRefusals {
         answer(.space(destinationID)) { browser in
             DropOnSpace(
                 workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: spaceID,
-                selection: selection, destinationSpaceID: destinationID, follows: false)
+                selection: selection, destinationSpaceID: destinationID)
         }
     }
 

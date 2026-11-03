@@ -39,13 +39,13 @@ struct BrowserCredentialSavePromptContent: View {
                     )
                 )
                 .font(.caption)
-                .foregroundStyle(.orange)
+                .foregroundStyle(CrestColor.warning)
             }
 
             if let errorMessage = route.errorMessage(spaceName: space?.name) {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(CrestColor.danger)
             }
 
             if metrics.saveActionPlacement == .belowContent {

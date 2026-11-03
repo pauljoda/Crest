@@ -18,7 +18,7 @@ public sealed partial class BrowserContractsTests {
 
     /// The rule that refuses dropping `selection` on the Space `destination`.
     private static Rejection? SpaceRefusal(TestDevice device, Guid window, Guid space, TabSelection selection, Guid destination) =>
-        device.Query(new CanSend(new DropOnSpace(device.Workspace, window, space, selection, destination, Follows: false))).Refusal;
+        device.Query(new CanSend(new DropOnSpace(device.Workspace, window, space, selection, destination))).Refusal;
 
     /// One tab lifted alone drops everywhere dragging one tab could: among the
     /// pinned tabs, on another Space, on the cards a window shows and around an

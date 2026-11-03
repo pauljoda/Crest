@@ -63,22 +63,28 @@ struct BrowserDeveloperToolbar: View {
 
     private var overflowMenu: some View {
         Menu {
-            Button("Copy Link", systemImage: "link", action: page.copyDeveloperPageLink)
-            Menu("Capture Window", systemImage: "rectangle.inset.filled") {
-                Button("Capture in Portrait Mode", systemImage: "rectangle.portrait.on.rectangle.portrait") {
-                    page.savePortraitCapture()
+            Group {
+                Button("Copy Link", systemImage: "link", action: page.copyDeveloperPageLink)
+                Menu("Capture Window", systemImage: "rectangle.inset.filled") {
+                    Group {
+                        Button("Capture in Portrait Mode", systemImage: "rectangle.portrait.on.rectangle.portrait") {
+                            page.savePortraitCapture()
+                        }
+                        Button("Copy Full Page Capture", systemImage: "doc.on.clipboard") {
+                            page.copyFullPageCapture()
+                        }
+                    }
+                    .crestMenuActionLabelStyle()
                 }
-                Button("Copy Full Page Capture", systemImage: "doc.on.clipboard") {
-                    page.copyFullPageCapture()
-                }
+                .disabled(!page.pageEngine.registration.supports(.fullPageCapture))
+                Button("Capture", systemImage: "camera", action: page.beginRegionCapture)
+                    .disabled(!page.pageEngine.registration.supports(.viewportCapture))
+                Divider()
+                Button("Toggle Console", systemImage: "apple.terminal") { page.toggleDeveloperPanel(.console) }
+                Button("Toggle Network Panel", systemImage: "network") { page.toggleDeveloperPanel(.network) }
+                Button("Inspect Element", systemImage: "scope") { page.toggleDeveloperPanel(.elements) }
             }
-            .disabled(!page.pageEngine.registration.supports(.fullPageCapture))
-            Button("Capture", systemImage: "camera", action: page.beginRegionCapture)
-                .disabled(!page.pageEngine.registration.supports(.viewportCapture))
-            Divider()
-            Button("Toggle Console", systemImage: "apple.terminal") { page.toggleDeveloperPanel(.console) }
-            Button("Toggle Network Panel", systemImage: "network") { page.toggleDeveloperPanel(.network) }
-            Button("Inspect Element", systemImage: "scope") { page.toggleDeveloperPanel(.elements) }
+            .crestMenuActionLabelStyle()
         } label: {
             Image(systemName: "ellipsis")
                 .frame(

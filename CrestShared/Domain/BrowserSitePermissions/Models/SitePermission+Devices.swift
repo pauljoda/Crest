@@ -9,11 +9,6 @@ extension SitePermission {
         components.isEmpty ? [self] : components
     }
 
-    /// The combined capabilities whose decisions also answer this one.
-    var combinations: [SitePermission] {
-        Self.all.filter { combination in combination.components.contains(where: devices.contains) }
-    }
-
     // MARK: - Actions - Presentation
 
     /// What the settings call `decision` for this capability. Ask reads as

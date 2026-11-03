@@ -14,8 +14,7 @@ public sealed record AnswerPermission(Guid PromptId, bool Grants, bool Remembers
     /// then records nothing.
     internal override void Apply(CrestApp app, ChangeFeed changes) {
         var prompts = app.Prompts;
-        var prompt = prompts.Prompt(PromptId);
-        if (prompt.Question is not PermissionQuestion permission) throw new Rejected(new PromptAnswerMismatch(PromptId));
+        var (prompt, permission) = prompts.Prompt<PermissionQuestion>(PromptId);
         if (prompts.Asking(prompt.PageId) is { } asking && prompts.Decision(asking.SpaceId, permission) is { Denies: true } blocked) {
             prompts.Settle(PromptId, changes);
             app.Issue(prompt.Engine, new SettlePermission(PromptId, Grants: false, blocked.IsPersistent));

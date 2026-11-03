@@ -43,7 +43,7 @@ struct BrowserOnboardingWindowContent: View {
                 }
                 if let failure = flow.completionFailure {
                     Text(failure)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(CrestColor.danger)
                         .padding()
                 }
             }

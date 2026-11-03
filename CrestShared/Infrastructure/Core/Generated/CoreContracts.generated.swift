@@ -2251,11 +2251,6 @@ struct DownloadProgressReading: Equatable, Sendable {
     let progress: Double
 }
 
-struct DownloadRetention: Equatable, Sendable {
-    var profileID: UUID
-    var lifetime: TimeInterval?
-}
-
 struct DownloadRisk: Query, Equatable, Sendable {
     typealias Answer = DownloadRiskVerdict
 
@@ -2388,7 +2383,6 @@ struct DropOnSpace: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
     let spaceID: UUID
     let selection: TabSelection
     let destinationSpaceID: UUID
-    let follows: Bool
 }
 
 struct DropStagedLink: Equatable, Sendable {
@@ -2670,11 +2664,6 @@ struct ExpandSavedTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let isExpanded: Bool
-}
-
-struct ExpireDownloads: Intent, DownloadIntent, Equatable, Sendable {
-    let now: Date
-    let retentions: [DownloadRetention]
 }
 
 struct ExportPage: PageRequest, Equatable, Sendable {
@@ -3873,7 +3862,6 @@ struct MoveTabToSpace: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement?
     let folderID: UUID?
     let beforeTabID: UUID?
-    let follows: Bool
 }
 
 struct MoveTabToWindow: Intent, SessionIntent, Equatable, Sendable {
@@ -3890,7 +3878,6 @@ struct MoveTabsToSpace: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let selection: TabSelection
     let destinationSpaceID: UUID
-    let follows: Bool
 }
 
 struct MuteMediaSession: PageRequest, Equatable, Sendable {
@@ -5472,6 +5459,12 @@ struct SearchProvider: Equatable, Sendable {
     }
 }
 
+struct SearchProviderPreview: Query, Equatable, Sendable {
+    typealias Answer = SearchProvider
+
+    let provider: CustomSearchProvider
+}
+
 struct SearchProviderSettings: Equatable, Sendable {
     let provider: BuiltInSearchProvider
     let isEnabled: Bool
@@ -6340,6 +6333,18 @@ struct SpaceProfileChanged: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("That Space is no longer available.")
     }
+}
+
+struct SpaceSearch: Query, Equatable, Sendable {
+    typealias Answer = SpaceSearchAnswer
+
+    let workspaceID: UUID
+    let spaceID: UUID
+}
+
+struct SpaceSearchAnswer: Equatable, Sendable {
+    let provider: SearchProvider
+    let suggestsSearches: Bool
 }
 
 struct SpaceSettings: Equatable, Sendable {
@@ -17557,7 +17562,7 @@ struct SetupFailureReason: Hashable, Sendable {
 }
 
 /// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `newSpaceLook`, `applying`.
+/// Core-only behavior, not emitted: `newSpaceLook`.
 struct SetupLook: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
@@ -17568,20 +17573,49 @@ struct SetupLook: Hashable, Sendable {
     var kind: Kinds { facts.kind }
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
+    var themeMode: SpaceThemeMode { facts.themeMode }
+    var iconStyle: SpaceIconStyle { facts.iconStyle }
+    var gradientAngle: Double? { facts.gradientAngle }
     private let facts: Facts
 
-    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        title: LocalizedStringResource,
+        themeMode: SpaceThemeMode,
+        iconStyle: SpaceIconStyle,
+        gradientAngle: Double?
+    ) {
         self.tag = tag
-        facts = Facts(kind: kind, name: name, title: title)
+        facts = Facts(
+            kind: kind,
+            name: name,
+            title: title,
+            themeMode: themeMode,
+            iconStyle: iconStyle,
+            gradientAngle: gradientAngle
+        )
     }
 
     static let heraldic = SetupLook(
         tag: 0,
         kind: .heraldic,
         name: "heraldic",
-        title: LocalizedStringResource("Heraldic")
+        title: LocalizedStringResource("Heraldic"),
+        themeMode: SpaceThemeMode.banner,
+        iconStyle: SpaceIconStyle.layeredCrest,
+        gradientAngle: nil
     )
-    static let modern = SetupLook(tag: 1, kind: .modern, name: "modern", title: LocalizedStringResource("Modern"))
+    static let modern = SetupLook(
+        tag: 1,
+        kind: .modern,
+        name: "modern",
+        title: LocalizedStringResource("Modern"),
+        themeMode: SpaceThemeMode.gradient,
+        iconStyle: SpaceIconStyle.simpleSymbol,
+        gradientAngle: 90
+    )
 
     static let all: [SetupLook] = [heraldic, modern]
 
@@ -17601,11 +17635,24 @@ struct SetupLook: Hashable, Sendable {
         let kind: Kinds
         let name: String
         let title: LocalizedStringResource
+        let themeMode: SpaceThemeMode
+        let iconStyle: SpaceIconStyle
+        let gradientAngle: Double?
 
-        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+        init(
+            kind: Kinds,
+            name: String,
+            title: LocalizedStringResource,
+            themeMode: SpaceThemeMode,
+            iconStyle: SpaceIconStyle,
+            gradientAngle: Double?
+        ) {
             self.kind = kind
             self.name = name
             self.title = title
+            self.themeMode = themeMode
+            self.iconStyle = iconStyle
+            self.gradientAngle = gradientAngle
         }
     }
 }

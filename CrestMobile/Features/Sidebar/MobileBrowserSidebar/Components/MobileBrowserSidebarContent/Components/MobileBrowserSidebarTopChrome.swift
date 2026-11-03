@@ -96,14 +96,19 @@ struct MobileBrowserSidebarTopChrome: View {
             .disabled(!navigationPort.hasActivePage())
             .contextMenu {
                 if navigationPort.activeURL()?.isLocalDevelopmentAddress == true {
-                    Button(
-                        "Reload (Ignore Cache)",
-                        systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
-                        action: navigationPort.reloadFromOrigin
-                    )
-                    Button("Clear Cookies and Reload", systemImage: BrowsingDataCategory.siteData.symbol ?? "trash") {
-                        Task { await navigationPort.clearCookiesAndReload() }
+                    Group {
+                        Button(
+                            "Reload (Ignore Cache)",
+                            systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
+                            action: navigationPort.reloadFromOrigin
+                        )
+                        Button(
+                            "Clear Cookies and Reload", systemImage: BrowsingDataCategory.siteData.symbol ?? "trash"
+                        ) {
+                            Task { await navigationPort.clearCookiesAndReload() }
+                        }
                     }
+                    .crestMenuActionLabelStyle()
                 }
             }
             .accessibilityIdentifier("reload-control")
