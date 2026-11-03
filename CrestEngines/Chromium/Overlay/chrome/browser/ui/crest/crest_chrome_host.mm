@@ -341,8 +341,12 @@ class ExtensionPopup final : public extensions::ExtensionView,
         if (event.window == popup) return event;
         // A click on the control that opened the popup only closes it. Let
         // through, it would complete on that control and open the popup again.
+        // A Control-click goes through, as a right-click does, to open the
+        // control's menu.
         NSView* source = anchor;
-        const bool on_source = event.type == NSEventTypeLeftMouseDown && source && event.window == source.window &&
+        const bool on_source = event.type == NSEventTypeLeftMouseDown &&
+                               !(event.modifierFlags & NSEventModifierFlagControl) && source &&
+                               event.window == source.window &&
                                NSPointInRect([source convertPoint:event.locationInWindow fromView:nil], anchor_rect);
         weak->Close();
         return on_source ? nil : event;

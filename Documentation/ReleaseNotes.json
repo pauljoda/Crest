@@ -4949,6 +4949,10 @@
     "peek-keeps-link-from-pinned-tab": {
       "category": "fixed",
       "message": "A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available."
+    },
+    "extension-icon-control-click-menu": {
+      "category": "fixed",
+      "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
     }
   }
 }
