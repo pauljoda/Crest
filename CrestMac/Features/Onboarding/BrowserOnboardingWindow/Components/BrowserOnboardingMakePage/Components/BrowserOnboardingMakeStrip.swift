@@ -31,18 +31,39 @@ struct BrowserOnboardingMakeSection<Accessory: View, Content: View>: View {
 }
 
 /// A row of choices, which scrolls sideways where the sheet is narrower
-/// than the row.
+/// than the row, and keeps the chosen tile in view whole.
 struct BrowserOnboardingMakeStrip<Content: View>: View {
+    // MARK: - Variables
+
     var spacing: CGFloat = 10
+    /// The `id` the chosen tile carries, or nil for a row that chooses
+    /// nothing of its own.
+    var selection: AnyHashable? = nil
     @ViewBuilder let content: Content
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: spacing) { content }
-                .padding(.vertical, 2)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: spacing) { content }
+                    .padding(.vertical, 2)
+            }
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            .onAppear { reveal(selection, with: proxy, animated: false) }
+            .onChange(of: selection) { _, chosen in reveal(chosen, with: proxy, animated: true) }
         }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    // MARK: - Actions - Scrolling
+
+    /// Scrolls the least that shows the chosen tile whole.
+    private func reveal(_ chosen: AnyHashable?, with proxy: ScrollViewProxy, animated: Bool) {
+        guard let chosen else { return }
+        withAnimation(animated ? CrestMotion.scrollAlignment.unlessReducingMotion(reduceMotion) : nil) {
+            proxy.scrollTo(chosen)
+        }
     }
 }
 
@@ -94,8 +115,11 @@ struct BrowserOnboardingMakeSwatch: View {
                     .font(CrestTypography.sans(10, weight: .semibold))
                     .foregroundStyle(CrestBrandTheme.textSecondary)
                     .lineLimit(1)
+                    .fixedSize()
             }
-            .frame(width: 52)
+            // A name longer than the swatch widens its column rather than
+            // being cut short.
+            .frame(minWidth: 52)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)

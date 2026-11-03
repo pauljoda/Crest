@@ -38,6 +38,7 @@
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(CrestBrandTheme.canvas)
+            .crestFieldSurfaceRole(.brand)
             .disabled(!isEnabled)
         }
 

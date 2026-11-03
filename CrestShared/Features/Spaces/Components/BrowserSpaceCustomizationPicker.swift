@@ -49,7 +49,7 @@
                 }
                 Button("New Space", systemImage: "plus", action: addSpace)
                     .labelStyle(.iconOnly)
-                    .frame(width: 44, height: 44)
+                    .buttonStyle(CrestChromeButtonStyle())
                     .accessibilityIdentifier("space-customization-add")
             }
             .buttonStyle(.plain)

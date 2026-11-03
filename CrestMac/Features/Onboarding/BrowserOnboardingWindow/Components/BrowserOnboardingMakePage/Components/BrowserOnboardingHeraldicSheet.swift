@@ -18,6 +18,11 @@ struct BrowserOnboardingHeraldicSheet: View {
 
     private var isIcon: Bool { branding.iconStyle == .simpleSymbol }
 
+    /// The Sidebar tile the Space wears: its pattern, or the gradient.
+    private var shownSidebar: AnyHashable {
+        branding.themeMode == .gradient ? AnyHashable(SpaceThemeMode.gradient) : AnyHashable(branding.bannerPattern)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
             startFrom
@@ -168,7 +173,7 @@ struct BrowserOnboardingHeraldicSheet: View {
 
     private var sidebar: some View {
         BrowserOnboardingMakeSection("Sidebar") {
-            BrowserOnboardingMakeStrip {
+            BrowserOnboardingMakeStrip(selection: shownSidebar) {
                 ForEach(SpaceBannerPattern.all, id: \.self) { pattern in
                     BrowserOnboardingMakeTile(
                         title: pattern.title,
@@ -186,6 +191,7 @@ struct BrowserOnboardingHeraldicSheet: View {
                                 $0.bannerPattern = pattern
                             })
                     }
+                    .id(AnyHashable(pattern))
                 }
                 BrowserOnboardingMakeTile(title: "Gradient", isSelected: branding.themeMode == .gradient) {
                     context.branding.editorUpdate {
@@ -195,6 +201,7 @@ struct BrowserOnboardingHeraldicSheet: View {
                 } artwork: {
                     field(context.preview { $0.themeMode = .gradient })
                 }
+                .id(AnyHashable(SpaceThemeMode.gradient))
             }
         }
     }

@@ -7,10 +7,9 @@ struct BrowserSpaceSchemeChoice: View {
     @Binding var branding: SpaceBranding
     let symbol: String
     var size: CGFloat = BrowserCrestForgeMetrics.tileCrestSize
-    var tint: Color = CrestBrandTheme.accent
 
     var body: some View {
-        BrowserCrestStudioChoice(title: scheme.title, selected: scheme.isWorn(by: branding), tint: tint) {
+        BrowserCrestStudioChoice(title: scheme.title, selected: scheme.isWorn(by: branding)) {
             branding = scheme.applying(to: branding)
         } artwork: {
             BrowserCrestStudioMark(branding: scheme.applying(to: branding), symbol: symbol, size: size * 0.55)

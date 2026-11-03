@@ -192,19 +192,17 @@ struct BrowserCrestStudioEditingAction {
 struct BrowserCrestStudioChoice<Artwork: View>: View {
     let title: LocalizedStringResource
     let selected: Bool
-    /// The color that marks the chosen tile.
-    var tint: Color = CrestBrandTheme.accent
     let select: () -> Void
     @ViewBuilder var artwork: Artwork
 
     var body: some View {
-        CrestSelectableCard(
-            isSelected: selected, accessibilityLabel: Text(title), density: .compact, tint: tint, action: select
-        ) {
+        CrestSelectableCard(isSelected: selected, accessibilityLabel: Text(title), density: .compact, action: select) {
             VStack(spacing: 4) {
                 artwork.frame(width: 64, height: 58)
-                Text(title).font(.caption).lineLimit(2).multilineTextAlignment(.center)
-                    .frame(height: 30, alignment: .top)
+                // Every tile keeps room for two lines, so a long name wraps
+                // where the tile is narrow and the tiles in a row stay even.
+                Text(title).font(.caption).lineLimit(2, reservesSpace: true).multilineTextAlignment(.center)
+                    .frame(minHeight: 30, alignment: .top)
             }
         }
     }

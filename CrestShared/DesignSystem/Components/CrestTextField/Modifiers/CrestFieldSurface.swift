@@ -12,6 +12,7 @@ struct CrestFieldSurface: ViewModifier {
     /// bindings synchronized against the same native field.
     @FocusState private var isFocused: Bool
 
+    @Environment(\.crestFieldSurfaceRole) private var role
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var shape: RoundedRectangle {
@@ -36,10 +37,10 @@ struct CrestFieldSurface: ViewModifier {
         field
             .padding(.horizontal, CrestFieldMetrics.horizontalPadding)
             .frame(minHeight: CrestFieldMetrics.height)
-            .background(CrestBrandTheme.canvas, in: shape)
+            .background(role.fill, in: shape)
             .overlay {
                 shape.strokeBorder(
-                    CrestBrandTheme.line,
+                    role.border,
                     lineWidth: CrestFieldMetrics.borderWidth
                 )
             }

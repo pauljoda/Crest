@@ -177,9 +177,11 @@ struct BrowserCrestForgePalette: View {
                     Text(caption).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            HStack(alignment: .top, spacing: 6) {
+            // Each swatch's ring already holds its color clear of the next, so
+            // the grid adds only a little room of its own.
+            HStack(alignment: .top, spacing: CrestSpacing.extraSmall) {
                 ForEach(houses, id: \.self) { house in
-                    VStack(spacing: 6) {
+                    VStack(spacing: CrestSpacing.extraSmall) {
                         ForEach(house.tinctures, id: \.self) { tincture($0) }
                     }
                     .accessibilityElement(children: .contain)

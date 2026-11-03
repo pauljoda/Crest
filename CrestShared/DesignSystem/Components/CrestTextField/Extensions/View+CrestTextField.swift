@@ -14,4 +14,9 @@ extension View {
     func crestFieldSurface(isFocused: Bool) -> some View {
         modifier(CrestFieldSurface(rowFocus: isFocused))
     }
+
+    /// Tells the fields under this view which surface they sit on.
+    func crestFieldSurfaceRole(_ role: CrestFieldSurfaceRole) -> some View {
+        environment(\.crestFieldSurfaceRole, role)
+    }
 }

@@ -5009,6 +5009,10 @@
     "core-owns-small-rules": {
       "category": "internal",
       "message": "The core now decides whether a window follows a tab moved to another Space, expires download records with the rest of a Space’s data, answers the camera and microphone choices an engine enforces, and carries what setup looks and the update card’s buttons show."
+    },
+    "space-studio-choices-fit-and-match": {
+      "category": "fixed",
+      "message": "Crest Studio and setup now mark every choice in the same color, draw search fields like the rest of Settings and show long names in full, and setup keeps the chosen sidebar style in view. A link route’s move buttons no longer look like delete buttons, and the New Space button in iPhone setup is easier to tap."
     }
   }
 }
