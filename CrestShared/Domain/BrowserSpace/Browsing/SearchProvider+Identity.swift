@@ -24,23 +24,6 @@ extension SearchProvider: Identifiable {
             ? String(localized: "Ask \(title)", comment: "A palette row that asks an AI assistant.")
             : String(localized: "Search \(title)", comment: "A palette row that searches a search engine or website.")
     }
-
-    // MARK: - Initializers
-
-    /// A provider a Space carries that this device does not keep, named as the
-    /// core names one a person added.
-    init(carried: CustomSearchProvider) {
-        let template = carried.searchURLTemplate
-            .replacingOccurrences(of: "{searchTerms}", with: "crest").replacingOccurrences(of: "%s", with: "crest")
-        let host = URLComponents(string: template)?.host ?? ""
-        self.init(
-            name: Self.customPrefix + carried.id.coreIdentifier, title: carried.name, kind: carried.kind,
-            shortcuts: carried.shortcuts, searchTemplate: carried.searchURLTemplate,
-            suggestionTemplate: carried.suggestionURLTemplate,
-            color: carried.color ?? BrandColor(red: 0.45, green: 0.48, blue: 0.52),
-            logo: nil, builtIn: nil, customID: carried.id,
-            site: host.hasPrefix("www.") ? String(host.dropFirst(4)) : host)
-    }
 }
 
 extension SearchProvider: Hashable {

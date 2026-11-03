@@ -16,7 +16,7 @@ struct BrowserUtilityFanDestinationButton: View {
                 if surface == .downloads, newDownloadCount > 0 {
                     BrowserUtilityNotificationBadge(
                         count: newDownloadCount,
-                        tint: downloadBadgeColor,
+                        tint: downloads.badgeTint(otherwise: badgeColor),
                         progress: downloads.notificationProgress
                     )
                     .offset(
@@ -96,10 +96,6 @@ struct BrowserUtilityFanDestinationButton: View {
             return BrowserUtilityPresentation.notSelected
         }
         return BrowserUtilityPresentation.downloadCount(downloads.count)
-    }
-
-    private var downloadBadgeColor: Color {
-        downloads.contains(where: { $0.phase.needsAttention }) ? .red : badgeColor
     }
 }
 

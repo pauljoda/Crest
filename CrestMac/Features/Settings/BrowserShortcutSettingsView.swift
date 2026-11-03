@@ -130,7 +130,7 @@ private struct BrowserShortcutValidationBanner: View {
             systemImage: "exclamationmark.triangle.fill"
         )
         .font(.footnote)
-        .foregroundStyle(.orange)
+        .foregroundStyle(CrestColor.warning)
         .accessibilityIdentifier(
             BrowserShortcutSettingsAccessibilityID.validationMessage
         )

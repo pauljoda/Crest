@@ -67,8 +67,8 @@ struct MobileOnboardingWelcomePage: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .background(BrowserOnboardingPalette.parchment)
-        .foregroundStyle(BrowserOnboardingPalette.ink)
+        .background(CrestBrandTheme.surface)
+        .foregroundStyle(CrestBrandTheme.textDisplay)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: MobileOnboardingLayout.pageActionsSpacing) {
                 Button(action: primaryAction) {
@@ -88,7 +88,7 @@ struct MobileOnboardingWelcomePage: View {
                     Button("Set Up Without iCloud", action: setupWithoutCloudAction)
                         .buttonStyle(.plain)
                         .font(.callout.weight(.semibold))
-                        .foregroundStyle(BrowserOnboardingPalette.ink)
+                        .foregroundStyle(CrestBrandTheme.textDisplay)
                         .frame(minHeight: MobileOnboardingLayout.secondaryActionMinimumHeight)
                         .accessibilityIdentifier(BrowserMobileAccessibilityID.welcomeSetupWithoutCloud)
                 }
@@ -96,7 +96,7 @@ struct MobileOnboardingWelcomePage: View {
             .padding(20)
             .frame(maxWidth: 580)
             .frame(maxWidth: .infinity)
-            .background(BrowserOnboardingPalette.parchment)
+            .background(CrestBrandTheme.surface)
         }
         .onAppear {
             withAnimation(reduceMotion ? nil : .spring(response: 0.7, dampingFraction: 0.8)) { hasAppeared = true }

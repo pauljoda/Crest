@@ -198,7 +198,7 @@ internal sealed class Extensions(Device device, Engines engines, Prompts prompts
     /// accept, the copies go to `CopySpaceIds`, each checked when its turn
     /// comes.
     internal void Answer(AnswerExtensionInstall answer, ChangeFeed changes, Action<Engine, EngineCommand> issue) {
-        prompts.Answer(answer.PromptId, question => question is ExtensionInstallQuestion,
+        prompts.Answer<ExtensionInstallQuestion>(answer.PromptId,
             new SettleExtensionInstall(answer.PromptId, answer.Accepted, answer.WithholdsSiteAccess), changes, issue);
         if (installs.Values.FirstOrDefault(install => install.AskingPromptId == answer.PromptId) is not { } asking) return;
         asking.Answer(answer.Accepted, answer.WithholdsSiteAccess, answer.CopySpaceIds);

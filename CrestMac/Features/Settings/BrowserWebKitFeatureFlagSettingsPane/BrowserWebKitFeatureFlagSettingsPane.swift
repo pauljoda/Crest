@@ -50,7 +50,7 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
                     systemImage: "arrow.clockwise.circle.fill"
                 )
                 .font(.footnote)
-                .foregroundStyle(.orange)
+                .foregroundStyle(CrestColor.warning)
                 .accessibilityIdentifier("webkit-feature-restart-notice")
             }
 

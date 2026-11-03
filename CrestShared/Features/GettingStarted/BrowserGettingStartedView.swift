@@ -106,20 +106,19 @@
         }
 
         private func chapterButton(_ option: BrowserGettingStartedChapter) -> some View {
-            Button {
+            CrestSelectableCard(
+                isSelected: chapter == option, accessibilityLabel: Text(option.pickerTitle), density: .compact
+            ) {
                 selectChapter(option)
-            } label: {
+            } content: {
                 HStack(spacing: 7) {
-                    Text(verbatim: String(format: "%02d", option.number)).font(.caption.monospacedDigit()).opacity(0.6)
+                    Text(verbatim: String(format: "%02d", option.number)).font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
                     Text(option.pickerTitle).font(CrestTypography.sans(13, weight: .semibold))
                 }
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .foregroundStyle(chapter == option ? CrestBrandPalette.ink : .primary)
-                .background(
-                    chapter == option ? CrestBrandPalette.butter : .primary.opacity(0.04), in: .rect(cornerRadius: 12))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, CrestSpacing.extraSmall)
             }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(chapter == option ? .isSelected : [])
         }
 
         private var tabLesson: some View {

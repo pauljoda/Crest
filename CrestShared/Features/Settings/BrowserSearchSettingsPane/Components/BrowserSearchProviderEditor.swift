@@ -107,10 +107,12 @@ struct BrowserSearchProviderEditor: View {
             footer(hint: "Use \("%s") where the search words go.")
         }
 
-        Section {
-            BrowserSearchProviderPill(provider: SearchProvider(carried: draft.custom), profileID: profileID)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityHidden(true)
+        if let preview = draft.preview {
+            Section {
+                BrowserSearchProviderPill(provider: preview, profileID: profileID)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityHidden(true)
+            }
         }
 
         if !draft.isNew {
@@ -147,7 +149,7 @@ struct BrowserSearchProviderEditor: View {
 
     /// The host of the address the person typed, without `www.`.
     private var host: String {
-        SearchProvider(carried: draft.custom).site
+        draft.preview?.site ?? ""
     }
 
     // MARK: - Actions

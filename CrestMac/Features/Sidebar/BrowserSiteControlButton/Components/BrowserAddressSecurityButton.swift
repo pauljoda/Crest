@@ -18,7 +18,7 @@ struct BrowserAddressSecurityButton: View {
         }
         .buttonStyle(buttonStyle)
         .foregroundStyle(
-            isSecure ? Color(nsColor: .secondaryLabelColor) : Color.red
+            isSecure ? Color(nsColor: .secondaryLabelColor) : CrestColor.danger
         )
         .disabled(!canReviewCertificate)
         .accessibilityLabel(stateDescription)

@@ -27,6 +27,9 @@ final class MobileBrowserRootModel {
     var splitWidthTransaction = BrowserSplitWidthTransaction(
         persistedFractions: []
     )
+    /// Whether the window's scene is active, where notices Crest posts for
+    /// the window the person looks at show.
+    @ObservationIgnored private var isSceneActive = false
 
     init(
         browser: BrowserStore,
@@ -139,6 +142,19 @@ extension MobileBrowserRootModel {
         if !presentation.showsSidebar {
             navigation.utilityPresentation.dismiss()
         }
+    }
+}
+
+// MARK: - Notices
+
+extension MobileBrowserRootModel {
+    /// Follows the window's scene: while it is active, the notices Crest
+    /// posts for the window the person looks at show here, and the scene
+    /// that became active last stands in while several are.
+    func sceneDidChange(to phase: ScenePhase) {
+        isSceneActive = phase == .active
+        guard isSceneActive else { return }
+        BrowserNoticeCenter.shared.register(pages.notices) { [weak self] in self?.isSceneActive == true }
     }
 }
 

@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The manual setup the core holds, which stays a setup until the host's
-/// final action applies it.
-struct BrowserSpaceSetupWizard: View {
+/// The manual setup the core holds on iPhone and iPad, which stays a setup
+/// until the host's final action applies it.
+struct MobileSpaceSetupWizard: View {
     let setup: BrowserManualSetupModel
     @Binding var selectedSpaceID: UUID?
     var errorMessage: String?
@@ -42,8 +42,8 @@ struct BrowserSpaceSetupWizard: View {
         let position: Int
         let title: LocalizedStringResource
         let continueTitle: LocalizedStringResource
-        let back: @MainActor @Sendable (BrowserSpaceSetupWizard) -> Void
-        let next: @MainActor @Sendable (BrowserSpaceSetupWizard) -> Void
+        let back: @MainActor @Sendable (MobileSpaceSetupWizard) -> Void
+        let next: @MainActor @Sendable (MobileSpaceSetupWizard) -> Void
 
         // MARK: - Actions - Identity
 
@@ -68,74 +68,32 @@ struct BrowserSpaceSetupWizard: View {
                 if let draft {
                     let branding = setup.brandingBinding(for: draft.spaceID)
                     let symbol = setup.symbolBinding(for: draft.spaceID)
-                    #if os(iOS)
-                        if step == .appearance {
-                            BrowserMobileSpaceAppearanceWorkspace(
-                                branding: branding, symbol: symbol,
-                                name: setup.nameBinding(for: draft.spaceID),
-                                spacePicker: spacePicker(for: draft.spaceID)
-                            )
-                            .id(draft.spaceID)
-                        } else {
-                            ScrollView {
-                                page(draft: draft, branding: branding, symbol: symbol, compact: !wide)
-                                    .padding(24)
-                                    .frame(maxWidth: 600)
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                    #else
-                        HStack(spacing: wide ? 26 : 0) {
-                            if wide {
-                                BrowserSpaceAppearanceHero(
-                                    branding: branding.wrappedValue, symbol: symbol.wrappedValue,
-                                    name: draft.shownName,
-                                    editableName: setup.nameBinding(for: draft.spaceID), showsNameHint: true,
-                                    spacePicker: spacePicker(for: draft.spaceID)
-                                )
-                                .frame(width: min(280, geometry.size.width * 0.30), height: 440)
-                            }
-                            ScrollView {
-                                VStack(alignment: .leading, spacing: 20) {
-                                    if !wide {
-                                        BrowserSpaceAppearanceHero(
-                                            branding: branding.wrappedValue, symbol: symbol.wrappedValue,
-                                            name: draft.shownName, compact: true,
-                                            editableName: setup.nameBinding(for: draft.spaceID),
-                                            showsNameHint: true,
-                                            spacePicker: spacePicker(for: draft.spaceID)
-                                        )
-                                        .frame(height: 192)
-                                    }
-                                    page(draft: draft, branding: branding, symbol: symbol, compact: !wide)
-                                }
-                                .padding(wide ? 24 : 20)
-                                .id("space-setup-page-top")
-                                .frame(
-                                    maxWidth: 560, minHeight: wide ? min(520, geometry.size.height - 180) : nil,
-                                    alignment: .topLeading
-                                )
+                    if step == .appearance {
+                        BrowserMobileSpaceAppearanceWorkspace(
+                            branding: branding, symbol: symbol,
+                            name: setup.nameBinding(for: draft.spaceID),
+                            spacePicker: spacePicker(for: draft.spaceID)
+                        )
+                        .id(draft.spaceID)
+                    } else {
+                        ScrollView {
+                            page(draft: draft, branding: branding, symbol: symbol, compact: !wide)
+                                .padding(24)
+                                .frame(maxWidth: 600)
                                 .frame(maxWidth: .infinity)
-                            }
-                            .contentMargins(.trailing, 16, for: .scrollContent)
-                            .id(step)
-                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 12)))
                         }
-                        .frame(maxWidth: 1020, maxHeight: 580)
-                        .padding(.horizontal, wide ? 24 : 0)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    #endif
+                    }
                 } else {
                     ContentUnavailableView("Create your first Space", systemImage: "square.grid.2x2")
                     Button("Add Space", action: addSpace).buttonStyle(.borderedProminent)
                 }
                 footer
             }
-            .foregroundStyle(BrowserOnboardingPalette.ink)
+            .foregroundStyle(CrestBrandTheme.textDisplay)
             .font(CrestTypography.sans(14))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: step)
             .background {
-                Rectangle().fill(BrowserOnboardingPalette.parchment)
+                Rectangle().fill(CrestBrandTheme.surface)
                 if let draft {
                     RadialGradient(
                         colors: [
@@ -148,14 +106,6 @@ struct BrowserSpaceSetupWizard: View {
         }
         .onAppear { setup.repairSelection($selectedSpaceID) }
         .onChange(of: setup.spaces.map(\.spaceID)) { _, _ in setup.repairSelection($selectedSpaceID) }
-    }
-
-    private var chromeBackground: Color {
-        #if os(iOS)
-            BrowserOnboardingPalette.parchment
-        #else
-            BrowserOnboardingPalette.paper
-        #endif
     }
 
     private var progress: some View {
@@ -180,8 +130,8 @@ struct BrowserSpaceSetupWizard: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 20)
         .frame(maxWidth: .infinity)
-        .background(chromeBackground)
-        .overlay(alignment: .bottom) { Rectangle().fill(BrowserOnboardingPalette.line).frame(height: 1) }
+        .background(CrestBrandTheme.surface)
+        .overlay(alignment: .bottom) { Rectangle().fill(CrestBrandTheme.line).frame(height: 1) }
     }
 
     @ViewBuilder private func page(
@@ -223,7 +173,10 @@ struct BrowserSpaceSetupWizard: View {
                 .buttonStyle(.plain)
                 .contextMenu {
                     if space.isNew {
-                        Button("Remove Space", role: .destructive) { setup.removeSpace(space.spaceID) }
+                        Button("Remove Space", systemImage: "trash", role: .destructive) {
+                            setup.removeSpace(space.spaceID)
+                        }
+                        .crestMenuActionLabelStyle()
                     }
                 }
             }
@@ -231,24 +184,16 @@ struct BrowserSpaceSetupWizard: View {
                 .buttonStyle(.crestSecondary)
                 .controlSize(.large)
             if opensGettingStarted {
-                Text(gettingStartedDescription)
+                Text("Getting Started opens next with practice for tabs and folders.")
                     .font(.callout).foregroundStyle(.secondary)
             }
         }
     }
 
-    private var gettingStartedDescription: LocalizedStringKey {
-        #if os(iOS)
-            "Getting Started opens next with practice for tabs and folders."
-        #else
-            "Getting Started opens next with practice for tabs, folders, and Split View."
-        #endif
-    }
-
     private var footer: some View {
         VStack(spacing: 8) {
             if let message = errorMessage ?? setup.errorMessage {
-                Text(message).foregroundStyle(.red).font(.callout)
+                Text(message).foregroundStyle(CrestColor.danger).font(.callout)
             }
             HStack {
                 Button {
@@ -276,8 +221,8 @@ struct BrowserSpaceSetupWizard: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
-        .background(chromeBackground)
-        .overlay(alignment: .top) { Rectangle().fill(BrowserOnboardingPalette.line).frame(height: 1) }
+        .background(CrestBrandTheme.surface)
+        .overlay(alignment: .top) { Rectangle().fill(CrestBrandTheme.line).frame(height: 1) }
     }
 
     private func addSpace() {

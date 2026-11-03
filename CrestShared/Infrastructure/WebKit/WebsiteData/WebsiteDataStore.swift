@@ -43,7 +43,7 @@ enum BrowserWebsiteDataStore {
     // MARK: - Actions - Stores
 
     static func launchScoped(
-        for profile: BrowsingProfile,
+        forProfile profileID: UUID,
         environment: BrowserLaunchEnvironment = .current
     ) -> WKWebsiteDataStore {
         guard
@@ -51,16 +51,16 @@ enum BrowserWebsiteDataStore {
         else {
             return .nonPersistent()
         }
-        return persistent(for: profile, environment: environment)
+        return persistent(forProfile: profileID, environment: environment)
     }
 
     /// The profile's persistent store, which a named isolated launch keeps
     /// apart from the installed app's.
     static func persistent(
-        for profile: BrowsingProfile,
+        forProfile profileID: UUID,
         environment: BrowserLaunchEnvironment = .current
     ) -> WKWebsiteDataStore {
-        WKWebsiteDataStore(forIdentifier: environment.websiteDataStoreIdentifier(forProfileID: profile.id))
+        WKWebsiteDataStore(forIdentifier: environment.websiteDataStoreIdentifier(forProfileID: profileID))
     }
 
     /// `dataStore` and, for one on disk, the obsolete store that copied its

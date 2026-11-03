@@ -9,8 +9,10 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
     // MARK: - Variables
 
     let selectedTab: TabStateModel?
-    let isURLCopiedFeedbackVisible: Bool
-    let pageFeedback: MobilePageFeedback?
+    /// The window's notices, which show over the page unless a sheet over it
+    /// shows them instead.
+    let notices: BrowserNotices
+    let showsNotices: Bool
     let reduceMotion: Bool
     let tabPromotionNamespace: Namespace.ID
     let completePagePresentation: () -> Void
@@ -28,14 +30,11 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
         )
         .onAppear(perform: completePagePresentation)
         .overlay(alignment: .top) {
-            MobileURLCopyFeedback(
-                isVisible: isURLCopiedFeedbackVisible,
-                topPadding: MobileBrowserRootLayout.compactOverlayTopPadding
-            )
-            if let pageFeedback {
-                MobilePageFeedbackCapsule(
-                    feedback: pageFeedback,
-                    topPadding: MobileBrowserRootLayout.compactOverlayTopPadding
+            if showsNotices {
+                BrowserNoticeLayer(
+                    notices: notices,
+                    topInset: MobileBrowserRootLayout.compactOverlayTopPadding,
+                    sideInset: MobileBrowserRootLayout.displayEdgeMargin
                 )
             }
         }

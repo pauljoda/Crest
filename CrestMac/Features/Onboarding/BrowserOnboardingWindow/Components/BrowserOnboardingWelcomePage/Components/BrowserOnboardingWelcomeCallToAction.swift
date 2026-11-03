@@ -33,7 +33,7 @@ struct BrowserOnboardingWelcomeCallToAction: View {
                     : cloudStatusDetail
             )
             .font(CrestTypography.sans(12, weight: .medium))
-            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+            .foregroundStyle(CrestBrandTheme.textSecondary)
 
             if action.offersSetupWithoutCloud {
                 Button("Set Up Without iCloud", action: setUpWithoutCloud)

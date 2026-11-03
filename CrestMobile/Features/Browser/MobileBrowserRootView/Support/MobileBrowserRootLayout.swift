@@ -49,14 +49,7 @@ enum MobileBrowserRootLayout {
     static let compactOverlayTopPadding: CGFloat = 12
     static let regularOverlayTopPadding: CGFloat = 18
 
-    static let feedbackHorizontalPadding: CGFloat = 14
-    static let feedbackHeight: CGFloat = 40
-    static let feedbackShadowRadius: CGFloat = 16
-    static let feedbackShadowOffset: CGFloat = 8
-    static let feedbackVisibilityDuration: Duration = .seconds(1.4)
-
     static let paletteLayer: Double = 10
-    static let feedbackLayer: Double = 30
     static let utilityLayer: Double = 8
 
     /// Gives detached sidebar controls the same breathing room as the card's

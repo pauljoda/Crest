@@ -27,7 +27,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
                 )
             )
             .frame(
-                minHeight: BrowserSettingsControlMetrics.minimumTouchTarget
+                minHeight: CrestLayout.minimumHitTarget
             )
             .accessibilityIdentifier("route-enabled-\(identifierSuffix)")
 
@@ -66,7 +66,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             .focused($isPatternFocused)
             .onSubmit { isPatternFocused = false }
             .frame(
-                minHeight: BrowserSettingsControlMetrics.minimumTouchTarget
+                minHeight: CrestLayout.minimumHitTarget
             )
             .accessibilityIdentifier("route-pattern-\(identifierSuffix)")
 
@@ -109,11 +109,11 @@ struct BrowserPlatformLinkRouteEditorContent: View {
                     role: .destructive,
                     action: delete
                 )
-                .buttonStyle(BrowserSettingsIconButtonStyle(tint: .red))
+                .buttonStyle(.crestIcon(tint: CrestColor.danger))
                 .accessibilityIdentifier("route-delete-\(identifierSuffix)")
             }
             .labelStyle(.iconOnly)
-            .buttonStyle(BrowserSettingsIconButtonStyle())
+            .buttonStyle(.crestIcon())
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("link-route-\(identifierSuffix)")
@@ -146,7 +146,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
         }
         .frame(
             maxWidth: .infinity,
-            minHeight: BrowserSettingsControlMetrics.minimumTouchTarget
+            minHeight: CrestLayout.minimumHitTarget
         )
         .contentShape(.rect)
     }

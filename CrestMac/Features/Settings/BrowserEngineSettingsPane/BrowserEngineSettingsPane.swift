@@ -78,7 +78,7 @@ struct BrowserEngineSettingsPane: View {
             } footer: {
                 CrestFormFootnote("A rule for a site doesn’t include its subdomains.")
             }
-            if let failure { Text(failure).foregroundStyle(.red) }
+            if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
         }
         .sheet(item: $editing) { draft in
             BrowserEngineRuleEditor(core: core, draft: draft, availableEngines: availableEngines)

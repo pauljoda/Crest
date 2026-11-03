@@ -9,8 +9,7 @@ public sealed record AnswerAuthentication(Guid PromptId, AuthenticationCredentia
     #region Actions - Prompts
 
     internal override void Apply(CrestApp app, ChangeFeed changes) =>
-        app.Prompts.Answer(PromptId, question => question is AuthenticationQuestion,
-            new SettleAuthentication(PromptId, Credential), changes, app.Issue);
+        app.Prompts.Answer<AuthenticationQuestion>(PromptId, new SettleAuthentication(PromptId, Credential), changes, app.Issue);
 
     #endregion
 }

@@ -81,31 +81,16 @@ final class BrowserSearchCatalog {
         published?.catalog.custom.first { $0.id == id }
     }
 
-    /// The provider the device keeps by `name`, or nil.
-    func provider(named name: String?) -> SearchProvider? {
-        name.flatMap { name in providers.first { $0.name == name } }
-    }
-
     /// The default a Space follows: the private one in a private window.
     func defaultProvider(isPrivate: Bool) -> SearchProvider? {
         isPrivate ? privateDefaultProvider : defaultProvider
     }
 
-    /// What a Space with `browsing`, in a private window or not, searches
-    /// with: the default while it follows it, else its own choice as this
-    /// device keeps it or as the Space carries it.
-    func provider(for browsing: BrowsingPreferences, isPrivate: Bool) -> SearchProvider? {
-        if browsing.followsDefaultSearch { return defaultProvider(isPrivate: isPrivate) }
-        if let id = browsing.selectedCustomEngineID {
-            return providers.first { $0.customID == id }
-                ?? browsing.customSearchProviders.first { $0.id == id }.map(SearchProvider.init(carried:))
-        }
-        return provider(named: browsing.selectedBuiltInEngine?.name) ?? defaultProvider(isPrivate: isPrivate)
-    }
-
-    /// Whether a Space with `browsing` suggests searches.
-    func suggests(for browsing: BrowsingPreferences) -> Bool {
-        browsing.followsDefaultSuggestions ? suggestionsEnabled : browsing.searchSuggestionsEnabled
+    /// What the Space `spaceID` of the workspace `workspaceID` searches with
+    /// and whether it suggests searches, as the core answers for its address
+    /// bar, or nil once the core no longer holds it.
+    func search(of spaceID: UUID, in workspaceID: UUID) -> SpaceSearchAnswer? {
+        try? core.query(SpaceSearch(workspaceID: workspaceID, spaceID: spaceID))
     }
 
     // MARK: - Actions - Edits

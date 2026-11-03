@@ -30,7 +30,7 @@ enum BrowserPageConfiguration {
     /// media policy, content scripts, and bridges — or override a shared default —
     /// without hand-rolling a second configuration that drifts from this one.
     static func make(
-        for profile: BrowsingProfile,
+        forProfile profileID: UUID,
         websiteDataStore: WKWebsiteDataStore? = nil,
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
@@ -58,7 +58,7 @@ enum BrowserPageConfiguration {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore =
             websiteDataStore
-            ?? BrowserWebsiteDataStore.launchScoped(for: profile)
+            ?? BrowserWebsiteDataStore.launchScoped(forProfile: profileID)
         configuration.defaultWebpagePreferences = webpagePreferences
         configuration.preferences = preferences
         configuration.applicationNameForUserAgent = safariCompatibleApplicationName

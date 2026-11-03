@@ -8,24 +8,24 @@ import XCTest
 final class BrowserWebCompatibilityTests: XCTestCase {
 
     func testLocalStorageAndIndexedDBRemainInsideOneSpaceProfile() async throws {
-        let profileA = BrowsingProfile()
-        let profileB = BrowsingProfile()
+        let profileA = UUID()
+        let profileB = UUID()
         let origin = URL(string: "https://storage.crest.test/")!
-        let dataStoreA = BrowserWebsiteDataStore.persistent(for: profileA)
-        let dataStoreB = BrowserWebsiteDataStore.persistent(for: profileB)
+        let dataStoreA = BrowserWebsiteDataStore.persistent(forProfile: profileA)
+        let dataStoreB = BrowserWebsiteDataStore.persistent(forProfile: profileB)
 
         do {
             let pageA = WKWebView(
                 frame: .zero,
                 configuration: BrowserPageConfiguration.make(
-                    for: profileA,
+                    forProfile: profileA,
                     websiteDataStore: dataStoreA
                 )
             )
             let pageB = WKWebView(
                 frame: .zero,
                 configuration: BrowserPageConfiguration.make(
-                    for: profileB,
+                    forProfile: profileB,
                     websiteDataStore: dataStoreB
                 )
             )
@@ -56,9 +56,9 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             let rehydratedA = WKWebView(
                 frame: .zero,
                 configuration: BrowserPageConfiguration.make(
-                    for: profileA,
+                    forProfile: profileA,
                     websiteDataStore: BrowserWebsiteDataStore.persistent(
-                        for: profileA
+                        forProfile: profileA
                     )
                 )
             )
@@ -75,14 +75,14 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             XCTAssertEqual(rehydratedCache, "cache-ready")
         }
 
-        await removeDataStore(profileA.id)
-        await removeDataStore(profileB.id)
+        await removeDataStore(profileA)
+        await removeDataStore(profileB)
     }
 
     func testUnapprovedAutomaticWindowOpenIsBlockedAndCoalesced() async throws {
         let origin = try XCTUnwrap(URL(string: "https://blocked-popups.crest.test/"))
         let openerTab = TabState.Seed(title: "Opener", url: nil, placement: .current)
-        let profile = BrowsingProfile()
+        let profile = UUID()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore.hostingPages(
             SessionState.Seed(spaces: [space])
@@ -142,7 +142,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             )
         }
 
-        await removeDataStore(profile.id)
+        await removeDataStore(profile)
     }
 
     /// The shape of a Google Identity Services sign-in, in a window that was
@@ -211,7 +211,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         }
 
         let openerTab = TabState.Seed(title: "Opener", url: nil, placement: .current)
-        let profile = BrowsingProfile()
+        let profile = UUID()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore.hostingPages(SessionState.Seed(spaces: [space]))
         let primary = BrowserPagePool(browser: store)
@@ -292,7 +292,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         }
         quickWindows.closeAll()
 
-        await removeDataStore(profile.id)
+        await removeDataStore(profile)
     }
 
     /// Stands in for the process host's Quick Windows, as the Chromium build
@@ -356,11 +356,11 @@ final class BrowserWebCompatibilityTests: XCTestCase {
     }
 
     private func makeSpace(
-        profile: BrowsingProfile,
+        profile: UUID,
         tabs: [TabState.Seed]
     ) -> SpaceState.Seed {
         SpaceState.Seed(
-            profileID: profile.id,
+            profileID: profile,
             name: "State",
             symbol: "clock.arrow.circlepath",
             accent: .teal,

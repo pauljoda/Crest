@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// the person may keep its site access back, and `WithholdsSiteAccess` says
 /// installing does so unless they choose otherwise.
 public sealed record ExtensionInstallQuestion(string ExtensionId, string Name, string Version, string Summary,
-    IReadOnlyList<string> Permissions, byte[]? Icon, bool CanWithholdSiteAccess, bool WithholdsSiteAccess) {
+    IReadOnlyList<string> Permissions, byte[]? Icon, bool CanWithholdSiteAccess, bool WithholdsSiteAccess) : PromptQuestion {
     #region Actions - Consent
 
     /// Whether the person's consent to `approved` answers this question too:

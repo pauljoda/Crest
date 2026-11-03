@@ -34,8 +34,8 @@ struct BrowserSoftwareUpdateStatusHeader: View {
     private var symbolColor: Color {
         switch model.phase.tone {
         case .accent: CrestBrandTheme.accent
-        case .success: .green
-        case .warning: .orange
+        case .success: CrestColor.success
+        case .warning: CrestColor.warning
         }
     }
 }

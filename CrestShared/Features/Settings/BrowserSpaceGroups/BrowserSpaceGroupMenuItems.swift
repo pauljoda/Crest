@@ -16,8 +16,13 @@ struct BrowserSpaceGroupMenuItems: View {
             Button("New Sub-Space", systemImage: "plus.square.on.square") {
                 if let addSubSpace {
                     addSubSpace(space.id)
-                } else if browser.addSubSpace(after: space.id) {
-                    BrowserSpaceGroupNotices.formed()
+                } else {
+                    do throws(Rejection) {
+                        try browser.addSubSpace(after: space.id)
+                        BrowserSpaceGroupUpdateNotice.showIfDue()
+                    } catch {
+                        BrowserNoticeCenter.shared.post(.failure(error.explanation))
+                    }
                 }
             }
             .disabled(browser.isDeleting(space.id))

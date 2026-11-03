@@ -151,7 +151,6 @@ struct BrowserSettingsSpacePage: View {
         case .privacy:
             BrowserPrivacySettingsPane(
                 browser: browser,
-                downloadCenter: pages.downloadCenter,
                 spaceAccess: spaceAccess,
                 permissionCenter: pages.permissionCenter,
                 contentBlockingErrorDescription: pages.contentBlockingErrorDescription,

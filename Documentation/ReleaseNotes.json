@@ -4981,6 +4981,62 @@
     "quick-window-shortcut-opens-over-your-window": {
       "category": "improved",
       "message": "On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward."
+    },
+    "mobile-window-notices": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a copied link, a zoom change or a Space joining a group now shows in a notice at the top of the window, as on Mac, and the notice shows over Settings too."
+    },
+    "status-colors-house-palette": {
+      "category": "improved",
+      "message": "Errors, warnings and confirmations, such as a failed download, a permission that needs attention or a secure site, now show in Crest’s own red, amber and green, which are easier to read in Light Mode."
+    },
+    "settings-results-as-notices": {
+      "category": "improved",
+      "message": "A finished password import, an app icon that couldn’t change and a Space that couldn’t be deleted now show in a notice at the top of the window instead of an alert you have to dismiss."
+    },
+    "choices-respond-to-pointer": {
+      "category": "improved",
+      "message": "Choices you pick from, such as crest and background tiles, symbols, color swatches, app icons, Getting Started chapters and the Spaces in setup, now highlight under the pointer, respond as you press them and show keyboard focus."
+    },
+    "password-and-route-buttons-match": {
+      "category": "improved",
+      "message": "Reveal Password and Copy Password, and the move and delete buttons of a link route on iPhone and iPad, now look and respond like Crest’s other buttons."
+    },
+    "setup-secondary-text-consistent": {
+      "category": "improved",
+      "message": "Hints, counts and captions in setup on Mac now read at one even strength on every step."
+    },
+    "menu-items-all-show-icons": {
+      "category": "improved",
+      "message": "Every item in Crest’s menus now shows its icon, including Select All and Deselect All, the folders in Move to Folder, and the Edit, Remove and Move items in Settings."
+    },
+    "refusals-no-longer-sync-errors": {
+      "category": "fixed",
+      "message": "A locked Space, a full split or another change Crest can’t make no longer shows as a sync failure in Settings › Sync. Adding a Space or Sub-Space past the limit, or pinning a tab when the pinned tabs are full, now says why in a notice."
+    },
+    "space-search-matches-address-bar": {
+      "category": "fixed",
+      "message": "A Space’s Browsing settings and the search providers agents see now name the same search engine the address bar searches with, including for a Space whose own engine is missing or no longer valid."
+    },
+    "sign-in-popups-save-and-fill-passwords": {
+      "category": "fixed",
+      "message": "A sign-in window a site opens in WebKit, such as a “Sign in with” popup in a Quick Window, now offers to save the password you enter and fills saved passwords, on Mac, iPhone and iPad."
+    },
+    "mobile-export-through-engine": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, exporting a page as a PDF or saving it as a web archive now makes the document the same way Crest on Mac does."
+    },
+    "remove-unused-setup-and-profile-code": {
+      "category": "internal",
+      "message": "Remove the Mac branch of the iPhone and iPad Space setup, an unused passkey type and the profile wrapper around an identifier."
+    },
+    "core-owns-small-rules": {
+      "category": "internal",
+      "message": "The core now decides whether a window follows a tab moved to another Space, expires download records with the rest of a Space’s data, answers the camera and microphone choices an engine enforces, and carries what setup looks and the update card’s buttons show."
+    },
+    "space-studio-choices-fit-and-match": {
+      "category": "fixed",
+      "message": "Crest Studio and setup now mark every choice in the same color, draw search fields like the rest of Settings and show long names in full, and setup keeps the chosen sidebar style in view. A link route’s move buttons no longer look like delete buttons, and the New Space button in iPhone setup is easier to tap."
     }
   }
 }

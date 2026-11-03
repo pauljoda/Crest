@@ -50,7 +50,7 @@ struct BrowserEngineRuleEditor: View {
                 } else {
                     Text("Enter an HTTP or HTTPS website.").foregroundStyle(.secondary)
                 }
-                if let failure { Text(failure).foregroundStyle(.red) }
+                if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
             }
             HStack {
                 Spacer()

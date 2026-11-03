@@ -46,6 +46,7 @@ struct BrowserSpaceBrowsingPreferencePicker<Choice: Identifiable & Hashable, Cho
                         }
                     }
                 }
+                .crestMenuActionLabelStyle()
             } label: {
                 BrowserSpaceBrowsingMenuLabel(title: title, layout: .touch, value: selectedValue)
             }

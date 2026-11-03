@@ -54,7 +54,7 @@ struct BrowserTranslationSettingsSection: View {
                 if couldNotOpenLanguages {
                     Text("Couldn’t open language downloads.")
                         .font(.footnote)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(CrestColor.warning)
                 }
             }
         }

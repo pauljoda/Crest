@@ -20,7 +20,7 @@ struct BrowserCredentialImportRejectedRows: View {
                     BrowserCredentialImportNoticeRow(
                         rowNumber: rejection.rowNumber,
                         message: String(localized: rejection.flaw.message),
-                        tint: .red
+                        tint: CrestColor.danger
                     )
 
                     if rejection.rowNumber != visibleRejections.last?.rowNumber {

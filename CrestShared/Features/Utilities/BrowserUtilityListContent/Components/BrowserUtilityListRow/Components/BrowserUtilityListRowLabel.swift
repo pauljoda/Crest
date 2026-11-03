@@ -20,7 +20,7 @@ struct BrowserUtilityListRowLabel<Icon: View, Trailing: View>: View {
         self.subtitleStyle =
             subtitleStyle
             ?? (subtitleIsFailure
-                ? AnyShapeStyle(.red)
+                ? AnyShapeStyle(CrestColor.danger)
                 : AnyShapeStyle(.secondary))
         self.icon = icon()
         self.trailing = trailing()

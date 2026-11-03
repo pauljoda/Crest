@@ -53,11 +53,25 @@ enum BrowserCredentialImportSelection: Equatable, Hashable, Sendable {
 }
 
 struct BrowserCredentialImportSummary: Equatable, Sendable, Identifiable {
+    // MARK: - Variables
+
     let id = UUID()
     let acceptedCount: Int
     let skippedCount: Int
     let warningCount: Int
     let rejectedCount: Int
+
+    /// What the window says once the import is in.
+    var notice: BrowserNotice {
+        BrowserNotice(
+            message: String(
+                localized:
+                    "Password import finished: \(acceptedCount) imported, \(skippedCount) skipped, \(rejectedCount) rejected"
+            ),
+            systemImage: "checkmark.circle.fill")
+    }
+
+    // MARK: - Actions - Identity
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.acceptedCount == rhs.acceptedCount

@@ -25,11 +25,11 @@ struct BrowserSourceImportTabRow: View {
                 Spacer(minLength: 6)
                 if overflows {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(CrestColor.danger)
                 } else if !included {
                     Image(systemName: duplicate ? "equal.circle.fill" : "minus.circle.fill")
                         .foregroundStyle(
-                            duplicate ? BrowserOnboardingPalette.match : Color.secondary
+                            duplicate ? CrestBrandPalette.match : Color.secondary
                         )
                 }
             }
@@ -46,15 +46,15 @@ struct BrowserSourceImportTabRow: View {
         .frame(height: 40)
         .background(
             duplicate
-                ? BrowserOnboardingPalette.match.opacity(0.16)
-                : overflows ? Color.red.opacity(0.18) : .clear,
+                ? CrestBrandPalette.match.opacity(0.16)
+                : overflows ? CrestColor.dangerFill : .clear,
             in: .rect(cornerRadius: 10, style: .continuous)
         )
         .overlay {
             if duplicate {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(
-                        BrowserOnboardingPalette.match.opacity(0.52),
+                        CrestBrandPalette.match.opacity(0.52),
                         lineWidth: 0.75
                     )
             }
