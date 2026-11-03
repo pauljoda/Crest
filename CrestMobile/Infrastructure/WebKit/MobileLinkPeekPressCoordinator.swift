@@ -14,27 +14,27 @@ enum MobileLinkPeekPressPhase: Equatable {
 }
 
 /// Turns a held press on a link into its Peek: shortly after the press begins
-/// the Peek starts to grow from the link, and once the press has lasted long
-/// enough it opens. A press that ends or moves away first takes the growing
-/// Peek back.
+/// the Peek starts to grow from the link, and once the page says the press is
+/// held, it opens. The page keeps the press's one clock, so a press it holds
+/// always opens its Peek and has its ending click swallowed. A press that ends
+/// or moves away first takes the growing Peek back.
 @MainActor
 final class MobileLinkPeekPressCoordinator {
-    /// Waits out one stretch of a press.
+    /// Waits out the stretch before the Peek starts to grow.
     ///
-    /// A finger is the clock in production, so this sleeps. A test that has to
-    /// release a press after the Peek starts to grow but before it opens
-    /// supplies its own instead, so it decides when each stretch ends rather
-    /// than racing a timer.
+    /// A finger is the clock in production, so this sleeps. A test supplies
+    /// its own to decide when the stretch ends rather than racing a timer.
     typealias Wait = @MainActor (Duration) async throws -> Void
 
     // MARK: - Variables
 
     private let previewDelay: Duration
-    private let minimumDuration: Duration
     private let wait: Wait
     private var pendingPresentation: Task<Void, Never>?
     private var activePressID: String?
-    private var activeRequestID: UUID?
+    private var activeRequest: BrowserPeekRequest?
+    private var stagePresentation: ((BrowserPeekRequest) -> Void)?
+    private var commitPresentation: ((BrowserPeekRequest) -> Void)?
     private var cancelStagedPresentation: ((UUID) -> Void)?
     private var settleWaiters: [@MainActor (Bool) -> Void] = []
     private(set) var phase: MobileLinkPeekPressPhase = .idle
@@ -43,21 +43,18 @@ final class MobileLinkPeekPressCoordinator {
 
     init(
         previewDelay: Duration = .milliseconds(90),
-        minimumDuration: Duration = .milliseconds(300),
         wait: @escaping Wait = { try await Task.sleep(for: $0) }
     ) {
         precondition(previewDelay >= .zero)
-        precondition(minimumDuration >= previewDelay)
         self.previewDelay = previewDelay
-        self.minimumDuration = minimumDuration
         self.wait = wait
     }
 
     // MARK: - Actions - Presses
 
     /// Starts the press `pressID` on the link `request` opens: `stage` starts
-    /// its Peek growing, `commit` opens it, and `cancelStaged` takes back a
-    /// Peek that never opened.
+    /// its Peek growing, `commit` opens it once the press is held, and
+    /// `cancelStaged` takes back a Peek that never opened.
     func begin(
         pressID: String,
         request: BrowserPeekRequest,
@@ -67,11 +64,12 @@ final class MobileLinkPeekPressCoordinator {
     ) {
         end()
         activePressID = pressID
-        activeRequestID = request.id
+        activeRequest = request
+        stagePresentation = stage
+        commitPresentation = commit
         cancelStagedPresentation = cancelStaged
         phase = .pressing
         let previewDelay = self.previewDelay
-        let minimumDuration = self.minimumDuration
         let wait = self.wait
 
         pendingPresentation = Task { @MainActor [weak self] in
@@ -80,22 +78,26 @@ final class MobileLinkPeekPressCoordinator {
             } catch {
                 return
             }
-            guard let self, activePressID == pressID else { return }
+            guard let self, activePressID == pressID, phase == .pressing else { return }
+            pendingPresentation = nil
             phase = .staged
             stage(request)
-
-            do {
-                try await wait(minimumDuration - previewDelay)
-            } catch {
-                return
-            }
-            guard activePressID == pressID else { return }
-            pendingPresentation = nil
-            phase = .committed
-            cancelStagedPresentation = nil
-            commit(request)
-            settle(opensPeek: true)
         }
+    }
+
+    /// The page held the press `pressID`, which opens its Peek, growing it
+    /// first if it hadn't started yet.
+    func hold(pressID: String) {
+        guard pressID == activePressID, phase.holdsLink, phase != .committed, let request = activeRequest else {
+            return
+        }
+        pendingPresentation?.cancel()
+        pendingPresentation = nil
+        if phase == .pressing { stagePresentation?(request) }
+        phase = .committed
+        cancelStagedPresentation = nil
+        commitPresentation?(request)
+        settle(opensPeek: true)
     }
 
     /// Ends the press `pressID`, or any press: a Peek that already opened
@@ -104,14 +106,16 @@ final class MobileLinkPeekPressCoordinator {
         guard pressID == nil || pressID == activePressID else { return }
         pendingPresentation?.cancel()
         pendingPresentation = nil
-        if phase == .staged, let activeRequestID {
-            cancelStagedPresentation?(activeRequestID)
+        if phase == .staged, let activeRequest {
+            cancelStagedPresentation?(activeRequest.id)
         }
         if phase != .committed {
             settle(opensPeek: false)
         }
         activePressID = nil
-        activeRequestID = nil
+        activeRequest = nil
+        stagePresentation = nil
+        commitPresentation = nil
         cancelStagedPresentation = nil
         phase = .idle
     }

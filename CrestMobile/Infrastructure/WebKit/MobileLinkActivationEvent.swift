@@ -9,6 +9,8 @@ import WebKit
 /// Where a press on a link is.
 enum MobileLinkPressPhase: String {
     case began
+    /// The press lasted long enough to open Peek.
+    case held
     case ended
     case cancelled
 }

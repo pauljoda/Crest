@@ -4,11 +4,14 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
-/// Reports a press on a link with its geometry, and when it began, ended or
-/// was cancelled, so a held press opens Peek from the link. While a link is
-/// held, it neither selects text nor shows the system's link callout, and once
-/// Crest says the press opened its Peek, the click that ends the press doesn't
-/// follow the link. Images and every other element keep WebKit's own menus.
+/// Reports a press on a link with its geometry, and when it began, was held,
+/// ended or was cancelled, so a held press opens Peek from the link. The page
+/// is the press's one clock: a press Crest heard is held once it lasts long
+/// enough, and from then the click that ends it doesn't follow the link. A
+/// press Crest never heard, such as one in a popup page whose messages Crest
+/// refuses, keeps its click. While a link is held, it neither selects text nor
+/// shows the system's link callout. Images and every other element keep
+/// WebKit's own menus.
 @MainActor
 enum MobileLinkActivationContentBridge {
     static let messageHandlerName = "crestLinkActivation"
@@ -36,25 +39,25 @@ enum MobileLinkActivationContentBridge {
         return proxy
     }
 
-    /// Tells the script in `frame` that the press `pressID` opened its Peek,
-    /// so the click that ends the press doesn't follow the link. A press whose
-    /// Peek never opens keeps its click.
-    static func pressOpenedPeek(_ pressID: String, in webView: WKWebView, frame: WKFrameInfo) {
+    /// Tells the script in `frame` that Crest heard the press `pressID`, so the
+    /// press may be held and open Peek.
+    static func heardPress(_ pressID: String, in webView: WKWebView, frame: WKFrameInfo) {
         webView.callAsyncJavaScript(
-            "globalThis.__crestLinkPressOpenedPeek?.(pressID)",
+            "globalThis.__crestLinkPressHeard?.(pressID)",
             arguments: ["pressID": pressID], in: frame, in: contentWorld, completionHandler: nil)
     }
 
     private static let source = #"""
         (() => {
+          // How long a press lasts before it is held and opens Peek.
+          const HOLD_MILLISECONDS = 300;
           if (globalThis.__crestLinkActivationInstalled) return;
           globalThis.__crestLinkActivationInstalled = true;
 
           let activePress = null;
           let pressSequence = 0;
-          // The click that ends a press whose Peek opened is swallowed: Crest's
-          // word that it opened arms it, and the press's release opens a short
-          // window for that click.
+          // The click that ends a held press is swallowed: holding arms it, and
+          // the press's release opens a short window for that click.
           let endingClickArmed = false;
           let suppressClickUntil = -Infinity;
 
@@ -64,8 +67,8 @@ enum MobileLinkActivationContentBridge {
             } catch (_) {}
           };
 
-          globalThis.__crestLinkPressOpenedPeek = pressID => {
-            if (activePress?.pressID === pressID) endingClickArmed = true;
+          globalThis.__crestLinkPressHeard = pressID => {
+            if (activePress?.pressID === pressID) activePress.heard = true;
           };
 
           const finish = phase => {
@@ -140,11 +143,13 @@ enum MobileLinkActivationContentBridge {
               startY: event.clientY,
               link,
               previousStyles,
+              heard: false,
               holdTimer: setTimeout(() => {
-                if (activePress?.pressID === pressID) {
-                  globalThis.getSelection()?.removeAllRanges();
-                }
-              }, 280)
+                if (activePress?.pressID !== pressID || !activePress.heard) return;
+                endingClickArmed = true;
+                globalThis.getSelection()?.removeAllRanges();
+                post({ phase: 'held', pressID });
+              }, HOLD_MILLISECONDS)
             };
 
             post({

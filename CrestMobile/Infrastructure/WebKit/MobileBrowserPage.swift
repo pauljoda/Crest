@@ -1105,7 +1105,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             )
         }
         guard event.phase == .began else {
-            linkPeekPressCoordinator.end(pressID: event.pressID)
+            if event.phase == .held {
+                linkPeekPressCoordinator.hold(pressID: event.pressID)
+            } else {
+                linkPeekPressCoordinator.end(pressID: event.pressID)
+            }
             return
         }
         // A held press on a link opens its Peek.
@@ -1132,12 +1136,13 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 } else {
                     openPeek(request)
                 }
-                MobileLinkActivationContentBridge.pressOpenedPeek(event.pressID, in: webView, frame: frame)
             },
             cancelStaged: { [weak self] requestID in
                 self?.cancelStagedPeek?(requestID)
             }
         )
+        // The page holds only a press Crest heard.
+        MobileLinkActivationContentBridge.heardPress(event.pressID, in: webView, frame: frame)
     }
 
     /// Closes WebKit's link preview and menu, open or about to open, for a
