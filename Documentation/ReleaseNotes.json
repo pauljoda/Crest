@@ -4950,6 +4950,10 @@
       "category": "fixed",
       "message": "A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available."
     },
+    "extension-icon-control-click-menu": {
+      "category": "fixed",
+      "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
