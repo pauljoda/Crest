@@ -208,13 +208,18 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     }
 
     /// Where the person is: the window they are in in another app, and the
-    /// screen it is on, or with no such window, the screen under the pointer.
+    /// screen they use it on, the one under the pointer while the pointer is
+    /// in that window, which can span two, else the one its centre is on. With
+    /// no such window, it is the screen under the pointer.
     private static func wherePersonIs() -> (window: CGRect?, screen: NSScreen?) {
         let window = frontWindowFrameOutsideCrest()
+        let pointer = NSEvent.mouseLocation
+        let pointerScreen = NSScreen.screens.first { NSMouseInRect(pointer, $0.frame, false) }
         let screen =
             window.flatMap { frame in
-                NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
-            } ?? NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
+                (frame.contains(pointer) ? pointerScreen : nil)
+                    ?? NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
+            } ?? pointerScreen
         return (window, screen)
     }
 
@@ -245,17 +250,21 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         return nil
     }
 
-    /// `frame`, kept inside `visibleFrame` and moved a step at a time while
+    /// `frame`, fitted inside `visibleFrame` and moved a step at a time while
     /// another Quick Window opens at the same place there, as new windows
     /// cascade on the Mac: down and to the right, or up and to the left where
     /// the screen's edge stops it.
     static func cascaded(_ frame: CGRect, clearOf others: [CGRect], in visibleFrame: CGRect) -> CGRect {
         let step = BrowserQuickWindowLayout.cascadeStep
+        // A window measured against one that spans two screens can be larger
+        // than this one.
         let inside = { (candidate: CGRect) -> CGRect in
-            CGRect(
-                x: max(min(candidate.minX, visibleFrame.maxX - candidate.width), visibleFrame.minX),
-                y: min(max(candidate.minY, visibleFrame.minY), visibleFrame.maxY - candidate.height),
-                width: candidate.width, height: candidate.height)
+            let width = min(candidate.width, visibleFrame.width)
+            let height = min(candidate.height, visibleFrame.height)
+            return CGRect(
+                x: max(min(candidate.minX, visibleFrame.maxX - width), visibleFrame.minX),
+                y: min(max(candidate.minY, visibleFrame.minY), visibleFrame.maxY - height),
+                width: width, height: height)
         }
         let isClear = { (candidate: CGRect) in
             !others.contains { abs($0.minX - candidate.minX) < step / 2 && abs($0.maxY - candidate.maxY) < step / 2 }
