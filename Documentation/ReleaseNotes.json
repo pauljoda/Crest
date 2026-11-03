@@ -4934,6 +4934,30 @@
       "category": "fixed",
       "message": "On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it."
     },
+    "mobile-long-press-peek": {
+      "category": "improved",
+      "message": "On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system’s link preview."
+    },
+    "mobile-peek-link-menu": {
+      "category": "new",
+      "message": "In Peek on iPhone and iPad, the More button shrinks the page to a preview with Open in New Tab, Copy Link, Share and Download Linked File beneath it."
+    },
+    "settings-space-page-every-window": {
+      "category": "fixed",
+      "message": "On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before."
+    },
+    "peek-keeps-link-from-pinned-tab": {
+      "category": "fixed",
+      "message": "A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available."
+    },
+    "extension-icon-control-click-menu": {
+      "category": "fixed",
+      "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
+    },
+    "mac-peek-size": {
+      "category": "new",
+      "message": "On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size."
+    },
     "quick-window-shortcut-from-any-app": {
       "category": "new",
       "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts."

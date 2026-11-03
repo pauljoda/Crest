@@ -29,6 +29,8 @@ struct MobileBrowserTransientUnlockedContent: View {
             actions: actions
         ) {
             webContent
+        } linkMenuAnchor: { presentation in
+            MobilePeekLinkMenuAnchor(presentation: presentation)
         }
         .task(id: presentationPhase) {
             await updatePresentation()
@@ -103,7 +105,8 @@ struct MobileBrowserTransientUnlockedContent: View {
         BrowserTransientCardActions(
             dismiss: dismiss,
             promote: promote,
-            restore: model.restorePage
+            restore: model.restorePage,
+            linkMenu: model.linkMenu
         )
     }
 

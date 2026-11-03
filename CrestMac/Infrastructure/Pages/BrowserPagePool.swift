@@ -715,6 +715,11 @@ final class BrowserPagePool:
 
     // MARK: - Actions - Peek
 
+    /// Opens `request` in Peek over its source tab, as a page's link does.
+    func presentPeek(_ request: BrowserPeekRequest) {
+        openPeek(request)
+    }
+
     /// Closes the Peek open over the active tab, which Close Tab closes
     /// before the tab under it; false when no Peek is open.
     func closePeek() -> Bool {

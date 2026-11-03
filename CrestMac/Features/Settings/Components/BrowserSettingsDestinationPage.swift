@@ -33,7 +33,8 @@ struct BrowserSettingsDestinationPage: View {
                 requestedSpaceID: requestedSpaceID,
                 requestRevision: acceptsExternalRoute ? spaceSettingsPresentation.revision : 0,
                 featureFlagsSpace: featureFlagsSpace,
-                openFeatureFlags: openFeatureFlags
+                openFeatureFlags: openFeatureFlags,
+                testPeek: testPeek
             )
         }
     }
@@ -49,6 +50,13 @@ struct BrowserSettingsDestinationPage: View {
         guard destination == .advanced, BrowserSettingsDestination.featureFlags.isProvided(in: browser.core.state)
         else { return nil }
         return { select(.featureFlags) }
+    }
+
+    /// Opens a sample Peek over this Settings tab, so a person can try the
+    /// size they chose.
+    private var testPeek: (() -> Void)? {
+        guard destination == .links, let tabAssignment else { return nil }
+        return { pages.presentPeek(.sample(over: tabAssignment)) }
     }
 
     private var acceptsExternalRoute: Bool {

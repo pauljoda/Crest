@@ -7,6 +7,10 @@ struct BrowserPeekSettingsSection: View {
     var dragsLinksToPeek: Binding<Bool>? = nil
     /// Absent where the page behind Peek is not dimmed.
     var dimsPageBehindPeek: Binding<Bool>? = nil
+    /// Absent where Peek fills the screen.
+    var peekSize: CrestSettingValue<Double>? = nil
+    /// Opens a sample Peek over Settings; absent where Settings can't show one.
+    var testPeek: (() -> Void)? = nil
 
     var body: some View {
         Section {
@@ -31,6 +35,21 @@ struct BrowserPeekSettingsSection: View {
             if let dimsPageBehindPeek {
                 Toggle("Dim the page behind Peek", isOn: dimsPageBehindPeek)
                     .accessibilityIdentifier("dim-page-behind-peek-toggle")
+            }
+
+            if let peekSize {
+                CrestSettingSlider(
+                    "Peek size",
+                    value: peekSize,
+                    range: BrowserTransientCardArrangement.pointerCardShares,
+                    identifier: "peek-size"
+                )
+            }
+
+            if let testPeek {
+                Button("Test Peek", systemImage: "rectangle.on.rectangle", action: testPeek)
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("test-peek")
             }
         } header: {
             Text("Peek")
