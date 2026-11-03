@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "quick-window-spanning-window",
+    "development": "mobile-peek-link-menu",
     "nightly": "reopen-pages-after-quit-choice"
   }
 }
