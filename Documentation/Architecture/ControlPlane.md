@@ -669,7 +669,9 @@ core no longer hosts, or that another engine hosts, changes nothing.
 - **Live state.** A binding reports a page's `PageSnapshot` at most once per
   turn and only when it changed. The core keeps it, with the latest failure,
   as the page's `PageLiveState` and publishes `PageChanged` only when that
-  differs. Load progress, find highlights, the hovered link and fullscreen
+  differs. A snapshot carries what the engine knows of the document's
+  connection (`PageSecurityFacts`), never a verdict: the core judges the
+  page's `PageSecurity` from those facts, the same way for every engine. Load progress, find highlights, the hovered link and fullscreen
   come straight from the engine, because no rule reads them.
 - **Crashes.** A page whose renderer stopped in view reloads through
   `RecoverPage` while its recovery budget lasts, and past it shows the

@@ -14,12 +14,12 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xb6, 0x0e, 0xdf, 0x46, 0x10, 0x53, 0x33, 0xbf, 0xaf, 0x3b, 0x72, 0xc1, 0x51, 0x0c, 0x7c, 0x6e, 0xe7, 0x18, 0x5b, 0xd0, 0x6b, 0xa1, 0x40, 0xfb, 0x67, 0xcb, 0x12, 0xfe, 0xb2, 0x15, 0xd9, 0xe3
+        0x45, 0xcf, 0xb8, 0x6f, 0xb6, 0x28, 0x4a, 0x65, 0x43, 0xe1, 0xd2, 0x58, 0x40, 0x15, 0x56, 0x26, 0xd6, 0x0b, 0x76, 0x5c, 0x62, 0x9d, 0x01, 0x3d, 0x2e, 0xc7, 0xca, 0x9b, 0x1a, 0x45, 0x3f, 0x55
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
     public static ReadOnlySpan<byte> EngineFingerprint => [
-        0x76, 0x91, 0xdf, 0xee, 0xe6, 0xa3, 0xba, 0x80, 0x33, 0x3f, 0x82, 0x77, 0x5c, 0x53, 0x7c, 0x23, 0xfa, 0x1f, 0x55, 0x8e, 0xc8, 0x61, 0x5a, 0x65, 0x6f, 0xd2, 0xe8, 0xd0, 0x7b, 0x1f, 0x27, 0x1c
+        0x9e, 0x04, 0xb5, 0x7e, 0xde, 0xfe, 0xcc, 0xb4, 0x0b, 0xf2, 0x46, 0x11, 0x27, 0x54, 0x9d, 0xa6, 0x44, 0x99, 0x6d, 0xe2, 0xd0, 0xb2, 0xc0, 0x91, 0xe3, 0x65, 0x92, 0xc2, 0xca, 0x0f, 0x72, 0xd1
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -12772,6 +12772,30 @@ public static class ContractCodec {
         writer.WriteBytes(value.State);
     }
 
+    public static PageSecurityFacts ReadPageSecurityFacts(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageSecurityFacts(
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            ReadPageMixedContent(reader),
+            reader.ReadBool(),
+            reader.ReadBool());
+    }
+
+    public static void WritePageSecurityFacts(WireWriter writer, PageSecurityFacts value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.CryptographicScheme);
+        writer.WriteBool(value.ConnectionJudged);
+        writer.WriteBool(value.CertificateError);
+        writer.WriteBool(value.EngineWarns);
+        WritePageMixedContent(writer, value.MixedContent);
+        writer.WriteBool(value.MaliciousContent);
+        writer.WriteBool(value.ErrorPage);
+    }
+
     public static PageSnapshot ReadPageSnapshot(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new PageSnapshot(
@@ -12779,7 +12803,7 @@ public static class ContractCodec {
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadString(),
             reader.ReadBool(),
-            ReadPageSecurity(reader),
+            ReadPageSecurityFacts(reader),
             ReadPageMediaActivity(reader));
     }
 
@@ -12800,7 +12824,7 @@ public static class ContractCodec {
         }
         writer.WriteString(value.Title);
         writer.WriteBool(value.IsLoading);
-        WritePageSecurity(writer, value.Security);
+        WritePageSecurityFacts(writer, value.Security);
         WritePageMediaActivity(writer, value.Media);
     }
 
@@ -19709,6 +19733,16 @@ public static class ContractCodec {
     }
 
     public static void WritePageMediaActivity(WireWriter writer, PageMediaActivity value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static PageMixedContent ReadPageMixedContent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (PageMixedContent)reader.ReadFlags(7);
+    }
+
+    public static void WritePageMixedContent(WireWriter writer, PageMixedContent value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

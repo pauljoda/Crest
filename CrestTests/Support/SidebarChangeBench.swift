@@ -86,7 +86,7 @@ final class SidebarChangeBench {
                 snapshot: PageSnapshot(
                     url: live.url, pendingURL: nil, title: title ?? live.title,
                     isLoading: isLoading ?? live.isLoading,
-                    security: live.security, media: live.media)))
+                    security: .unknown, media: live.media)))
         if drains { core.drain() }
     }
 

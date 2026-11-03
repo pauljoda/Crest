@@ -29,7 +29,7 @@ namespace crest::engine {
 // SHA-256 of the engine contract alone. A binding registers with it, so the
 // core refuses an engine built against any other contract.
 inline constexpr std::array<uint8_t, 32> kFingerprint = {
-    0x76, 0x91, 0xdf, 0xee, 0xe6, 0xa3, 0xba, 0x80, 0x33, 0x3f, 0x82, 0x77, 0x5c, 0x53, 0x7c, 0x23, 0xfa, 0x1f, 0x55, 0x8e, 0xc8, 0x61, 0x5a, 0x65, 0x6f, 0xd2, 0xe8, 0xd0, 0x7b, 0x1f, 0x27, 0x1c};
+    0x9e, 0x04, 0xb5, 0x7e, 0xde, 0xfe, 0xcc, 0xb4, 0x0b, 0xf2, 0x46, 0x11, 0x27, 0x54, 0x9d, 0xa6, 0x44, 0x99, 0x6d, 0xe2, 0xd0, 0xb2, 0xc0, 0x91, 0xe3, 0x65, 0x92, 0xc2, 0xca, 0x0f, 0x72, 0xd1};
 
 // A GUID in RFC 4122 byte order, as the wire carries it.
 using Guid = std::array<uint8_t, 16>;
@@ -472,6 +472,26 @@ inline bool Read(WireReader& reader, PageMediaActivity& value) {
   return reader.ok();
 }
 
+enum class PageMixedContent : uint32_t {
+  kNone = 0,
+  kRan = 1,
+  kDisplayed = 2,
+  kForm = 4,
+};
+inline constexpr uint32_t kPageMixedContentMask = 7;
+constexpr PageMixedContent operator|(PageMixedContent lhs, PageMixedContent rhs) {
+  return static_cast<PageMixedContent>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
+}
+constexpr PageMixedContent& operator|=(PageMixedContent& lhs, PageMixedContent rhs) { return lhs = lhs | rhs; }
+constexpr bool Has(PageMixedContent value, PageMixedContent flag) {
+  return (static_cast<uint32_t>(value) & static_cast<uint32_t>(flag)) != 0;
+}
+inline void Write(WireWriter& writer, PageMixedContent value) { writer.WriteVarint(static_cast<uint32_t>(value)); }
+inline bool Read(WireReader& reader, PageMixedContent& value) {
+  value = static_cast<PageMixedContent>(reader.ReadFlags(kPageMixedContentMask));
+  return reader.ok();
+}
+
 enum class PageScriptWorld : uint32_t {
   kAgent = 0,
   kPage = 1,
@@ -681,20 +701,6 @@ enum class PageExportFailure : uint32_t {
 inline void Write(WireWriter& writer, PageExportFailure value) { writer.WriteVarint(static_cast<uint32_t>(value)); }
 inline bool Read(WireReader& reader, PageExportFailure& value) {
   value = static_cast<PageExportFailure>(reader.ReadEnum(8));
-  return reader.ok();
-}
-
-enum class PageSecurity : uint32_t {
-  kNone = 0,
-  kInsecure = 1,
-  kSecure = 2,
-  kMixedContent = 3,
-  kCertificateError = 4,
-  kDangerous = 5,
-};
-inline void Write(WireWriter& writer, PageSecurity value) { writer.WriteVarint(static_cast<uint32_t>(value)); }
-inline bool Read(WireReader& reader, PageSecurity& value) {
-  value = static_cast<PageSecurity>(reader.ReadEnum(6));
   return reader.ok();
 }
 
@@ -2927,12 +2933,42 @@ inline bool Read(WireReader& reader, PageScriptEvaluated& value) {
       && Read(reader, value.error);
 }
 
+struct PageSecurityFacts {
+  bool cryptographic_scheme = false;
+  bool connection_judged = false;
+  bool certificate_error = false;
+  bool engine_warns = false;
+  PageMixedContent mixed_content = {};
+  bool malicious_content = false;
+  bool error_page = false;
+
+  friend bool operator==(const PageSecurityFacts&, const PageSecurityFacts&) = default;
+};
+inline void Write(WireWriter& writer, const PageSecurityFacts& value) {
+  Write(writer, value.cryptographic_scheme);
+  Write(writer, value.connection_judged);
+  Write(writer, value.certificate_error);
+  Write(writer, value.engine_warns);
+  Write(writer, value.mixed_content);
+  Write(writer, value.malicious_content);
+  Write(writer, value.error_page);
+}
+inline bool Read(WireReader& reader, PageSecurityFacts& value) {
+  return Read(reader, value.cryptographic_scheme)
+      && Read(reader, value.connection_judged)
+      && Read(reader, value.certificate_error)
+      && Read(reader, value.engine_warns)
+      && Read(reader, value.mixed_content)
+      && Read(reader, value.malicious_content)
+      && Read(reader, value.error_page);
+}
+
 struct PageSnapshot {
   std::optional<std::string> url;
   std::optional<std::string> pending_url;
   std::string title;
   bool is_loading = false;
-  PageSecurity security = {};
+  PageSecurityFacts security;
   PageMediaActivity media = {};
 
   friend bool operator==(const PageSnapshot&, const PageSnapshot&) = default;

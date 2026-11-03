@@ -4490,14 +4490,49 @@ struct PageScriptEvaluated: Equatable, Sendable {
     let error: String?
 }
 
+struct PageSecurityFacts: Equatable, Sendable {
+    static let unknown = PageSecurityFacts(
+        cryptographicScheme: false,
+        connectionJudged: false,
+        certificateError: false,
+        engineWarns: false,
+        mixedContent: [],
+        maliciousContent: false,
+        errorPage: false
+    )
+
+    var cryptographicScheme: Bool
+    var connectionJudged: Bool
+    var certificateError: Bool
+    var engineWarns: Bool
+    var mixedContent: PageMixedContent
+    var maliciousContent: Bool
+    var errorPage: Bool
+}
+
 struct PageSnapshot: Equatable, Sendable {
-    static let blank = PageSnapshot(url: nil, pendingURL: nil, title: "", isLoading: false, security: PageSecurity.none, media: [])
+    static let blank = PageSnapshot(
+        url: nil,
+        pendingURL: nil,
+        title: "",
+        isLoading: false,
+        security: PageSecurityFacts(
+            cryptographicScheme: false,
+            connectionJudged: false,
+            certificateError: false,
+            engineWarns: false,
+            mixedContent: [],
+            maliciousContent: false,
+            errorPage: false
+        ),
+        media: []
+    )
 
     var url: String?
     var pendingURL: String?
     var title: String
     var isLoading: Bool
-    var security: PageSecurity
+    var security: PageSecurityFacts
     var media: PageMediaActivity
 }
 
@@ -7470,6 +7505,13 @@ struct PageMediaActivity: OptionSet, Sendable {
     static let playing = PageMediaActivity(rawValue: 1)
     static let capturing = PageMediaActivity(rawValue: 2)
     static let pictureInPicture = PageMediaActivity(rawValue: 4)
+}
+
+struct PageMixedContent: OptionSet, Sendable {
+    let rawValue: Int
+    static let ran = PageMixedContent(rawValue: 1)
+    static let displayed = PageMixedContent(rawValue: 2)
+    static let form = PageMixedContent(rawValue: 4)
 }
 
 enum PageScriptWorld: Int, CaseIterable, Sendable {
@@ -14771,6 +14813,7 @@ struct PagePresentation: Hashable, Sendable {
 }
 
 /// The members of the core's `PageSecurity`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `applies`.
 struct PageSecurity: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }

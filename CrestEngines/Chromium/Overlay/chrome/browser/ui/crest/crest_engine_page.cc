@@ -1087,7 +1087,7 @@ engine::PageSnapshot EnginePage::Snapshot() const {
   }
   snapshot.title = Title();
   snapshot.is_loading = web_contents()->IsLoading();
-  snapshot.security = Security();
+  snapshot.security = SecurityFacts();
   snapshot.media = MediaActivity();
   return snapshot;
 }
@@ -1109,50 +1109,37 @@ std::string EnginePage::Title() const {
   return base::UTF16ToUTF8(title);
 }
 
-// The engine's own verdict on the visible document's connection. Only a
-// secure transport with no mixed content and no certificate problem is
-// secure; a page the engine flags as malicious outranks everything else, and
-// a certificate error outranks mixed content.
-engine::PageSecurity EnginePage::Security() const {
+// What the engine knows about the visible document's connection, which the
+// core judges as the page's security: the facts of its visible security
+// state, and whether the level Chromium gives it warns. Content whose own
+// certificate failed counts as the mixed content it ran or displayed.
+engine::PageSecurityFacts EnginePage::SecurityFacts() const {
   if (!web_contents()) {
-    return engine::PageSecurity::kNone;
+    return engine::PageSecurityFacts{};
   }
   const auto visible = chrome_security_state::GetVisibleSecurityState(web_contents());
-  const auto level = chrome_security_state::GetSecurityLevel(web_contents());
   if (!visible) {
-    return engine::PageSecurity::kNone;
+    return engine::PageSecurityFacts{};
   }
-  if (visible->malicious_content_status != security_state::MALICIOUS_CONTENT_STATUS_NONE) {
-    return engine::PageSecurity::kDangerous;
+  const auto level = chrome_security_state::GetSecurityLevel(web_contents());
+  engine::PageMixedContent mixed = engine::PageMixedContent::kNone;
+  if (visible->ran_mixed_content || visible->ran_content_with_cert_errors) {
+    mixed |= engine::PageMixedContent::kRan;
   }
-  if (net::IsCertStatusError(visible->cert_status)) {
-    return engine::PageSecurity::kCertificateError;
+  if (visible->displayed_mixed_content || visible->displayed_content_with_cert_errors) {
+    mixed |= engine::PageMixedContent::kDisplayed;
   }
-  // Any other failed load shows Crest's own failure view, not a connection.
-  if (visible->is_error_page) {
-    return engine::PageSecurity::kNone;
+  if (visible->contained_mixed_form) {
+    mixed |= engine::PageMixedContent::kForm;
   }
-  if (!security_state::IsSchemeCryptographic(visible->url)) {
-    return level == security_state::WARNING || level == security_state::DANGEROUS
-               ? engine::PageSecurity::kInsecure
-               : engine::PageSecurity::kNone;
-  }
-  // An HTTPS entry that has not connected yet has no connection to judge.
-  if (!visible->connection_info_initialized) {
-    return engine::PageSecurity::kNone;
-  }
-  if (level == security_state::SECURE) {
-    return engine::PageSecurity::kSecure;
-  }
-  if (visible->ran_mixed_content || visible->displayed_mixed_content || visible->contained_mixed_form ||
-      visible->ran_content_with_cert_errors || visible->displayed_content_with_cert_errors) {
-    return engine::PageSecurity::kMixedContent;
-  }
-  if (level == security_state::DANGEROUS) {
-    return engine::PageSecurity::kDangerous;
-  }
-  // A cryptographic scheme the engine still warns about, such as legacy TLS.
-  return engine::PageSecurity::kInsecure;
+  return engine::PageSecurityFacts{
+      .cryptographic_scheme = security_state::IsSchemeCryptographic(visible->url),
+      .connection_judged = visible->connection_info_initialized,
+      .certificate_error = net::IsCertStatusError(visible->cert_status),
+      .engine_warns = level == security_state::WARNING || level == security_state::DANGEROUS,
+      .mixed_content = mixed,
+      .malicious_content = visible->malicious_content_status != security_state::MALICIOUS_CONTENT_STATUS_NONE,
+      .error_page = visible->is_error_page};
 }
 
 bool EnginePage::ShowsInitialBlank(const GURL& url) const {

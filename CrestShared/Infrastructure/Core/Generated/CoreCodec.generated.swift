@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xb6, 0x0e, 0xdf, 0x46, 0x10, 0x53, 0x33, 0xbf, 0xaf, 0x3b, 0x72, 0xc1, 0x51, 0x0c, 0x7c, 0x6e, 0xe7, 0x18, 0x5b, 0xd0, 0x6b, 0xa1, 0x40, 0xfb, 0x67, 0xcb, 0x12, 0xfe, 0xb2, 0x15, 0xd9, 0xe3
+        0x45, 0xcf, 0xb8, 0x6f, 0xb6, 0x28, 0x4a, 0x65, 0x43, 0xe1, 0xd2, 0x58, 0x40, 0x15, 0x56, 0x26, 0xd6, 0x0b, 0x76, 0x5c, 0x62, 0x9d, 0x01, 0x3d, 0x2e, 0xc7, 0xca, 0x9b, 0x1a, 0x45, 0x3f, 0x55
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0x76, 0x91, 0xdf, 0xee, 0xe6, 0xa3, 0xba, 0x80, 0x33, 0x3f, 0x82, 0x77, 0x5c, 0x53, 0x7c, 0x23, 0xfa, 0x1f, 0x55, 0x8e, 0xc8, 0x61, 0x5a, 0x65, 0x6f, 0xd2, 0xe8, 0xd0, 0x7b, 0x1f, 0x27, 0x1c
+        0x9e, 0x04, 0xb5, 0x7e, 0xde, 0xfe, 0xcc, 0xb4, 0x0b, 0xf2, 0x46, 0x11, 0x27, 0x54, 0x9d, 0xa6, 0x44, 0x99, 0x6d, 0xe2, 0xd0, 0xb2, 0xc0, 0x91, 0xe3, 0x65, 0x92, 0xc2, 0xca, 0x0f, 0x72, 0xd1
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -15433,6 +15433,29 @@ extension PageScriptEvaluated {
     }
 }
 
+extension PageSecurityFacts {
+    init(from reader: inout WireReader) throws(WireError) {
+        let cryptographicScheme = try reader.readBool()
+        let connectionJudged = try reader.readBool()
+        let certificateError = try reader.readBool()
+        let engineWarns = try reader.readBool()
+        let mixedContent = try PageMixedContent(from: &reader)
+        let maliciousContent = try reader.readBool()
+        let errorPage = try reader.readBool()
+        self.init(cryptographicScheme: cryptographicScheme, connectionJudged: connectionJudged, certificateError: certificateError, engineWarns: engineWarns, mixedContent: mixedContent, maliciousContent: maliciousContent, errorPage: errorPage)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(cryptographicScheme)
+        writer.writeBool(connectionJudged)
+        writer.writeBool(certificateError)
+        writer.writeBool(engineWarns)
+        mixedContent.encode(into: &writer)
+        writer.writeBool(maliciousContent)
+        writer.writeBool(errorPage)
+    }
+}
+
 extension PageSnapshot {
     init(from reader: inout WireReader) throws(WireError) {
         let url: String?
@@ -15451,7 +15474,7 @@ extension PageSnapshot {
         }
         let title = try reader.readString()
         let isLoading = try reader.readBool()
-        let security = try PageSecurity(from: &reader)
+        let security = try PageSecurityFacts(from: &reader)
         let media = try PageMediaActivity(from: &reader)
         self.init(url: url, pendingURL: pendingURL, title: title, isLoading: isLoading, security: security, media: media)
     }
@@ -25657,6 +25680,18 @@ extension PageMediaActivity {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
         guard rawValue & ~7 == 0 else { throw WireError.malformed("Unknown PageMediaActivity \(rawValue)") }
+        self.init(rawValue: rawValue)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension PageMixedContent {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard rawValue & ~7 == 0 else { throw WireError.malformed("Unknown PageMixedContent \(rawValue)") }
         self.init(rawValue: rawValue)
     }
 

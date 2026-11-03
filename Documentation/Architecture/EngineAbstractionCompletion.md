@@ -128,9 +128,20 @@ Both engines:
   decisions as content settings; WebKit applies them through its delegates, and
   withdrawing a camera or microphone grant ends capture.
 - Each page's live state carries an engine-neutral `PageSecurity`, whose
-  members carry the title, symbol and detail Site Controls shows. Chromium
-  reports it in every snapshot; WebKit derives it from the scheme, mixed
-  content, the trust result and any override.
+  members carry the title, symbol and detail Site Controls shows. The core
+  judges it in one place from the `PageSecurityFacts` each snapshot carries,
+  so a site reads the same on both engines. Chromium reports the facts of its
+  visible security state and whether its security level warns; WebKit reports
+  the scheme, its secure-content flag as displayed mixed content, and a
+  certificate error from the trust result or an approved override, and no
+  engine warning, since it words none. A malicious page outranks a
+  certificate error, which outranks everything else. The engine's own error
+  page, a secure address whose connection the engine has not judged yet, and
+  a plain scheme on this device's own host (`localhost`, a name under it or a
+  loopback address) are `none`; any other plain scheme, or one the engine
+  warns about, is `insecure`. A judged cryptographic connection is
+  `mixed_content` when it carried insecure content, `insecure` when the
+  engine warns about it, such as legacy TLS, and otherwise `secure`.
 - On the Mac, a document's notifications reach Crest's own system delivery:
   the core decides whether one shows, a click brings its tab forward, and the document
   hears the click.

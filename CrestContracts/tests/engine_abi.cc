@@ -236,7 +236,10 @@ void CodecRoundTrips() {
                                             .pending_url = std::nullopt,
                                             .title = "Example",
                                             .is_loading = true,
-                                            .security = engine::PageSecurity::kMixedContent,
+                                            .security = {.cryptographic_scheme = true,
+                                                         .connection_judged = true,
+                                                         .mixed_content = engine::PageMixedContent::kDisplayed |
+                                                                          engine::PageMixedContent::kForm},
                                             .media = engine::PageMediaActivity::kPlaying |
                                                      engine::PageMediaActivity::kPictureInPicture}},
       engine::PermissionRequested{.prompt_id = Filled(0x74),
@@ -331,7 +334,10 @@ void EngineBoundary() {
   assert(Report(binding, engine::NavigationStarted{.page_id = page, .url = url}) == CREST_OK);
   assert(Report(binding, engine::NavigationCommitted{.page_id = page, .url = url}) == CREST_OK);
   assert(Report(binding, engine::PageStateChanged{
-      .page_id = page, .snapshot = {.url = url, .title = "Example", .security = engine::PageSecurity::kSecure}}) == CREST_OK);
+      .page_id = page,
+      .snapshot = {.url = url,
+                   .title = "Example",
+                   .security = {.cryptographic_scheme = true, .connection_judged = true}}}) == CREST_OK);
   assert(Report(binding, engine::PageIconChanged{.page_id = page, .url = url, .accent = engine::TabIconAccent{1, 0, 0}}) ==
          CREST_OK);
   assert(Report(binding, engine::NavigationFinished{.page_id = page, .url = url, .title = "Example"}) == CREST_OK);

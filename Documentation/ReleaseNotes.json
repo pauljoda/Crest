@@ -4957,6 +4957,10 @@
     "mac-peek-size": {
       "category": "new",
       "message": "On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size."
+    },
+    "site-controls-security-same-on-both-engines": {
+      "category": "fixed",
+      "message": "Site Controls now describes a site’s connection the same way whichever engine shows the page."
     }
   }
 }

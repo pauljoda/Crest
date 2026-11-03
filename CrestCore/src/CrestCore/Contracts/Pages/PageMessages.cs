@@ -144,4 +144,16 @@ public enum PageMediaActivity {
     PictureInPicture = 1 << 2
 }
 
+/// What a page's document took over a connection that was not secure, as its
+/// engine reports it: a script or other active content it ran, an image or
+/// other passive content it displayed, or a form that sends over one. Content
+/// whose own certificate failed counts as what it ran or displayed.
+[Flags]
+public enum PageMixedContent {
+    None = 0,
+    Ran = 1 << 0,
+    Displayed = 1 << 1,
+    Form = 1 << 2
+}
+
 #endregion
