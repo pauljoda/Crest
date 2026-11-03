@@ -20,4 +20,6 @@ enum CrestOpacity {
     /// A status drawn across a pinned tile, which is small and sits on its
     /// own plate.
     static let prominentStatusSurface = 0.6
+    /// A status colour washed under a row or tag, beneath its own text.
+    static let statusFill = 0.18
 }

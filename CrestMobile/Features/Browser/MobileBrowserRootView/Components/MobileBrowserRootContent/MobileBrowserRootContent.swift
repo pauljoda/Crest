@@ -19,8 +19,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
     @State var historyAssignment: BrowserSpaceRuntimeAssignment?
-    @State var isURLCopiedFeedbackVisible = false
-    @State var visiblePageFeedback: MobilePageFeedback?
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
@@ -64,8 +62,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             spaceAccess: spaceAccess,
             preferredSidebarWidth: model.sidebarWidth,
             isCommandPalettePresented: commandPaletteMode != nil,
-            isURLCopiedFeedbackVisible: isURLCopiedFeedbackVisible,
-            pageFeedback: visiblePageFeedback,
+            showsNotices: !model.showsSettings,
             reduceMotion: reduceMotion,
             didPromoteTransientPage: model.activateSelectedTab,
             compact: MobileCompactBrowserSurface(
@@ -177,8 +174,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 ),
                 page: MobileCompactPageSurface(
                     selectedTab: browser.shownTab,
-                    isURLCopiedFeedbackVisible: isURLCopiedFeedbackVisible,
-                    pageFeedback: visiblePageFeedback,
+                    notices: pages.notices,
+                    showsNotices: !model.showsSettings,
                     reduceMotion: reduceMotion,
                     tabPromotionNamespace: tabPromotionNamespace,
                     completePagePresentation:
@@ -380,12 +377,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         }
         .sheet(item: historySheet(overPage: false)) { historySheetContent($0) }
         .modifier(downloadRiskConfirmation(overPage: false))
-        .onChange(of: pages.urlCopyFeedbackRevision) { _, revision in
-            presentURLCopyFeedback(revision: revision)
-        }
-        .onChange(of: pages.pageFeedbackRevision) { _, revision in
-            presentPageFeedback(revision: revision)
-        }
         .modifier(
             MobileBrowserRootLifecycleModifier(
                 model: model,

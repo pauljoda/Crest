@@ -8,28 +8,10 @@ struct CrestSpaceChipCommand: Identifiable {
     var isDestructive = false
     let perform: () -> Void
 
-    static func rename(_ perform: @escaping () -> Void) -> Self {
+    static func remove(_ perform: @escaping () -> Void) -> Self {
         CrestSpaceChipCommand(
-            id: "rename",
-            title: "Rename",
-            systemImage: "pencil",
-            perform: perform
-        )
-    }
-
-    static func customize(_ perform: @escaping () -> Void) -> Self {
-        CrestSpaceChipCommand(
-            id: "customize",
-            title: "Customize",
-            systemImage: "paintpalette",
-            perform: perform
-        )
-    }
-
-    static func delete(_ perform: @escaping () -> Void) -> Self {
-        CrestSpaceChipCommand(
-            id: "delete",
-            title: "Delete",
+            id: "remove",
+            title: "Remove Space",
             systemImage: "trash",
             isDestructive: true,
             perform: perform

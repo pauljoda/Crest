@@ -22,14 +22,16 @@ struct MobileSpaceSelectionSection: View {
                 Spacer()
                 BrowserSpaceOrderControls(browser: browser, spaceID: selectedSpaceID)
                 BrowserSpaceAddButton {
-                    browser.addSpace()
-                    selectedSpaceID = browser.selectedSpaceID
+                    do throws(Rejection) {
+                        try browser.addSpace()
+                        selectedSpaceID = browser.selectedSpaceID
+                    } catch {
+                        BrowserNoticeCenter.shared.post(.failure(error.explanation))
+                    }
                 }
             }
         } header: {
             Text("Spaces")
-        } footer: {
-            BrowserSpaceGroupNoticeLabel()
         }
     }
 

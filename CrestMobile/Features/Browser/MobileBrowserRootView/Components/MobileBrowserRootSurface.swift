@@ -11,8 +11,9 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let spaceAccess: BrowserSpaceAccessController
     let preferredSidebarWidth: CGFloat
     let isCommandPalettePresented: Bool
-    let isURLCopiedFeedbackVisible: Bool
-    let pageFeedback: MobilePageFeedback?
+    /// Whether the window shows its notices, which a sheet over it shows
+    /// instead.
+    let showsNotices: Bool
     let reduceMotion: Bool
     let didPromoteTransientPage: () -> Void
     let compact: Compact
@@ -77,17 +78,12 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             }
         }
         .overlay(alignment: .top) {
-            if !presentation.presentsPageOverTabViewer || !navigation.compactShowsPage {
-                MobileURLCopyFeedback(
-                    isVisible: isURLCopiedFeedbackVisible,
-                    topPadding: presentation.overlayTopPadding
+            if showsNotices, !presentation.presentsPageOverTabViewer || !navigation.compactShowsPage {
+                BrowserNoticeLayer(
+                    notices: pages.notices,
+                    topInset: presentation.overlayTopPadding,
+                    sideInset: MobileBrowserRootLayout.displayEdgeMargin
                 )
-                if let pageFeedback {
-                    MobilePageFeedbackCapsule(
-                        feedback: pageFeedback,
-                        topPadding: presentation.overlayTopPadding
-                    )
-                }
             }
         }
         .onChange(of: transientBrowsing.orphanedPeeks(in: browser), initial: true) {

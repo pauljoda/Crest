@@ -15,7 +15,7 @@ struct BrowserCredentialPromptError: View {
     var body: some View {
         message
             .font(.caption)
-            .foregroundStyle(.red)
+            .foregroundStyle(CrestColor.danger)
     }
 }
 

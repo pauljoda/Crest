@@ -126,7 +126,7 @@ struct BrowserAgentsSettingsPane: View {
             } footer: {
                 CrestFormFootnote("Forgetting an agent disconnects it. Crest asks again the next time it connects.")
             }
-            if let failure { Text(failure).foregroundStyle(.red) }
+            if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
         }
     }
 
@@ -137,7 +137,7 @@ struct BrowserAgentsSettingsPane: View {
             if isTranslocated {
                 Text("Move Crest to your Applications folder to connect agents.").foregroundStyle(.secondary)
             } else if case .failed(let failure) = endpoint?.state {
-                Text(failure.message).foregroundStyle(.red)
+                Text(failure.message).foregroundStyle(CrestColor.danger)
             } else {
                 ForEach(Setup.all) { setup in
                     LabeledContent(setup.name) {

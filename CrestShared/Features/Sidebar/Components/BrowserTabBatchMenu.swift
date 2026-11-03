@@ -36,12 +36,14 @@ struct BrowserTabBatchMenu: View {
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
         }
         Menu("Move to Folder", systemImage: "folder") {
-            action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
-            action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
-            action("Saved Tabs", browser.filing(request, .saved))
-            ForEach(folderChoices) { choice in
-                action(named: choice.pathTitle, browser.filing(request, choice.folder.location, folder: choice.id))
+            Group {
+                newFolderActions
+                action("Saved Tabs", systemImage: "bookmark", browser.filing(request, .saved))
+                ForEach(folderChoices) { choice in
+                    action(choice, browser.filing(request, choice.folder.location, folder: choice.id))
+                }
             }
+            .crestMenuActionLabelStyle()
         }
         Menu("Move to Space", systemImage: "square.grid.2x2") {
             let destinations = browser.availableTabMoveDestinationSpaces(
@@ -58,6 +60,7 @@ struct BrowserTabBatchMenu: View {
                     .disabled(!actions.isAvailable(moving))
                 }
             }
+            .crestMenuActionLabelStyle()
         }
         action("Combine in Split View", systemImage: "rectangle.split.2x1", browser.splitting(request))
         if request.members.contains(where: { $0.splitGroupID != nil }) {
@@ -83,11 +86,11 @@ struct BrowserTabBatchMenu: View {
         action("Archive Selected Tabs", systemImage: "archivebox", browser.closing(request))
         action("Delete \(count) Tabs", systemImage: "trash", role: .destructive, browser.deleting(request))
         Divider()
-        Button("Select All Tabs") {
+        Button("Select All Tabs", systemImage: "checkmark.circle") {
             browser.tabMultiSelection.selectAll(
                 units: BrowserSidebarSelection.itemUnits(in: browser))
         }
-        Button("Deselect All") { browser.tabMultiSelection.clear() }
+        Button("Deselect All", systemImage: "xmark.circle") { browser.tabMultiSelection.clear() }
     }
 
     private var folderMenu: some View {
@@ -104,18 +107,20 @@ struct BrowserTabBatchMenu: View {
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
             action("Move to Saved Tabs", systemImage: "bookmark", browser.filing(request, .saved))
             Menu("Move to Folder", systemImage: "folder") {
-                action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
-                action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
-                ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) }) { choice in
-                    action(named: choice.pathTitle, browser.filing(request, choice.folder.location, folder: choice.id))
+                Group {
+                    newFolderActions
+                    ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) }) { choice in
+                        action(choice, browser.filing(request, choice.folder.location, folder: choice.id))
+                    }
                 }
+                .crestMenuActionLabelStyle()
             }
             Divider()
-            Button("Select All Items") {
+            Button("Select All Items", systemImage: "checkmark.circle") {
                 browser.tabMultiSelection.selectAll(
                     units: BrowserSidebarSelection.itemUnits(in: browser))
             }
-            Button("Deselect All") { browser.tabMultiSelection.clear() }
+            Button("Deselect All", systemImage: "xmark.circle") { browser.tabMultiSelection.clear() }
         }
     }
 
@@ -127,17 +132,28 @@ struct BrowserTabBatchMenu: View {
             .disabled(!actions.isAvailable(batch))
     }
 
-    /// A menu item without a symbol that performs `batch`, offered only when
-    /// the core would take it.
-    private func action(_ title: LocalizedStringKey, _ batch: BrowserTabBatch) -> some View {
-        Button(title) { actions.perform(batch, for: request) }
-            .disabled(!actions.isAvailable(batch))
+    /// A menu item for one of the Space's folders, titled by its place among
+    /// them and drawn in its own icon and color.
+    private func action(_ choice: SpaceModel.FolderChoice, _ batch: BrowserTabBatch) -> some View {
+        Button {
+            actions.perform(batch, for: request)
+        } label: {
+            Label {
+                Text(choice.pathTitle)
+            } icon: {
+                BrowserFolderArtwork(symbol: choice.folder.displaySymbol, color: choice.folder.displayColor)
+            }
+        }
+        .disabled(!actions.isAvailable(batch))
     }
 
-    /// A menu item titled by a folder's own name.
-    private func action(named title: String, _ batch: BrowserTabBatch) -> some View {
-        Button(title) { actions.perform(batch, for: request) }
-            .disabled(!actions.isAvailable(batch))
+    /// The two folders the selection can move into that don't exist yet.
+    @ViewBuilder
+    private var newFolderActions: some View {
+        action(
+            "New Current Tabs Folder", systemImage: "folder.badge.plus",
+            browser.filingInNewFolder(request, in: .current))
+        action("New Saved Folder", systemImage: "folder.badge.plus", browser.filingInNewFolder(request, in: .saved))
     }
 
     private func copyLinks() { actions.copyLinks(request) }

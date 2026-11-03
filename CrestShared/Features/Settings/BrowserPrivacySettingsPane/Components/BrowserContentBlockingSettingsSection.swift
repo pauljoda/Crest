@@ -15,7 +15,7 @@ struct BrowserContentBlockingSettingsSection: View {
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .font(.footnote)
-                .foregroundStyle(.orange)
+                .foregroundStyle(CrestColor.warning)
             }
         }
     }

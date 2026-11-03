@@ -130,14 +130,14 @@ struct BrowserCrestForge: View {
 
     private var startSections: some View {
         gallery(SpaceHouse.all, id: \.self) { house in
-            BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding), tint: .accentColor) {
+            BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding)) {
                 branding = house.applying(to: branding)
             } artwork: {
                 crest(house.applying(to: editingStart ?? branding))
             }
         } trailing: {
             ForEach(SpaceScheme.all, id: \.self) { scheme in
-                BrowserSpaceSchemeChoice(scheme: scheme, branding: $branding, symbol: symbol, tint: .accentColor)
+                BrowserSpaceSchemeChoice(scheme: scheme, branding: $branding, symbol: symbol)
             }
         }
     }
@@ -271,9 +271,7 @@ struct BrowserCrestForge: View {
             let selected =
                 pattern.map { branding.themeMode == .banner && branding.bannerPattern == $0 }
                 ?? (branding.themeMode == .gradient)
-            BrowserCrestStudioChoice(
-                title: pattern?.title ?? "Gradient", selected: selected, tint: .accentColor
-            ) {
+            BrowserCrestStudioChoice(title: pattern?.title ?? "Gradient", selected: selected) {
                 context.branding.editorUpdate {
                     if let pattern {
                         $0.themeMode = .banner
@@ -344,7 +342,7 @@ struct BrowserCrestForge: View {
     ) -> some View {
         let value = context.crest(path)
         return gallery(options, id: \.self) { option in
-            BrowserCrestStudioChoice(title: option.title, selected: option == value.wrappedValue, tint: .accentColor) {
+            BrowserCrestStudioChoice(title: option.title, selected: option == value.wrappedValue) {
                 value.binding.wrappedValue = option
             } artwork: {
                 crest(context.preview { $0.crest[keyPath: path] = option })

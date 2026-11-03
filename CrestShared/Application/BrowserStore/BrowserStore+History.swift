@@ -45,11 +45,12 @@ extension BrowserStore {
         sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: nil))
     }
 
-    /// Applies every Space's tab and stored-record retention policies to a
-    /// session that is already running, rather than only at launch. Windows
-    /// share one session, and the core sweeps it at most once a minute unless
-    /// a Space's retention changed, so every window may ask whenever it
-    /// becomes active. A sweep that expires nothing changes nothing.
+    /// Applies every Space's tab, stored-record and download retention
+    /// policies to a session that is already running, rather than only at
+    /// launch. Windows share one session, and the core sweeps it at most once
+    /// a minute unless a Space's retention changed, so every window may ask
+    /// whenever it becomes active. A sweep that expires nothing changes
+    /// nothing.
     func sweepExpiredBrowsingData() {
         sendRecords(SweepExpiredRecords(workspaceID: family.workspaceID))
     }
@@ -60,11 +61,8 @@ extension BrowserStore {
     /// The caller owns the lifetime: a scene ties this to being active, so the
     /// loop is cancelled — and the sweep suspends — as soon as the scene stops
     /// being active. Every pass runs on the main actor, so windows serialize.
-    func sweepExpiredBrowsingDataWhileSceneIsActive(
-        additionalSweep: @MainActor () -> Void = {}
-    ) async {
+    func sweepExpiredBrowsingDataWhileSceneIsActive() async {
         sweepExpiredBrowsingData()
-        additionalSweep()
         while !Task.isCancelled {
             do {
                 try await Task.sleep(
@@ -74,7 +72,6 @@ extension BrowserStore {
                 return
             }
             sweepExpiredBrowsingData()
-            additionalSweep()
         }
     }
 
@@ -118,7 +115,7 @@ extension BrowserStore {
     /// answers whether it changed the session.
     @discardableResult
     private func sendRecords(_ intent: some Intent) -> Bool {
-        family.send(intent, from: self, failure: "Core record command failed")
+        family.send(intent, from: self)
     }
 }
 

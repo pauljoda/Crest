@@ -179,8 +179,8 @@ struct BrowserGeneralSettingsPane: View {
     private var defaultBrowserStatusStyle: AnyShapeStyle {
         switch defaultBrowser.status.tone {
         case .quiet: AnyShapeStyle(.secondary)
-        case .success: AnyShapeStyle(.green)
-        case .warning: AnyShapeStyle(.orange)
+        case .success: AnyShapeStyle(CrestColor.success)
+        case .warning: AnyShapeStyle(CrestColor.warning)
         }
     }
 }

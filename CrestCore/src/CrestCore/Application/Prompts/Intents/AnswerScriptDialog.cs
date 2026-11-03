@@ -8,8 +8,7 @@ public sealed record AnswerScriptDialog(Guid PromptId, bool Accepted, string? Te
     #region Actions - Prompts
 
     internal override void Apply(CrestApp app, ChangeFeed changes) =>
-        app.Prompts.Answer(PromptId, question => question is ScriptDialogQuestion,
-            new SettleScriptDialog(PromptId, Accepted, Text), changes, app.Issue);
+        app.Prompts.Answer<ScriptDialogQuestion>(PromptId, new SettleScriptDialog(PromptId, Accepted, Text), changes, app.Issue);
 
     #endregion
 }

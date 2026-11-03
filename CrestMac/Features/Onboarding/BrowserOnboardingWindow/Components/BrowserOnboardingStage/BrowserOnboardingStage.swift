@@ -24,6 +24,7 @@ struct BrowserOnboardingStage<Content: View>: View {
             }
         }
         .environment(\.colorScheme, .dark)
+        .crestFieldSurfaceRole(.brand)
     }
 }
 

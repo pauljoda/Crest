@@ -25,7 +25,7 @@ struct BrowserCredentialImportAccountRow: View {
                 HStack(spacing: CrestSpacing.small) {
                     if !group.origin.isSecure {
                         Label("HTTP", systemImage: "exclamationmark.shield.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(CrestColor.warning)
                     }
                     Label(status.title, systemImage: status.systemImage)
                         .foregroundStyle(status.color)
@@ -101,13 +101,13 @@ struct BrowserCredentialImportAccountRow: View {
             return (
                 "Needs review",
                 "exclamationmark.arrow.triangle.2.circlepath",
-                .orange
+                CrestColor.warning
             )
         }
         if group.existingID != nil {
             return ("Already saved", "checkmark.circle", .secondary)
         }
-        return ("New", "plus.circle.fill", .green)
+        return ("New", "plus.circle.fill", CrestColor.success)
     }
 
     private var selectionPicker: some View {

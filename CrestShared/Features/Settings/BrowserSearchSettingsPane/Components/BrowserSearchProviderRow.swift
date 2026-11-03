@@ -61,10 +61,13 @@ struct BrowserSearchProviderRow: View {
             }
         }
         .contextMenu {
-            Button("Edit…", action: edit)
-            if let id = provider.customID {
-                Button("Remove", role: .destructive) { catalog.remove(id) }
+            Group {
+                Button("Edit…", systemImage: "pencil", action: edit)
+                if let id = provider.customID {
+                    Button("Remove", systemImage: "trash", role: .destructive) { catalog.remove(id) }
+                }
             }
+            .crestMenuActionLabelStyle()
         }
         .accessibilityIdentifier("search-provider-\(provider.name)")
     }

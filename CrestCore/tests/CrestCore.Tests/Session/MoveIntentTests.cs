@@ -97,7 +97,7 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void AMoveToAnotherSpaceTakesASplitMemberOutOfItsSplitAndFollowsOnlyWhenAsked() {
+    public void AMoveToAnotherSpaceTakesASplitMemberOutOfItsSplitAndFollowsAsTheLinkPreferencesSay() {
         var f = new BatchSpace();
         var other = f.Session["spaces"]![1]!["tabs"]!.AsArray();
         for (var index = 0; index < TabPlacement.PinnedCapacity; index++)
@@ -114,23 +114,26 @@ public sealed partial class BrowserContractsTests {
         var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         device.Send(new ShowTab(window, f.Space, f.Left));
-        MoveTabToSpace Moving(Guid tab, Guid destination, bool follows, TabPlacement? placement = null) =>
-            new(device.Workspace, window, f.Space, tab, destination, placement, null, null, follows);
+        MoveTabToSpace Moving(Guid tab, Guid destination, TabPlacement? placement = null) =>
+            new(device.Workspace, window, f.Space, tab, destination, placement, null, null);
         var before = core.Current;
 
         Assert.Equal(f.Space, Assert.IsType<AlreadyInSpace>(Assert.Throws<Rejected>(() =>
-            device.Send(Moving(f.Left, f.Space, false))).Rejection).SpaceId);
+            device.Send(Moving(f.Left, f.Space))).Rejection).SpaceId);
         Assert.Equal(TabPlacement.PinnedCapacity, Assert.IsType<PinnedTabsFull>(device.Query(new CanSend(
-            Moving(f.Left, f.Other, false, TabPlacement.Pinned))).Refusal).Capacity);
+            Moving(f.Left, f.Other, TabPlacement.Pinned))).Refusal).Capacity);
         Assert.Same(before, core.Current);
 
         // The window gives up the tab it showed for the one it showed before.
-        device.Send(Moving(f.Left, f.Other, follows: false));
+        device.Send(new SetLinkBehavior(LinkBehavior.FollowsMovedTabs, IsOn: false));
+        device.Send(Moving(f.Left, f.Other));
         var moved = core.Current.Spaces[1].Tabs.Single(tab => tab.Id == f.Left);
         Assert.Equal((TabPlacement.Current, (Guid?)null), (moved.Placement, moved.SplitGroupId));
         Assert.Equal((f.Space, (Guid?)f.Open), (device.Space(window), device.Tab(window, f.Space)));
 
-        device.Send(Moving(f.Last, f.Other, follows: true));
+        // The window follows a moved tab when the device's link preferences say so.
+        device.Send(new SetLinkBehavior(LinkBehavior.FollowsMovedTabs, IsOn: true));
+        device.Send(Moving(f.Last, f.Other));
         Assert.Equal((f.Other, (Guid?)f.Last), (device.Space(window), device.Tab(window, f.Other)));
         Assert.Equal([f.Resident, f.Left, f.Last], core.Current.Spaces[1].Tabs.Where(tab => tab.Placement == TabPlacement.Current)
             .Select(tab => tab.Id));

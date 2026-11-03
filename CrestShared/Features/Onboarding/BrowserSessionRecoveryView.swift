@@ -25,7 +25,7 @@ struct BrowserSessionRecoveryView<Value>: View {
                         "No recovery checkpoint is available. Retry after checking that your disk is available and has free space."
                     )
                 }
-                if let error = launch.recoveryError { Text(error).foregroundStyle(.red) }
+                if let error = launch.recoveryError { Text(error).foregroundStyle(CrestColor.danger) }
                 Button("Retry", action: launch.retry)
                     .buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("session-recovery-retry")

@@ -12,18 +12,19 @@ struct BrowserTabBatch {
     /// Whether the action closes the selected tabs' pages, which may first
     /// ask the person to leave them.
     let closesPages: Bool
-    /// The Space the window follows the tabs to, when it does.
-    let following: BrowserSpaceRuntimeAssignment?
+    /// The Space the action moves the tabs to, which the window follows them
+    /// to when the core moves it there.
+    let destination: BrowserSpaceRuntimeAssignment?
 
     // MARK: - Initializers
 
     init(
         _ intent: any Intent, reselection: BrowserTabReselection, closesPages: Bool = false,
-        following: BrowserSpaceRuntimeAssignment? = nil
+        destination: BrowserSpaceRuntimeAssignment? = nil
     ) {
         self.intent = intent
         self.reselection = reselection
         self.closesPages = closesPages
-        self.following = following
+        self.destination = destination
     }
 }

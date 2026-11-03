@@ -43,7 +43,7 @@ final class BrowserAgentMutationTests: XCTestCase {
         let kept = try XCTUnwrap(URL(string: "https://history.crest.test/keep"))
         browser.seedVisit(to: url, titled: "Delete", in: fixture.space.id)
         browser.seedVisit(to: kept, titled: "Keep", in: fixture.space.id)
-        browser.addSpace()
+        try browser.addSpace()
         let other = try XCTUnwrap(browser.shownSpace)
         browser.seedVisit(to: url, titled: "Other Space", in: other.id)
         fixture.windows.openPrivateWindow()

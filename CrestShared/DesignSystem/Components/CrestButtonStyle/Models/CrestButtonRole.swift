@@ -12,5 +12,7 @@ enum CrestButtonRole: Equatable, Sendable {
     /// An action that removes something.
     case destructive
     /// A glyph-only circular control. Callers supply an accessibility label.
+    /// A quiet one is neutral and a prominent one wears the accent, unless
+    /// the caller tints it.
     case icon(diameter: CGFloat, isProminent: Bool)
 }

@@ -8,6 +8,7 @@ struct MobileBrowserRootView: View {
     private let closePrivateBrowsing: () -> Void
 
     @State private var model: MobileBrowserRootModel
+    @Environment(\.scenePhase) private var scenePhase
 
     init(
         browser: BrowserStore,
@@ -79,7 +80,9 @@ struct MobileBrowserRootView: View {
             \.browserNativeTabActions,
             BrowserNativeTabActions(
                 browser: model.browser, spaceAccess: model.spaceAccess,
-                didOpenURL: { model.pages.select() }))
+                didOpenURL: { model.pages.select() })
+        )
+        .onChange(of: scenePhase, initial: true) { _, phase in model.sceneDidChange(to: phase) }
     }
 }
 

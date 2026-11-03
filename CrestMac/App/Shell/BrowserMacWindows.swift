@@ -386,7 +386,7 @@ final class BrowserMacWindows {
         quickWindows[request.id] = quickWindow
         // Notices from the page's services reach the Quick Window while it is
         // key, as they reach a browser window.
-        BrowserNoticeCenter.shared.register(quickWindow.chrome) { [weak self] in
+        BrowserNoticeCenter.shared.register(quickWindow.chrome.notices) { [weak self] in
             self?.quickWindow(request.id)?.isKeyWindow == true
         }
         show(
@@ -404,7 +404,7 @@ final class BrowserMacWindows {
                         open(.normal(sourceWindowID: request.targetWindowID), activation: .key)
                     }
                 )
-                .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
+                .overlay { BrowserNoticeLayer(notices: quickWindow.chrome.notices) }
                 .modifier(BrowserChromeAppearancePersistence())
                 .environment(application.softwareUpdates)
                 .environment(\.browserSiteControlAnchor, application.siteControlAnchor)

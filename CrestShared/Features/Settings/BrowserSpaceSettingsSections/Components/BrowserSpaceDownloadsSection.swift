@@ -38,7 +38,7 @@ struct BrowserSpaceDownloadsSection: View {
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .font(.footnote)
-                .foregroundStyle(.red)
+                .foregroundStyle(CrestColor.danger)
             }
         }
     }

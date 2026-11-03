@@ -37,8 +37,8 @@
                     .scrollDismissesKeyboard(.interactively)
                 }
             }
-            .background(BrowserOnboardingPalette.parchment)
-            .foregroundStyle(BrowserOnboardingPalette.ink)
+            .background(CrestBrandTheme.surface)
+            .foregroundStyle(CrestBrandTheme.textDisplay)
         }
 
         private func preview(compact: Bool) -> some View {

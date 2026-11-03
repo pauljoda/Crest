@@ -11,6 +11,10 @@ public sealed record ResolvedAddress(string? Url, string? SearchQuery);
 /// engine that runs it.
 public sealed record SelectionSearchAnswer(string? Url, string EngineTitle);
 
+/// What a Space searches with, and whether it suggests searches as a person
+/// types.
+public sealed record SpaceSearchAnswer(SearchProvider Provider, bool SuggestsSearches);
+
 #endregion
 
 #region Rejections

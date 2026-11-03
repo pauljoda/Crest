@@ -102,12 +102,10 @@ final class BrowserCommandPaletteModel {
     }
 
     /// The providers the palette offers as chips while what is typed is one
-    /// word, closest first, when Tab or Space enters them; none once the
-    /// palette is narrowed.
+    /// word, closest first, when Tab or Space enters them, as the core matches
+    /// them; none once the palette is narrowed.
     var providerChips: [SearchProvider] {
-        guard isUnscoped, preferences.searchesSitesWithTab || preferences.providerSpaceTrigger.isEnabled,
-            isCompletionSourceAvailable
-        else { return [] }
+        guard isUnscoped, isCompletionSourceAvailable else { return [] }
         return matchingProviders
     }
 

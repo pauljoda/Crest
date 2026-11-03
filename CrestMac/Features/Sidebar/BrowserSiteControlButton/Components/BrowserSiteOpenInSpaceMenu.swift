@@ -22,6 +22,7 @@ struct BrowserSiteOpenInSpaceMenu: View {
                         }
                     }
                 }
+                .crestMenuActionLabelStyle()
             } label: {
                 Label("Open This Page in", systemImage: "square.stack.3d.up")
                     .font(.caption.weight(.medium))

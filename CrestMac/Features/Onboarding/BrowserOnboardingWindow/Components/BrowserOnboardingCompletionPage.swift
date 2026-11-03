@@ -61,7 +61,7 @@ struct BrowserOnboardingCompletionPage: View {
                 .accessibilityIdentifier("onboarding-open-crest")
             Text(detail)
                 .font(CrestTypography.sans(12, weight: .medium))
-                .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                .foregroundStyle(CrestBrandTheme.textSecondary)
                 .padding(.top, 14)
         }
     }

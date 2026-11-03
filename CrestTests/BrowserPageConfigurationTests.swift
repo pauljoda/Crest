@@ -6,14 +6,14 @@ import XCTest
 @MainActor
 final class BrowserPageConfigurationTests: XCTestCase {
     func testProductionConfigurationUsesTheSpacesPersistentStoreAndDesktopBrowserDefaults() {
-        let profile = BrowsingProfile()
+        let profile = UUID()
 
         let configuration = BrowserPageConfiguration.make(
-            for: profile,
-            websiteDataStore: BrowserWebsiteDataStore.persistent(for: profile)
+            forProfile: profile,
+            websiteDataStore: BrowserWebsiteDataStore.persistent(forProfile: profile)
         )
 
-        XCTAssertEqual(configuration.websiteDataStore.identifier, profile.id)
+        XCTAssertEqual(configuration.websiteDataStore.identifier, profile)
         XCTAssertEqual(
             configuration.applicationNameForUserAgent,
             BrowserPlatformUserAgent.applicationName

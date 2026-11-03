@@ -8,8 +8,8 @@ public sealed record AnswerExtensionInstall(Guid PromptId, bool Accepted, bool W
     #region Actions - Prompts
 
     internal override void Apply(CrestApp app, ChangeFeed changes) =>
-        app.Prompts.Answer(PromptId, question => question is ExtensionInstallQuestion,
-            new SettleExtensionInstall(PromptId, Accepted, WithholdsSiteAccess), changes, app.Issue);
+        app.Prompts.Answer<ExtensionInstallQuestion>(PromptId, new SettleExtensionInstall(PromptId, Accepted, WithholdsSiteAccess),
+            changes, app.Issue);
 
     #endregion
 }

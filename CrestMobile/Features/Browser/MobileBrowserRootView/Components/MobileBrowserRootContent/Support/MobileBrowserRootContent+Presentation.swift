@@ -97,10 +97,20 @@ extension MobileBrowserRootContent {
         )
     }
 
+    /// Settings in its sheet, which shows the window's notices while it
+    /// covers the window, so what Settings reports is never hidden under it.
     var settingsSheetContent: some View {
         MobileBrowserSettingsView(
             browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
-            state: model.settings.state)
+            state: model.settings.state
+        )
+        .overlay(alignment: .top) {
+            BrowserNoticeLayer(
+                notices: pages.notices,
+                topInset: MobileBrowserRootLayout.compactOverlayTopPadding,
+                sideInset: MobileBrowserRootLayout.displayEdgeMargin
+            )
+        }
     }
 
     /// The Space whose History shows as a sheet from the page, or from the

@@ -12,13 +12,12 @@ extension BrowserStore {
         guard spaceModel(matching: assignment) != nil else { return nil }
         let settingsBrowser = profileSettingsBrowser.makeWindowStore(
             BrowserWindowOpening(showingSpaceID: assignment.spaceID, restoresTabs: false))
-        let workspaceFamily: BrowserStoreFamily
-        do {
-            workspaceFamily = try settingsBrowser.family.makeBorrowed(in: assignment, settingsBrowser: settingsBrowser)
-        } catch {
-            localSyncErrorDescription = "Core workspace creation failed: \(error)"
-            return nil
-        }
+        // Only a Space that may lend itself offers a temporary window, so a
+        // refusal here is routine and opens nothing.
+        guard
+            let workspaceFamily = try? settingsBrowser.family.makeBorrowed(
+                in: assignment, settingsBrowser: settingsBrowser)
+        else { return nil }
         return BrowserStore(
             opening: BrowserWindowOpening(id: id),
             credentialVault: credentialVault,
@@ -65,7 +64,6 @@ extension BrowserStore {
             try BrowserStoreFamily.moveTab(
                 movingTab(id, in: sourceAssignment, to: destination), from: self, to: destination)
         } catch {
-            localSyncErrorDescription = "Core workspace transfer failed: \(error)"
             return false
         }
         if family !== destination.family { tabMultiSelection.clear() }

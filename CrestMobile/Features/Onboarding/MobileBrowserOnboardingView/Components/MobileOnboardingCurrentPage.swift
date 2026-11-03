@@ -61,7 +61,7 @@ struct MobileOnboardingCurrentPage: View, BrowserOnboardingPages {
     func reviewPage() -> some View { EmptyView() }
 
     func manualSetupPage() -> some View {
-        BrowserSpaceSetupWizard(
+        MobileSpaceSetupWizard(
             setup: context.setup,
             selectedSpaceID: context.selectedSpaceID,
             errorMessage: context.errorMessage,

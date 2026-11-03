@@ -20,6 +20,7 @@ struct BrowserPlatformEmojiVariantModifier: ViewModifier {
                         }
                     }
                 }
+                .crestMenuActionLabelStyle()
             }
             .accessibilityHint("Long press or open the context menu for skin tone variations.")
     }

@@ -38,7 +38,8 @@ struct BrowserSidebarDropCommit {
             return copied
         }
         browser.prepareAcceptedCopies(copies, from: sources)
-        if let destination = drop.following {
+        // The window followed the lift when the core moved it to its Space.
+        if let destination = drop.destination, browser.selectedSpaceID == destination.id {
             let destinationAssignment = BrowserSpaceRuntimeAssignment(
                 spaceID: destination.id, profileID: destination.profileID)
             browser.pendingMovedTabActivation = browser.selectedTabID(in: destination.id).map {

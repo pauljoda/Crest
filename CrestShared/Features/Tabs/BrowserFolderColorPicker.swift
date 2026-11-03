@@ -41,30 +41,17 @@ struct BrowserFolderColorPicker: View {
 
             LazyVGrid(columns: columns, spacing: CrestSpacing.small) {
                 ForEach(BrowserFolderColorPalette.choices) { choice in
-                    Button {
+                    CrestSelectableCard(
+                        isSelected: color == choice.value, accessibilityLabel: Text(choice.title), density: .swatch
+                    ) {
                         color = choice.value
-                    } label: {
+                    } content: {
                         Circle()
                             .fill(choice.value.color)
-                            .frame(width: 22, height: 22)
-                            .padding(3)
-                            .overlay {
-                                Circle()
-                                    .strokeBorder(
-                                        Color.primary.opacity(
-                                            color == choice.value ? 0.75 : 0.14
-                                        ),
-                                        lineWidth: color == choice.value ? 2 : 0.5
-                                    )
-                            }
-                            .contentShape(.circle)
+                            .frame(width: 20, height: 20)
+                            .overlay { Circle().strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5) }
                     }
-                    .buttonStyle(.plain)
                     .help(choice.title)
-                    .accessibilityLabel(choice.title)
-                    .accessibilityValue(
-                        color == choice.value ? "Selected" : ""
-                    )
                 }
             }
 

@@ -3,11 +3,12 @@ import Foundation
 
 // MARK: - Types
 
-/// A drop a target makes of a lift: the core's intent, the Space the window
-/// follows the lift to, if any, and whether the lift leaves its Space.
+/// A drop a target makes of a lift: the core's intent, the other Space it
+/// moves the lift to, if any, which the window follows when the core moves it
+/// there, and whether the lift leaves its Space.
 struct BrowserSidebarDrop {
     let intent: any SidebarDrop
-    var following: SpaceModel? = nil
+    var destination: SpaceModel? = nil
     /// Whether the lift leaves the Space it was lifted in, so a selection it
     /// carried is let go rather than kept selected where it landed.
     var leavesSpace = false
@@ -90,12 +91,11 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
                 guard let destinationSpace = browser.spaceModel(destination.spaceID),
                     destinationSpace.profileID == destination.profileID
                 else { return nil }
-                let follows = browser.linkPreferences.preferences.followsMovedTabs
                 return BrowserSidebarDrop(
                     intent: DropOnSpace(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        destinationSpaceID: destination.spaceID, follows: follows),
-                    following: follows ? destinationSpace : nil,
+                        destinationSpaceID: destination.spaceID),
+                    destination: destinationSpace,
                     leavesSpace: true
                 )
             case .splitInsert(let assignment, let index):

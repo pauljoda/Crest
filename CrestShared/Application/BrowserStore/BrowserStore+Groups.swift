@@ -88,12 +88,12 @@ extension BrowserStore {
     // MARK: - Actions - Changing groups
 
     /// Adds a Sub-Space right after `spaceID`, which joins that Space's group,
-    /// and shows it in this window. Answers whether the core added it.
-    @discardableResult
-    func addSubSpace(after spaceID: UUID) -> Bool {
-        family.send(
+    /// and shows it in this window. Throws the rule that refused it, such as
+    /// the Space limit.
+    func addSubSpace(after spaceID: UUID) throws(Rejection) {
+        try family.commit(
             AddSubSpace(workspaceID: family.workspaceID, windowID: windowID, spaceID: UUID(), fromSpaceID: spaceID),
-            from: self, failure: "Core Space command failed")
+            from: self)
     }
 
     /// Makes `spaceID` a Sub-Space of the group `groupSpaceID` belongs to.
@@ -158,8 +158,7 @@ extension BrowserStore {
     /// keeps every group together.
     func orderSpaces(_ spaceIDs: [UUID]) {
         family.send(
-            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: spaceIDs), from: self,
-            failure: "Core Space command failed")
+            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: spaceIDs), from: self)
     }
 
 }

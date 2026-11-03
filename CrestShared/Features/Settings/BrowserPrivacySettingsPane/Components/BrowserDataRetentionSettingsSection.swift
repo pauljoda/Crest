@@ -2,7 +2,6 @@ import SwiftUI
 
 struct BrowserDataRetentionSettingsSection: View {
     let browser: BrowserStore
-    let downloadCenter: BrowserDownloadCenter
     let spaceID: UUID
 
     @State private var pendingChange: BrowserDataRetentionChange?
@@ -91,13 +90,10 @@ struct BrowserDataRetentionSettingsSection: View {
             return
         }
         retention[keyPath: change.category.retention] = change.proposed
-        let now = BrowserDataRetentionClock.now()
         browser.updateDataRetentionPreferences(retention, in: spaceID)
-        downloadCenter.sweepExpiredRecords(
-            in: browser.spaceModels,
-            now: now,
-            force: true
-        )
+        // A Space whose retention changed is swept at once, its download
+        // records included.
+        browser.sweepExpiredBrowsingData()
         pendingChange = nil
     }
 }
