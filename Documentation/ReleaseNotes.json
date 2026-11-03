@@ -4953,6 +4953,10 @@
     "extension-icon-control-click-menu": {
       "category": "fixed",
       "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
+    },
+    "mac-peek-size": {
+      "category": "new",
+      "message": "On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size."
     }
   }
 }

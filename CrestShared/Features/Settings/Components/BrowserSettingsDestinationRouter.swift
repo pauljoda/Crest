@@ -39,6 +39,9 @@ struct BrowserSettingsDestinationRouter: View {
     var featureFlagsSpace: SpaceModel? = nil
     /// Opens Feature Flags from Advanced, for a shell that lists it there.
     var openFeatureFlags: (() -> Void)? = nil
+    /// Opens a sample Peek over Settings, for a shell whose Settings is a tab
+    /// Peek can float over.
+    var testPeek: (() -> Void)? = nil
 
     @ViewBuilder
     var body: some View {
@@ -58,7 +61,8 @@ struct BrowserSettingsDestinationRouter: View {
         case .links:
             BrowserLinkSettingsPane(
                 browser: browser,
-                spaceAccess: spaceAccess
+                spaceAccess: spaceAccess,
+                testPeek: testPeek
             )
         case .shortcuts:
             #if os(macOS)

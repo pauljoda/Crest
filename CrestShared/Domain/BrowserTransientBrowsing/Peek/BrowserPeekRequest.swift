@@ -8,6 +8,8 @@ enum BrowserPeekTrigger: String, Codable, Equatable, Sendable {
     case linkDrag
     case longPress
     case contextMenu
+    /// A person trying Peek from Settings.
+    case sample
 }
 
 struct BrowserPeekRequest: Identifiable, Equatable, Sendable {
