@@ -103,6 +103,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// asked for. Only an app-initiated load may reach a `file:` URL.
     @ObservationIgnored var appInitiatedURL: URL?
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
+    @ObservationIgnored private let stagePeek: ((BrowserPeekRequest) -> Void)?
+    @ObservationIgnored private let commitPeek: ((BrowserPeekRequest) -> Void)?
+    @ObservationIgnored private let cancelStagedPeek: ((UUID) -> Void)?
     @ObservationIgnored var contextMenuPreviewCommit: (() -> Void)?
     @ObservationIgnored var navigationContext: BrowserPageNavigationContext?
     @ObservationIgnored var activeNavigation: WKNavigation?
@@ -138,6 +141,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var credentialMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored private var linkActivationMessageProxy: MobileLinkActivationScriptMessageProxy?
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
+    @ObservationIgnored let linkPeekPressCoordinator = MobileLinkPeekPressCoordinator()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored private var userActivityMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserScriptMessageProxy?
@@ -191,6 +195,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             _, _, _ in nil
         },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
+        stagePeek: ((BrowserPeekRequest) -> Void)? = nil,
+        commitPeek: ((BrowserPeekRequest) -> Void)? = nil,
+        cancelStagedPeek: ((UUID) -> Void)? = nil,
         opensExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         self.corePage = corePage
@@ -204,6 +211,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.linkDestinationHost = linkDestinationHost
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
+        self.stagePeek = stagePeek
+        self.commitPeek = commitPeek
+        self.cancelStagedPeek = cancelStagedPeek
         contentRuleSession = BrowserPageContentRuleSession(
             ruleLists: webKitPage.contentRuleLists,
             additionalRuleList: contentRuleList
@@ -540,6 +550,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         translation.reset()
         readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()
+        linkPeekPressCoordinator.end()
         webKitPage.resetAutomaticDownloads()
         webView.stopLoading()
         webView.removeFromSuperview()
@@ -1092,6 +1103,48 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 destinationURL: destinationURL,
                 sourcePresentation: sourcePresentation
             )
+        }
+        guard event.phase == .began else {
+            linkPeekPressCoordinator.end(pressID: event.pressID)
+            return
+        }
+        // A held press on a link opens its Peek.
+        guard let request = event.peekRequest(context: navigationContext, sourcePresentation: sourcePresentation)
+        else { return }
+        linkPeekPressCoordinator.begin(
+            pressID: event.pressID,
+            request: request,
+            stage: { [weak self] request in
+                guard request.sourcePresentation != nil else { return }
+                self?.stagePeek?(request)
+            },
+            commit: { [weak self] request in
+                self?.dismissLinkMenu()
+                let feedback = UIImpactFeedbackGenerator(style: .soft)
+                feedback.prepare()
+                feedback.impactOccurred(intensity: 0.82)
+                if let commitPeek = self?.commitPeek {
+                    commitPeek(request)
+                } else {
+                    self?.openPeek(request)
+                }
+            },
+            cancelStaged: { [weak self] requestID in
+                self?.cancelStagedPeek?(requestID)
+            }
+        )
+    }
+
+    /// Closes WebKit's link preview and menu, open or about to open, for a
+    /// held link that opened Peek instead. iPadOS shows them even for a link
+    /// without its callout.
+    func dismissLinkMenu() {
+        var views: [UIView] = [webView]
+        while let view = views.popLast() {
+            for case let interaction as UIContextMenuInteraction in view.interactions {
+                interaction.dismissMenu()
+            }
+            views.append(contentsOf: view.subviews)
         }
     }
 

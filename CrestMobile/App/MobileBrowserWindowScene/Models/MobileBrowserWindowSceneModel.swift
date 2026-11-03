@@ -211,6 +211,15 @@ final class MobileBrowserWindowSceneModel {
             },
             openPeek: { request in
                 privateTransientBrowsing.presentPeek(request)
+            },
+            stagePeek: { request in
+                privateTransientBrowsing.stagePeek(request)
+            },
+            commitPeek: { request in
+                privateTransientBrowsing.commitPeek(request)
+            },
+            cancelStagedPeek: { id in
+                privateTransientBrowsing.cancelStagedPeek(id: id)
             }
         )
 
