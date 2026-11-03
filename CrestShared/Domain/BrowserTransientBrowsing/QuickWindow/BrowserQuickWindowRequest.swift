@@ -17,6 +17,10 @@ struct BrowserQuickWindowRequest: Hashable, Identifiable, Sendable {
     /// page asked for, which its target window hosts until the Quick Window
     /// takes it. A window a relaunch restores has none and loads `url`.
     let openedPageID: UUID?
+    /// Whether the window opens where the person is, on the display under
+    /// the pointer, rather than over the page it came from: a link or sign-in
+    /// another app handed Crest.
+    let opensWherePersonIs: Bool
 
     var spaceID: UUID { spaceAssignment.spaceID }
 
@@ -30,7 +34,8 @@ struct BrowserQuickWindowRequest: Hashable, Identifiable, Sendable {
         spaceAssignment: BrowserSpaceRuntimeAssignment,
         targetWindowID: UUID? = nil,
         sourcePresentation: BrowserPeekSourcePresentation? = nil,
-        openedPageID: UUID? = nil
+        openedPageID: UUID? = nil,
+        opensWherePersonIs: Bool = false
     ) {
         self.id = id
         self.url = url
@@ -38,6 +43,7 @@ struct BrowserQuickWindowRequest: Hashable, Identifiable, Sendable {
         self.targetWindowID = targetWindowID
         self.sourcePresentation = sourcePresentation
         self.openedPageID = openedPageID
+        self.opensWherePersonIs = opensWherePersonIs
     }
 
     static func empty(

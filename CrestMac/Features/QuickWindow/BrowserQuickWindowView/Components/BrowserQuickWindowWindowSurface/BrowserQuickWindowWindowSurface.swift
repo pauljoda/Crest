@@ -29,7 +29,8 @@ struct BrowserQuickWindowWindowSurface: View {
         .background {
             BrowserQuickWindowGeometryBridge(
                 pagePoolRegistry: pagePoolRegistry,
-                targetWindowID: model.presentedRequest.targetWindowID
+                targetWindowID: model.presentedRequest.targetWindowID,
+                opensWherePersonIs: model.presentedRequest.opensWherePersonIs
             )
         }
         .background {

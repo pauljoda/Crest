@@ -4,12 +4,19 @@ import SwiftUI
 
 /// The windowed shell's scrolling chrome around the shared tab list.
 ///
-/// Two things here belong to this shell and not to the list. The list is laid
-/// out lazily and pinned to the top of a region at least as tall as the sidebar,
-/// so the space below the last row is real and can be handed to `background` —
-/// which is what makes the empty sidebar draggable and right-clickable. And a
-/// tap anywhere over the region gives up address focus, because on this shell
-/// the address field keeps it until something takes it away.
+/// Two things here belong to this shell and not to the list. The list is pinned
+/// to the top of a region at least as tall as the sidebar, so the space below
+/// the last row is real and can be handed to `background` — which is what makes
+/// the empty sidebar draggable and right-clickable. And a tap anywhere over the
+/// region gives up address focus, because on this shell the address field keeps
+/// it until something takes it away.
+///
+/// The list's sections are stacked as they are: each makes its own rows lazily,
+/// and a lazy stack around them would size every section from an estimate,
+/// which with the section's own lazy rows inside could keep the sidebar's
+/// layout from ever settling. The stack keeps each section at its own height,
+/// so the room left below them goes to `background` and never to a row that
+/// can stretch, such as the new-tab row.
 struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -24,9 +31,10 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
-                    LazyVStack(spacing: 0) {
+                    VStack(spacing: 0) {
                         content()
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     .sidebarScrollContent()
 
                     background()
