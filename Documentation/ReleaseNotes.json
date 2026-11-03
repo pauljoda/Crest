@@ -4933,6 +4933,10 @@
     "quick-window-spanning-window": {
       "category": "fixed",
       "message": "On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it."
+    },
+    "extension-icon-control-click-menu": {
+      "category": "fixed",
+      "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
     }
   }
 }
