@@ -4,8 +4,8 @@ import SwiftUI
 struct BrowserOnboardingCompletionPage: View {
     /// The Spaces setup is about to make, or made.
     let spaces: [BrowserSpaceIdentity]
-    /// What setup did, once it has.
-    let summary: LocalizedStringResource?
+    /// What setup did, sentence by sentence, once it has.
+    let summary: [LocalizedStringResource]
     /// Whether the Getting Started guide opens next.
     let opensGuide: Bool
     let back: BrowserOnboardingBackAction?
@@ -67,8 +67,7 @@ struct BrowserOnboardingCompletionPage: View {
     }
 
     private var detail: String {
-        var parts: [String] = []
-        if let summary { parts.append(String(localized: summary)) }
+        var parts = summary.map { String(localized: $0) }
         if opensGuide { parts.append(String(localized: "Getting Started opens next.")) }
         return parts.joined(separator: " ")
     }

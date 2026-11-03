@@ -486,5 +486,13 @@
   "chrome/browser/extensions/api/identity/web_auth_flow.cc": {
     "before": "5f5d505fc60f579f180fcb8a874102b379dffe56eda81a55d67d096ad0ea13a3",
     "after": "7082aeb60500c678c5875d9dbd4ea2f9723869315200a3cbafed44f7c9de0c34"
+  },
+  "chrome/browser/ui/webui/new_tab_page/new_tab_page_handler.cc": {
+    "before": "d40d969bfa4be11f23937469aecf275dd05ca5e1bc8bbed9b37dc9aea0779ce5",
+    "after": "fb3cc195be5024d60b698079435704eeac14dd3433b7f05a7a8822893643d381"
+  },
+  "chrome/browser/new_tab_page/feature_promo_helper/new_tab_page_feature_promo_helper.cc": {
+    "before": "3efb0306b800e66924556bdad10c8e78d85f17c6591d04dc409e9484fe3e8fcc",
+    "after": "ab0a8556b5650c98a4cecfc7ba0a874f10f76fdd703099bc2e19a2280675c923"
   }
 }

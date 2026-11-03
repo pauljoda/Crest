@@ -44,7 +44,8 @@ struct BrowserMacWindowKind: Hashable {
         contentSize: CGSize(
             width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight),
         minimumContentSize: CGSize(
-            width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight))
+            width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight),
+        collectionBehavior: .moveToActiveSpace)
     /// Crest Setup, which fills the screen it opens on. The setup content is
     /// fully flexible above its minimum, so the window keeps the size it opens
     /// at rather than the content's ideal one, which is that minimum.
@@ -100,6 +101,10 @@ struct BrowserMacWindowKind: Hashable {
     /// The window's fixed identifier, or nil when it is identified by the
     /// window's own identity in the core.
     let identifier: String?
+    /// How the window joins the Mac's Spaces, beyond AppKit's own: a Quick
+    /// Window comes to the Space the person is on rather than taking them to
+    /// the Space it opened on.
+    let collectionBehavior: NSWindow.CollectionBehavior
 
     // MARK: - Initializers
 
@@ -108,7 +113,7 @@ struct BrowserMacWindowKind: Hashable {
         hidesTitleBarSeparator: Bool = false, contentSize: CGSize, minimumContentSize: CGSize? = nil,
         sizingOptions: NSHostingSizingOptions? = nil,
         savesFrame: Bool = false, fillsScreen: Bool = false, hasWindowModel: Bool = false, hasPageRow: Bool = false,
-        isSingleton: Bool = false, identifier: String? = nil
+        isSingleton: Bool = false, identifier: String? = nil, collectionBehavior: NSWindow.CollectionBehavior = []
     ) {
         self.name = name
         self.title = title
@@ -124,6 +129,7 @@ struct BrowserMacWindowKind: Hashable {
         self.hasPageRow = hasPageRow
         self.isSingleton = isSingleton
         self.identifier = identifier
+        self.collectionBehavior = collectionBehavior
     }
 
     // MARK: - Actions - Windows
@@ -146,6 +152,7 @@ struct BrowserMacWindowKind: Hashable {
         // none of its own.
         window.isRestorable = false
         window.tabbingMode = .disallowed
+        window.collectionBehavior.formUnion(collectionBehavior)
         if let minimumContentSize { window.contentMinSize = minimumContentSize }
         if hidesTitle {
             // Set before the first layout, so the content never lays itself

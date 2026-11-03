@@ -25,7 +25,7 @@ public sealed class SearchEngineFlaw {
     public static readonly SearchEngineFlaw CredentialsInTemplate = new(name: "credentialsInTemplate",
         message: "Usernames and passwords cannot be stored in a search template.");
     public static readonly SearchEngineFlaw PlaceholderInFragment = new(name: "placeholderInFragment",
-        message: "Put the query placeholder in the path or query, not the fragment.");
+        message: "Put the suggestions URL’s placeholder in the path or query, not the fragment.");
     public static readonly SearchEngineFlaw SecretInTemplate = new(name: "secretInTemplate",
         message: "Authentication tokens and other secrets cannot be stored in a search template. Sign in on the search engine website instead.");
 
