@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "mac-peek-size",
+    "development": "quick-window-shortcut-opens-over-your-window",
     "nightly": "mac-peek-size"
   }
 }
