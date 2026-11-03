@@ -11,6 +11,15 @@ internal sealed partial class Device {
     private LinkPreferences links = LinkPreferences.Default;
     internal LinkPreferences Links { get => links; set => links = value; }
 
+    /// Whether a window follows a tab it moves to another Space, as this
+    /// device's link preferences say. A session's intent reads it holding
+    /// the session's gate, which comes before the device lock.
+    internal bool FollowsMovedTabs {
+        get {
+            lock (gate) return links.FollowsMovedTabs;
+        }
+    }
+
     #endregion
 
     #region Actions - Link intents

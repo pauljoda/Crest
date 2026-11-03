@@ -26,9 +26,11 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         instance.availableActions.contains(.hideSoftwareUpdate)
     }
 
-    /// The card's own buttons, without the corner control that hides it.
-    private var buttonActions: Set<BrowserSidebarWidgetAction> {
-        instance.availableActions.subtracting([.hideSoftwareUpdate])
+    /// The card's own buttons, in the order their actions stand, without the
+    /// corner control that hides it.
+    private var buttonActions: [BrowserSidebarWidgetAction] {
+        instance.availableActions.filter { $0.cardButton != nil }
+            .sorted { ($0.cardButton?.priority ?? 0) < ($1.cardButton?.priority ?? 0) }
     }
 
     // MARK: - Actions - Layout
@@ -140,101 +142,46 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         }
     }
 
+    /// Each button the card offers, in order, the first prominent one as the
+    /// card's primary button.
     @ViewBuilder
     private var actionButtons: some View {
-        if instance.availableActions.contains(.declineAutomaticUpdateChecks) {
-            actionButton(
-                .declineAutomaticUpdateChecks,
-                label: "Not Now",
-                symbol: "clock",
-                emphasis: .quiet
-            )
-        }
-
-        if instance.availableActions.contains(.dismissExactUpdate) {
-            actionButton(
-                .dismissExactUpdate,
-                label: "Skip",
-                symbol: "forward.end",
-                accessibilityLabel: "Skip This Version",
-                emphasis: .quiet
-            )
-        }
-
-        if instance.availableActions.contains(.viewUpdateInformation),
-            let informationURL = update.informationURL
-        {
-            Link(destination: informationURL) {
-                Label("View Release", systemImage: "arrow.up.right")
+        let primary = buttonActions.first { $0.cardButton?.isProminent == true }
+        ForEach(buttonActions, id: \.self) { action in
+            if let button = action.cardButton {
+                actionButton(action, button, emphasis: action == primary ? .prominent : .quiet)
             }
-            .buttonStyle(
-                BrowserSidebarWidgetActionButtonStyle(
-                    emphasis: .prominent
-                )
-            )
-        } else if instance.availableActions.contains(.installUpdate) {
-            actionButton(
-                .installUpdate,
-                label: "Download",
-                symbol: "arrow.down.circle",
-                accessibilityLabel: "Download Update",
-                emphasis: .prominent
-            )
-        } else if instance.availableActions.contains(.installAndRelaunch) {
-            actionButton(
-                .installAndRelaunch,
-                label: "Restart",
-                symbol: "arrow.down.to.line",
-                accessibilityLabel: "Restart and Update",
-                emphasis: .prominent
-            )
-        } else if instance.availableActions.contains(.cancelUpdate) {
-            actionButton(
-                .cancelUpdate,
-                label: "Cancel",
-                symbol: "xmark",
-                emphasis: .quiet
-            )
-        } else if instance.availableActions.contains(.retryUpdateInstallation) {
-            actionButton(
-                .retryUpdateInstallation,
-                label: "Retry",
-                symbol: "arrow.clockwise",
-                accessibilityLabel: "Try Quitting Again",
-                emphasis: .prominent
-            )
-        } else if instance.availableActions.contains(.enableAutomaticUpdateChecks) {
-            actionButton(
-                .enableAutomaticUpdateChecks,
-                label: "Check Automatically",
-                symbol: "arrow.trianglehead.2.clockwise.rotate.90",
-                emphasis: .prominent
-            )
-        } else if instance.availableActions.contains(.acknowledgeUpdateStatus) {
-            actionButton(
-                .acknowledgeUpdateStatus,
-                label: "Dismiss",
-                symbol: "xmark",
-                emphasis: .quiet
-            )
         }
     }
 
+    /// The card's button for `action`, as `button` shows it: a link to the
+    /// update's release page, or a button that performs it.
+    @ViewBuilder
     private func actionButton(
         _ action: BrowserSidebarWidgetAction,
-        label: LocalizedStringKey,
-        symbol: String,
-        accessibilityLabel: LocalizedStringKey? = nil,
+        _ button: BrowserSidebarWidgetAction.CardButton,
         emphasis: BrowserSidebarWidgetActionEmphasis
     ) -> some View {
-        Button {
-            perform(action, instance.id)
-        } label: {
-            Label(label, systemImage: symbol)
+        let label = Label {
+            Text(button.title)
+        } icon: {
+            Image(systemName: button.symbol)
         }
-        .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
-        .accessibilityLabel(accessibilityLabel ?? label)
-        .help(accessibilityLabel ?? label)
+        if button.opensReleasePage {
+            if let informationURL = update.informationURL {
+                Link(destination: informationURL) { label }
+                    .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
+            }
+        } else {
+            Button {
+                perform(action, instance.id)
+            } label: {
+                label
+            }
+            .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
+            .accessibilityLabel(Text(button.accessibilityLabel ?? button.title))
+            .help(Text(button.accessibilityLabel ?? button.title))
+        }
     }
 
     private var hasDetails: Bool {

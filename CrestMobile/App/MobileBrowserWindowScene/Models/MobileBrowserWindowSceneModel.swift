@@ -113,9 +113,7 @@ final class MobileBrowserWindowSceneModel {
     }
 
     func sweepExpiredTabsWhileActive() async {
-        await browser.sweepExpiredBrowsingDataWhileSceneIsActive {
-            pages.downloadCenter.sweepExpiredRecords(in: browser.spaceModels)
-        }
+        await browser.sweepExpiredBrowsingDataWhileSceneIsActive()
     }
 
     func prepareForInactiveScene() {

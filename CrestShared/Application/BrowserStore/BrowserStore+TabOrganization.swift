@@ -136,7 +136,7 @@ extension BrowserStore {
             MoveTabToSpace(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: sourceSpaceID,
                 tabID: id, destinationSpaceID: destinationSpaceID, placement: nil, folderID: nil,
-                beforeTabID: nil, follows: false),
+                beforeTabID: nil),
             from: self)
     }
 
@@ -190,16 +190,17 @@ extension BrowserStore {
         before destinationTabID: UUID? = nil
     ) -> Bool {
         guard spaceModel(sourceSpaceID) != nil, let destination = spaceModel(destinationSpaceID) else { return false }
-        let follows = linkPreferences.preferences.followsMovedTabs
         guard
             family.perform(
                 MoveTabToSpace(
                     workspaceID: family.workspaceID, windowID: windowID, spaceID: sourceSpaceID,
                     tabID: id, destinationSpaceID: destinationSpaceID, placement: placement,
-                    folderID: folderID, beforeTabID: destinationTabID, follows: follows),
+                    folderID: folderID, beforeTabID: destinationTabID),
                 from: self) != nil
         else { return false }
-        if follows {
+        // The core follows the tab when the person's link preferences say so,
+        // and this window then shows it in its new Space.
+        if selectedSpaceID == destinationSpaceID, selectedTabID(in: destinationSpaceID) == id {
             pendingMovedTabActivation = BrowserTabRuntimeAssignment(
                 tabID: id, spaceID: destinationSpaceID, profileID: destination.profileID)
         }
