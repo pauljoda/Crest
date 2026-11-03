@@ -4993,6 +4993,10 @@
     "space-search-matches-address-bar": {
       "category": "fixed",
       "message": "A Space’s Browsing settings and the search providers agents see now name the same search engine the address bar searches with, including for a Space whose own engine is missing or no longer valid."
+    },
+    "sign-in-popups-save-and-fill-passwords": {
+      "category": "fixed",
+      "message": "A sign-in window a site opens in WebKit, such as a “Sign in with” popup in a Quick Window, now offers to save the password you enter and fills saved passwords, on Mac, iPhone and iPad."
     }
   }
 }

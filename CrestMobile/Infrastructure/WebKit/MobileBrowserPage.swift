@@ -1054,7 +1054,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             media: pageEngine.knownMediaActivity)
     }
 
-    private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+    /// Reads what the credential bridge posted from this page's web view. A
+    /// popup shares this page's controller, so its bridge posts here too: a
+    /// message another page's web view sent goes to that page, whose own
+    /// credential session reads it and fills its own frames.
+    func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+        if let source = scriptMessage.webView, source !== webView {
+            webKitPage.binding?.page(showing: source)?.host?.receiveCredentialMessage(scriptMessage)
+            return
+        }
         credentialSession.receive(scriptMessage, in: webView)
     }
 

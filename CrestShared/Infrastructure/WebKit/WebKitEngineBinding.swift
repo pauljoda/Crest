@@ -306,9 +306,14 @@ final class WebKitEngineBinding: EngineBinding {
     /// Media in the page whose web view is `webView` started or stopped, so
     /// its host asks WebKit what the page runs now.
     private func mediaActivityMayHaveChanged(in webView: WKWebView?) {
-        guard let webView, let page = pages.values.lazy.compactMap(\.value).first(where: { $0.webView === webView })
-        else { return }
+        guard let webView, let page = page(showing: webView) else { return }
         page.host?.mediaActivityMayHaveChanged()
+    }
+
+    /// The page the binding built whose web view is `webView`, which a
+    /// content bridge names when a popup posts through its opener's handler.
+    func page(showing webView: WKWebView) -> WebKitEnginePage? {
+        pages.values.lazy.compactMap(\.value).first { $0.webView === webView }
     }
 
     /// The website data store the page `creation` asks for browses in: its
