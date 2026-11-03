@@ -4981,6 +4981,10 @@
     "setup-secondary-text-consistent": {
       "category": "improved",
       "message": "Hints, counts and captions in setup on Mac now read at one even strength on every step."
+    },
+    "menu-items-all-show-icons": {
+      "category": "improved",
+      "message": "Every item in Crest’s menus now shows its icon, including Select All and Deselect All, the folders in Move to Folder, and the Edit, Remove and Move items in Settings."
     }
   }
 }

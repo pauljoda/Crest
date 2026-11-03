@@ -21,9 +21,12 @@ struct BrowserSystemPermissionRow: View {
                     ProgressView().controlSize(.small)
                 } else if permission.checksSpaceFolder, spaceName != nil {
                     Menu("Manage") {
-                        Button("Check Access", action: request)
-                        Button("Choose Folder…", action: chooseFolder)
-                        Button("System Settings…", action: openSettings)
+                        Group {
+                            Button("Check Access", systemImage: "checkmark.shield", action: request)
+                            Button("Choose Folder…", systemImage: "folder", action: chooseFolder)
+                            Button("System Settings…", systemImage: "gearshape", action: openSettings)
+                        }
+                        .crestMenuActionLabelStyle()
                     }
                     .fixedSize()
                 } else {

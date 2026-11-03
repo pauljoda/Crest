@@ -71,14 +71,17 @@ struct BrowserPasswordDescriptorRow: View {
                     .controlSize(.small)
             } else if !isSelectionActive {
                 Menu("Password Actions", systemImage: "ellipsis.circle") {
-                    Button("View Password", systemImage: "eye", action: showDetails)
-                    Divider()
-                    Button(
-                        "Delete Password",
-                        systemImage: "trash",
-                        role: .destructive,
-                        action: requestDeletion
-                    )
+                    Group {
+                        Button("View Password", systemImage: "eye", action: showDetails)
+                        Divider()
+                        Button(
+                            "Delete Password",
+                            systemImage: "trash",
+                            role: .destructive,
+                            action: requestDeletion
+                        )
+                    }
+                    .crestMenuActionLabelStyle()
                 }
                 .labelStyle(.iconOnly)
                 .menuIndicator(.hidden)
@@ -89,13 +92,16 @@ struct BrowserPasswordDescriptorRow: View {
         .accessibilityElement(children: .contain)
         .contextMenu {
             if !isSelectionActive {
-                Button("View Password", systemImage: "eye", action: showDetails)
-                Button(
-                    "Delete Password",
-                    systemImage: "trash",
-                    role: .destructive,
-                    action: requestDeletion
-                )
+                Group {
+                    Button("View Password", systemImage: "eye", action: showDetails)
+                    Button(
+                        "Delete Password",
+                        systemImage: "trash",
+                        role: .destructive,
+                        action: requestDeletion
+                    )
+                }
+                .crestMenuActionLabelStyle()
             }
         }
     }

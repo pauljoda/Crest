@@ -223,7 +223,10 @@ struct BrowserSpaceSetupWizard: View {
                 .buttonStyle(.plain)
                 .contextMenu {
                     if space.isNew {
-                        Button("Remove Space", role: .destructive) { setup.removeSpace(space.spaceID) }
+                        Button("Remove Space", systemImage: "trash", role: .destructive) {
+                            setup.removeSpace(space.spaceID)
+                        }
+                        .crestMenuActionLabelStyle()
                     }
                 }
             }

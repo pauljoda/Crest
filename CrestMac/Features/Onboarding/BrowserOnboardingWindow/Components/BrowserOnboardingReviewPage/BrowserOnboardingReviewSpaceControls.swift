@@ -218,13 +218,14 @@ private struct BrowserOnboardingReviewDestinationMenu: View {
     var body: some View {
         Menu {
             Picker("Destination Space", selection: $destination) {
-                Text("New Space").tag(BrowserImportDestination.newSpace)
+                Label("New Space", systemImage: "plus").tag(BrowserImportDestination.newSpace)
                 ForEach(spaces) { space in
                     BrowserSpaceIdentityLabel(space: space).tag(BrowserImportDestination.existing(space.id))
                 }
             }
             .pickerStyle(.inline)
             .labelsHidden()
+            .crestMenuActionLabelStyle()
         } label: {
             HStack(spacing: 6) {
                 if let space = spaces.first(where: { destination.spaceID == $0.id }) {
