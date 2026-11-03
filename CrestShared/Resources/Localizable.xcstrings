@@ -5466,6 +5466,9 @@
     "Download Languages…" : {
 
     },
+    "Download Linked File" : {
+
+    },
     "Download location" : {
 
     },
@@ -10390,6 +10393,9 @@
       }
     },
     "Put the query placeholder in the path or query, not the fragment." : {
+      "extractionState" : "stale"
+    },
+    "Put the suggestions URL’s placeholder in the path or query, not the fragment." : {
 
     },
     "Quartered" : {

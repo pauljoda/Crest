@@ -16522,7 +16522,7 @@ struct SearchEngineFlaw: Hashable, Sendable {
     static let placeholderInFragment = SearchEngineFlaw(
         tag: 11,
         name: "placeholderInFragment",
-        message: LocalizedStringResource("Put the query placeholder in the path or query, not the fragment.")
+        message: LocalizedStringResource("Put the suggestions URL’s placeholder in the path or query, not the fragment.")
     )
     static let secretInTemplate = SearchEngineFlaw(
         tag: 12,
