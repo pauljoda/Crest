@@ -748,7 +748,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func pdfData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await webView.pdf(configuration: WKPDFConfiguration())
+        return try await enginePage.export(.pdf)
     }
 
     func exportPDF(to destination: MobileBrowserFileExportDestination) {
@@ -772,13 +772,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// The page's document and resources, in the archive WebKit keeps.
     func webArchiveData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await withCheckedThrowingContinuation { continuation in
-            webView.createWebArchiveData { result in
-                continuation.resume(with: result)
-            }
-        }
+        return try await enginePage.export(BrowserPageArchiveFormat.webArchive.exportFormat)
     }
 
     func exportWebArchive(to destination: MobileBrowserFileExportDestination) {

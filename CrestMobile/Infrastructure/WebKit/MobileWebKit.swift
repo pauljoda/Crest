@@ -60,4 +60,13 @@ enum MobileWebKit {
         webView.underPageBackgroundColor = .clear
         return webView
     }
+
+    // MARK: - Actions - Snapshots
+
+    /// The pixels of `image`, a snapshot WebKit took of a page, and how many
+    /// of them make a point.
+    static func bitmap(of image: UIImage) -> (image: CGImage, scale: CGFloat)? {
+        guard let bitmap = image.cgImage else { return nil }
+        return (bitmap, CGFloat(bitmap.width) / max(image.size.width, 1))
+    }
 }
