@@ -1,6 +1,13 @@
 import SwiftUI
 
 struct CrestFieldSurface: ViewModifier {
+    // MARK: - Variables
+
+    /// Whether the field inside a field-like row has focus, as the row's
+    /// owner tracks it, or nil for a surface around a native field, which
+    /// tracks its own focus.
+    var rowFocus: Bool?
+
     /// Callers may also attach a programmatic focus binding; SwiftUI keeps both
     /// bindings synchronized against the same native field.
     @FocusState private var isFocused: Bool
@@ -14,9 +21,19 @@ struct CrestFieldSurface: ViewModifier {
         )
     }
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .focused($isFocused)
+        if let rowFocus {
+            surface(content, isFocused: rowFocus)
+        } else {
+            surface(content.focused($isFocused), isFocused: isFocused)
+        }
+    }
+
+    // MARK: - Actions - Drawing
+
+    private func surface(_ field: some View, isFocused: Bool) -> some View {
+        field
             .padding(.horizontal, CrestFieldMetrics.horizontalPadding)
             .frame(minHeight: CrestFieldMetrics.height)
             .background(CrestBrandTheme.canvas, in: shape)

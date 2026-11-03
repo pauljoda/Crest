@@ -39,9 +39,9 @@ struct BrowserPlatformAppIconSettingsSection: View {
     }
 
     private func iconChoice(name: String, title: LocalizedStringResource, preview: String) -> some View {
-        Button {
+        CrestSelectableCard(isSelected: selectedName == name, accessibilityLabel: Text(title), density: .compact) {
             select(name)
-        } label: {
+        } content: {
             VStack(spacing: 6) {
                 Image(
                     nsImage: name.isEmpty
@@ -52,18 +52,9 @@ struct BrowserPlatformAppIconSettingsSection: View {
                 .id(appearanceRevision)
                 .frame(width: 58, height: 58)
                 .clipShape(.rect(cornerRadius: 13))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 13)
-                        .strokeBorder(selectedName == name ? Color.accentColor : .clear, lineWidth: 3)
-                }
                 Text(title).font(.caption).foregroundStyle(.primary)
             }
-            .frame(maxWidth: .infinity, minHeight: 82)
-            .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(selectedName == name ? .isSelected : [])
         .accessibilityIdentifier("app-icon-" + (name.isEmpty ? "default" : name))
     }
 }

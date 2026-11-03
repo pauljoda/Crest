@@ -131,20 +131,18 @@ private struct BrowserOnboardingModernPresetSwatch: View {
     let select: () -> Void
 
     var body: some View {
-        Button(action: select) {
+        CrestSelectableCard(
+            isSelected: isSelected,
+            accessibilityLabel: Text(colors.map { String(localized: $0.title) }.joined(separator: ", ")),
+            density: .swatch, tint: CrestBrandPalette.butter, action: select
+        ) {
             Circle()
                 .fill(
                     LinearGradient(
                         colors: colors.map(\.color), startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .frame(width: 44, height: 44)
-                .overlay { Circle().strokeBorder(CrestBrandPalette.paper.opacity(0.2), lineWidth: 1) }
-                .padding(4)
-                .overlay { Circle().strokeBorder(isSelected ? CrestBrandPalette.butter : .clear, lineWidth: 3) }
-                .contentShape(.circle)
+                .overlay { Circle().strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(colors.map { String(localized: $0.title) }.joined(separator: ", ")))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

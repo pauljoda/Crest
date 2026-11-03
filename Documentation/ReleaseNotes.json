@@ -4969,6 +4969,10 @@
     "settings-results-as-notices": {
       "category": "improved",
       "message": "A finished password import, an app icon that couldn’t change and a Space that couldn’t be deleted now show in a notice at the top of the window instead of an alert you have to dismiss."
+    },
+    "choices-respond-to-pointer": {
+      "category": "improved",
+      "message": "Choices you pick from, such as crest and background tiles, symbols, color swatches, app icons, Getting Started chapters and the Spaces in setup, now highlight under the pointer, respond as you press them and show keyboard focus."
     }
   }
 }

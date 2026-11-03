@@ -197,21 +197,16 @@ struct BrowserCrestForgePalette: View {
     }
 
     private func tincture(_ tincture: BrandColor) -> some View {
-        let isSelected = tincture.matches(color)
-        return Button {
+        CrestSelectableCard(
+            isSelected: tincture.matches(color), accessibilityLabel: Text(tincture.title), density: .swatch
+        ) {
             select(tincture)
-        } label: {
+        } content: {
             Circle()
                 .fill(tincture.color)
                 .frame(width: 24, height: 24)
-                .overlay { Circle().strokeBorder(.primary.opacity(0.15)) }
-                .padding(3)
-                .overlay { Circle().strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2) }
-                .contentShape(.circle)
+                .overlay { Circle().strokeBorder(CrestColor.subtleBorder) }
         }
-        .buttonStyle(.plain)
         .help(Text(tincture.title))
-        .accessibilityLabel(Text(tincture.title))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

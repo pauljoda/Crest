@@ -162,6 +162,35 @@
                     Text("Disabled and selected")
                 }
                 .disabled(true)
+
+                HStack(spacing: CrestSpacing.small) {
+                    ForEach(0..<3, id: \.self) { index in
+                        CrestSelectableCard(
+                            isSelected: selectedCard == index,
+                            accessibilityLabel: Text(verbatim: "Tile \(index + 1)"),
+                            density: .compact
+                        ) {
+                            selectedCard = index
+                        } content: {
+                            Image(systemName: "seal").font(.title2)
+                        }
+                    }
+                }
+
+                HStack(spacing: CrestSpacing.small) {
+                    let colors = [CrestBrandPalette.coral, CrestBrandPalette.butter, CrestBrandPalette.sage]
+                    ForEach(Array(colors.enumerated()), id: \.offset) { index, color in
+                        CrestSelectableCard(
+                            isSelected: selectedCard == index,
+                            accessibilityLabel: Text(verbatim: "Swatch \(index + 1)"),
+                            density: .swatch
+                        ) {
+                            selectedCard = index
+                        } content: {
+                            Circle().fill(color).frame(width: 22, height: 22)
+                        }
+                    }
+                }
             }
         }
 
@@ -172,11 +201,7 @@
                     selection: $chipSelection,
                     add: CrestSpaceChipAddAction(title: "New Space") {},
                     commands: { identity in
-                        [
-                            .rename {},
-                            .customize {},
-                            .delete { _ = identity },
-                        ]
+                        [.remove { _ = identity }]
                     }
                 )
 
@@ -199,18 +224,7 @@
             section("Form rows") {
                 Form {
                     Section {
-                        CrestFormActionRow(
-                            "Manage Filter Lists",
-                            subtitle: "Choose which blocklists a Space loads",
-                            systemImage: "shield.lefthalf.filled"
-                        ) {
-                        }
-
-                        CrestFormControlRow(
-                            "Default Space",
-                            systemImage: "square.grid.2x2",
-                            tint: CrestBrandPalette.sky
-                        ) {
+                        CrestSettingRow("Default Space") {
                             CrestSpaceMenuPicker(
                                 "Default Space",
                                 selection: $menuSelection,
@@ -219,12 +233,7 @@
                             )
                         }
 
-                        CrestFormControlRow(
-                            "Reset All",
-                            subtitle: "Makes every site ask again in this Space",
-                            systemImage: "arrow.counterclockwise",
-                            tint: CrestBrandPalette.coral
-                        ) {
+                        CrestSettingRow("Reset All") {
                             Button("Reset") {}
                                 .buttonStyle(.crestTertiary)
                         }

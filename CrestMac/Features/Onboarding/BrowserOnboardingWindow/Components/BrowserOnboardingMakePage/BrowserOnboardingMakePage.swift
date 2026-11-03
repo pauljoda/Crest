@@ -107,80 +107,23 @@ struct BrowserOnboardingMakePicker {
     let remove: (UUID) -> (() -> Void)?
 }
 
+/// The Spaces being made as a rail of chips, with one to add. The rail
+/// scrolls sideways where a setup has made more Spaces than fit the header.
 private struct BrowserOnboardingMakeChips: View {
     let picker: BrowserOnboardingMakePicker
 
-    /// The chips in a row where they fit the header, and in a row that
-    /// scrolls sideways where a setup has made more Spaces than fit.
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            chips
-            ScrollView(.horizontal) { chips }
-                .scrollIndicators(.hidden)
-                .frame(maxWidth: BrowserOnboardingMakeMetrics.chipsWidth)
-        }
-        .accessibilityElement(children: .contain)
+        CrestSpaceChipRail(
+            spaces: CrestSpaceIdentity.list(picker.spaces),
+            selection: Binding(
+                get: { picker.selectedID },
+                set: { if let id = $0 { picker.select(id) } }),
+            add: CrestSpaceChipAddAction(
+                title: "New Space", accessibilityIdentifier: "space-customization-add", perform: picker.add),
+            commands: { space in picker.remove(space.id).map { [.remove($0)] } ?? [] }
+        )
+        .frame(maxWidth: BrowserOnboardingMakeMetrics.chipsWidth)
         .accessibilityLabel("Spaces")
-    }
-
-    private var chips: some View {
-        HStack(spacing: 8) {
-            ForEach(picker.spaces) { space in
-                BrowserOnboardingSpaceChip(space: space, isSelected: space.id == picker.selectedID) {
-                    picker.select(space.id)
-                }
-                .contextMenu {
-                    if let remove = picker.remove(space.id) {
-                        Button("Remove Space", role: .destructive, action: remove)
-                    }
-                }
-            }
-            Button(action: picker.add) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(CrestBrandTheme.textDisplay)
-                    .frame(width: 34, height: 34)
-                    .background(CrestBrandPalette.paper.opacity(0.1), in: .circle)
-                    .overlay { Circle().strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
-                    .contentShape(.circle)
-            }
-            .buttonStyle(.plain)
-            .help("New Space")
-            .accessibilityLabel("Add a Space")
-            .accessibilityIdentifier("space-customization-add")
-        }
-    }
-}
-
-/// One Space as a chip: its icon and name, lit when it is the one shown.
-struct BrowserOnboardingSpaceChip: View {
-    let space: BrowserSpaceIdentity
-    let isSelected: Bool
-    let select: () -> Void
-
-    init(space: some BrowserSpaceIdentifying, isSelected: Bool, select: @escaping () -> Void) {
-        self.space = space.identity
-        self.isSelected = isSelected
-        self.select = select
-    }
-
-    var body: some View {
-        Button(action: select) {
-            BrowserSpaceIdentityLabel(identity: space, iconSize: 18)
-                .font(CrestTypography.sans(13, weight: .semibold))
-                .lineLimit(1)
-                .foregroundStyle(isSelected ? CrestBrandPalette.ink : CrestBrandTheme.textDisplay)
-                .padding(.leading, 8)
-                .padding(.trailing, 12)
-                .frame(height: 34)
-                .background(isSelected ? CrestBrandPalette.paper : CrestBrandPalette.paper.opacity(0.1), in: .capsule)
-                .overlay {
-                    Capsule().strokeBorder(CrestBrandTheme.line, lineWidth: isSelected ? 0 : CrestLayout.hairline)
-                }
-                .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -192,8 +135,7 @@ enum BrowserOnboardingMakeMetrics {
     /// The most of the header the Space chips take once they scroll.
     static let chipsWidth: CGFloat = 520
     static let pageIconSize: CGFloat = 180
-    /// A choice tile on the sheet.
-    static let tileSize: CGFloat = 52
+    /// The artwork of a choice tile on the sheet.
     static let tileArtworkSize: CGFloat = 40
     static let swatchSize: CGFloat = 34
 }

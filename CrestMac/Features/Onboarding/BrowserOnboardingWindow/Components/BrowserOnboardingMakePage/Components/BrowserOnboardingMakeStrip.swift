@@ -54,27 +54,17 @@ struct BrowserOnboardingMakeTile<Artwork: View>: View {
     @ViewBuilder let artwork: Artwork
 
     var body: some View {
-        Button(action: select) {
+        CrestSelectableCard(
+            isSelected: isSelected, accessibilityLabel: Text(title), density: .compact,
+            tint: CrestBrandPalette.butter, action: select
+        ) {
             artwork
                 .frame(
                     width: BrowserOnboardingMakeMetrics.tileArtworkSize,
                     height: BrowserOnboardingMakeMetrics.tileArtworkSize
                 )
-                .frame(width: BrowserOnboardingMakeMetrics.tileSize, height: BrowserOnboardingMakeMetrics.tileSize)
-                .background(
-                    CrestBrandPalette.paper.opacity(isSelected ? 0.14 : 0.08),
-                    in: .rect(cornerRadius: CrestRadius.control, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: CrestRadius.control, style: .continuous)
-                        .strokeBorder(isSelected ? CrestBrandPalette.butter : .clear, lineWidth: 3)
-                }
-                .contentShape(.rect(cornerRadius: CrestRadius.control, style: .continuous))
         }
-        .buttonStyle(.plain)
         .help(Text(title))
-        .accessibilityLabel(Text(title))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

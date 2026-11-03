@@ -16,13 +16,7 @@ struct BrowserCrestStudioTextField: View {
                     .focused($isFocused)
                     .autocorrectionDisabled()
             }
-            .padding(.horizontal, 12)
-            .frame(minHeight: 42)
-            .background(BrowserSettingsCanvas.background, in: .rect(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10).strokeBorder(
-                    isFocused ? CrestBrandTheme.accent : .primary.opacity(0.12), lineWidth: isFocused ? 2 : 1)
-            }
+            .crestFieldSurface(isFocused: isFocused)
         }
     }
 }

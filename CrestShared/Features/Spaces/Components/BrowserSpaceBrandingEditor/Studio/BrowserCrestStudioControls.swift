@@ -198,25 +198,14 @@ struct BrowserCrestStudioChoice<Artwork: View>: View {
     @ViewBuilder var artwork: Artwork
 
     var body: some View {
-        Button(action: select) {
+        CrestSelectableCard(
+            isSelected: selected, accessibilityLabel: Text(title), density: .compact, tint: tint, action: select
+        ) {
             VStack(spacing: 4) {
                 artwork.frame(width: 64, height: 58)
                 Text(title).font(.caption).lineLimit(2).multilineTextAlignment(.center)
                     .frame(height: 30, alignment: .top)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .background(
-                selected ? tint.opacity(0.12) : .primary.opacity(0.035), in: .rect(cornerRadius: 12)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 12).strokeBorder(
-                    selected ? tint : .clear, lineWidth: 2)
-            }
-            .contentShape(.rect(cornerRadius: 12))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(title))
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
