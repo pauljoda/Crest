@@ -149,10 +149,11 @@ class EngineBinding {
   // go, or refuses it, when that page may load the request instead. Answers
   // whether it held it.
   bool HoldsWindowLink(content::NavigationHandle& navigation, base::OnceClosure resume);
-  // A person's plain click on the link to `url` in `contents`: answers
-  // whether it opens Peek instead, as the core decides for a link leaving a
-  // saved tab's site, which the platform then hears.
-  bool KeepsLinkForPeek(content::WebContents* contents, const GURL& url);
+  // A person's plain click on the link `navigation` follows in its page:
+  // answers whether it opens Peek instead, as the core decides for a link
+  // leaving a saved tab's site, which the platform then hears, with the link
+  // staged for the Peek's first load.
+  bool KeepsLinkForPeek(content::NavigationHandle& navigation);
   // A person's plain click on a link that opens in a window of its own, such
   // as one with target="_blank", whose WebContents the engine made for
   // `navigation`: answers whether it opens Peek instead, as the core decides
@@ -241,11 +242,9 @@ class EngineBinding {
     base::WeakPtr<content::WebContents> contents;
     std::string profile;
   };
-  // A link followed in `source`, kept for a Peek's first load.
+  // A link followed in `source`, kept for a Peek's first load or for a
+  // window it opened.
   struct StagedLink;
-  // The request of a window's first navigation, which a link in `source`
-  // started.
-  struct WindowLink;
   // A window a link opened, held before its request goes out.
   struct HeldWindow;
 
@@ -330,6 +329,9 @@ class EngineBinding {
   void Stage(const engine::StageNavigation& staging);
   // Stages a link a person followed in `page` for the Peek it opens.
   bool StageForPeek(EnginePage& page, content::OpenURLParams& params);
+  // Keeps `link` a while for the first load of the Peek it opens and names
+  // it, unless too many links wait already.
+  std::optional<engine::Guid> StageLink(std::unique_ptr<StagedLink> link);
   // Presents `request` once the turn ends, while `page` still shows the
   // document the link was in; a link staged for it is dropped otherwise.
   void PresentPeekSoon(const EnginePage& page, engine::PeekRequested request);
@@ -396,7 +398,7 @@ class EngineBinding {
   // The windows links opened, held until the core decides, and the links of
   // windows it refused, with when, for the next load of the page each was in.
   std::vector<std::unique_ptr<HeldWindow>> held_windows_;
-  std::vector<std::pair<std::unique_ptr<WindowLink>, base::TimeTicks>> refused_window_links_;
+  std::vector<std::pair<std::unique_ptr<StagedLink>, base::TimeTicks>> refused_window_links_;
   std::unique_ptr<EngineProfiles> profiles_;
   std::unique_ptr<EngineBrowsers> browsers_;
   std::unique_ptr<EngineTabGroups> tab_groups_;

@@ -4946,6 +4946,10 @@
       "category": "fixed",
       "message": "On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before."
     },
+    "peek-keeps-link-from-pinned-tab": {
+      "category": "fixed",
+      "message": "A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."
