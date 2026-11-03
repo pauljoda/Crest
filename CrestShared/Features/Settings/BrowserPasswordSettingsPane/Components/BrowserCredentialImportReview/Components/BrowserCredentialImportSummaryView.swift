@@ -30,25 +30,25 @@ struct BrowserCredentialImportSummaryView: View {
             title: "Ready to import",
             value: review.proposedImportCount,
             systemImage: "checkmark.circle.fill",
-            color: .green
+            color: CrestColor.success
         )
         BrowserCredentialImportMetric(
             title: "Need review",
             value: review.conflictCount,
             systemImage: "arrow.triangle.branch",
-            color: .orange
+            color: CrestColor.warning
         )
         BrowserCredentialImportMetric(
             title: "Warnings",
             value: review.plan.warnings.count,
             systemImage: "exclamationmark.shield.fill",
-            color: .orange
+            color: CrestColor.warning
         )
         BrowserCredentialImportMetric(
             title: "Rejected rows",
             value: review.plan.rejections.count,
             systemImage: "xmark.octagon.fill",
-            color: .red
+            color: CrestColor.danger
         )
     }
 }

@@ -40,7 +40,7 @@ struct BrowserSpaceDeletionSection: View {
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(CrestColor.danger)
                     .accessibilityIdentifier("space-deletion-error")
             }
 

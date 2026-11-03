@@ -4961,6 +4961,10 @@
     "mobile-window-notices": {
       "category": "improved",
       "message": "On iPhone and iPad, a copied link, a zoom change or a Space joining a group now shows in a notice at the top of the window, as on Mac, and the notice shows over Settings too."
+    },
+    "status-colors-house-palette": {
+      "category": "improved",
+      "message": "Errors, warnings and confirmations, such as a failed download, a permission that needs attention or a secure site, now show in Crest’s own red, amber and green, which are easier to read in Light Mode."
     }
   }
 }

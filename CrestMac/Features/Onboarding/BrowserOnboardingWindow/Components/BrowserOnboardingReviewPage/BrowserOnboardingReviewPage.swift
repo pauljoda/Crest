@@ -72,7 +72,7 @@ struct BrowserOnboardingReviewPage: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                             }
                             .font(CrestTypography.sans(12, weight: .medium))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(CrestColor.danger)
                             .lineLimit(2)
                             .accessibilityIdentifier("onboarding-workflow-error")
                         } else if let summary = flow.reviewSummary() {

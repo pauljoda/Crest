@@ -51,7 +51,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
                                 BrowserSidebarWidgetDeckStyle.badgeVerticalPadding
                             )
                             .background(
-                                .orange.opacity(CrestOpacity.brandHairline),
+                                CrestColor.warningFill,
                                 in: .capsule
                             )
                             .accessibilityLabel("Test fixture")

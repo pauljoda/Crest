@@ -55,7 +55,7 @@ struct BrowserPasskeyAccessView: View {
     }
 
     private var statusColor: Color {
-        if access.status.isReady { return .green }
-        return access.status.needsAttention ? .orange : .secondary
+        if access.status.isReady { return CrestColor.success }
+        return access.status.needsAttention ? CrestColor.warning : .secondary
     }
 }

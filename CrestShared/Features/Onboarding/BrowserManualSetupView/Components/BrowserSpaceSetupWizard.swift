@@ -248,7 +248,7 @@ struct BrowserSpaceSetupWizard: View {
     private var footer: some View {
         VStack(spacing: 8) {
             if let message = errorMessage ?? setup.errorMessage {
-                Text(message).foregroundStyle(.red).font(.callout)
+                Text(message).foregroundStyle(CrestColor.danger).font(.callout)
             }
             HStack {
                 Button {

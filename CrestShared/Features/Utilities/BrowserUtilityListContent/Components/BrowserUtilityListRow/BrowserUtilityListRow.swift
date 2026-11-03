@@ -303,7 +303,7 @@ private struct BrowserDownloadRowLabel: View {
         _ presentation: BrowserDownloadRowPresentation
     ) -> Text {
         if presentation.statusNeedsAttention {
-            return presentation.statusText.view.foregroundStyle(.red)
+            return presentation.statusText.view.foregroundStyle(CrestColor.danger)
         }
         return presentation.statusText.view.foregroundStyle(.secondary)
     }

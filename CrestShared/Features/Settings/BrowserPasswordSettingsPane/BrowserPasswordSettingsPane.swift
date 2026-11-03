@@ -269,7 +269,7 @@ struct BrowserPasswordSettingsPane: View {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(CrestColor.danger)
                     }
                 }
             } else {

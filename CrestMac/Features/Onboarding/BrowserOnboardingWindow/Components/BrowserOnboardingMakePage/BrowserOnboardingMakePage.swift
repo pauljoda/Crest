@@ -58,7 +58,7 @@ struct BrowserOnboardingMakePage: View {
                         if let failure {
                             BrowserOnboardingFailureMessage(message: failure)
                                 .font(CrestTypography.sans(12, weight: .medium))
-                                .foregroundStyle(.red)
+                                .foregroundStyle(CrestColor.danger)
                                 .lineLimit(2)
                                 .accessibilityIdentifier("onboarding-workflow-error")
                         }

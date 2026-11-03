@@ -25,7 +25,7 @@ struct BrowserSourceImportTabRow: View {
                 Spacer(minLength: 6)
                 if overflows {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(CrestColor.danger)
                 } else if !included {
                     Image(systemName: duplicate ? "equal.circle.fill" : "minus.circle.fill")
                         .foregroundStyle(
@@ -47,7 +47,7 @@ struct BrowserSourceImportTabRow: View {
         .background(
             duplicate
                 ? BrowserOnboardingPalette.match.opacity(0.16)
-                : overflows ? Color.red.opacity(0.18) : .clear,
+                : overflows ? CrestColor.dangerFill : .clear,
             in: .rect(cornerRadius: 10, style: .continuous)
         )
         .overlay {

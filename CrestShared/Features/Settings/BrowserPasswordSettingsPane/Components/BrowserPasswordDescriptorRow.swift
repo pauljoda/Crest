@@ -130,7 +130,7 @@ struct BrowserPasswordDescriptorRow: View {
 
         if !descriptor.origin.isSecure {
             Image(systemName: "exclamationmark.shield.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(CrestColor.warning)
                 .help(
                     "Imported from an insecure HTTP site. Crest keeps it available for manual access but does not autofill it on insecure connections."
                 )

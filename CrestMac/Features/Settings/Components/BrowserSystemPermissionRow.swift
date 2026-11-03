@@ -38,7 +38,7 @@ struct BrowserSystemPermissionRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let error {
-                    Text(error).font(.caption).foregroundStyle(.orange)
+                    Text(error).font(.caption).foregroundStyle(CrestColor.warning)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

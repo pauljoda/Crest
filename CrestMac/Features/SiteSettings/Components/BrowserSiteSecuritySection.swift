@@ -70,8 +70,8 @@ struct BrowserSiteSecuritySection: View {
 
     private var tint: Color {
         if isUnconfirmedSecure { return .secondary }
-        if security.isSecure { return .green }
-        return security.isHazardous ? .red : .orange
+        if security.isSecure { return CrestColor.success }
+        return security.isHazardous ? CrestColor.danger : CrestColor.warning
     }
 
     private var detail: LocalizedStringResource? { security.detail }

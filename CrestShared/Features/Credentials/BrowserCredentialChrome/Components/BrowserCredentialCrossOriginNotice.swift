@@ -11,7 +11,7 @@ struct BrowserCredentialCrossOriginNotice: View {
             systemImage: "rectangle.inset.filled.and.person.filled"
         )
         .font(.caption)
-        .foregroundStyle(.orange)
+        .foregroundStyle(CrestColor.warning)
     }
 }
 

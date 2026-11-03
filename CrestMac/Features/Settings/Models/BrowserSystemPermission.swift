@@ -123,7 +123,7 @@ struct BrowserSystemPermission: Hashable, Identifiable, Sendable {
     }
 }
 
-/// Where a permission stands, with the label, glyph and tint its row shows and
+/// Where a permission stands, with the label, glyph and tone its row shows and
 /// the button the row offers for it.
 struct BrowserSystemPermissionState: Hashable, Sendable {
     // MARK: - Static Variables
@@ -139,17 +139,18 @@ struct BrowserSystemPermissionState: Hashable, Sendable {
             }
         })
     static let allowed = BrowserSystemPermissionState(
-        name: "allowed", title: "Allowed", symbol: "checkmark.circle.fill", tint: .green,
+        name: "allowed", title: "Allowed", symbol: "checkmark.circle.fill", tone: .success,
         primaryAction: { row in
             Button(
                 row.permission.checksSpaceFolder ? "Check Again" : "Settings…",
                 action: row.permission.checksSpaceFolder ? row.request : row.openSettings)
         })
     static let blocked = BrowserSystemPermissionState(
-        name: "blocked", title: "Needs attention", symbol: "exclamationmark.circle.fill", tint: .orange,
+        name: "blocked", title: "Needs attention", symbol: "exclamationmark.circle.fill", tone: .warning,
         primaryAction: { row in Button("Open Settings", action: row.openSettings) })
     static let restricted = BrowserSystemPermissionState(
-        name: "restricted", title: "Restricted by macOS", symbol: "exclamationmark.circle.fill", tint: .orange,
+        name: "restricted", title: "Restricted by macOS", symbol: "exclamationmark.circle.fill",
+        tone: .warning,
         primaryAction: { row in Button("Open Settings", action: row.openSettings) })
     static let unavailable = BrowserSystemPermissionState(name: "unavailable", title: "Unavailable")
     static let notChecked = BrowserSystemPermissionState(
@@ -162,7 +163,11 @@ struct BrowserSystemPermissionState: Hashable, Sendable {
     let name: String
     let title: LocalizedStringResource
     let symbol: String
-    let tint: Color
+    /// How the state reads; nil reads quietly.
+    let tone: CrestStatusTone?
+
+    /// The colour the row's label draws the state in.
+    var tint: Color { tone?.color ?? .secondary }
 
     /// The button a row offers in this state, if any.
     let primaryAction: @MainActor @Sendable (BrowserSystemPermissionRow) -> Button<Text>?
@@ -170,13 +175,13 @@ struct BrowserSystemPermissionState: Hashable, Sendable {
     // MARK: - Initializers
 
     private init(
-        name: String, title: LocalizedStringResource, symbol: String = "circle.dashed", tint: Color = .secondary,
+        name: String, title: LocalizedStringResource, symbol: String = "circle.dashed", tone: CrestStatusTone? = nil,
         primaryAction: @escaping @MainActor @Sendable (BrowserSystemPermissionRow) -> Button<Text>? = { _ in nil }
     ) {
         self.name = name
         self.title = title
         self.symbol = symbol
-        self.tint = tint
+        self.tone = tone
         self.primaryAction = primaryAction
     }
 

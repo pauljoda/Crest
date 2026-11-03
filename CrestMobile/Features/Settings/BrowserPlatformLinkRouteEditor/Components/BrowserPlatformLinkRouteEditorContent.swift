@@ -109,7 +109,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
                     role: .destructive,
                     action: delete
                 )
-                .buttonStyle(BrowserSettingsIconButtonStyle(tint: .red))
+                .buttonStyle(BrowserSettingsIconButtonStyle(tint: CrestColor.danger))
                 .accessibilityIdentifier("route-delete-\(identifierSuffix)")
             }
             .labelStyle(.iconOnly)

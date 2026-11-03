@@ -19,7 +19,7 @@ struct BrowserDataPortabilityProgressStatus: View {
             } icon: {
                 Image(systemName: status.symbol)
             }
-            .foregroundStyle(status.isError ? .red : .secondary)
+            .foregroundStyle(status.isError ? CrestColor.danger : .secondary)
             .font(.footnote)
             .accessibilityIdentifier("browser-data-operation-status")
         }
