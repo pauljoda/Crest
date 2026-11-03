@@ -14041,7 +14041,7 @@ struct LinkNavigationDecision: Hashable, Sendable {
         protectsSavedSite: true,
         opensTab: false,
         selectsTab: false,
-        stagesLink: false
+        stagesLink: true
     )
     static let backgroundTab = LinkNavigationDecision(
         tag: 3,
