@@ -4965,6 +4965,10 @@
     "status-colors-house-palette": {
       "category": "improved",
       "message": "Errors, warnings and confirmations, such as a failed download, a permission that needs attention or a secure site, now show in Crest’s own red, amber and green, which are easier to read in Light Mode."
+    },
+    "settings-results-as-notices": {
+      "category": "improved",
+      "message": "A finished password import, an app icon that couldn’t change and a Space that couldn’t be deleted now show in a notice at the top of the window instead of an alert you have to dismiss."
     }
   }
 }

@@ -29,7 +29,6 @@ final class BrowserCredentialSpaceStore {
     var exportDocument: BrowserCredentialCSVDocument?
     var exportFilename = "Crest Passwords.csv"
     var importReview: BrowserCredentialImportReview?
-    var importSummary: BrowserCredentialImportSummary?
 
     @ObservationIgnored private let browser: BrowserStore
 
@@ -90,7 +89,6 @@ final class BrowserCredentialSpaceStore {
         errorMessage = nil
         exportDocument = nil
         importReview = nil
-        importSummary = nil
     }
 
     func delete(
@@ -355,7 +353,7 @@ final class BrowserCredentialSpaceStore {
         importReview = nil
         // The import is done; a Space chosen meanwhile shows its own passwords.
         guard isStillSelected(), browser.spaceModel(matching: plan.destination) != nil else { return }
-        importSummary = resolution.summary
+        BrowserNoticeCenter.shared.post(resolution.summary.notice)
         await load(
             in: plan.destination.spaceID,
             accessController: accessController

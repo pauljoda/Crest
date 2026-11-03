@@ -144,17 +144,6 @@ struct BrowserPasswordSettingsPane: View {
                 spaceAccess: spaceAccess
             )
         }
-        .alert(
-            "Password Import Finished",
-            isPresented: importSummaryIsPresented,
-            presenting: credentials.importSummary
-        ) { _ in
-            Button("OK") { credentials.importSummary = nil }
-        } message: { summary in
-            Text(
-                "Accepted \(summary.acceptedCount), skipped \(summary.skippedCount), reviewed \(summary.warningCount) warnings, and rejected \(summary.rejectedCount) from the selected file."
-            )
-        }
         .fileImporter(
             isPresented: $isChoosingImportFile,
             allowedContentTypes: [.commaSeparatedText, .plainText],
@@ -451,14 +440,6 @@ struct BrowserPasswordSettingsPane: View {
             if !isPresented {
                 credentialPendingDeletion = nil
             }
-        }
-    }
-
-    private var importSummaryIsPresented: Binding<Bool> {
-        Binding {
-            credentials.importSummary != nil
-        } set: { isPresented in
-            if !isPresented { credentials.importSummary = nil }
         }
     }
 

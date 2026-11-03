@@ -4,7 +4,6 @@ import UIKit
 struct BrowserPlatformAppIconSettingsSection: View {
     @State private var selectedName = UIApplication.shared.alternateIconName
     @State private var isChanging = false
-    @State private var errorMessage: String?
 
     var body: some View {
         CrestSettingsGroup(
@@ -21,16 +20,6 @@ struct BrowserPlatformAppIconSettingsSection: View {
             .disabled(isChanging || !UIApplication.shared.supportsAlternateIcons)
         }
         .onAppear { selectedName = UIApplication.shared.alternateIconName }
-        .alert(
-            "Couldn’t change app icon",
-            isPresented: Binding(
-                get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) { errorMessage = nil }
-        } message: {
-            Text(errorMessage ?? "")
-        }
     }
 
     private var resettable: CrestResettableSetting {
@@ -46,7 +35,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
                 try await UIApplication.shared.setAlternateIconName(name)
                 selectedName = UIApplication.shared.alternateIconName
             } catch {
-                errorMessage = String(localized: "Crest could not update its icon. Please try again.")
+                BrowserNoticeCenter.shared.post(.failure(String(localized: "Couldn’t change app icon")))
             }
         }
     }
