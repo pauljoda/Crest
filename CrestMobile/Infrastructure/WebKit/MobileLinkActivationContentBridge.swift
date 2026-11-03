@@ -63,6 +63,8 @@ enum MobileLinkActivationContentBridge {
               }
             }
             activePress = null;
+            // No click follows a cancelled pointer, so none is left to swallow.
+            if (phase === 'cancelled') suppressClickUntil = -Infinity;
             post({ phase, pressID });
           };
 

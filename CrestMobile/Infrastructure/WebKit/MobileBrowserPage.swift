@@ -1119,14 +1119,17 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 self?.stagePeek?(request)
             },
             commit: { [weak self] request in
-                self?.dismissLinkMenu()
+                guard let self else { return }
+                dismissLinkMenu()
                 let feedback = UIImpactFeedbackGenerator(style: .soft)
                 feedback.prepare()
                 feedback.impactOccurred(intensity: 0.82)
-                if let commitPeek = self?.commitPeek {
+                // Only a link with its place in the page grew a Peek to
+                // commit; one in a frame opens its Peek outright.
+                if request.sourcePresentation != nil, stagePeek != nil, let commitPeek {
                     commitPeek(request)
                 } else {
-                    self?.openPeek(request)
+                    openPeek(request)
                 }
             },
             cancelStaged: { [weak self] requestID in
