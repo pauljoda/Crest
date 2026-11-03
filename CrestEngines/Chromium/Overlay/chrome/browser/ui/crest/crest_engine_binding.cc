@@ -92,12 +92,14 @@ bool OpensPeek(engine::LinkNavigationDecision decision) {
 }
 
 // The request Chromium made for a link a person followed, which `navigation`
-// carries, with the link's referrer, initiator and SiteInstance.
+// carries, with the link's referrer, its initiator and the initiator's state,
+// such as the policies it hands the navigation, and its SiteInstance.
 content::NavigationController::LoadURLParams LinkRequest(content::NavigationHandle& navigation) {
   content::NavigationController::LoadURLParams request(navigation.GetURL());
   request.referrer = content::Referrer(navigation.GetReferrer());
   request.initiator_origin = navigation.GetInitiatorOrigin();
   request.initiator_base_url = navigation.GetInitiatorBaseUrl();
+  request.initiator_navigation_state = navigation.GetInitiatorNavigationState();
   request.initiator_frame_token = navigation.GetInitiatorFrameToken();
   request.initiator_process_id = navigation.GetInitiatorProcessId();
   request.source_site_instance = navigation.GetSourceSiteInstance();
