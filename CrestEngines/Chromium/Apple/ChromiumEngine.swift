@@ -37,9 +37,6 @@
         private var dismissals: [UUID: BrowserPromptDismissal] = [:]
         /// Each page this hosts, while its owner keeps it.
         private var hosted: [UUID: WeakNativePage] = [:]
-        /// What waits for the binding to prepare each profile, by the
-        /// preparation's identity.
-        var preparations: [UUID: CheckedContinuation<Bool, Never>] = [:]
         private(set) var notifications: ChromiumProfileNotifications?
         /// The Chromium version a page's saved history belongs to: the running
         /// engine's, or before it starts, the version of the framework it
@@ -140,30 +137,7 @@
             }
         }
 
-        // MARK: - Actions - Profiles
-
-        /// Loads a Space's profile so its extensions can be listed before anything
-        /// opens in it; answers whether it is ready.
-        func prepareProfile(_ profileID: UUID) async -> Bool {
-            if let runtime = ChromiumComposition.runtime, !(await runtime.whenReady()) { return false }
-            guard !Task.isCancelled else { return false }
-            let preparationID = UUID()
-            return await withTaskCancellationHandler {
-                await withCheckedContinuation { continuation in
-                    guard !Task.isCancelled,
-                        pages.request(PrepareProfile(profileID: profileID, preparationID: preparationID))
-                    else {
-                        continuation.resume(returning: false)
-                        return
-                    }
-                    preparations[preparationID] = continuation
-                }
-            } onCancel: {
-                Task { @MainActor [weak self] in
-                    self?.preparations.removeValue(forKey: preparationID)?.resume(returning: false)
-                }
-            }
-        }
+        // MARK: - Actions - Hosted Pages
 
         func icon(of pageID: UUID) -> Data? {
             guard host != nil else { return nil }
@@ -224,12 +198,10 @@
             page.ask(asked, dismissal: dismissal(for: asked.promptID))
         }
 
+        /// The install review shows the question, or declines one no review
+        /// shows any more.
         func ask(_ asked: ExtensionInstallAsked) {
-            ChromiumComposition.extensions.review(asked) { [weak self] accepted, withholds in
-                self?.answer(
-                    AnswerExtensionInstall(
-                        promptID: asked.promptID, accepted: accepted, withholdsSiteAccess: withholds))
-            }
+            ChromiumComposition.extensions.review(asked)
         }
 
         /// The download prompts choose where a download goes.

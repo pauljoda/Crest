@@ -5,10 +5,6 @@ namespace CrestCore.Contracts;
 /// A server's request for a user name and password waits on the person.
 public sealed record AuthenticationAsked(Guid PromptId, Guid PageId, AuthenticationQuestion Question) : Change;
 
-/// Whether to install an extension waits on the person, in the window that
-/// started the install.
-public sealed record ExtensionInstallAsked(Guid PromptId, Guid WindowId, ExtensionInstallQuestion Question) : Change;
-
 /// A site's permission request that its Space's choices do not answer waits
 /// on the person.
 public sealed record PermissionAsked(Guid PromptId, Guid PageId, PermissionQuestion Question) : Change;
@@ -45,14 +41,6 @@ public enum AuthenticationScheme {
     Basic,
     Digest
 }
-
-/// Whether to install the extension package the engine verified: its
-/// `Name`, `Version` and `Summary`, the `Permissions` it asks for, as the
-/// engine words them, and its icon as PNG bytes. `CanWithholdSiteAccess` says
-/// the person may keep its site access back, and `WithholdsSiteAccess` says
-/// installing does so unless they choose otherwise.
-public sealed record ExtensionInstallQuestion(string ExtensionId, string Name, string Version, string Summary,
-    IReadOnlyList<string> Permissions, byte[]? Icon, bool CanWithholdSiteAccess, bool WithholdsSiteAccess);
 
 /// A document in a page asked for `Permission`, from `Origin` inside
 /// `TopLevelOrigin`.

@@ -29,6 +29,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     private readonly Pages pages;
     /// The questions the pages and engines ask the person.
     private readonly Prompts prompts;
+    /// The extensions of the person's Spaces, and the installs under way.
+    private readonly Extensions extensions;
     /// The downloads engines run, in the download ledger.
     private readonly EngineDownloads engineDownloads;
     /// Close and quit preparations, which ask each page whether it may go.
@@ -56,6 +58,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     internal Device Device => device;
     internal Pages Pages => pages;
     internal Prompts Prompts => prompts;
+    internal Extensions Extensions => extensions;
     internal EngineDownloads EngineDownloads => engineDownloads;
     internal ClosePreparations ClosePreparations => closePreparations;
     internal DataDeletions DataDeletions => dataDeletions;
@@ -97,6 +100,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             engines.Prefer(device.DefaultEngine);
             pages = new(device, engines, clock, ids);
             prompts = new(device, pages);
+            extensions = new(device, engines, prompts);
             engineDownloads = new(downloads, device, pages, ids);
             closePreparations = new(device, pages, downloads, dataDeletions, ids);
             access = new(device, grants);
@@ -109,6 +113,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         engines.Prefer(device.DefaultEngine);
         pages = new(device, engines, clock, ids);
         prompts = new(device, pages);
+        extensions = new(device, engines, prompts);
         engineDownloads = new(downloads, device, pages, ids);
         closePreparations = new(device, pages, downloads, dataDeletions, ids);
         access = new(device, grants);
@@ -143,9 +148,10 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     /// published. Afterwards each engine tab group follows the folder that
     /// shows it, the pages windows show are stamped, and one shown
     /// again or of a Space this process may not show ends its Picture in
-    /// Picture; closed tabs let go of what they kept, and what a page that
-    /// went had asked no longer waits. The engine commands the turn caused
-    /// are delivered once the lock is released.
+    /// Picture; closed tabs let go of what they kept, what a page that went
+    /// had asked no longer waits, and an extension install whose Space went
+    /// out of reach ends. The engine commands the turn caused are delivered
+    /// once the lock is released.
     internal IReadOnlyList<Change> Turn(Action<ChangeFeed> apply) {
         IReadOnlyList<Change> published;
         storedSync?.RequireNoTransactionHeldHere();
@@ -162,6 +168,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             // What a page that went had asked no longer waits.
             prompts.Prune(changes);
             closePreparations.Prune(changes, Issue);
+            extensions.Prune(changes, Issue);
             // Agents let go of the tabs they may no longer use.
             device.PruneAgents(changes);
             published = [.. TakePending(), .. changes.Published];

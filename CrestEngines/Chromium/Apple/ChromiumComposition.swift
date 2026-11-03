@@ -145,30 +145,13 @@
             extensions.refresh()
         }
 
-        static var extensionSpaces: [BrowserSpaceIdentity] { shell?.application?.extensionSpaces ?? [] }
+        /// The core the application runs, which owns every extension rule, or
+        /// nil before the application starts.
+        static var core: CrestCore? { shell?.application?.browser.core }
 
-        /// The Space whose profile is `profileID`, when its extensions may act.
-        static func extensionSpace(forProfile profileID: UUID) -> BrowserSpaceIdentity? {
-            extensionSpaces.first { $0.profileID == profileID }
-        }
-
-        /// Whether this store is one of the persistent Spaces' own stores.
-        ///
-        /// Engine extension profiles belong to the application's persistent
-        /// store family — every normal window's store shares it. A private
-        /// window and a borrowed settings workspace each have a family of their
-        /// own and no persistent engine profile, so neither may prepare or read
-        /// one.
-        static func ownsExtensionProfiles(_ browser: BrowserStore) -> Bool {
-            guard let application = shell?.application else { return false }
-            return browser.family === application.browser.family
-                && !browser.isPrivateBrowsing && !browser.isTemporaryWorkspace
-        }
-
-        static func isSpaceLocked(_ space: BrowserSpaceIdentity) -> Bool {
-            guard let application = shell?.application else { return true }
-            return application.browser.deletingSpaceIDs.contains(space.id) || application.spaceAccess.isLocked(space)
-        }
+        /// The person's own Spaces, in the order the application lists them,
+        /// for the extension views to name and to offer as copies.
+        static var personSpaces: [SpaceModel] { shell?.application?.browser.spaceModels ?? [] }
 
         /// The browser window the person is using, which an extension's popup
         /// or page opens against when nothing names one.

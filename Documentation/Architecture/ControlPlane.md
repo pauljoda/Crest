@@ -394,7 +394,10 @@ The engine contract is a set of contract records like intents and changes:
   window shows again or one of a locked Space, `CheckBeforeUnload`, the prompt
   settlements, the download commands, the erasures (`EraseProfileData`,
   `EraseSiteData`), `AdoptOfferedPage` and `RejectOfferedPage` for a page the
-  engine offered, and `StageNavigation` and `DropStagedLink` for a staged link.
+  engine offered, `StageNavigation` and `DropStagedLink` for a staged link,
+  and the extension commands (`ListEngineExtensions`,
+  `ChangeEngineExtension`, `DownloadExtension`, `InstallExtensionPackage`,
+  `EndExtensionInstall`).
   The core delivers them in the order it issued them, never while it holds a
   lock and never on the stack of the report that caused them.
 - **Engine events** a binding reports: `PageCreated`, `PageCreationFailed`,
@@ -402,9 +405,11 @@ The engine contract is a set of contract records like intents and changes:
   `PageStateChanged` with a `PageSnapshot`, `PageIconChanged`, `PageCrashed`,
   the prompt events, the download events, `BeforeUnloadAnswered`,
   `DataErased`, `ProtectedMediaUnavailable`, `PictureInPictureReturned`,
-  `PageOffered` and `StagedLinkUnavailable`. A report is never refused; one
-  about a page the core no longer knows, or one from an engine that no longer
-  hosts the page, changes nothing.
+  `PageOffered`, `StagedLinkUnavailable`, and the extension events
+  (`ExtensionsListed`, `ExtensionDownloaded`, `ExtensionInstallRequested`,
+  `ExtensionInstalled`, `ExtensionInstallFailed`). A report is never refused;
+  one about a page the core no longer knows, or one from an engine that no
+  longer hosts the page, changes nothing.
 - **Engine questions** a binding asks the core and has answered at once,
   changing nothing, through `crest_engine_ask`: `LinkActivation` asks where a
   link the person followed goes, by the same rules as the `LinkNavigation`
@@ -699,8 +704,10 @@ core no longer hosts, or that another engine hosts, changes nothing.
   installs are questions the binding raises with the core (`ScriptDialogOpened`,
   `AuthenticationChallenged`, `PermissionRequested`,
   `ExtensionInstallRequested`). The core answers a permission from the Space's
-  choices when it holds one, and otherwise publishes the question
-  (`PermissionAsked` and the others) for the page's host to show. The person's
+  choices when it holds one, and an extension install from the consent the
+  person gave the same package and access earlier in that install, and
+  otherwise publishes the question (`PermissionAsked` and the others) for the
+  page's host, or the install's review, to show. The person's
   answer comes back as an intent, and the core settles the engine. A question
   whose page goes, stops holding its engine page or moves to another engine is
   settled as declined. A credential passes to the engine and is never kept,
@@ -763,6 +770,32 @@ core no longer hosts, or that another engine hosts, changes nothing.
   in Picture. It holds each unloaded page's engine restore state in memory,
   never saved, and hands it back to the tab's next page on the same engine
   while the tab still shows that address.
+- **Extensions.** The core owns which Spaces' extensions may change,
+  engine-neutrally (`Extensions`): every intent names a Space and an engine,
+  and the core refuses a Space outside the person's own workspace
+  (`UnknownSpace`), a private window's (`SpaceIsPrivate`, since a private
+  window runs no extension a person installed), one being deleted, one that
+  is locked or shares its profile with a locked Space (`SpaceLocked`), and an
+  engine without the `extensions` capability (`EngineLacksCapability`), before
+  it issues the command to the engine that keeps the Space's profile.
+  `ListExtensions` asks the engine to list and follow a profile, which it
+  reports as `ExtensionsListed`; the core keeps the list and publishes it as
+  `InstalledExtensionsChanged` while no locked Space browses with the profile,
+  so Settings follows the read model. `ChangeExtension` checks the extension
+  against that list and refuses one a policy manages
+  (`ExtensionNotChangeable`). `InstallExtension` downloads the package once
+  through the first Space's profile and installs it there, then in each copy
+  the person chose, one at a time: a copy goes to one Space for each profile
+  (`ExtensionCopyDestinations`), within reach when its turn comes, and leaves
+  out a profile that already has the extension. The engine asks the core
+  about each package it verified (`ExtensionInstallRequested`); the core asks
+  the person the first time, unless an import already chose the extension,
+  and answers each later question with that consent when it names the same
+  package, version and permissions, declining any other. The install
+  publishes `ExtensionInstallChanged` as it moves on, and ends with its
+  failure (`ExtensionInstallFailure`) when its first Space goes out of reach
+  or the engine refuses the package. Toolbar actions, pinning and icons stay
+  page requests, which the core never sees.
 - **Erasure.** Deleting a Space saves a core-owned deletion intent first; the
   Space becomes unavailable across its windows, and launch resumes a saved
   intent until the engines confirm. Final removal and its sync tombstones share
@@ -966,10 +999,14 @@ merely visiting engine Settings does not.
   `settings`), in the Settings tab's Space and window, so a private window's
   flags page is private too.
 - **Extensions.** Chromium owns verification, runtime permissions, updates,
-  execution and pin state. Crest's toolbar, Site Controls, install review,
-  Space-scoped management and copying read the binding's model; the toolbar
-  and Site Controls take their Space from the read model, and the install
-  review shows the question the core asks (`ExtensionInstallAsked`). Action popups
+  execution and pin state. Crest's toolbar and Site Controls read the
+  binding's actions and icons directly; Settings, the install review and
+  copying read what the core lists for each Space (see "Extensions" under
+  "Page lifecycle"), and every change and install goes through the core. The
+  binding downloads a Chrome Web Store package in portable C++ through the
+  Space's own profile and installs it with a prompt whose question goes to
+  the core, never to a window; an install the engine starts by itself in a
+  Crest window has no review in Crest and is declined. Action popups
   appear in a child window of the Crest window; side panels are cards in the
   page row that follow the focused tab, as Chromium's side panel does: a panel
   an extension gave one tab shows only beside that tab and returns with it,

@@ -103,6 +103,21 @@ final class CoreState {
         set { publish(newValue, into: \.sitePermissionsStorage, as: \.sitePermissions) }
     }
     @ObservationIgnored private var sitePermissionsStorage: [UUID: [SitePermissionRecordState]] = [:]
+    /// The extensions each engine installed in each profile, as the core last
+    /// published them, by engine and then by profile. A profile missing here
+    /// has not been listed yet, or a locked Space browses with it.
+    var installedExtensions: [EngineKind: [UUID: [InstalledExtension]]] {
+        get { observed(\.installedExtensionsStorage, as: \.installedExtensions) }
+        set { publish(newValue, into: \.installedExtensionsStorage, as: \.installedExtensions) }
+    }
+    @ObservationIgnored private var installedExtensionsStorage: [EngineKind: [UUID: [InstalledExtension]]] = [:]
+    /// Each extension install of this run as the core last published it, by
+    /// install, the ended ones included.
+    var extensionInstalls: [UUID: ExtensionInstallState] {
+        get { observed(\.extensionInstallsStorage, as: \.extensionInstalls) }
+        set { publish(newValue, into: \.extensionInstallsStorage, as: \.extensionInstalls) }
+    }
+    @ObservationIgnored private var extensionInstallsStorage: [UUID: ExtensionInstallState] = [:]
     /// Advances with every site permission change the core publishes, so a
     /// view that asks the core for a decision redraws when any choice changes.
     var sitePermissionRevision: UInt64 {
