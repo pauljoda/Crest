@@ -351,6 +351,9 @@ final class BrowserMacWindows {
         if let existing = quickWindows.first(where: { $0.value.request.value == request }),
             let controller = controller(.quick, id: existing.key)
         {
+            // A link another app hands Crest again opens where the person is
+            // now, which may be another display.
+            if request.opensWherePersonIs { BrowserQuickWindowGeometryHostView.moveWherePersonIs(controller.window) }
             controller.present(.key)
             return existing.key
         }

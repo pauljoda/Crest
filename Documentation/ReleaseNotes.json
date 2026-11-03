@@ -4926,6 +4926,14 @@
       "category": "fixed",
       "message": "On Mac, Command-` (Move focus to next window) moves between Crest's windows, Quick Windows included, when a Chromium page has focus."
     },
+    "quick-window-reused-moves-to-you": {
+      "category": "fixed",
+      "message": "On Mac, a link from another app that opens a Quick Window already open for it brings that Quick Window to the window you're in, and Quick Windows opening at a screen's edge no longer open on top of each other."
+    },
+    "quick-window-spanning-window": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it."
+    },
     "quick-window-shortcut-from-any-app": {
       "category": "new",
       "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts."
