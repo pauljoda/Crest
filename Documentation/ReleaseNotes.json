@@ -4957,6 +4957,14 @@
     "mac-peek-size": {
       "category": "new",
       "message": "On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size."
+    },
+    "quick-window-shortcut-from-any-app": {
+      "category": "new",
+      "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts."
+    },
+    "quick-window-shortcut-opens-over-your-window": {
+      "category": "improved",
+      "message": "On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward."
     }
   }
 }
