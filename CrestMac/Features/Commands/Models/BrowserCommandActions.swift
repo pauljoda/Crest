@@ -207,10 +207,15 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         windows?.openPrivateWindow()
     }
 
-    func openQuickWindow() {
+    /// Opens a blank Quick Window in the Space this window shows, over the
+    /// window, or with `wherePersonIs`, over the window the person is in in
+    /// another app.
+    func openQuickWindow(wherePersonIs: Bool = false) {
         guard let space = browser.shownSpace else { return }
         windows?.openQuickWindow(
-            .empty(spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID))
+            .empty(
+                spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID,
+                opensWherePersonIs: wherePersonIs))
     }
 
     func closeKeyWindow() {

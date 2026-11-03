@@ -49,13 +49,15 @@ struct BrowserQuickWindowRequest: Hashable, Identifiable, Sendable {
     static func empty(
         id: UUID = UUID(),
         spaceAssignment: BrowserSpaceRuntimeAssignment,
-        targetWindowID: UUID? = nil
+        targetWindowID: UUID? = nil,
+        opensWherePersonIs: Bool = false
     ) -> BrowserQuickWindowRequest {
         BrowserQuickWindowRequest(
             id: id,
             url: emptyLookupURL,
             spaceAssignment: spaceAssignment,
-            targetWindowID: targetWindowID
+            targetWindowID: targetWindowID,
+            opensWherePersonIs: opensWherePersonIs
         )
     }
 

@@ -5013,6 +5013,14 @@
     "space-studio-choices-fit-and-match": {
       "category": "fixed",
       "message": "Crest Studio and setup now mark every choice in the same color, draw search fields like the rest of Settings and show long names in full, and setup keeps the chosen sidebar style in view. A link route’s move buttons no longer look like delete buttons, and the New Space button in iPhone setup is easier to tap."
+    },
+    "quick-window-shortcut-from-any-app": {
+      "category": "new",
+      "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts."
+    },
+    "quick-window-shortcut-opens-over-your-window": {
+      "category": "improved",
+      "message": "On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward."
     }
   }
 }
