@@ -12,6 +12,34 @@ extension MobileBrowserPage: WKUIDelegate {
         completionHandler: @escaping @MainActor (UIContextMenuConfiguration?) -> Void
     ) {
         contextMenuPreviewCommit = nil
+        guard elementInfo.linkURL != nil, linkPeekPressCoordinator.phase.holdsLink else {
+            answerContextMenu(for: elementInfo, in: webView, completionHandler: completionHandler)
+            return
+        }
+        // A held link opens Peek, not WebKit's link menu, which iPadOS asks
+        // for even on a link without its callout. A press still deciding holds
+        // the question until it does.
+        linkPeekPressCoordinator.whenSettled { [weak self] opensPeek in
+            guard let self else {
+                completionHandler(nil)
+                return
+            }
+            guard opensPeek else {
+                answerContextMenu(for: elementInfo, in: webView, completionHandler: completionHandler)
+                return
+            }
+            completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: nil))
+            DispatchQueue.main.async { [weak self] in self?.dismissLinkMenu() }
+        }
+    }
+
+    /// WebKit's menu for the element a person pressed: a link's with its live
+    /// preview and the Spaces it can open in, and WebKit's own for the rest.
+    private func answerContextMenu(
+        for elementInfo: WKContextMenuElementInfo,
+        in webView: WKWebView,
+        completionHandler: @escaping @MainActor (UIContextMenuConfiguration?) -> Void
+    ) {
         guard webView === self.webView,
             let context = navigationContext,
             let url = elementInfo.linkURL,
@@ -46,12 +74,14 @@ extension MobileBrowserPage: WKUIDelegate {
             UIContextMenuConfiguration(
                 identifier: nil,
                 previewProvider: { [weak self] in
-                    guard isCurrent(), let self else { return nil }
+                    guard isCurrent(), let self, linkPeekPressCoordinator.phase != .committed else { return nil }
                     return MobileBrowserLinkPreviewController(
                         url: url, source: self.webView, isCurrent: isCurrent
                     )
                 }
             ) { [weak self] suggested in
+                // The press opened Peek while WebKit was preparing its menu.
+                if self?.linkPeekPressCoordinator.phase == .committed { return UIMenu(children: []) }
                 guard let self, isCurrent(),
                     let space = linkDestinationHost.browser?.spaceModel(source.spaceID)
                 else { return UIMenu(children: suggested) }
@@ -81,6 +111,13 @@ extension MobileBrowserPage: WKUIDelegate {
                 }
                 return UIMenu(children: [UIMenu(options: .displayInline, children: actions)] + suggested)
             })
+    }
+
+    /// WebKit asked for a held link's menu before the press opened Peek, as
+    /// iPadOS does when the press begins; the menu closes as it opens.
+    func webView(_ webView: WKWebView, contextMenuWillPresentForElement elementInfo: WKContextMenuElementInfo) {
+        guard elementInfo.linkURL != nil, linkPeekPressCoordinator.phase == .committed else { return }
+        DispatchQueue.main.async { [weak self] in self?.dismissLinkMenu() }
     }
 
     func webView(

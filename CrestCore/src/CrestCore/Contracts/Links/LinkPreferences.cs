@@ -15,7 +15,7 @@ internal readonly record struct LinkRoutingDecision(bool OpensQuickWindow, Guid 
 /// them. Each edit answers the revised preferences, or throws the rule that
 /// refuses it.
 public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? DestinationSpaceId, bool FocusesNewTabs,
-    bool FollowsMovedTabs, bool OpensPeekAutomatically, LinkPeekModifier PeekModifier, bool DragsLinksToPeek,
+    bool FollowsMovedTabs, bool OpensPeekAutomatically, LinkPeekModifier PeekModifier, bool DragsLinksToPeek, bool DimsPageBehindPeek,
     QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, IReadOnlyList<LinkRoute> Routes,
     IReadOnlyList<RememberedSite> RememberedSites) {
     #region Static Variables
@@ -23,7 +23,7 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
     /// The preferences of a device that never chose any.
     internal static readonly LinkPreferences Default = new(ExternalLinkDestination.QuickWindow, DestinationSpaceId: null,
         FocusesNewTabs: false, FollowsMovedTabs: true, OpensPeekAutomatically: true, LinkPeekModifier.Option,
-        DragsLinksToPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true, [], []);
+        DragsLinksToPeek: true, DimsPageBehindPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true, [], []);
 
     #endregion
 
@@ -148,7 +148,8 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
         && Destination == other.Destination && DestinationSpaceId == other.DestinationSpaceId
         && FocusesNewTabs == other.FocusesNewTabs && FollowsMovedTabs == other.FollowsMovedTabs
         && OpensPeekAutomatically == other.OpensPeekAutomatically && PeekModifier == other.PeekModifier
-        && DragsLinksToPeek == other.DragsLinksToPeek && ArchivePolicy == other.ArchivePolicy
+        && DragsLinksToPeek == other.DragsLinksToPeek && DimsPageBehindPeek == other.DimsPageBehindPeek
+        && ArchivePolicy == other.ArchivePolicy
         && RemembersSpaceBySite == other.RemembersSpaceBySite && Routes.SequenceEqual(other.Routes)
         && RememberedSites.SequenceEqual(other.RememberedSites);
 

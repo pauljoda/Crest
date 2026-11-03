@@ -18,6 +18,9 @@ struct BrowserQuickWindowWindowSurface: View {
             openBrowserWindow: openBrowserWindow
         )
         .modifier(BrowserQuickWindowAppearanceModifier(model: model))
+        // The window's smallest size, which the hosting controller hands the
+        // window: its toolbar and the palette under it fit no narrower.
+        .frame(minWidth: BrowserQuickWindowLayout.minimumWidth, minHeight: BrowserQuickWindowLayout.minimumHeight)
         .onChange(of: selectedSpaceIsLocked, initial: true) { _, isLocked in
             if isLocked {
                 model.releaseForUnavailableSpace()
@@ -26,7 +29,8 @@ struct BrowserQuickWindowWindowSurface: View {
         .background {
             BrowserQuickWindowGeometryBridge(
                 pagePoolRegistry: pagePoolRegistry,
-                targetWindowID: model.presentedRequest.targetWindowID
+                targetWindowID: model.presentedRequest.targetWindowID,
+                opensWherePersonIs: model.presentedRequest.opensWherePersonIs
             )
         }
         .background {

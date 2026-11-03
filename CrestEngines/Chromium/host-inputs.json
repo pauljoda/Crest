@@ -305,7 +305,7 @@
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
     "before": "ba6cc89556737347a1d2ea95deb0ff79d04643574e1e55239a8b2f84cc384b8f",
-    "after": "b560f17b314a24f497d220a88753dce3288885e7a2b16e0070cb0fd539b9b68f"
+    "after": "6100221c99eaf2b0d9e1e7357ee9a03dce4e4e61ae783af9870fa4f84690ccfb"
   },
   "chrome/browser/media/webrtc/display_media_access_handler.cc": {
     "before": "06d96012fdfe68905b1542b2a414a883f1dfaf3a40ffe151a109fce85d874b2f",
@@ -474,5 +474,25 @@
   "chrome/browser/extensions/api/developer_private/extension_info_generator.cc": {
     "before": "7e7a7df6ab010a60b0eeae22625278e538b046680b8ee9e687419cdc6c480a6a",
     "after": "c44a31f08b48c7292643f8dd39a4543e77347ce12623fda16d26a117788ea7d7"
+  },
+  "chrome/browser/extensions/api/extension_action/extension_action_api.cc": {
+    "before": "f14ef32a347d0f29efcc8c1f9c56e0d821810c2db20c3748f7b37fced40b69aa",
+    "after": "9a2e3e6d9800b70492a02c6280de093be994e6dbb46fc048c86d4e32053d0a7d"
+  },
+  "chrome/browser/extensions/extension_tab_util.cc": {
+    "before": "33fd97e60845e9fbbef192e04e874fe115a7f07d7fcfba0e29e7fd53c8907815",
+    "after": "e999f9149b4cd90dc9943afb6656d82a6844bd4e06adb15028724af25108f0f4"
+  },
+  "chrome/browser/extensions/api/identity/web_auth_flow.cc": {
+    "before": "5f5d505fc60f579f180fcb8a874102b379dffe56eda81a55d67d096ad0ea13a3",
+    "after": "7082aeb60500c678c5875d9dbd4ea2f9723869315200a3cbafed44f7c9de0c34"
+  },
+  "chrome/browser/ui/webui/new_tab_page/new_tab_page_handler.cc": {
+    "before": "d40d969bfa4be11f23937469aecf275dd05ca5e1bc8bbed9b37dc9aea0779ce5",
+    "after": "fb3cc195be5024d60b698079435704eeac14dd3433b7f05a7a8822893643d381"
+  },
+  "chrome/browser/new_tab_page/feature_promo_helper/new_tab_page_feature_promo_helper.cc": {
+    "before": "3efb0306b800e66924556bdad10c8e78d85f17c6591d04dc409e9484fe3e8fcc",
+    "after": "ab0a8556b5650c98a4cecfc7ba0a874f10f76fdd703099bc2e19a2280675c923"
   }
 }

@@ -9,6 +9,22 @@ extension CrestCore {
 
     /// The most records one recency or account question may carry.
     private nonisolated static let credentialBatchLimit = 64
+    /// The most saved origins one fill question may carry.
+    private nonisolated static let fillBatchLimit = 1_024
+
+    // MARK: - Actions - Filling
+
+    /// Whether a password saved for each of `saved` fills a page at `page`, in
+    /// order, asked in core-sized batches. Throws the core's rejection when it
+    /// refuses the page's origin.
+    nonisolated func fills(_ page: CredentialOrigin, from saved: [CredentialOrigin]) throws(Rejection) -> [Bool] {
+        var fills: [Bool] = []
+        for start in stride(from: 0, to: saved.count, by: Self.fillBatchLimit) {
+            let batch = Array(saved[start..<min(start + Self.fillBatchLimit, saved.count)])
+            fills += try query(CredentialsFillingPage(page: page, saved: batch)).fills
+        }
+        return fills
+    }
 
     // MARK: - Actions - Recency
 

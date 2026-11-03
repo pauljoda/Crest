@@ -317,13 +317,17 @@ class ExtensionPopup final : public extensions::ExtensionView,
     [window_ setFrame:frame display:YES];
   }
 
-  // Transient like the popover it replaces: a click outside it, Escape, the
-  // window it belongs to moving, resizing or minimising, and Crest going to the
-  // background all dismiss it. The extension closing its own popup, the host
-  // being destroyed and the extension unloading come through the host.
+  // Transient like the popover it replaces: a click elsewhere in Crest, Escape,
+  // and the window it belongs to moving, resizing or minimising dismiss it.
+  // Crest going to the background does not, as in Chrome: the extension may be
+  // waiting on the system or another app, such as the Touch ID prompt its
+  // native host raised. The extension closing its own popup, the host being
+  // destroyed and the extension unloading come through the host.
   void Observe(NSWindow* parent) {
     auto weak = weak_factory_.GetWeakPtr();
     NSWindow* popup = window_;
+    NSView* __weak anchor = anchor_view_;
+    const NSRect anchor_rect = anchor_rect_;
     const NSEventMask clicks = NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown | NSEventMaskOtherMouseDown;
     monitors_ = @[
       [NSEvent addLocalMonitorForEventsMatchingMask:clicks | NSEventMaskKeyDown
@@ -334,11 +338,18 @@ class ExtensionPopup final : public extensions::ExtensionView,
           weak->Close();
           return nil;
         }
-        if (event.window != popup) weak->Close();
-        return event;
-      }],
-      [NSEvent addGlobalMonitorForEventsMatchingMask:clicks handler:^(NSEvent*) {
-        if (weak) weak->Close();
+        if (event.window == popup) return event;
+        // A click on the control that opened the popup only closes it. Let
+        // through, it would complete on that control and open the popup again.
+        // A Control-click goes through, as a right-click does, to open the
+        // control's menu.
+        NSView* source = anchor;
+        const bool on_source = event.type == NSEventTypeLeftMouseDown &&
+                               !(event.modifierFlags & NSEventModifierFlagControl) && source &&
+                               event.window == source.window &&
+                               NSPointInRect([source convertPoint:event.locationInWindow fromView:nil], anchor_rect);
+        weak->Close();
+        return on_source ? nil : event;
       }],
     ];
     NSMutableArray* observations = [NSMutableArray array];
@@ -349,9 +360,6 @@ class ExtensionPopup final : public extensions::ExtensionView,
                                       NSWindowDidMiniaturizeNotification, NSWindowWillCloseNotification])
       [observations addObject:[[NSNotificationCenter defaultCenter] addObserverForName:name object:parent
           queue:NSOperationQueue.mainQueue usingBlock:dismiss]];
-    [observations addObject:[[NSNotificationCenter defaultCenter]
-        addObserverForName:NSApplicationDidResignActiveNotification object:NSApp
-                     queue:NSOperationQueue.mainQueue usingBlock:dismiss]];
     observations_ = observations;
   }
 
@@ -965,6 +973,9 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
                                     extensions::CommandService::REGULAR, &named)) continue;
     for (const auto& [name, command] : named) {
       if (command.accelerator() != accelerator) continue;
+      // The extension may find its page as the active tab rather than read
+      // the one the command names, as a click on its button finds it.
+      crest::EngineBinding::Get().Browsers().Activate(contents);
       DeliverExtensionCommand(profile, *extension, name, contents);
       return [[CrestExtensionShortcutResult alloc] init];
     }
@@ -1326,6 +1337,16 @@ void EnsureCrestUIStarted(Browser* browser) {
   const crest_engine_pages_t pages = binding.Pages();
   const auto& fingerprint = crest::EngineBinding::Fingerprint();
   start([[CrestChromiumMacShell alloc] init], &table, fingerprint.data(), fingerprint.size(), &pages);
+  // A window that comes into use brings the page in use there with it: a page
+  // shown while its window was in the background did not come into use then.
+  [[NSNotificationCenter defaultCenter] addObserverForName:NSWindowDidBecomeKeyNotification object:nil
+      queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification* notification) {
+    if (State().disposing || State().quitting) return;
+    NSWindow* window = notification.object;
+    crest::EngineBinding::Get().Browsers().WindowInUse([window](content::WebContents* contents) {
+      return contents->GetTopLevelNativeWindow().GetNativeNSWindow() == window;
+    });
+  }];
   auto pending = std::move(State().pending_authentication_sessions);
   State().pending_authentication_sessions.clear();
   for (ASWebAuthenticationSessionRequest* request : pending) StartAuthenticationSession(request);

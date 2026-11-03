@@ -11,7 +11,8 @@ extension BrowserQuickWindowRequest {
             spaceAssignment: assignment,
             targetWindowID: targetWindowID,
             sourcePresentation: sourcePresentation,
-            openedPageID: openedPageID
+            openedPageID: openedPageID,
+            opensWherePersonIs: opensWherePersonIs
         )
     }
 }

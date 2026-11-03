@@ -33,6 +33,13 @@ SOURCE_NAME = re.compile(r"[0-9a-f]{20}")
 PREPARATION_FIELDS = ("chromium", "dependencies", "cipd", "crestPatches")
 ARCHIVE = "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
 CIPD = "https://chrome-infra-packages.appspot.com/prpc/cipd.Repository/ResolveVersion"
+# What gclient sets for a source-archive checkout on this host, as
+# prepare-chromium.py evaluates it. A DEPS below src is read as part of
+# Chromium, not as its own standalone checkout.
+DEPS_HOST = {"host_os": "mac", "host_cpu": "arm64", "checkout_mac": True, "checkout_arm64": True,
+             "non_git_source": True}
+DEPS_EMBEDDED = {"build_with_chromium": True, "dawn_standalone": False}
+CIPD_PLATFORM = {"platform": "mac-arm64", "os": "mac", "arch": "arm64"}
 
 
 def run(*args, cwd=None, capture=False):
@@ -370,19 +377,61 @@ def resolve_cipd(package, version):
     return instance["hexDigest"]
 
 
-def deps_cipd(deps_text, prefix):
-    """{checkout path: (package, version)} for the CIPD packages a DEPS file pins on this host."""
+def deps_cipd(deps_text, directory):
+    """{checkout path: [(package, version, version file)]} for the CIPD packages a DEPS file pins on this host.
+
+    `directory` is where the DEPS file sits in the checkout, such as "src/". An
+    entry whose condition is false on this host, such as an Android one, is not
+    part of this build. A version kept in a file comes back as that file's
+    checkout path, with no version, for the caller to read; any other form is
+    an error rather than a package left out.
+    """
     scope = {}
     exec(deps_text, {"Var": lambda name: "{" + name + "}", "Str": str}, scope)
-    variables = scope.get("vars", {})
+    variables = {**scope.get("vars", {}), **DEPS_HOST, **(DEPS_EMBEDDED if directory != "src/" else {})}
+
+    class Variables(dict):
+        def __missing__(self, _):
+            return False
+
+    def applies(condition):
+        return not condition or bool(eval(condition, {"__builtins__": {}}, Variables(variables)))
+
+    def expand(text):
+        text = re.sub(r"\$\{\{(\w+)\}\}", lambda match: CIPD_PLATFORM[match.group(1)], text)
+        return re.sub(r"\{(\w+)\}", lambda match: str(variables[match.group(1)]), text)
+
+    prefix = directory if scope.get("use_relative_paths") else ""
     packages = {}
     for path, dependency in scope["deps"].items():
-        if isinstance(dependency, dict) and dependency.get("dep_type") == "cipd":
-            for item in dependency["packages"]:
-                version = item["version"].format(**variables) if item["version"].startswith("{") else item["version"]
-                package = item["package"].replace("${{platform}}", "mac-arm64")
-                packages[prefix + path] = (package, version)
+        if not isinstance(dependency, dict) or dependency.get("dep_type") != "cipd":
+            continue
+        if not applies(dependency.get("condition")):
+            continue
+        for item in dependency["packages"]:
+            if "version" in item:
+                pinned = (expand(item["version"]), None)
+            elif "version_file" in item:
+                pinned = (None, directory + item["version_file"])
+            else:
+                raise ValueError(f"DEPS pins {prefix + path} in a form Crest does not read: {sorted(item)}")
+            packages.setdefault(prefix + path, []).append((expand(item["package"]), *pinned))
     return packages
+
+
+def archive_files(archive, version, paths):
+    """{checkout path: text} for files under src in the Chromium source archive."""
+    wanted = {f"chromium-{version}/{path.removeprefix('src/')}": path for path in paths}
+    found = {}
+    with tarfile.open(archive) as stream:
+        for member in stream:
+            if member.name in wanted and member.isfile():
+                found[wanted[member.name]] = stream.extractfile(member).read().decode()
+                if len(found) == len(wanted):
+                    break
+    if missing := sorted(set(paths) - set(found)):
+        raise ValueError(f"The source archive is missing {', '.join(missing)}")
+    return found
 
 
 def candidate_lock(repo, root, version):
@@ -407,31 +456,29 @@ def candidate_lock(repo, root, version):
         if sha256(archive) != checksums[0][0]:
             raise ValueError("Chromium source archive does not match its published manifest")
     # The archive's own DEPS names the CIPD tool versions and the PGO profile.
-    wanted = {f"chromium-{version}/DEPS": "",
-              f"chromium-{version}/third_party/dawn/DEPS": "src/third_party/dawn/",
-              f"chromium-{version}/third_party/devtools-frontend/src/DEPS": "src/third_party/devtools-frontend/src/",
-              f"chromium-{version}/chrome/build/mac-arm.pgo.txt": None}
-    found = {}
-    with tarfile.open(archive) as stream:
-        for member in stream:
-            if member.name in wanted and member.isfile():
-                found[member.name] = stream.extractfile(member).read().decode()
-                if len(found) == len(wanted):
-                    break
-    if len(found) != len(wanted):
-        raise ValueError("The source archive is missing its DEPS or PGO profile name")
+    deps = ("src/", "src/third_party/dawn/", "src/third_party/devtools-frontend/src/")
+    profile_file = "src/chrome/build/mac-arm.pgo.txt"
+    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + [profile_file])
     packages = {}
-    for name, prefix in wanted.items():
-        if prefix is not None:
-            packages.update(deps_cipd(found[name], prefix))
+    for directory in deps:
+        for path, entries in deps_cipd(found[directory + "DEPS"], directory).items():
+            packages.setdefault(path, []).extend(entries)
+    chosen = {}
     for path, pinned in lock["cipd"].items():
-        if path not in packages:
-            raise ValueError(f"DEPS no longer pins {path}")
-        package, package_version = packages[path]
+        entries = packages.get(path, [])
+        matching = [entry for entry in entries if entry[0] == pinned["package"]] or entries
+        if len(matching) != 1:
+            raise ValueError(f"DEPS pins several packages at {path}" if entries else f"DEPS no longer pins {path}")
+        chosen[path] = matching[0]
+    version_files = sorted({version_file for _, _, version_file in chosen.values() if version_file})
+    versions = archive_files(archive, version, version_files) if version_files else {}
+    for path, (package, package_version, version_file) in chosen.items():
+        package_version = versions[version_file].strip() if version_file else package_version
+        pinned = lock["cipd"][path]
         if (package, package_version) != (pinned["package"], pinned["version"]):
             lock["cipd"][path] = {"package": package, "version": package_version,
                                   "sha256": resolve_cipd(package, package_version)}
-    profile_name = found[f"chromium-{version}/chrome/build/mac-arm.pgo.txt"].strip()
+    profile_name = found[profile_file].strip()
     profile = download_profile(root, {"pgoProfile": profile_name})
     lock["performanceInputs"].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
     return lock

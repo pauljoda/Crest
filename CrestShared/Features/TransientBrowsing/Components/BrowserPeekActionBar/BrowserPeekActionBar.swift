@@ -3,14 +3,17 @@ import SwiftUI
 struct BrowserPeekActionBar: View {
     // MARK: - Static Variables
 
-    static let controlHeight: CGFloat = 48
-    private static let closeControlWidth: CGFloat = 206
     private static let openControlWidth: CGFloat = 206
     private static let controlSpacing: CGFloat = 10
 
+    /// The bar beside a pointer's card: the X and Open In at its own width.
     static var width: CGFloat {
-        closeControlWidth + controlSpacing + openControlWidth
+        BrowserPeekControlStyle.actionBar.height + controlSpacing + openControlWidth
     }
+
+    /// The widest a bar under a thumb grows, Open In taking the room the X
+    /// leaves it.
+    static let maximumWidth: CGFloat = 422
 
     // MARK: - Variables
 
@@ -20,9 +23,13 @@ struct BrowserPeekActionBar: View {
     let closeHelp: LocalizedStringKey
     let dismiss: () -> Void
     let openInSpace: (BrowserSpaceRuntimeAssignment) -> Void
+    /// Opens the card's link menu; no "…" without one.
+    var showLinkMenu: (() -> Void)? = nil
 
     var body: some View {
-        GlassEffectContainer(spacing: Self.controlSpacing) {
+        // Close, Open In and "…" stay separate pieces of glass, so Open In
+        // keeps its Space's tint rather than blending into theirs.
+        GlassEffectContainer(spacing: 0) {
             HStack(spacing: Self.controlSpacing) {
                 BrowserPeekCloseButton(
                     accessibilityLabel: closeAccessibilityLabel,
@@ -35,6 +42,10 @@ struct BrowserPeekActionBar: View {
                     selectedSpaceID: selectedSpaceID,
                     openInSpace: openInSpace
                 )
+
+                if let showLinkMenu {
+                    BrowserPeekMoreButton(show: showLinkMenu)
+                }
             }
             .labelStyle(.titleAndIcon)
         }

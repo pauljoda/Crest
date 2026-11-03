@@ -23,6 +23,12 @@ extension EnvironmentValues {
 /// the person is using, and lets go of what goes with each as it closes.
 @MainActor
 final class BrowserMacWindows {
+    // MARK: - Static Variables
+
+    /// How long a launch's reopened pages take to settle: a launch that ends
+    /// sooner asks whether to reopen them next time.
+    private static let reopenedPagesSettle: Duration = .seconds(60)
+
     // MARK: - Types
 
     /// A Quick Window's content, which answers for the window it shows in.
@@ -244,11 +250,43 @@ final class BrowserMacWindows {
 
     /// Opens the launch's windows back to front, each coming forward without
     /// focus, and the frontmost last, as the key window on the startup choice.
+    /// After a launch that ended while it reopened its pages, the person first
+    /// chooses whether to reopen them; if not, every window opens on the Start
+    /// Page, and its tabs wait in the sidebar.
     private func open(_ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key) {
         heldLaunch = nil
         application.startupWindowID = plan.startupWindowID
+        if plan.quitWhileReopening, !Self.reopensPagesAfterQuit() {
+            application.startPageWindowIDs = Set(plan.windowIDs)
+        }
+        beginReopeningPages()
         for id in plan.windowIDs {
             open(.reopening(id), activation: id == plan.startupWindowID ? activation : .background)
+        }
+        application.startPageWindowIDs = []
+    }
+
+    /// Asks whether to reopen the pages of the launch's windows, as macOS asks
+    /// of an app that quit while it reopened its windows. True to reopen them.
+    private static func reopensPagesAfterQuit() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Crest quit unexpectedly while reopening your pages.")
+        alert.informativeText = String(localized: "Do you want to try to reopen them?")
+        alert.addButton(withTitle: String(localized: "Reopen"))
+        alert.addButton(withTitle: String(localized: "Don’t Reopen"))
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    /// The launch starts showing its windows' pages. The core keeps that until
+    /// they settle or the person quits, so the next launch knows when this one
+    /// ended while they opened.
+    private func beginReopeningPages() {
+        let core = application.browser.core
+        _ = try? core.send(BeginReopeningPages())
+        Task { @MainActor in
+            try? await Task.sleep(for: Self.reopenedPagesSettle)
+            _ = try? core.send(FinishReopeningPages())
         }
     }
 
@@ -313,6 +351,9 @@ final class BrowserMacWindows {
         if let existing = quickWindows.first(where: { $0.value.request.value == request }),
             let controller = controller(.quick, id: existing.key)
         {
+            // A link another app hands Crest again opens where the person is
+            // now, which may be another display.
+            if request.opensWherePersonIs { BrowserQuickWindowGeometryHostView.moveWherePersonIs(controller.window) }
             controller.present(.key)
             return existing.key
         }
@@ -366,10 +407,34 @@ final class BrowserMacWindows {
                 .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
                 .modifier(BrowserChromeAppearancePersistence())
                 .environment(application.softwareUpdates)
+                .environment(\.browserSiteControlAnchor, application.siteControlAnchor)
+                // Open Location in a key Quick Window asks its own chrome,
+                // which the window answers by focusing its address field.
+                .environment(quickWindow.chrome)
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))
             },
             closed: { [weak self] controller in self?.quickWindowClosed(controller) })
         return request.id
+    }
+
+    /// Opens an empty Quick Window beside the key one, in its Space, which
+    /// opens its pages in the same browser window. The person asked for it,
+    /// so a Quick Window never needs a browser window in front to open another.
+    func openQuickWindowBesideKeyQuickWindow() {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID]
+        else { return }
+        let request = quickWindow.request.value
+        openQuickWindow(.empty(spaceAssignment: request.assignment, targetWindowID: request.targetWindowID))
+    }
+
+    /// Opens the key Quick Window's palette from its address field, which a
+    /// Quick Window without a page has no page commands to ask for.
+    func openLocationInKeyQuickWindow() {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID]
+        else { return }
+        quickWindow.chrome.openLocation(quickWindow.model.address)
     }
 
     /// The Quick Window named `id`, while it is open.

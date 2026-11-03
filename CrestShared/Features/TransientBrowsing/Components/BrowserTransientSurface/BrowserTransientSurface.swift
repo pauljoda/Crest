@@ -4,11 +4,10 @@ import SwiftUI
 /// standing on it.
 ///
 /// The card grows out of the link it came from. Where that growth is applied
-/// is the one thing the arrangement changes here — a pointer overlay grows the
-/// page alone and leaves its controls in place, a touch overlay grows the card
-/// and its controls together — and the state hands identity to whichever layer
-/// is not growing, so both run the same chain.
-struct BrowserTransientSurface<WebContent: View>: View {
+/// is the one thing the arrangement changes here — the card and its controls
+/// together, or the page alone — and the state hands identity to whichever
+/// layer is not growing, so every arrangement runs the same chain.
+struct BrowserTransientSurface<WebContent: View, LinkMenuAnchor: View>: View {
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus
     let spaces: [BrowserSpaceIdentity]
@@ -16,6 +15,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
     let vocabulary: BrowserTransientOverlayVocabulary
     let actions: BrowserTransientCardActions
     @ViewBuilder let webContent: () -> WebContent
+    /// The shell's control a Peek's link menu opens from.
+    @ViewBuilder let linkMenuAnchor: (BrowserPeekLinkMenuPresentation) -> LinkMenuAnchor
 
     var body: some View {
         // The stack's insets keep the card clear of the safe area, so the
@@ -49,6 +50,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
                 BrowserTransientScrim(
                     opacity: state.scrimOpacity,
                     allowsDismissal: state.arrangement.allowsScrimDismissal,
+                    insets: state.scrimInsets,
+                    fadesIn: state.arrangement.fadesScrim,
                     dismiss: actions.dismiss
                 )
                 BrowserTransientCardStack(
@@ -60,7 +63,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
                     availableSize: proxy.size,
                     safeAreaInsets: safeAreaInsets,
                     actions: actions,
-                    webContent: webContent
+                    webContent: webContent,
+                    linkMenuAnchor: linkMenuAnchor
                 )
                 .scaleEffect(
                     x: assemblyScale.width,
@@ -75,5 +79,22 @@ struct BrowserTransientSurface<WebContent: View>: View {
 
     private var assemblyScale: CGSize {
         state.scale(for: .assembly)
+    }
+}
+
+extension BrowserTransientSurface where LinkMenuAnchor == EmptyView {
+    /// A surface whose card has no link menu.
+    init(
+        state: BrowserTransientPresentationState,
+        pageStatus: BrowserTransientPageStatus,
+        spaces: [BrowserSpaceIdentity],
+        selectedSpaceID: UUID,
+        vocabulary: BrowserTransientOverlayVocabulary,
+        actions: BrowserTransientCardActions,
+        @ViewBuilder webContent: @escaping () -> WebContent
+    ) {
+        self.init(
+            state: state, pageStatus: pageStatus, spaces: spaces, selectedSpaceID: selectedSpaceID,
+            vocabulary: vocabulary, actions: actions, webContent: webContent, linkMenuAnchor: { _ in EmptyView() })
     }
 }

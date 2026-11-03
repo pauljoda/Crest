@@ -6,7 +6,7 @@ import SwiftUI
 /// the card the controls sit on and how large the card is allowed to be.
 /// Everything an arrangement does not use resolves to identity, so all three
 /// walk the same chain.
-struct BrowserTransientCardStack<WebContent: View>: View {
+struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus
     let spaces: [BrowserSpaceIdentity]
@@ -16,6 +16,13 @@ struct BrowserTransientCardStack<WebContent: View>: View {
     let safeAreaInsets: EdgeInsets
     let actions: BrowserTransientCardActions
     @ViewBuilder let webContent: () -> WebContent
+    /// The shell's control the link menu opens from, under the card.
+    @ViewBuilder let linkMenuAnchor: (BrowserPeekLinkMenuPresentation) -> LinkMenuAnchor
+
+    /// Whether the card is the preview above its link menu.
+    @State private var showsLinkMenu = false
+    /// Counts the times the person opened the link menu.
+    @State private var linkMenuRequest = 0
 
     var body: some View {
         VStack(
@@ -30,7 +37,15 @@ struct BrowserTransientCardStack<WebContent: View>: View {
                 actionBar
             }
         }
-        .padding(arrangement.contentInsets(safeAreaInsets: safeAreaInsets))
+        // A card the person pulls carries its controls with it as it grows
+        // and springs into place.
+        .modifier(
+            BrowserTransientMotionTransform(
+                state: state.motionState, containerSize: availableSize, reduceMotion: state.reduceMotion
+            )
+        )
+        // The page's frame is the part of the overlay the scrim dims.
+        .padding(arrangement.contentInsets(safeAreaInsets: safeAreaInsets, pageInsets: state.scrimInsets))
         .modifier(BrowserTransientContentRegion(region: contentRegion))
     }
 
@@ -45,11 +60,32 @@ struct BrowserTransientCardStack<WebContent: View>: View {
             closeAccessibilityLabel: vocabulary.closeAccessibilityLabel,
             closeHelp: vocabulary.closeHelp,
             dismiss: actions.dismiss,
-            openInSpace: actions.promote
+            openInSpace: actions.promote,
+            showLinkMenu: linkMenuOpener
         )
         .modifier(BrowserTransientControlBarWidth(arrangement: arrangement))
-        .opacity(state.controlsOpacity)
-        .allowsHitTesting(state.isCardExpanded)
+        .opacity(showsLinkMenu ? 0 : state.controlsOpacity)
+        .allowsHitTesting(state.isCardExpanded && !showsLinkMenu)
+    }
+
+    /// Opens the link menu, where the shell offers one.
+    private var linkMenuOpener: (() -> Void)? {
+        guard actions.linkMenu != nil else { return nil }
+        return { showLinkMenu() }
+    }
+
+    /// The card shrinks to the preview above its link menu as the menu opens.
+    private func showLinkMenu() {
+        linkMenuRequest += 1
+        withAnimation(CrestMotion.peekLinkMenu.unlessReducingMotion(state.reduceMotion)) {
+            showsLinkMenu = true
+        }
+    }
+
+    private func hideLinkMenu() {
+        withAnimation(CrestMotion.peekLinkMenu.unlessReducingMotion(state.reduceMotion)) {
+            showsLinkMenu = false
+        }
     }
 
     private var pageCard: some View {
@@ -70,9 +106,14 @@ struct BrowserTransientCardStack<WebContent: View>: View {
         )
         .opacity(state.opacity(for: .pageCard))
         .modifier(
-            BrowserTransientMotionTransform(
-                state: state.motionState, containerSize: availableSize, reduceMotion: state.reduceMotion
-            ))
+            BrowserPeekLinkMenuPreview(menuSize: actions.linkMenu?.size, isShowing: showsLinkMenu) { width in
+                if let menu = actions.linkMenu {
+                    linkMenuAnchor(
+                        BrowserPeekLinkMenuPresentation(menu: menu, request: linkMenuRequest, didEnd: hideLinkMenu)
+                    )
+                    .frame(width: min(menu.size.width, width), height: menu.size.height)
+                }
+            })
     }
 
     /// The region the stack is laid out inside, once the shell's own leading
@@ -127,13 +168,50 @@ private struct BrowserTransientContentRegion: ViewModifier {
     }
 }
 
+/// The card as the preview above its link menu: the same card, scaled down
+/// from its top as large as leaves the menu room below it, as the system's
+/// link preview sits above its menu. The menu opens from beneath the scaled
+/// card, lined up with its leading edge.
+private struct BrowserPeekLinkMenuPreview<Anchor: View>: ViewModifier {
+    private static var largestScale: CGFloat { 0.66 }
+    private static var menuGap: CGFloat { 12 }
+
+    let menuSize: CGSize?
+    let isShowing: Bool
+    /// The menu's control, given the scaled card's width.
+    @ViewBuilder let anchor: (CGFloat) -> Anchor
+
+    @State private var size = CGSize.zero
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGSize.self) { proxy in
+                proxy.size
+            } action: { newSize in
+                size = newSize
+            }
+            .scaleEffect(isShowing ? scale : 1, anchor: .top)
+            .overlay(alignment: .top) {
+                anchor(size.width * scale)
+                    .frame(width: size.width * scale, alignment: .leading)
+                    .offset(y: size.height * scale + Self.menuGap)
+                    .allowsHitTesting(false)
+            }
+    }
+
+    private var scale: CGFloat {
+        guard let menuSize, size.height > 0 else { return 1 }
+        return max(0, min(Self.largestScale, (size.height - menuSize.height - 2 * Self.menuGap) / size.height))
+    }
+}
+
 private struct BrowserTransientControlBarWidth: ViewModifier {
     let arrangement: BrowserTransientCardArrangement
 
     func body(content: Content) -> some View {
         if arrangement.constrainsControlBarToMaximumWidth {
             content
-                .frame(maxWidth: BrowserPeekActionBar.width)
+                .frame(maxWidth: BrowserPeekActionBar.maximumWidth)
                 .padding(arrangement.controlBarPadding)
         } else {
             content.frame(width: BrowserPeekActionBar.width)

@@ -57,8 +57,8 @@ extension BrowserPlatformPage {
         let decision =
             webKitPage?.linkActivation(to: navigationAction.request.url, gesture: navigationAction.linkGesture)
             ?? .navigate
-        // A modified click keeps its initiator's referrer through a staged
-        // request; a saved-site Peek starts afresh, as it does on Chromium.
+        // A Peek keeps its link's referrer through a staged request, as it
+        // does on Chromium.
         let engineNavigation = decision.stagesLink ? webKitPage?.stageLink(navigationAction.request) : nil
         if let request = decision.peekRequest(
             destinationURL: navigationAction.request.url,

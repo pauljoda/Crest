@@ -25,8 +25,19 @@ struct BrowserCommandPaletteCard: View {
     let restingWidth: CGFloat?
     let queryIsFocused: FocusState<Bool>.Binding
 
+    /// How much taller than its minimum the input line has grown at a larger
+    /// text size.
+    @State private var fieldExcessHeight: CGFloat = 0
+    /// How tall the provider chips' row is, which a larger text size makes
+    /// taller than its least height.
+    @State private var chipRowHeight = BrowserCommandPaletteMetrics.providerChipRowHeight
+
     /// Whether the card has arrived, rather than growing in or shrinking away.
     private var isSettled: Bool { transitionPhase.isIdentity }
+
+    /// The edge the query row sits on, which shows first as the card grows.
+    private var queryEdge: UnitPoint { presentation.listsUpward ? .bottom : .top }
+    private var queryAlignment: Alignment { presentation.listsUpward ? .bottom : .top }
 
     /// The identity the card shares with its Space's address field.
     private var morph: BrowserCommandSurfaceMorph? {
@@ -50,12 +61,12 @@ struct BrowserCommandPaletteCard: View {
                     $0.opacity(isSettled ? 1 : 0)
                         .scaleEffect(
                             isSettled ? 1 : BrowserCommandPaletteMetrics.morphContentScale,
-                            anchor: .top
+                            anchor: queryEdge
                         )
                 }
                 // Takes whatever frame the morph proposes. The resting
-                // contents overflow it from the top, where the query row is.
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+                // contents overflow it from the query row's edge.
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: queryAlignment)
                 .modifier(
                     BrowserCommandPaletteShellMaterial(
                         shape: morphingShape,
@@ -95,49 +106,87 @@ struct BrowserCommandPaletteCard: View {
     }
 
     /// The field, the provider chips while what is typed names some, and the
-    /// results. An overlay card keeps one height whatever the results, so it
-    /// never moves as they change; the chips take their room from the results.
+    /// results, which a palette rising from the bottom of the screen lists
+    /// above the field. An overlay card keeps one height whatever the results,
+    /// so it never moves as they change; the chips take their room from the
+    /// results.
     private var contents: some View {
         VStack(spacing: 0) {
-            BrowserCommandPaletteSearchField(
-                model: model,
-                presentation: presentation,
-                queryIsFocused: queryIsFocused
-            )
-
-            if !model.providerChips.isEmpty {
-                BrowserCommandPaletteProviderChips(model: model)
-            }
-
-            if keepsHeight || !model.groups.isEmpty {
-                Divider()
-                BrowserCommandPaletteResultList(
-                    model: model,
-                    maximumResultAreaHeight: resultAreaHeight,
-                    fillsHeight: keepsHeight
-                )
+            if presentation.listsUpward {
+                if showsResults {
+                    results
+                    Divider()
+                }
+                chips
+                field
+            } else {
+                field
+                chips
+                if showsResults {
+                    Divider()
+                    results
+                }
             }
         }
     }
+
+    private var field: some View {
+        BrowserCommandPaletteSearchField(
+            model: model,
+            presentation: presentation,
+            queryIsFocused: queryIsFocused
+        )
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            fieldExcessHeight = max(0, $0 - presentation.input.minimumHeight)
+        }
+    }
+
+    @ViewBuilder
+    private var chips: some View {
+        if !model.providerChips.isEmpty {
+            BrowserCommandPaletteProviderChips(model: model)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    chipRowHeight = $0
+                }
+        }
+    }
+
+    private var results: some View {
+        BrowserCommandPaletteResultList(
+            model: model,
+            maximumResultAreaHeight: resultAreaHeight,
+            fillsHeight: keepsHeight,
+            listsUpward: presentation.listsUpward
+        )
+    }
+
+    private var showsResults: Bool { keepsHeight || !model.groups.isEmpty }
 
     /// Lifts an overlay card off a page its scrim leaves undimmed.
     private func liftedShadow(shape: RoundedRectangle) -> some View {
         CrestLiftedSurfaceShadow(
             cornerRadius: shape.cornerSize.width,
-            opacity: presentation == .overlay && !dimsPage ? BrowserCommandPaletteMetrics.liftedShadowOpacity : 0,
+            opacity: presentation.centersOverWindow && !dimsPage ? BrowserCommandPaletteMetrics.liftedShadowOpacity : 0,
             radius: BrowserCommandPaletteMetrics.liftedShadowRadius,
             yOffset: BrowserCommandPaletteMetrics.liftedShadowYOffset
         )
     }
 
     /// Whether the card keeps one height while its results change.
-    private var keepsHeight: Bool { presentation == .overlay }
+    private var keepsHeight: Bool { presentation.keepsHeight }
 
     /// The height the results may take, less what the provider chips take
-    /// from a card that keeps its height.
+    /// from a card that keeps its height or fills what its field leaves it,
+    /// and less what a larger text size adds to that field's input line.
     private var resultAreaHeight: CGFloat {
-        guard keepsHeight, !model.providerChips.isEmpty else { return maximumResultAreaHeight }
-        return max(0, maximumResultAreaHeight - BrowserCommandPaletteMetrics.providerChipRowHeight)
+        guard keepsHeight || presentation.growsFromField else { return maximumResultAreaHeight }
+        let chips = model.providerChips.isEmpty ? 0 : chipRowHeight
+        let grownField = presentation.growsFromField ? fieldExcessHeight : 0
+        return max(0, maximumResultAreaHeight - chips - grownField)
     }
 
     /// The card's own outline at rest, and the field's while the card is
@@ -152,10 +201,7 @@ struct BrowserCommandPaletteCard: View {
     }
 
     private var restingShape: RoundedRectangle {
-        RoundedRectangle(
-            cornerRadius: BrowserCommandPaletteMetrics.cardCornerRadius,
-            style: .continuous
-        )
+        RoundedRectangle(cornerRadius: presentation.cornerRadius, style: .continuous)
     }
 
     /// The contents appear once the frame has nearly settled, and clear
