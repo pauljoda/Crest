@@ -94,10 +94,10 @@ final class MobileBrowserInteropTests: XCTestCase {
         // The file comes from another site, as a release page's files come
         // from its CDN.
         let fileURL = try XCTUnwrap(URL(string: "http://127.0.0.1:\(port)/\(filename)"))
-        let profile = BrowsingProfile()
+        let profileID = UUID()
         let tab = TabState.Seed(title: "Release", url: nil, placement: .current)
         let space = SpaceState.Seed(
-            profileID: profile.id,
+            profileID: profileID,
             name: "Download Space",
             symbol: "arrow.down.circle",
             accent: .teal,
@@ -142,7 +142,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             center.items.contains { $0.phase != .preparing }
         }
         XCTAssertEqual(center.items.first?.phase, .blockedAutomaticDownload)
-        await Self.removeDataStore(profile.id)
+        await Self.removeDataStore(profileID)
     }
 
     private func waitUntil(

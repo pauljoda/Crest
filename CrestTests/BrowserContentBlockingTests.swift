@@ -50,7 +50,7 @@ final class BrowserContentBlockingTests: XCTestCase {
                 browser.openWebKitPage(in: space.id, for: try XCTUnwrap(space.tabs.first).id))
             defer { opener.core.release(keepingState: false) }
             let configuration = BrowserPageConfiguration.make(
-                for: BrowsingProfile(id: space.profileID),
+                forProfile: space.profileID,
                 websiteDataStore: .nonPersistent(),
                 contentRuleList: crestRuleList
             )

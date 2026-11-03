@@ -5001,6 +5001,10 @@
     "mobile-export-through-engine": {
       "category": "fixed",
       "message": "On iPhone and iPad, exporting a page as a PDF or saving it as a web archive now makes the document the same way Crest on Mac does."
+    },
+    "remove-unused-setup-and-profile-code": {
+      "category": "internal",
+      "message": "Remove the Mac branch of the iPhone and iPad Space setup, an unused passkey type and the profile wrapper around an identifier."
     }
   }
 }

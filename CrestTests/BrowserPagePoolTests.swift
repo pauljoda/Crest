@@ -601,8 +601,8 @@ private final class RecordingWebsiteDataStoreRemover:
 {
     private(set) var removedProfileIDs: [UUID] = []
 
-    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
-        removedProfileIDs.append(profile.id)
+    func removeProfile(_ profileID: UUID, ephemeral: Bool) async throws {
+        removedProfileIDs.append(profileID)
     }
 }
 

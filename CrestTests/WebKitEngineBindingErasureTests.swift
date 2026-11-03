@@ -29,8 +29,8 @@ private final class ErasingProfileStores: BrowserEngineProfileRemoving {
     private(set) var erased: [(id: UUID, ephemeral: Bool)] = []
     var fails = false
 
-    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
+    func removeProfile(_ profileID: UUID, ephemeral: Bool) async throws {
         if fails { throw CancellationError() }
-        erased.append((profile.id, ephemeral))
+        erased.append((profileID, ephemeral))
     }
 }

@@ -281,7 +281,7 @@ final class WebKitEngineBinding: EngineBinding {
         let configuration =
             popup?.configuration
             ?? BrowserPageConfiguration.make(
-                for: BrowsingProfile(id: creation.profileID),
+                forProfile: creation.profileID,
                 websiteDataStore: store(for: creation),
                 contentRuleLists: contentRuleLists,
                 preferredContentMode: BrowserPlatformWebKit.preferredContentMode,
@@ -331,7 +331,7 @@ final class WebKitEngineBinding: EngineBinding {
         }
         liveStores = liveStores.filter { $0.value.value != nil }
         if let store = liveStores[profileID]?.value { return store }
-        let store = BrowserWebsiteDataStore.persistent(for: BrowsingProfile(id: profileID))
+        let store = BrowserWebsiteDataStore.persistent(forProfile: profileID)
         liveStores[profileID] = WeakStore(value: store)
         return store
     }
