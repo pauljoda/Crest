@@ -6,29 +6,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.147</title>
-            <pubDate>Mon, 02 Nov 2026 23:46:52 +0000</pubDate>
+            <title>0.8.148</title>
+            <pubDate>Tue, 03 Nov 2026 01:58:29 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1484</sparkle:version>
-            <sparkle:shortVersionString>0.8.147</sparkle:shortVersionString>
+            <sparkle:version>1485</sparkle:version>
+            <sparkle:shortVersionString>0.8.148</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### Improved
+
+- On Mac, a Quick Window that opens where another already is opens a little below and to the right of it, so both stay in view.
+
 ### Fixed
 
-- On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them.
+- On Mac, a Quick Window for a link from another app opens over the window you're in and on its display, instead of over a Crest window that may be on another display, and comes to the Space you're on.
+- On Mac, Command-` (Move focus to next window) moves between Crest's windows, Quick Windows included, when a Chromium page has focus.
+- On Mac, a link from another app that opens a Quick Window already open for it brings that Quick Window to the window you're in, and Quick Windows opening at a screen's edge no longer open on top of each other.
+- On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/6ca83ecf0eb7c8977d27f476711aae614a77681b...91c3a579e781c972bcc6c9c711b77ab405876134) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.147-2026-11-02-1484-r484.1/Installer-Crest-0.8.147-development-2026-11-02-91c3a57-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/91c3a579e781c972bcc6c9c711b77ab405876134...c1f44653b48138ab44967ed84ccb7d7c213ff897) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.148-2026-11-03-1485-r485.1/Installer-Crest-0.8.148-development-2026-11-03-c1f4465-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.147-2026-11-02-1484-r484.1/Installer-Crest-0.8.147-development-2026-11-02-91c3a57-arm64.dmg" length="216818843" type="application/octet-stream" sparkle:edSignature="2vGmSyjFEl/uohNxGugCDEWS8FL2icyZsAWpsxS1QAnggiSFc113bCcDhOK4znoeW7ulY4HbhmpnMMvJPn6vDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.148-2026-11-03-1485-r485.1/Installer-Crest-0.8.148-development-2026-11-03-c1f4465-arm64.dmg" length="216780954" type="application/octet-stream" sparkle:edSignature="C++2+XuSgbjdNV2nCT1miZG+3WAW3rVf2ZfmELDDi/5wu6RyGtnfUuCxo1LQY33nHxHDyhp6Knt+rFWwfErOAg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +67,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Z0cr+6KCxOjbmXsQkvDHDcpcr8++fJY17JTJTVujDrXGoVJpj/bnstweRqEcNT8NhWuc5DfNmM2DCRekN+dbDQ==
-length: 4045
+edSignature: G5mC01VPYtqEOH/l8q67IUVU4to74Vw4QoKVJ0tkWKtH8qeoVOTvuDyNJ8rc1kb5cf+bUmnoVW5FG/pyTpKeBA==
+length: 4712
 -->
