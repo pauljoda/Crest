@@ -52,6 +52,35 @@ struct BrowserTransientCardActions {
 
     /// Rebuilds a page released under memory pressure.
     let restore: () -> Void
+
+    /// The menu a "…" beside the card opens, as the system's menu for a link
+    /// does; none where the shell has no such menu.
+    var linkMenu: BrowserPeekLinkMenu? = nil
+}
+
+/// A Peek's link menu: its actions, and the room the shell measures the
+/// system's menu for them to take.
+@MainActor
+struct BrowserPeekLinkMenu {
+    let items: [BrowserPeekLinkMenuItem]
+    let size: CGSize
+}
+
+/// One action of a Peek's link menu: its title, its SF Symbol and what it does.
+@MainActor
+struct BrowserPeekLinkMenuItem {
+    let title: String
+    let systemImage: String
+    let perform: () -> Void
+}
+
+/// A link menu the person opened, for the shell's own control to show: the
+/// menu, how many times it was asked for, and what tells the card it closed.
+@MainActor
+struct BrowserPeekLinkMenuPresentation {
+    let menu: BrowserPeekLinkMenu
+    let request: Int
+    let didEnd: () -> Void
 }
 
 struct BrowserTransientPageSnapshot: Equatable, Sendable {
