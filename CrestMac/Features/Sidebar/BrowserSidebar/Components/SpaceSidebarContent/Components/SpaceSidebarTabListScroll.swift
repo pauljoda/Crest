@@ -14,7 +14,9 @@ import SwiftUI
 /// The list's sections are stacked as they are: each makes its own rows lazily,
 /// and a lazy stack around them would size every section from an estimate,
 /// which with the section's own lazy rows inside could keep the sidebar's
-/// layout from ever settling.
+/// layout from ever settling. The stack keeps each section at its own height,
+/// so the room left below them goes to `background` and never to a row that
+/// can stretch, such as the new-tab row.
 struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -32,6 +34,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                     VStack(spacing: 0) {
                         content()
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     .sidebarScrollContent()
 
                     background()

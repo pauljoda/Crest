@@ -144,6 +144,15 @@ extension MobileBrowserPage: WKNavigationDelegate {
         discardDownloadOnlySurfaceIfNeeded()
     }
 
+    /// Downloads `url` because the person chose to from a link's menu.
+    func downloadLinkedFile(_ url: URL) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let download = await webView.startDownload(using: URLRequest(url: url))
+            webKitPage.startDownload(download, isUserInitiated: true)
+        }
+    }
+
     /// Hands a download the page's web view started to WebKit's binding, which
     /// runs it as the engine's own, and shows it leaving from where the
     /// person started it. Only Crest's trusted activation bridge counts it as
