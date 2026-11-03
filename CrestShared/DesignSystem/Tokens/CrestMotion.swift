@@ -99,6 +99,8 @@ enum CrestMotion {
     static let feedbackPresentationTransition: TimeInterval = 0.22
     /// Dismissing a Peek card back into browser chrome.
     static let peekDismissalTransition: TimeInterval = 0.22
+    /// Shrinking a Peek's card into the preview above its link menu, and back.
+    static let peekLinkMenuTransition: TimeInterval = 0.36
     /// Revealing one destination in the utility fan.
     static let utilityFanRevealTransition: TimeInterval = 0.42
     /// The complete press-and-return cycle for reload feedback.
@@ -181,6 +183,7 @@ enum CrestMotion {
         .snappy(duration: feedbackPresentationTransition)
     }
     static var peekDismissal: Animation { .snappy(duration: peekDismissalTransition) }
+    static var peekLinkMenu: Animation { .smooth(duration: peekLinkMenuTransition) }
     static var utilityFanReveal: Animation {
         .smooth(duration: utilityFanRevealTransition, extraBounce: 0.05)
     }

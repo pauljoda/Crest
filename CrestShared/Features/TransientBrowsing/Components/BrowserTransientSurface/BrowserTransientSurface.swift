@@ -7,7 +7,7 @@ import SwiftUI
 /// is the one thing the arrangement changes here — the card and its controls
 /// together, or the page alone — and the state hands identity to whichever
 /// layer is not growing, so every arrangement runs the same chain.
-struct BrowserTransientSurface<WebContent: View>: View {
+struct BrowserTransientSurface<WebContent: View, LinkMenuAnchor: View>: View {
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus
     let spaces: [BrowserSpaceIdentity]
@@ -15,6 +15,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
     let vocabulary: BrowserTransientOverlayVocabulary
     let actions: BrowserTransientCardActions
     @ViewBuilder let webContent: () -> WebContent
+    /// The shell's control a Peek's link menu opens from.
+    @ViewBuilder let linkMenuAnchor: (BrowserPeekLinkMenuPresentation) -> LinkMenuAnchor
 
     var body: some View {
         // The stack's insets keep the card clear of the safe area, so the
@@ -61,7 +63,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
                     availableSize: proxy.size,
                     safeAreaInsets: safeAreaInsets,
                     actions: actions,
-                    webContent: webContent
+                    webContent: webContent,
+                    linkMenuAnchor: linkMenuAnchor
                 )
                 .scaleEffect(
                     x: assemblyScale.width,
@@ -76,5 +79,22 @@ struct BrowserTransientSurface<WebContent: View>: View {
 
     private var assemblyScale: CGSize {
         state.scale(for: .assembly)
+    }
+}
+
+extension BrowserTransientSurface where LinkMenuAnchor == EmptyView {
+    /// A surface whose card has no link menu.
+    init(
+        state: BrowserTransientPresentationState,
+        pageStatus: BrowserTransientPageStatus,
+        spaces: [BrowserSpaceIdentity],
+        selectedSpaceID: UUID,
+        vocabulary: BrowserTransientOverlayVocabulary,
+        actions: BrowserTransientCardActions,
+        @ViewBuilder webContent: @escaping () -> WebContent
+    ) {
+        self.init(
+            state: state, pageStatus: pageStatus, spaces: spaces, selectedSpaceID: selectedSpaceID,
+            vocabulary: vocabulary, actions: actions, webContent: webContent, linkMenuAnchor: { _ in EmptyView() })
     }
 }
