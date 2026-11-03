@@ -387,12 +387,12 @@ void EnginePrompts::WithdrawShare(const engine::Guid& id) {
 
 // Extension installs.
 
-void EnginePrompts::AskToInstall(const engine::Guid& window,
+void EnginePrompts::AskToInstall(const engine::Guid& install,
                                  engine::ExtensionInstallQuestion question,
                                  InstallReply reply) {
   const engine::Guid id = RandomGuid();
   installs_[id] = std::move(reply);
-  report_.Run(engine::ExtensionInstallRequested{.prompt_id = id, .window_id = window, .question = std::move(question)});
+  report_.Run(engine::ExtensionInstallRequested{.prompt_id = id, .install_id = install, .question = std::move(question)});
 }
 
 bool EnginePrompts::Settle(const engine::SettleExtensionInstall& settlement) {

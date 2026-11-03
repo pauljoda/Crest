@@ -26,6 +26,7 @@
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
 #include "chrome/browser/ui/crest/crest_engine_prompts.h"
 #include "chrome/browser/ui/crest/crest_engine_screen_sharing.h"
+#include "chrome/browser/ui/crest/crest_engine_store.h"
 #include "chrome/browser/ui/crest/crest_engine_tab_groups.h"
 #include "components/password_manager/core/common/password_manager_pref_names.h"
 #include "components/prefs/pref_service.h"
@@ -268,6 +269,7 @@ void EngineBinding::Dispose() {
   }
   offers_.clear();
   staged_links_.clear();
+  installs_.reset();
   extensions_.reset();
   prompts_.reset();
   notifications_.reset();
@@ -398,6 +400,49 @@ void EngineBinding::Handle(const engine::SettlePermission& command) {
 
 void EngineBinding::Handle(const engine::SettleExtensionInstall& command) {
   Prompts().Settle(command);
+}
+
+// A Space's profile loads for the core's listing when nothing has loaded it
+// yet, and its extensions are followed from then on.
+void EngineBinding::Handle(const engine::ListEngineExtensions& command) {
+  const std::string id = GuidText(command.profile_id);
+  Profiles().Prepare(id, base::BindOnce(
+                             [](base::WeakPtr<EngineBinding> binding, std::string id, bool ready) {
+                               if (!binding || binding->disposing_ || !ready) {
+                                 return;
+                               }
+                               if (Profile* profile = binding->Profiles().Find(id)) {
+                                 binding->Extensions().List(profile, id);
+                               }
+                             },
+                             weak_factory_.GetWeakPtr(), id));
+}
+
+void EngineBinding::Handle(const engine::ChangeEngineExtension& command) {
+  const std::string id = GuidText(command.profile_id);
+  Profiles().Prepare(id, base::BindOnce(
+                             [](base::WeakPtr<EngineBinding> binding, std::string id, engine::ChangeEngineExtension command,
+                                bool ready) {
+                               if (!binding || binding->disposing_ || !ready) {
+                                 return;
+                               }
+                               if (Profile* profile = binding->Profiles().Find(id)) {
+                                 binding->Extensions().Change(profile, command.extension_id, command.change);
+                               }
+                             },
+                             weak_factory_.GetWeakPtr(), id, command));
+}
+
+void EngineBinding::Handle(const engine::DownloadExtension& command) {
+  Installs().Download(command);
+}
+
+void EngineBinding::Handle(const engine::InstallExtensionPackage& command) {
+  Installs().Install(command);
+}
+
+void EngineBinding::Handle(const engine::EndExtensionInstall& command) {
+  Installs().End(command);
 }
 
 void EngineBinding::Handle(const engine::SettleDownloadDestination& command) {
@@ -1048,6 +1093,7 @@ EngineExtensions& EngineBinding::Extensions() {
   if (!extensions_) {
     extensions_ = std::make_unique<EngineExtensions>(
         base::BindRepeating(&EngineBinding::Present, base::Unretained(this)),
+        base::BindRepeating(&EngineBinding::Report, base::Unretained(this)),
         base::BindRepeating(
             [](EngineBinding* binding, Profile* profile, const std::string& extension, std::optional<int> tab) {
               if (binding->shell_ && !binding->disposing_) {
@@ -1058,6 +1104,13 @@ EngineExtensions& EngineBinding::Extensions() {
         base::BindRepeating(&EngineBinding::RefreshStoreListings, base::Unretained(this)));
   }
   return *extensions_;
+}
+
+ExtensionInstalls& EngineBinding::Installs() {
+  if (!installs_) {
+    installs_ = std::make_unique<ExtensionInstalls>(*this);
+  }
+  return *installs_;
 }
 
 EnginePrompts& EngineBinding::Prompts() {
@@ -1198,15 +1251,10 @@ engine::ExtensionActionList EngineBinding::Handle(const engine::PinnedExtensions
   return profile ? Extensions().Pinned(profile, profile_id) : engine::ExtensionActionList{};
 }
 
-engine::InstalledExtensionList EngineBinding::Handle(const engine::InstalledExtensions& request) {
+engine::ExtensionIconList EngineBinding::Handle(const engine::ExtensionIcons& request) {
   const std::string profile_id = GuidText(request.profile_id);
   Profile* profile = disposing_ ? nullptr : Profiles().Find(profile_id);
-  return profile ? Extensions().Installed(profile, profile_id) : engine::InstalledExtensionList{};
-}
-
-bool EngineBinding::Handle(const engine::ChangeExtension& request) {
-  Profile* profile = disposing_ ? nullptr : Profiles().Find(GuidText(request.profile_id));
-  return profile && Extensions().Change(profile, request.extension_id, request.change);
+  return profile ? Extensions().Icons(profile, profile_id) : engine::ExtensionIconList{};
 }
 
 engine::SidePanelScope EngineBinding::Handle(const engine::HasSidePanel& request) {
@@ -1236,28 +1284,6 @@ bool EngineBinding::Handle(const engine::AnswerWebNotification& request) {
 
 bool EngineBinding::Handle(const engine::AnswerProfileNotification& request) {
   return Notifications().Answer(request);
-}
-
-// A Space's profile loads before anything opens in it, so its extensions
-// can be listed; its extensions are followed from then on.
-bool EngineBinding::Handle(const engine::PrepareProfile& request) {
-  if (disposing_) {
-    return false;
-  }
-  const std::string id = GuidText(request.profile_id);
-  Profiles().Prepare(id, base::BindOnce(
-                             [](base::WeakPtr<EngineBinding> binding, std::string id, engine::Guid preparation,
-                                bool ready) {
-                               if (!binding) {
-                                 return;
-                               }
-                               if (ready) {
-                                 binding->Extensions().For(binding->Profiles().Find(id), id);
-                               }
-                               binding->Present(engine::ProfilePrepared{.preparation_id = preparation, .ready = ready});
-                             },
-                             weak_factory_.GetWeakPtr(), id, request.preparation_id));
-  return true;
 }
 
 // Its pages, Browsers and extensions go at once; its data after, loaded

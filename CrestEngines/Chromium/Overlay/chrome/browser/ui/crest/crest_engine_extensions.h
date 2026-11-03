@@ -6,6 +6,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
@@ -59,6 +60,7 @@ class ProfileExtensions final : public extensions::ExtensionRegistryObserver,
   gfx::Image IconFor(const extensions::Extension& extension, extensions::ExtensionAction* action, int tab);
   // Whether an extension still has the files it was installed from.
   bool IsAvailable(const extensions::Extension& extension, extensions::ExtensionAction* action);
+  Profile* profile() const { return profile_; }
 
   // extensions::ExtensionRegistryObserver:
   void OnExtensionLoaded(content::BrowserContext* context, const extensions::Extension* extension) override;
@@ -105,14 +107,16 @@ class ProfileExtensions final : public extensions::ExtensionRegistryObserver,
   std::map<std::string, bool> availability_;
 };
 
-// The binding's extensions: each profile's, what the toolbar and Settings list
-// of them, and what the person changes. A profile's changes are presented
-// once each turn.
+// The binding's extensions: each profile's, what the toolbar lists of them,
+// what the core lists for Settings, and the changes the core makes. A
+// profile's changes are presented once each turn, and a profile the core
+// lists is reported to it again whenever what it lists changed.
 class EngineExtensions final {
  public:
   using Present = base::RepeatingCallback<void(engine::EnginePresentation)>;
+  using Report = base::RepeatingCallback<void(engine::EngineEvent)>;
 
-  EngineExtensions(Present present, ProfileExtensions::Retract retract, base::RepeatingClosure changed);
+  EngineExtensions(Present present, Report report, ProfileExtensions::Retract retract, base::RepeatingClosure changed);
   EngineExtensions(const EngineExtensions&) = delete;
   EngineExtensions& operator=(const EngineExtensions&) = delete;
   ~EngineExtensions();
@@ -126,8 +130,14 @@ class EngineExtensions final {
   engine::ExtensionActionList PageActions(content::WebContents* contents, const std::string& profile_id);
   // The actions pinned in a profile, which its Space shows with no page open.
   engine::ExtensionActionList Pinned(Profile* profile, const std::string& profile_id);
-  engine::InstalledExtensionList Installed(Profile* profile, const std::string& profile_id);
-  bool Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change);
+  // Reports the extensions installed in a profile to the core now, and from
+  // then on whenever they change.
+  void List(Profile* profile, const std::string& profile_id);
+  // The icons of the extensions installed in a profile, for Settings.
+  engine::ExtensionIconList Icons(Profile* profile, const std::string& profile_id);
+  // Makes a change the core found the person may make. The engine's own
+  // management policy still decides, and a change it refuses changes nothing.
+  void Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change);
   // Whether `extension` runs in `profile`: a private profile runs only the
   // extensions the person allowed in private browsing.
   static bool RunsIn(Profile* profile, const extensions::Extension& extension);
@@ -141,13 +151,19 @@ class EngineExtensions final {
   static engine::SidePanelScope SidePanelScopeFor(content::WebContents* contents, const std::string& extension_id);
 
  private:
+  // What the core lists of a profile: every extension the person installed
+  // whose files are still there.
+  std::vector<engine::InstalledExtension> Installed(Profile* profile, const std::string& profile_id);
   void Changed(const std::string& profile_id);
   void Flush();
 
   const Present present_;
+  const Report report_;
   const ProfileExtensions::Retract retract_;
   const base::RepeatingClosure changed_;
   std::map<std::string, std::unique_ptr<ProfileExtensions>> profiles_;
+  // The profiles the core lists, with what it heard of each last.
+  std::map<std::string, std::vector<engine::InstalledExtension>> listed_;
   std::set<std::string> due_;
   bool flush_posted_ = false;
   base::WeakPtrFactory<EngineExtensions> weak_factory_{this};

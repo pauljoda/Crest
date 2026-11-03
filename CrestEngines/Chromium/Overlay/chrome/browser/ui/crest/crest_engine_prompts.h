@@ -66,9 +66,10 @@ class EnginePrompts final : public content::JavaScriptDialogManager {
                                 ShareReply reply);
   void WithdrawShare(const engine::Guid& id);
 
-  // Whether to install the extension an install the window `window` started
-  // verified; `reply` hears the answer, or a decline when nobody can give one.
-  void AskToInstall(const engine::Guid& window, engine::ExtensionInstallQuestion question, InstallReply reply);
+  // Whether to install the package the core's install `install` verified for
+  // the profile it installs in; `reply` hears the answer, or a decline when
+  // nobody can give one.
+  void AskToInstall(const engine::Guid& install, engine::ExtensionInstallQuestion question, InstallReply reply);
   bool Settle(const engine::SettleExtensionInstall& settlement);
 
   // The page closed: what it asked goes unanswered.

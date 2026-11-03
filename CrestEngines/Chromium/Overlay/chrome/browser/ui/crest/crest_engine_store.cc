@@ -1,19 +1,52 @@
 #include "chrome/browser/ui/crest/crest_engine_store.h"
 
+#include <algorithm>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include "base/files/file_util.h"
+#include "base/functional/bind.h"
 #include "base/json/json_writer.h"
+#include "base/location.h"
+#include "base/logging.h"
+#include "base/memory/ref_counted_memory.h"
+#include "base/strings/escape.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task/thread_pool.h"
+#include "base/uuid.h"
 #include "base/values.h"
+#include "chrome/browser/extensions/extension_install_prompt.h"
+#include "chrome/browser/extensions/extension_install_prompt_show_params.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/browser/ui/crest/crest_engine_binding.h"
+#include "chrome/browser/ui/crest/crest_engine_profiles.h"
+#include "chrome/browser/ui/crest/crest_engine_prompts.h"
 #include "chrome/common/chrome_isolated_world_ids.h"
+#include "components/crx_file/id_util.h"
+#include "components/update_client/update_query_params.h"
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/storage_partition.h"
 #include "content/public/browser/web_contents.h"
+#include "extensions/browser/crx_installer.h"
 #include "extensions/browser/extension_registry.h"
+#include "extensions/browser/extension_util.h"
+#include "extensions/browser/install/crx_install_error.h"
+#include "extensions/browser/install_prompt_data.h"
+#include "extensions/common/extension.h"
+#include "extensions/common/extension_urls.h"
+#include "net/base/net_errors.h"
+#include "net/http/http_response_headers.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
+#include "services/network/public/cpp/resource_request.h"
+#include "services/network/public/cpp/shared_url_loader_factory.h"
+#include "services/network/public/cpp/simple_url_loader.h"
+#include "services/network/public/mojom/url_response_head.mojom.h"
+#include "ui/gfx/image/image.h"
 #include "url/gurl.h"
 #include "url/url_constants.h"
 
@@ -318,6 +351,337 @@ bool PageStore::Consume(const GURL& url) {
     present_.Run(engine::StoreInstallRequested{.page_id = page_, .extension_id = expected});
   }
   return true;
+}
+
+namespace {
+
+constexpr net::NetworkTrafficAnnotationTag kWebStoreDownloadAnnotation =
+    net::DefineNetworkTrafficAnnotation("crest_web_store_download", R"(
+      semantics {
+        sender: "Crest Web Store install"
+        description: "Downloads a Chrome Web Store extension package for installation."
+        trigger: "The person installs an extension from a Chrome Web Store listing."
+        data: "The extension's ID and Chromium's version, platform and language."
+        destination: GOOGLE_OWNED_SERVICE
+      }
+      policy {
+        cookies_allowed: NO
+        setting: "Only runs when the person installs an extension."
+      })");
+
+// A copy of `package` for one profile's install, which CrxInstaller deletes
+// once it is done, or an empty path when none could be made.
+base::FilePath StagedCopy(const base::FilePath& package) {
+  base::FilePath directory;
+  if (!base::GetTempDir(&directory)) {
+    return base::FilePath();
+  }
+  const base::FilePath staged =
+      directory.AppendASCII("crest-extension-" + base::Uuid::GenerateRandomV4().AsLowercaseString() + ".crx");
+  return base::CopyFile(package, staged) ? staged : base::FilePath();
+}
+
+// The question the core asks about the package `prompt` describes, in the
+// engine's own words.
+engine::ExtensionInstallQuestion QuestionFor(const extensions::InstallPromptData& prompt) {
+  const extensions::Extension& extension = *prompt.extension();
+  engine::ExtensionInstallQuestion question{
+      .extension_id = extension.id(),
+      .name = extension.name(),
+      .version = extension.version().GetString(),
+      .can_withhold_site_access = extensions::util::CanWithholdPermissionsFromExtension(extension),
+      .withholds_site_access = prompt.ShouldWithheldPermissionsOnDialogAccept()};
+  if (const std::string* summary = extension.manifest()->FindStringPath("description")) {
+    question.summary = *summary;
+  }
+  const auto details = prompt.GetPermissions();
+  for (size_t index = 0; index < prompt.GetPermissionCount(); ++index) {
+    question.permissions.push_back(base::UTF16ToUTF8(prompt.GetPermission(index)));
+    if (index < details.details.size() && !details.details[index].empty()) {
+      question.permissions.push_back(base::UTF16ToUTF8(details.details[index]));
+    }
+  }
+  if (!prompt.icon().IsEmpty()) {
+    if (auto png = prompt.icon().As1xPNGBytes(); png && png->size()) {
+      question.icon = engine::Bytes(png->data(), png->data() + png->size());
+    }
+  }
+  return question;
+}
+
+// Asks the core whether install `install` may install the package `prompt`
+// describes. The core answers from the person's review or from the consent
+// they gave the same package, and the installer hears the answer.
+void AskCore(const engine::Guid& install,
+             std::unique_ptr<ExtensionInstallPromptShowParams>,
+             ExtensionInstallPrompt::DoneCallback done,
+             std::unique_ptr<extensions::InstallPromptData> prompt) {
+  using Result = extensions::ExtensionInstallPromptClient::Result;
+  using Payload = ExtensionInstallPrompt::DoneCallbackPayload;
+  EngineBinding& binding = EngineBinding::Get();
+  if (binding.disposing() || !prompt->extension() || prompt->requires_parent_permission()) {
+    std::move(done).Run(Payload(Result::ABORTED));
+    return;
+  }
+  engine::ExtensionInstallQuestion question = QuestionFor(*prompt);
+  binding.Prompts().AskToInstall(
+      install, std::move(question),
+      base::BindOnce(
+          [](ExtensionInstallPrompt::DoneCallback done, std::unique_ptr<extensions::InstallPromptData> prompt,
+             bool accepted, bool withholds) {
+            if (!accepted) {
+              prompt->OnDialogCanceled();
+              std::move(done).Run(Payload(Result::USER_CANCELED));
+              return;
+            }
+            prompt->OnDialogAccepted();
+            std::move(done).Run(
+                Payload(withholds ? Result::ACCEPTED_WITH_WITHHELD_PERMISSIONS : Result::ACCEPTED));
+          },
+          std::move(done), std::move(prompt)));
+}
+
+// The prompt each of the core's installs installs with. Its question goes to
+// the core, never to a window: the person's review is Crest's, in whichever
+// window shows it.
+class CorePrompt final : public ExtensionInstallPrompt {
+ public:
+  CorePrompt(Profile* profile, const engine::Guid& install)
+      : ExtensionInstallPrompt(
+            profile,
+            gfx::NativeWindow(),
+            std::make_unique<extensions::InstallPromptData>(extensions::InstallPromptData::INSTALL_PROMPT)),
+        install_(install) {}
+
+  // CrxInstaller asks to confirm the install once it verified the package.
+  void ConfirmInstall(DoneCallback done, const extensions::Extension* extension) override {
+    ShowDialog(std::move(done), extension, nullptr, base::BindRepeating(&AskCore, install_));
+  }
+
+ private:
+  const engine::Guid install_;
+};
+
+}  // namespace
+
+// WebStoreDownload.
+
+WebStoreDownload::WebStoreDownload(Profile* profile, const std::string& extension_id, Progress progress, Done done)
+    : progress_(std::move(progress)), done_(std::move(done)) {
+  auto request = std::make_unique<network::ResourceRequest>();
+  request->url = GURL(extension_urls::GetWebstoreUpdateUrl().spec() + "?response=redirect&" +
+                      update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
+                      base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
+  request->credentials_mode = network::mojom::CredentialsMode::kOmit;
+  // Someone is waiting on this download, as on Chromium's own foreground
+  // extension fetches. At the default idle priority the loader writes the
+  // package on best-effort tasks, which Chromium holds until it counts
+  // startup as complete: up to three minutes when no page has loaded.
+  request->priority = net::MEDIUM;
+  loader_ = network::SimpleURLLoader::Create(std::move(request), kWebStoreDownloadAnnotation);
+  loader_->SetOnResponseStartedCallback(base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));
+  loader_->SetOnDownloadProgressCallback(base::BindRepeating(&WebStoreDownload::Progressed, base::Unretained(this)));
+  loader_->DownloadToTempFile(profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess().get(),
+                              base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
+}
+
+WebStoreDownload::~WebStoreDownload() = default;
+
+void WebStoreDownload::Started(const GURL&, const network::mojom::URLResponseHead& head) {
+  length_ = head.content_length;
+}
+
+void WebStoreDownload::Progressed(uint64_t received) {
+  if (length_ > 0) {
+    progress_.Run(std::min(1.0, static_cast<double>(received) / static_cast<double>(length_)));
+  }
+}
+
+void WebStoreDownload::Finished(base::FilePath path) {
+  const network::mojom::URLResponseHead* head = loader_->ResponseInfo();
+  const int status = head && head->headers ? head->headers->response_code() : 0;
+  if (!path.empty() && status == 200) {
+    std::move(done_).Run(std::move(path));
+    return;
+  }
+  // A successful status other than 200 carries no package: the service
+  // answers 204 for an extension it will not serve to this browser.
+  if (!path.empty()) {
+    base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(path));
+  }
+  LOG(WARNING) << "Crest could not download an extension package: "
+               << (status ? "HTTP " + base::NumberToString(status) : net::ErrorToString(loader_->NetError()));
+  std::move(done_).Run(std::nullopt);
+}
+
+// ExtensionInstalls.
+
+// One install: the extension it installs, its download while it runs, and
+// the package it keeps once downloaded, which each profile's install copies.
+struct ExtensionInstalls::Running {
+  std::string extension_id;
+  std::unique_ptr<WebStoreDownload> download;
+  base::FilePath package;
+};
+
+ExtensionInstalls::ExtensionInstalls(EngineBinding& binding) : binding_(binding) {}
+
+ExtensionInstalls::~ExtensionInstalls() {
+  for (const auto& [install, running] : installs_) {
+    if (!running->package.empty()) {
+      base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(running->package));
+    }
+  }
+}
+
+ExtensionInstalls::Running* ExtensionInstalls::Find(const engine::Guid& install) {
+  const auto found = installs_.find(install);
+  return found == installs_.end() ? nullptr : found->second.get();
+}
+
+// The package comes through the profile of the install's first Space, which
+// loads for it when nothing has.
+void ExtensionInstalls::Download(const engine::DownloadExtension& command) {
+  if (installs_.contains(command.install_id)) {
+    return;
+  }
+  auto running = std::make_unique<Running>();
+  running->extension_id = command.extension_id;
+  installs_[command.install_id] = std::move(running);
+  binding_->Profiles().Prepare(GuidText(command.profile_id),
+                               base::BindOnce(&ExtensionInstalls::StartDownload, weak_factory_.GetWeakPtr(),
+                                              command.install_id, command.profile_id));
+}
+
+void ExtensionInstalls::StartDownload(const engine::Guid& install, const engine::Guid& profile_id, bool ready) {
+  Running* running = Find(install);
+  if (!running) {
+    return;
+  }
+  Profile* profile = ready ? binding_->Profiles().Find(GuidText(profile_id)) : nullptr;
+  if (!profile || profile->IsOffTheRecord()) {
+    Fail(install, profile_id, engine::ExtensionInstallFailure::kSpaceUnavailable);
+    return;
+  }
+  if (!crx_file::id_util::IdIsValid(running->extension_id)) {
+    Fail(install, profile_id, engine::ExtensionInstallFailure::kRefused);
+    return;
+  }
+  running->download = std::make_unique<WebStoreDownload>(
+      profile, running->extension_id,
+      base::BindRepeating(&ExtensionInstalls::Progressed, weak_factory_.GetWeakPtr(), install),
+      base::BindOnce(&ExtensionInstalls::Downloaded, weak_factory_.GetWeakPtr(), install, profile_id));
+}
+
+void ExtensionInstalls::Progressed(const engine::Guid& install, double fraction) {
+  binding_->Present(engine::ExtensionDownloadProgressed{.install_id = install, .fraction = fraction});
+}
+
+void ExtensionInstalls::Downloaded(const engine::Guid& install,
+                                   const engine::Guid& profile,
+                                   std::optional<base::FilePath> package) {
+  Running* running = Find(install);
+  if (!running) {
+    if (package) {
+      base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(*package));
+    }
+    return;
+  }
+  if (!package) {
+    Fail(install, profile, engine::ExtensionInstallFailure::kDownloadFailed);
+    return;
+  }
+  running->package = std::move(*package);
+  binding_->Report(engine::ExtensionDownloaded{.install_id = install});
+}
+
+void ExtensionInstalls::Install(const engine::InstallExtensionPackage& command) {
+  binding_->Profiles().Prepare(GuidText(command.profile_id),
+                               base::BindOnce(&ExtensionInstalls::StagePackage, weak_factory_.GetWeakPtr(),
+                                              command.install_id, command.profile_id));
+}
+
+// Each profile installs its own copy of the package, so every one of them
+// verifies its signature and publisher proof and keeps its own data.
+void ExtensionInstalls::StagePackage(const engine::Guid& install, const engine::Guid& profile_id, bool ready) {
+  Running* running = Find(install);
+  if (!running) {
+    return;
+  }
+  Profile* profile = ready ? binding_->Profiles().Find(GuidText(profile_id)) : nullptr;
+  if (!profile || profile->IsOffTheRecord()) {
+    Fail(install, profile_id, engine::ExtensionInstallFailure::kSpaceUnavailable);
+    return;
+  }
+  if (running->package.empty()) {
+    Fail(install, profile_id, engine::ExtensionInstallFailure::kRefused);
+    return;
+  }
+  base::ThreadPool::PostTaskAndReplyWithResult(
+      FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_VISIBLE},
+      base::BindOnce(&StagedCopy, running->package),
+      base::BindOnce(&ExtensionInstalls::Staged, weak_factory_.GetWeakPtr(), install, profile_id));
+}
+
+void ExtensionInstalls::Staged(const engine::Guid& install, const engine::Guid& profile_id, base::FilePath staged) {
+  Profile* profile = Find(install) ? binding_->Profiles().Find(GuidText(profile_id)) : nullptr;
+  if (!profile || staged.empty()) {
+    if (!staged.empty()) {
+      base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(staged));
+    }
+    if (Find(install)) {
+      Fail(install, profile_id,
+           profile ? engine::ExtensionInstallFailure::kRefused : engine::ExtensionInstallFailure::kSpaceUnavailable);
+    }
+    return;
+  }
+  auto prompt = std::make_unique<CorePrompt>(profile, install);
+  prompt->SetSkipPostInstallUI(true);
+  auto installer = extensions::CrxInstaller::Create(profile, std::move(prompt));
+  installer->set_expected_id(Find(install)->extension_id);
+  installer->set_is_gallery_install(true);
+  installer->set_delete_source(true);
+  installer->AddInstallerCallback(
+      base::BindOnce(&ExtensionInstalls::Installed, weak_factory_.GetWeakPtr(), install, profile_id));
+  installer->InstallCrx(staged);
+}
+
+void ExtensionInstalls::Installed(const engine::Guid& install,
+                                  const engine::Guid& profile,
+                                  const std::optional<extensions::CrxInstallError>& error) {
+  if (!Find(install)) {
+    return;
+  }
+  if (!error) {
+    binding_->Report(engine::ExtensionInstalled{.install_id = install, .profile_id = profile});
+    return;
+  }
+  const auto detail = error->detail();
+  LOG(WARNING) << "Crest could not install an extension package: " << base::UTF16ToUTF8(error->message());
+  Fail(install, profile,
+       detail == extensions::CrxInstallErrorDetail::USER_CANCELED ||
+               detail == extensions::CrxInstallErrorDetail::USER_ABORTED
+           ? engine::ExtensionInstallFailure::kCanceled
+           : engine::ExtensionInstallFailure::kRefused);
+}
+
+void ExtensionInstalls::Fail(const engine::Guid& install,
+                             const engine::Guid& profile,
+                             engine::ExtensionInstallFailure reason) {
+  binding_->Report(engine::ExtensionInstallFailed{.install_id = install, .profile_id = profile, .reason = reason});
+}
+
+// The core is done with the install: a download still running stops, and the
+// package goes.
+void ExtensionInstalls::End(const engine::EndExtensionInstall& command) {
+  const auto found = installs_.find(command.install_id);
+  if (found == installs_.end()) {
+    return;
+  }
+  if (!found->second->package.empty()) {
+    base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(found->second->package));
+  }
+  installs_.erase(found);
 }
 
 }  // namespace crest

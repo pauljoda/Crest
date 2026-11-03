@@ -4965,6 +4965,10 @@
     "core-owns-extension-policy": {
       "category": "internal",
       "message": "Decide in the core which Spaces' extensions may change, where an extension's copies go, and which consent answers an install, for any engine that runs extensions."
+    },
+    "chromium-extension-installs-portable": {
+      "category": "internal",
+      "message": "Download and install Chrome Web Store packages in the portable Chromium binding, asking the core rather than a window whether each install may go ahead."
     }
   }
 }
