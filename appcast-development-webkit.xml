@@ -6,33 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.149</title>
-            <pubDate>Tue, 03 Nov 2026 06:52:43 +0000</pubDate>
+            <title>0.8.150</title>
+            <pubDate>Tue, 03 Nov 2026 13:18:14 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1486</sparkle:version>
-            <sparkle:shortVersionString>0.8.149</sparkle:shortVersionString>
+            <sparkle:version>1487</sparkle:version>
+            <sparkle:shortVersionString>0.8.150</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Fixed
 
-- In Peek on iPhone and iPad, the More button shrinks the page to a preview with Open in New Tab, Copy Link, Share and Download Linked File beneath it.
-
-### Improved
-
-- On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system’s link preview.
+- On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c1f44653b48138ab44967ed84ccb7d7c213ff897...c3e28b4224533f69c17dd1173ceb12f3519b63c0) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.149-2026-11-03-1486-r486.1/Installer-Crest-0.8.149-development-2026-11-03-c3e28b4-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/c3e28b4224533f69c17dd1173ceb12f3519b63c0...71c75b3850b1a4f0fa31a8b82b74617dcb0e9aa7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.150-2026-11-03-1487-r487.1/Installer-Crest-0.8.150-development-2026-11-03-71c75b3-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.149-2026-11-03-1486-r486.1/Installer-Crest-0.8.149-development-2026-11-03-c3e28b4-arm64.dmg" length="216815258" type="application/octet-stream" sparkle:edSignature="1B9uoTuMLlf9g8RLRCCLTPj9lnHzlK5Kz0cZ019urhIBGu/QBuP93XlGD2vNUVMKXIUVFUz/Yn7dZiDt/wvvBg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.150-2026-11-03-1487-r487.1/Installer-Crest-0.8.150-development-2026-11-03-71c75b3-arm64.dmg" length="216847514" type="application/octet-stream" sparkle:edSignature="AfpLrIwN1g2CfPPeBi130cAHC+dAH5UpSrZ88D9L79/+O+bBI/VkDjgW1JGlipit0gj7Gs47jZvihNURuvS4Cg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: JcwLEXrnMz/BJ8jeHPMnQsJrmeMs4hC2lNdsqYgyH74hljcrXRO+ZivbV9kWAAADiCjmz4jEOitP74zZlyx1AA==
-length: 4183
+edSignature: XK2msyiR0HZDJUuvy0jwsk4L19/4GzV985KwOriOPOe8t49c1puJWj8PAe17OLMHKvcW8KtV1t+N+kSD7gAZBw==
+length: 4071
 -->
