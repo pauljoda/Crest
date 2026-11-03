@@ -6,9 +6,9 @@ import WebKit
 
 /// Reports a press on a link with its geometry, and when it began, ended or
 /// was cancelled, so a held press opens Peek from the link. While a link is
-/// held, it neither selects text nor shows the system's link callout, and the
-/// click that ends a held press doesn't follow the link. Images and every other
-/// element keep WebKit's own menus.
+/// held, it neither selects text nor shows the system's link callout, and once
+/// Crest says the press opened its Peek, the click that ends the press doesn't
+/// follow the link. Images and every other element keep WebKit's own menus.
 @MainActor
 enum MobileLinkActivationContentBridge {
     static let messageHandlerName = "crestLinkActivation"
@@ -36,6 +36,15 @@ enum MobileLinkActivationContentBridge {
         return proxy
     }
 
+    /// Tells the script in `frame` that the press `pressID` opened its Peek,
+    /// so the click that ends the press doesn't follow the link. A press whose
+    /// Peek never opens keeps its click.
+    static func pressOpenedPeek(_ pressID: String, in webView: WKWebView, frame: WKFrameInfo) {
+        webView.callAsyncJavaScript(
+            "globalThis.__crestLinkPressOpenedPeek?.(pressID)",
+            arguments: ["pressID": pressID], in: frame, in: contentWorld, completionHandler: nil)
+    }
+
     private static let source = #"""
         (() => {
           if (globalThis.__crestLinkActivationInstalled) return;
@@ -43,8 +52,9 @@ enum MobileLinkActivationContentBridge {
 
           let activePress = null;
           let pressSequence = 0;
-          // The click that ends a held press is swallowed: the press arms it
-          // once held, and its release opens a short window for that click.
+          // The click that ends a press whose Peek opened is swallowed: Crest's
+          // word that it opened arms it, and the press's release opens a short
+          // window for that click.
           let endingClickArmed = false;
           let suppressClickUntil = -Infinity;
 
@@ -52,6 +62,10 @@ enum MobileLinkActivationContentBridge {
             try {
               globalThis.webkit.messageHandlers.crestLinkActivation.postMessage(payload);
             } catch (_) {}
+          };
+
+          globalThis.__crestLinkPressOpenedPeek = pressID => {
+            if (activePress?.pressID === pressID) endingClickArmed = true;
           };
 
           const finish = phase => {
@@ -128,7 +142,6 @@ enum MobileLinkActivationContentBridge {
               previousStyles,
               holdTimer: setTimeout(() => {
                 if (activePress?.pressID === pressID) {
-                  endingClickArmed = true;
                   globalThis.getSelection()?.removeAllRanges();
                 }
               }, 280)

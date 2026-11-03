@@ -1111,6 +1111,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // A held press on a link opens its Peek.
         guard let request = event.peekRequest(context: navigationContext, sourcePresentation: sourcePresentation)
         else { return }
+        let frame = message.frameInfo
         linkPeekPressCoordinator.begin(
             pressID: event.pressID,
             request: request,
@@ -1131,6 +1132,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 } else {
                     openPeek(request)
                 }
+                MobileLinkActivationContentBridge.pressOpenedPeek(event.pressID, in: webView, frame: frame)
             },
             cancelStaged: { [weak self] requestID in
                 self?.cancelStagedPeek?(requestID)
