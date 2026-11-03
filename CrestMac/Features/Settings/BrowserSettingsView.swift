@@ -159,7 +159,7 @@ struct BrowserSettingsView: View {
     private func addSubSpace(after spaceID: UUID) {
         tabState.isArrangingSpaces = false
         guard browser.addSubSpace(after: spaceID) else { return }
-        BrowserSpaceGroupNotices.formed()
+        BrowserSpaceGroupUpdateNotice.showIfDue()
         openAddedSpace()
     }
 

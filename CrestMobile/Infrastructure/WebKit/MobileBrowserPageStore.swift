@@ -49,10 +49,9 @@ final class MobileBrowserPageStore:
     /// Every tab whose page this scene presents now.
     var presentedTabIDsAcrossWindows: Set<UUID> { Set(presentedTabIDs) }
     var residencyRevision: Int { host.revision }
-    private(set) var urlCopyFeedbackRevision = 0
-    /// What the page's feedback capsule says last, which each new revision shows.
-    private(set) var pageFeedback = MobilePageFeedback.pageZoom("100%")
-    private(set) var pageFeedbackRevision = 0
+    /// The notice this window shows at its top, such as a zoom change or a
+    /// copied link.
+    let notices = BrowserNotices()
     let downloadCenter: BrowserDownloadCenter
     let downloadRiskConfirmation: MobileDownloadRiskConfirmationCoordinator
     /// The answers to the core's questions about this mode's downloads, which
@@ -545,29 +544,23 @@ final class MobileBrowserPageStore:
 
     func zoomIn() {
         guard activePage?.zoomIn() == true else { return }
-        showFeedback(.pageZoom(pageZoomLabel))
+        notices.show(.pageZoom(pageZoomLabel))
     }
 
     func zoomOut() {
         guard activePage?.zoomOut() == true else { return }
-        showFeedback(.pageZoom(pageZoomLabel))
+        notices.show(.pageZoom(pageZoomLabel))
     }
 
     func resetZoom() {
         guard activePage?.resetZoom() == true else { return }
-        showFeedback(.pageZoom(pageZoomLabel))
-    }
-
-    /// Shows `feedback` in the page's capsule.
-    func showFeedback(_ feedback: MobilePageFeedback) {
-        pageFeedback = feedback
-        pageFeedbackRevision &+= 1
+        notices.show(.pageZoom(pageZoomLabel))
     }
 
     @discardableResult
     func copyPageLink() -> Bool {
         guard activePage?.copyPageLink() == true else { return false }
-        urlCopyFeedbackRevision &+= 1
+        notices.show(.urlCopied)
         return true
     }
 

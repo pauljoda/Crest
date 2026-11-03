@@ -17,7 +17,7 @@ struct BrowserSpaceGroupMenuItems: View {
                 if let addSubSpace {
                     addSubSpace(space.id)
                 } else if browser.addSubSpace(after: space.id) {
-                    BrowserSpaceGroupNotices.formed()
+                    BrowserSpaceGroupUpdateNotice.showIfDue()
                 }
             }
             .disabled(browser.isDeleting(space.id))

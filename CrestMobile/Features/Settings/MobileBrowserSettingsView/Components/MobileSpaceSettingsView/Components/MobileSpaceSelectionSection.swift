@@ -28,8 +28,6 @@ struct MobileSpaceSelectionSection: View {
             }
         } header: {
             Text("Spaces")
-        } footer: {
-            BrowserSpaceGroupNoticeLabel()
         }
     }
 

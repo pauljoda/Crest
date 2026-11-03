@@ -125,7 +125,7 @@ struct MobileSelectedPageActionPort: MobilePageActions {
         guard let page = activePage,
             let cleared = await page.clearSiteData([category], ephemeral: pages.usesEphemeralWebsiteDataStores)
         else { return }
-        pages.showFeedback(.siteData(category, cleared: cleared))
+        pages.notices.show(.siteData(category, cleared: cleared))
     }
 
     func togglePreferredContentMode() {

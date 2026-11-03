@@ -124,7 +124,7 @@ final class BrowserRootModel {
     }
 
     private func registerForNotices() {
-        BrowserNoticeCenter.shared.register(chrome) { [weak self] in self?.isWindowFocused == true }
+        BrowserNoticeCenter.shared.register(chrome.notices) { [weak self] in self?.isWindowFocused == true }
     }
 }
 

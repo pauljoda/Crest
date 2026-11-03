@@ -58,9 +58,9 @@ private struct BrowserSpaceGroupChangeConfirmation: ViewModifier {
             }
             do throws(Rejection) {
                 try change.apply(in: browser)
-                if change.formsGroup { BrowserSpaceGroupNotices.formed() }
+                if change.formsGroup { BrowserSpaceGroupUpdateNotice.showIfDue() }
             } catch {
-                BrowserSpaceGroupNotices.failed(error.localizedDescription)
+                BrowserNoticeCenter.shared.post(.failure(error.localizedDescription))
             }
         }
     }
@@ -134,7 +134,7 @@ private struct BrowserSpaceDeletionConfirmation: ViewModifier {
                 // The page that asked may be gone with the Space, so the window says it too.
                 let message = "\(error.localizedDescription) The Space was kept so you can try again."
                 failure = message
-                BrowserSpaceGroupNotices.failed(message)
+                BrowserNoticeCenter.shared.post(.failure(message))
             }
         }
     }

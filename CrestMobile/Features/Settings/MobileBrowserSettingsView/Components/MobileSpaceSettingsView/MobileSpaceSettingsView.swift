@@ -29,7 +29,6 @@ struct MobileSpaceSettingsView: View {
         .browserSpaceDeletionConfirmation(
             $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
         )
-        .onDisappear { BrowserSpaceGroupNotices.shared.dismiss() }
         .fullScreenCover(item: $editingAppearanceSpace) { requested in
             NavigationStack {
                 appearanceWorkspace(for: requested)
@@ -94,15 +93,6 @@ struct MobileSpaceSettingsView: View {
                     .background(BrowserSettingsCanvas.card)
             }
             Divider()
-            if BrowserSpaceGroupNotices.shared.current != nil {
-                BrowserSpaceGroupNoticeLabel()
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, CrestSpacing.small)
-                    .background(BrowserSettingsCanvas.card)
-            }
             if let space {
                 if canReveal(space) {
                     Group {
@@ -146,7 +136,7 @@ struct MobileSpaceSettingsView: View {
     /// Starts a Sub-Space after `spaceID`, in its group, and edits it.
     private func addSubSpace(after spaceID: UUID) {
         guard browser.addSubSpace(after: spaceID) else { return }
-        BrowserSpaceGroupNotices.formed()
+        BrowserSpaceGroupUpdateNotice.showIfDue()
         selectEditedSpace(browser.selectedSpaceID)
     }
 

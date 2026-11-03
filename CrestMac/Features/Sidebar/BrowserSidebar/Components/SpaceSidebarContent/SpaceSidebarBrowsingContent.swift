@@ -78,7 +78,7 @@ struct SpaceSidebarBrowsingContent: View {
                 createSubSpace: browser.isPrivateBrowsing
                     ? nil
                     : { [space = listContext.space.id] in
-                        if browser.addSubSpace(after: space) { BrowserSpaceGroupNotices.formed() }
+                        if browser.addSubSpace(after: space) { BrowserSpaceGroupUpdateNotice.showIfDue() }
                     }
             )
             .modifier(
