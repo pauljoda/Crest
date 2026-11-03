@@ -4933,6 +4933,14 @@
     "quick-window-spanning-window": {
       "category": "fixed",
       "message": "On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it."
+    },
+    "mobile-long-press-peek": {
+      "category": "improved",
+      "message": "On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system’s link preview."
+    },
+    "mobile-peek-link-menu": {
+      "category": "new",
+      "message": "In Peek on iPhone and iPad, the More button shrinks the page to a preview with Open in New Tab, Copy Link, Share and Download Linked File beneath it."
     }
   }
 }

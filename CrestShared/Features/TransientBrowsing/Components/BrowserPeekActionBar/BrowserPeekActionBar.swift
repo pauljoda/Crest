@@ -23,10 +23,12 @@ struct BrowserPeekActionBar: View {
     let closeHelp: LocalizedStringKey
     let dismiss: () -> Void
     let openInSpace: (BrowserSpaceRuntimeAssignment) -> Void
+    /// Opens the card's link menu; no "…" without one.
+    var showLinkMenu: (() -> Void)? = nil
 
     var body: some View {
-        // Close and Open In stay two pieces of glass, so Open In keeps its
-        // Space's tint rather than blending into Close's.
+        // Close, Open In and "…" stay separate pieces of glass, so Open In
+        // keeps its Space's tint rather than blending into theirs.
         GlassEffectContainer(spacing: 0) {
             HStack(spacing: Self.controlSpacing) {
                 BrowserPeekCloseButton(
@@ -40,6 +42,10 @@ struct BrowserPeekActionBar: View {
                     selectedSpaceID: selectedSpaceID,
                     openInSpace: openInSpace
                 )
+
+                if let showLinkMenu {
+                    BrowserPeekMoreButton(show: showLinkMenu)
+                }
             }
             .labelStyle(.titleAndIcon)
         }
