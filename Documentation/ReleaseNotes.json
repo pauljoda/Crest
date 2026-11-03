@@ -4941,6 +4941,10 @@
     "mobile-peek-link-menu": {
       "category": "new",
       "message": "In Peek on iPhone and iPad, the More button shrinks the page to a preview with Open in New Tab, Copy Link, Share and Download Linked File beneath it."
+    },
+    "settings-space-page-every-window": {
+      "category": "fixed",
+      "message": "On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before."
     }
   }
 }
