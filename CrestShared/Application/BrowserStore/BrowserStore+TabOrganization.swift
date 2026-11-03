@@ -4,16 +4,18 @@ import Foundation
 
 extension BrowserStore {
     /// Pins a tab of the Space this window shows, or returns a pinned one to
-    /// the open tabs, as the core places each. False when the core refused it.
+    /// the open tabs, as the core places each. Answers whether it moved, and
+    /// throws the rule that refused it, such as a full pinned section.
     @discardableResult
-    func togglePin(_ id: UUID) -> Bool {
+    func togglePin(_ id: UUID) throws(Rejection) -> Bool {
         guard let space = shownSpace else { return false }
-        return family.send(TogglePin(workspaceID: family.workspaceID, spaceID: space.id, tabID: id), from: self)
+        try family.commit(TogglePin(workspaceID: family.workspaceID, spaceID: space.id, tabID: id), from: self)
+        return true
     }
 
     func pinTab(_ id: UUID) {
         guard let tab = shownSpace?.shownTab(id), tab.placement != .pinned else { return }
-        togglePin(id)
+        _ = try? togglePin(id)
     }
 
     func saveTab(_ id: UUID) {
@@ -189,17 +191,14 @@ extension BrowserStore {
     ) -> Bool {
         guard spaceModel(sourceSpaceID) != nil, let destination = spaceModel(destinationSpaceID) else { return false }
         let follows = linkPreferences.preferences.followsMovedTabs
-        do {
-            try family.commit(
+        guard
+            family.perform(
                 MoveTabToSpace(
                     workspaceID: family.workspaceID, windowID: windowID, spaceID: sourceSpaceID,
                     tabID: id, destinationSpaceID: destinationSpaceID, placement: placement,
                     folderID: folderID, beforeTabID: destinationTabID, follows: follows),
-                from: self)
-        } catch {
-            localSyncErrorDescription = "Core tab move failed: \(error)"
-            return false
-        }
+                from: self) != nil
+        else { return false }
         if follows {
             pendingMovedTabActivation = BrowserTabRuntimeAssignment(
                 tabID: id, spaceID: destinationSpaceID, profileID: destination.profileID)
@@ -377,7 +376,7 @@ extension BrowserStore {
             NameSplit(
                 workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID,
                 name: title),
-            from: self, failure: "Core record command failed")
+            from: self)
     }
 
     @discardableResult
@@ -389,7 +388,7 @@ extension BrowserStore {
         guard spaceModel(matching: assignment) != nil else { return false }
         return family.send(
             SetSplitIcon(workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID, emoji: emoji),
-            from: self, failure: "Core record command failed")
+            from: self)
     }
 
     @discardableResult
@@ -403,7 +402,7 @@ extension BrowserStore {
             TintSplit(
                 workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID,
                 tint: tint),
-            from: self, failure: "Core record command failed")
+            from: self)
     }
 
     /// Whether the core would join `tabID` to the split of `targetTabID`: no

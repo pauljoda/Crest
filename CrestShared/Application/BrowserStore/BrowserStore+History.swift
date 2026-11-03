@@ -118,7 +118,7 @@ extension BrowserStore {
     /// answers whether it changed the session.
     @discardableResult
     private func sendRecords(_ intent: some Intent) -> Bool {
-        family.send(intent, from: self, failure: "Core record command failed")
+        family.send(intent, from: self)
     }
 }
 

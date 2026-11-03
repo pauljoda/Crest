@@ -4985,6 +4985,10 @@
     "menu-items-all-show-icons": {
       "category": "improved",
       "message": "Every item in Crest’s menus now shows its icon, including Select All and Deselect All, the folders in Move to Folder, and the Edit, Remove and Move items in Settings."
+    },
+    "refusals-no-longer-sync-errors": {
+      "category": "fixed",
+      "message": "A locked Space, a full split or another change Crest can’t make no longer shows as a sync failure in Settings › Sync. Adding a Space or Sub-Space past the limit, or pinning a tab when the pinned tabs are full, now says why in a notice."
     }
   }
 }

@@ -135,7 +135,12 @@ struct MobileSpaceSettingsView: View {
 
     /// Starts a Sub-Space after `spaceID`, in its group, and edits it.
     private func addSubSpace(after spaceID: UUID) {
-        guard browser.addSubSpace(after: spaceID) else { return }
+        do throws(Rejection) {
+            try browser.addSubSpace(after: spaceID)
+        } catch {
+            BrowserNoticeCenter.shared.post(.failure(error.explanation))
+            return
+        }
         BrowserSpaceGroupUpdateNotice.showIfDue()
         selectEditedSpace(browser.selectedSpaceID)
     }

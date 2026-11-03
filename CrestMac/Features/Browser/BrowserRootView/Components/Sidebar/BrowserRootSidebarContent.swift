@@ -80,7 +80,12 @@ struct BrowserRootSidebarContent: View {
     }
 
     private func createSpace() {
-        model.browser.addSpace()
+        do throws(Rejection) {
+            try model.browser.addSpace()
+        } catch {
+            BrowserNoticeCenter.shared.post(.failure(error.explanation))
+            return
+        }
         guard let space = model.browser.shownSpace else { return }
         model.pages.select()
         presentSpaceSettings(for: BrowserSpaceRuntimeAssignment(space: space), intent: .newSpace)

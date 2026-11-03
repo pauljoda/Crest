@@ -24,6 +24,9 @@ final class BrowserStore {
     /// The last move a Next or Previous Space command made in this window,
     /// which the Space pager follows around the ends of the Spaces.
     private(set) var spaceStep: BrowserSpaceStep?
+    /// Why this device's changes may not reach sync: a save the core could
+    /// not finish, or a Space deletion whose cleanup needs another attempt.
+    /// A rule refusing an intent is never one.
     var localSyncErrorDescription: String?
     let browsingMode: BrowserBrowsingMode
     let tabMultiSelection = BrowserTabMultiSelection()
@@ -294,8 +297,7 @@ extension BrowserStore {
         interactionObserver?.browserWillResetSession()
         guard
             family.send(
-                ResetPrivateBrowsing(workspaceID: family.workspaceID, windowID: windowID), from: self,
-                failure: "Core Space command failed")
+                ResetPrivateBrowsing(workspaceID: family.workspaceID, windowID: windowID), from: self)
         else { return }
         localSyncErrorDescription = nil
     }
