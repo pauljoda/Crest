@@ -5050,6 +5050,26 @@
       "category": "internal",
       "message": "Build the core with the .NET 10.0.14 security update."
     },
+    "mobile-peek-grows-from-held-link": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link."
+    },
+    "sidebar-with-open-folders-stops-freezing": {
+      "category": "fixed",
+      "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
+    },
+    "sidebar-drag-right-after-a-drop-lands-where-aimed": {
+      "category": "fixed",
+      "message": "Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started."
+    },
+    "shortcuts-put-the-address-palette-away": {
+      "category": "fixed",
+      "message": "Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs."
+    },
+    "private-palette-opens-quick-windows": {
+      "category": "fixed",
+      "message": "New Quick Window and Open in Quick Window from the command palette work in a private window, opening a private Quick Window as the shortcut does."
+    },
     "function-keys-make-shortcuts-alone": {
       "category": "improved",
       "message": "A shortcut can be a function key on its own, such as F12 for Show Web Inspector."

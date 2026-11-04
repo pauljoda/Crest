@@ -167,7 +167,11 @@ final class BrowserSidebarReorderState {
         scrollRegionID: UUID? = nil
     ) {
         // Freeze transformed rows during a lift; accept newly revealed lazy rows.
-        guard !isDragging || geometry.row(row.id, in: row.space) == nil else { return }
+        // What a frozen row measures is kept for when the lift ends.
+        guard !isDragging || geometry.row(row.id, in: row.space) == nil else {
+            geometry.hold(row: row, owner: owner, scrollRegionID: scrollRegionID)
+            return
+        }
         geometry.register(row: row, owner: owner, scrollRegionID: scrollRegionID)
         // A Sub-Space beside this one lists the pins its group shares too.
         if needsLandingMeasurement, var preview = landingPreview, preview.item.id == row.id,
@@ -199,7 +203,10 @@ final class BrowserSidebarReorderState {
         sidebarViewportID: UUID? = nil,
         scrollRegionID: UUID? = nil
     ) {
-        guard !isDragging || geometry.zones[id] == nil else { return }
+        guard !isDragging || geometry.zones[id] == nil else {
+            geometry.hold(zone: zone, for: id, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID)
+            return
+        }
         geometry.register(
             zone: zone, for: id, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID)
     }
@@ -459,6 +466,7 @@ final class BrowserSidebarReorderState {
             lastPointerEvent = nil
             if lift != nil, suppressReleaseActivation { suppressActivation() }
             lift = nil
+            geometry.registerHeld()
             stagedLift = nil
             cancelStagedLiftExpiration()
             resolvedTarget = nil
@@ -482,6 +490,7 @@ final class BrowserSidebarReorderState {
         if let id = landingPreview?.landing?.id { finishLanding(id) }
         if lift != nil { suppressActivation() }
         lift = nil
+        geometry.registerHeld()
         stagedLift = nil
         cancelStagedLiftExpiration()
         resolvedTarget = nil
