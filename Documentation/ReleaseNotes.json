@@ -5054,6 +5054,10 @@
       "category": "fixed",
       "message": "On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link."
     },
+    "sidebar-with-open-folders-stops-freezing": {
+      "category": "fixed",
+      "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
