@@ -102,4 +102,4 @@ Some temporary interfaces have their own local actions. In Peek, **Command-W** c
 
 ## Resolve a conflict on Mac
 
-Search for either command in **Settings → Shortcuts**, select the row, and record a different key combination. Crest shows collisions before the replacement becomes part of your command map. Clearing a shortcut makes the action unassigned; resetting restores the shipped default.
+Search for either command in **Settings → Shortcuts**, select the row, and record a different key combination. A shortcut needs Command, Option, Control or Shift, except a function key such as F12, which works on its own. Crest shows collisions before the replacement becomes part of your command map. Clearing a shortcut makes the action unassigned; resetting restores the shipped default.
