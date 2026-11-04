@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "sidebar-with-open-folders-stops-freezing",
+    "development": "shortcuts-put-the-address-palette-away",
     "nightly": "mac-peek-size"
   }
 }
