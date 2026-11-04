@@ -5046,6 +5046,10 @@
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
     },
+    "core-dotnet-10-0-14-security-update": {
+      "category": "internal",
+      "message": "Build the core with the .NET 10.0.14 security update."
+    },
     "mobile-peek-grows-from-held-link": {
       "category": "fixed",
       "message": "On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link."

@@ -849,7 +849,7 @@ URL.
 
 ## Build workflow
 
-Install the .NET SDK 10.0.201 or a servicing patch, Xcode and XcodeGen.
+Install the .NET SDK pinned by `CrestCore/global.json`, Xcode and XcodeGen.
 Regenerate `Crest.xcodeproj` with `xcodegen generate` after changing
 `project.yml`.
 
