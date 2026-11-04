@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Asks which of the offered tabs the page shares, or whether the system's
-/// picker asks for a window or a display instead, on the same lifted panel
-/// as the page's permission and credential prompts. It stays over the page
+/// picker asks for a window or a display instead, on the flyout surface the
+/// page's permission and credential prompts use. It stays over the page
 /// until the person answers or the engine withdraws the offer.
 struct BrowserShareSourcePicker: View {
     // MARK: - Variables
@@ -39,12 +39,10 @@ struct BrowserShareSourcePicker: View {
         }
         .padding(BrowserWebPageSurfaceMetrics.sharePickerPadding)
         .frame(width: BrowserWebPageSurfaceMetrics.sharePickerWidth, alignment: .leading)
-        .background {
-            CrestSurfaceLayer(shape: panelShape)
-        }
         .overlay {
             panelShape.strokeBorder(.separator, lineWidth: BrowserWebPageSurfaceMetrics.sharePickerStrokeWidth)
         }
+        .crestFlyoutStyle(in: panelShape)
         .shadow(
             color: .black.opacity(reduceTransparency ? 0 : CrestOpacity.controlShadow),
             radius: BrowserWebPageSurfaceMetrics.sharePickerShadowRadius,

@@ -5132,7 +5132,7 @@
     },
     "popovers-read-on-their-own-surface": {
       "category": "fixed",
-      "message": "Popovers such as the color and icon pickers and Site Controls stay readable whatever the Space’s text color, Crest’s appearance or the page behind them."
+      "message": "Popovers and prompts such as the color and icon pickers, Site Controls, the save-password prompt and the screen-sharing picker stay readable whatever the Space’s text color, Crest’s appearance or the page behind them."
     },
     "space-color-grid-and-custom-hex": {
       "category": "fixed",
