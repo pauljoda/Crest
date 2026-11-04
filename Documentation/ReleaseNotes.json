@@ -5045,6 +5045,10 @@
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    },
+    "save-or-unsave-current-tab-command": {
+      "category": "new",
+      "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
     }
   }
 }

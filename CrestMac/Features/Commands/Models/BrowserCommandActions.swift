@@ -395,6 +395,14 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
+    /// Moves the tab this window shows into Saved Tabs, or a saved one back
+    /// to Current Tabs, as the sidebar's Save and Move to Current Tabs do.
+    func toggleSelectedTabSaved() {
+        guard let tab = browser.shownTab, !tab.isStartPage else { return }
+        guard browser.moveTab(tab.id, to: tab.placement == .saved ? .current : .saved) else { return }
+        pages.select()
+    }
+
     func duplicateSelectedTab() {
         guard browser.duplicateSelectedTab() != nil else { return }
         pages.reconcile()
