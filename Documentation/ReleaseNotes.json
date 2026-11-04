@@ -5045,6 +5045,10 @@
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    },
+    "sidebar-drag-right-after-a-drop-lands-where-aimed": {
+      "category": "fixed",
+      "message": "Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started."
     }
   }
 }
