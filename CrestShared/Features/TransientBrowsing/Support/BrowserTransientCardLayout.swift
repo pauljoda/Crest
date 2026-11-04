@@ -9,20 +9,59 @@ import SwiftUI
 enum BrowserTransientCardLayout {
     /// The transform that starts a card at the link it was opened from.
     ///
+    /// Once the card's own frame inside a container of `containerSize` is
+    /// known, the card starts over its link: centred on it, at the link's
+    /// size, and grows from there along the line to its own place. Until then
+    /// it grows from the point the link was touched, at the link's share of
+    /// the container.
+    ///
     /// The clamps keep a card recognisable: a link narrower than the lower
     /// bound would start as a hairline, and one wider than the upper bound
     /// would barely appear to grow at all.
     static func sourceCardTransform(
-        for source: BrowserPeekSourcePresentation
+        for source: BrowserPeekSourcePresentation,
+        cardFrame: CGRect?,
+        in containerSize: CGSize
     ) -> BrowserTransientSourceTransform {
-        BrowserTransientSourceTransform(
-            anchor: UnitPoint(
-                x: source.normalizedTouchX,
-                y: source.normalizedTouchY
-            ),
-            scaleX: min(max(source.normalizedWidth, 0.06), 0.42),
-            scaleY: min(max(source.normalizedHeight, 0.035), 0.24)
+        guard let cardFrame, cardFrame.width > 0, cardFrame.height > 0,
+            containerSize.width > 0, containerSize.height > 0
+        else {
+            return BrowserTransientSourceTransform(
+                anchor: UnitPoint(x: source.normalizedTouchX, y: source.normalizedTouchY),
+                scaleX: startingWidthShare(source.normalizedWidth),
+                scaleY: startingHeightShare(source.normalizedHeight)
+            )
+        }
+        let link = CGRect(
+            x: source.normalizedMinX * containerSize.width,
+            y: source.normalizedMinY * containerSize.height,
+            width: source.normalizedWidth * containerSize.width,
+            height: source.normalizedHeight * containerSize.height
         )
+        let scaleX = startingWidthShare(link.width / cardFrame.width)
+        let scaleY = startingHeightShare(link.height / cardFrame.height)
+        let start = CGPoint(
+            x: link.midX - cardFrame.width * scaleX / 2,
+            y: link.midY - cardFrame.height * scaleY / 2
+        )
+        // The point a scale holds still is the one that carries the card's
+        // origin onto the start; every other point of the card follows it.
+        return BrowserTransientSourceTransform(
+            anchor: UnitPoint(
+                x: (start.x - scaleX * cardFrame.minX) / (1 - scaleX) / containerSize.width,
+                y: (start.y - scaleY * cardFrame.minY) / (1 - scaleY) / containerSize.height
+            ),
+            scaleX: scaleX,
+            scaleY: scaleY
+        )
+    }
+
+    private static func startingWidthShare(_ share: CGFloat) -> CGFloat {
+        min(max(share, 0.06), 0.42)
+    }
+
+    private static func startingHeightShare(_ share: CGFloat) -> CGFloat {
+        min(max(share, 0.035), 0.24)
     }
 
     /// Insets that clear the screen's own safe area without letting a card

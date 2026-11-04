@@ -5050,6 +5050,10 @@
       "category": "internal",
       "message": "Build the core with the .NET 10.0.14 security update."
     },
+    "mobile-peek-grows-from-held-link": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
