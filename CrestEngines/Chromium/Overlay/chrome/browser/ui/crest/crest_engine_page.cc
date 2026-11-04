@@ -582,10 +582,22 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
 // it would have heard it commit. The platform, which reveals a page only once
 // it has committed and follows an adopted page only after the core adopts
 // it, hears it when it first shows the page.
+//
+// A window a page opens empty, which the page then writes into itself, has
+// committed its empty document by the time it is adopted, and Chromium keeps
+// that as the window's initial entry. The platform shows it all the same; the
+// core hears no navigation, since the window has gone nowhere.
 void EnginePage::AdoptCommittedDocument() {
-  content::NavigationEntry* entry =
-      web_contents() ? web_contents()->GetController().GetLastCommittedEntry() : nullptr;
-  if (!entry || entry->IsInitialEntry()) {
+  if (!web_contents()) {
+    return;
+  }
+  content::NavigationController& controller = web_contents()->GetController();
+  content::NavigationEntry* entry = controller.GetLastCommittedEntry();
+  if (!entry || controller.IsInitialNavigation()) {
+    return;
+  }
+  presents_adopted_commit_ = true;
+  if (entry->IsInitialEntry()) {
     return;
   }
   UpdateTheme();
@@ -596,7 +608,6 @@ void EnginePage::AdoptCommittedDocument() {
   if (!icon_) {
     PublishIcon(entry->GetFavicon().image, entry->GetFavicon().url);
   }
-  presents_adopted_commit_ = true;
   StateChanged();
 }
 
