@@ -5066,6 +5066,10 @@
       "category": "fixed",
       "message": "Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs."
     },
+    "private-palette-opens-quick-windows": {
+      "category": "fixed",
+      "message": "New Quick Window and Open in Quick Window from the command palette work in a private window, opening a private Quick Window as the shortcut does."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
