@@ -5058,6 +5058,14 @@
       "category": "fixed",
       "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
     },
+    "sidebar-drag-right-after-a-drop-lands-where-aimed": {
+      "category": "fixed",
+      "message": "Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started."
+    },
+    "shortcuts-put-the-address-palette-away": {
+      "category": "fixed",
+      "message": "Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs."
+    },
     "download-finished-notice": {
       "category": "new",
       "message": "On Mac, a brief confirmation at the top of the window now shows when a download finishes."
