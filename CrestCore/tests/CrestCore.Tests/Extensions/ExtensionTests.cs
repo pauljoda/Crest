@@ -112,7 +112,7 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void ACopyEndsWhenTheSpaceItInstallsInBeginsToBeDeleted() {
+    public void ACopyIsSkippedWhenTheSpaceItInstallsInBeginsToBeDeleted() {
         var (app, chromium, binding, workspace, first, second, firstProfile, secondProfile) = ExtensionHost();
         using var disposal = app;
         app.Report(chromium, new ExtensionsListed(firstProfile, []));
@@ -127,7 +127,6 @@ public sealed partial class BrowserContractsTests {
         var changes = app.Send(new BeginDeletingSpace(workspace, Guid.NewGuid(), second, Guid.NewGuid()));
         Assert.Equal(new EndExtensionInstall(install), binding.Commands[^1]);
         var ended = Assert.Single(changes.OfType<ExtensionInstallChanged>()).Install;
-        Assert.Equal((ExtensionInstallStage.Failed, ExtensionInstallFailure.SpaceUnavailable, 1),
-            (ended.Stage, ended.Failure, ended.InstalledCount));
+        Assert.Equal((ExtensionInstallStage.Installed, null, 1), (ended.Stage, ended.Failure, ended.InstalledCount));
     }
 }

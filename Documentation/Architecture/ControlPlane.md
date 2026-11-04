@@ -705,7 +705,7 @@ core no longer hosts, or that another engine hosts, changes nothing.
   `AuthenticationChallenged`, `PermissionRequested`,
   `ExtensionInstallRequested`). The core answers a permission from the Space's
   choices when it holds one, and an extension install from the consent the
-  person gave the same package and access earlier in that install, and
+  person gave for the same package, version and permissions earlier in that install, and
   otherwise publishes the question (`PermissionAsked` and the others) for the
   page's host, or the install's review, to show. The person's
   answer comes back as an intent, and the core settles the engine. A question

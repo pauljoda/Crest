@@ -228,14 +228,20 @@ internal sealed class Extensions(Device device, Engines engines, Prompts prompts
     }
 
     /// Ends each install whose first Space went out of reach before it was
-    /// done, or whose Space it installs in now did, as a Space that locked or
-    /// began to be deleted. The engine finishes an install it already began,
-    /// and the core ignores it.
+    /// done, as a Space that locked or began to be deleted. A copy whose Space
+    /// went out of reach is skipped and the install moves on, as a copy that
+    /// failed is. The engine finishes an install it already began, and the
+    /// core ignores it.
     public void Prune(ChangeFeed changes, Action<Engine, EngineCommand> issue) {
         foreach (var install in installs.Values.ToArray()) {
             var sourceGone = install.InstalledCount == 0 && Reach(install.SpaceId, install.Engine.Kind, out _) is null;
             var targetGone = install.InstallingSpaceId is { } target && Reach(target, install.Engine.Kind, out _) is null;
-            if (sourceGone || targetGone) End(install, ExtensionInstallFailure.SpaceUnavailable, changes, issue);
+            if (sourceGone || targetGone && install.InstallingFirst) {
+                End(install, ExtensionInstallFailure.SpaceUnavailable, changes, issue);
+            } else if (targetGone) {
+                install.Skipped();
+                Advance(install, changes, issue);
+            }
         }
     }
 
