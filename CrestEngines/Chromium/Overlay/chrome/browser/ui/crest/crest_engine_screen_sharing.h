@@ -32,15 +32,16 @@ namespace crest {
 
 // A page's getDisplayMedia() in Crest. The core decides first whether the
 // page's site may ask, from its Space's choices. The platform then offers the
-// person the tabs of the page's profile, and the system's own sharing picker
-// for a window or a display. A tab is the engine's own to capture; the
-// system's picker asks the person which window or display to share. Either
-// choice is the consent, and neither needs Screen Recording access, so nothing
-// lists or captures the screen before the person picks, and nothing asks the
-// system for access. A window or display reaches the page as the picker's
-// session, which the engine captures with the filter the system handed it.
-// The question lasts only while the document that asked stays in its page,
-// as Chrome's picker closes with the page.
+// person the tabs of the page's profile, or only the page's own tab when it
+// asked to share that, and the system's own sharing picker for a window or a
+// display. A tab is the engine's own to capture; the system's picker asks the
+// person which window or display to share. Either choice is the consent, and
+// neither needs Screen Recording access, so nothing lists or captures the
+// screen before the person picks, and nothing asks the system for access. A
+// window or display reaches the page as the picker's session, which the engine
+// captures with the filter the system handed it. The question lasts only while
+// the document that asked stays in its page, as Chrome's picker closes with
+// the page.
 class ScreenSharingPicker final : public DesktopMediaPicker, public content::WebContentsObserver {
  public:
   explicit ScreenSharingPicker(const content::MediaStreamRequest& request);
@@ -83,6 +84,8 @@ class ScreenSharingPicker final : public DesktopMediaPicker, public content::Web
   const GURL origin_;
   const content::GlobalRenderFrameHostId requester_;
   const bool excludes_own_tab_;
+  // The document asked to share its own tab (preferCurrentTab).
+  const bool shares_own_tab_;
   const bool asks_audio_;
   DoneCallback done_;
   // The page that asked, once a page Crest shows asked.

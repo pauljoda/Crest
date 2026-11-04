@@ -129,9 +129,10 @@ bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& par
 // WebKit uses. Other Chromium pages keep their engine dialog manager.
 content::JavaScriptDialogManager* JavaScriptDialogManagerFor(content::WebContents* contents);
 // Screen sharing. Once Crest's core lets the page's site ask, a page's
-// getDisplayMedia() offers the person its profile's tabs, then the system's
-// own sharing picker for a window or a display, so Chromium's picker, which
-// lists and captures every window to show thumbnails, is never made.
+// getDisplayMedia() offers the person its profile's tabs, or its own tab when
+// it asked for that, then the system's own sharing picker for a window or a
+// display, so Chromium's picker, which lists and captures every window to show
+// thumbnails, is never made.
 // `SharesScreenThroughSystem` says whether Crest takes `request`, and
 // `CreateScreenSharingPicker` makes its picker.
 bool SharesScreenThroughSystem(const content::MediaStreamRequest& request);

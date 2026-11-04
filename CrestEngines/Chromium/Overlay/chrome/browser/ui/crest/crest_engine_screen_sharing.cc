@@ -87,6 +87,7 @@ ScreenSharingPicker::ScreenSharingPicker(const content::MediaStreamRequest& requ
     : origin_(request.security_origin),
       requester_(request.render_process_id, request.render_frame_id),
       excludes_own_tab_(request.exclude_self_browser_surface),
+      shares_own_tab_(request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE_THIS_TAB),
       asks_audio_(request.audio_type == blink::mojom::MediaStreamType::DISPLAY_AUDIO_CAPTURE) {}
 
 ScreenSharingPicker::~ScreenSharingPicker() {
@@ -276,7 +277,8 @@ void ScreenSharingPicker::WithdrawOffer() {
 
 // The live pages of the requesting tab's profile, as Chrome offers the tabs
 // of the capturer's profile. The requesting tab is one of them unless the
-// document asked to leave it out.
+// document asked to leave it out, and the only one when it asked to share
+// its own tab.
 std::vector<content::WebContents*> ScreenSharingPicker::ShareableTabs() const {
   std::vector<content::WebContents*> tabs;
   content::RenderFrameHost* requester = content::RenderFrameHost::FromID(requester_);
@@ -287,7 +289,7 @@ std::vector<content::WebContents*> ScreenSharingPicker::ShareableTabs() const {
   for (EnginePage* page : EngineBinding::Get().LivePages()) {
     content::WebContents* contents = page->web_contents();
     if (page->phase() != EnginePage::Phase::kLive || contents->GetBrowserContext() != own->GetBrowserContext() ||
-        (excludes_own_tab_ && contents == own) || contents->IsCrashed() ||
+        (shares_own_tab_ ? contents != own : excludes_own_tab_ && contents == own) || contents->IsCrashed() ||
         !contents->GetPrimaryMainFrame()->IsRenderFrameLive()) {
       continue;
     }
@@ -302,7 +304,9 @@ bool AnswerShareChoice(const engine::ChooseShareSource& choice) {
 }
 
 bool SharesScreenThroughSystem(const content::MediaStreamRequest& request) {
-  return IsEnabled() && request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE &&
+  return IsEnabled() &&
+         (request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE ||
+          request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE_THIS_TAB) &&
          base::FeatureList::IsEnabled(media::kUseSCContentSharingPicker);
 }
 
