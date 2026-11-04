@@ -5045,6 +5045,10 @@
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    },
+    "sidebar-with-open-folders-stops-freezing": {
+      "category": "fixed",
+      "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
     }
   }
 }
