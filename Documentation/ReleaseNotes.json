@@ -5045,6 +5045,10 @@
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    },
+    "private-palette-opens-quick-windows": {
+      "category": "fixed",
+      "message": "New Quick Window and Open in Quick Window from the command palette work in a private window, opening a private Quick Window as the shortcut does."
     }
   }
 }
