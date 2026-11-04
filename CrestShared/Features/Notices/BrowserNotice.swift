@@ -42,6 +42,14 @@ struct BrowserNotice: Equatable, Hashable {
 
     // MARK: - Actions - Notices
 
+    /// What the window says once `filename` has finished downloading.
+    static func downloadFinished(_ filename: String) -> BrowserNotice {
+        BrowserNotice(
+            message: String(localized: "Downloaded \(filename)"),
+            systemImage: "checkmark.circle.fill"
+        )
+    }
+
     /// The page's zoom, as `label` names it.
     static func pageZoom(_ label: String) -> BrowserNotice {
         BrowserNotice(
