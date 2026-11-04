@@ -17,6 +17,12 @@ public sealed record ShortcutChord {
     public const int SupportedModifiers = Command | Option | Control | Shift;
     public const int MaximumCharacterLength = 64;
 
+    /// The text editing chords, which every platform's fields share.
+    private static readonly ShortcutChord[] TextEditing = [
+        new("z", false, Command), new("z", false, Command | Shift), new("x", false, Command), new("c", false, Command),
+        new("v", false, Command), new("a", false, Command)
+    ];
+
     public string Key { get; }
     public bool IsSpecial { get; }
     public int Modifiers { get; }
@@ -27,6 +33,13 @@ public sealed record ShortcutChord {
 
     /// The chord as the platform reads it.
     public KeyCombination Keys => new(Key, IsSpecial, (ShortcutModifiers)Modifiers);
+
+    /// Whether the chord is one a focused text field answers itself: Undo,
+    /// Redo, Cut, Copy, Paste or Select All. A command bound to one never goes
+    /// ahead of the page or the field, and runs only when the field has nothing
+    /// to do with the keys.
+    public bool EditsText => !IsSpecial && Array.Exists(TextEditing, chord =>
+        chord.Modifiers == (Modifiers & SupportedModifiers) && string.Equals(chord.Key, Key, StringComparison.OrdinalIgnoreCase));
 
     #endregion
 

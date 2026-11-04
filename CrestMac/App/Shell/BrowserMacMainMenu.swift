@@ -8,6 +8,9 @@ final class BrowserMacMainMenu: NSMenu {
     // MARK: - Variables
 
     weak var shell: BrowserMacShell?
+    /// The Edit menu, whose items a focused field answers to before any
+    /// command bound to the same keys.
+    weak var editMenu: NSMenu?
     /// Items that answer a second chord their menu doesn't show, since an item
     /// shows one. AppKit matches these chords as it matches the menu's own, so
     /// a layout that moves letters while ⌘ is held still finds them.
@@ -16,13 +19,15 @@ final class BrowserMacMainMenu: NSMenu {
     // MARK: - Actions - Key equivalents
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if super.performKeyEquivalent(with: event) { return true }
-        if performAlias(for: event) { return true }
-        guard let shell else { return false }
         // AppKit and the engines ask the menu bar about keys on the main
         // thread only.
         nonisolated(unsafe) let event = event
-        return MainActor.assumeIsolated { shell.handleShortcut(event, pageSeesFirst: false) }
+        nonisolated(unsafe) let editMenu = editMenu
+        if let shell, MainActor.assumeIsolated({ shell.menuBarReceives(event, editMenu: editMenu) }) { return true }
+        if super.performKeyEquivalent(with: event) { return true }
+        if performAlias(for: event) { return true }
+        guard let shell else { return false }
+        return MainActor.assumeIsolated { shell.handleShortcut(event, at: .menuBar) }
     }
 
     /// Runs the alias item `event`'s chord matches, if it is enabled.

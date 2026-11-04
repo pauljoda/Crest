@@ -9,9 +9,9 @@ namespace CrestCore.Contracts;
 ///
 /// A command carries everything that differs by command: its stored `Name`,
 /// its section, its English title, search terms and symbol, its default keys
-/// on each platform, the engine capability its whole feature needs, whether a
-/// focused page sees its keys first, and, for a numbered command, what it
-/// selects. Persisted shortcut overrides are keyed by `Name`, so a name never
+/// on each platform, the engine capability its whole feature needs, who
+/// answers its keys while a focused page uses them too, and, for a numbered
+/// command, what it selects. Persisted shortcut overrides are keyed by `Name`, so a name never
 /// changes. `All` is append-only, and its order is the order the settings list
 /// shows within a section. Each command sits in one group of one
 /// `ShortcutMenu`, which is where the menu bar shows it.
@@ -91,7 +91,8 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand NewBlankWindow = new(Kinds.NewBlankWindow, name: "newBlankWindow",
         ShortcutSection.Everyday, title: "New Blank Window", symbol: "macwindow.badge.plus",
         shortcuts: [new(DevicePlatform.Desktop, Character("n", Command | Option), YieldsToOverrides: true)],
-        searchTerms: "temporary disposable unsynced window", availableWhen: facts => facts.ShowsSpace && !facts.IsPrivate);
+        searchTerms: "temporary disposable unsynced window", availableWhen: facts => facts.ShowsSpace && !facts.IsPrivate,
+        reservedFromPages: true);
     public static readonly ShortcutCommand NewTab = new(Kinds.NewTab, name: "newTab", ShortcutSection.Everyday,
         title: "New Tab", symbol: "plus.square", shortcuts: Everywhere(Character("t", Command)), offersInPalette: false,
         reservedFromPages: true);
@@ -102,7 +103,7 @@ public sealed class ShortcutCommand {
             new(DevicePlatform.Desktop, Character("n", Command | Option | Shift), YieldsToOverrides: true),
             new(DevicePlatform.Mobile, Character("n", Command | Option), YieldsToOverrides: false)
         ],
-        searchTerms: "little arc quick lookup", availableWhen: ShowingSpace);
+        searchTerms: "little arc quick lookup", availableWhen: ShowingSpace, reservedFromPages: true);
     public static readonly ShortcutCommand NewPrivateWindow = new(Kinds.NewPrivateWindow, name: "newPrivateWindow",
         ShortcutSection.Everyday, title: "New Private Window", symbol: "eyeglasses",
         shortcuts: Everywhere(Character("n", Command | Shift)), searchTerms: "incognito private browsing", reservedFromPages: true);
@@ -114,7 +115,8 @@ public sealed class ShortcutCommand {
         reservedFromPages: true);
     public static readonly ShortcutCommand OpenLocation = new(Kinds.OpenLocation, name: "openLocation",
         ShortcutSection.Everyday, title: "Open Location", symbol: "magnifyingglass",
-        shortcuts: Everywhere(Character("l", Command)), searchTerms: "change current tab url address focus", offersInPalette: false);
+        shortcuts: Everywhere(Character("l", Command)), searchTerms: "change current tab url address focus", offersInPalette: false,
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand Back = new(Kinds.Back, name: "back", ShortcutSection.Everyday, title: "Back",
         symbol: "chevron.left", shortcuts: Everywhere(Character("[", Command)));
     public static readonly ShortcutCommand Forward = new(Kinds.Forward, name: "forward", ShortcutSection.Everyday,
@@ -129,7 +131,8 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ToggleSelectedTabPinned = new(Kinds.ToggleSelectedTabPinned,
         name: "toggleSelectedTabPinned", ShortcutSection.Tabs, title: "Pin or Unpin Current Tab", symbol: "pin",
         shortcuts: Everywhere(Character("d", Command)), searchTerms: "favorite bookmark pin unpin",
-        menuTitle: "Pin or Unpin Tab", availableWhen: facts => facts.ShownTab is not null);
+        menuTitle: "Pin or Unpin Tab", availableWhen: facts => facts.ShownTab is not null,
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand DuplicateTab = new(Kinds.DuplicateTab, name: "duplicateTab", ShortcutSection.Tabs,
         title: "Duplicate Tab", symbol: "plus.square.on.square", availableWhen: facts => facts.ShownTab is { IsStartPage: false });
     public static readonly ShortcutCommand ReopenClosedTab = new(Kinds.ReopenClosedTab, name: "reopenClosedTab",
@@ -169,10 +172,11 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand SelectTab9 = SelectingTab(name: "selectTab9", number: 9);
     public static readonly ShortcutCommand PreviousSpace = new(Kinds.PreviousSpace, name: "previousSpace",
         ShortcutSection.Spaces, title: "Previous Space", symbol: "chevron.up",
-        shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Command | Option)), searchTerms: "switch cycle spaces left right arrow");
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Command | Option)), searchTerms: "switch cycle spaces left right arrow",
+        whenPageUsesKeys: ShortcutPreference.PreferCrest);
     public static readonly ShortcutCommand NextSpace = new(Kinds.NextSpace, name: "nextSpace", ShortcutSection.Spaces,
         title: "Next Space", symbol: "chevron.down", shortcuts: Everywhere(Special(ShortcutSpecialKey.RightArrow, Command | Option)),
-        searchTerms: "switch cycle spaces left right arrow");
+        searchTerms: "switch cycle spaces left right arrow", whenPageUsesKeys: ShortcutPreference.PreferCrest);
     public static readonly ShortcutCommand SelectSpace1 = SelectingSpace(name: "selectSpace1", number: 1);
     public static readonly ShortcutCommand SelectSpace2 = SelectingSpace(name: "selectSpace2", number: 2);
     public static readonly ShortcutCommand SelectSpace3 = SelectingSpace(name: "selectSpace3", number: 3);
@@ -190,7 +194,7 @@ public sealed class ShortcutCommand {
         searchTerms: "ads trackers privacy protection", requiredCapability: EngineCapability.ContentBlocking,
         availableWhen: ShowingSpace);
     public static readonly ShortcutCommand FindInPage = new(Kinds.FindInPage, name: "findInPage", ShortcutSection.Page,
-        title: "Find in Page", symbol: "text.magnifyingglass", shortcuts: Everywhere(Character("f", Command)));
+        title: "Find in Page", symbol: "text.magnifyingglass", shortcuts: Everywhere(Character("f", Command)), whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ZoomIn = new(Kinds.ZoomIn, name: "zoomIn", ShortcutSection.Page, title: "Zoom In",
         symbol: "plus.magnifyingglass", shortcuts: Everywhere(Character("+", Command)));
     public static readonly ShortcutCommand ZoomOut = new(Kinds.ZoomOut, name: "zoomOut", ShortcutSection.Page,
@@ -200,10 +204,11 @@ public sealed class ShortcutCommand {
         searchTerms: "reset zoom zero");
     public static readonly ShortcutCommand CopyPageLink = new(Kinds.CopyPageLink, name: "copyPageLink", ShortcutSection.Page,
         title: "Copy Page Link", symbol: "link", shortcuts: Everywhere(Character("c", Command | Shift)),
-        searchTerms: "copy url address clipboard");
+        searchTerms: "copy url address clipboard", whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand CopyPageLinkAsMarkdown = new(Kinds.CopyPageLinkAsMarkdown,
         name: "copyPageLinkAsMarkdown", ShortcutSection.Page, title: "Copy Page Link as Markdown", symbol: "link",
-        shortcuts: Everywhere(Character("c", Command | Option | Shift)), searchTerms: "copy url address markdown clipboard");
+        shortcuts: Everywhere(Character("c", Command | Option | Shift)), searchTerms: "copy url address markdown clipboard",
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand SharePage = new(Kinds.SharePage, name: "sharePage", ShortcutSection.Page,
         title: "Share Page", symbol: "square.and.arrow.up", menuTitle: "Share…");
     public static readonly ShortcutCommand ExportPDF = new(Kinds.ExportPDF, name: "exportPDF", ShortcutSection.Page,
@@ -211,22 +216,24 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand SaveWebArchive = new(Kinds.SaveWebArchive, name: "saveWebArchive",
         ShortcutSection.Page, title: "Save Web Archive", symbol: "square.and.arrow.down", menuTitle: "Save Web Archive…");
     public static readonly ShortcutCommand PrintPage = new(Kinds.PrintPage, name: "printPage", ShortcutSection.Page,
-        title: "Print Page", symbol: "printer", shortcuts: Everywhere(Character("p", Command)), menuTitle: "Print…");
+        title: "Print Page", symbol: "printer", shortcuts: Everywhere(Character("p", Command)), menuTitle: "Print…",
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ToggleSidebar = new(Kinds.ToggleSidebar, name: "toggleSidebar",
         ShortcutSection.View, title: "Show or Hide Sidebar", symbol: "sidebar.leading",
-        shortcuts: Everywhere(Character("s", Command)), menuTitle: "Toggle Sidebar", paletteRest: 5);
+        shortcuts: Everywhere(Character("s", Command)), menuTitle: "Toggle Sidebar", paletteRest: 5, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ShowHistory = new(Kinds.ShowHistory, name: "showHistory", ShortcutSection.View,
         title: "Show History", symbol: "clock", shortcuts: Everywhere(Character("y", Command)),
-        searchTerms: "visited pages history", paletteRest: 3);
+        searchTerms: "visited pages history", paletteRest: 3, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ShowArchive = new(Kinds.ShowArchive, name: "showArchive", ShortcutSection.View,
         title: "Show Archive", symbol: "archivebox", searchTerms: "closed tabs archive", availableWhen: ShowingSpace);
     public static readonly ShortcutCommand ShowDownloads = new(Kinds.ShowDownloads, name: "showDownloads",
         ShortcutSection.View, title: "Show Downloads", symbol: "arrow.down.circle",
-        shortcuts: Everywhere(Character("j", Command | Shift)), searchTerms: "download files transfers", paletteRest: 4);
+        shortcuts: Everywhere(Character("j", Command | Shift)), searchTerms: "download files transfers", paletteRest: 4,
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
     // The stored name is the one this command shipped with.
     public static readonly ShortcutCommand ShowWebInspector = new(Kinds.ShowWebInspector, name: "webInspectorInstructions",
         ShortcutSection.View, title: "Show Web Inspector", symbol: "hammer", shortcuts: Everywhere(Character("i", Command | Option)),
-        searchTerms: "developer tools inspect element webkit safari");
+        searchTerms: "developer tools inspect element webkit safari", whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand SplitWithNextTab = new(Kinds.SplitWithNextTab, name: "splitWithNextTab",
         ShortcutSection.Tabs, title: "Split With Next Tab", symbol: "rectangle.split.2x1",
         searchTerms: "split view cards side by side columns", availableWhen: facts => facts.HasSplitCandidate);
@@ -236,18 +243,18 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand FocusNextSplitCard = new(Kinds.FocusNextSplitCard, name: "focusNextSplitCard",
         ShortcutSection.Tabs, title: "Focus Next Split Card", symbol: "rectangle.righthalf.filled",
         shortcuts: Everywhere(Special(ShortcutSpecialKey.RightArrow, Control | Command)),
-        searchTerms: "split view cards focus cycle left right arrow", availableWhen: ShowingSplit);
+        searchTerms: "split view cards focus cycle left right arrow", availableWhen: ShowingSplit, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand FocusPreviousSplitCard = new(Kinds.FocusPreviousSplitCard,
         name: "focusPreviousSplitCard", ShortcutSection.Tabs, title: "Focus Previous Split Card",
         symbol: "rectangle.lefthalf.filled", shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Control | Command)),
-        searchTerms: "split view cards focus cycle left right arrow", availableWhen: ShowingSplit);
+        searchTerms: "split view cards focus cycle left right arrow", availableWhen: ShowingSplit, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand RemoveTabFromSplit = new(Kinds.RemoveTabFromSplit, name: "removeTabFromSplit",
         ShortcutSection.Tabs, title: "Remove Tab From Split", symbol: "minus.rectangle",
         searchTerms: "split view card remove leave unsplit", availableWhen: ShowingSplit);
     public static readonly ShortcutCommand SeparateSplitTabs = new(Kinds.SeparateSplitTabs, name: "separateSplitTabs",
         ShortcutSection.Tabs, title: "Separate All Tabs", symbol: "rectangle.split.2x1.slash",
         shortcuts: Everywhere(Character("u", Command | Option)), searchTerms: "split view break up unsplit separate cards",
-        availableWhen: ShowingSplit);
+        availableWhen: ShowingSplit, whenPageUsesKeys: ShortcutPreference.UseBoth);
     // A fixed-direction arrow, not a mirroring backward or forward one: the
     // command names a side of the screen, and it still names that side in a
     // right-to-left layout. ⇧⌘←/→ shadows extend-selection only while a split
@@ -265,11 +272,12 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ToggleDeveloperToolbar = new(Kinds.ToggleDeveloperToolbar,
         name: "toggleDeveloperToolbar", ShortcutSection.View, title: "Show or Hide Developer Toolbar",
         symbol: "macbook.and.iphone", shortcuts: Everywhere(Character("i", Command | Shift)),
-        searchTerms: "developer toolbar viewport preview responsive custom size", menuTitle: "Show Developer Toolbar");
+        searchTerms: "developer toolbar viewport preview responsive custom size", menuTitle: "Show Developer Toolbar",
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ToggleTranslationToolbar = new(Kinds.ToggleTranslationToolbar,
         name: "toggleTranslationToolbar", ShortcutSection.View, title: "Show or Hide Translation Toolbar", symbol: "translate",
         shortcuts: Everywhere(Character("l", Command | Shift)), searchTerms: "translate translation language toolbar show hide",
-        menuTitle: "Show Translation Toolbar", requiredCapability: EngineCapability.Translation);
+        menuTitle: "Show Translation Toolbar", requiredCapability: EngineCapability.Translation, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand OpenFile = new(Kinds.OpenFile, name: "openFile", ShortcutSection.Everyday,
         title: "Open File", symbol: "folder", searchTerms: "open local file document html pdf archive webarchive mhtml",
         menuTitle: "Open File…", availableWhen: ShowingSpace);
@@ -286,7 +294,7 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand CapturePage = new(Kinds.CapturePage, name: "capturePage", ShortcutSection.Page,
         title: "Capture Page", symbol: "camera", searchTerms: "screenshot snapshot region selection image clipboard",
         shortcuts: [new(DevicePlatform.Desktop, Character("2", Command | Shift), YieldsToOverrides: true)],
-        requiredCapability: EngineCapability.ViewportCapture, availableWhen: ShowingWebPage);
+        requiredCapability: EngineCapability.ViewportCapture, availableWhen: ShowingWebPage, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ClearSiteCookies = new(Kinds.ClearSiteCookies, name: "clearSiteCookies",
         ShortcutSection.Page, title: "Clear Cookies for This Site", symbol: "person.crop.circle.badge.xmark",
         searchTerms: "site data storage local session indexeddb service workers sign out delete remove",
@@ -358,13 +366,19 @@ public sealed class ShortcutCommand {
     /// themselves.
     public bool OffersInPalette { get; }
 
-    /// Whether the browser runs the command before a page with focus sees its
-    /// keys. A page sees every other command's keys first, as in other
-    /// browsers: a document editor that handles them runs its own Find or
-    /// Save, and the browser runs the command only when the page lets the keys
-    /// go. Opening, closing and switching tabs and windows stay the browser's,
-    /// so no page can keep a person in it.
+    /// Whether the command always runs before a page with focus sees its keys,
+    /// whatever a person prefers. Opening, closing and switching tabs and
+    /// windows stay the browser's, as in other browsers, so no page can keep a
+    /// person in it.
     public bool IsReservedFromPages { get; }
+
+    /// Who answers the command's keys while a focused page uses them too,
+    /// until a person chooses otherwise: Crest for switching Spaces, Crest on
+    /// a second press for Crest's own surfaces and pinning, and otherwise the
+    /// page, as in other browsers, so a document editor that handles them runs
+    /// its own Find or Save, and keys an editor presses again and again, such
+    /// as indenting or zooming, stay the page's.
+    public ShortcutPreference DefaultPreference { get; }
 
     /// Whether a window can run the command now, by what it shows. Commands
     /// that act on a page also ask the page's engine, which the platform does.
@@ -377,7 +391,8 @@ public sealed class ShortcutCommand {
     private ShortcutCommand(Kinds kind, string name, ShortcutSection section, string title, string symbol,
         IReadOnlyList<ShortcutDefault>? shortcuts = null, string? searchTerms = null, string? menuTitle = null,
         EngineCapability? requiredCapability = null, NumberedSelectionTarget? selects = null, int? number = null, int? paletteRest = null,
-        bool offersInPalette = true, Func<WindowCommandFacts, bool>? availableWhen = null, bool reservedFromPages = false) {
+        bool offersInPalette = true, Func<WindowCommandFacts, bool>? availableWhen = null, bool reservedFromPages = false,
+        ShortcutPreference? whenPageUsesKeys = null) {
         Kind = kind;
         Name = name;
         Section = section;
@@ -392,19 +407,20 @@ public sealed class ShortcutCommand {
         PaletteRest = paletteRest;
         OffersInPalette = offersInPalette;
         IsReservedFromPages = reservedFromPages;
+        DefaultPreference = reservedFromPages ? ShortcutPreference.PreferCrest : whenPageUsesKeys ?? ShortcutPreference.PreferWebsite;
         this.availableWhen = availableWhen ?? (_ => true);
     }
 
     /// ⌘1–⌘9 select the Nth stop of the shown Space's sidebar.
     private static ShortcutCommand SelectingTab(string name, int number) => new(Kinds.SelectNumbered, name, ShortcutSection.Tabs,
         title: "Select Tab %lld", symbol: "square.on.square", shortcuts: Everywhere(Character(Digit(number), Command)),
-        selects: NumberedSelectionTarget.Tab, number: number, offersInPalette: false);
+        selects: NumberedSelectionTarget.Tab, number: number, offersInPalette: false, whenPageUsesKeys: ShortcutPreference.UseBoth);
 
     /// ⌃1–⌃9 select the Nth Space.
     private static ShortcutCommand SelectingSpace(string name, int number) => new(Kinds.SelectNumbered, name,
         ShortcutSection.Spaces, title: "Select Space %lld", symbol: "rectangle.3.group",
         shortcuts: Everywhere(Character(Digit(number), Control)), selects: NumberedSelectionTarget.Space, number: number,
-        offersInPalette: false);
+        offersInPalette: false, whenPageUsesKeys: ShortcutPreference.PreferCrest);
 
     #endregion
 

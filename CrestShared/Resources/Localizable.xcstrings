@@ -10118,7 +10118,13 @@
     "Practice window" : {
 
     },
+    "Prefer Crest" : {
+
+    },
     "Prefer open tabs" : {
+
+    },
+    "Prefer Website" : {
 
     },
     "Preparing" : {
@@ -10159,6 +10165,12 @@
           }
         }
       }
+    },
+    "Press %@ again to %@" : {
+
+    },
+    "Press %@ Again to %@" : {
+
     },
     "Press Tab to %@" : {
 
@@ -15207,6 +15219,9 @@
     "Use a supported key with Command, Option, Control, or Shift." : {
 
     },
+    "Use Both" : {
+
+    },
     "Use Built-In Shortcuts" : {
 
     },
@@ -15568,6 +15583,9 @@
 
     },
     "Wheat" : {
+
+    },
+    "When a Website Uses These Keys" : {
 
     },
     "When Crest opens" : {

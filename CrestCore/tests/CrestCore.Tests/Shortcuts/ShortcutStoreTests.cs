@@ -117,6 +117,21 @@ public sealed partial class BrowserContractsTests {
             Assert.Equal(Typed("t", ShortcutModifiers.Command), reset[ShortcutCommand.NewTab].Keys);
             Assert.Equal(chord, reset[ShortcutCommand.NewWindow].Keys);
             Assert.Null(Bindings(app.Send(new UnassignShortcut(ShortcutCommand.ShowHistory)))[ShortcutCommand.ShowHistory].Keys);
+
+            // A preference is a choice of its own; a command reserved from pages keeps Crest's.
+            Assert.Equal(ShortcutPreference.UseBoth, reset[ShortcutCommand.ToggleSidebar].Preference);
+            var preferred = Bindings(app.Send(new ChooseShortcutPreference(ShortcutCommand.ToggleSidebar, ShortcutPreference.PreferWebsite)));
+            Assert.Equal(ShortcutPreference.PreferWebsite, preferred[ShortcutCommand.ToggleSidebar].Preference);
+            Assert.True(preferred[ShortcutCommand.ToggleSidebar].IsCustomized);
+            Assert.Empty(app.Send(new ChooseShortcutPreference(ShortcutCommand.NewTab, ShortcutPreference.PreferWebsite))
+                .OfType<ShortcutsChanged>());
+            Assert.False(preferred[ShortcutCommand.NewTab].ChoosesPreference);
+
+            // Keys a text field edits with stay the field's first, whatever the command prefers.
+            var undo = Bindings(app.Send(new AssignShortcut(ShortcutCommand.ReopenClosedTab, Typed("z", ShortcutModifiers.Command))));
+            Assert.Equal(ShortcutPreference.PreferWebsite, undo[ShortcutCommand.ReopenClosedTab].Preference);
+            Assert.False(undo[ShortcutCommand.ReopenClosedTab].ChoosesPreference);
+            Assert.True(undo[ShortcutCommand.ReopenClosedTab].YieldsToTextEditing);
         }
 
         var (relaunched, _, _) = DeviceApp(directory);
@@ -125,6 +140,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(chord, restored[ShortcutCommand.NewWindow].Keys);
         Assert.Null(restored[ShortcutCommand.ShowHistory].Keys);
         Assert.Equal(Typed("t", ShortcutModifiers.Command), restored[ShortcutCommand.NewTab].Keys);
+        Assert.Equal(ShortcutPreference.PreferWebsite, restored[ShortcutCommand.ToggleSidebar].Preference);
+        Assert.Equal(ShortcutPreference.UseBoth,
+            Bindings(relaunched.Send(new ResetShortcut(ShortcutCommand.ToggleSidebar)))[ShortcutCommand.ToggleSidebar].Preference);
 
         // Resetting every shortcut forgets them all, on disk too.
         var cleared = Assert.Single(relaunched.Send(new ResetShortcuts()).OfType<ShortcutsChanged>());
