@@ -5046,6 +5046,18 @@
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
     },
+    "core-dotnet-10-0-14-security-update": {
+      "category": "internal",
+      "message": "Build the core with the .NET 10.0.14 security update."
+    },
+    "mobile-peek-grows-from-held-link": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link."
+    },
+    "sidebar-with-open-folders-stops-freezing": {
+      "category": "fixed",
+      "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
+    },
     "sidebar-drag-right-after-a-drop-lands-where-aimed": {
       "category": "fixed",
       "message": "Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started."
