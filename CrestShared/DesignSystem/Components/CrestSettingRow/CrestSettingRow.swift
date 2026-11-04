@@ -91,6 +91,7 @@ private struct CrestSettingResetContextMenu: ViewModifier {
         content.contextMenu {
             if let setting, !setting.isDefault {
                 Button("Reset to Default", systemImage: "arrow.counterclockwise", action: setting.reset)
+                    .crestMenuActionLabelStyle()
             }
         }
     }

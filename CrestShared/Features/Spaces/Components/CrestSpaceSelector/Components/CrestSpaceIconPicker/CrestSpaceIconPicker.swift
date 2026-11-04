@@ -113,14 +113,17 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 #endif
                 .contextMenu {
                     if let index = spaces.firstIndex(where: { $0.id == space.id }) {
-                        Button("Move Left", systemImage: "arrow.left") {
-                            moveSpace(space.id, spaces[index - 1].id)
+                        Group {
+                            Button("Move Left", systemImage: "arrow.left") {
+                                moveSpace(space.id, spaces[index - 1].id)
+                            }
+                            .disabled(index == 0)
+                            Button("Move Right", systemImage: "arrow.right") {
+                                moveSpace(space.id, spaces[index + 1].id)
+                            }
+                            .disabled(index == spaces.count - 1)
                         }
-                        .disabled(index == 0)
-                        Button("Move Right", systemImage: "arrow.right") {
-                            moveSpace(space.id, spaces[index + 1].id)
-                        }
-                        .disabled(index == spaces.count - 1)
+                        .crestMenuActionLabelStyle()
                     }
                 }
         } else {

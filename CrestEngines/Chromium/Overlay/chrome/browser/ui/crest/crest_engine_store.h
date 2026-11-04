@@ -1,20 +1,41 @@
 #ifndef CHROME_BROWSER_UI_CREST_CREST_ENGINE_STORE_H_
 #define CHROME_BROWSER_UI_CREST_CREST_ENGINE_STORE_H_
 
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <optional>
 #include <string>
 
+#include "base/files/file_path.h"
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
+#include "base/memory/raw_ref.h"
+#include "base/memory/weak_ptr.h"
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
 
 class GURL;
+class Profile;
 
 namespace content {
 class RenderFrameHost;
 class WebContents;
 }
 
+namespace extensions {
+class CrxInstallError;
+}
+
+namespace network {
+class SimpleURLLoader;
+namespace mojom {
+class URLResponseHead;
+}
+}  // namespace network
+
 namespace crest {
+
+class EngineBinding;
 
 // A Chrome Web Store listing in a page. Crest owns the store's Add to Chrome
 // button, so an install goes through Crest's review and Spaces rather than
@@ -54,6 +75,72 @@ class PageStore final {
   const Present present_;
   // A request from the listing is still with Crest.
   bool request_open_ = false;
+};
+
+// One Chrome Web Store package download, made by a Space's own profile with
+// the request Chromium's Web Store installer sends. Crest downloads it here
+// rather than through that installer, so one package can be installed into
+// every Space the person picks, and Chromium's CrxInstaller judges it in each;
+// nothing here limits or inspects it. Destroying it stops the request and
+// deletes what it received.
+class WebStoreDownload final {
+ public:
+  // The fraction of the package received, once the response names its size.
+  using Progress = base::RepeatingCallback<void(double fraction)>;
+  // The package file, which the caller then owns, or nothing.
+  using Done = base::OnceCallback<void(std::optional<base::FilePath> package)>;
+
+  WebStoreDownload(Profile* profile, const std::string& extension_id, Progress progress, Done done);
+  WebStoreDownload(const WebStoreDownload&) = delete;
+  WebStoreDownload& operator=(const WebStoreDownload&) = delete;
+  ~WebStoreDownload();
+
+ private:
+  void Started(const GURL& url, const network::mojom::URLResponseHead& head);
+  void Progressed(uint64_t received);
+  void Finished(base::FilePath path);
+
+  std::unique_ptr<network::SimpleURLLoader> loader_;
+  int64_t length_ = -1;
+  const Progress progress_;
+  Done done_;
+};
+
+// The extension installs the core runs on Chromium, by install: each one's
+// package, downloaded once through the profile the core names and kept until
+// the core ends the install, and installed into each profile the core names
+// next, which Chromium verifies again there. The question each install asks
+// goes to the core, never to a window, and the core answers it: from the
+// person's review, or from the consent they gave the same package before.
+class ExtensionInstalls final {
+ public:
+  explicit ExtensionInstalls(EngineBinding& binding);
+  ExtensionInstalls(const ExtensionInstalls&) = delete;
+  ExtensionInstalls& operator=(const ExtensionInstalls&) = delete;
+  ~ExtensionInstalls();
+
+  void Download(const engine::DownloadExtension& command);
+  void Install(const engine::InstallExtensionPackage& command);
+  void End(const engine::EndExtensionInstall& command);
+
+ private:
+  struct Running;
+
+  // The install the core runs as `install`, or nullptr once it ended.
+  Running* Find(const engine::Guid& install);
+  void StartDownload(const engine::Guid& install, const engine::Guid& profile, bool ready);
+  void Progressed(const engine::Guid& install, double fraction);
+  void Downloaded(const engine::Guid& install, const engine::Guid& profile, std::optional<base::FilePath> package);
+  void StagePackage(const engine::Guid& install, const engine::Guid& profile, bool ready);
+  void Staged(const engine::Guid& install, const engine::Guid& profile, base::FilePath staged);
+  void Installed(const engine::Guid& install,
+                 const engine::Guid& profile,
+                 const std::optional<extensions::CrxInstallError>& error);
+  void Fail(const engine::Guid& install, const engine::Guid& profile, engine::ExtensionInstallFailure reason);
+
+  const raw_ref<EngineBinding> binding_;
+  std::map<engine::Guid, std::unique_ptr<Running>> installs_;
+  base::WeakPtrFactory<ExtensionInstalls> weak_factory_{this};
 };
 
 }  // namespace crest

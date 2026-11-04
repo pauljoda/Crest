@@ -18,7 +18,7 @@ struct BrowserSiteControlTrigger: View {
                     )
                 if blockedPopupNotice != nil {
                     Circle()
-                        .fill(.orange)
+                        .fill(CrestColor.warning)
                         .frame(width: 7, height: 7)
                         .overlay {
                             Circle().stroke(.background, lineWidth: 1)
@@ -39,7 +39,7 @@ struct BrowserSiteControlTrigger: View {
             )
         )
         .foregroundStyle(
-            blockedPopupNotice == nil ? Color.secondary : Color.orange
+            blockedPopupNotice == nil ? Color.secondary : CrestColor.warning
         )
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)

@@ -139,6 +139,7 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
+    static let peekSizeKey = "crest.appearance.peek-size"
     static let maximumCornerRadius: Double = 40
     /// How long the choices stay still before the store writes them out.
     static let settleDelay = Duration.milliseconds(300)
@@ -179,6 +180,12 @@ final class BrowserDeviceAppearanceStore {
     /// How wide, in points, the strip along the window's edge is that shows a
     /// hidden sidebar when the pointer rests on it. Only the Mac has one.
     var sidebarRevealWidth: Double {
+        didSet { saveSoon() }
+    }
+    /// How much of the room beside the sidebar a Peek's card takes, within
+    /// ``BrowserTransientCardArrangement/pointerCardShares``. Only the Mac's
+    /// Peek floats in that room.
+    var peekSize: Double {
         didSet { saveSoon() }
     }
     /// How tabs look. Replaced only to reset it; otherwise its choices change
@@ -289,6 +296,11 @@ final class BrowserDeviceAppearanceStore {
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
+        let shares = BrowserTransientCardArrangement.pointerCardShares
+        peekSize =
+            (defaults.object(forKey: Self.peekSizeKey) as? Double).flatMap {
+                $0.isFinite ? min(max($0, shares.lowerBound), shares.upperBound) : nil
+            } ?? shares.upperBound
         if defaults.object(forKey: Self.cornerRadiusKey) != nil {
             cornerRadius = defaults.double(forKey: Self.cornerRadiusKey)
         } else {
@@ -388,6 +400,7 @@ final class BrowserDeviceAppearanceStore {
         write(spaceIconSizing.name, forKey: Self.spaceIconSizingKey, in: defaults)
         write(spaceIconScale, forKey: Self.spaceIconScaleKey, in: defaults)
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
+        write(peekSize, forKey: Self.peekSizeKey, in: defaults)
         write(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey, in: defaults)
         write(pinsFillRow, forKey: BrowserSidebarDensityPreference.pinsFillRowKey, in: defaults)
         write(foldersAlwaysVisible, forKey: BrowserFolderAppearancePreference.alwaysVisibleKey, in: defaults)

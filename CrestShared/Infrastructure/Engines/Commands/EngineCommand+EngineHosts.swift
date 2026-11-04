@@ -8,10 +8,11 @@ extension EngineCommand {
         case .adoptOfferedPage(let command): command.note(runningOn: kind, in: &hosts)
         case .closePage(let command): command.note(runningOn: kind, in: &hosts)
         case .createPage(let command): command.note(runningOn: kind, in: &hosts)
-        case .approveEngineDownload, .cancelEngineDownload, .checkBeforeUnload, .dropStagedLink, .eraseBrowsingData,
-            .eraseProfileData, .eraseSiteData, .exitPictureInPicture, .goToHistoryEntry, .groupPages, .loadPage,
-            .pauseEngineDownload, .readSiteData, .recoverPage, .rejectOfferedPage, .removeEngineDownload,
-            .resumeEngineDownload, .settleAuthentication,
+        case .approveEngineDownload, .cancelEngineDownload, .changeEngineExtension, .checkBeforeUnload,
+            .downloadExtension, .dropStagedLink, .endExtensionInstall, .eraseBrowsingData, .eraseProfileData,
+            .eraseSiteData, .exitPictureInPicture, .goToHistoryEntry, .groupPages, .installExtensionPackage,
+            .listEngineExtensions, .loadPage, .pauseEngineDownload, .readSiteData, .recoverPage, .rejectOfferedPage,
+            .removeEngineDownload, .resumeEngineDownload, .settleAuthentication,
             .settleDownloadDestination, .settleExtensionInstall, .settlePermission, .settleScriptDialog,
             .stageNavigation:
             // These act on a page the engine already hosts, or on none.

@@ -51,9 +51,7 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                 if !newDownloads.isEmpty {
                     BrowserUtilityNotificationBadge(
                         count: newDownloads.count,
-                        tint: downloads.contains(where: { $0.phase.needsAttention })
-                            ? .red
-                            : badgeColor,
+                        tint: downloads.badgeTint(otherwise: badgeColor),
                         progress: downloads.notificationProgress
                     )
                     .offset(

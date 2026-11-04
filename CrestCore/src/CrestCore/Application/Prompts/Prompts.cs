@@ -16,7 +16,7 @@ internal sealed class Prompts(Device device, Pages pages) {
     /// A prompt waiting on the person: the engine that asked it, the page that
     /// asked or none for one the engine asks itself, and the question, which
     /// says what kind of answer it takes.
-    internal sealed record Waiting(Engine Engine, Guid? PageId, object Question);
+    internal sealed record Waiting(Engine Engine, Guid? PageId, PromptQuestion Question);
 
     #endregion
 
@@ -41,7 +41,7 @@ internal sealed class Prompts(Device device, Pages pages) {
     /// changes nothing; a question from a page the core does not host on that
     /// engine is declined with `declining`, and one `answered` answers from
     /// the page's Space is answered, both at once and without asking.
-    internal bool Raised(Engine engine, Guid promptId, Guid? pageId, object question, EngineCommand declining,
+    internal bool Raised(Engine engine, Guid promptId, Guid? pageId, PromptQuestion question, EngineCommand declining,
         Action<Engine, EngineCommand> issue, Func<Page, EngineCommand?>? answered = null) {
         if (waiting.ContainsKey(promptId)) return false;
         var page = Asking(pageId);
@@ -80,14 +80,20 @@ internal sealed class Prompts(Device device, Pages pages) {
     internal Waiting Prompt(Guid promptId) =>
         waiting.TryGetValue(promptId, out var prompt) ? prompt : throw new Rejected(new UnknownPrompt(promptId));
 
-    /// Settles the prompt `promptId` names and hands the engine that asked
-    /// `settlement`, when `answers` is true of its question. Refused with
-    /// `UnknownPrompt` when no such prompt waits, and `PromptAnswerMismatch`
-    /// for an answer to another kind of question.
-    internal void Answer(Guid promptId, Func<object, bool> answers, EngineCommand settlement, ChangeFeed changes,
-        Action<Engine, EngineCommand> issue) {
+    /// The prompt `promptId` names and its question, which is a `TQuestion`.
+    /// Refused with `UnknownPrompt` when no such prompt waits, and
+    /// `PromptAnswerMismatch` when it asks another kind of question.
+    internal (Waiting Prompt, TQuestion Question) Prompt<TQuestion>(Guid promptId) where TQuestion : PromptQuestion {
         var prompt = Prompt(promptId);
-        if (!answers(prompt.Question)) throw new Rejected(new PromptAnswerMismatch(promptId));
+        return prompt.Question is TQuestion question ? (prompt, question) : throw new Rejected(new PromptAnswerMismatch(promptId));
+    }
+
+    /// Settles the prompt `promptId` names, which asks a `TQuestion`, and
+    /// hands the engine that asked `settlement`. Refused as
+    /// `Prompt<TQuestion>` refuses.
+    internal void Answer<TQuestion>(Guid promptId, EngineCommand settlement, ChangeFeed changes,
+        Action<Engine, EngineCommand> issue) where TQuestion : PromptQuestion {
+        var (prompt, _) = Prompt<TQuestion>(promptId);
         Settle(promptId, changes);
         issue(prompt.Engine, settlement);
     }

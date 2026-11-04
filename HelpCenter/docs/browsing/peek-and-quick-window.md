@@ -35,7 +35,7 @@ To see a link under another account on Mac, right-click it and choose a Space fr
 
 On Mac, a Quick Window has a browser window's controls: Back and Forward, Site Controls for the page's permissions and extensions, and the Space's pinned extensions, with the ones that don't fit behind **»**. Click its address or press **Command-L** to search or go somewhere else in the same Quick Window. Right-click a link and choose **Open Link in New Quick Window** to open it in another Quick Window.
 
-Open a blank Quick Window with **Option-Shift-Command-N** on Mac, including from another Quick Window. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+Open a blank Quick Window with **Option-Shift-Command-N** on Mac, including from another Quick Window, and from any app while Crest is open, where it opens over the window you're in. While Crest is in the background, that shortcut opens a Quick Window instead of acting in the app in front; change or clear it in **Settings → Shortcuts**. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
 ### Sign-in and other popup windows
 

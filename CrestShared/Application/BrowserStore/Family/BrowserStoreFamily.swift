@@ -155,45 +155,47 @@ final class BrowserStoreFamily {
 
     /// Runs one session intent that `source`'s window issued. What it changed
     /// reaches the read model through the core's changes, which every window
-    /// reads. Answers whether the session changed; a refusal changes nothing,
-    /// and the window's sync status reports it after `failure`.
+    /// reads. Answers whether the session changed. A refusal changes nothing
+    /// and answers false: it is routine, such as a tab already where it goes,
+    /// and a caller that tells the person why runs `commit` instead.
     @discardableResult
-    func send(
-        _ intent: some Intent, from source: BrowserStore, offering image: Data? = nil,
-        failure: String = "Core command failed"
-    ) -> Bool {
-        perform(intent, from: source, offering: image, failure: failure)?.changed ?? false
+    func send(_ intent: some Intent, from source: BrowserStore, offering image: Data? = nil) -> Bool {
+        perform(intent, from: source, offering: image)?.changed ?? false
     }
 
     /// Runs one session intent as `send` does, and answers the changes the
     /// core published with it and whether the session changed, or nil when a
-    /// rule refused it. `image` is the image `source` holds for the tab the
-    /// core tells to adopt its issuer's, such as a favicon pulled from a page.
+    /// rule refused it.
     func perform(
-        _ intent: some Intent, from source: BrowserStore, offering image: Data? = nil,
-        failure: String = "Core command failed"
+        _ intent: some Intent, from source: BrowserStore, offering image: Data? = nil
     ) -> (changes: [Change], changed: Bool)? {
         let before = workspace?.sessionRevision
-        let changes: [Change]
-        let favicons = source.core.state.favicons
-        if let image { favicons.offer(FaviconAssets.Offer(assigned: image), in: workspaceID) }
-        defer { if image != nil { favicons.withdrawOffer(in: workspaceID) } }
-        do {
-            changes = try source.core.send(intent)
-        } catch {
-            source.localSyncErrorDescription = "\(failure): \(error)"
-            return nil
-        }
+        guard let changes = try? commit(intent, from: source, offering: image) else { return nil }
         return (changes, workspace?.sessionRevision != before)
     }
 
     /// Runs one session intent as `send` does, and answers the changes the
-    /// core published with it, or throws the rule that refused it or the save
-    /// that failed, for a caller that handles either, such as a deletion step
-    /// the core saves before it returns.
+    /// core published with it, or throws the rule that refused it, for a
+    /// caller that tells the person why or handles it otherwise. A save the
+    /// core makes before it returns, such as a deletion step's, that fails
+    /// throws too, and `source`'s window shows it as a failed save. `image` is
+    /// the image `source` holds for the tab the core tells to adopt its
+    /// issuer's, such as a favicon pulled from a page.
     @discardableResult
-    func commit(_ intent: some Intent, from source: BrowserStore) throws(Rejection) -> [Change] {
-        try source.core.send(intent)
+    func commit(
+        _ intent: some Intent, from source: BrowserStore, offering image: Data? = nil
+    ) throws(Rejection) -> [Change] {
+        let favicons = source.core.state.favicons
+        if let image { favicons.offer(FaviconAssets.Offer(assigned: image), in: workspaceID) }
+        defer { if image != nil { favicons.withdrawOffer(in: workspaceID) } }
+        do {
+            return try source.core.send(intent)
+        } catch {
+            if case .saveFailed(let failed) = error {
+                source.localSyncErrorDescription = CoreState.description(of: failed.reason)
+            }
+            throw error
+        }
     }
 
     /// Whether the core would accept a session intent `source`'s window
@@ -219,7 +221,7 @@ final class BrowserStoreFamily {
     static func moveTab(
         _ intent: MoveTabToWindow, from source: BrowserStore, to destination: BrowserStore
     ) throws(Rejection) {
-        try source.core.send(intent)
+        try source.family.commit(intent, from: source)
         source.showsAnew()
         destination.showsAnew()
     }

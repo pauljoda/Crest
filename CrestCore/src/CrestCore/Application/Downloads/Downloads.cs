@@ -31,6 +31,15 @@ public sealed class Downloads {
         if (downloadIds.Count > 0) changes.Publish(new DownloadsRemoved(downloadIds));
     }
 
+    /// Removes the finished, canceled, failed and blocked records of the
+    /// profiles `spaces` browse in whose age at `now` strictly exceeds their
+    /// Space's download retention, publishing those it let go. When several
+    /// Spaces share a profile the shortest retention wins; a profile with no
+    /// limit keeps its records.
+    internal void Expire(IEnumerable<SpaceState> spaces, DateTimeOffset now, ChangeFeed changes) =>
+        Removed(ledger.RemoveExpired([.. spaces.Select(space => new DownloadRetention(space.ProfileId,
+            space.Settings.BrowsingPreferences.DataRetention.Downloads.Lifetime))], now), changes);
+
     #endregion
 
     #region Actions - Queries

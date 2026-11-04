@@ -15,7 +15,7 @@ extension View {
 
     /// Asks before deleting the Space `request` names, as its plan describes:
     /// a primary that leads Sub-Spaces asks which of them takes its group
-    /// over. Then deletes it and its data, reporting a failure.
+    /// over. Then deletes it and its data; a failure shows a notice.
     func browserSpaceDeletionConfirmation(
         _ request: Binding<BrowserSpaceDeletionRequest?>,
         browser: BrowserStore,
@@ -58,9 +58,9 @@ private struct BrowserSpaceGroupChangeConfirmation: ViewModifier {
             }
             do throws(Rejection) {
                 try change.apply(in: browser)
-                if change.formsGroup { BrowserSpaceGroupNotices.formed() }
+                if change.formsGroup { BrowserSpaceGroupUpdateNotice.showIfDue() }
             } catch {
-                BrowserSpaceGroupNotices.failed(error.localizedDescription)
+                BrowserNoticeCenter.shared.post(.failure(error.localizedDescription))
             }
         }
     }
@@ -71,7 +71,6 @@ private struct BrowserSpaceDeletionConfirmation: ViewModifier {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
-    @State private var failure: String?
 
     func body(content: Content) -> some View {
         let plan = request.flatMap { BrowserSpaceDeletionPlan($0, in: browser) }
@@ -108,14 +107,6 @@ private struct BrowserSpaceDeletionConfirmation: ViewModifier {
                     Text(plan.message)
                 }
             #endif
-            .alert(
-                "Couldn’t Delete Space",
-                isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
-            ) {
-                Button("OK") { failure = nil }
-            } message: {
-                Text(failure ?? "")
-            }
     }
 
     /// Whether the person chooses which Sub-Space keeps the group of the
@@ -131,10 +122,10 @@ private struct BrowserSpaceDeletionConfirmation: ViewModifier {
             do {
                 try await plan.run(in: browser, successor: successor, dataDeleter: dataDeleter)
             } catch {
-                // The page that asked may be gone with the Space, so the window says it too.
-                let message = "\(error.localizedDescription) The Space was kept so you can try again."
-                failure = message
-                BrowserSpaceGroupNotices.failed(message)
+                // The page that asked may be gone with the Space, so the window says it.
+                BrowserNoticeCenter.shared.post(
+                    .failure(
+                        String(localized: "\(error.localizedDescription) The Space was kept so you can try again.")))
             }
         }
     }

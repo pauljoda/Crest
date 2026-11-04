@@ -324,7 +324,7 @@ class EnginePage final : public content::WebContentsObserver,
   void Report(engine::EngineEvent event);
   engine::PageSnapshot Snapshot() const;
   std::string Title() const;
-  engine::PageSecurity Security() const;
+  engine::PageSecurityFacts SecurityFacts() const;
   // The engine is about to load the address a page was asked for and shows
   // its initial blank document meanwhile, which is nothing the page shows.
   bool ShowsInitialBlank(const GURL& url) const;

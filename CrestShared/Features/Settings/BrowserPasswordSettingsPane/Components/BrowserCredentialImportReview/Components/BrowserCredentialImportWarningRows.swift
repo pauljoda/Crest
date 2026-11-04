@@ -16,7 +16,7 @@ struct BrowserCredentialImportWarningRows: View {
                     BrowserCredentialImportNoticeRow(
                         rowNumber: warning.rowNumber,
                         message: String(localized: warning.caution.message),
-                        tint: .orange
+                        tint: CrestColor.warning
                     )
 
                     if warning.rowNumber != warnings.last?.rowNumber {
@@ -26,7 +26,7 @@ struct BrowserCredentialImportWarningRows: View {
             }
             .padding(.horizontal, CrestSpacing.large)
             .background(
-                Color.orange.opacity(BrowserCredentialImportReviewMetrics.warningFillOpacity),
+                CrestColor.warning.opacity(BrowserCredentialImportReviewMetrics.warningFillOpacity),
                 in: RoundedRectangle(cornerRadius: CrestRadius.control))
         }
     }

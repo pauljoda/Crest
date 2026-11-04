@@ -44,7 +44,7 @@ struct BrowserOnboardingImportPage: View {
                             .controlSize(.small)
                         Text("Building your review…")
                             .font(CrestTypography.sans(13, weight: .medium))
-                            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.7))
+                            .foregroundStyle(CrestBrandTheme.textSecondary)
                         Button("Cancel", action: cancelRead)
                             .buttonStyle(.crestSecondary)
                             .accessibilityIdentifier("onboarding-import-cancel")
@@ -56,7 +56,7 @@ struct BrowserOnboardingImportPage: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                             }
                             .font(CrestTypography.sans(12, weight: .medium))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(CrestColor.danger)
                             .lineLimit(2)
                             .accessibilityIdentifier("onboarding-import-error")
                         }
@@ -125,7 +125,7 @@ private struct BrowserOnboardingScanForMore: View {
                 if foundCount == 0 {
                     Text("Crest couldn’t find another browser. Not every browser can be found.")
                         .font(CrestTypography.sans(13, weight: .medium))
-                        .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.7))
+                        .foregroundStyle(CrestBrandTheme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
                 Link("Request a browser", destination: BrowserAboutLinks.browserRequest)

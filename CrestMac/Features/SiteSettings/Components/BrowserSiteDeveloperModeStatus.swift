@@ -15,7 +15,7 @@ struct BrowserSiteDeveloperModeStatus: View {
         } icon: {
             Image(systemName: "hammer.fill")
                 .foregroundStyle(
-                    page.isDeveloperModeEnabled ? .yellow : .secondary
+                    page.isDeveloperModeEnabled ? CrestColor.warning : .secondary
                 )
         }
     }

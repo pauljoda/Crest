@@ -177,9 +177,11 @@ struct BrowserCrestForgePalette: View {
                     Text(caption).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            HStack(alignment: .top, spacing: 6) {
+            // Each swatch's ring already holds its color clear of the next, so
+            // the grid adds only a little room of its own.
+            HStack(alignment: .top, spacing: CrestSpacing.extraSmall) {
                 ForEach(houses, id: \.self) { house in
-                    VStack(spacing: 6) {
+                    VStack(spacing: CrestSpacing.extraSmall) {
                         ForEach(house.tinctures, id: \.self) { tincture($0) }
                     }
                     .accessibilityElement(children: .contain)
@@ -197,21 +199,16 @@ struct BrowserCrestForgePalette: View {
     }
 
     private func tincture(_ tincture: BrandColor) -> some View {
-        let isSelected = tincture.matches(color)
-        return Button {
+        CrestSelectableCard(
+            isSelected: tincture.matches(color), accessibilityLabel: Text(tincture.title), density: .swatch
+        ) {
             select(tincture)
-        } label: {
+        } content: {
             Circle()
                 .fill(tincture.color)
                 .frame(width: 24, height: 24)
-                .overlay { Circle().strokeBorder(.primary.opacity(0.15)) }
-                .padding(3)
-                .overlay { Circle().strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2) }
-                .contentShape(.circle)
+                .overlay { Circle().strokeBorder(CrestColor.subtleBorder) }
         }
-        .buttonStyle(.plain)
         .help(Text(tincture.title))
-        .accessibilityLabel(Text(tincture.title))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

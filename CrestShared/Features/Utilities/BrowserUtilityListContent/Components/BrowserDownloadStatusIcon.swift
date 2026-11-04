@@ -33,16 +33,9 @@ struct BrowserDownloadStatusIcon: View {
         }
     }
 
-    /// A decision the person owes reads as a caution, trouble as an error, and
-    /// anything else stays quiet.
+    /// The phase's tone, or the quiet secondary style when it has none.
     private var symbolStyle: AnyShapeStyle {
-        if item.phase.awaitsDecision {
-            AnyShapeStyle(Color.orange)
-        } else if item.phase.needsAttention {
-            AnyShapeStyle(Color.red)
-        } else {
-            AnyShapeStyle(HierarchicalShapeStyle.secondary)
-        }
+        item.phase.tone.map { AnyShapeStyle($0.color) } ?? AnyShapeStyle(HierarchicalShapeStyle.secondary)
     }
 }
 

@@ -134,7 +134,9 @@ struct CrestButtonSurface: View {
     }
 
     private func icon(diameter: CGFloat, isProminent: Bool) -> some View {
-        let tint = resolvedTint
+        // A quiet glyph is a neutral action and draws in the secondary text
+        // colour; only a prominent one, or one given a tint, takes a colour.
+        let tint = tint ?? (isProminent ? CrestBrandTheme.accent : CrestColor.textSecondary)
         let hitTarget = max(diameter, CrestLayout.minimumHitTarget)
         return configuration.label
             .foregroundStyle(tint)

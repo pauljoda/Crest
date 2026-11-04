@@ -89,21 +89,16 @@ struct BrowserCrestStudioColorRow: View {
         return CrestSettingRow(title, setting: setting.resettable(title)) {
             HStack(spacing: 8) {
                 ForEach(colors.indices, id: \.self) { index in
-                    Button {
+                    CrestSelectableCard(
+                        isSelected: setting.wrappedValue == index,
+                        accessibilityLabel: Text("\(Text(title)), color \(index + 1)"), density: .swatch
+                    ) {
                         setting.binding.wrappedValue = index
-                    } label: {
+                    } content: {
                         Circle().fill(colors[index].color)
                             .frame(width: 22, height: 22)
-                            .overlay { Circle().strokeBorder(.primary.opacity(0.2)) }
-                            .padding(4)
-                            .overlay {
-                                Circle().strokeBorder(
-                                    setting.wrappedValue == index ? CrestBrandTheme.accent : .clear, lineWidth: 2)
-                            }
+                            .overlay { Circle().strokeBorder(CrestColor.subtleBorder) }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("\(Text(title)), color \(index + 1)"))
-                    .accessibilityAddTraits(setting.wrappedValue == index ? .isSelected : [])
                 }
             }
         }

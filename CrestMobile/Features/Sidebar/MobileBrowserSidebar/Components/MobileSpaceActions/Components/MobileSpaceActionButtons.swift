@@ -83,6 +83,6 @@ struct MobileSpaceActionButtons: View {
     }
 
     private var downloadBadgeColor: Color {
-        downloads.contains(where: { $0.phase.needsAttention }) ? .red : selectedAccentColor
+        downloads.badgeTint(otherwise: selectedAccentColor)
     }
 }

@@ -18,13 +18,16 @@ struct BrowserGettingStartedPracticeSidebar: View {
                     if capabilities.supportsTouch {
                         Spacer()
                         Menu {
-                            Button("New Tab", systemImage: "plus", action: practice.openExampleTab)
-                            Button("New Folder", systemImage: "folder.badge.plus") {
-                                practice.addFolder(nested: false)
+                            Group {
+                                Button("New Tab", systemImage: "plus", action: practice.openExampleTab)
+                                Button("New Folder", systemImage: "folder.badge.plus") {
+                                    practice.addFolder(nested: false)
+                                }
+                                Button("Clean Up Current Tabs", systemImage: "sparkles") {
+                                    _ = practice.tabActions.clearCurrentTabs()
+                                }
                             }
-                            Button("Clean Up Current Tabs", systemImage: "sparkles") {
-                                _ = practice.tabActions.clearCurrentTabs()
-                            }
+                            .crestMenuActionLabelStyle()
                         } label: {
                             Image(systemName: "ellipsis").frame(width: 44, height: 44)
                         }

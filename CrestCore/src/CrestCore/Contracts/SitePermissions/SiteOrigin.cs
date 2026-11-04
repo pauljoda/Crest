@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace CrestCore.Contracts;
 
 /// The scheme, host and port a site permission belongs to. Scheme and host
@@ -31,10 +33,15 @@ public sealed record SiteOrigin(string Scheme, string Host, int Port) {
     public string DisplayName => WebScheme.Named(Scheme)?.DefaultPort == Port ? $"{Scheme}://{Host}" : $"{Scheme}://{Host}:{Port}";
 
     /// Powerful features (location, hosted web notifications) need a secure
-    /// context: HTTPS, or plain HTTP only on this device's loopback names. An
-    /// origin the rules cannot read is never secure.
-    internal bool IsSecureContext => IsValid && WebScheme.Named(Scheme) is { } scheme
-        && (scheme.IsSecure || Host is "localhost" or "127.0.0.1" or "::1");
+    /// context: HTTPS, or plain HTTP only on this device's own host. An origin
+    /// the rules cannot read is never secure.
+    internal bool IsSecureContext => IsValid && WebScheme.Named(Scheme) is { } scheme && (scheme.IsSecure || IsLoopback);
+
+    /// Whether the host is this device's own: `localhost` or a name under it,
+    /// or a loopback address (127.0.0.0/8 or ::1), so traffic to it never
+    /// leaves the device.
+    internal bool IsLoopback => Host == "localhost" || Host.EndsWith(".localhost", StringComparison.Ordinal)
+        || IPAddress.TryParse(Host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address);
 
     #endregion
 }

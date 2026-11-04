@@ -2,10 +2,16 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// Native presentation state only. Installation, permissions, pinning, workers,
-/// and package storage remain owned by Chromium's independent Space profiles.
+/// Native presentation of the extensions Chromium keeps for the person's
+/// Spaces: the toolbar's actions and icons, which the engine answers directly,
+/// and the menus, confirmations and install review. Which Spaces may change,
+/// where a copy may go and which consent answers a later question are the
+/// core's: every change and install is an intent the core checks first, and
+/// what each Space has comes from the core's read model.
 @Observable @MainActor
 final class ChromiumExtensionStore {
+    // MARK: - Types
+
     struct Installed: Identifiable {
         let id: String
         let name: String
@@ -13,25 +19,33 @@ final class ChromiumExtensionStore {
         let detail: String
         let icon: NSImage?
         let enabled: Bool
+        /// The person may enable, disable, pin or remove it; one a policy
+        /// manages they may not, and the core refuses each change.
+        let changeable: Bool
         let permissions: [String]
         let webStore: Bool
         let options: String
-        init(_ item: InstalledExtension) {
+        init(_ item: InstalledExtension, icon: NSImage?) {
             id = item.id
             name = item.name.isEmpty ? item.id : item.name
             version = item.version
             detail = item.description
-            icon = item.icon.flatMap(NSImage.init(extensionIcon:))
+            self.icon = icon
             enabled = item.enabled
+            changeable = item.changeable
             permissions = item.permissions
             webStore = item.fromWebStore
             options = item.optionsURL ?? ""
         }
     }
+
+    // MARK: - Variables
+
     var revision = 0
-    private(set) var installed: [UUID: [Installed]] = [:]
     private(set) var installation: ChromiumExtensionInstallation?
-    /// The extensions an import brought that still await their install review.
+    /// Each profile's extension icons, as the engine last answered them.
+    @ObservationIgnored private var icons: [UUID: [String: NSImage]] = [:]
+    /// The extensions an import brought that still wait to install.
     @ObservationIgnored private var pendingImports: [ImportExtensionInstall] = []
     @ObservationIgnored private var importsTask: Task<Void, Never>?
     @ObservationIgnored private var popover: NSPopover?
@@ -44,53 +58,78 @@ final class ChromiumExtensionStore {
     /// button instead of leaving it in the progress label.
     @ObservationIgnored private var installCompletion: (@MainActor () -> Void)?
 
-    var spaces: [BrowserSpaceIdentity] { ChromiumComposition.extensionSpaces }
+    /// The person's own Spaces, which the extension views name.
+    var spaces: [BrowserSpaceIdentity] { ChromiumComposition.personSpaces.map(\.identity) }
+    private var core: CrestCore? { ChromiumComposition.core }
+
+    // MARK: - Actions - Spaces
+
+    /// The person's own Space `id` names.
+    func space(_ id: UUID) -> BrowserSpaceIdentity? {
+        ChromiumComposition.personSpaces.first { $0.id == id }?.identity
+    }
+
     /// Whether another Space browses with `space`'s profile, as a group's
     /// Spaces do, so an extension removed from one leaves them all.
     func sharesProfile(_ space: BrowserSpaceIdentity) -> Bool {
         spaces.contains { $0.id != space.id && $0.profileID == space.profileID }
     }
-    /// Whether this Space's engine profile may be read and prepared here.
-    ///
-    /// Ownership is decided by `(spaceID, profileID)` against the store family
-    /// that owns the window asking, not by identity against one global list: a
-    /// window's own store publishes its Spaces before the application-wide list
-    /// a start-up read would see. A Space from an unrelated family — another
-    /// family's window, a borrowed settings workspace, a private window, which
-    /// has no persistent engine profile of its own — and a locked Space are all
-    /// refused. Callers with no window fall back to the application list.
-    func authorized(_ space: BrowserSpaceIdentity, in browser: BrowserStore? = nil) -> Bool {
-        guard !ChromiumComposition.isSpaceLocked(space) else { return false }
-        guard let browser else {
-            return spaces.contains { $0.id == space.id && $0.profileID == space.profileID }
+
+    /// Whether the core lets `space`'s extensions change now; a private
+    /// window's, a locked Space's and one being deleted do not.
+    func mayChange(_ space: BrowserSpaceIdentity) -> Bool {
+        guard let permission = try? core?.query(CanChangeExtensions(spaceID: space.id, engine: .chromium)) else {
+            return false
         }
-        guard ChromiumComposition.ownsExtensionProfiles(browser) else { return false }
-        return browser.spaceModel(matching: space.assignment) != nil
-    }
-    func refresh() {
-        revision &+= 1
-        guard ChromiumComposition.chromiumEngine != nil else { return }
-        let profiles = Set(spaces.map { $0.profileID })
-        installed = installed.filter { profiles.contains($0.key) }
-        for space in spaces where installed[space.profileID] != nil {
-            installed[space.profileID] = Self.installed(in: space)
-        }
+        return permission.refusal == nil
     }
 
-    /// What the engine has installed in the Space's profile.
-    private static func installed(in space: BrowserSpaceIdentity) -> [Installed] {
-        guard ChromiumComposition.engineHost != nil, let pages = ChromiumComposition.chromiumEngine?.pages else {
-            return []
-        }
-        return pages.request(InstalledExtensions(profileID: space.profileID)).extensions.map(Installed.init)
+    // MARK: - Actions - Listing
+
+    /// The extensions the core lists for `space`'s profile, with their icons,
+    /// or nil before the engine listed it.
+    func installed(in space: BrowserSpaceIdentity) -> [Installed]? {
+        _ = revision
+        guard let listed = core?.state.installedExtensions[.chromium]?[space.profileID] else { return nil }
+        return listed.map { Installed($0, icon: icon($0.id, in: space.profileID)) }
     }
-    func load(_ space: BrowserSpaceIdentity, in browser: BrowserStore? = nil) async {
-        guard authorized(space, in: browser), let engine = ChromiumComposition.chromiumEngine else { return }
-        let ready = await engine.prepareProfile(space.profileID)
-        guard ready, authorized(space, in: browser) else { return }
-        installed[space.profileID] = Self.installed(in: space)
+
+    /// Asks the core to list `space`'s extensions, which the engine loads the
+    /// Space's profile for. A Space the core refuses lists nothing.
+    func load(_ space: BrowserSpaceIdentity) {
+        send(ListExtensions(spaceID: space.id, engine: .chromium), reportsRefusal: false)
+    }
+
+    /// Makes sure the Space's engine profile is listed, so its pinned row
+    /// shows before anything has been opened in it. Idempotent: a Space the
+    /// core already lists is left as it is, so the row can ask on every
+    /// appearance and every Space change.
+    func prepare(_ space: BrowserSpaceIdentity) {
+        guard core?.state.installedExtensions[.chromium]?[space.profileID] == nil else { return }
+        load(space)
+    }
+
+    /// The engine changed something the toolbar or the extension list shows.
+    func refresh() {
         revision &+= 1
+        icons = [:]
     }
+
+    private func icon(_ extensionID: String, in profileID: UUID) -> NSImage? {
+        if icons[profileID] == nil, ChromiumComposition.engineHost != nil,
+            let pages = ChromiumComposition.chromiumEngine?.pages
+        {
+            icons[profileID] = Dictionary(
+                pages.request(ExtensionIcons(profileID: profileID)).icons.compactMap { icon in
+                    icon.image.flatMap(NSImage.init(extensionIcon:)).map { (icon.extensionID, $0) }
+                },
+                uniquingKeysWith: { first, _ in first })
+        }
+        return icons[profileID]?[extensionID]
+    }
+
+    // MARK: - Actions - Toolbar
+
     func actions(for page: ChromiumNativePage) -> [BrowserExtensionActionPresentation] {
         _ = revision
         return page.extensions
@@ -148,53 +187,61 @@ final class ChromiumExtensionStore {
             return
         }
     }
-    /// Makes sure the Space's engine profile is loaded so its pinned list can be
-    /// read before anything has been opened in it.
-    ///
-    /// Idempotent: the Space keeps whatever the engine reported, so the row can
-    /// ask on every appearance and every Space change. A Space the window's own
-    /// store does not own — a private window's, a borrowed workspace's — is left
-    /// alone; its profile exists only while a page of its own does.
-    func prepare(_ space: BrowserSpaceIdentity, in browser: BrowserStore? = nil) async {
-        guard installed[space.profileID] == nil, authorized(space, in: browser) else { return }
-        await load(space, in: browser)
-    }
+
+    // MARK: - Actions - Commands
+
     /// Runs `command` for the extension `extensionID` names in `space`: opens
-    /// the page it names in `window`, or makes its change and restates what
-    /// the store lists. False when the Space is not one this window may
-    /// change, or when the command has nothing to open and no change to make.
+    /// the page it names in `window`, or asks the core to make its change,
+    /// which says why when it refuses. False when the core refused the change,
+    /// or when the command has nothing to open and no change to make.
     @discardableResult
     func command(
         _ command: ExtensionCommand, extensionID: String = "", space: BrowserSpaceIdentity, window: NSWindow? = nil
     ) -> Bool {
-        guard authorized(space), let pages = ChromiumComposition.chromiumEngine?.pages,
-            let window = window ?? ChromiumComposition.activeNativeWindow
-        else { return false }
-        let options = installed[space.profileID]?.first { $0.id == extensionID }?.options
+        let options = installed(in: space)?.first { $0.id == extensionID }?.options
         if let destination = command.destination(extensionID, options), let url = URL(string: destination) {
+            guard let window = window ?? ChromiumComposition.activeNativeWindow else { return false }
             return ChromiumComposition.openExtensionURL(url, in: space, window: window)
         }
         guard let change = command.change else { return false }
-        let accepted = pages.request(
-            ChangeExtension(profileID: space.profileID, extensionID: extensionID, change: change))
-        refresh()
-        return accepted
+        return send(ChangeExtension(spaceID: space.id, engine: .chromium, extensionID: extensionID, change: change))
     }
     func togglePin(_ action: BrowserExtensionActionPresentation, space: BrowserSpaceIdentity) {
-        _ = command(action.isPinned ? .unpin : .pin, extensionID: action.id, space: space)
+        command(action.isPinned ? .unpin : .pin, extensionID: action.id, space: space)
     }
-    /// Reports the installed record backing an action so the menu can offer only
-    /// the verbs the extension actually supports. The profile is already prepared
-    /// whenever an action is presented, so the host answers synchronously.
+    /// The installed record backing an action, so the menu offers only the
+    /// verbs the extension supports.
     private func installedRecord(_ extensionID: String, in space: BrowserSpaceIdentity) -> Installed? {
-        if let cached = installed[space.profileID] { return cached.first { $0.id == extensionID } }
-        guard authorized(space) else { return nil }
-        let items = Self.installed(in: space)
-        guard !items.isEmpty else { return nil }
-        installed[space.profileID] = items
-        revision &+= 1
-        return items.first { $0.id == extensionID }
+        installed(in: space)?.first { $0.id == extensionID }
     }
+
+    /// Sends `intent` to the core. When the core refuses it, the person reads
+    /// why in a notice, unless `reportsRefusal` is false.
+    @discardableResult
+    private func send(_ intent: some Intent, reportsRefusal: Bool = true) -> Bool {
+        guard let core else { return false }
+        do {
+            try core.send(intent)
+            return true
+        } catch {
+            if reportsRefusal { reportRefusal(error) }
+            return false
+        }
+    }
+
+    private func reportRefusal(_ rejection: Rejection) {
+        BrowserNoticeCenter.shared.post(
+            BrowserNotice(
+                message: rejection.message.map { String(localized: $0) }
+                    ?? String(
+                        localized:
+                            "Couldn’t complete that extension action. Check its details for policy or permission requirements."
+                    ),
+                systemImage: "exclamationmark.triangle"))
+    }
+
+    // MARK: - Actions - Menus
+
     /// - Parameter openSidePanel: Supplied only when the extension has a side
     ///   panel entry for the page the action was presented on. The caller owns
     ///   the window the panel would mount into, so it also owns the check.
@@ -203,7 +250,7 @@ final class ChromiumExtensionStore {
     ///   surface stays open while the menu shows and when it is dismissed.
     func presentMenu(
         _ action: BrowserExtensionActionPresentation, space: BrowserSpaceIdentity,
-        anchor: BrowserExtensionPopupAnchor?, isPrivate: Bool = false,
+        anchor: BrowserExtensionPopupAnchor?,
         openSidePanel: (@MainActor () -> Void)? = nil,
         closeSource: (() -> Void)? = nil
     ) {
@@ -211,19 +258,23 @@ final class ChromiumExtensionStore {
         menu.autoenablesItems = false
         let handler = ExtensionMenuHandler(closeSource: closeSource)
         let record = installedRecord(action.id, in: space)
+        // The core decides whether the Space's extensions may change: a
+        // private window's never do, so only the navigation verbs are offered
+        // from one. An extension a policy manages offers no change either.
+        let spaceChanges = mayChange(space)
+        let opensSettings = spaceChanges && (record.map { !$0.options.isEmpty && $0.enabled } ?? true)
+        let changeable = spaceChanges && (record?.changeable ?? true)
         if let openSidePanel {
             menu.addItem(handler.item(String(localized: "Open Side Panel")) { openSidePanel() })
             menu.addItem(.separator())
         }
-        // A private window must never change the Space's persistent extension
-        // state, so only the navigation verbs are offered from one.
-        if !isPrivate {
-            if record.map({ !$0.options.isEmpty && $0.enabled }) ?? true {
-                menu.addItem(
-                    handler.item(String(localized: "Extension Settings…")) { [weak self] in
-                        self?.command(.options, extensionID: action.id, space: space)
-                    })
-            }
+        if opensSettings {
+            menu.addItem(
+                handler.item(String(localized: "Extension Settings…")) { [weak self] in
+                    self?.command(.options, extensionID: action.id, space: space)
+                })
+        }
+        if changeable {
             menu.addItem(
                 handler.item(
                     action.isPinned
@@ -241,8 +292,8 @@ final class ChromiumExtensionStore {
                         self?.command(record.enabled ? .disable : .enable, extensionID: action.id, space: space)
                     })
             }
-            menu.addItem(.separator())
         }
+        if opensSettings || changeable { menu.addItem(.separator()) }
         menu.addItem(
             handler.item(String(localized: "Manage Extension…")) { [weak self] in
                 self?.command(.details, extensionID: action.id, space: space)
@@ -257,7 +308,7 @@ final class ChromiumExtensionStore {
                     self?.command(.store, extensionID: action.id, space: space)
                 })
         }
-        if !isPrivate, let record {
+        if changeable, let record {
             menu.addItem(.separator())
             menu.addItem(
                 handler.item(String(localized: "Remove Extension…")) { [weak self] in
@@ -272,8 +323,8 @@ final class ChromiumExtensionStore {
         withExtendedLifetime(handler) {}
     }
     /// Removal asked for by identifier — the Chrome Web Store listing for an
-    /// extension already installed in this Space. The confirmation, the Space's
-    /// ownership check and the engine command are the menu's own.
+    /// extension already installed in this Space. The confirmation and the
+    /// core's intent are the menu's own.
     func confirmRemoval(
         _ extensionID: String, in space: BrowserSpaceIdentity,
         completion: (@MainActor () -> Void)? = nil
@@ -293,7 +344,7 @@ final class ChromiumExtensionStore {
     ) {
         Task { @MainActor [weak self] in
             await Task.yield()
-            guard let self, self.authorized(space) else {
+            guard let self, self.mayChange(space) else {
                 completion?()
                 return
             }
@@ -313,10 +364,7 @@ final class ChromiumExtensionStore {
                 MainActor.assumeIsolated {
                     defer { completion?() }
                     guard response == .alertFirstButtonReturn else { return }
-                    guard self.command(.remove, extensionID: record.id, space: space) else {
-                        self.reportFailure()
-                        return
-                    }
+                    self.command(.remove, extensionID: record.id, space: space)
                 }
             }
             if let window = ChromiumComposition.activeNativeWindow {
@@ -326,6 +374,33 @@ final class ChromiumExtensionStore {
             }
         }
     }
+
+    // MARK: - Actions - Copies
+
+    /// The Spaces a copy of `extensionID` from `space` may go to, as the core
+    /// answers it from what each Space's profile has.
+    func destinations(for extensionID: String, from space: BrowserSpaceIdentity) -> [BrowserSpaceIdentity] {
+        // Reading the lists the core published redraws a view that shows the
+        // answer once another profile's arrives.
+        _ = core?.state.installedExtensions[.chromium]
+        guard
+            let answer = try? core?.query(
+                ExtensionCopyDestinations(spaceID: space.id, engine: .chromium, extensionID: extensionID))
+        else { return [] }
+        return answer.spaceIDs.compactMap(self.space)
+    }
+
+    /// Whether the core has heard from every profile a copy of `extensionID`
+    /// from `space` could go to.
+    func destinationsListed(for extensionID: String, from space: BrowserSpaceIdentity) -> Bool {
+        _ = core?.state.installedExtensions[.chromium]
+        let answer = try? core?.query(
+            ExtensionCopyDestinations(spaceID: space.id, engine: .chromium, extensionID: extensionID))
+        return answer?.listed ?? false
+    }
+
+    // MARK: - Actions - Imports
+
     /// Says what an import's extensions came to: those installed, and those
     /// that could not be.
     private func reportImportedInstalls(added: [String], failed: [String]) {
@@ -344,22 +419,12 @@ final class ChromiumExtensionStore {
                     systemImage: "exclamationmark.triangle"))
         }
     }
-    private func reportFailure() {
-        BrowserNoticeCenter.shared.post(
-            BrowserNotice(
-                message: String(
-                    localized:
-                        "Couldn’t complete that extension action. Check its details for policy or permission requirements."
-                ),
-                systemImage: "exclamationmark.triangle"))
-    }
     /// Installs the extensions an import brought, one at a time and without
-    /// asking again: the person chose each when they reviewed the import.
-    /// Chromium still verifies every package for each Space it goes into. An
-    /// extension that goes into several Spaces is downloaded once, then
-    /// installed in each of them. It waits for the Spaces and a browser window
-    /// to exist, leaves out a Space that already has the extension, and says
-    /// once, when the queue empties, what it installed and what it could not.
+    /// asking again: the person chose each when they reviewed the import, and
+    /// the core accepts the engine's question for them. It waits for the
+    /// Spaces the import made to appear, and says once, when the queue
+    /// empties, what it installed and what it could not. The core decides
+    /// which of the Spaces each goes to.
     func installImported(_ installs: [ImportExtensionInstall]) {
         pendingImports += installs
         guard importsTask == nil else { return }
@@ -374,67 +439,78 @@ final class ChromiumExtensionStore {
         defer { reportImportedInstalls(added: added, failed: failed) }
         while !pendingImports.isEmpty, !Task.isCancelled {
             let next = pendingImports.removeFirst()
-            var wanted: [BrowserSpaceIdentity] = []
-            for id in next.spaceIDs {
-                guard let space = await importedSpace(id) else { continue }
-                await load(space)
-                let alreadyHas = installed[space.profileID]?.contains { $0.id == next.extensionID } == true
-                if !alreadyHas, !wanted.contains(where: { $0.id == space.id }) { wanted.append(space) }
+            guard let ended = await installImport(next) else {
+                failed.append(next.name)
+                continue
             }
-            // One install runs at a time and the engine routes its consent through a browser window. Either
-            // can change while this waits, so the Spaces still within reach are chosen when the install
-            // starts, with nothing awaited between that check and the call.
-            while !Task.isCancelled {
-                let reachable = wanted.filter { space in
-                    authorized(space) && installed[space.profileID]?.contains { $0.id == next.extensionID } != true
-                }
-                guard let first = reachable.first else { break }
-                if installation == nil, let window = ChromiumComposition.activeNativeWindow {
-                    let job = ChromiumExtensionInstallation(
-                        id: next.extensionID, space: first, window: window, store: self, approvesItself: true)
-                    job.selectedSpaces = Set(reachable.dropFirst().map(\.id))
-                    installation = job
-                    await job.start()
-                    if installation === job { installation = nil }
-                    if job.completed { added.append(job.questionName ?? next.name) } else { failed.append(next.name) }
-                    break
-                }
-                try? await Task.sleep(for: .milliseconds(250))
+            if !ended.stage.hasInstalled {
+                failed.append(next.name)
+            } else if ended.installedCount > 0 {
+                added.append(next.name)
             }
         }
     }
-    /// The Space `id` once the engine may act in it and a browser window is
-    /// open to present the review. It waits for the window however long that
-    /// takes, since setup holds the browser's windows back until the person
-    /// opens Crest, and gives up only on a Space that never appears or stays
-    /// out of reach.
-    private func importedSpace(_ id: UUID) async -> BrowserSpaceIdentity? {
-        var missing = 0
-        while !Task.isCancelled {
-            if let space = spaces.first(where: { $0.id == id }), authorized(space) {
-                if ChromiumComposition.activeNativeWindow != nil { return space }
-                missing = 0
-            } else {
-                missing += 1
-                if missing >= 60 { return nil }
+    /// Installs one extension an import brought in the Spaces it chose, from
+    /// the first of them the core accepts, and answers how the install ended,
+    /// or nil when no Space took it.
+    private func installImport(_ install: ImportExtensionInstall) async -> ExtensionInstallState? {
+        var spaceIDs = await importedSpaces(install.spaceIDs)
+        while let first = spaceIDs.first, !Task.isCancelled {
+            let installID = UUID()
+            if send(
+                InstallExtension(
+                    installID: installID, spaceID: first, engine: .chromium, extensionID: install.extensionID,
+                    copySpaceIDs: Array(spaceIDs.dropFirst()), preApproved: true),
+                reportsRefusal: false)
+            {
+                return await ending(of: installID)
             }
-            try? await Task.sleep(for: .milliseconds(500))
+            spaceIDs.removeFirst()
         }
         return nil
     }
+    /// The Spaces of `spaceIDs` that exist, once each import made them. It
+    /// waits however long setup holds them back, and gives up only on a Space
+    /// that never appears.
+    private func importedSpaces(_ spaceIDs: [UUID]) async -> [UUID] {
+        var missing = 0
+        while !Task.isCancelled, spaceIDs.contains(where: { space($0) == nil }), missing < 60 {
+            missing += 1
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        return spaceIDs.filter { space($0) != nil }
+    }
+    /// How the install `installID` ended, once it did.
+    private func ending(of installID: UUID) async -> ExtensionInstallState? {
+        while !Task.isCancelled {
+            if let state = core?.state.extensionInstalls[installID], state.stage.hasEnded { return state }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        return nil
+    }
+
+    // MARK: - Actions - Installs
+
     func install(
         _ id: String, in space: BrowserSpaceIdentity, anchor: NSView?, copies: Set<UUID> = [],
         completion: (@MainActor () -> Void)? = nil
     ) {
-        guard installation == nil, authorized(space),
-            let window = anchor?.window ?? ChromiumComposition.activeNativeWindow
+        guard installation == nil, let window = anchor?.window ?? ChromiumComposition.activeNativeWindow else {
+            completion?()
+            return
+        }
+        let job = ChromiumExtensionInstallation(extensionID: id, space: space, window: window, store: self)
+        job.selectedSpaces = copies
+        guard
+            send(
+                InstallExtension(
+                    installID: job.id, spaceID: space.id, engine: .chromium, extensionID: id, copySpaceIDs: [],
+                    preApproved: false))
         else {
             completion?()
             return
         }
         installCompletion = completion
-        let job = ChromiumExtensionInstallation(id: id, space: space, window: window, store: self)
-        job.selectedSpaces = copies
         installation = job
         let popover = NSPopover()
         popover.behavior = .applicationDefined
@@ -465,20 +541,32 @@ final class ChromiumExtensionStore {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.dismissInstallation() }
         }
-        Task { await job.start() }
     }
-    /// The engine asks whether to install the package the install operation of
-    /// the window `asked` names verified.
-    func review(_ asked: ExtensionInstallAsked, reply: @escaping (Bool, Bool) -> Void) {
-        let review = asked.question
-        guard let job = installation, job.window?.identifier?.rawValue == asked.windowID.uuidString,
-            review.extensionID == job.id
-        else {
-            // No user-owned install operation may inherit an unrelated consent.
-            reply(false, false)
+    /// The core asks the person whether to install the package an install
+    /// verified. The review showing that install shows the question; one no
+    /// review shows any more is declined.
+    func review(_ asked: ExtensionInstallAsked) {
+        guard let job = installation, job.id == asked.installID else {
+            send(
+                AnswerExtensionInstall(
+                    promptID: asked.promptID, accepted: false, withholdsSiteAccess: false, copySpaceIDs: []),
+                reportsRefusal: false)
             return
         }
-        job.review(review, reply: reply)
+        job.review(asked)
+    }
+    /// Sends the person's answer to an install's question.
+    fileprivate func answer(_ answer: AnswerExtensionInstall) {
+        send(answer)
+    }
+    /// Stops the install `installID` names.
+    fileprivate func cancel(_ installID: UUID) {
+        send(CancelExtensionInstall(installID: installID), reportsRefusal: false)
+    }
+    /// The download of install `installID` received `fraction` of its package.
+    func downloadProgressed(_ installID: UUID, fraction: Double) {
+        guard let installation, installation.id == installID else { return }
+        installation.downloaded = fraction
     }
     func dismissInstallation() {
         installation?.cancel()
@@ -533,189 +621,82 @@ extension ChromiumExtensionStore: BrowserImportedExtensionInstalling {}
     }
 }
 
+/// The install review's model: what the person sees of one install the core
+/// runs, the question it asks, and the person's choices before they answer.
 @Observable @MainActor
 final class ChromiumExtensionInstallation {
-    let id: String
+    // MARK: - Variables
+
+    /// The core's identity for the install.
+    let id = UUID()
+    let extensionID: String
     let space: BrowserSpaceIdentity
     weak var window: NSWindow?
     private let store: ChromiumExtensionStore
     /// The verified package the core asks the person about, as its question
     /// presents it.
-    var question: ExtensionInstallQuestion?
+    private(set) var question: ExtensionInstallQuestion?
     /// The name the review shows: the package's own, or its identifier when
     /// it names none.
     var questionName: String? { question.map { $0.name.isEmpty ? $0.extensionID : $0.name } }
     var questionIcon: NSImage? { question?.icon.flatMap(NSImage.init(data:)) }
     var selectedSpaces: Set<UUID> = []
     var withhold = false
-    var canWithhold = false
-    var preparing = true
+    private(set) var canWithhold = false
     /// The fraction of the package received, once its download knows its size.
     var downloaded: Double?
-    var installing = false
-    var completed = false
-    var installedCount = 0
-    var failure: String?
-    var canAccept = false
-    @ObservationIgnored private var consent: ((Bool, Bool) -> Void)?
-    @ObservationIgnored private var approvedIdentity: [String]?
-    @ObservationIgnored private var approvedDestinations: [BrowserSpaceIdentity] = []
-    @ObservationIgnored private var package: URL?
-    /// The package download while it runs, so closing the review stops it.
-    @ObservationIgnored private var transfer: (any CrestExtensionDownload)?
-    @ObservationIgnored private var canceled = false
-    @ObservationIgnored private var targetSpace: BrowserSpaceIdentity?
+    private(set) var canAccept = false
+    /// The question waiting on the person's answer, until they give it.
+    @ObservationIgnored private var promptID: UUID?
 
-    /// Whether the install accepts the engine's question itself, as an
-    /// import's does: the person chose the extension when they reviewed it.
-    private let approvesItself: Bool
+    /// The install as the core last published it.
+    private var state: ExtensionInstallState? { ChromiumComposition.core?.state.extensionInstalls[id] }
+    var preparing: Bool { state?.stage.isPreparing ?? true }
+    var installing: Bool { state?.stage.isInstalling ?? false }
+    var completed: Bool { state?.stage.hasInstalled ?? false }
+    var installedCount: Int { state?.installedCount ?? 0 }
+    var failure: String? { state?.failure.map { String(localized: $0.message) } }
+    /// The install ended because its Space went out of reach, so the review
+    /// closes.
+    var closesReview: Bool { state?.failure?.closesReview == true }
+    /// The Spaces a copy may go to, as the core answers it.
+    var destinations: [BrowserSpaceIdentity] { store.destinations(for: extensionID, from: space) }
 
-    init(
-        id: String, space: BrowserSpaceIdentity, window: NSWindow, store: ChromiumExtensionStore,
-        approvesItself: Bool = false
-    ) {
-        self.id = id
+    // MARK: - Initializers
+
+    init(extensionID: String, space: BrowserSpaceIdentity, window: NSWindow, store: ChromiumExtensionStore) {
+        self.extensionID = extensionID
         self.space = space
         self.window = window
         self.store = store
-        self.approvesItself = approvesItself
     }
-    var isAuthorized: Bool { store.authorized(space) && (targetSpace.map { store.authorized($0) } ?? true) }
-    /// The Spaces a copy may go to, one per profile, which a group's primary
-    /// stands for: never the source's own group, which already has it.
-    var destinations: [BrowserSpaceIdentity] {
-        var profiles: Set<UUID> = [space.profileID]
-        return store.spaces.filter {
-            profiles.insert($0.profileID).inserted && !(store.installed[$0.profileID] ?? []).contains { $0.id == id }
-        }
-    }
-    func start() async {
-        for target in store.spaces { await store.load(target) }
-        guard !canceled else { return }
-        do {
-            let retained = try await download()
-            package = retained
-            defer {
-                try? FileManager.default.removeItem(at: retained)
-                package = nil
-            }
-            guard !canceled else { return }
-            try await installPackage(in: space)
-            installedCount = 1
-            // Freeze the explicitly reviewed targets and package; every copy is
-            // independently verified by Chromium and keeps its own profile data,
-            // so a Space that refuses its copy leaves the others to install.
-            for target in approvedDestinations {
-                guard !canceled else { return }
-                guard (try? await installPackage(in: target)) != nil else { continue }
-                installedCount += 1
-            }
-            completed = true
-            store.refresh()
-        } catch {
-            if !canceled { failure = error.localizedDescription }
-        }
-        preparing = false
-        installing = false
-    }
-    /// The package as the Space's own engine profile downloads it; Chromium's
-    /// installer then judges it for every Space it is installed in.
-    private func download() async throws -> URL {
-        guard let host = ChromiumComposition.engineHost else { throw URLError(.cancelled) }
-        let result: (String?, String) = await withCheckedContinuation { continuation in
-            transfer = host.downloadExtension(
-                id, profile: space.profileID,
-                progress: { [weak self] fraction in self?.downloaded = fraction },
-                completion: { package, message in
-                    continuation.resume(returning: (package, message))
-                })
-            if transfer == nil { continuation.resume(returning: (nil, "")) }
-        }
-        transfer = nil
-        guard let package = result.0 else {
-            throw NSError(
-                domain: "CrestExtension", code: 2,
-                userInfo: [
-                    NSLocalizedDescriptionKey: result.1.isEmpty
-                        ? String(localized: "The Space is no longer available.")
-                        : String(localized: "Couldn’t download this extension from the Chrome Web Store (\(result.1)).")
-                ])
-        }
-        return URL(fileURLWithPath: package)
-    }
-    private func installPackage(in target: BrowserSpaceIdentity) async throws {
-        guard !canceled, store.authorized(target), let package, let host = ChromiumComposition.engineHost,
-            let windowID = window?.identifier.flatMap({ UUID(uuidString: $0.rawValue) })
-        else { throw URLError(.cancelled) }
-        targetSpace = target
-        let staged = FileManager.default.temporaryDirectory.appendingPathComponent("crest-extension-\(UUID()).crx")
-        try FileManager.default.copyItem(at: package, to: staged)
-        defer { try? FileManager.default.removeItem(at: staged) }
-        let result: (Bool, String) = await withCheckedContinuation { continuation in
-            if !host.installExtension(
-                id, package: staged.path, profile: target.profileID, window: windowID,
-                completion: { success, message in
-                    continuation.resume(returning: (success, message))
-                })
-            {
-                continuation.resume(returning: (false, "The Space is no longer available."))
-            }
-        }
-        guard result.0 else {
-            throw NSError(
-                domain: "CrestExtension", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: result.1.isEmpty ? "Installation canceled." : result.1])
-        }
-    }
-    func review(_ review: ExtensionInstallQuestion, reply: @escaping (Bool, Bool) -> Void) {
-        guard !canceled, store.authorized(space), let targetSpace, store.authorized(targetSpace) else {
-            reply(false, false)
-            return
-        }
-        if let approvedIdentity {
-            // Consent applies only to the same verified package and warnings.
-            reply(Self.consentIdentity(of: review) == approvedIdentity, withhold)
-            return
-        }
-        question = review
-        canWithhold = review.canWithholdSiteAccess
-        withhold = review.withholdsSiteAccess
-        if approvesItself {
-            approvedIdentity = Self.consentIdentity(of: review)
-            approvedDestinations = destinations.filter { selectedSpaces.contains($0.id) }
-            installing = true
-            reply(true, withhold)
-            return
-        }
-        consent = reply
-        preparing = false
+
+    // MARK: - Actions - Review
+
+    /// The core asks the person whether to install the package the engine
+    /// verified. Accepting waits a moment, so a click meant for something
+    /// else does not land on it.
+    func review(_ asked: ExtensionInstallAsked) {
+        promptID = asked.promptID
+        question = asked.question
+        canWithhold = asked.question.canWithholdSiteAccess
+        withhold = asked.question.withholdsSiteAccess
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             self?.canAccept = true
         }
     }
     func accept() {
-        guard canAccept, let question, store.authorized(space), let consent else { return }
-        approvedIdentity = Self.consentIdentity(of: question)
-        approvedDestinations = destinations.filter { selectedSpaces.contains($0.id) }
-        self.consent = nil
-        installing = true
-        consent(true, withhold)
+        guard canAccept, let promptID else { return }
+        self.promptID = nil
+        let copies = destinations.filter { selectedSpaces.contains($0.id) }.map(\.id)
+        store.answer(
+            AnswerExtensionInstall(
+                promptID: promptID, accepted: true, withholdsSiteAccess: withhold, copySpaceIDs: copies))
     }
     func cancel() {
-        canceled = true
-        // The download then reports failure, which a canceled review ignores.
-        transfer?.cancel()
-        transfer = nil
-        let callback = consent
-        consent = nil
-        callback?(false, false)
+        promptID = nil
+        store.cancel(id)
     }
     func dismiss() { store.dismissInstallation() }
-
-    /// What a consent covers: the same verified package, at the same version,
-    /// asking for the same access.
-    private static func consentIdentity(of question: ExtensionInstallQuestion) -> [String] {
-        [question.extensionID, question.version] + question.permissions.sorted()
-    }
 }

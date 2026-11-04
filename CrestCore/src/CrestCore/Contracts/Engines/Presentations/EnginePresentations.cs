@@ -154,6 +154,10 @@ public enum ProfileNotificationSource { ServiceWorker, Extension }
 /// removed, enabled or pinned, or an action's state or icon changed.
 public sealed record ExtensionsChanged(Guid ProfileId) : EnginePresentation;
 
+/// Install `InstallId` received `Fraction` of its package, once its download
+/// knows the package's size.
+public sealed record ExtensionDownloadProgressed(Guid InstallId, double Fraction) : EnginePresentation;
+
 /// The engine asks for the extension's side panel beside the page: its
 /// `chrome.sidePanel.open()` or `close()`, or an action click that toggles
 /// the panel instead of opening a popup. A panel is a card beside the page,
@@ -254,9 +258,6 @@ public sealed record InspectorLayoutChanged(Guid PageId) : EnginePagePresentatio
 #endregion
 
 #region Profiles
-
-/// Whether the profile `PrepareProfile` asked for is ready.
-public sealed record ProfilePrepared(Guid PreparationId, bool Ready) : EnginePresentation;
 
 /// The engine let go of the profile `ProfileId` names: its pages and windows
 /// closed and its extensions are gone.

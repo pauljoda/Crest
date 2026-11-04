@@ -19,7 +19,6 @@ struct MobileBrowserSettingsDestinationPage: View {
             spaceAccess: spaceAccess,
             dataDeleter: dataDeleter,
             cloudSync: cloudSync,
-            downloadCenter: pages.downloadCenter,
             permissionCenter: pages.permissionCenter,
             contentBlockingErrorDescription:
                 pages.contentBlockingErrorDescription,

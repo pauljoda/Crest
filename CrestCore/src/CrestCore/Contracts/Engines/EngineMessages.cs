@@ -16,8 +16,8 @@ public sealed record DefaultEngineAlreadyRegistered(EngineKind Current) : Reject
 /// A binding for this engine is already registered.
 public sealed record EngineAlreadyRegistered(EngineKind Kind) : Rejection;
 
-/// The engine does not support `Capability`, which every engine must support
-/// to register.
+/// The engine does not support `Capability`: one every engine must support to
+/// register, or one the intent needs, such as `extensions`.
 public sealed record EngineLacksCapability(EngineKind Kind, EngineCapability Capability) : Rejection;
 
 /// No registered engine can host a new page: none is the default.

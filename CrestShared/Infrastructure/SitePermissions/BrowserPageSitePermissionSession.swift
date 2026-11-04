@@ -92,12 +92,16 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
         }
     }
 
-    /// A device without its own answer follows a combined capture record.
+    /// Tells the engine the core's answer for `permission` at `origin`: a
+    /// capture capability by the core's capture rule, which reads a combined
+    /// camera and microphone record too, and any other by the site's choice.
+    /// Ask leaves the engine to ask.
     private func apply(_ permission: SitePermission, origin: SiteOrigin) {
-        let decision = ([permission] + permission.combinations).lazy
-            .map { self.permissionCenter.decision(for: $0, origin: origin, in: self.spaceID) }
-            .first { $0.verdict != .ask }
-        page.setSitePermission(permission, allowed: decision?.grants)
+        let decision =
+            permission.isMedia
+            ? permissionCenter.mediaDecision(for: permission, origin: origin, in: spaceID)
+            : permissionCenter.decision(for: permission, origin: origin, in: spaceID)
+        page.setSitePermission(permission, allowed: decision.verdict == .ask ? nil : decision.grants)
     }
 
     private func affects(
@@ -106,7 +110,10 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
         origin: SiteOrigin
     ) -> Bool {
         // A combined capture record answers each of its devices.
-        ([permission] + permission.combinations).contains { change.affects($0, origin: origin, in: spaceID) }
+        guard let changed = change.permission, changed.components.contains(where: permission.devices.contains) else {
+            return change.affects(permission, origin: origin, in: spaceID)
+        }
+        return change.affects(changed, origin: origin, in: spaceID)
     }
 
     // MARK: - Actions - Observation

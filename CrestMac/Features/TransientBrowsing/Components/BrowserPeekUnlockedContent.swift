@@ -89,7 +89,8 @@ struct BrowserPeekUnlockedContent: View {
             // the coordinator removes the request and SwiftUI fades it out.
             motionState: model.motionState ?? retainedMotionState,
             dimsBackground: model.browser.linkPreferences.preferences.dimsPageBehindPeek,
-            scrimInsets: frameInsets
+            scrimInsets: frameInsets,
+            cardShare: CGFloat(BrowserDeviceAppearanceStore.shared.peekSize)
         )
     }
 

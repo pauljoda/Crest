@@ -75,12 +75,8 @@ final class WebKitEnginePages: EnginePages {
     /// Makes the page's document as the export asks, and presents it once
     /// WebKit made it.
     func export(_ exporting: ExportPage) -> Bool {
-        #if os(macOS)
-            guard let page = page(exporting.pageID) else { return false }
-            return export(exporting, from: page)
-        #else
-            return false
-        #endif
+        guard let page = page(exporting.pageID) else { return false }
+        return export(exporting, from: page)
     }
 
     /// The certificates the page's current document was verified with, the
@@ -92,69 +88,70 @@ final class WebKitEnginePages: EnginePages {
         return chain.map { SecCertificateCopyData($0) as Data }
     }
 
+    private static func webArchive(of webView: WKWebView) async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            webView.createWebArchiveData { continuation.resume(with: $0) }
+        }
+    }
+
+    /// The whole document as a PNG, `width` points wide or as wide as it
+    /// lays out, up to 1,600 points; within 6,000 by 24,000 points.
+    private static func fullPage(of webView: WKWebView, width requestedWidth: Double) async -> Data? {
+        let measured = try? await webView.evaluateJavaScript(
+            """
+            (() => {
+              const root = document.documentElement;
+              const body = document.body;
+              return [
+                Math.max(root?.scrollWidth ?? 0, body?.scrollWidth ?? 0, innerWidth),
+                Math.max(root?.scrollHeight ?? 0, body?.scrollHeight ?? 0, innerHeight)
+              ];
+            })()
+            """
+        )
+        guard let dimensions = measured as? [NSNumber], dimensions.count == 2 else { return nil }
+        let width = min(max(CGFloat(dimensions[0].doubleValue), webView.bounds.width), 6_000)
+        let height = min(max(CGFloat(dimensions[1].doubleValue), webView.bounds.height), 24_000)
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(x: 0, y: 0, width: width, height: height)
+        configuration.afterScreenUpdates = true
+        configuration.snapshotWidth = NSNumber(value: requestedWidth > 0 ? requestedWidth : min(width, 1_600))
+        guard let image = try? await webView.takeSnapshot(configuration: configuration),
+            let snapshot = BrowserPlatformWebKit.bitmap(of: image)
+        else { return nil }
+        return await Task.detached(priority: .userInitiated) { Self.png(snapshot.image, scale: snapshot.scale) }
+            .value
+    }
+
     #if os(macOS)
-        private static func webArchive(of webView: WKWebView) async throws -> Data {
-            try await withCheckedThrowingContinuation { continuation in
-                webView.createWebArchiveData { continuation.resume(with: $0) }
-            }
-        }
-
-        /// The whole document as a PNG, `width` points wide or as wide as it
-        /// lays out, up to 1,600 points; within 6,000 by 24,000 points.
-        private static func fullPage(of webView: WKWebView, width requestedWidth: Double) async -> Data? {
-            let measured = try? await webView.evaluateJavaScript(
-                """
-                (() => {
-                  const root = document.documentElement;
-                  const body = document.body;
-                  return [
-                    Math.max(root?.scrollWidth ?? 0, body?.scrollWidth ?? 0, innerWidth),
-                    Math.max(root?.scrollHeight ?? 0, body?.scrollHeight ?? 0, innerHeight)
-                  ];
-                })()
-                """
-            )
-            guard let dimensions = measured as? [NSNumber], dimensions.count == 2 else { return nil }
-            let width = min(max(CGFloat(dimensions[0].doubleValue), webView.bounds.width), 6_000)
-            let height = min(max(CGFloat(dimensions[1].doubleValue), webView.bounds.height), 24_000)
-            let configuration = WKSnapshotConfiguration()
-            configuration.rect = CGRect(x: 0, y: 0, width: width, height: height)
-            configuration.afterScreenUpdates = true
-            configuration.snapshotWidth = NSNumber(value: requestedWidth > 0 ? requestedWidth : min(width, 1_600))
-            guard let image = try? await webView.takeSnapshot(configuration: configuration),
-                let bitmap = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
-            else { return nil }
-            let scale = CGFloat(bitmap.width) / max(image.size.width, 1)
-            return await Task.detached(priority: .userInitiated) { Self.png(bitmap, scale: scale) }.value
-        }
-
         /// Presents `image` as a PNG once it is encoded away from the main
         /// thread, which encoding a whole view's pixels would hold up.
         private func present(_ image: NSImage?, as presentation: @escaping @MainActor (Data?) -> EnginePresentation) {
-            guard let image, let bitmap = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            guard let image, let snapshot = BrowserPlatformWebKit.bitmap(of: image) else {
                 attached.present(presentation(nil))
                 return
             }
-            let scale = CGFloat(bitmap.width) / max(image.size.width, 1)
             Task { @MainActor [weak self] in
-                let png = await Task.detached(priority: .userInitiated) { Self.png(bitmap, scale: scale) }.value
+                let png = await Task.detached(priority: .userInitiated) {
+                    Self.png(snapshot.image, scale: snapshot.scale)
+                }.value
                 self?.attached.present(presentation(png))
             }
         }
-
-        /// Presents the document `make` makes for the export once it is made.
-        private func export(_ exporting: ExportPage, making make: @escaping @MainActor () async -> Data?) -> Bool {
-            Task { @MainActor [weak self] in
-                let document = await make()
-                self?.attached.present(
-                    .pageExported(
-                        PageExported(
-                            pageID: exporting.pageID, exportID: exporting.exportID, document: document,
-                            failure: document == nil ? .failed : nil)))
-            }
-            return true
-        }
     #endif
+
+    /// Presents the document `make` makes for the export once it is made.
+    private func export(_ exporting: ExportPage, making make: @escaping @MainActor () async -> Data?) -> Bool {
+        Task { @MainActor [weak self] in
+            let document = await make()
+            self?.attached.present(
+                .pageExported(
+                    PageExported(
+                        pageID: exporting.pageID, exportID: exporting.exportID, document: document,
+                        failure: document == nil ? .failed : nil)))
+        }
+        return true
+    }
 
     /// `image` as a PNG that names its own resolution, so it opens at the
     /// size in points WebKit drew it at.
@@ -244,37 +241,35 @@ final class WebKitEnginePages: EnginePages {
     }
 }
 
-#if os(macOS)
-    extension WebKitEnginePages {
-        /// Makes `page`'s document in the export's format. Answers whether
-        /// the export began; WebKit makes no MHTML.
-        private func export(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
-            switch exporting.format {
-            case .pdf: exportPDF(exporting, from: page)
-            case .png: exportPNG(exporting, from: page)
-            case .mhtml: exportMHTML(exporting, from: page)
-            case .webArchive: exportWebArchive(exporting, from: page)
-            }
-        }
-
-        private func exportPDF(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
-            let webView = page.webView
-            return export(exporting) { try? await webView.pdf(configuration: WKPDFConfiguration()) }
-        }
-
-        private func exportPNG(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
-            let webView = page.webView
-            return export(exporting) { await Self.fullPage(of: webView, width: exporting.width) }
-        }
-
-        /// WebKit keeps its archives as web archives, never as MHTML.
-        private func exportMHTML(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
-            false
-        }
-
-        private func exportWebArchive(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
-            let webView = page.webView
-            return export(exporting) { try? await Self.webArchive(of: webView) }
+extension WebKitEnginePages {
+    /// Makes `page`'s document in the export's format. Answers whether
+    /// the export began; WebKit makes no MHTML.
+    private func export(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        switch exporting.format {
+        case .pdf: exportPDF(exporting, from: page)
+        case .png: exportPNG(exporting, from: page)
+        case .mhtml: exportMHTML(exporting, from: page)
+        case .webArchive: exportWebArchive(exporting, from: page)
         }
     }
-#endif
+
+    private func exportPDF(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        let webView = page.webView
+        return export(exporting) { try? await webView.pdf(configuration: WKPDFConfiguration()) }
+    }
+
+    private func exportPNG(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        let webView = page.webView
+        return export(exporting) { await Self.fullPage(of: webView, width: exporting.width) }
+    }
+
+    /// WebKit keeps its archives as web archives, never as MHTML.
+    private func exportMHTML(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        false
+    }
+
+    private func exportWebArchive(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+        let webView = page.webView
+        return export(exporting) { try? await Self.webArchive(of: webView) }
+    }
+}

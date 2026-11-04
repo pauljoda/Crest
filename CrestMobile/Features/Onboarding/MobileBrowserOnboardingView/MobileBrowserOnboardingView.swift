@@ -66,6 +66,7 @@ struct MobileBrowserOnboardingView: View {
                 .transition(.opacity)
         }
         .tint(.accentColor)
+        .crestFieldSurfaceRole(.brand)
         .modifier(lifecycleModifier)
         .task { await cloudWait.run() }
         .disabled(completionTask != nil)

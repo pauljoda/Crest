@@ -24,6 +24,7 @@ struct BrowserWebsiteDataRow: View {
         .frame(minHeight: CrestFormRowMetrics.minimumHeight)
         .contextMenu {
             Button("Remove", systemImage: "trash", role: .destructive, action: remove)
+                .crestMenuActionLabelStyle()
         }
     }
 

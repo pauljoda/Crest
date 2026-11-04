@@ -93,12 +93,12 @@ struct BrowserFindMatchStatus: View {
 
     /// Words stay quiet unless the page has nothing to show.
     private var labelColor: Color {
-        state.readsAsFailure ? .red : .secondary
+        state.readsAsFailure ? CrestColor.danger : .secondary
     }
 
     private var symbolColor: Color {
-        if state.readsAsFailure { return .red }
-        return state.readsAsSuccess ? .green : .secondary
+        if state.readsAsFailure { return CrestColor.danger }
+        return state.readsAsSuccess ? CrestColor.success : .secondary
     }
 }
 

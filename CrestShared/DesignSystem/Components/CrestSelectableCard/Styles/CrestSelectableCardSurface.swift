@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct CrestSelectableCardSurface: View {
+    // MARK: - Variables
+
     let isSelected: Bool
+    let density: CrestSelectableCardDensity
     let tint: Color?
     let configuration: ButtonStyleConfiguration
 
@@ -12,14 +15,11 @@ struct CrestSelectableCardSurface: View {
 
     var body: some View {
         let tint = tint ?? CrestBrandTheme.accent
-        let shape = RoundedRectangle(
-            cornerRadius: CrestSelectableCardMetrics.cornerRadius,
-            style: .continuous
-        )
+        let shape = CrestSelectableCardShape(cornerRadius: density.cornerRadius)
 
         configuration.label
-            .padding(CrestSelectableCardMetrics.padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(density.padding)
+            .frame(maxWidth: density.fillsWidth ? .infinity : nil)
             .background(background(tint: tint), in: shape)
             .overlay {
                 shape.strokeBorder(
@@ -27,12 +27,7 @@ struct CrestSelectableCardSurface: View {
                     lineWidth: borderWidth
                 )
             }
-            .contentShape(
-                .rect(
-                    cornerRadius: CrestSelectableCardMetrics.cornerRadius,
-                    style: .continuous
-                )
-            )
+            .contentShape(shape)
             .crestFocusShape(shape)
             .crestPressFeedback(
                 isPressed: configuration.isPressed,
@@ -45,13 +40,12 @@ struct CrestSelectableCardSurface: View {
             .onHover { isHovering = $0 && isEnabled }
     }
 
+    // MARK: - Actions - Drawing
+
     private var borderWidth: CGFloat {
-        switch (isSelected, contrast) {
-        case (true, _), (false, .increased):
-            CrestSelectableCardMetrics.selectedBorderWidth
-        case (false, _):
-            CrestSelectableCardMetrics.restingBorderWidth
-        }
+        isSelected || contrast == .increased
+            ? CrestSelectableCardMetrics.selectedBorderWidth
+            : density.restingBorderWidth
     }
 
     private func background(tint: Color) -> Color {
@@ -65,7 +59,7 @@ struct CrestSelectableCardSurface: View {
         case (false, false, true):
             CrestColor.hover
         case (false, false, false):
-            CrestColor.chromeSurface
+            density.showsRestingFill ? CrestColor.chromeSurface : .clear
         }
     }
 }

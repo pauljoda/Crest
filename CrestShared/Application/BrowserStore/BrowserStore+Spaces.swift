@@ -10,10 +10,11 @@ extension BrowserStore {
         controller.attach(self)
     }
 
-    func addSpace() {
-        family.send(
-            CreateSpace(workspaceID: family.workspaceID, windowID: windowID, spaceID: UUID()), from: self,
-            failure: "Core Space command failed")
+    /// Adds a Space and shows it in this window. Throws the rule that refused
+    /// it, such as the Space limit.
+    func addSpace() throws(Rejection) {
+        try family.commit(
+            CreateSpace(workspaceID: family.workspaceID, windowID: windowID, spaceID: UUID()), from: self)
     }
 
     /// Deletes a Space in two steps the core saves before each returns: the
@@ -152,15 +153,14 @@ extension BrowserStore {
     @discardableResult
     func sendSpaceSettings(_ intent: some Intent) -> Bool {
         let owner = profileSettingsBrowser
-        return owner.family.send(intent, from: owner, failure: "Core Space command failed")
+        return owner.family.send(intent, from: owner)
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
         var order = spaceModels.map(\.id)
         order.move(fromOffsets: source, toOffset: destination)
         family.send(
-            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: order), from: self,
-            failure: "Core Space command failed")
+            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: order), from: self)
     }
 
     /// Sets a Space's browsing preferences through the core: when it cleans up

@@ -128,7 +128,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         snapshot: { [weak self] pendingURL in
             self?.snapshot(pendingURL: pendingURL)
                 ?? PageSnapshot(
-                    url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: PageSecurity.none,
+                    url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: .unknown,
                     media: [])
         },
         history: { [weak self] in self?.pageEngine.reportedHistory })
@@ -748,7 +748,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func pdfData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await webView.pdf(configuration: WKPDFConfiguration())
+        return try await enginePage.export(.pdf)
     }
 
     func exportPDF(to destination: MobileBrowserFileExportDestination) {
@@ -772,13 +772,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// The page's document and resources, in the archive WebKit keeps.
     func webArchiveData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await withCheckedThrowingContinuation { continuation in
-            webView.createWebArchiveData { result in
-                continuation.resume(with: result)
-            }
-        }
+        return try await enginePage.export(BrowserPageArchiveFormat.webArchive.exportFormat)
     }
 
     func exportWebArchive(to destination: MobileBrowserFileExportDestination) {
@@ -1035,8 +1032,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     /// What WebKit shows for the page now: the document and its title,
-    /// whether it loads, the page's
-    /// security from its secure-content flag and the trust it kept, and the
+    /// whether it loads, what it knows of the connection from its
+    /// secure-content flag and the trust it kept, and the
     /// media WebKit last said it runs.
     private func snapshot(pendingURL: String?) -> PageSnapshot {
         let overrides = serverTrustOverrides
@@ -1046,7 +1043,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             pendingURL: pendingURL,
             title: webView.title ?? "",
             isLoading: webView.isLoading,
-            security: PageSecurity(
+            security: PageSecurityFacts(
                 webKitURL: webView.url,
                 hasOnlySecureContent: webView.hasOnlySecureContent,
                 serverTrust: webView.serverTrust,
@@ -1054,7 +1051,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             media: pageEngine.knownMediaActivity)
     }
 
-    private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+    /// Reads what the credential bridge posted from this page's web view. A
+    /// popup shares this page's controller, so its bridge posts here too: a
+    /// message another page's web view sent goes to that page, whose own
+    /// credential session reads it and fills its own frames.
+    func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+        if let source = scriptMessage.webView, source !== webView {
+            webKitPage.binding?.page(showing: source)?.host?.receiveCredentialMessage(scriptMessage)
+            return
+        }
         credentialSession.receive(scriptMessage, in: webView)
     }
 

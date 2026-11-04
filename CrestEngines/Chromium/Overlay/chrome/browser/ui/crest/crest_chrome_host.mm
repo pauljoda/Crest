@@ -41,7 +41,6 @@
 #include "chrome/browser/ui/crest/crest_engine_extensions.h"
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
 #include "chrome/browser/ui/crest/crest_extension_prompt.h"
-#include "extensions/browser/crx_installer.h"
 #include "chrome/browser/extensions/extension_action_dispatcher.h"
 #include "chrome/browser/ui/toolbar/toolbar_actions_model.h"
 #include "extensions/browser/extension_registrar.h"
@@ -55,22 +54,9 @@
 #include "extensions/common/manifest_handlers/options_page_info.h"
 #include "extensions/common/permissions/permissions_data.h"
 #include "extensions/common/permissions/permission_message.h"
-
-#include "extensions/browser/install/crx_install_error.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
-#include "base/strings/escape.h"
-#include "base/task/thread_pool.h"
-#include "components/crx_file/id_util.h"
-#include "components/update_client/update_query_params.h"
 #include "components/version_info/version_info.h"
-#include "content/public/browser/storage_partition.h"
-#include "net/http/http_response_headers.h"
-#include "net/traffic_annotation/network_traffic_annotation.h"
-#include "services/network/public/cpp/resource_request.h"
-#include "services/network/public/cpp/shared_url_loader_factory.h"
-#include "services/network/public/cpp/simple_url_loader.h"
-#include "services/network/public/mojom/url_response_head.mojom.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/permissions/permission_request.h"
@@ -100,7 +86,6 @@
 #include "extensions/browser/extension_registry.h"
 #include "extensions/browser/extension_util.h"
 #include "extensions/common/extension.h"
-#include "extensions/common/extension_urls.h"
 #include "extensions/common/manifest.h"
 #include "components/sessions/content/session_tab_helper.h"
 #include "content/public/browser/render_frame_host.h"
@@ -730,109 +715,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   extensions::EventRouter::Get(profile)->DispatchEventToExtension(extension.id(), std::move(event));
 }
 
-// One Chrome Web Store package download, made by the Space's own profile with
-// the request Chromium's Web Store installer sends. Crest downloads it here
-// rather than through that installer, so the package can be installed into
-// the Spaces the person picks, and Chromium's CrxInstaller judges it; nothing
-// here limits or inspects it. Deletes itself once it has reported.
-class WebStoreDownload {
- public:
-  WebStoreDownload(void (^progress)(double), void (^completion)(NSString*, NSString*))
-      : progress_(progress), completion_(completion) {}
-
-  base::WeakPtr<WebStoreDownload> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
-
-  // Destroying the loader stops the request and deletes what it received.
-  void Cancel() {
-    weak_factory_.InvalidateWeakPtrs();
-    loader_.reset();
-    completion_(nil, base::SysUTF8ToNSString(net::ErrorToString(net::ERR_ABORTED)));
-    delete this;
-  }
-
-  void Start(Profile* profile, const std::string& extension_id) {
-    auto request = std::make_unique<network::ResourceRequest>();
-    request->url = GURL(extension_urls::GetWebstoreUpdateUrl().spec() + "?response=redirect&" +
-        update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
-        base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
-    request->credentials_mode = network::mojom::CredentialsMode::kOmit;
-    // Someone is waiting on this download, as on Chromium's own foreground
-    // extension fetches. At the default idle priority the loader writes the
-    // package on best-effort tasks, which Chromium holds until it counts
-    // startup as complete: up to three minutes when no page has loaded.
-    request->priority = net::MEDIUM;
-    loader_ = network::SimpleURLLoader::Create(std::move(request), kAnnotation);
-    loader_->SetOnResponseStartedCallback(
-        base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));
-    loader_->SetOnDownloadProgressCallback(
-        base::BindRepeating(&WebStoreDownload::Progressed, base::Unretained(this)));
-    loader_->DownloadToTempFile(
-        profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess().get(),
-        base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
-  }
-
- private:
-  static constexpr net::NetworkTrafficAnnotationTag kAnnotation =
-      net::DefineNetworkTrafficAnnotation("crest_web_store_download", R"(
-        semantics {
-          sender: "Crest Web Store install"
-          description: "Downloads a Chrome Web Store extension package for installation."
-          trigger: "The person installs an extension from a Chrome Web Store listing."
-          data: "The extension's ID and Chromium's version, platform and language."
-          destination: GOOGLE_OWNED_SERVICE
-        }
-        policy {
-          cookies_allowed: NO
-          setting: "Only runs when the person installs an extension."
-        })");
-
-  void Started(const GURL&, const network::mojom::URLResponseHead& head) { length_ = head.content_length; }
-
-  void Progressed(uint64_t received) {
-    if (length_ > 0) progress_(std::min(1.0, static_cast<double>(received) / static_cast<double>(length_)));
-  }
-
-  void Finished(base::FilePath path) {
-    weak_factory_.InvalidateWeakPtrs();
-    const network::mojom::URLResponseHead* head = loader_->ResponseInfo();
-    const int status = head && head->headers ? head->headers->response_code() : 0;
-    if (!path.empty() && status == 200) {
-      completion_(base::apple::FilePathToNSString(path), @"");
-    } else {
-      // A successful status other than 200 carries no package: the service
-      // answers 204 for an extension it will not serve to this browser.
-      if (!path.empty()) {
-        base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(path));
-      }
-      completion_(nil, status && status != 200 ? base::SysUTF8ToNSString("HTTP " + base::NumberToString(status))
-                                               : base::SysUTF8ToNSString(net::ErrorToString(loader_->NetError())));
-    }
-    delete this;
-  }
-
-  std::unique_ptr<network::SimpleURLLoader> loader_;
-  int64_t length_ = -1;
-  void (^progress_)(double);
-  void (^completion_)(NSString*, NSString*);
-  base::WeakPtrFactory<WebStoreDownload> weak_factory_{this};
-};
 }  // namespace
-
-// The platform's handle on a Web Store download, which outlives the download.
-@interface CrestWebStoreDownloadHandle : NSObject <CrestExtensionDownload>
-@end
-@implementation CrestWebStoreDownloadHandle {
-  base::WeakPtr<WebStoreDownload> _download;
-}
-- (instancetype)initWithDownload:(base::WeakPtr<WebStoreDownload>)download {
-  if ((self = [super init])) _download = download;
-  return self;
-}
-- (void)cancel {
-  CHECK(NSThread.isMainThread);
-  if (_download) _download->Cancel();
-}
-@end
 
 @interface CrestChromiumMacShell : NSObject <CrestMacShell>
 @end
@@ -986,39 +869,6 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
 - (void)attachUI:(id<CrestMacUI>)ui {
   CHECK(NSThread.isMainThread);
   State().ui = ui;
-}
-- (id<CrestExtensionDownload>)downloadExtension:(NSString*)extensionID profile:(NSUUID*)profileID
-                                       progress:(void (^)(double))progress
-                                     completion:(void (^)(NSString*, NSString*))completion {
-  CHECK(NSThread.isMainThread);
-  const std::string id = base::SysNSStringToUTF8(extensionID);
-  Profile* profile = crest::EngineBinding::Get().Profiles().Find(KeyFor(profileID));
-  if (!profile || profile->IsOffTheRecord() || !crx_file::id_util::IdIsValid(id)) return nil;
-  auto* download = new WebStoreDownload(progress, completion);
-  CrestWebStoreDownloadHandle* handle = [[CrestWebStoreDownloadHandle alloc] initWithDownload:download->GetWeakPtr()];
-  download->Start(profile, id);
-  return handle;
-}
-- (BOOL)installExtension:(NSString*)extensionID package:(NSString*)path profile:(NSUUID*)profileID
-                  window:(NSUUID*)windowID completion:(void (^)(BOOL, NSString*))completion {
-  CHECK(NSThread.isMainThread);
-  const std::string id = base::SysNSStringToUTF8(extensionID);
-  Profile* profile = crest::EngineBinding::Get().Profiles().Find(KeyFor(profileID));
-  NSWindow* window = [UI() windowWithID:windowID];
-  if (!profile || profile->IsOffTheRecord() || !window || !crx_file::id_util::IdIsValid(id)) return NO;
-  auto prompt = std::make_unique<ExtensionInstallPrompt>(profile, gfx::NativeWindow(window),
-      std::make_unique<extensions::InstallPromptData>(extensions::InstallPromptData::UNSET_PROMPT_TYPE));
-  prompt->SetSkipPostInstallUI(true);
-  auto installer = extensions::CrxInstaller::Create(profile, std::move(prompt));
-  installer->set_expected_id(id);
-  installer->set_is_gallery_install(true);
-  installer->set_delete_source(true);
-  // Each target profile independently verifies CRX3 signature and publisher proof.
-  installer->AddInstallerCallback(base::BindOnce(^(const std::optional<extensions::CrxInstallError>& error) {
-    completion(!error, error ? base::SysUTF16ToNSString(error->message()) : @"");
-  }));
-  installer->InstallCrx(base::FilePath(base::SysNSStringToUTF8(path)));
-  return YES;
 }
 - (void)disposePages:(NSArray<NSUUID*>*)pageIDs windows:(NSArray<NSUUID*>*)windowIDs
     releaseProfiles:(NSArray<NSUUID*>*)profileIDs {
@@ -1188,38 +1038,15 @@ void ShowExtensionPrompt(
     std::unique_ptr<extensions::InstallPromptData> prompt;
   };
   auto pending = std::make_shared<PendingPrompt>(std::move(params), std::move(callback), std::move(prompt));
-  // An install a Crest window started is a question for the core, which the
-  // window's own review answers.
-  const auto window_id = window.identifier ? crest::ParseGuid(base::SysNSStringToUTF8(window.identifier)) : std::nullopt;
-  if (window_id && pending->prompt->extension() &&
+  // Crest's own installs ask the core through the prompt they install
+  // with, and never come here. An install the engine began by itself in a
+  // Crest window, such as a package dropped on the extension manager, has no
+  // review in Crest to answer it, and Crest's review is the only consent an
+  // install in its windows gets, so it is declined.
+  if (window.identifier && crest::ParseGuid(base::SysNSStringToUTF8(window.identifier)) &&
       pending->prompt->type() == extensions::InstallPromptData::INSTALL_PROMPT) {
-    auto* extension = pending->prompt->extension();
-    crest::engine::ExtensionInstallQuestion question{
-        .extension_id = extension->id(),
-        .name = extension->name(),
-        .version = extension->version().GetString(),
-        .can_withhold_site_access = extensions::util::CanWithholdPermissionsFromExtension(*extension),
-        .withholds_site_access = pending->prompt->ShouldWithheldPermissionsOnDialogAccept()};
-    if (const std::string* summary = extension->manifest()->FindStringPath("description")) question.summary = *summary;
-    const auto permission_details = pending->prompt->GetPermissions();
-    for (size_t i = 0; i < pending->prompt->GetPermissionCount(); ++i) {
-      question.permissions.push_back(base::UTF16ToUTF8(pending->prompt->GetPermission(i)));
-      if (i < permission_details.details.size() && !permission_details.details[i].empty())
-        question.permissions.push_back(base::UTF16ToUTF8(permission_details.details[i]));
-    }
-    if (!pending->prompt->icon().IsEmpty()) {
-      if (auto png = pending->prompt->icon().As1xPNGBytes(); png && png->size())
-        question.icon = crest::engine::Bytes(png->data(), png->data() + png->size());
-    }
-    crest::EngineBinding::Get().Prompts().AskToInstall(*window_id, std::move(question),
-        base::BindOnce([](std::shared_ptr<PendingPrompt> pending, bool accepted, bool withhold) {
-          if (!pending->callback) return;
-          Result result = Result::USER_CANCELED;
-          if (pending->params->WasParentDestroyed()) result = Result::ABORTED;
-          else if (accepted) { result = withhold ? Result::ACCEPTED_WITH_WITHHELD_PERMISSIONS : Result::ACCEPTED; pending->prompt->OnDialogAccepted(); }
-          else pending->prompt->OnDialogCanceled();
-          std::move(pending->callback).Run(Payload(result));
-        }, pending));
+    pending->prompt->OnDialogCanceled();
+    std::move(pending->callback).Run(Payload(Result::USER_CANCELED));
     return;
   }
   NSAlert* alert = [[NSAlert alloc] init];

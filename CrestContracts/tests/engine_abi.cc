@@ -189,8 +189,12 @@ void CodecRoundTrips() {
                                                            .types_related = true},
                                                  .user_initiated = true,
                                                  .source_host = "files.example"},
+      engine::ExtensionDownloaded{.install_id = Filled(0x73)},
+      engine::ExtensionInstallFailed{.install_id = Filled(0x73),
+                                     .profile_id = Filled(0x76),
+                                     .reason = engine::ExtensionInstallFailure::kDownloadFailed},
       engine::ExtensionInstallRequested{.prompt_id = Filled(0x72),
-                                        .window_id = Filled(0x73),
+                                        .install_id = Filled(0x73),
                                         .question = {.extension_id = "abcdefghijklmnopabcdefghijklmnop",
                                                      .name = "Reader",
                                                      .version = "1.0",
@@ -198,6 +202,15 @@ void CodecRoundTrips() {
                                                      .permissions = {"Read your history"},
                                                      .icon = engine::Bytes{0x89, 0x50},
                                                      .can_withhold_site_access = true}},
+      engine::ExtensionInstalled{.install_id = Filled(0x73), .profile_id = Filled(0x76)},
+      engine::ExtensionsListed{.profile_id = Filled(0x76),
+                               .extensions = {{.id = "abcdefghijklmnopabcdefghijklmnop",
+                                               .name = "Reader",
+                                               .version = "1.0",
+                                               .enabled = true,
+                                               .changeable = true,
+                                               .permissions = {"Read your history"},
+                                               .from_web_store = true}}},
       engine::NavigationCommitted{.page_id = page, .url = "https://example.com/a", .same_document = true},
       engine::NavigationFailed{.page_id = page,
                                .failure = {.error = engine::NavigationError::kCannotFindServer,
@@ -236,7 +249,10 @@ void CodecRoundTrips() {
                                             .pending_url = std::nullopt,
                                             .title = "Example",
                                             .is_loading = true,
-                                            .security = engine::PageSecurity::kMixedContent,
+                                            .security = {.cryptographic_scheme = true,
+                                                         .connection_judged = true,
+                                                         .mixed_content = engine::PageMixedContent::kDisplayed |
+                                                                          engine::PageMixedContent::kForm},
                                             .media = engine::PageMediaActivity::kPlaying |
                                                      engine::PageMediaActivity::kPictureInPicture}},
       engine::PermissionRequested{.prompt_id = Filled(0x74),
@@ -331,7 +347,10 @@ void EngineBoundary() {
   assert(Report(binding, engine::NavigationStarted{.page_id = page, .url = url}) == CREST_OK);
   assert(Report(binding, engine::NavigationCommitted{.page_id = page, .url = url}) == CREST_OK);
   assert(Report(binding, engine::PageStateChanged{
-      .page_id = page, .snapshot = {.url = url, .title = "Example", .security = engine::PageSecurity::kSecure}}) == CREST_OK);
+      .page_id = page,
+      .snapshot = {.url = url,
+                   .title = "Example",
+                   .security = {.cryptographic_scheme = true, .connection_judged = true}}}) == CREST_OK);
   assert(Report(binding, engine::PageIconChanged{.page_id = page, .url = url, .accent = engine::TabIconAccent{1, 0, 0}}) ==
          CREST_OK);
   assert(Report(binding, engine::NavigationFinished{.page_id = page, .url = url, .title = "Example"}) == CREST_OK);

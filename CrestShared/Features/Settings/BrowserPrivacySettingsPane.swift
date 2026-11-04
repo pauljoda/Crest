@@ -3,7 +3,6 @@ import SwiftUI
 /// What a Space blocks, and what it has already been told about individual sites.
 struct BrowserPrivacySettingsPane: View {
     let browser: BrowserStore
-    let downloadCenter: BrowserDownloadCenter
     let spaceAccess: BrowserSpaceAccessController
     let permissionCenter: BrowserSitePermissionCenter
     let contentBlockingErrorDescription: String?
@@ -37,7 +36,6 @@ struct BrowserPrivacySettingsPane: View {
                 if let selectedSpaceID {
                     BrowserDataRetentionSettingsSection(
                         browser: browser,
-                        downloadCenter: downloadCenter,
                         spaceID: selectedSpaceID
                     )
                 }

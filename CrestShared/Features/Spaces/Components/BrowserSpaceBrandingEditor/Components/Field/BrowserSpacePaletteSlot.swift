@@ -55,7 +55,7 @@ struct BrowserSpacePaletteSlot: View {
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 22, height: 22)
-                            .background(Color.red, in: .circle)
+                            .background(CrestColor.danger, in: .circle)
                             .overlay {
                                 Circle().strokeBorder(.white.opacity(0.65), lineWidth: 1)
                             }

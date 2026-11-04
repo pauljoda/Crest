@@ -8,20 +8,20 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
     /// installed profile IDs. The stores it opens and removes must never be the
     /// installed app's, and relaunching the same review finds its own again.
     func testNamedIsolatedLaunchNeverOpensOrRemovesTheInstalledProfileStores() async throws {
-        let profile = BrowsingProfile()
+        let profile = UUID()
         let installed = BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false)
         let review = Self.namedIsolatedLaunch("review-a")
-        let reviewStore = review.websiteDataStoreIdentifier(forProfileID: profile.id)
+        let reviewStore = review.websiteDataStoreIdentifier(forProfileID: profile)
 
-        XCTAssertEqual(installed.websiteDataStoreIdentifier(forProfileID: profile.id), profile.id)
-        XCTAssertNotEqual(reviewStore, profile.id)
+        XCTAssertEqual(installed.websiteDataStoreIdentifier(forProfileID: profile), profile)
+        XCTAssertNotEqual(reviewStore, profile)
         XCTAssertEqual(
-            Self.namedIsolatedLaunch("review-a").websiteDataStoreIdentifier(forProfileID: profile.id), reviewStore)
+            Self.namedIsolatedLaunch("review-a").websiteDataStoreIdentifier(forProfileID: profile), reviewStore)
         XCTAssertNotEqual(
-            Self.namedIsolatedLaunch("review-b").websiteDataStoreIdentifier(forProfileID: profile.id), reviewStore)
-        XCTAssertNotEqual(review.websiteDataStoreIdentifier(forProfileID: BrowsingProfile().id), reviewStore)
+            Self.namedIsolatedLaunch("review-b").websiteDataStoreIdentifier(forProfileID: profile), reviewStore)
+        XCTAssertNotEqual(review.websiteDataStoreIdentifier(forProfileID: UUID()), reviewStore)
 
-        let installedStores = [profile.id, BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile.id)]
+        let installedStores = [profile, BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile)]
         var removed: [UUID] = []
         let remover = WebKitBrowserWebsiteDataStoreRemover(
             identifierProvider: { installedStores + [reviewStore] },
@@ -77,16 +77,16 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
     }
 
     func testRemovingAProfileAlsoRemovesItsLegacyHostedExtensionStore() async throws {
-        let profile = BrowsingProfile()
-        let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile.id)
+        let profile = UUID()
+        let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile)
         var removed: [UUID] = []
         let remover = WebKitBrowserWebsiteDataStoreRemover(
-            identifierProvider: { [profile.id, hostedID] },
+            identifierProvider: { [profile, hostedID] },
             removeDataStore: { removed.append($0) },
             clearDataStore: { _ in XCTFail("No fallback should be needed") })
-        try await remover.removePersistentDataStore(for: profile)
-        XCTAssertEqual(removed, [profile.id, hostedID])
-        XCTAssertNotEqual(hostedID, profile.id)
+        try await remover.removePersistentDataStore(forProfile: profile)
+        XCTAssertEqual(removed, [profile, hostedID])
+        XCTAssertNotEqual(hostedID, profile)
     }
 
     private static func namedIsolatedLaunch(_ isolationID: String) -> BrowserLaunchEnvironment {

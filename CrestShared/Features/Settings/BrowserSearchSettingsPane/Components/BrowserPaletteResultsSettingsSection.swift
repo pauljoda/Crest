@@ -107,10 +107,13 @@ struct BrowserPaletteResultsSettingsSection: View {
             Button("Move Down") { move(choice, by: 1) }
         }
         .contextMenu {
-            Button("Move Up") { move(choice, by: -1) }
-                .disabled(choice.source == preferences.palette.sections.first?.source)
-            Button("Move Down") { move(choice, by: 1) }
-                .disabled(choice.source == preferences.palette.sections.last?.source)
+            Group {
+                Button("Move Up", systemImage: "arrow.up") { move(choice, by: -1) }
+                    .disabled(choice.source == preferences.palette.sections.first?.source)
+                Button("Move Down", systemImage: "arrow.down") { move(choice, by: 1) }
+                    .disabled(choice.source == preferences.palette.sections.last?.source)
+            }
+            .crestMenuActionLabelStyle()
         }
     }
 

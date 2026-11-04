@@ -32,9 +32,15 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     /// The room a pointer card keeps from the page it floats over.
     static let pointerMargin: CGFloat = 24
 
+    /// The shares of the room its controls and margins leave a pointer card
+    /// that a person can give it: from the share a Quick Window takes of its
+    /// own room up to all of it, which is where a card starts.
+    static let pointerCardShares: ClosedRange<Double> = Double(windowContentFraction)...1
+
     /// A card beside a window's reserved leading chrome, filling the room
-    /// there less a margin that keeps it floating, and dismissed with the
-    /// pointer or a key. Its controls grow and travel with it.
+    /// there less a margin that keeps it floating, or the share of that room
+    /// the person chose, and dismissed with the pointer or a key. Its controls
+    /// grow and travel with it.
     static let pointer = BrowserTransientCardArrangement(
         name: "pointer", entranceTarget: .assembly, placesControlsAboveCard: true, controlAlignment: .trailing,
         controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0,

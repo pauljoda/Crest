@@ -133,7 +133,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             snapshot: { [weak self] pendingURL in
                 self?.snapshot(pendingURL: pendingURL)
                     ?? PageSnapshot(
-                        url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: PageSecurity.none,
+                        url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: .unknown,
                         media: [])
             },
             history: { [weak self] in self?.webKit.reportedHistory })
@@ -376,8 +376,8 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     }
 
     /// What WebKit shows for the page now: the document and its title,
-    /// whether it loads, the page's
-    /// security from its secure-content flag and the trust it kept, and the
+    /// whether it loads, what it knows of the connection from its
+    /// secure-content flag and the trust it kept, and the
     /// media WebKit last said it runs, with Picture in Picture while Crest's
     /// own controller holds or is entering it, so memory pressure never
     /// unloads that video.
@@ -390,7 +390,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             pendingURL: pendingURL,
             title: webView.title ?? "",
             isLoading: webView.isLoading,
-            security: PageSecurity(
+            security: PageSecurityFacts(
                 webKitURL: webView.url,
                 hasOnlySecureContent: webView.hasOnlySecureContent,
                 serverTrust: webView.serverTrust,

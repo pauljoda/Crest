@@ -43,7 +43,7 @@ struct BrowserOnboardingReviewSpacePage: View {
                 .frame(maxHeight: .infinity)
                 Text("Click anything to leave it out.")
                     .font(CrestTypography.sans(12, weight: .medium))
-                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.55))
+                    .foregroundStyle(CrestBrandTheme.textSecondary)
             }
             .frame(width: layout.sidebarWidth)
 
@@ -93,7 +93,7 @@ private struct BrowserOnboardingReviewColumnLabel: View {
             .font(CrestTypography.sans(11, weight: .bold))
             .tracking(1.4)
             .textCase(.uppercase)
-            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+            .foregroundStyle(CrestBrandTheme.textSecondary)
             .frame(height: 20)
     }
 }

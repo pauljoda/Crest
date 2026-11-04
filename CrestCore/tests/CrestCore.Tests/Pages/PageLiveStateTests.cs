@@ -29,6 +29,33 @@ public sealed partial class BrowserContractsTests {
 
     private static PageLiveState Live(IReadOnlyList<Change> changes) => Assert.IsType<PageChanged>(Assert.Single(changes)).Page.Live;
 
+    /// The core judges a page's security from the facts its engine reports,
+    /// the same way for every engine: plain HTTP is insecure except on this
+    /// device's own host, a secure connection is secure until what it carried,
+    /// a warning or its certificate says otherwise, and a malicious page
+    /// outranks everything.
+    [Theory]
+    [InlineData("http://example.org/", false, false, false, false, PageMixedContent.None, false, false, "insecure")]
+    [InlineData("http://localhost:8080/", false, false, false, false, PageMixedContent.None, false, false, "none")]
+    [InlineData("http://app.localhost/", false, false, false, false, PageMixedContent.None, false, false, "none")]
+    [InlineData("http://127.0.0.1:5000/", false, false, false, false, PageMixedContent.None, false, false, "none")]
+    [InlineData("http://[::1]:5000/", false, false, false, false, PageMixedContent.None, false, false, "none")]
+    [InlineData("data:text/html,hi", false, false, false, true, PageMixedContent.None, false, false, "insecure")]
+    [InlineData("file:///tmp/page.html", false, false, false, false, PageMixedContent.None, false, false, "none")]
+    [InlineData("https://example.org/", true, false, false, false, PageMixedContent.None, false, false, "none")]
+    [InlineData("https://example.org/", true, true, false, false, PageMixedContent.None, false, false, "secure")]
+    [InlineData("https://example.org/", true, true, false, true, PageMixedContent.None, false, false, "insecure")]
+    [InlineData("https://example.org/", true, true, false, true, PageMixedContent.Displayed, false, false, "mixed_content")]
+    [InlineData("https://example.org/", true, true, true, false, PageMixedContent.Ran, false, false, "certificate_error")]
+    [InlineData("https://example.org/", true, true, false, false, PageMixedContent.None, false, true, "none")]
+    [InlineData("https://example.org/", true, true, true, false, PageMixedContent.None, true, false, "dangerous")]
+    public void APageSecurityIsJudgedFromWhatItsEngineKnows(string url, bool cryptographic, bool judged, bool certificateError,
+        bool warns, PageMixedContent mixed, bool malicious, bool errorPage, string expected) {
+        var facts = new PageSecurityFacts(cryptographic, judged, certificateError, warns, mixed, malicious, errorPage);
+
+        Assert.Equal(PageSecurity.Named(expected), PageSecurity.Judging(facts, url));
+    }
+
     [Fact]
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;

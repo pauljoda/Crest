@@ -20,9 +20,16 @@ enum BrowserSpaceGroupUpdateNotice {
 
     // MARK: - Actions - Showing
 
+    /// A Space joined a group: the first group on this device shows the
+    /// notice in the window the person looks at.
+    static func showIfDue() {
+        guard takeIfDue() else { return }
+        BrowserNoticeCenter.shared.post(BrowserNotice(message: message, systemImage: "arrow.down.circle"))
+    }
+
     /// Answers whether the notice is due, and marks it shown: true only the
     /// first time a group forms on this device.
-    static func takeIfDue() -> Bool {
+    private static func takeIfDue() -> Bool {
         guard !defaults.bool(forKey: shownKey) else { return false }
         defaults.set(true, forKey: shownKey)
         return true

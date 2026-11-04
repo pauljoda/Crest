@@ -117,6 +117,6 @@ struct BrowserChromeWebStoreInstallView: View {
         .padding(CrestSpacing.extraLarge)
         .frame(width: BrowserExtensionInstallMetrics.width)
         .interactiveDismissDisabled(model.installing)
-        .onChange(of: model.isAuthorized) { _, authorized in if !authorized { model.dismiss() } }
+        .onChange(of: model.closesReview) { _, closes in if closes { model.dismiss() } }
     }
 }

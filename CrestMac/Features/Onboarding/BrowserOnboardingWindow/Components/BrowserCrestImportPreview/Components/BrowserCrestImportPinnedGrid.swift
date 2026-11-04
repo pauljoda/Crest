@@ -20,7 +20,7 @@ struct BrowserCrestImportPinnedGrid: View {
                 .frame(height: 47)
                 .background(
                     isMatched
-                        ? BrowserOnboardingPalette.match.opacity(0.2)
+                        ? CrestBrandPalette.match.opacity(0.2)
                         : Color.primary.opacity(
                             tab.id == highlightedTabID ? 0.14 : 0.075
                         ),
@@ -30,7 +30,7 @@ struct BrowserCrestImportPinnedGrid: View {
                     if isMatched {
                         Image(systemName: "equal.circle.fill")
                             .font(.caption)
-                            .foregroundStyle(BrowserOnboardingPalette.match)
+                            .foregroundStyle(CrestBrandPalette.match)
                             .padding(4)
                     }
                 }
@@ -38,7 +38,7 @@ struct BrowserCrestImportPinnedGrid: View {
                     if isMatched {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .strokeBorder(
-                                BrowserOnboardingPalette.match.opacity(0.64),
+                                CrestBrandPalette.match.opacity(0.64),
                                 lineWidth: 1
                             )
                     }

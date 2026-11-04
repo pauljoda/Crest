@@ -146,6 +146,11 @@ public sealed partial class NativeSessionAuthority {
     /// open over this workspace.
     internal Window? IssuingWindow(Guid windowId) => device?.Snapshot(workspaceId, windowId);
 
+    /// Whether the window that moves a tab to another Space follows it there,
+    /// as the link preferences of the device that shows this session say, or
+    /// as they start for a session no device shows.
+    internal bool FollowsMovedTabs => device?.FollowsMovedTabs ?? LinkPreferences.Default.FollowsMovedTabs;
+
     /// `now` as the session stores it, so the next load reads the same value.
     private static DateTimeOffset Stamp(DateTimeOffset now) => StoredSessionCodec.Date(StoredSessionCodec.Seconds(now));
 
