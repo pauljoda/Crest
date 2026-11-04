@@ -20,23 +20,9 @@ private struct BrowserIconCustomizationPopoverModifier: ViewModifier {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if let preferredArrowEdge {
-            content.popover(
-                isPresented: presentation.isPresented,
-                attachmentAnchor: .rect(.bounds),
-                arrowEdge: preferredArrowEdge
-            ) {
-                popoverContent
-            }
-        } else {
-            content.popover(
-                isPresented: presentation.isPresented,
-                attachmentAnchor: .rect(.bounds)
-            ) {
-                popoverContent
-            }
+        content.crestPopover(isPresented: presentation.isPresented, arrowEdge: preferredArrowEdge) {
+            popoverContent
         }
     }
 

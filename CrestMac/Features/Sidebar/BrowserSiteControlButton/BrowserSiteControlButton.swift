@@ -23,7 +23,7 @@ struct BrowserSiteControlButton: View {
             isPresented: presentationBinding,
             blockedPopupNotice: configuration.page.blockedPopupNotice
         )
-        .popover(isPresented: presentationBinding, arrowEdge: .top) {
+        .crestPopover(isPresented: presentationBinding, arrowEdge: .top) {
             Group {
                 if let request = configuration.page.sitePermissionRequests.current {
                     BrowserPagePermissionPrompt(
@@ -38,7 +38,6 @@ struct BrowserSiteControlButton: View {
                 }
             }
             .font(.body)
-            .crestFlyoutStyle()
         }
         // This control opens the window's extension list, so it is where an
         // extension popup goes when the keyboard asked for one and the

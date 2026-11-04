@@ -126,7 +126,7 @@ struct BrowserOnboardingMakeSwatch: View {
         .help(Text(color.title))
         .accessibilityLabel(Text(title))
         .accessibilityValue(Text(color.title))
-        .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+        .crestPopover(isPresented: $isOpen, arrowEdge: .bottom) {
             BrowserCrestForgePalette(title: title, caption: caption, color: color, select: select)
                 .presentationCompactAdaptation(.popover)
         }

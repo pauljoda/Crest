@@ -64,7 +64,7 @@ struct BrowserFolderGroupSurface: View {
                 }
             }
         }
-        .popover(
+        .crestPopover(
             isPresented: interaction.isChoosingColor,
             arrowEdge: .trailing
         ) {

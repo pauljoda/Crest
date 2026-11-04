@@ -13,7 +13,7 @@ struct BrowserDeveloperCaptureControls: View {
                 action: { showsCaptureOptions.toggle() }
             )
             .disabled(!page.pageEngine.registration.supports(.fullPageCapture))
-            .popover(isPresented: $showsCaptureOptions, arrowEdge: .top) {
+            .crestPopover(isPresented: $showsCaptureOptions, arrowEdge: .top) {
                 BrowserDeveloperCaptureOptions(page: page)
             }
 

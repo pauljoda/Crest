@@ -39,7 +39,7 @@ struct BrowserSidebarSplitGroupRow: View {
                 interaction: interaction
             )
         )
-        .popover(isPresented: tintPresentation, arrowEdge: .trailing) {
+        .crestPopover(isPresented: tintPresentation, arrowEdge: .trailing) {
             BrowserFolderColorPicker(
                 color: interaction.tint,
                 title: "Split View Color",

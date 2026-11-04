@@ -1,16 +1,19 @@
 import SwiftUI
 
 /// The surface of every flyout Crest draws over its windows, such as Site
-/// Controls or a permission request: one dark surface whose labels are read in
-/// that same appearance, so neither the Space's ink, the window's appearance
-/// nor the page behind the flyout can put light labels on a light background.
+/// Controls, a color picker or a permission request: one solid dark surface
+/// whose labels are read in that same appearance, so neither the Space's ink,
+/// a scheme the presenting view forces, the window's appearance nor the page
+/// behind the flyout can put light labels on a light background.
 ///
-/// The material is a solid one of its own rather than the device's surface
-/// choice: that choice suits layers on the sidebar, but a see-through one lets
-/// a bright page show through a flyout held over it.
+/// The material is one of its own rather than the device's surface choice,
+/// laid over the window's own background: that choice suits layers on the
+/// sidebar, but even the thickest material lets a bright page show through a
+/// flyout held over it, and the labels must read against the surface alone.
 struct CrestFlyoutStyle: ViewModifier {
     // MARK: - Static Variables
 
+    private static let colorScheme = ColorScheme.dark
     private static let material = CrestSurfaceMaterial.thick
 
     // MARK: - Variables
@@ -18,19 +21,21 @@ struct CrestFlyoutStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .foregroundStyle(.primary)
-            .tint(CrestBrandTheme.accent(.dark))
-            .environment(\.colorScheme, .dark)
+            .tint(CrestBrandTheme.accent(Self.colorScheme))
+            .environment(\.colorScheme, Self.colorScheme)
             .presentationBackground {
                 Rectangle()
-                    .fill(Self.material.material)
-                    .environment(\.colorScheme, .dark)
+                    .fill(CrestColor.windowBackground)
+                    .overlay { Rectangle().fill(Self.material.material) }
+                    .environment(\.colorScheme, Self.colorScheme)
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Self.colorScheme)
     }
 }
 
 extension View {
-    /// Draws this flyout's content on Crest's flyout surface.
+    /// Draws this flyout's content on Crest's flyout surface. A popover gets
+    /// it from ``crestPopover(isPresented:attachmentAnchor:arrowEdge:content:)``.
     func crestFlyoutStyle() -> some View {
         modifier(CrestFlyoutStyle())
     }
