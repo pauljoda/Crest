@@ -909,9 +909,10 @@ documents and sign-ins that arrived before it was ready.
   through a local key monitor. While Crest's own views have focus, Crest's
   shortcuts win. While a page has focus, each binding's `ShortcutPreference`
   decides: Prefer Crest runs the command before the page sees the key; Use
-  Both lets the page see the first press and runs the command on a quick
-  second press of keys the page kept, after the window's notice says so;
-  Prefer Website leaves the key to the page. Commands the core marks
+  Both lets the page see the first press and runs the command on a second
+  press of keys the page kept, made to the same page within two seconds of
+  the first, whether or not the window's notice has shown yet; Prefer
+  Website leaves the key to the page. Commands the core marks
   `IsReservedFromPages` (opening, closing and switching tabs and windows)
   always prefer Crest, and quit always runs. Text editing keys bound to a
   command reach the focused page or field first and run the command only

@@ -18,13 +18,14 @@ final class BrowserMacPageKeptShortcut {
 
     // MARK: - Types
 
-    /// One press of `shortcut` for `command`, the event's own timestamp, in
-    /// the window it went to.
+    /// One press of `shortcut` for `command`, the event's own timestamp, and
+    /// the page view it went to. A press that reaches another page, such as
+    /// after switching tabs, is that page's first press.
     private struct Press {
         let command: ShortcutCommand
         let shortcut: BrowserShortcut
         let timestamp: TimeInterval
-        let windowNumber: Int
+        weak var receiver: NSResponder?
     }
 
     // MARK: - Variables
@@ -42,7 +43,7 @@ final class BrowserMacPageKeptShortcut {
     /// now and the page never sees this press.
     func isSecondPress(_ event: NSEvent, of command: ShortcutCommand, shortcut: BrowserShortcut) -> Bool {
         guard let press, press.timestamp != event.timestamp, !event.isARepeat, press.command == command,
-            press.shortcut == shortcut, press.windowNumber == event.windowNumber,
+            press.shortcut == shortcut, let receiver = press.receiver, receiver === event.window?.firstResponder,
             event.timestamp - press.timestamp <= Self.secondPressWindow
         else { return false }
         answeredTimestamp = press.timestamp
@@ -57,7 +58,7 @@ final class BrowserMacPageKeptShortcut {
         guard press?.timestamp != event.timestamp, !event.isARepeat else { return }
         forget()
         let pressed = Press(
-            command: command, shortcut: shortcut, timestamp: event.timestamp, windowNumber: event.windowNumber)
+            command: command, shortcut: shortcut, timestamp: event.timestamp, receiver: event.window?.firstResponder)
         press = pressed
         Task { [weak self] in
             try? await Task.sleep(for: Self.hintDelay)

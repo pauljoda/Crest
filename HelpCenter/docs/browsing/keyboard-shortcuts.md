@@ -105,7 +105,7 @@ Some temporary interfaces have their own local actions. In Peek, **Command-W** c
 Some websites use keys Crest also uses, such as Command-S in a chat app. On Mac, each shortcut's **…** menu in **Settings → Shortcuts** says who gets them while the page has focus:
 
 - **Prefer Crest**: Crest runs the command and the website never sees the keys. Opening, closing and switching tabs and windows always work this way. Previous Space, Next Space and Select Space 1–9 start this way.
-- **Use Both**: the website gets the first press. If it keeps the keys, the top of the window says to press them again, and a second press within about two seconds runs Crest's command. Show or Hide Sidebar, Open Location, Find in Page, Print Page, Show History, Show Downloads, Copy Page Link, Pin or Unpin Current Tab, Select Tab 1–9, Capture Page and the developer and translation toolbars start this way.
+- **Use Both**: the website gets the first press. If it keeps the keys, the top of the window says to press them again, and a second press within about two seconds runs Crest's command. Show or Hide Sidebar, Open Location, Find in Page, Print Page, Show History, Show Downloads, Show Web Inspector, Copy Page Link, Copy Page Link as Markdown, Pin or Unpin Current Tab, Select Tab 1–9, Focus Next and Previous Split Card, Separate All Tabs, Capture Page and the developer and translation toolbars start this way.
 - **Prefer Website**: the website keeps the keys, and Crest runs its command only when the website doesn't use them. Every other shortcut starts this way.
 
 If you give a command a text editing shortcut, such as Command-Z for Reopen Last Closed Tab, a text field you're typing in keeps Undo, and the command runs when no field can use the keys.
