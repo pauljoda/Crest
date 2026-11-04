@@ -43,6 +43,7 @@ class EnginePage;
 class EngineProfiles;
 class EnginePrompts;
 class EngineTabGroups;
+class ExtensionInstalls;
 
 // Chromium's engine binding: the portable half of Crest's Chromium host, in
 // C++ and Chromium's own types with no Objective-C, so it serves every
@@ -195,9 +196,11 @@ class EngineBinding {
   void RefreshStoreListings();
   // The shell hosts the view of the inspector docked on `page`, or none.
   void DockInspector(const std::string& page, content::WebContents* frontend);
-  // The engine profiles, and every profile's extensions.
+  // The engine profiles, every profile's extensions, and the extension
+  // installs the core runs.
   EngineProfiles& Profiles();
   EngineExtensions& Extensions();
+  ExtensionInstalls& Installs();
   // The engine's downloads in Crest's profiles.
   EngineDownloads& Downloads();
   bool disposing() const { return disposing_; }
@@ -282,15 +285,13 @@ class EngineBinding {
   bool Handle(const engine::WatchPage& request);
   engine::ExtensionActionList Handle(const engine::PageExtensions& request);
   engine::ExtensionActionList Handle(const engine::PinnedExtensions& request);
-  engine::InstalledExtensionList Handle(const engine::InstalledExtensions& request);
-  bool Handle(const engine::ChangeExtension& request);
+  engine::ExtensionIconList Handle(const engine::ExtensionIcons& request);
   engine::SidePanelScope Handle(const engine::HasSidePanel& request);
   bool Handle(const engine::StopMediaCapture& request);
   bool Handle(const engine::ChooseShareSource& request);
   bool Handle(const engine::StopTabSharing& request);
   bool Handle(const engine::AnswerWebNotification& request);
   bool Handle(const engine::AnswerProfileNotification& request);
-  bool Handle(const engine::PrepareProfile& request);
 
   void Perform(engine::EngineCommand command);
   // Each command, handled where it lands. `Perform` visits a command with
@@ -306,6 +307,11 @@ class EngineBinding {
   void Handle(const engine::SettleAuthentication& command);
   void Handle(const engine::SettlePermission& command);
   void Handle(const engine::SettleExtensionInstall& command);
+  void Handle(const engine::ListEngineExtensions& command);
+  void Handle(const engine::ChangeEngineExtension& command);
+  void Handle(const engine::DownloadExtension& command);
+  void Handle(const engine::InstallExtensionPackage& command);
+  void Handle(const engine::EndExtensionInstall& command);
   void Handle(const engine::SettleDownloadDestination& command);
   void Handle(const engine::CancelEngineDownload& command);
   void Handle(const engine::PauseEngineDownload& command);
@@ -403,6 +409,7 @@ class EngineBinding {
   std::unique_ptr<EngineBrowsers> browsers_;
   std::unique_ptr<EngineTabGroups> tab_groups_;
   std::unique_ptr<EngineExtensions> extensions_;
+  std::unique_ptr<ExtensionInstalls> installs_;
   std::unique_ptr<EngineDownloads> downloads_;
   std::unique_ptr<EnginePrompts> prompts_;
   std::unique_ptr<EngineNotifications> notifications_;

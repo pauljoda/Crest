@@ -8,6 +8,11 @@ extension EngineCommand {
         case .adoptOfferedPage(let command): command.perform(on: binding)
         case .approveEngineDownload(let command): command.perform(on: binding)
         case .cancelEngineDownload(let command): command.perform(on: binding)
+        case .changeEngineExtension, .downloadExtension, .endExtensionInstall, .installExtensionPackage,
+            .listEngineExtensions:
+            // WebKit declares no extensions, so the core refuses every
+            // extension intent for it before any of these is issued.
+            break
         case .checkBeforeUnload(let command): command.perform(on: binding)
         case .closePage(let command): command.perform(on: binding)
         case .createPage(let command): command.perform(on: binding)

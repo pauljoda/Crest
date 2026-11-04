@@ -14,10 +14,10 @@ extension EnginePresentation {
         case .pageScriptEvaluated(let presentation): presentation.deliver(to: page)
         case .pageViewReady(let presentation): presentation.deliver(to: page)
         case .audioSpectrumChanged, .contentFullscreenChanged, .contentMessagePosted, .contentScriptEvaluated,
-            .extensionsChanged, .infoBarRemoved, .infoBarShown, .inspectorClosed, .inspectorLayoutChanged,
-            .linkHovered, .mediaSessionChanged, .pageInteracted, .pageLoadingChanged,
+            .extensionDownloadProgressed, .extensionsChanged, .infoBarRemoved, .infoBarShown, .inspectorClosed,
+            .inspectorLayoutChanged, .linkHovered, .mediaSessionChanged, .pageInteracted, .pageLoadingChanged,
             .pageNavigationStarted, .pageRendererGone, .pageThemeChanged, .pageViewClosed, .pageViewUnavailable,
-            .peekRequested, .popupBlocked, .profileNotificationClosed, .profileNotificationPosted, .profilePrepared,
+            .peekRequested, .popupBlocked, .profileNotificationClosed, .profileNotificationPosted,
             .profileReleased, .screenCaptureAccessMissing, .shareSourcesOffered, .shareSourcesWithdrawn,
             .sidePanelRequested, .storeInstallRequested, .storeRemovalRequested, .tabSharingChanged,
             .webNotificationClosed, .webNotificationPosted:

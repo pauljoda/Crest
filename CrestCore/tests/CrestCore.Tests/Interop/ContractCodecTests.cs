@@ -250,7 +250,7 @@ public sealed unsafe class ContractCodecTests {
         Assert.Contains("record EngineRegistration(", schema.EngineCanonical, StringComparison.Ordinal);
         Assert.Matches(@"engineevent \d+ PageClosed", schema.EngineCanonical);
         Assert.DoesNotContain("intent ", schema.EngineCanonical, StringComparison.Ordinal);
-        Assert.Contains("set PageSecurity None=0 Insecure=1", schema.EngineCanonical, StringComparison.Ordinal);
+        Assert.Contains("set EngineKind Chromium=0 WebKit=1", schema.EngineCanonical, StringComparison.Ordinal);
         Assert.DoesNotContain("localized", schema.EngineCanonical, StringComparison.Ordinal);
         // An enum only a fixed set's data names stays out with that data.
         Assert.DoesNotContain("enum EngineMark", schema.EngineCanonical, StringComparison.Ordinal);

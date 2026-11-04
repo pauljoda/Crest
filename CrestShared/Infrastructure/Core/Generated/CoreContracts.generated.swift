@@ -63,6 +63,12 @@ protocol DownloadIntent: Intent {}
 /// The members of `EngineEvent` that derive from the core's `EngineDownloadEvent`.
 protocol EngineDownloadEvent: EngineEvent {}
 
+/// The members of `EngineEvent` that derive from the core's `ExtensionEvent`.
+protocol ExtensionEvent: EngineEvent {}
+
+/// The members of `Intent` that derive from the core's `ExtensionIntent`.
+protocol ExtensionIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `ImportWorkspace`.
 protocol ImportWorkspace: Intent {}
 
@@ -134,8 +140,10 @@ enum Change: Equatable, Sendable {
     case enginePreferencesChanged(EnginePreferencesChanged)
     case enginesChanged(EnginesChanged)
     case extensionInstallAsked(ExtensionInstallAsked)
+    case extensionInstallChanged(ExtensionInstallChanged)
     case foldersChanged(FoldersChanged)
     case historyChanged(HistoryChanged)
+    case installedExtensionsChanged(InstalledExtensionsChanged)
     case linkPreferencesChanged(LinkPreferencesChanged)
     case navigationRecorded(NavigationRecorded)
     case offeredPageAdopted(OfferedPageAdopted)
@@ -222,6 +230,7 @@ enum Rejection: Equatable, Error, Sendable {
     case engineAlreadyRegistered(EngineAlreadyRegistered)
     case engineLacksCapability(EngineLacksCapability)
     case engineNotRegistered(EngineNotRegistered)
+    case extensionNotChangeable(ExtensionNotChangeable)
     case fileUnreadable(FileUnreadable)
     case folderAlreadyExists(FolderAlreadyExists)
     case folderCycle(FolderCycle)
@@ -311,6 +320,7 @@ enum Rejection: Equatable, Error, Sendable {
     case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceDataNotErased(SpaceDataNotErased)
     case spaceDeletionUnderway(SpaceDeletionUnderway)
+    case spaceIsPrivate(SpaceIsPrivate)
     case spaceLimitReached(SpaceLimitReached)
     case spaceLocked(SpaceLocked)
     case spaceProfileChanged(SpaceProfileChanged)
@@ -334,6 +344,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownAgentSession(UnknownAgentSession)
     case unknownArchivedTab(UnknownArchivedTab)
     case unknownCloudMerge(UnknownCloudMerge)
+    case unknownExtension(UnknownExtension)
     case unknownFolder(UnknownFolder)
     case unknownLinkRoute(UnknownLinkRoute)
     case unknownPage(UnknownPage)
@@ -377,6 +388,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .currentTabsOnly(let value): value.message
         case .duplicateSearchEngineName(let value): value.message
         case .duplicateSearchShortcut(let value): value.message
+        case .extensionNotChangeable(let value): value.message
         case .fileUnreadable(let value): value.message
         case .guideSpaceLocked(let value): value.message
         case .incompleteSplit(let value): value.message
@@ -412,6 +424,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .spaceAlreadyExists(let value): value.message
         case .spaceBeingDeleted(let value): value.message
         case .spaceDeletionUnderway(let value): value.message
+        case .spaceIsPrivate(let value): value.message
         case .spaceLimitReached(let value): value.message
         case .spaceLocked(let value): value.message
         case .spaceProfileChanged(let value): value.message
@@ -419,6 +432,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .splitNeedsTwoTabs(let value): value.message
         case .unknownAgentSession(let value): value.message
         case .unknownCloudMerge(let value): value.message
+        case .unknownExtension(let value): value.message
         case .unsuitableDefaultSearch(let value): value.message
         case .unsupportedArchiveVersion(let value): value.message
         case .webPagesOnly(let value): value.message
@@ -432,16 +446,21 @@ enum EngineCommand: Equatable, Sendable {
     case adoptOfferedPage(AdoptOfferedPage)
     case approveEngineDownload(ApproveEngineDownload)
     case cancelEngineDownload(CancelEngineDownload)
+    case changeEngineExtension(ChangeEngineExtension)
     case checkBeforeUnload(CheckBeforeUnload)
     case closePage(ClosePage)
     case createPage(CreatePage)
+    case downloadExtension(DownloadExtension)
     case dropStagedLink(DropStagedLink)
+    case endExtensionInstall(EndExtensionInstall)
     case eraseBrowsingData(EraseBrowsingData)
     case eraseProfileData(EraseProfileData)
     case eraseSiteData(EraseSiteData)
     case exitPictureInPicture(ExitPictureInPicture)
     case goToHistoryEntry(GoToHistoryEntry)
     case groupPages(GroupPages)
+    case installExtensionPackage(InstallExtensionPackage)
+    case listEngineExtensions(ListEngineExtensions)
     case loadPage(LoadPage)
     case pauseEngineDownload(PauseEngineDownload)
     case readSiteData(ReadSiteData)
@@ -463,6 +482,7 @@ enum EnginePresentation: Equatable, Sendable {
     case contentFullscreenChanged(ContentFullscreenChanged)
     case contentMessagePosted(ContentMessagePosted)
     case contentScriptEvaluated(ContentScriptEvaluated)
+    case extensionDownloadProgressed(ExtensionDownloadProgressed)
     case extensionsChanged(ExtensionsChanged)
     case findFinished(FindFinished)
     case infoBarRemoved(InfoBarRemoved)
@@ -489,7 +509,6 @@ enum EnginePresentation: Equatable, Sendable {
     case popupBlocked(PopupBlocked)
     case profileNotificationClosed(ProfileNotificationClosed)
     case profileNotificationPosted(ProfileNotificationPosted)
-    case profilePrepared(ProfilePrepared)
     case profileReleased(ProfileReleased)
     case screenCaptureAccessMissing(ScreenCaptureAccessMissing)
     case shareSourcesOffered(ShareSourcesOffered)
@@ -504,7 +523,7 @@ enum EnginePresentation: Equatable, Sendable {
     /// The `PageId` every member of the core's `EnginePagePresentation` carries, or nil for any other.
     var pageID: UUID? {
         switch self {
-        case .extensionsChanged, .profileNotificationClosed, .profileNotificationPosted, .profilePrepared, .profileReleased: nil
+        case .extensionDownloadProgressed, .extensionsChanged, .profileNotificationClosed, .profileNotificationPosted, .profileReleased: nil
         case .audioSpectrumChanged(let value): value.pageID
         case .contentFullscreenChanged(let value): value.pageID
         case .contentMessagePosted(let value): value.pageID
@@ -567,8 +586,10 @@ extension Change {
         case .enginePreferencesChanged(let change): change.apply(to: state)
         case .enginesChanged(let change): change.apply(to: state)
         case .extensionInstallAsked(let change): change.apply(to: state)
+        case .extensionInstallChanged(let change): change.apply(to: state)
         case .foldersChanged(let change): change.apply(to: state)
         case .historyChanged(let change): change.apply(to: state)
+        case .installedExtensionsChanged(let change): change.apply(to: state)
         case .linkPreferencesChanged(let change): change.apply(to: state)
         case .navigationRecorded(let change): change.apply(to: state)
         case .offeredPageAdopted(let change): change.apply(to: state)
@@ -640,8 +661,10 @@ extension Change {
         case .enginePreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .enginesChanged(let change): change.apply(to: core, in: &batch)
         case .extensionInstallAsked(let change): change.apply(to: core, in: &batch)
+        case .extensionInstallChanged(let change): change.apply(to: core, in: &batch)
         case .foldersChanged(let change): change.apply(to: core, in: &batch)
         case .historyChanged(let change): change.apply(to: core, in: &batch)
+        case .installedExtensionsChanged(let change): change.apply(to: core, in: &batch)
         case .linkPreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .navigationRecorded(let change): change.apply(to: core, in: &batch)
         case .offeredPageAdopted(let change): change.apply(to: core, in: &batch)
@@ -713,8 +736,10 @@ extension Change {
         case .enginePreferencesChanged(let change): change.note(in: &receipts)
         case .enginesChanged(let change): change.note(in: &receipts)
         case .extensionInstallAsked(let change): change.note(in: &receipts)
+        case .extensionInstallChanged(let change): change.note(in: &receipts)
         case .foldersChanged(let change): change.note(in: &receipts)
         case .historyChanged(let change): change.note(in: &receipts)
+        case .installedExtensionsChanged(let change): change.note(in: &receipts)
         case .linkPreferencesChanged(let change): change.note(in: &receipts)
         case .navigationRecorded(let change): change.note(in: &receipts)
         case .offeredPageAdopted(let change): change.note(in: &receipts)
@@ -1018,6 +1043,7 @@ struct AnswerExtensionInstall: Intent, PromptIntent, Equatable, Sendable {
     let promptID: UUID
     let accepted: Bool
     let withholdsSiteAccess: Bool
+    let copySpaceIDs: [UUID]
 }
 
 struct AnswerInfoBar: PageRequest, Equatable, Sendable {
@@ -1402,6 +1428,13 @@ struct BrowsingPreferences: Equatable, Sendable {
     var dataRetention: DataRetentionPreferences
 }
 
+struct CanChangeExtensions: Query, Equatable, Sendable {
+    typealias Answer = SendPermission
+
+    let spaceID: UUID
+    let engine: EngineKind
+}
+
 struct CanReturnToSavedAddress: Query, Equatable, Sendable {
     typealias Answer = SavedAddressReturn
 
@@ -1435,6 +1468,10 @@ struct CancelDownload: Intent, DownloadIntent, Equatable, Sendable {
 struct CancelEngineDownload: Equatable, Sendable {
     let profileID: UUID
     let downloadID: String
+}
+
+struct CancelExtensionInstall: Intent, ExtensionIntent, Equatable, Sendable {
+    let installID: UUID
 }
 
 struct CancelImportRead: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -1508,10 +1545,15 @@ struct ChallengeHandling: Query, Equatable, Sendable {
     let previousFailureCount: Int
 }
 
-struct ChangeExtension: PageRequest, Equatable, Sendable {
-    typealias Answer = Bool
-
+struct ChangeEngineExtension: Equatable, Sendable {
     let profileID: UUID
+    let extensionID: String
+    let change: ExtensionChange
+}
+
+struct ChangeExtension: Intent, ExtensionIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let engine: EngineKind
     let extensionID: String
     let change: ExtensionChange
 }
@@ -2230,6 +2272,12 @@ struct DownloadDestinationAsked: CoreChange, Equatable, Sendable {
     let forcesPrompt: Bool
 }
 
+struct DownloadExtension: Equatable, Sendable {
+    let installID: UUID
+    let profileID: UUID
+    let extensionID: String
+}
+
 struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
@@ -2466,6 +2514,10 @@ struct EditLinkRoute: Intent, LinkIntent, Equatable, Sendable {
 
 struct EndAgentSession: Intent, AgentIntent, Equatable, Sendable {
     let sessionID: UUID
+}
+
+struct EndExtensionInstall: Equatable, Sendable {
+    let installID: UUID
 }
 
 struct EnforcedLimits: Query, Equatable, Sendable {
@@ -2709,10 +2761,57 @@ struct ExtensionActionList: Equatable, Sendable {
     let actions: [ExtensionAction]
 }
 
+struct ExtensionCopyDestinationList: Equatable, Sendable {
+    let spaceIDs: [UUID]
+    let listed: Bool
+}
+
+struct ExtensionCopyDestinations: Query, Equatable, Sendable {
+    typealias Answer = ExtensionCopyDestinationList
+
+    let spaceID: UUID
+    let engine: EngineKind
+    let extensionID: String
+}
+
+struct ExtensionDownloadProgressed: Equatable, Sendable {
+    let installID: UUID
+    let fraction: Double
+}
+
+struct ExtensionDownloaded: EngineEvent, ExtensionEvent, Equatable, Sendable {
+    let installID: UUID
+}
+
+struct ExtensionIcon: Equatable, Sendable {
+    let extensionID: String
+    let image: Data?
+}
+
+struct ExtensionIconList: Equatable, Sendable {
+    let icons: [ExtensionIcon]
+}
+
+struct ExtensionIcons: PageRequest, Equatable, Sendable {
+    typealias Answer = ExtensionIconList
+
+    let profileID: UUID
+}
+
 struct ExtensionInstallAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
-    let windowID: UUID
+    let installID: UUID
     let question: ExtensionInstallQuestion
+}
+
+struct ExtensionInstallChanged: CoreChange, Equatable, Sendable {
+    let install: ExtensionInstallState
+}
+
+struct ExtensionInstallFailed: EngineEvent, ExtensionEvent, Equatable, Sendable {
+    let installID: UUID
+    let profileID: UUID
+    let reason: ExtensionInstallFailure
 }
 
 struct ExtensionInstallQuestion: Equatable, Sendable {
@@ -2726,14 +2825,42 @@ struct ExtensionInstallQuestion: Equatable, Sendable {
     var withholdsSiteAccess: Bool
 }
 
-struct ExtensionInstallRequested: EngineEvent, PromptEvent, Equatable, Sendable {
+struct ExtensionInstallRequested: EngineEvent, ExtensionEvent, Equatable, Sendable {
     let promptID: UUID
-    let windowID: UUID
+    let installID: UUID
     let question: ExtensionInstallQuestion
+}
+
+struct ExtensionInstallState: Equatable, Sendable {
+    let installID: UUID
+    let spaceID: UUID
+    let engine: EngineKind
+    let extensionID: String
+    let stage: ExtensionInstallStage
+    let installedCount: Int
+    let failure: ExtensionInstallFailure?
+}
+
+struct ExtensionInstalled: EngineEvent, ExtensionEvent, Equatable, Sendable {
+    let installID: UUID
+    let profileID: UUID
+}
+
+struct ExtensionNotChangeable: Equatable, Sendable {
+    let extensionID: String
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("This extension is managed for you and can’t be changed.")
+    }
 }
 
 struct ExtensionsChanged: Equatable, Sendable {
     let profileID: UUID
+}
+
+struct ExtensionsListed: EngineEvent, ExtensionEvent, Equatable, Sendable {
+    let profileID: UUID
+    let extensions: [InstalledExtension]
 }
 
 struct ExternalAddressVerdict: Equatable, Sendable {
@@ -3258,26 +3385,36 @@ struct InspectorLayoutChanged: Equatable, Sendable {
     let pageID: UUID
 }
 
-struct InstalledExtension: Equatable, Sendable, Identifiable {
-    let id: String
-    let name: String
-    let version: String
-    let description: String
-    let icon: Data?
-    let enabled: Bool
-    let permissions: [String]
-    let fromWebStore: Bool
-    let optionsURL: String?
+struct InstallExtension: Intent, ExtensionIntent, Equatable, Sendable {
+    let installID: UUID
+    let spaceID: UUID
+    let engine: EngineKind
+    let extensionID: String
+    let copySpaceIDs: [UUID]
+    let preApproved: Bool
 }
 
-struct InstalledExtensionList: Equatable, Sendable {
-    let extensions: [InstalledExtension]
-}
-
-struct InstalledExtensions: PageRequest, Equatable, Sendable {
-    typealias Answer = InstalledExtensionList
-
+struct InstallExtensionPackage: Equatable, Sendable {
+    let installID: UUID
     let profileID: UUID
+}
+
+struct InstalledExtension: Equatable, Sendable, Identifiable {
+    var id: String
+    var name: String
+    var version: String
+    var description: String
+    var enabled: Bool
+    var changeable: Bool
+    var permissions: [String]
+    var fromWebStore: Bool
+    var optionsURL: String?
+}
+
+struct InstalledExtensionsChanged: CoreChange, Equatable, Sendable {
+    let engine: EngineKind
+    let profileID: UUID
+    let extensions: [InstalledExtension]
 }
 
 struct InteractionState: Equatable, Sendable {
@@ -3677,6 +3814,15 @@ struct LinkRoutesFull: Equatable, Sendable {
 struct ListDropTarget: Equatable, Sendable {
     let section: TabPlacement
     let folderID: UUID?
+}
+
+struct ListEngineExtensions: Equatable, Sendable {
+    let profileID: UUID
+}
+
+struct ListExtensions: Intent, ExtensionIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let engine: EngineKind
 }
 
 struct LoadAddress: Intent, PageIntent, Equatable, Sendable {
@@ -4477,14 +4623,49 @@ struct PageScriptEvaluated: Equatable, Sendable {
     let error: String?
 }
 
+struct PageSecurityFacts: Equatable, Sendable {
+    static let unknown = PageSecurityFacts(
+        cryptographicScheme: false,
+        connectionJudged: false,
+        certificateError: false,
+        engineWarns: false,
+        mixedContent: [],
+        maliciousContent: false,
+        errorPage: false
+    )
+
+    var cryptographicScheme: Bool
+    var connectionJudged: Bool
+    var certificateError: Bool
+    var engineWarns: Bool
+    var mixedContent: PageMixedContent
+    var maliciousContent: Bool
+    var errorPage: Bool
+}
+
 struct PageSnapshot: Equatable, Sendable {
-    static let blank = PageSnapshot(url: nil, pendingURL: nil, title: "", isLoading: false, security: PageSecurity.none, media: [])
+    static let blank = PageSnapshot(
+        url: nil,
+        pendingURL: nil,
+        title: "",
+        isLoading: false,
+        security: PageSecurityFacts(
+            cryptographicScheme: false,
+            connectionJudged: false,
+            certificateError: false,
+            engineWarns: false,
+            mixedContent: [],
+            maliciousContent: false,
+            errorPage: false
+        ),
+        media: []
+    )
 
     var url: String?
     var pendingURL: String?
     var title: String
     var isLoading: Bool
-    var security: PageSecurity
+    var security: PageSecurityFacts
     var media: PageMediaActivity
 }
 
@@ -4802,13 +4983,6 @@ struct PopupBlocked: Equatable, Sendable {
     let pageURL: String
 }
 
-struct PrepareProfile: PageRequest, Equatable, Sendable {
-    typealias Answer = Bool
-
-    let profileID: UUID
-    let preparationID: UUID
-}
-
 struct PrepareToClosePages: Intent, CloseIntent, Equatable, Sendable {
     let requestID: UUID
     let pageIDs: [UUID]
@@ -4899,11 +5073,6 @@ struct ProfileNotificationPosted: Equatable, Sendable {
     let title: String
     let body: String
     let silent: Bool
-}
-
-struct ProfilePrepared: Equatable, Sendable {
-    let preparationID: UUID
-    let ready: Bool
 }
 
 struct ProfileReleased: Equatable, Sendable {
@@ -6298,6 +6467,14 @@ struct SpaceDeletionUnderway: Equatable, Sendable {
     }
 }
 
+struct SpaceIsPrivate: Equatable, Sendable {
+    let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Extensions can’t be changed in a private window.")
+    }
+}
+
 struct SpaceLimitReached: Equatable, Sendable {
     let limit: Int
 
@@ -7005,6 +7182,14 @@ struct UnknownCloudMerge: Equatable, Sendable {
     }
 }
 
+struct UnknownExtension: Equatable, Sendable {
+    let extensionID: String
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("That extension is no longer installed.")
+    }
+}
+
 struct UnknownFolder: Equatable, Sendable {
     let folderID: UUID
 }
@@ -7475,6 +7660,13 @@ struct PageMediaActivity: OptionSet, Sendable {
     static let playing = PageMediaActivity(rawValue: 1)
     static let capturing = PageMediaActivity(rawValue: 2)
     static let pictureInPicture = PageMediaActivity(rawValue: 4)
+}
+
+struct PageMixedContent: OptionSet, Sendable {
+    let rawValue: Int
+    static let ran = PageMixedContent(rawValue: 1)
+    static let displayed = PageMixedContent(rawValue: 2)
+    static let form = PageMixedContent(rawValue: 4)
 }
 
 enum PageScriptWorld: Int, CaseIterable, Sendable {
@@ -13190,6 +13382,164 @@ struct ExportFormat: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `ExtensionInstallFailure`. A member's wire tag is its index in `all`.
+struct ExtensionInstallFailure: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    var closesReview: Bool { facts.closesReview }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, message: LocalizedStringResource, closesReview: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, message: message, closesReview: closesReview)
+    }
+
+    static let spaceUnavailable = ExtensionInstallFailure(
+        tag: 0,
+        name: "space_unavailable",
+        message: LocalizedStringResource("The Space is no longer available."),
+        closesReview: true
+    )
+    static let downloadFailed = ExtensionInstallFailure(
+        tag: 1,
+        name: "download_failed",
+        message: LocalizedStringResource("Couldn’t download this extension."),
+        closesReview: false
+    )
+    static let refused = ExtensionInstallFailure(
+        tag: 2,
+        name: "refused",
+        message: LocalizedStringResource("This extension couldn’t be verified or installed."),
+        closesReview: false
+    )
+    static let canceled = ExtensionInstallFailure(
+        tag: 3,
+        name: "canceled",
+        message: LocalizedStringResource("Installation canceled."),
+        closesReview: false
+    )
+
+    static let all: [ExtensionInstallFailure] = [spaceUnavailable, downloadFailed, refused, canceled]
+
+    static func named(_ name: String?) -> ExtensionInstallFailure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ExtensionInstallFailure, rhs: ExtensionInstallFailure) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+        let closesReview: Bool
+
+        init(name: String, message: LocalizedStringResource, closesReview: Bool) {
+            self.name = name
+            self.message = message
+            self.closesReview = closesReview
+        }
+    }
+}
+
+/// The members of the core's `ExtensionInstallStage`. A member's wire tag is its index in `all`.
+struct ExtensionInstallStage: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var isPreparing: Bool { facts.isPreparing }
+    var isInstalling: Bool { facts.isInstalling }
+    var hasEnded: Bool { facts.hasEnded }
+    var hasInstalled: Bool { facts.hasInstalled }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, isPreparing: Bool, isInstalling: Bool, hasEnded: Bool, hasInstalled: Bool) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            isPreparing: isPreparing,
+            isInstalling: isInstalling,
+            hasEnded: hasEnded,
+            hasInstalled: hasInstalled
+        )
+    }
+
+    static let downloading = ExtensionInstallStage(
+        tag: 0,
+        name: "downloading",
+        isPreparing: true,
+        isInstalling: false,
+        hasEnded: false,
+        hasInstalled: false
+    )
+    static let asking = ExtensionInstallStage(
+        tag: 1,
+        name: "asking",
+        isPreparing: false,
+        isInstalling: false,
+        hasEnded: false,
+        hasInstalled: false
+    )
+    static let installing = ExtensionInstallStage(
+        tag: 2,
+        name: "installing",
+        isPreparing: false,
+        isInstalling: true,
+        hasEnded: false,
+        hasInstalled: false
+    )
+    static let installed = ExtensionInstallStage(
+        tag: 3,
+        name: "installed",
+        isPreparing: false,
+        isInstalling: false,
+        hasEnded: true,
+        hasInstalled: true
+    )
+    static let failed = ExtensionInstallStage(
+        tag: 4,
+        name: "failed",
+        isPreparing: false,
+        isInstalling: false,
+        hasEnded: true,
+        hasInstalled: false
+    )
+
+    static let all: [ExtensionInstallStage] = [downloading, asking, installing, installed, failed]
+
+    static func named(_ name: String?) -> ExtensionInstallStage? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ExtensionInstallStage, rhs: ExtensionInstallStage) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let isPreparing: Bool
+        let isInstalling: Bool
+        let hasEnded: Bool
+        let hasInstalled: Bool
+
+        init(name: String, isPreparing: Bool, isInstalling: Bool, hasEnded: Bool, hasInstalled: Bool) {
+            self.name = name
+            self.isPreparing = isPreparing
+            self.isInstalling = isInstalling
+            self.hasEnded = hasEnded
+            self.hasInstalled = hasInstalled
+        }
+    }
+}
+
 /// The members of the core's `ExternalLinkDestination`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `space`.
 struct ExternalLinkDestination: Hashable, Sendable {
@@ -14776,6 +15126,7 @@ struct PagePresentation: Hashable, Sendable {
 }
 
 /// The members of the core's `PageSecurity`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `applies`.
 struct PageSecurity: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }

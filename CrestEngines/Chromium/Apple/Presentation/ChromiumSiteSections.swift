@@ -45,15 +45,13 @@
     struct BrowserEngineSidebarAccessory: View {
         /// The Space whose row this is, in the read model.
         let space: SpaceModel
-        /// The window's own store. Extension ownership is decided against the store
-        /// family that owns this window rather than against one global Space list.
+        /// The window's own store.
         let browser: BrowserStore
         let pages: BrowserPagePool
 
         var body: some View {
             if browser.core.state.defaultEngineSupports(.extensions) || pinnedActionPage != nil {
-                BrowserPinnedExtensionStrip(
-                    page: pinnedActionPage, space: space, browser: browser)
+                BrowserPinnedExtensionStrip(page: pinnedActionPage, space: space)
             }
         }
 
@@ -75,8 +73,7 @@
 
         var body: some View {
             if browser.core.state.defaultEngineSupports(.extensions) || page?.chromiumPage != nil {
-                BrowserPinnedExtensionStrip(
-                    page: page?.chromiumPage, space: space, browser: browser, placement: .toolbar)
+                BrowserPinnedExtensionStrip(page: page?.chromiumPage, space: space, placement: .toolbar)
             }
         }
     }

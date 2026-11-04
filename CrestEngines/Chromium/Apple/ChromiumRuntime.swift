@@ -14,7 +14,6 @@
         private(set) lazy var engine = ChromiumEngine(runtime: self)
         private var binding: crest_engine_binding_t?
         private var commands: [[UInt8]] = []
-        private var waiting: [UUID: CheckedContinuation<Bool, Never>] = [:]
         private var app: UInt64 = 0
         private var engineID: UInt64 = 0
         private var report: crest_engine_report_t?
@@ -48,9 +47,6 @@
             commands = []
             for command in queued { run(command) }
             engine.pages.replayStartingRequests()
-            let completions = waiting
-            waiting = [:]
-            for completion in completions.values { completion.resume(returning: true) }
         }
 
         // MARK: - Actions - Runtime
@@ -67,26 +63,6 @@
                     windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0)
                 {
                     NSApp.postEvent(event, atStart: false)
-                }
-            }
-        }
-
-        func whenReady() async -> Bool {
-            guard !Task.isCancelled else { return false }
-            guard binding == nil else { return true }
-            let requestID = UUID()
-            return await withTaskCancellationHandler {
-                await withCheckedContinuation { continuation in
-                    guard !Task.isCancelled else {
-                        continuation.resume(returning: false)
-                        return
-                    }
-                    waiting[requestID] = continuation
-                    requestStart()
-                }
-            } onCancel: {
-                Task { @MainActor [weak self] in
-                    self?.waiting.removeValue(forKey: requestID)?.resume(returning: false)
                 }
             }
         }

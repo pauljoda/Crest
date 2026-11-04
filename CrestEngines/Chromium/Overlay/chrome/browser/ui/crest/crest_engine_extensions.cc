@@ -1,5 +1,6 @@
 #include "chrome/browser/ui/crest/crest_engine_extensions.h"
 
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -237,8 +238,14 @@ void ProfileExtensions::RebuildIcons() {
 
 // EngineExtensions.
 
-EngineExtensions::EngineExtensions(Present present, ProfileExtensions::Retract retract, base::RepeatingClosure changed)
-    : present_(std::move(present)), retract_(std::move(retract)), changed_(std::move(changed)) {}
+EngineExtensions::EngineExtensions(Present present,
+                                   Report report,
+                                   ProfileExtensions::Retract retract,
+                                   base::RepeatingClosure changed)
+    : present_(std::move(present)),
+      report_(std::move(report)),
+      retract_(std::move(retract)),
+      changed_(std::move(changed)) {}
 
 EngineExtensions::~EngineExtensions() = default;
 
@@ -253,11 +260,13 @@ ProfileExtensions& EngineExtensions::For(Profile* profile, const std::string& pr
 
 void EngineExtensions::Forget(const std::string& profile_id) {
   profiles_.erase(profile_id);
+  listed_.erase(profile_id);
   due_.erase(profile_id);
 }
 
 void EngineExtensions::Clear() {
   profiles_.clear();
+  listed_.clear();
   due_.clear();
 }
 
@@ -340,13 +349,26 @@ engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std
   return list;
 }
 
-engine::InstalledExtensionList EngineExtensions::Installed(Profile* profile, const std::string& profile_id) {
-  engine::InstalledExtensionList list;
+void EngineExtensions::List(Profile* profile, const std::string& profile_id) {
+  const auto id = ParseGuid(profile_id);
+  if (!id) {
+    return;
+  }
+  auto installed = Installed(profile, profile_id);
+  listed_[profile_id] = installed;
+  report_.Run(engine::ExtensionsListed{.profile_id = *id, .extensions = std::move(installed)});
+  // A profile only just loaded has its pinned actions to show now.
+  Changed(profile_id);
+}
+
+std::vector<engine::InstalledExtension> EngineExtensions::Installed(Profile* profile, const std::string& profile_id) {
+  std::vector<engine::InstalledExtension> list;
   if (profile->IsOffTheRecord()) {
     return list;
   }
   auto* registry = extensions::ExtensionRegistry::Get(profile);
   auto* actions = extensions::ExtensionActionManager::Get(profile);
+  auto* policy = extensions::ExtensionSystem::Get(profile)->management_policy();
   auto& state = For(profile, profile_id);
   for (const auto& extension : registry->GenerateInstalledExtensionsSet()) {
     if (!Listed(*extension)) {
@@ -361,8 +383,8 @@ engine::InstalledExtensionList EngineExtensions::Installed(Profile* profile, con
     engine::InstalledExtension item{.id = extension->id(),
                                     .name = extension->name(),
                                     .version = extension->version().GetString(),
-                                    .icon = IconPNG(state.IconFor(*extension, action, -1)),
                                     .enabled = registry->enabled_extensions().Contains(extension->id()),
+                                    .changeable = policy && policy->UserMayModifySettings(extension.get(), nullptr),
                                     .from_web_store = extension->from_webstore()};
     if (const std::string* description = extension->manifest()->FindStringPath("description")) {
       item.description = *description;
@@ -373,43 +395,60 @@ engine::InstalledExtensionList EngineExtensions::Installed(Profile* profile, con
     if (const GURL options = extensions::OptionsPageInfo::GetOptionsPage(extension.get()); options.is_valid()) {
       item.options_url = options.spec();
     }
-    list.extensions.push_back(std::move(item));
+    list.push_back(std::move(item));
   }
   return list;
 }
 
-bool EngineExtensions::Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change) {
+engine::ExtensionIconList EngineExtensions::Icons(Profile* profile, const std::string& profile_id) {
+  engine::ExtensionIconList list;
   if (profile->IsOffTheRecord()) {
-    return false;
+    return list;
+  }
+  auto* registry = extensions::ExtensionRegistry::Get(profile);
+  auto* actions = extensions::ExtensionActionManager::Get(profile);
+  auto& state = For(profile, profile_id);
+  for (const auto& extension : registry->GenerateInstalledExtensionsSet()) {
+    if (Listed(*extension)) {
+      list.icons.push_back(engine::ExtensionIcon{
+          .extension_id = extension->id(),
+          .image = IconPNG(state.IconFor(*extension, actions->GetExtensionAction(*extension), -1))});
+    }
+  }
+  return list;
+}
+
+void EngineExtensions::Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change) {
+  if (profile->IsOffTheRecord()) {
+    return;
   }
   const auto* extension = extensions::ExtensionRegistry::Get(profile)->GetInstalledExtension(extension_id);
   if (!extension ||
       !extensions::ExtensionSystem::Get(profile)->management_policy()->UserMayModifySettings(extension, nullptr)) {
-    return false;
+    return;
   }
   auto* registrar = extensions::ExtensionRegistrar::Get(profile);
   switch (change) {
     case engine::ExtensionChange::kEnable:
       registrar->EnableExtension(extension_id);
-      return true;
+      return;
     case engine::ExtensionChange::kDisable:
       registrar->DisableExtension(extension_id, {extensions::disable_reason::DISABLE_USER_ACTION});
-      return true;
+      return;
     case engine::ExtensionChange::kRemove: {
       std::u16string error;
-      return registrar->UninstallExtension(extension_id, extensions::UNINSTALL_REASON_USER_INITIATED, &error);
+      std::ignore = registrar->UninstallExtension(extension_id, extensions::UNINSTALL_REASON_USER_INITIATED, &error);
+      return;
     }
     case engine::ExtensionChange::kPin:
     case engine::ExtensionChange::kUnpin: {
       auto* model = ToolbarActionsModel::Get(profile);
-      if (!model || !model->HasAction(extension_id) || model->IsActionForcePinned(extension_id)) {
-        return false;
+      if (model && model->HasAction(extension_id) && !model->IsActionForcePinned(extension_id)) {
+        model->SetActionVisibility(extension_id, change == engine::ExtensionChange::kPin);
       }
-      model->SetActionVisibility(extension_id, change == engine::ExtensionChange::kPin);
-      return true;
+      return;
     }
   }
-  return false;
 }
 
 // static
@@ -463,7 +502,8 @@ engine::SidePanelScope EngineExtensions::SidePanelScopeFor(content::WebContents*
 }
 
 // Changes arrive in bursts while the registry and the toolbar model mutate,
-// so each profile's are presented once the turn ends.
+// so each profile's are presented once the turn ends, and a profile the core
+// lists is reported again when what it lists changed.
 void EngineExtensions::Changed(const std::string& profile_id) {
   due_.insert(profile_id);
   if (flush_posted_) {
@@ -479,8 +519,20 @@ void EngineExtensions::Flush() {
   std::set<std::string> due = std::move(due_);
   due_.clear();
   for (const std::string& profile_id : due) {
-    if (auto profile = ParseGuid(profile_id)) {
-      present_.Run(engine::ExtensionsChanged{.profile_id = *profile});
+    const auto id = ParseGuid(profile_id);
+    if (!id) {
+      continue;
+    }
+    present_.Run(engine::ExtensionsChanged{.profile_id = *id});
+    const auto listed = listed_.find(profile_id);
+    const auto state = profiles_.find(profile_id);
+    if (listed == listed_.end() || state == profiles_.end()) {
+      continue;
+    }
+    auto installed = Installed(state->second->profile(), profile_id);
+    if (installed != listed->second) {
+      listed->second = installed;
+      report_.Run(engine::ExtensionsListed{.profile_id = *id, .extensions = std::move(installed)});
     }
   }
   changed_.Run();

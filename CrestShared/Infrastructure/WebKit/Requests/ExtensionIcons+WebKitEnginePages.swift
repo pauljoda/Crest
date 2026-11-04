@@ -1,8 +1,8 @@
 import Foundation
 
-extension InstalledExtensions {
+extension ExtensionIcons {
     /// Only Chromium's binding is asked this.
     @MainActor func answer(on pages: WebKitEnginePages) -> Answer {
-        preconditionFailure("WebKit answers no InstalledExtensions.")
+        preconditionFailure("WebKit answers no ExtensionIcons.")
     }
 }
