@@ -76,7 +76,8 @@ jobs:
           global-json-file: CrestCore/global.json
 
       - name: Test core contracts
-        run: dotnet test CrestCore/tests/CrestCore.Tests/CrestCore.Tests.csproj --nologo
+        working-directory: CrestCore
+        run: dotnet test tests/CrestCore.Tests/CrestCore.Tests.csproj --nologo
 
       - name: Check core analyzers and code style
         run: Scripts/control-plane/lint-dotnet.sh
