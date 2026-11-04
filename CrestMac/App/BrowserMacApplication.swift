@@ -299,7 +299,7 @@ final class BrowserMacApplication {
         privateWindowCloseGate = BrowserWindowCloseGate(core: core) { [windowID = privateBrowser.windowID] in
             PrepareToCloseWindows(requestID: UUID(), windowIDs: [windowID])
         }
-        downloadNotices = BrowserDownloadNotices(core: core)
+        downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess)
         engineMoveNotices = BrowserEngineMoveNotices(core: core)
         let downloadDialogs = BrowserDialogPresenter()
         downloadPrompts = BrowserDownloadPrompts(core: core) { asked, dismissal in
