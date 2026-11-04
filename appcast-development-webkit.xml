@@ -6,32 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.171</title>
-            <pubDate>Wed, 04 Nov 2026 18:57:06 +0000</pubDate>
+            <title>0.8.172</title>
+            <pubDate>Wed, 04 Nov 2026 19:45:41 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1497</sparkle:version>
-            <sparkle:shortVersionString>0.8.171</sparkle:shortVersionString>
+            <sparkle:version>1498</sparkle:version>
+            <sparkle:shortVersionString>0.8.172</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Site Controls now describes a site’s connection the same way whichever engine shows the page.
-- An extension managed by a policy no longer offers to enable, disable, pin or remove it, and a copy of an extension stops when the Space it goes to starts being deleted.
-- When an extension chosen during import can’t be installed in one Space, the other Spaces that chose it still receive it.
-- An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs.
+- On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/abcd7c1ff1aad3c2df5fe9ffd49ac8318ac348b1...6b5ac3dda3238e085714d1e5af600409357d8e51) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.171-2026-11-04-1497-r497.1/Installer-Crest-0.8.171-development-2026-11-04-6b5ac3d-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/6b5ac3dda3238e085714d1e5af600409357d8e51...ca745369df39ec9274f4e15f5cc24519c12b4dc4) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.172-2026-11-04-1498-r498.1/Installer-Crest-0.8.172-development-2026-11-04-ca74536-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.171-2026-11-04-1497-r497.1/Installer-Crest-0.8.171-development-2026-11-04-6b5ac3d-arm64.dmg" length="216798875" type="application/octet-stream" sparkle:edSignature="mW3etQjCrwASPPTmf40Ho50ihJHrCnSj31WIQRCJzIHKUBjAe6WGprh+W9Phn0J44HXT2DX9Xe5uupWcew6RDQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.172-2026-11-04-1498-r498.1/Installer-Crest-0.8.172-development-2026-11-04-ca74536-arm64.dmg" length="216790170" type="application/octet-stream" sparkle:edSignature="JFDBHulcPcziY7vATlj4eDJDqm/+ygS2/UJ761mdENEWwkRFOYq7Joqv44MQDKn0Gr1bT+RcfnKv4gl3dkQUBw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -63,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: muFWdRwXeVRzN1I6rg7OcapmeQsIKOzIJb2xNitFPIgNJyqIWSHuPBx4tbY/m68PU/ERUAs0kWm/tkz3TSslAg==
-length: 4421
+edSignature: bFXtfx7yD8cqiWpakXynW0GZ4ONT35nJm1ozvMNzZNEk40sw48fgYjlS4XpM2OCn4JWScLwyU8yGA7L+70qsCg==
+length: 4023
 -->

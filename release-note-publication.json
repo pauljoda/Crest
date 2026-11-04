@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "core-dotnet-10-0-14-security-update",
+    "development": "mobile-peek-grows-from-held-link",
     "nightly": "mac-peek-size"
   }
 }
