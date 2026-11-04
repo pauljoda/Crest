@@ -71,10 +71,6 @@ protocol MobileBrowserTransientRequest: Equatable, Sendable {
 extension MobileBrowserTransientRequest {
     // MARK: - Variables
 
-    var resolvedSourcePresentation: BrowserPeekSourcePresentation {
-        BrowserPeekSourcePresentation.resolved(sourcePresentation)
-    }
-
     var renderIdentity: MobileBrowserTransientRenderIdentity {
         MobileBrowserTransientRenderIdentity(
             requestID: id,

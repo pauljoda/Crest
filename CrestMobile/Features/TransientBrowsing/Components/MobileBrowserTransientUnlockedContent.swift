@@ -17,7 +17,10 @@ struct MobileBrowserTransientUnlockedContent: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var isCardVisible = false
     @State private var isCardExpanded = false
+    /// Whether the card is collapsing back into its link as it closes.
+    @State private var isCollapsing = false
     @State private var retainedMotionState: BrowserPeekMotionState?
+    @State private var windowPlacement: MobileBrowserTransientWindowPlacement?
 
     var body: some View {
         BrowserTransientSurface(
@@ -31,6 +34,10 @@ struct MobileBrowserTransientUnlockedContent: View {
             webContent
         } linkMenuAnchor: { presentation in
             MobilePeekLinkMenuAnchor(presentation: presentation)
+        }
+        .background {
+            MobileBrowserTransientWindowPlacement.Reader { windowPlacement = $0 }
+                .ignoresSafeArea()
         }
         .task(id: presentationPhase) {
             await updatePresentation()
@@ -52,7 +59,7 @@ struct MobileBrowserTransientUnlockedContent: View {
             dismiss()
             return .handled
         }
-        .allowsHitTesting(presentationPhase == .committed)
+        .allowsHitTesting(presentationPhase == .committed && !isCollapsing)
         .accessibilityHidden(presentationPhase == .staged)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(model.request.accessibilityLabel)
@@ -76,14 +83,35 @@ struct MobileBrowserTransientUnlockedContent: View {
                 horizontalSizeClass: horizontalSizeClass,
                 verticalSizeClass: verticalSizeClass
             ),
-            isCardVisible: !model.request.isQuickWindow || isCardVisible,
-            isCardExpanded: model.request.isQuickWindow ? isCardExpanded : presentationPhase == .committed,
+            isCardVisible: followsMotion || isCardVisible,
+            isCardExpanded: followsMotion ? presentationPhase == .committed : isCardExpanded,
             reduceMotion: reduceMotion,
             reduceTransparency: reduceTransparency,
             presentationPhase: presentationPhase,
-            sourcePresentation: model.request.resolvedSourcePresentation,
-            motionState: model.motionState ?? retainedMotionState
+            sourcePresentation: sourcePresentation,
+            motionState: motionState
         )
+    }
+
+    private var motionState: BrowserPeekMotionState? {
+        model.motionState ?? retainedMotionState
+    }
+
+    /// Whether the card follows the shared motion of a link the person tapped
+    /// open, rather than growing out of a link they held.
+    private var followsMotion: Bool {
+        motionState != nil
+    }
+
+    /// The link the card grows from, measured against the overlay rather
+    /// than the window the page measured it in.
+    private var sourcePresentation: BrowserPeekSourcePresentation {
+        .resolved(model.request.sourcePresentation.map { windowPlacement?.place($0) ?? $0 })
+    }
+
+    /// Whether closing the card shrinks it back into the link it grew from.
+    private var collapsesIntoLink: Bool {
+        !followsMotion && !model.request.isQuickWindow && model.request.sourcePresentation != nil
     }
 
     private var pageStatus: BrowserTransientPageStatus {
@@ -116,29 +144,34 @@ struct MobileBrowserTransientUnlockedContent: View {
             : "Preview preparing"
     }
 
+    /// A held link's Peek waits unseen behind the press, then grows out of
+    /// the link once the press holds. A Peek tapped open follows the shared
+    /// motion instead.
     private func updatePresentation() async {
         guard model.preparePage(isActive: scenePhase == .active) else { return }
-        guard presentationPhase == .committed else { return }
-        // All Peek inputs use the shared motion state; only Quick Window has
-        // its independent scene entrance.
-        guard model.request.isQuickWindow else { return }
-        guard !reduceMotion else {
-            isCardVisible = true
-            isCardExpanded = true
-            return
-        }
-        withAnimation(
-            CrestMotion.quickPeekEntrance.unlessReducingMotion(reduceMotion)
-        ) {
+        guard presentationPhase == .committed, !followsMotion else { return }
+        let entrance = model.request.isQuickWindow ? CrestMotion.quickPeekEntrance : CrestMotion.peekEntrance
+        withAnimation(entrance.unlessReducingMotion(reduceMotion)) {
             isCardVisible = true
             isCardExpanded = true
         }
     }
 
     private func dismiss() {
-        withAnimation(
-            CrestMotion.peekDismissal.unlessReducingMotion(reduceMotion)
-        ) {
+        guard !isCollapsing else { return }
+        guard collapsesIntoLink, !reduceMotion else {
+            withAnimation(
+                CrestMotion.peekDismissal.unlessReducingMotion(reduceMotion)
+            ) {
+                model.dismiss()
+            }
+            return
+        }
+        isCollapsing = true
+        withAnimation(CrestMotion.peekDismissal, completionCriteria: .logicallyComplete) {
+            isCardVisible = false
+            isCardExpanded = false
+        } completion: {
             model.dismiss()
         }
     }
