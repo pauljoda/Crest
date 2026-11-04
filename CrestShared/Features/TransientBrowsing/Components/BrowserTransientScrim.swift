@@ -11,8 +11,8 @@ struct BrowserTransientScrim: View {
     let opacity: Double
     let allowsDismissal: Bool
     var insets = EdgeInsets()
-    /// Whether the ground fades in when it appears, as the card grows, instead
-    /// of showing at its full opacity from the first frame.
+    /// Whether the ground fades in on its own when it appears, as the card
+    /// grows, instead of following whatever animates the card.
     var fadesIn = false
     let dismiss: () -> Void
 
@@ -37,7 +37,9 @@ struct BrowserTransientScrim: View {
             .ignoresSafeArea()
             .padding(insets)
             .contentShape(.rect)
-            .animation(fade, value: shownOpacity)
+            .transaction(value: shownOpacity) { transaction in
+                if fadesIn { transaction.animation = fade }
+            }
             .onAppear { hasAppeared = true }
     }
 

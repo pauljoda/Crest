@@ -1,12 +1,7 @@
 import SwiftUI
 
 /// The whole of a transient overlay below its lock: the scrim, and the card
-/// standing on it.
-///
-/// The card grows out of the link it came from. Where that growth is applied
-/// is the one thing the arrangement changes here — the card and its controls
-/// together, or the page alone — and the state hands identity to whichever
-/// layer is not growing, so every arrangement runs the same chain.
+/// standing on it, which grows out of the link it came from.
 struct BrowserTransientSurface<WebContent: View, LinkMenuAnchor: View>: View {
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus
@@ -66,19 +61,9 @@ struct BrowserTransientSurface<WebContent: View, LinkMenuAnchor: View>: View {
                     webContent: webContent,
                     linkMenuAnchor: linkMenuAnchor
                 )
-                .scaleEffect(
-                    x: assemblyScale.width,
-                    y: assemblyScale.height,
-                    anchor: state.sourceTransform.anchor
-                )
-                .opacity(state.opacity(for: .assembly))
             }
             .coordinateSpace(name: BrowserTransientMotion.coordinateSpaceName)
         }
-    }
-
-    private var assemblyScale: CGSize {
-        state.scale(for: .assembly)
     }
 }
 

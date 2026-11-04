@@ -83,6 +83,8 @@ enum CrestMotion {
     static let boundaryShakeTransition: TimeInterval = 0.36
     /// Fading a page in where Reduce Motion stills a slide.
     static let reducedMotionFadeTransition: TimeInterval = 0.2
+    /// Growing a held link's Peek out of the link.
+    static let peekEntranceTransition: TimeInterval = 0.28
     /// Presenting Peek inside a Quick Window, and fading in the ground behind a
     /// Mac Peek.
     static let quickPeekEntranceTransition: TimeInterval = 0.34
@@ -169,6 +171,9 @@ enum CrestMotion {
     /// roles it is meant for Reduce Motion, so it is used as it is.
     static var reducedMotionFade: Animation {
         .easeInOut(duration: reducedMotionFadeTransition)
+    }
+    static var peekEntrance: Animation {
+        .spring(duration: peekEntranceTransition, bounce: 0.2)
     }
     static var quickPeekEntrance: Animation {
         .smooth(duration: quickPeekEntranceTransition)
