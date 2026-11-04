@@ -6,7 +6,21 @@ import SwiftUI
 /// the card the controls sit on and how large the card is allowed to be.
 /// Everything an arrangement does not use resolves to identity, so all three
 /// walk the same chain.
+///
+/// The card grows out of the link it came from. Where that growth is applied
+/// is the one thing the arrangement changes here — the card and its controls
+/// together, or the page alone — and the state hands identity to whichever
+/// layer is not growing. The growth starts from the card's own frame laid
+/// over the link, so the stack measures that frame inside the growth, where
+/// the growth never moves it.
 struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
+    // MARK: - Static Variables
+
+    /// The stack as laid out, before it grows.
+    private nonisolated static var layoutSpaceName: String { "crest-transient-card-stack" }
+
+    // MARK: - Variables
+
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus
     let spaces: [BrowserSpaceIdentity]
@@ -23,6 +37,8 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
     @State private var showsLinkMenu = false
     /// Counts the times the person opened the link menu.
     @State private var linkMenuRequest = 0
+    /// The card's frame in the stack as laid out.
+    @State private var cardFrame: CGRect?
 
     var body: some View {
         VStack(
@@ -47,6 +63,13 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
         // The page's frame is the part of the overlay the scrim dims.
         .padding(arrangement.contentInsets(safeAreaInsets: safeAreaInsets, pageInsets: state.scrimInsets))
         .modifier(BrowserTransientContentRegion(region: contentRegion))
+        .coordinateSpace(.named(Self.layoutSpaceName))
+        .scaleEffect(
+            x: assemblyScale.width,
+            y: assemblyScale.height,
+            anchor: sourceTransform.anchor
+        )
+        .opacity(state.opacity(for: .assembly))
     }
 
     private var arrangement: BrowserTransientCardArrangement {
@@ -103,7 +126,7 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
         .scaleEffect(
             x: pageCardScale.width,
             y: pageCardScale.height,
-            anchor: state.sourceTransform.anchor
+            anchor: sourceTransform.anchor
         )
         .opacity(state.opacity(for: .pageCard))
         .modifier(
@@ -114,7 +137,17 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
                     )
                     .frame(width: min(menu.size.width, width), height: menu.size.height)
                 }
-            })
+            }
+        )
+        // Measured outside the card's own scales, which leave its frame
+        // where it was laid out. A card that follows the shared motion never
+        // grows from its frame, so only one that grows is measured.
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .named(Self.layoutSpaceName))
+        } action: { frame in
+            guard state.motionState == nil else { return }
+            cardFrame = frame
+        }
     }
 
     /// The region the stack is laid out inside, once the shell's own leading
@@ -131,8 +164,17 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
         arrangement.cardSize(in: contentRegion?.size ?? availableSize)
     }
 
+    /// The transform that starts the card over the link it came from.
+    private var sourceTransform: BrowserTransientSourceTransform {
+        state.sourceTransform(cardFrame: cardFrame, in: availableSize)
+    }
+
+    private var assemblyScale: CGSize {
+        state.scale(for: .assembly, from: sourceTransform)
+    }
+
     private var pageCardScale: CGSize {
-        state.scale(for: .pageCard)
+        state.scale(for: .pageCard, from: sourceTransform)
     }
 }
 
