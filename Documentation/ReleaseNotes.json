@@ -5046,6 +5046,10 @@
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
     },
+    "core-dotnet-10-0-14-security-update": {
+      "category": "internal",
+      "message": "Build the core with the .NET 10.0.14 security update."
+    },
     "save-or-unsave-current-tab-command": {
       "category": "new",
       "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
