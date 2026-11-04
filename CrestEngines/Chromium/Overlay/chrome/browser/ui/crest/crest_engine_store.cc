@@ -39,7 +39,10 @@
 #include "extensions/browser/install_prompt_data.h"
 #include "extensions/common/extension.h"
 #include "extensions/common/extension_urls.h"
+#include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
+#include "net/cookies/site_for_cookies.h"
+#include "net/http/http_status_code.h"
 #include "net/http/http_response_headers.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/resource_request.h"
@@ -361,13 +364,30 @@ constexpr net::NetworkTrafficAnnotationTag kWebStoreDownloadAnnotation =
         sender: "Crest Web Store install"
         description: "Downloads a Chrome Web Store extension package for installation."
         trigger: "The person installs an extension from a Chrome Web Store listing."
-        data: "The extension's ID and Chromium's version, platform and language."
+        data: "The extension's ID and Chromium's version, platform and language, and the Space's cookies when the service refuses the request without them."
         destination: GOOGLE_OWNED_SERVICE
       }
       policy {
-        cookies_allowed: NO
-        setting: "Only runs when the person installs an extension."
+        cookies_allowed: YES
+        cookies_store: "user"
+        setting: "Only runs when the person installs an extension. Cookies are sent only when the service refuses the request without them, as it does for a private or trusted-tester item."
       })");
+
+// The package of `extension_id` from Google's update service, as Chromium's
+// Web Store installer asks for it.
+GURL PackageURL(const std::string& extension_id) {
+  return GURL(extension_urls::GetWebstoreUpdateUrl().spec() + "?response=redirect&" +
+              update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
+              base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
+}
+
+// Whether a request the service refused with `status` may ask again with the
+// profile's cookies: only Google's own service over HTTPS, which answers 401
+// or 403 for an item the request's account can't see.
+bool MayAskWithCookies(const GURL& url, int status) {
+  return (status == net::HTTP_UNAUTHORIZED || status == net::HTTP_FORBIDDEN) &&
+         url.SchemeIs(url::kHttpsScheme) && url.DomainIs("google.com");
+}
 
 // A copy of `package` for one profile's install, which CrxInstaller deletes
 // once it is done, or an empty path when none could be made.
@@ -467,12 +487,29 @@ class CorePrompt final : public ExtensionInstallPrompt {
 // WebStoreDownload.
 
 WebStoreDownload::WebStoreDownload(Profile* profile, const std::string& extension_id, Progress progress, Done done)
-    : progress_(std::move(progress)), done_(std::move(done)) {
+    : factory_(profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess()),
+      url_(PackageURL(extension_id)),
+      progress_(std::move(progress)),
+      done_(std::move(done)) {
+  Begin(/*with_cookies=*/false);
+}
+
+WebStoreDownload::~WebStoreDownload() = default;
+
+void WebStoreDownload::Begin(bool with_cookies) {
+  with_cookies_ = with_cookies;
+  length_ = -1;
   auto request = std::make_unique<network::ResourceRequest>();
-  request->url = GURL(extension_urls::GetWebstoreUpdateUrl().spec() + "?response=redirect&" +
-                      update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
-                      base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
-  request->credentials_mode = network::mojom::CredentialsMode::kOmit;
+  request->url = url_;
+  if (with_cookies) {
+    // As Chromium's extension downloader asks for an item that needs an
+    // account: the cookies of the service's own site, never from a cache.
+    request->credentials_mode = network::mojom::CredentialsMode::kInclude;
+    request->site_for_cookies = net::SiteForCookies::FromUrl(url_);
+    request->load_flags = net::LOAD_DISABLE_CACHE;
+  } else {
+    request->credentials_mode = network::mojom::CredentialsMode::kOmit;
+  }
   // Someone is waiting on this download, as on Chromium's own foreground
   // extension fetches. At the default idle priority the loader writes the
   // package on best-effort tasks, which Chromium holds until it counts
@@ -481,14 +518,12 @@ WebStoreDownload::WebStoreDownload(Profile* profile, const std::string& extensio
   loader_ = network::SimpleURLLoader::Create(std::move(request), kWebStoreDownloadAnnotation);
   loader_->SetOnResponseStartedCallback(base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));
   loader_->SetOnDownloadProgressCallback(base::BindRepeating(&WebStoreDownload::Progressed, base::Unretained(this)));
-  loader_->DownloadToTempFile(profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess().get(),
-                              base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
+  loader_->DownloadToTempFile(factory_.get(), base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
 }
 
-WebStoreDownload::~WebStoreDownload() = default;
-
+// Only a package's size counts toward progress, never a refusal's body.
 void WebStoreDownload::Started(const GURL&, const network::mojom::URLResponseHead& head) {
-  length_ = head.content_length;
+  length_ = head.headers && head.headers->response_code() == net::HTTP_OK ? head.content_length : -1;
 }
 
 void WebStoreDownload::Progressed(uint64_t received) {
@@ -500,7 +535,7 @@ void WebStoreDownload::Progressed(uint64_t received) {
 void WebStoreDownload::Finished(base::FilePath path) {
   const network::mojom::URLResponseHead* head = loader_->ResponseInfo();
   const int status = head && head->headers ? head->headers->response_code() : 0;
-  if (!path.empty() && status == 200) {
+  if (!path.empty() && status == net::HTTP_OK) {
     std::move(done_).Run(std::move(path));
     return;
   }
@@ -508,6 +543,12 @@ void WebStoreDownload::Finished(base::FilePath path) {
   // answers 204 for an extension it will not serve to this browser.
   if (!path.empty()) {
     base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(path));
+  }
+  // A private or trusted-tester item is served only to an account that can
+  // see it. Replacing the loader inside its own callback is allowed.
+  if (!with_cookies_ && MayAskWithCookies(url_, status)) {
+    Begin(/*with_cookies=*/true);
+    return;
   }
   LOG(WARNING) << "Crest could not download an extension package: "
                << (status ? "HTTP " + base::NumberToString(status) : net::ErrorToString(loader_->NetError()));

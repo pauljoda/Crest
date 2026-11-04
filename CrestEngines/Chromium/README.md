@@ -355,7 +355,10 @@ the same thing from the toolbar. Both have the Space's engine profile download
 the CRX3 package from Google's update service with the request Chromium's own
 Web Store installer makes, so one download can install into every Space the
 person picks; Crest sets no size or format limits of its own, and closing the
-review stops the download.
+review stops the download. The request carries no cookies. When the service
+refuses it, as it does for a private or trusted-tester item, it is made once
+more with the Space's cookies, so an account in the Space that can see the item
+receives it.
 Chromium verifies the publisher proof and
 expected ID before Crest shows the original install review layout.
 The review displays Chromium's permission warnings and offers website-access
