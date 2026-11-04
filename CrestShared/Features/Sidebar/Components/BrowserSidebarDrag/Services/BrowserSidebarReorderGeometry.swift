@@ -25,6 +25,13 @@ final class BrowserSidebarReorderGeometry {
         let scrollRegionID: UUID?
     }
 
+    /// What a view measured while a lift held its registration still, and
+    /// when, among the others held.
+    struct HeldRow {
+        let order: Int
+        let registration: RegisteredRow
+    }
+
     struct SplitCard {
         let owner: UUID
         let space: BrowserSpaceRuntimeAssignment
@@ -67,6 +74,11 @@ final class BrowserSidebarReorderGeometry {
     @ObservationIgnored private(set) var scrollRegions: [UUID: CGRect] = [:]
     @ObservationIgnored private(set) var sidebarViewports: [UUID: CGRect] = [:]
     @ObservationIgnored private(set) var splitCards: [Key<UUID>: SplitCard] = [:]
+    /// What the views of registered rows and zones measured while a lift held
+    /// their registrations still, by view, until the lift ends.
+    @ObservationIgnored private var heldRows: [UUID: HeldRow] = [:]
+    @ObservationIgnored private var heldRowCount = 0
+    @ObservationIgnored private var heldZones: [UUID: RegisteredZone] = [:]
 
     /// `space`'s registration of the item.
     func row(_ id: BrowserSidebarReorderItemID, in space: BrowserSpaceRuntimeAssignment) -> RegisteredRow? {
@@ -91,10 +103,33 @@ final class BrowserSidebarReorderGeometry {
         rows[row.space, default: [:]][row.id] = RegisteredRow(owner: owner, row: row, scrollRegionID: scrollRegionID)
     }
 
+    /// Keeps what `owner` measured while a lift holds its registration still.
+    func hold(row: BrowserSidebarReorderRow, owner: UUID, scrollRegionID: UUID?) {
+        heldRowCount &+= 1
+        heldRows[owner] = HeldRow(
+            order: heldRowCount, registration: RegisteredRow(owner: owner, row: row, scrollRegionID: scrollRegionID))
+    }
+
+    /// Registers what views measured while a lift held them still. A drop
+    /// that leaves a row where the lift's gap already moved it never moves
+    /// that row again, so without this the row would keep the frame it had
+    /// before the lift, and the next drag would aim a slot off. They register
+    /// in the order the views reported them, as they would have without the
+    /// lift, so of two views of one item the later one is in use.
+    func registerHeld() {
+        let rows = heldRows.values.sorted { $0.order < $1.order }.map(\.registration)
+        let zones = heldZones
+        heldRows = [:]
+        heldZones = [:]
+        for held in rows { register(row: held.row, owner: held.owner, scrollRegionID: held.scrollRegionID) }
+        for (id, held) in zones { self.zones[id] = held }
+    }
+
     /// Forgets `owner`'s registration of the item. When it was the one in
     /// use, the item keeps the registration of a view still showing it in
     /// the same Space, if any.
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
+        heldRows[owner] = nil
         guard let space = rowSpaces.removeValue(forKey: owner) else { return }
         let key = Key(id: id, space: space)
         defer { if replacedRows[key]?.isEmpty == true { replacedRows[key] = nil } }
@@ -134,14 +169,26 @@ final class BrowserSidebarReorderGeometry {
             zone: zone, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID)
     }
 
+    /// Keeps what a zone measured while a lift holds its registration still.
+    func hold(
+        zone: BrowserSidebarReorderZone, for id: UUID, sidebarViewportID: UUID?, scrollRegionID: UUID?
+    ) {
+        heldZones[id] = RegisteredZone(
+            zone: zone, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID)
+    }
+
     func register(sidebarViewport frame: CGRect, for id: UUID) { sidebarViewports[id] = frame }
 
     func removeSidebarViewport(for id: UUID) {
         sidebarViewports[id] = nil
         zones = zones.filter { $0.value.sidebarViewportID != id }
+        heldZones = heldZones.filter { $0.value.sidebarViewportID != id }
     }
 
-    func removeZone(for id: UUID) { zones[id] = nil }
+    func removeZone(for id: UUID) {
+        zones[id] = nil
+        heldZones[id] = nil
+    }
 
     func register(scrollRegionFrame frame: CGRect, for id: UUID) { scrollRegions[id] = frame }
 
@@ -162,6 +209,8 @@ final class BrowserSidebarReorderGeometry {
         for owner in removedRows + removedReplacements { rowSpaces[owner] = nil }
         if !removedRows.isEmpty { selectionRowsRevision &+= 1 }
         zones = zones.filter { $0.value.scrollRegionID != id }
+        heldRows = heldRows.filter { $0.value.registration.scrollRegionID != id }
+        heldZones = heldZones.filter { $0.value.scrollRegionID != id }
     }
 
     /// Scrolling translates frozen measurements uniformly during a lift.

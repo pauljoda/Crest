@@ -5057,6 +5057,10 @@
     "sidebar-with-open-folders-stops-freezing": {
       "category": "fixed",
       "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
+    },
+    "sidebar-drag-right-after-a-drop-lands-where-aimed": {
+      "category": "fixed",
+      "message": "Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started."
     }
   }
 }
