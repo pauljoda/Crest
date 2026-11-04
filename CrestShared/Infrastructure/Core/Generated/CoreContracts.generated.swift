@@ -20538,6 +20538,7 @@ struct ShortcutSpecialKey: Hashable, Sendable {
     var title: LocalizedStringResource? { facts.title }
     var spokenName: LocalizedStringResource? { facts.spokenName }
     var functionKeyNumber: Int? { facts.functionKeyNumber }
+    var standsAlone: Bool { facts.standsAlone }
     private let facts: Facts
 
     private init(
@@ -20546,7 +20547,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: String?,
         title: LocalizedStringResource?,
         spokenName: LocalizedStringResource?,
-        functionKeyNumber: Int?
+        functionKeyNumber: Int?,
+        standsAlone: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -20554,7 +20556,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
             glyph: glyph,
             title: title,
             spokenName: spokenName,
-            functionKeyNumber: functionKeyNumber
+            functionKeyNumber: functionKeyNumber,
+            standsAlone: standsAlone
         )
     }
 
@@ -20564,7 +20567,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "⇥",
         title: nil,
         spokenName: LocalizedStringResource("tab"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let leftArrow = ShortcutSpecialKey(
         tag: 1,
@@ -20572,7 +20576,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "←",
         title: nil,
         spokenName: LocalizedStringResource("left arrow"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let rightArrow = ShortcutSpecialKey(
         tag: 2,
@@ -20580,7 +20585,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "→",
         title: nil,
         spokenName: LocalizedStringResource("right arrow"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let upArrow = ShortcutSpecialKey(
         tag: 3,
@@ -20588,7 +20594,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "↑",
         title: nil,
         spokenName: LocalizedStringResource("up arrow"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let downArrow = ShortcutSpecialKey(
         tag: 4,
@@ -20596,7 +20603,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "↓",
         title: nil,
         spokenName: LocalizedStringResource("down arrow"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let escape = ShortcutSpecialKey(
         tag: 5,
@@ -20604,7 +20612,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "⎋",
         title: nil,
         spokenName: LocalizedStringResource("escape"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let returnKey = ShortcutSpecialKey(
         tag: 6,
@@ -20612,7 +20621,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "↩",
         title: nil,
         spokenName: LocalizedStringResource("return"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let delete = ShortcutSpecialKey(
         tag: 7,
@@ -20620,7 +20630,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "⌫",
         title: nil,
         spokenName: LocalizedStringResource("delete"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let forwardDelete = ShortcutSpecialKey(
         tag: 8,
@@ -20628,7 +20639,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "⌦",
         title: nil,
         spokenName: LocalizedStringResource("forward delete"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let home = ShortcutSpecialKey(
         tag: 9,
@@ -20636,7 +20648,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "↖",
         title: nil,
         spokenName: LocalizedStringResource("home"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let end = ShortcutSpecialKey(
         tag: 10,
@@ -20644,7 +20657,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "↘",
         title: nil,
         spokenName: LocalizedStringResource("end"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let pageUp = ShortcutSpecialKey(
         tag: 11,
@@ -20652,7 +20666,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "⇞",
         title: nil,
         spokenName: LocalizedStringResource("page up"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let pageDown = ShortcutSpecialKey(
         tag: 12,
@@ -20660,7 +20675,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "⇟",
         title: nil,
         spokenName: LocalizedStringResource("page down"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let space = ShortcutSpecialKey(
         tag: 13,
@@ -20668,7 +20684,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: nil,
         title: LocalizedStringResource("Space"),
         spokenName: LocalizedStringResource("space"),
-        functionKeyNumber: nil
+        functionKeyNumber: nil,
+        standsAlone: false
     )
     static let f1 = ShortcutSpecialKey(
         tag: 14,
@@ -20676,7 +20693,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F1",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 1
+        functionKeyNumber: 1,
+        standsAlone: true
     )
     static let f2 = ShortcutSpecialKey(
         tag: 15,
@@ -20684,7 +20702,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F2",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 2
+        functionKeyNumber: 2,
+        standsAlone: true
     )
     static let f3 = ShortcutSpecialKey(
         tag: 16,
@@ -20692,7 +20711,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F3",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 3
+        functionKeyNumber: 3,
+        standsAlone: true
     )
     static let f4 = ShortcutSpecialKey(
         tag: 17,
@@ -20700,7 +20720,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F4",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 4
+        functionKeyNumber: 4,
+        standsAlone: true
     )
     static let f5 = ShortcutSpecialKey(
         tag: 18,
@@ -20708,7 +20729,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F5",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 5
+        functionKeyNumber: 5,
+        standsAlone: true
     )
     static let f6 = ShortcutSpecialKey(
         tag: 19,
@@ -20716,7 +20738,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F6",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 6
+        functionKeyNumber: 6,
+        standsAlone: true
     )
     static let f7 = ShortcutSpecialKey(
         tag: 20,
@@ -20724,7 +20747,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F7",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 7
+        functionKeyNumber: 7,
+        standsAlone: true
     )
     static let f8 = ShortcutSpecialKey(
         tag: 21,
@@ -20732,7 +20756,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F8",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 8
+        functionKeyNumber: 8,
+        standsAlone: true
     )
     static let f9 = ShortcutSpecialKey(
         tag: 22,
@@ -20740,7 +20765,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F9",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 9
+        functionKeyNumber: 9,
+        standsAlone: true
     )
     static let f10 = ShortcutSpecialKey(
         tag: 23,
@@ -20748,7 +20774,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F10",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 10
+        functionKeyNumber: 10,
+        standsAlone: true
     )
     static let f11 = ShortcutSpecialKey(
         tag: 24,
@@ -20756,7 +20783,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F11",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 11
+        functionKeyNumber: 11,
+        standsAlone: true
     )
     static let f12 = ShortcutSpecialKey(
         tag: 25,
@@ -20764,7 +20792,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F12",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 12
+        functionKeyNumber: 12,
+        standsAlone: true
     )
     static let f13 = ShortcutSpecialKey(
         tag: 26,
@@ -20772,7 +20801,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F13",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 13
+        functionKeyNumber: 13,
+        standsAlone: true
     )
     static let f14 = ShortcutSpecialKey(
         tag: 27,
@@ -20780,7 +20810,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F14",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 14
+        functionKeyNumber: 14,
+        standsAlone: true
     )
     static let f15 = ShortcutSpecialKey(
         tag: 28,
@@ -20788,7 +20819,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F15",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 15
+        functionKeyNumber: 15,
+        standsAlone: true
     )
     static let f16 = ShortcutSpecialKey(
         tag: 29,
@@ -20796,7 +20828,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F16",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 16
+        functionKeyNumber: 16,
+        standsAlone: true
     )
     static let f17 = ShortcutSpecialKey(
         tag: 30,
@@ -20804,7 +20837,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F17",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 17
+        functionKeyNumber: 17,
+        standsAlone: true
     )
     static let f18 = ShortcutSpecialKey(
         tag: 31,
@@ -20812,7 +20846,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F18",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 18
+        functionKeyNumber: 18,
+        standsAlone: true
     )
     static let f19 = ShortcutSpecialKey(
         tag: 32,
@@ -20820,7 +20855,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F19",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 19
+        functionKeyNumber: 19,
+        standsAlone: true
     )
     static let f20 = ShortcutSpecialKey(
         tag: 33,
@@ -20828,7 +20864,8 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         glyph: "F20",
         title: nil,
         spokenName: nil,
-        functionKeyNumber: 20
+        functionKeyNumber: 20,
+        standsAlone: true
     )
 
     static let all: [ShortcutSpecialKey] = [
@@ -20886,19 +20923,22 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         let title: LocalizedStringResource?
         let spokenName: LocalizedStringResource?
         let functionKeyNumber: Int?
+        let standsAlone: Bool
 
         init(
             name: String,
             glyph: String?,
             title: LocalizedStringResource?,
             spokenName: LocalizedStringResource?,
-            functionKeyNumber: Int?
+            functionKeyNumber: Int?,
+            standsAlone: Bool
         ) {
             self.name = name
             self.glyph = glyph
             self.title = title
             self.spokenName = spokenName
             self.functionKeyNumber = functionKeyNumber
+            self.standsAlone = standsAlone
         }
     }
 }

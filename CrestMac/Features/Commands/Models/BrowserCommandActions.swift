@@ -76,9 +76,12 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         chrome.showNotice(.copied)
     }
 
+    /// Runs `command` when the window and its page allow it, putting an open
+    /// palette away first unless the command opens or closes it itself.
     func perform(_ command: ShortcutCommand) {
         guard windowAllows(command), let action = BrowserMacCommand.of(command), action.isAvailable(self, command)
         else { return }
+        if !action.managesPalette { chrome.dismissCommandPalette() }
         action.run(self, command)
     }
 
@@ -275,8 +278,10 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         }
     }
 
+    /// Edits the shown tab's address, or puts the editor away when it is
+    /// already showing, as pressing its keys again does.
     func openLocation() {
-        chrome.openLocation(browser.shownTab?.url ?? "")
+        chrome.toggleLocation(browser.shownTab?.url ?? "")
     }
 
     /// Opens local documents as ordinary tabs in the Space on screen.

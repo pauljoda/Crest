@@ -15210,10 +15210,10 @@
     "Use %s or {searchTerms} where the search goes. HTTPS only." : {
 
     },
-    "Use a public search engine host, not a local or numeric address." : {
+    "Use a function key, or a key with Command, Option, Control, or Shift." : {
 
     },
-    "Use a supported key with Command, Option, Control, or Shift." : {
+    "Use a public search engine host, not a local or numeric address." : {
 
     },
     "Use Built-In Shortcuts" : {
