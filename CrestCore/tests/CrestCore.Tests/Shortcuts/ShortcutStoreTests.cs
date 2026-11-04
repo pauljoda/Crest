@@ -82,6 +82,39 @@ public sealed partial class BrowserContractsTests {
         Assert.True(Assert.Single(relaunched.Send(new AdoptShortcuts(null)).OfType<ShortcutsChanged>()).IsCustomized);
     }
 
+    /// Earlier releases saved a Shift chord on a digit key by the symbol Shift
+    /// types there, ⌘⇧@ for ⇧⌘2 on a US layout, while the catalog names the
+    /// digit. Those chords name the digit once, unless another command holds
+    /// it, and a later adoption on any layout changes nothing.
+    [Fact]
+    public void ShortcutsSavedWithAShiftedDigitSymbolNameTheDigitOnce() {
+        using var directory = new StorageDirectory();
+        var shift = ShortcutModifiers.Command | ShortcutModifiers.Shift;
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            app.Send(new AdoptShortcuts(null));
+            app.Send(new AssignShortcut(ShortcutCommand.ShowHistory, Typed("@", shift)));
+            app.Send(new AssignShortcut(ShortcutCommand.ShowArchive, Typed("$", shift)));
+            app.Send(new AssignShortcut(ShortcutCommand.ClearSiteCookies, Typed("4", shift)));
+            var renamed = Bindings(app.Send(new AdoptShiftedDigitShortcuts([new("@", "2"), new("$", "4")])));
+            Assert.Equal(Typed("2", shift), renamed[ShortcutCommand.ShowHistory].Keys);
+            Assert.Equal(Typed("$", shift), renamed[ShortcutCommand.ShowArchive].Keys);
+            Assert.Equal(Typed("4", shift), renamed[ShortcutCommand.ClearSiteCookies].Keys);
+
+            app.Send(new UnassignShortcut(ShortcutCommand.ClearSiteCookies));
+            var again = Bindings(app.Send(new AdoptShiftedDigitShortcuts([new("$", "4")])));
+            Assert.Equal(Typed("$", shift), again[ShortcutCommand.ShowArchive].Keys);
+        }
+
+        var (relaunched, _, _) = DeviceApp(directory);
+        using var relaunchedDisposal = relaunched;
+        relaunched.Send(new AdoptShortcuts(null));
+        var restored = Bindings(relaunched.Send(new AdoptShiftedDigitShortcuts([new("$", "4")])));
+        Assert.Equal(Typed("2", shift), restored[ShortcutCommand.ShowHistory].Keys);
+        Assert.Equal(Typed("$", shift), restored[ShortcutCommand.ShowArchive].Keys);
+    }
+
     [Fact]
     public void KeysAnotherCommandHoldsWaitForConfirmationAndEveryChangeSurvivesARelaunch() {
         using var directory = new StorageDirectory();

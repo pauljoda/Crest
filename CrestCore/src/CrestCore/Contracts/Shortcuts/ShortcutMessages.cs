@@ -47,6 +47,10 @@ public sealed record NumberedChoices(Guid ShownSpaceId, IReadOnlyList<Guid> Tabs
 /// `SpaceId`, and for a tab the tab `TabId` the window shows there.
 public sealed record NumberedSelection(ShortcutCommand Command, NumberedSelectionTarget Target, Guid SpaceId, Guid? TabId);
 
+/// A digit key of the keyboard layout in use: the symbol Shift types on it,
+/// and the digit it types alone.
+public sealed record ShiftedDigit(string Symbol, string Digit);
+
 /// A command's default key combination on one platform. A default that
 /// `YieldsToOverrides` stays unbound while the person has given its keys to
 /// another command, so a default added after people could customize never

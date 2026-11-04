@@ -10,13 +10,17 @@ protocol BrowserShortcutKeyPress {
 }
 
 extension BrowserShortcutKeyPress {
-    /// The characters a shortcut names the key by. Layouts such as Dvorak –
-    /// QWERTY ⌘ and Russian type from another layer while ⌘ is held, where
-    /// the menu bar matches key equivalents, so a chord with ⌘ on such a key
-    /// reads that layer with Shift. Every other press reads as typed, since
-    /// the ⌘ layer of other layouts drops Shift and saved ⌘⇧ shortcuts would
-    /// change meaning.
+    /// The characters a shortcut names the key by. A digit key held with
+    /// Shift reads as its digit, as the catalog names ⇧⌘2, whatever symbol
+    /// the layout puts over it. Layouts such as Dvorak – QWERTY ⌘ and Russian
+    /// type from another layer while ⌘ is held, where the menu bar matches key
+    /// equivalents, so a chord with ⌘ on such a key reads that layer with
+    /// Shift. Every other press reads as typed, since the ⌘ layer of other
+    /// layouts drops Shift and saved ⌘⇧ shortcuts would change meaning.
     var shortcutCharacters: String? {
+        if modifierFlags.contains(.shift), let digit = characters(byApplyingModifiers: []), digit.isDigit {
+            return digit
+        }
         // A dead key types nothing as typed but its accent once modifiers
         // apply, so comparing with `charactersIgnoringModifiers` would read
         // every dead key as a ⌘ layer.
@@ -28,3 +32,10 @@ extension BrowserShortcutKeyPress {
 }
 
 extension NSEvent: BrowserShortcutKeyPress {}
+
+extension String {
+    /// Whether the text is one of the digits 0 to 9.
+    fileprivate var isDigit: Bool {
+        count == 1 && unicodeScalars.allSatisfy { ("0"..."9").contains($0) }
+    }
+}

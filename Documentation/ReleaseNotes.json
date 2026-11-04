@@ -5045,6 +5045,10 @@
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    },
+    "shift-number-shortcuts-record-as-the-number": {
+      "category": "fixed",
+      "message": "Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over."
     }
   }
 }

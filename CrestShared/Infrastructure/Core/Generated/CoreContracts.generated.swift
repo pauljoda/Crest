@@ -867,6 +867,10 @@ struct AdoptSetupDraft: Intent, SetupDraftIntent, Equatable, Sendable {
     let draft: Data?
 }
 
+struct AdoptShiftedDigitShortcuts: Intent, ShortcutIntent, Equatable, Sendable {
+    let digits: [ShiftedDigit]
+}
+
 struct AdoptShortcuts: Intent, ShortcutIntent, Equatable, Sendable {
     let overrides: Data?
 }
@@ -6098,6 +6102,11 @@ struct ShareableTab: Equatable, Sendable {
     let title: String
     let url: String?
     let icon: Data?
+}
+
+struct ShiftedDigit: Equatable, Sendable {
+    var symbol: String
+    var digit: String
 }
 
 struct ShortcutBinding: Equatable, Sendable {

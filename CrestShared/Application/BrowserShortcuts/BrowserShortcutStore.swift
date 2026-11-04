@@ -48,6 +48,20 @@ final class BrowserShortcutStore {
         self.init(core: CrestCore())
     }
 
+    // MARK: - Actions - Adoption
+
+    /// Names, once, the shortcuts an earlier release saved with the symbol
+    /// Shift types on a digit key by that digit, reading `digits` from the
+    /// keyboard layout in use.
+    func adoptShiftedDigits(_ digits: [ShiftedDigit]) {
+        do {
+            try core.send(AdoptShiftedDigitShortcuts(digits: digits))
+        } catch {
+            Self.log.error(
+                "The core could not rename the saved shifted digits: \(DiagnosticLog.describe(error))")
+        }
+    }
+
     // MARK: - Actions - Bindings
 
     func shortcut(for command: ShortcutCommand) -> BrowserShortcut? {
