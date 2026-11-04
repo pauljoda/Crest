@@ -18,16 +18,6 @@ extension BrowserMacApplication {
         let windowState: BrowserWindowStateStore?
     }
 
-    // MARK: - Variables
-
-    /// The Spaces the engine's extensions may act in: every one this window
-    /// family holds that is neither locked nor being deleted.
-    var extensionSpaces: [BrowserSpaceIdentity] {
-        browser.spaceModels.filter {
-            !browser.deletingSpaceIDs.contains($0.id) && !spaceAccess.isLocked($0)
-        }.map(\.identity)
-    }
-
     // MARK: - Actions - Spaces
 
     /// Shows `spaceID` in the window `window`.

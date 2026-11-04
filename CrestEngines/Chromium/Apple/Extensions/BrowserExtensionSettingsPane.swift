@@ -41,12 +41,11 @@ struct BrowserExtensionSettingsPane: View {
 struct BrowserExtensionsView: View {
     let space: BrowserSpaceIdentity
     let store: ChromiumExtensionStore
-    @State private var failure: String?
     @State private var pendingRemoval: ChromiumExtensionStore.Installed?
     @State private var pendingCopy: ChromiumExtensionStore.Installed?
     @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
     private var extensions: [ChromiumExtensionStore.Installed] {
-        (store.installed[space.profileID] ?? []).sorted {
+        (store.installed(in: space) ?? []).sorted {
             $0.name.localizedStandardCompare($1.name) == .orderedAscending
         }
     }
@@ -65,15 +64,7 @@ struct BrowserExtensionsView: View {
             }
             if usesLiveSidebar { installedExtensions }
         }
-        .task(id: space.profileID) { await store.load(space) }
-        .alert(
-            "Couldn’t Complete Extension Action",
-            isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
-        ) {
-            Button("OK") { failure = nil }
-        } message: {
-            Text(failure ?? "")
-        }
+        .task(id: space.profileID) { store.load(space) }
         .confirmationDialog(
             "Remove Extension?",
             isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
@@ -95,7 +86,7 @@ struct BrowserExtensionsView: View {
     }
     private var installedExtensions: some View {
         Section("Installed") {
-            if store.installed[space.profileID] == nil {
+            if store.installed(in: space) == nil {
                 ProgressView()
             } else if extensions.isEmpty {
                 Text("No extensions")
@@ -110,10 +101,10 @@ struct BrowserExtensionsView: View {
             }
         }
     }
+    /// Runs `command`; the store tells the person why when the core refuses
+    /// it.
     private func run(_ command: ExtensionCommand, _ id: String = "") {
-        if !store.command(command, extensionID: id, space: space) {
-            failure = "Check the extension’s details for policy or permission requirements."
-        }
+        store.command(command, extensionID: id, space: space)
     }
 }
 
@@ -141,7 +132,9 @@ struct BrowserExtensionRow: View {
                 if !item.options.isEmpty && item.enabled {
                     Button("Extension Settings", systemImage: "gearshape", action: options)
                 }
-                Button("Remove Extension", systemImage: "trash", role: .destructive, action: remove)
+                if item.changeable {
+                    Button("Remove Extension", systemImage: "trash", role: .destructive, action: remove)
+                }
             }
             .padding(.top, CrestSpacing.medium)
             .padding(.leading, BrowserExtensionsMetrics.expandedContentIndent)
@@ -161,6 +154,7 @@ struct BrowserExtensionRow: View {
                 Spacer(minLength: 0)
                 Toggle("Enabled", isOn: Binding(get: { item.enabled }, set: setEnabled))
                     .labelsHidden().accessibilityLabel("\(item.name) Enabled")
+                    .disabled(!item.changeable)
             }
         }.padding(.vertical, CrestSpacing.extraSmall)
     }
@@ -172,16 +166,11 @@ struct BrowserExtensionCopySheet: View {
     let store: ChromiumExtensionStore
     @Environment(\.dismiss) private var dismiss
     @State private var selectedSpaces: Set<UUID> = []
-    @State private var loading = true
-    /// The Spaces a copy may go to, one per profile, which a group's primary
-    /// stands for: never the source's own group, which already has it.
-    private var destinations: [BrowserSpaceIdentity] {
-        var profiles: Set<UUID> = [space.profileID]
-        return store.spaces.filter {
-            profiles.insert($0.profileID).inserted
-                && !(store.installed[$0.profileID] ?? []).contains { $0.id == item.id }
-        }
-    }
+    /// The Spaces a copy may go to, as the core answers it.
+    private var destinations: [BrowserSpaceIdentity] { store.destinations(for: item.id, from: space) }
+    /// Whether the core still waits to hear what some Space a copy could go
+    /// to already has.
+    private var loading: Bool { !store.destinationsListed(for: item.id, from: space) }
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.large) {
             Text("Install a Copy in Other Spaces").font(.title2.bold())
@@ -211,8 +200,7 @@ struct BrowserExtensionCopySheet: View {
         .padding(CrestSpacing.extraLarge)
         .frame(idealWidth: 480)
         .task {
-            for target in store.spaces { await store.load(target) }
-            loading = false
+            for target in store.spaces { store.load(target) }
         }
     }
 }

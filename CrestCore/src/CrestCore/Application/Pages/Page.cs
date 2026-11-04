@@ -54,13 +54,14 @@ internal sealed class Page {
     public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase, Live);
 
     /// What rules and views read of the page now: what its engine last showed,
-    /// whether its history reaches back or forward, and why its latest
-    /// navigation failed. A failure over the document the page still shows can
-    /// be left for that document, so the page can go back even when its
-    /// history cannot.
+    /// how secure its document's connection is, judged from what the engine
+    /// knows of it, whether its history reaches back or forward, and why its
+    /// latest navigation failed. A failure over the document the page still
+    /// shows can be left for that document, so the page can go back even when
+    /// its history cannot.
     public PageLiveState Live => new(shown.Url, shown.PendingUrl, shown.Title, shown.IsLoading,
         History.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null, History.CanGoForward,
-        shown.Security, failure, shown.Media);
+        PageSecurity.Judging(shown.Security, shown.Url), failure, shown.Media);
 
     /// The page's back and forward history across the engines it moved
     /// through, as their reports and the page's moves left it.

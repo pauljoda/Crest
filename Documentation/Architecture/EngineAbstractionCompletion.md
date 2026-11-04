@@ -10,8 +10,8 @@ feature. Read [ControlPlane.md](ControlPlane.md) for how the design works, and
 
 | Layer | Owns | Never owns |
 | --- | --- | --- |
-| Portable core (`CrestCore`) | Every piece of browser state and every rule that must behave the same on both engines and both platforms: sessions, windows and what each shows, pages and their live state, prompts, downloads, site permissions, credential policy, search and completion, import and export, setup, shortcuts, launch policy, behavior preferences, engine registrations and per-site engine choices, storage and sync | Rendering, input, scrolling, compositing, engine handles, image bytes, OS services |
-| Engine bindings (`CrestEngines/Chromium`, `WebKitEngineBinding` and the WebKit page code in `CrestShared` and `CrestMac`) | Page creation and disposal, loads, engine navigation history, find, zoom, capture, printing, export, DevTools, extensions, download transfer, website data and cookie stores, reporting what happened to the core | Deciding browser rules; changing browser state other than by reporting events |
+| Portable core (`CrestCore`) | Every piece of browser state and every rule that must behave the same on both engines and both platforms: sessions, windows and what each shows, pages and their live state and security, prompts, downloads, site permissions, credential policy, extension policy, search and completion, import and export, setup, shortcuts, launch policy, behavior preferences, engine registrations and per-site engine choices, storage and sync | Rendering, input, scrolling, compositing, engine handles, image bytes, OS services |
+| Engine bindings (`CrestEngines/Chromium`, `WebKitEngineBinding` and the WebKit page code in `CrestShared` and `CrestMac`) | Page creation and disposal, loads, engine navigation history, find, zoom, capture, printing, export, DevTools, running, verifying and storing extensions, download transfer, website data and cookie stores, reporting what happened to the core | Deciding browser rules; changing browser state other than by reporting events |
 | Shared Swift (`CrestShared`, `CrestMac`, `CrestMobile`) | Views, layout, animation, presentation of prompts and notices, native windows and cards, OS services (Keychain, CloudKit transport, notification delivery, LaunchServices) | Engine types or `#if CREST_CHROMIUM_HOST` outside the engine code; second copies of core rules |
 
 Scrolling, pointer input, compositing, focus and page zoom stay inside the
@@ -128,9 +128,20 @@ Both engines:
   decisions as content settings; WebKit applies them through its delegates, and
   withdrawing a camera or microphone grant ends capture.
 - Each page's live state carries an engine-neutral `PageSecurity`, whose
-  members carry the title, symbol and detail Site Controls shows. Chromium
-  reports it in every snapshot; WebKit derives it from the scheme, mixed
-  content, the trust result and any override.
+  members carry the title, symbol and detail Site Controls shows. The core
+  judges it in one place from the `PageSecurityFacts` each snapshot carries,
+  so a site reads the same on both engines. Chromium reports the facts of its
+  visible security state and whether its security level warns; WebKit reports
+  the scheme, its secure-content flag as displayed mixed content, and a
+  certificate error from the trust result or an approved override, and no
+  engine warning, since it words none. A malicious page outranks a
+  certificate error, which outranks everything else. The engine's own error
+  page, a secure address whose connection the engine has not judged yet, and
+  a plain scheme on this device's own host (`localhost`, a name under it or a
+  loopback address) are `none`; any other plain scheme, or one the engine
+  warns about, is `insecure`. A judged cryptographic connection is
+  `mixed_content` when it carried insecure content, `insecure` when the
+  engine warns about it, such as legacy TLS, and otherwise `secure`.
 - On the Mac, a document's notifications reach Crest's own system delivery:
   the core decides whether one shows, a click brings its tab forward, and the document
   hears the click.
@@ -186,7 +197,8 @@ WebKit:
   expose the initiating frame's security context to a second page; the
   registration declares that limit.
 - WebKit has no extensions; its registration declares `extensions`
-  unavailable.
+  unavailable, so the core refuses every extension intent for it
+  (`EngineLacksCapability`) before its binding hears of one.
 - Two shared files still name WebKit types: `CredentialContentBridge.swift`
   installs the WebKit credential bridge, and the transient page lease carries
   WebKit content-rule lists.
@@ -216,6 +228,7 @@ downloads. Launch cleanup and retention run as the core's
 | Behavior preferences | The session's `appPreferences` record behind `SetAppPreferences`, `SetTranslationRule` and `ImportAppPreferences` |
 | Links and Quick Window | `LinkNavigation`, `RouteExternalLink`, `RouteLocalDocument`, `ExternalWebLink`, `ChooseExternalLinkDestination`, `RememberQuickWindowSpace` and the link preference intents |
 | Engines | `EnginesChanged`, `EnginePreferencesChanged`, `SelectDefaultEngine`, `EditEngineRule`, `ForgetEngineRule`, `ChooseSiteEngine`, `RehostPage`, `ProtectedMediaUnavailable` |
+| Extensions | `ListExtensions`, `ChangeExtension`, `InstallExtension`, `CancelExtensionInstall`, `AnswerExtensionInstall`, the `ExtensionCopyDestinations` and `CanChangeExtensions` queries, `InstalledExtensionsChanged` and `ExtensionInstallChanged`; the engine extension commands and events |
 
 The device stores a preferred default engine and exact-origin website rules
 locally. Settings edits the same rules that page-menu choices and protected

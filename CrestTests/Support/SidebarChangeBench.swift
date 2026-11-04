@@ -86,7 +86,12 @@ final class SidebarChangeBench {
                 snapshot: PageSnapshot(
                     url: live.url, pendingURL: nil, title: title ?? live.title,
                     isLoading: isLoading ?? live.isLoading,
-                    security: live.security, media: live.media)))
+                    security: PageSecurityFacts(
+                        cryptographicScheme: live.url.flatMap(URL.init(string:))
+                            .map { WebScheme.named($0.scheme)?.isSecure == true } ?? false,
+                        connectionJudged: live.url != nil, certificateError: false, engineWarns: false,
+                        mixedContent: [], maliciousContent: false, errorPage: false),
+                    media: live.media)))
         if drains { core.drain() }
     }
 

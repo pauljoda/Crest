@@ -5021,6 +5021,30 @@
     "quick-window-shortcut-opens-over-your-window": {
       "category": "improved",
       "message": "On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward."
+    },
+    "site-controls-security-same-on-both-engines": {
+      "category": "fixed",
+      "message": "Site Controls now describes a site’s connection the same way whichever engine shows the page."
+    },
+    "core-owns-extension-policy": {
+      "category": "internal",
+      "message": "Decide in the core which Spaces' extensions may change, where an extension's copies go, and which consent answers an install, for any engine that runs extensions."
+    },
+    "chromium-extension-installs-portable": {
+      "category": "internal",
+      "message": "Download and install Chrome Web Store packages in the portable Chromium binding, asking the core rather than a window whether each install may go ahead."
+    },
+    "managed-extensions-offer-no-changes": {
+      "category": "fixed",
+      "message": "An extension managed by a policy no longer offers to enable, disable, pin or remove it, and a copy of an extension stops when the Space it goes to starts being deleted."
+    },
+    "imported-extension-copies-continue-after-one-fails": {
+      "category": "fixed",
+      "message": "When an extension chosen during import can’t be installed in one Space, the other Spaces that chose it still receive it."
+    },
+    "imported-extension-copies-skip-a-space-being-deleted": {
+      "category": "fixed",
+      "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
     }
   }
 }

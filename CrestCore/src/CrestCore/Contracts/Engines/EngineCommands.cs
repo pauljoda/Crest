@@ -100,8 +100,8 @@ public sealed record CheckBeforeUnload(Guid PageId) : EngineCommand;
 /// Answers a server's request with `Credential`, or cancels it with none.
 public sealed record SettleAuthentication(Guid PromptId, AuthenticationCredential? Credential) : EngineCommand;
 
-/// Installs the extension the prompt asked about, with its site access
-/// withheld when asked, or cancels the install.
+/// Installs the extension package the prompt asked about, with its site
+/// access withheld when asked, or declines it.
 public sealed record SettleExtensionInstall(Guid PromptId, bool Accepted, bool WithholdsSiteAccess) : EngineCommand;
 
 /// Answers a permission request: whether it `Grants` it, and whether the
@@ -113,6 +113,38 @@ public sealed record SettlePermission(Guid PromptId, bool Grants, bool Remembers
 /// Closes a script dialog as the person answered it, or declined when no one
 /// could.
 public sealed record SettleScriptDialog(Guid PromptId, bool Accepted, string? Text) : EngineCommand;
+
+#endregion
+
+#region Extensions
+
+/// Lists the extensions installed in the profile `ProfileId` names, loading
+/// the profile when nothing has, and reports them as `ExtensionsListed`, now
+/// and whenever they change.
+public sealed record ListEngineExtensions(Guid ProfileId) : EngineCommand;
+
+/// Makes `Change` to the extension `ExtensionId` installed in the profile
+/// `ProfileId` names, which the core found the person may change. The binding
+/// reports the profile's extensions again once they changed.
+public sealed record ChangeEngineExtension(Guid ProfileId, string ExtensionId, ExtensionChange Change) : EngineCommand;
+
+/// Downloads the package of the extension `ExtensionId` for install
+/// `InstallId` through the network of the profile `ProfileId` names, as the
+/// engine's own installer would, presenting `ExtensionDownloadProgressed` as
+/// it arrives. The binding keeps the package until `EndExtensionInstall` and
+/// reports `ExtensionDownloaded`, or `ExtensionInstallFailed`.
+public sealed record DownloadExtension(Guid InstallId, Guid ProfileId, string ExtensionId) : EngineCommand;
+
+/// Installs the package install `InstallId` downloaded in the profile
+/// `ProfileId` names. The engine verifies it for that profile, asks the core
+/// whether to install it (`ExtensionInstallRequested`), and reports
+/// `ExtensionInstalled`, or `ExtensionInstallFailed`.
+public sealed record InstallExtensionPackage(Guid InstallId, Guid ProfileId) : EngineCommand;
+
+/// Ends install `InstallId`: stops a download still running, and discards its
+/// package. An install the engine is verifying or installing finishes, and
+/// the core ignores what it reports.
+public sealed record EndExtensionInstall(Guid InstallId) : EngineCommand;
 
 #endregion
 

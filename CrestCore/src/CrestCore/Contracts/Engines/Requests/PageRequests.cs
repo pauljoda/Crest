@@ -86,11 +86,6 @@ public sealed record PageIconImage(byte[]? Image);
 /// Whether an inspector is open on the page, docked or in a window of its own.
 public sealed record PageInspected(Guid PageId) : PageRequest<bool>;
 
-/// Loads the engine profile of the Space profile `ProfileId` names, so its
-/// extensions can be listed before anything opens in it, and presents
-/// `ProfilePrepared` with `PreparationId`. False when it cannot start.
-public sealed record PrepareProfile(Guid ProfileId, Guid PreparationId) : PageRequest<bool>;
-
 /// Fetches the page's icon again rather than keep the one the engine has.
 public sealed record RefreshPageIcon(Guid PageId) : PageRequest<bool>;
 
@@ -126,18 +121,15 @@ public sealed record ZoomPage(Guid PageId, double Factor) : PageRequest<bool>;
 
 #region Extensions
 
-/// Changes an installed extension in the profile `ProfileId` names. False when
-/// the person may not change it.
-public sealed record ChangeExtension(Guid ProfileId, string ExtensionId, ExtensionChange Change) : PageRequest<bool>;
+/// The icons of the extensions installed in the profile `ProfileId` names,
+/// which Settings shows beside the extensions the core lists.
+public sealed record ExtensionIcons(Guid ProfileId) : PageRequest<ExtensionIconList>;
 
-/// What the person can change about an installed extension.
-public enum ExtensionChange {
-    Enable,
-    Disable,
-    Remove,
-    Pin,
-    Unpin
-}
+/// Extensions' icons, as an engine keeps them.
+public sealed record ExtensionIconList(IReadOnlyList<ExtensionIcon> Icons);
+
+/// One extension's icon as a PNG, or none.
+public sealed record ExtensionIcon(string ExtensionId, byte[]? Image);
 
 /// Which side panel, if any, the extension has for the page's own tab.
 public sealed record HasSidePanel(Guid PageId, string ExtensionId) : PageRequest<SidePanelScope>;
@@ -152,18 +144,6 @@ public enum SidePanelScope {
     /// global panel), which stays open as the person moves between such tabs.
     Window
 }
-
-/// The extensions installed in the profile `ProfileId` names, for Settings.
-public sealed record InstalledExtensions(Guid ProfileId) : PageRequest<InstalledExtensionList>;
-
-/// Installed extensions, as an engine lists them.
-public sealed record InstalledExtensionList(IReadOnlyList<InstalledExtension> Extensions);
-
-/// One installed extension: what it is, its icon as a PNG, whether it is
-/// enabled, the permission warnings it carries, whether it came from the
-/// Chrome Web Store, and its options page, if it has one.
-public sealed record InstalledExtension(string Id, string Name, string Version, string Description, byte[]? Icon,
-    bool Enabled, IReadOnlyList<string> Permissions, bool FromWebStore, string? OptionsUrl);
 
 /// The extension actions the page's toolbar offers, with each one's state for
 /// the page's own tab: its badge, its icon and whether it is pinned.

@@ -18,7 +18,6 @@ struct BrowserPinnedExtensionStrip: View {
     let page: ChromiumNativePage?
     /// The Space whose row this is, in the read model.
     let space: SpaceModel
-    let browser: BrowserStore
     var placement = Placement.sidebar
     private var store: ChromiumExtensionStore { ChromiumComposition.extensions }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -58,7 +57,7 @@ struct BrowserPinnedExtensionStrip: View {
         }
         .animation(reduceMotion ? nil : SpacePagerSettlement.standardAnimation, value: actions.map(\.id))
         .task(id: PreparationKey(space: space.id, profile: space.profileID)) {
-            await store.prepare(space.identity, in: browser)
+            store.prepare(space.identity)
         }
     }
 
@@ -72,7 +71,6 @@ struct BrowserPinnedExtensionStrip: View {
     private func presentMenu(_ action: BrowserExtensionActionPresentation, anchor: BrowserExtensionPopupAnchor?) {
         store.presentMenu(
             action, space: space.identity, anchor: anchor,
-            isPrivate: page?.isPrivateBrowsing ?? false,
             openSidePanel: page.flatMap {
                 BrowserExtensionSidePanelHost.opener(action, page: $0, host: sidePanel)
             })
@@ -115,12 +113,11 @@ struct ChromiumExtensionControls: View {
                 presentMenu: { action, anchor in
                     store.presentMenu(
                         action, space: space.identity, anchor: anchor,
-                        isPrivate: page.isPrivateBrowsing,
                         openSidePanel: BrowserExtensionSidePanelHost.opener(
                             action, page: page, host: sidePanel),
                         closeSource: dismiss)
                 })
-            if !page.isPrivateBrowsing, let id = ChromiumNativePage.webStoreExtensionID(url) {
+            if store.mayChange(space.identity), let id = ChromiumNativePage.webStoreExtensionID(url) {
                 Button("Install Extension…", systemImage: "plus.app") {
                     afterDismiss { store.install(id, in: space.identity, anchor: page.surface) }
                 }

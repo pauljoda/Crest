@@ -33,7 +33,11 @@
                     pageID: page.id,
                     snapshot: PageSnapshot(
                         url: url.absoluteString, pendingURL: nil, title: title, isLoading: false,
-                        security: url.scheme == "https" ? .secure : .insecure, media: [])))
+                        security: PageSecurityFacts(
+                            cryptographicScheme: WebScheme.named(url.scheme)?.isSecure == true,
+                            connectionJudged: true, certificateError: false, engineWarns: false, mixedContent: [],
+                            maliciousContent: false, errorPage: false),
+                        media: [])))
             if let icon {
                 page.report(PageIconChanged(pageID: page.id, url: url.absoluteString, accent: nil), icon: icon)
             }

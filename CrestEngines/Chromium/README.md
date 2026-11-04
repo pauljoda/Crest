@@ -304,15 +304,13 @@ popup of its own, including any page action, reports itself unavailable instead.
 A private window reads the same pinned list narrowed to the extensions enabled
 in incognito.
 
-The row prepares the Space's engine profile itself, so the tiles are there on
-the first Start Page of a launch rather than only once something has been opened
-in the Space. Which Spaces it may prepare is decided by `(spaceID, profileID)`
-against the store family that owns the window it is drawn in, not by identity
-against one application-wide list: a window publishes its own Spaces first, and
-the list would still be empty at that point. A Space belonging to another family,
-such as a borrowed settings workspace or a private window with no persistent
-engine profile of its own, is refused, and so is a locked Space. The preparation is
-idempotent, so it can be asked on every appearance and every Space change.
+The row has the core list the Space's extensions (`ListExtensions`), which
+loads the Space's engine profile, so the tiles are there on the first Start Page
+of a launch rather than only once something has been opened in the Space. The
+core decides which Spaces it lists: one of the person's own Spaces, never a
+private window's, which has no persistent engine profile of its own, a locked
+Space or one being deleted. The listing is idempotent, so it can be asked on
+every appearance and every Space change.
 
 An extension that is still enabled in the registry but whose directory is gone
 is treated as unavailable rather than broken: it contributes no tile and no
@@ -340,10 +338,14 @@ its popup, is unloaded or has its host destroyed.
 
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`
-contains those engine-independent views; `ChromiumExtensionStore` supplies
-profile-scoped Chromium state and native install presentation. Registry, action,
-toolbar, and icon observers refresh the UI without polling. Pinning is stored in
-Chromium's per-profile toolbar preferences.
+contains those engine-independent views; `ChromiumExtensionStore` supplies the
+toolbar's Chromium state and the native menus, confirmations and install review.
+Which Spaces may change or receive an extension, where a copy may go and which
+consent answers a later question are the core's (see "Extensions" in the
+control plane's page lifecycle). Registry, action, toolbar, and icon observers
+refresh the UI without polling, and the binding reports each listed profile's
+extensions to the core again when they change. Pinning is stored in Chromium's
+per-profile toolbar preferences.
 
 On a Chrome Web Store listing, the listing's own install button reads **Add to
 Crest** and runs Crest's install; **Install Extension…** in Site Controls does
@@ -358,9 +360,11 @@ The review displays Chromium's permission warnings and offers website-access
 withholding where supported. Required API permissions use Chromium's install
 consent semantics rather than the retired WebKit permission emulation.
 Selected additional Spaces install the same downloaded package, each with its own
-signature check and separate extension data. Consent is reused only when the
-verified extension identity, version, and warnings match. Locked, deleted, or
-replaced Space profiles cannot receive a copy.
+signature check and separate extension data. The core reuses consent only when
+the verified extension identity, version, and warnings match, and a locked,
+deleted, or replaced Space profile cannot receive a copy. The package download
+and each install run in the portable binding (`crest_engine_store.cc`), and the
+question Chromium's installer asks goes to the core rather than to a window.
 
 The native Extensions settings pane retains Space selection, extension artwork,
 disclosure rows, enable/remove controls, options pages, and copying to other

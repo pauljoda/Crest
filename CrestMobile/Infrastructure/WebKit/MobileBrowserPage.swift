@@ -128,7 +128,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         snapshot: { [weak self] pendingURL in
             self?.snapshot(pendingURL: pendingURL)
                 ?? PageSnapshot(
-                    url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: PageSecurity.none,
+                    url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: .unknown,
                     media: [])
         },
         history: { [weak self] in self?.pageEngine.reportedHistory })
@@ -1032,8 +1032,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     /// What WebKit shows for the page now: the document and its title,
-    /// whether it loads, the page's
-    /// security from its secure-content flag and the trust it kept, and the
+    /// whether it loads, what it knows of the connection from its
+    /// secure-content flag and the trust it kept, and the
     /// media WebKit last said it runs.
     private func snapshot(pendingURL: String?) -> PageSnapshot {
         let overrides = serverTrustOverrides
@@ -1043,7 +1043,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             pendingURL: pendingURL,
             title: webView.title ?? "",
             isLoading: webView.isLoading,
-            security: PageSecurity(
+            security: PageSecurityFacts(
                 webKitURL: webView.url,
                 hasOnlySecureContent: webView.hasOnlySecureContent,
                 serverTrust: webView.serverTrust,

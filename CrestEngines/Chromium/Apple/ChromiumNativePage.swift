@@ -273,12 +273,12 @@
         /// The Chrome Web Store listing this page is showing asked Crest to install
         /// or remove the extension it is about. The engine has already checked that
         /// the extension is the one the page's own URL names, and the destination is
-        /// this page's own Space — a listing can never reach another Space or a
-        /// private window, which keeps no persistent extension state.
+        /// this page's own Space, which the core refuses for a private window, a
+        /// locked Space or one being deleted, so a listing never reaches another.
         func performStoreRequest(_ extensionID: String, removes: Bool) {
             let store = ChromiumComposition.extensions
-            guard !isPrivateBrowsing, let profileID,
-                let space = ChromiumComposition.extensionSpace(forProfile: profileID)
+            guard let spaceID = ChromiumComposition.core?.state.pages[pageID]?.spaceID,
+                let space = store.space(spaceID)
             else {
                 refreshStoreState()
                 return
