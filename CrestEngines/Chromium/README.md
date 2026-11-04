@@ -438,11 +438,14 @@ key. When it ends with no passkey for the site, the request goes on in
 Chromium's mechanism list, as cancelling the sheet does when that list has more
 than one choice, so the engine's phone (QR code), USB and security-key flows
 stay reachable. Choosing a passkey from another device in a sign-in field's
-suggestions goes to that list directly. Creation defaults to iCloud Keychain
-rather than a browser-owned store, and Chromium's staged rollout features for
-that choice do not apply. A build without the entitlement, such as the review
-package, keeps Chromium's own sheet, so passkeys there are not a test of Crest's
-behaviour.
+suggestions goes to that list directly. A site that asks
+`isUserVerifyingPlatformAuthenticatorAvailable()` first, as Duo does before
+offering Touch ID, hears yes when the Mac can keep passkeys, since the system
+sheet performs Touch ID; Chromium's own answer covers only its Touch ID store,
+which Crest does not use. Creation defaults to iCloud Keychain rather than a
+browser-owned store, and Chromium's staged rollout features for that choice do
+not apply. A build without the entitlement, such as the review package, keeps
+Chromium's own sheet, so passkeys there are not a test of Crest's behaviour.
 
 A private window works like incognito. Its pages use an off-the-record
 profile that is new each time private browsing opens, is always derived from

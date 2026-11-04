@@ -3314,3 +3314,37 @@
      return;
    }
  
+--- a/chrome/browser/webauthn/chrome_web_authentication_delegate.cc
++++ b/chrome/browser/webauthn/chrome_web_authentication_delegate.cc
+@@ -81,7 +81,9 @@
+ #endif
+ 
+ #if BUILDFLAG(IS_MAC)
++#include "chrome/browser/webauthn/chrome_authenticator_request_delegate_mac.h"
+ #include "device/fido/mac/credential_metadata.h"
++#include "device/fido/mac/icloud_keychain.h"
+ #endif
+ 
+ namespace {
+@@ -289,6 +291,21 @@
+                   return;
+                 }
+ 
++#if BUILDFLAG(IS_MAC)
++                // Crest creates and uses passkeys through the macOS system
++                // sheet, not Chromium's own Touch ID store, so it answers for
++                // the sheet when this Mac can keep passkeys. Otherwise the
++                // answer falls through, which keeps the platform transport
++                // for create() and get().
++                if (base::CommandLine::ForCurrentProcess()->HasSwitch(
++                        "crest-control-plane") &&
++                    device::fido::icloud_keychain::IsSupported() &&
++                    IsICloudKeychainConfiguredForPasskeys()) {
++                  std::move(callback).Run(true);
++                  return;
++                }
++#endif
++
+                 // The enclave won't allow credentials for an account to be
+                 // stored in GPM _in_ that account. So we don't want to tell
+                 // accounts.google.com that there is a platform authenticator
