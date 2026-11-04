@@ -163,6 +163,7 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = spaceModel(matching: assignment) else { return false }
         let ids = Self.currentTabIDs(of: space)
+        guard !ids.isEmpty else { return false }
         let tabs = ids.map { BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID) }
         return performPageDismissal(of: tabs) { [weak self] in
             guard let self, let current = self.spaceModel(matching: assignment), Self.currentTabIDs(of: current) == ids,
@@ -170,6 +171,13 @@ extension BrowserStore {
             else { return false }
             return true
         }
+    }
+
+    /// Clears the open tabs of the Space this window shows, unless it is locked.
+    @discardableResult
+    func clearShownSpaceTabs(accessController: BrowserSpaceAccessController) -> Bool {
+        guard let space = shownSpace, !accessController.isLocked(space) else { return false }
+        return clearCurrentTabs(matching: BrowserSpaceRuntimeAssignment(space: space))
     }
 
     @discardableResult

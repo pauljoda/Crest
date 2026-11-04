@@ -5021,6 +5021,10 @@
     "quick-window-shortcut-opens-over-your-window": {
       "category": "improved",
       "message": "On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward."
+    },
+    "clear-unpinned-tabs-shortcut": {
+      "category": "fixed",
+      "message": "Clear Unpinned Tabs and Shift-Command-K now clear a Space's open tabs however recently they were used."
     }
   }
 }
