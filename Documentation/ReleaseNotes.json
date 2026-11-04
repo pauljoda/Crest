@@ -5045,6 +5045,10 @@
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
       "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    },
+    "shortcuts-put-the-address-palette-away": {
+      "category": "fixed",
+      "message": "Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs."
     }
   }
 }
