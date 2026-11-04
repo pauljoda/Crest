@@ -31,20 +31,30 @@ struct BrowserTransientPresentationState {
     /// it, where the shell lets the person choose it.
     var cardShare: CGFloat = 1
 
-    var sourceTransform: BrowserTransientSourceTransform {
-        BrowserTransientCardLayout.sourceCardTransform(for: sourcePresentation)
-    }
-
     // MARK: - Growing out of the source link
 
-    /// The entrance scale, applied to whichever layer the arrangement grows.
-    /// The other layer is handed identity, so both shells run the same chain.
-    func scale(for target: BrowserTransientEntranceTarget) -> CGSize {
+    /// The transform that starts the card over its source link, for a card
+    /// laid out at `cardFrame` in a container of `containerSize`.
+    func sourceTransform(cardFrame: CGRect?, in containerSize: CGSize) -> BrowserTransientSourceTransform {
+        BrowserTransientCardLayout.sourceCardTransform(
+            for: sourcePresentation, cardFrame: cardFrame, in: containerSize)
+    }
+
+    /// The entrance scale from `source`, applied to whichever layer the
+    /// arrangement grows. The other layer is handed identity, so both shells
+    /// run the same chain.
+    func scale(
+        for target: BrowserTransientEntranceTarget,
+        from source: BrowserTransientSourceTransform
+    ) -> CGSize {
         if motionState != nil { return CGSize(width: 1, height: 1) }
         guard arrangement.entranceTarget == target else {
             return CGSize(width: 1, height: 1)
         }
-        return CGSize(width: cardScaleX, height: cardScaleY)
+        return CGSize(
+            width: cardScale(visible: source.scaleX, staged: source.scaleX * 0.82),
+            height: cardScale(visible: source.scaleY, staged: source.scaleY * 0.82)
+        )
     }
 
     func opacity(for target: BrowserTransientEntranceTarget) -> Double {
@@ -76,20 +86,6 @@ struct BrowserTransientPresentationState {
 
     private var cardOpacity: Double {
         isCardExpanded || isCardVisible ? 1 : 0
-    }
-
-    private var cardScaleX: CGFloat {
-        cardScale(
-            visible: sourceTransform.scaleX,
-            staged: sourceTransform.scaleX * 0.82
-        )
-    }
-
-    private var cardScaleY: CGFloat {
-        cardScale(
-            visible: sourceTransform.scaleY,
-            staged: sourceTransform.scaleY * 0.82
-        )
     }
 
     /// A card that has finished growing is at its own size. Before that it is
