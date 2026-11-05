@@ -20,18 +20,30 @@ final class BrowserDurableTabCloseTests: XCTestCase {
     }
 
     private final class DeferredDismissal: BrowserPageDismissalAuthorizing {
+        // MARK: - Variables
+
         var pending: (@MainActor () -> Bool)?
+        var completion: (@MainActor (Bool) -> Void)?
+
+        // MARK: - Actions - Dismissal
+
         func performDismissal(
             of assignments: [BrowserTabRuntimeAssignment], in browser: BrowserStore,
+            completion: @escaping @MainActor (Bool) -> Void,
             operation: @escaping @MainActor () -> Bool
         ) -> Bool {
             pending = operation
+            self.completion = completion
             return false
         }
         func resolve(_ allowed: Bool) -> Bool {
             let operation = pending
             pending = nil
-            return allowed && operation?() == true
+            let completed = completion
+            completion = nil
+            let closed = allowed && operation?() == true
+            completed?(closed)
+            return closed
         }
     }
 
