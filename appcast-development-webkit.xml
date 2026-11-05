@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.177</title>
-            <pubDate>Wed, 04 Nov 2026 22:44:44 +0000</pubDate>
+            <title>0.8.178</title>
+            <pubDate>Thu, 05 Nov 2026 01:08:43 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1503</sparkle:version>
-            <sparkle:shortVersionString>0.8.177</sparkle:shortVersionString>
+            <sparkle:version>1504</sparkle:version>
+            <sparkle:shortVersionString>0.8.178</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### New
 
-- A shortcut can be a function key on its own, such as F12 for Show Web Inspector.
+- Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/ed4f03d06b133a3d9592e66322e883445b5ed820...b7ca4c10c0941dcb31b86aefdc9612f145e36e72) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.177-2026-11-04-1503-r503.1/Installer-Crest-0.8.177-development-2026-11-04-b7ca4c1-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b7ca4c10c0941dcb31b86aefdc9612f145e36e72...444d6ebbcbff709aa1be943a0a322aa7212c4f14) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.178-2026-11-05-1504-r504.1/Installer-Crest-0.8.178-development-2026-11-05-444d6eb-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.177-2026-11-04-1503-r503.1/Installer-Crest-0.8.177-development-2026-11-04-b7ca4c1-arm64.dmg" length="216794267" type="application/octet-stream" sparkle:edSignature="OHfqnQbFSgGv/KY+TGtWiVVSId8xawERxiYIlhpgGqdlws9UUvDAA5yknRJyDGS/02MgL/YK6Jby7tG31yyTAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.178-2026-11-05-1504-r504.1/Installer-Crest-0.8.178-development-2026-11-05-444d6eb-arm64.dmg" length="216843930" type="application/octet-stream" sparkle:edSignature="McyCdAPY2DvR/4dFSWx9MPqDpFV9L7/S25HAC/+TleiMkPLhmrfq3jtOY1tWAU0uY4uiEfwcWUR2YSujsu35Dg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Weh2aKRDZNxFxg8fv1xrjZFIp8YWVD1sWs+m2+lt6h7a4EHmkCm7WNCekkZI6/UMHvAs1XbvvftTzgXtnsptAw==
-length: 3982
+edSignature: mz2p5tJQtm0wrXZyt81bwUN/uWHCEtcvmsD3pIyGgOmvTtqQSinkfYPuViYOOt8dAEdAOzTBSv/v9VlfPkj8AA==
+length: 4081
 -->
