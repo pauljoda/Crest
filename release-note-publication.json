@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "command-z-undo-stays-in-text-fields",
+    "development": "shift-number-shortcuts-record-as-the-number",
     "nightly": "mac-peek-size"
   }
 }

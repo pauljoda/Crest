@@ -6,33 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.179</title>
-            <pubDate>Thu, 05 Nov 2026 03:28:12 +0000</pubDate>
+            <title>0.8.180</title>
+            <pubDate>Thu, 05 Nov 2026 15:40:04 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1505</sparkle:version>
-            <sparkle:shortVersionString>0.8.179</sparkle:shortVersionString>
+            <sparkle:version>1506</sparkle:version>
+            <sparkle:shortVersionString>0.8.180</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings › Shortcuts, and switching Spaces now always reaches Crest.
-
 ### Fixed
 
-- Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in.
+- Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/444d6ebbcbff709aa1be943a0a322aa7212c4f14...b6eb1b6db314c91a1dfc6df7032f53551f345e2a) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.179-2026-11-05-1505-r505.1/Installer-Crest-0.8.179-development-2026-11-05-b6eb1b6-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b6eb1b6db314c91a1dfc6df7032f53551f345e2a...5d8413ae3a8d2c59ec31b4f8a7c06ca5dc137762) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.180-2026-11-05-1506-r506.1/Installer-Crest-0.8.180-development-2026-11-05-5d8413a-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.179-2026-11-05-1505-r505.1/Installer-Crest-0.8.179-development-2026-11-05-b6eb1b6-arm64.dmg" length="216885403" type="application/octet-stream" sparkle:edSignature="lEB7KnPNGbS4VQwrcYoRyIpJiOfGJpH06gtTbQi1C0B64Xk2uuxL8YYjjjPIumKcKrcVthTSwfslWl/L3O24DA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.180-2026-11-05-1506-r506.1/Installer-Crest-0.8.180-development-2026-11-05-5d8413a-arm64.dmg" length="216832154" type="application/octet-stream" sparkle:edSignature="bMLG/O7Kc7kFrswHkDZLhA/QvgnwaQCvDihUtLlIKSWWpO7Vav+xsM9oFWNjfcfcOsSEGICWKxfU4uj8bPwwAA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: YYzdC38R3BXCcWT/klhyzftdr4zyWdUOkX2mA7qK3dUuNLiDjszBhJwkj6fXEL7vPobP6QBqKY0StbCxSh8jCw==
-length: 4312
+edSignature: uE1TV6/IMJuiN6zIh0tzPIi4/Rr1ZDvRRscxprV5219LnHat0Dibi0EHpl3hSRAjLfn3baWaJvYKNvW7IKsmAw==
+length: 4144
 -->
