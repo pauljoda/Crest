@@ -11,6 +11,8 @@ final class BrowserSoftwareUpdateService {
     static let bundledChannelPreferenceKey =
         "crest.software-update.bundled-channel"
     static let defaultChannelInfoKey = "CrestDefaultUpdateChannel"
+    static let lastLaunchedVersionPreferenceKey =
+        "crest.software-update.last-launched-version"
 
     // MARK: - Variables
 
@@ -94,6 +96,8 @@ final class BrowserSoftwareUpdateService {
 
         guard isEnabled else { return }
         startUpdater()
+        // A failed start leaves its error card, which this must not replace.
+        if isEnabled { announceUpdateInstalledSinceLastLaunch() }
     }
 
     // MARK: - Actions - Checking
@@ -165,6 +169,17 @@ final class BrowserSoftwareUpdateService {
                 acknowledgement: {}
             )
         }
+    }
+
+    /// Shows the card that links the changelog when this launch is a newer
+    /// version than the last one. A first install has no earlier version and
+    /// shows nothing.
+    private func announceUpdateInstalledSinceLastLaunch() {
+        guard let current = BrowserSoftwareUpdateUserDriver.bundleVersion, let preferences else { return }
+        let previous = preferences.string(forKey: Self.lastLaunchedVersionPreferenceKey)
+        preferences.set(current, forKey: Self.lastLaunchedVersionPreferenceKey)
+        guard let previous, current.compare(previous, options: .numeric) == .orderedDescending else { return }
+        model.presentUpdatedOnLaunch(version: current, changelog: BrowserAboutLinks.changelog)
     }
 
     private static func launchChannel(

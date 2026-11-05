@@ -185,6 +185,8 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
     }
 
     private var hasDetails: Bool {
+        // After an update the card's own button opens the changelog.
+        guard update.phase != .installed else { return false }
         if let releaseNotes = update.releaseNotes, !releaseNotes.isEmpty {
             return true
         }

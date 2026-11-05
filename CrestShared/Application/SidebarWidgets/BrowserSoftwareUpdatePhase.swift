@@ -145,7 +145,12 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         windowButtons: settledWindowButtons)
     static let installed = BrowserSoftwareUpdatePhase(
         name: "installed", title: "Update Installed", statusLabel: "Installed",
-        symbol: settledSymbol, tone: .success, cardActions: settledCardActions, windowButtons: settledWindowButtons)
+        symbol: settledSymbol, tone: .success,
+        cardActions: { snapshot in
+            snapshot.informationURL == nil
+                ? [.acknowledgeUpdateStatus] : [.viewChangelog, .acknowledgeUpdateStatus]
+        },
+        windowButtons: settledWindowButtons)
     /// Updates can't run in this build at all.
     static let unavailable = BrowserSoftwareUpdatePhase(
         name: "unavailable", title: "Software Update Unavailable", statusLabel: "Unavailable")

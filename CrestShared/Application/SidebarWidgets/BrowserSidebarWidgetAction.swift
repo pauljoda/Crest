@@ -43,6 +43,12 @@ struct BrowserSidebarWidgetAction: Hashable, Sendable {
         button: CardButton(
             priority: 2, title: "View Release", symbol: "arrow.up.right", isProminent: true,
             opensReleasePage: true))
+    /// The card opens the changelog itself, once an update is installed.
+    static let viewChangelog = Self(
+        name: "viewChangelog",
+        button: CardButton(
+            priority: 9, title: "What's New", symbol: "list.bullet.rectangle", isProminent: true,
+            opensReleasePage: true))
     static let installUpdate = Self(
         name: "installUpdate",
         button: CardButton(

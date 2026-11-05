@@ -60,8 +60,12 @@ struct BrowserSoftwareUpdateFixture: Sendable {
         )
     }
 
+    static let installed = Self(name: "installed") { model, version, _, _ in
+        model.presentUpdatedOnLaunch(version: version, changelog: BrowserAboutLinks.changelog)
+    }
+
     static let all: [BrowserSoftwareUpdateFixture] = [
-        available, checking, automaticDownloading, downloading, automaticReady, ready, failed,
+        available, checking, automaticDownloading, downloading, automaticReady, ready, failed, installed,
     ]
 
     // MARK: - Variables

@@ -5085,6 +5085,10 @@
     "command-z-undo-stays-in-text-fields": {
       "category": "fixed",
       "message": "Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in."
+    },
+    "whats-new-card-after-update": {
+      "category": "new",
+      "message": "The first time you open Crest after an update, a sidebar card confirms it and opens the changelog with What's New."
     }
   }
 }

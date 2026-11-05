@@ -418,6 +418,17 @@ final class BrowserSoftwareUpdateModel {
         present()
     }
 
+    /// Tells the person, on the first launch after an update, which version
+    /// they now have and where its changes are listed.
+    func presentUpdatedOnLaunch(version: String, changelog: URL) {
+        resetCallbacks()
+        phase = .installed
+        updateVersion = version
+        informationURL = changelog
+        message = "Crest was updated successfully."
+        present()
+    }
+
     /// Asks Crest to quit so the update installs and Crest opens again. Until
     /// it quits, the same request can be made again.
     func installAndRelaunchNow() {
@@ -455,6 +466,9 @@ final class BrowserSoftwareUpdateModel {
     }
 
     func dismissInstallation() {
+        // Sparkle ends every session this way, including a background check at
+        // launch. An installed card waits for the person to dismiss it.
+        guard phase != .installed else { return }
         reset()
     }
 
