@@ -8,6 +8,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
     let perform: (BrowserSidebarWidgetAction, BrowserSidebarWidgetID) -> Void
 
     @Environment(\.browserSoftwareUpdateDetails) private var showDetails
+    @Environment(\.browserSoftwareUpdateLinkOpening) private var linkOpening
 
     var body: some View {
         VStack(alignment: .leading, spacing: BrowserSidebarWidgetDeckStyle.contentSpacing) {
@@ -169,8 +170,13 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         }
         if button.opensReleasePage {
             if let informationURL = update.informationURL {
-                Link(destination: informationURL) { label }
+                let link = Link(destination: informationURL) { label }
                     .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
+                if let linkOpening {
+                    link.environment(\.openURL, linkOpening)
+                } else {
+                    link
+                }
             }
         } else {
             Button {
@@ -233,4 +239,8 @@ extension EnvironmentValues {
     /// Opens the full release notes for the update a card presents. Nil where
     /// the shell has no window to show them in, which leaves out What's New.
     @Entry var browserSoftwareUpdateDetails: BrowserSoftwareUpdateDetailsAction? = nil
+
+    /// Opens the links the update card offers, such as the changelog, in a Crest
+    /// tab. Nil leaves them to the system, where the shell has no tab to open.
+    @Entry var browserSoftwareUpdateLinkOpening: OpenURLAction? = nil
 }

@@ -5089,6 +5089,10 @@
     "whats-new-card-after-update": {
       "category": "new",
       "message": "The first time you open Crest after an update, a sidebar card confirms it and opens the changelog with What's New."
+    },
+    "whats-new-card-opens-in-crest-tab": {
+      "category": "fixed",
+      "message": "What's New on the update card opens the changelog in a Crest tab, and a failed software update start is no longer hidden by that card."
     }
   }
 }

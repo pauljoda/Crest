@@ -353,7 +353,14 @@ final class BrowserMacApplication {
         .environment(browser.core.engines)
         .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
+        .environment(\.browserSoftwareUpdateLinkOpening, tabOpening(in: model.browser))
         .modifier(BrowserSoftwareUpdateDetailsPresentation())
+    }
+
+    private func tabOpening(in browser: BrowserStore) -> OpenURLAction {
+        OpenURLAction { [weak browser] url in
+            browser?.openExternalURL(url) == true ? .handled : .systemAction
+        }
     }
 
     var privateWindowContent: some View {
@@ -384,6 +391,7 @@ final class BrowserMacApplication {
             \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
         )
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
+        .environment(\.browserSoftwareUpdateLinkOpening, tabOpening(in: privateBrowser))
         .modifier(BrowserSoftwareUpdateDetailsPresentation())
         .background(
             BrowserMacWindowAttachment(

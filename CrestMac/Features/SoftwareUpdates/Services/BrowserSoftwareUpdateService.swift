@@ -97,7 +97,7 @@ final class BrowserSoftwareUpdateService {
         guard isEnabled else { return }
         startUpdater()
         // A failed start leaves its error card, which this must not replace.
-        if isEnabled { announceUpdateInstalledSinceLastLaunch() }
+        if self.isEnabled { announceUpdateInstalledSinceLastLaunch() }
     }
 
     // MARK: - Actions - Checking
