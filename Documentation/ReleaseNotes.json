@@ -5085,6 +5085,10 @@
     "command-z-undo-stays-in-text-fields": {
       "category": "fixed",
       "message": "Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in."
+    },
+    "shift-number-shortcuts-record-as-the-number": {
+      "category": "fixed",
+      "message": "Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over."
     }
   }
 }

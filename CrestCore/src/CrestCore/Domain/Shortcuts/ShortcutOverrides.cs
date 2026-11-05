@@ -125,6 +125,28 @@ public sealed class ShortcutOverrides {
     /// `command` answering to no chord.
     public ShortcutOverrides Unassigning(ShortcutCommand command, DevicePlatform platform) => Setting(command, null, platform);
 
+    /// The choices with each chord that holds Shift and the symbol one of
+    /// `digits` types under it named by that digit instead, as the catalog
+    /// names ⇧⌘2. A chord whose digit another offered command would then
+    /// answer to keeps its symbol, so nothing loses its keys.
+    public ShortcutOverrides ReadingShiftedDigits(IReadOnlyList<ShiftedDigit> digits, IReadOnlyList<ShortcutCommand> offered,
+        DevicePlatform platform) {
+        ArgumentNullException.ThrowIfNull(digits);
+        var revised = this;
+        foreach (var (name, chord) in chords) {
+            if (chord is not { IsSpecial: false } held || (held.Modifiers & ShortcutChord.Shift) == 0
+                || digits.FirstOrDefault(digit => digit.Symbol == held.Key) is not { } shifted) continue;
+            var renamed = ShortcutChord.Character(shifted.Digit, held.Modifiers);
+            if (ShortcutCommand.Named(name) is not { } command) {
+                revised = revised.Replacing(name, renamed);
+                continue;
+            }
+            var candidate = revised.Setting(command, renamed, platform);
+            if (candidate.Holders(renamed, command, offered, platform).Count == 0) revised = candidate;
+        }
+        return revised;
+    }
+
     /// `command` back on its default.
     public ShortcutOverrides Resetting(ShortcutCommand command) {
         ArgumentNullException.ThrowIfNull(command);
@@ -148,6 +170,11 @@ public sealed class ShortcutOverrides {
         else preferred[command.Name] = preference;
         return new(chords, preferred);
     }
+
+    /// The choices with `chord` for the command stored as `name`, which this
+    /// build does not know.
+    private ShortcutOverrides Replacing(string name, ShortcutChord chord) =>
+        new(new SortedDictionary<string, ShortcutChord?>(chords, StringComparer.Ordinal) { [name] = chord }, preferences);
 
     /// The choices with `chord` for `command`; one equal to its default is
     /// no choice at all.

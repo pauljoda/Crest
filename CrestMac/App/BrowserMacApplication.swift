@@ -284,6 +284,7 @@ final class BrowserMacApplication {
         self.spaceAccess = spaceAccess
         self.spaceSettingsPresentation = spaceSettingsPresentation
         let shortcuts = BrowserShortcutStore(core: core, legacyOverrides: legacyDevice.shortcuts)
+        if let layout = BrowserShortcutKeyboardLayout.current { shortcuts.adoptShiftedDigits(layout.shiftedDigits) }
         self.shortcuts = shortcuts
         self.passkeyAccess = passkeyAccess
         self.softwareUpdates = softwareUpdates
