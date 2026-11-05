@@ -5078,6 +5078,14 @@
       "category": "new",
       "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
     },
+    "press-a-shortcut-again-when-a-website-keeps-it": {
+      "category": "new",
+      "message": "When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings › Shortcuts, and switching Spaces now always reaches Crest."
+    },
+    "command-z-undo-stays-in-text-fields": {
+      "category": "fixed",
+      "message": "Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."

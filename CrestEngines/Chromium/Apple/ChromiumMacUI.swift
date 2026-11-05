@@ -71,9 +71,9 @@
         // MARK: - Actions - The engine's browser window
 
         /// A key the engine is about to hand a page, which sees it first unless
-        /// the core reserves its command from pages. The engine hands a key the
+        /// its command's preference says otherwise. The engine hands a key the
         /// page lets go to the menu bar.
-        func handleShortcut(_ event: NSEvent) -> Bool { shell?.handleShortcut(event, pageSeesFirst: true) ?? false }
+        func handleShortcut(_ event: NSEvent) -> Bool { shell?.handleShortcut(event, at: .beforePage) ?? false }
 
         func focusLocation() { shell?.focusLocation() }
 

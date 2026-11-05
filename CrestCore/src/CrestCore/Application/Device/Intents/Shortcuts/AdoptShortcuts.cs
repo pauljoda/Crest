@@ -25,7 +25,8 @@ public sealed record AdoptShortcuts(byte[]? Overrides) : ShortcutIntent {
     /// returning. The caller holds the device lock.
     private void Adopt(Device device) {
         if (device.Storage is not { } target || device.Adopted.Contains(DeviceAdoption.Shortcuts)) return;
-        var merged = ShortcutOverrides.Restore([.. device.ShortcutOverrides.Chords, .. LegacyShortcutDocument.Read(Overrides)]);
+        var merged = ShortcutOverrides.Restore([.. device.ShortcutOverrides.Chords, .. LegacyShortcutDocument.Read(Overrides)],
+            device.ShortcutOverrides.Preferences);
         var carried = device.Records().Adopting(DeviceAdoption.Shortcuts) with { Shortcuts = merged };
         try {
             target.SaveDevice(carried);

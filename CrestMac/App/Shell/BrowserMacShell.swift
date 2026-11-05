@@ -40,8 +40,8 @@ final class BrowserMacShell {
     private var pendingSignIns: [PendingSignIn] = []
     /// Offers every key down to `handleShortcut` before any view sees it.
     /// Both engines' page views take key equivalents before the menu bar
-    /// does, so this is where Crest's shortcuts go ahead of a page when the
-    /// core reserves them from pages, and ahead of Crest's own views always.
+    /// does, so this is where Crest's shortcuts go ahead of a page when their
+    /// preference says so, and ahead of Crest's own views always.
     private var keyMonitor: Any?
     /// The New Quick Window keys, which reach Crest from other apps.
     private var quickWindowShortcut: BrowserMacGlobalShortcut?
@@ -50,6 +50,8 @@ final class BrowserMacShell {
     private let mouseButtons = BrowserMacMouseButtons()
     /// The recent tabs a held Most Recent Tab shortcut shows.
     let recentTabSwitcher = BrowserMacRecentTabSwitcher()
+    /// The last press of a Use Both shortcut a focused page saw first.
+    let pageKeptShortcut = BrowserMacPageKeptShortcut()
 
     /// The application, once the launch built it.
     var application: BrowserMacApplication? { running?.application }
@@ -102,8 +104,9 @@ final class BrowserMacShell {
         windows.openLaunchWindows(activation: background ? .background : .key)
         menuBar.install()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            let pageSeesFirst = BrowserWebHostView.isPageContent(NSApp.keyWindow?.firstResponder)
-            return self?.handleShortcut(event, pageSeesFirst: pageSeesFirst) == true ? nil : event
+            let stage: BrowserMacKeyStage =
+                BrowserWebHostView.isPageContent(NSApp.keyWindow?.firstResponder) ? .beforePage : .beforeCrestView
+            return self?.handleShortcut(event, at: stage) == true ? nil : event
         }
         quickWindowShortcut = BrowserMacGlobalShortcut(
             binding: { application.shortcuts.shortcut(for: .newQuickWindow) },

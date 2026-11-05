@@ -32,9 +32,13 @@ final class BrowserNoticeCenter {
 
     // MARK: - Actions - Posting
 
-    func post(_ notice: BrowserNotice) {
+    /// Shows `notice` in the window the person is looking at, and answers
+    /// that window's notices, which can put it away early.
+    @discardableResult
+    func post(_ notice: BrowserNotice) -> BrowserNotices? {
         receivers.removeAll { $0.notices == nil }
-        let target = receivers.last(where: { $0.isFocused() }) ?? receivers.last
-        target?.notices?.show(notice)
+        let target = (receivers.last(where: { $0.isFocused() }) ?? receivers.last)?.notices
+        target?.show(notice)
+        return target
     }
 }

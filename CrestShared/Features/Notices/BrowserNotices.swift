@@ -34,6 +34,14 @@ final class BrowserNotices {
             shown = nil
         }
     }
+
+    /// Puts `notice` away early, if it is the one showing, once what it
+    /// reports no longer holds.
+    func dismiss(_ notice: BrowserNotice) {
+        guard shown == notice else { return }
+        revision &+= 1
+        shown = nil
+    }
 }
 
 extension BrowserNotices: BrowserStoreFirstObservable {}
