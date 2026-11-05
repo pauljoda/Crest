@@ -142,6 +142,9 @@ struct BrowserSidebarListRow: View {
             BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabID: keptTabID)
                 .equatable()
                 .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.nestingIndent : 0)
+                .modifier(
+                    BrowserFolderOffscreenPlaceholder(folder: folder, context: context, isEnabled: keptTabID == nil)
+                )
                 .crestCollectionItemTransition()
         }
     }

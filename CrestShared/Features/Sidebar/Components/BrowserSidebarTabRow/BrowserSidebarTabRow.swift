@@ -50,13 +50,20 @@ struct BrowserSidebarTabRow: View {
         .modifier(
             SidebarSpaceRoleCleanupModifier(
                 isAvailable: configuration.isAvailableForDisplay,
-                hasPendingActions: renameRequest != nil || iconRequest != nil,
+                hasPendingActions: hasPendingActions,
                 cancel: {
                     cancelTitleEditing()
                     iconRequest = nil
                 }
             )
         )
+        .keepsSidebarFolderDrawn(hasPendingActions)
+    }
+
+    /// Whether a rename or an icon choice is under way, which the row's view
+    /// holds until it ends.
+    private var hasPendingActions: Bool {
+        renameRequest != nil || iconRequest != nil
     }
 
     /// What the row draws from: its own tab, whether its window shows that

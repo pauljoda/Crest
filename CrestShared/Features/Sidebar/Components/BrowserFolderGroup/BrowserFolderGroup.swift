@@ -141,12 +141,19 @@ struct BrowserFolderGroup: View {
         .modifier(
             SidebarSpaceRoleCleanupModifier(
                 isAvailable: configuration.isAvailableForDisplay,
-                hasPendingActions: sidebarInteraction.editingFolderRequest == configuration.folderRuntimeAssignment
-                    || colorRequest != nil || iconRequest != nil || deletionRequest != nil,
+                hasPendingActions: hasPendingActions,
                 cancel: clearUnavailableDeferredActions
             )
         )
+        .keepsSidebarFolderDrawn(hasPendingActions)
         .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
+    }
+
+    /// Whether a rename, an icon or colour choice, or a deletion is under way,
+    /// which the folder's view holds until it ends.
+    private var hasPendingActions: Bool {
+        sidebarInteraction.editingFolderRequest == configuration.folderRuntimeAssignment
+            || colorRequest != nil || iconRequest != nil || deletionRequest != nil
     }
 
     /// Nested folders are children of the section they move with, so a parent's
