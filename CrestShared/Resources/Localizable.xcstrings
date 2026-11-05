@@ -11593,6 +11593,12 @@
         }
       }
     },
+    "Save or Unsave Current Tab" : {
+
+    },
+    "Save or Unsave Tab" : {
+
+    },
     "Save password?" : {
       "localizations" : {
         "ar" : {
@@ -11721,6 +11727,9 @@
           }
         }
       }
+    },
+    "saved tabs keep bookmark unsave current" : {
+
     },
     "Saved tabs stay above the line until you delete them. The minus button unloads a saved tab while keeping it in your sidebar." : {
 

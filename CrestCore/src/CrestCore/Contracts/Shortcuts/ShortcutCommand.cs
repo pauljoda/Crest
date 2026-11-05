@@ -78,7 +78,8 @@ public sealed class ShortcutCommand {
         CapturePage,
         MostRecentTabBackward,
         ClearSiteCookies,
-        ClearSiteCache
+        ClearSiteCache,
+        ToggleSelectedTabSaved
     }
 
     #endregion
@@ -294,6 +295,11 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ClearSiteCache = new(Kinds.ClearSiteCache, name: "clearSiteCache",
         ShortcutSection.Page, title: "Clear Cache for This Site", symbol: "trash",
         searchTerms: "cached images files empty delete remove", availableWhen: ShowingWebPage);
+    // It came after people could customize, so it waits for the keys a person chooses.
+    public static readonly ShortcutCommand ToggleSelectedTabSaved = new(Kinds.ToggleSelectedTabSaved,
+        name: "toggleSelectedTabSaved", ShortcutSection.Tabs, title: "Save or Unsave Current Tab", symbol: "bookmark",
+        searchTerms: "saved tabs keep bookmark unsave current", menuTitle: "Save or Unsave Tab",
+        availableWhen: facts => facts.ShownTab is { IsStartPage: false });
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -305,7 +311,7 @@ public sealed class ShortcutCommand {
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache
+        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved
     ];
 
     public Kinds Kind { get; }
