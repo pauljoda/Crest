@@ -334,7 +334,9 @@ below the control it was opened from, flipping above and sliding along the
 screen at an edge, and Chromium's auto-resize keeps following the document. It
 dismisses on a click outside, on Escape, when its window moves, resizes or
 minimises, when Crest goes to the background, and when the extension closes
-its popup, is unloaded or has its host destroyed.
+its popup, is unloaded or has its host destroyed. A key the popup's or a side
+panel's document does not use goes to the menu bar, as a tab's does, so Copy,
+Paste and the other Edit shortcuts reach the extension's page.
 
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`
