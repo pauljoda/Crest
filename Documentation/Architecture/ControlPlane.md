@@ -907,12 +907,19 @@ documents and sign-ins that arrived before it was ready.
 - **Shortcuts.** Both engines' page views take key equivalents before the
   menu bar does, so the shell offers every key down to its shortcuts first,
   through a local key monitor. While Crest's own views have focus, Crest's
-  shortcuts win. While a page has focus it sees the key first, as in other
-  browsers, and only the commands the core marks `IsReservedFromPages` run
-  ahead of it: opening, closing and switching tabs and windows, plus quit. An
-  extension's `chrome.commands` binding also goes ahead of the page, as in
-  Chrome. WebKit hands a key the page lets go back to AppKit, and Chromium's
-  browser window hands it to the menu bar; the menu bar's top menu runs the
+  shortcuts win. While a page has focus, each binding's `ShortcutPreference`
+  decides: Prefer Crest runs the command before the page sees the key; Use
+  Both lets the page see the first press and runs the command on a second
+  press of keys the page kept, made to the same page within two seconds of
+  the first, whether or not the window's notice has shown yet; Prefer
+  Website leaves the key to the page. Commands the core marks
+  `IsReservedFromPages` (opening, closing and switching tabs and windows)
+  always prefer Crest, and quit always runs. Text editing keys bound to a
+  command reach the focused page or field first and run the command only
+  when the field cannot act on them. An extension's `chrome.commands`
+  binding also goes ahead of the page, as in Chrome. WebKit hands a key the
+  page lets go back to AppKit, and Chromium's browser window hands it to the
+  menu bar, both as the same event; the menu bar's top menu runs the
   command, and asks the shell for a chord no item matches, such as ⌘= for
   zoom's ⌘+.
 - **The core decides.** The shell asks the core and presents the answer.

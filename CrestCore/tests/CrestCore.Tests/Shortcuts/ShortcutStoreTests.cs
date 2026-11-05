@@ -85,7 +85,8 @@ public sealed partial class BrowserContractsTests {
     /// Earlier releases saved a Shift chord on a digit key by the symbol Shift
     /// types there, ⌘⇧@ for ⇧⌘2 on a US layout, while the catalog names the
     /// digit. Those chords name the digit once, unless another command holds
-    /// it, and a later adoption on any layout changes nothing.
+    /// it, and a later adoption on any layout changes nothing. Each command's
+    /// chosen preference stays with it.
     [Fact]
     public void ShortcutsSavedWithAShiftedDigitSymbolNameTheDigitOnce() {
         using var directory = new StorageDirectory();
@@ -97,8 +98,10 @@ public sealed partial class BrowserContractsTests {
             app.Send(new AssignShortcut(ShortcutCommand.ShowHistory, Typed("@", shift)));
             app.Send(new AssignShortcut(ShortcutCommand.ShowArchive, Typed("$", shift)));
             app.Send(new AssignShortcut(ShortcutCommand.ClearSiteCookies, Typed("4", shift)));
+            app.Send(new ChooseShortcutPreference(ShortcutCommand.ShowHistory, ShortcutPreference.PreferWebsite));
             var renamed = Bindings(app.Send(new AdoptShiftedDigitShortcuts([new("@", "2"), new("$", "4")])));
             Assert.Equal(Typed("2", shift), renamed[ShortcutCommand.ShowHistory].Keys);
+            Assert.Equal(ShortcutPreference.PreferWebsite, renamed[ShortcutCommand.ShowHistory].Preference);
             Assert.Equal(Typed("$", shift), renamed[ShortcutCommand.ShowArchive].Keys);
             Assert.Equal(Typed("4", shift), renamed[ShortcutCommand.ClearSiteCookies].Keys);
 
@@ -112,6 +115,7 @@ public sealed partial class BrowserContractsTests {
         relaunched.Send(new AdoptShortcuts(null));
         var restored = Bindings(relaunched.Send(new AdoptShiftedDigitShortcuts([new("$", "4")])));
         Assert.Equal(Typed("2", shift), restored[ShortcutCommand.ShowHistory].Keys);
+        Assert.Equal(ShortcutPreference.PreferWebsite, restored[ShortcutCommand.ShowHistory].Preference);
         Assert.Equal(Typed("$", shift), restored[ShortcutCommand.ShowArchive].Keys);
     }
 
@@ -129,6 +133,11 @@ public sealed partial class BrowserContractsTests {
                 app.Send(new AssignShortcut(ShortcutCommand.NewTab, find))).Rejection).Commands);
             Assert.Equal(new InvalidShortcut(Typed("t", ShortcutModifiers.None)), Assert.Throws<Rejected>(() =>
                 app.Send(new AssignShortcut(ShortcutCommand.NewTab, Typed("t", ShortcutModifiers.None)))).Rejection);
+            // A function key types nothing, so it makes a shortcut on its own; another special key does not.
+            var f12 = new KeyCombination("f12", true, ShortcutModifiers.None);
+            Assert.Equal(f12, Bindings(app.Send(new AssignShortcut(ShortcutCommand.ShowWebInspector, f12)))[ShortcutCommand.ShowWebInspector].Keys);
+            Assert.Equal(new InvalidShortcut(new KeyCombination("escape", true, ShortcutModifiers.None)), Assert.Throws<Rejected>(() =>
+                app.Send(new AssignShortcut(ShortcutCommand.NewTab, new KeyCombination("escape", true, ShortcutModifiers.None)))).Rejection);
             Assert.Equal(new InvalidShortcut(new KeyCombination("hyper", true, ShortcutModifiers.Command)), Assert.Throws<Rejected>(() =>
                 app.Send(new ReassignShortcut(ShortcutCommand.NewTab, new KeyCombination("hyper", true, ShortcutModifiers.Command))))
                 .Rejection);
@@ -150,6 +159,21 @@ public sealed partial class BrowserContractsTests {
             Assert.Equal(Typed("t", ShortcutModifiers.Command), reset[ShortcutCommand.NewTab].Keys);
             Assert.Equal(chord, reset[ShortcutCommand.NewWindow].Keys);
             Assert.Null(Bindings(app.Send(new UnassignShortcut(ShortcutCommand.ShowHistory)))[ShortcutCommand.ShowHistory].Keys);
+
+            // A preference is a choice of its own; a command reserved from pages keeps Crest's.
+            Assert.Equal(ShortcutPreference.UseBoth, reset[ShortcutCommand.ToggleSidebar].Preference);
+            var preferred = Bindings(app.Send(new ChooseShortcutPreference(ShortcutCommand.ToggleSidebar, ShortcutPreference.PreferWebsite)));
+            Assert.Equal(ShortcutPreference.PreferWebsite, preferred[ShortcutCommand.ToggleSidebar].Preference);
+            Assert.True(preferred[ShortcutCommand.ToggleSidebar].IsCustomized);
+            Assert.Empty(app.Send(new ChooseShortcutPreference(ShortcutCommand.NewTab, ShortcutPreference.PreferWebsite))
+                .OfType<ShortcutsChanged>());
+            Assert.False(preferred[ShortcutCommand.NewTab].ChoosesPreference);
+
+            // Keys a text field edits with stay the field's first, whatever the command prefers.
+            var undo = Bindings(app.Send(new AssignShortcut(ShortcutCommand.ReopenClosedTab, Typed("z", ShortcutModifiers.Command))));
+            Assert.Equal(ShortcutPreference.PreferWebsite, undo[ShortcutCommand.ReopenClosedTab].Preference);
+            Assert.False(undo[ShortcutCommand.ReopenClosedTab].ChoosesPreference);
+            Assert.True(undo[ShortcutCommand.ReopenClosedTab].YieldsToTextEditing);
         }
 
         var (relaunched, _, _) = DeviceApp(directory);
@@ -158,6 +182,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(chord, restored[ShortcutCommand.NewWindow].Keys);
         Assert.Null(restored[ShortcutCommand.ShowHistory].Keys);
         Assert.Equal(Typed("t", ShortcutModifiers.Command), restored[ShortcutCommand.NewTab].Keys);
+        Assert.Equal(ShortcutPreference.PreferWebsite, restored[ShortcutCommand.ToggleSidebar].Preference);
+        Assert.Equal(ShortcutPreference.UseBoth,
+            Bindings(relaunched.Send(new ResetShortcut(ShortcutCommand.ToggleSidebar)))[ShortcutCommand.ToggleSidebar].Preference);
 
         // Resetting every shortcut forgets them all, on disk too.
         var cleared = Assert.Single(relaunched.Send(new ResetShortcuts()).OfType<ShortcutsChanged>());

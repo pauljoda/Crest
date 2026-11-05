@@ -27,8 +27,8 @@ public sealed class ShortcutMenu {
             ShortcutCommand.ReloadFromOrigin]
     ]);
     public static readonly ShortcutMenu Tabs = new(name: "tabs", title: "Tabs", groups: [
-        [ShortcutCommand.ToggleSelectedTabPinned, ShortcutCommand.DuplicateTab, ShortcutCommand.ReopenClosedTab,
-            ShortcutCommand.ClearUnpinnedTabs, ShortcutCommand.ArchiveTab],
+        [ShortcutCommand.ToggleSelectedTabPinned, ShortcutCommand.ToggleSelectedTabSaved, ShortcutCommand.DuplicateTab,
+            ShortcutCommand.ReopenClosedTab, ShortcutCommand.ClearUnpinnedTabs, ShortcutCommand.ArchiveTab],
         [ShortcutCommand.PreviousTab, ShortcutCommand.NextTab, ShortcutCommand.MostRecentTab,
             ShortcutCommand.MostRecentTabBackward],
         [ShortcutCommand.SplitWithNextTab, ShortcutCommand.FocusNextSplitCard, ShortcutCommand.FocusPreviousSplitCard,

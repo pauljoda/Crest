@@ -17,16 +17,30 @@ public sealed record ShortcutChord {
     public const int SupportedModifiers = Command | Option | Control | Shift;
     public const int MaximumCharacterLength = 64;
 
+    /// The text editing chords, which every platform's fields share.
+    private static readonly ShortcutChord[] TextEditing = [
+        new("z", false, Command), new("z", false, Command | Shift), new("x", false, Command), new("c", false, Command),
+        new("v", false, Command), new("a", false, Command)
+    ];
+
     public string Key { get; }
     public bool IsSpecial { get; }
     public int Modifiers { get; }
 
     /// A chord needs at least one supported modifier, so a plain key keeps
-    /// reaching the focused text field.
-    public bool IsValid => (Modifiers & SupportedModifiers) != 0;
+    /// reaching the focused text field, unless its key types nothing, as a
+    /// function key does.
+    public bool IsValid => (Modifiers & SupportedModifiers) != 0 || (IsSpecial && ShortcutSpecialKey.Named(Key)?.StandsAlone == true);
 
     /// The chord as the platform reads it.
     public KeyCombination Keys => new(Key, IsSpecial, (ShortcutModifiers)Modifiers);
+
+    /// Whether the chord is one a focused text field answers itself: Undo,
+    /// Redo, Cut, Copy, Paste or Select All. A command bound to one never goes
+    /// ahead of the page or the field, and runs only when the field has nothing
+    /// to do with the keys.
+    public bool EditsText => !IsSpecial && Array.Exists(TextEditing, chord =>
+        chord.Modifiers == (Modifiers & SupportedModifiers) && string.Equals(chord.Key, Key, StringComparison.OrdinalIgnoreCase));
 
     #endregion
 
@@ -54,7 +68,8 @@ public sealed record ShortcutChord {
 
     /// The chord `keys` spell when a person may bind it: a character of usable
     /// length or a special key this build knows, held with at least one
-    /// supported modifier. Null for keys that can never be a shortcut.
+    /// supported modifier unless it is a function key. Null for keys that can
+    /// never be a shortcut.
     public static ShortcutChord? Usable(KeyCombination keys) {
         ArgumentNullException.ThrowIfNull(keys);
         if (keys.IsSpecialKey ? ShortcutSpecialKey.Named(keys.Key) is null : keys.Key.Length is 0 or > MaximumCharacterLength) return null;

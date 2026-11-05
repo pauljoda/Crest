@@ -9,6 +9,7 @@ enum BrowserShortcutSettingsPresentation {
     static let clearShortcut: LocalizedStringResource = "Clear Shortcut"
     static let resetToDefault: LocalizedStringResource = "Reset to Default"
     static let shortcutActions: LocalizedStringResource = "Shortcut Actions"
+    static let whenWebsiteUsesKeys: LocalizedStringResource = "When a Website Uses These Keys"
     static let shortcutAlreadyInUse: LocalizedStringResource =
         "Shortcut Already in Use"
     static let replaceExistingShortcut: LocalizedStringResource =
@@ -25,7 +26,7 @@ enum BrowserShortcutSettingsPresentation {
     static let guidance: LocalizedStringResource =
         "Click a shortcut, then press the new keys."
     static let invalidShortcut: LocalizedStringResource =
-        "Use a supported key with Command, Option, Control, or Shift."
+        "Use a function key, or a key with Command, Option, Control, or Shift."
     static let typeShortcut: LocalizedStringResource = "Type Shortcut"
     static let unassigned: LocalizedStringResource = "Unassigned"
     static let recorderHelp: LocalizedStringResource =

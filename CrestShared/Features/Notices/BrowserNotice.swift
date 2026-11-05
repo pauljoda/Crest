@@ -58,6 +58,14 @@ struct BrowserNotice: Equatable, Hashable {
             systemImage: cleared ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
     }
 
+    /// A page kept `shortcut`, and pressing it again runs `command`.
+    static func pressAgain(_ shortcut: BrowserShortcut, for command: ShortcutCommand) -> BrowserNotice {
+        BrowserNotice(
+            message: String(localized: "Press \(shortcut.displayString) Again to \(command.title())"),
+            systemImage: "keyboard",
+            accessibilityLabel: String(localized: "Press \(shortcut.spokenDescription) again to \(command.title())"))
+    }
+
     /// An action that could not run, with `reason` saying why.
     static func failure(_ reason: String) -> BrowserNotice {
         BrowserNotice(message: reason, systemImage: "exclamationmark.triangle.fill")

@@ -13,6 +13,9 @@ final class BrowserRootModel {
     let chrome: BrowserChromeState
     let spaceAccess: BrowserSpaceAccessController
     let windowState: BrowserWindowStateStore?
+    /// The window this model shows. A private window keeps no window state,
+    /// so its pages name it.
+    var windowID: UUID { windowState?.id ?? pages.windowID }
     private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: StartupBehavior
 
@@ -665,7 +668,7 @@ extension BrowserRootModel {
             chrome: chrome,
             windows: windows,
             spaceAccess: spaceAccess,
-            targetWindowID: windowState?.id,
+            targetWindowID: windowID,
             layoutDirection: layoutDirection,
         )
         .paletteRegistry(shortcuts: shortcuts) { [weak self] name in self?.openPaletteSettings(name, in: settings) }
@@ -762,7 +765,7 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
             BrowserQuickWindowRequest(
                 url: url,
                 spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
-                targetWindowID: model.windowState?.id))
+                targetWindowID: model.windowID))
         return true
     }
 }
