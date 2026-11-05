@@ -96,6 +96,11 @@ public sealed partial class BrowserContractsTests {
                 app.Send(new AssignShortcut(ShortcutCommand.NewTab, find))).Rejection).Commands);
             Assert.Equal(new InvalidShortcut(Typed("t", ShortcutModifiers.None)), Assert.Throws<Rejected>(() =>
                 app.Send(new AssignShortcut(ShortcutCommand.NewTab, Typed("t", ShortcutModifiers.None)))).Rejection);
+            // A function key types nothing, so it makes a shortcut on its own; another special key does not.
+            var f12 = new KeyCombination("f12", true, ShortcutModifiers.None);
+            Assert.Equal(f12, Bindings(app.Send(new AssignShortcut(ShortcutCommand.ShowWebInspector, f12)))[ShortcutCommand.ShowWebInspector].Keys);
+            Assert.Equal(new InvalidShortcut(new KeyCombination("escape", true, ShortcutModifiers.None)), Assert.Throws<Rejected>(() =>
+                app.Send(new AssignShortcut(ShortcutCommand.NewTab, new KeyCombination("escape", true, ShortcutModifiers.None)))).Rejection);
             Assert.Equal(new InvalidShortcut(new KeyCombination("hyper", true, ShortcutModifiers.Command)), Assert.Throws<Rejected>(() =>
                 app.Send(new ReassignShortcut(ShortcutCommand.NewTab, new KeyCombination("hyper", true, ShortcutModifiers.Command))))
                 .Rejection);

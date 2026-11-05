@@ -11605,6 +11605,12 @@
         }
       }
     },
+    "Save or Unsave Current Tab" : {
+
+    },
+    "Save or Unsave Tab" : {
+
+    },
     "Save password?" : {
       "localizations" : {
         "ar" : {
@@ -11733,6 +11739,9 @@
           }
         }
       }
+    },
+    "saved tabs keep bookmark unsave current" : {
+
     },
     "Saved tabs stay above the line until you delete them. The minus button unloads a saved tab while keeping it in your sidebar." : {
 
@@ -15213,10 +15222,10 @@
     "Use %s or {searchTerms} where the search goes. HTTPS only." : {
 
     },
-    "Use a public search engine host, not a local or numeric address." : {
+    "Use a function key, or a key with Command, Option, Control, or Shift." : {
 
     },
-    "Use a supported key with Command, Option, Control, or Shift." : {
+    "Use a public search engine host, not a local or numeric address." : {
 
     },
     "Use Both" : {

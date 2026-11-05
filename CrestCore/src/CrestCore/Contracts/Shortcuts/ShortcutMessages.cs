@@ -27,8 +27,9 @@ public sealed record ShortcutBinding(ShortcutCommand Command, KeyCombination? Ke
 
 #region Rejections
 
-/// The keys can never be a shortcut: they hold no supported modifier, so a
-/// plain key would never reach the focused text field, or they name no key.
+/// The keys can never be a shortcut: they hold no supported modifier and are
+/// not a function key, so a plain key would never reach the focused text
+/// field, or they name no key.
 public sealed record InvalidShortcut(KeyCombination Keys) : Rejection;
 
 /// Other offered commands answer to the keys already.

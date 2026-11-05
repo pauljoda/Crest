@@ -15,9 +15,10 @@ struct BrowserMacCommand {
         .newWindow, withoutWindow: .always { $0.open(.normal(sourceWindowID: nil), activation: .key) },
         run: { $0.openNewWindow() })
     static let newBlankWindow = BrowserMacCommand(.newBlankWindow) { $0.openBlankWindow() }
-    static let newTab = BrowserMacCommand(.newTab) { $0.openNewTab() }
+    static let newTab = BrowserMacCommand(.newTab, managesPalette: true) { $0.openNewTab() }
     static let openLocation = BrowserMacCommand(
-        .openLocation, actsOnPage: true, withoutWindow: .opensLocationInKeyQuickWindow, run: { $0.openLocation() })
+        .openLocation, actsOnPage: true, withoutWindow: .opensLocationInKeyQuickWindow, managesPalette: true,
+        run: { $0.openLocation() })
     static let openFile = BrowserMacCommand(
         .openFile, isAvailable: { $0.supportsEngineCapability(.localFiles) },
         run: { $0.openFile() })
@@ -43,6 +44,7 @@ struct BrowserMacCommand {
         run: { $0.commandPage?.stopLoading() })
     static let reloadFromOrigin = BrowserMacCommand(.reloadFromOrigin, actsOnPage: true) { $0.reload(.fromOrigin) }
     static let toggleSelectedTabPinned = BrowserMacCommand(.toggleSelectedTabPinned) { $0.toggleSelectedTabPinned() }
+    static let toggleSelectedTabSaved = BrowserMacCommand(.toggleSelectedTabSaved) { $0.toggleSelectedTabSaved() }
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
     static let clearUnpinnedTabs = BrowserMacCommand(.clearUnpinnedTabs) { $0.cleanupCurrentTabs() }
@@ -154,7 +156,8 @@ struct BrowserMacCommand {
     static let all = [
         newWindow, newBlankWindow, newTab, openLocation, openFile, newQuickWindow, newPrivateWindow, closeTabOrWindow,
         closeWindow,
-        back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, duplicateTab,
+        back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, toggleSelectedTabSaved,
+        duplicateTab,
         reopenClosedTab,
         clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
@@ -205,6 +208,11 @@ struct BrowserMacCommand {
     /// the menu bar or the palette it jumps at once.
     let recentTabDirection: RecentTabSwitchDirection?
 
+    /// Whether the command opens or puts away the palette itself. Every other
+    /// command puts an open palette away before it runs, so the window shows
+    /// what the command did.
+    let managesPalette: Bool
+
     // MARK: - Initializers
 
     private init(
@@ -216,12 +224,13 @@ struct BrowserMacCommand {
         withoutWindow: BrowserMacWindowlessCommand? = nil,
         waitsInPaletteUntilAvailable: Bool = false,
         recentTabDirection: RecentTabSwitchDirection? = nil,
+        managesPalette: Bool = false,
         run: @escaping @MainActor (BrowserCommandActions) -> Void
     ) {
         self.init(
             kind, actsOnPage: actsOnPage, isAvailable: { actions, _ in isAvailable(actions) }, title: title,
             isOn: isOn, withoutWindow: withoutWindow, waitsInPaletteUntilAvailable: waitsInPaletteUntilAvailable,
-            recentTabDirection: recentTabDirection,
+            recentTabDirection: recentTabDirection, managesPalette: managesPalette,
             run: { actions, _ in run(actions) })
     }
 
@@ -234,6 +243,7 @@ struct BrowserMacCommand {
         withoutWindow: BrowserMacWindowlessCommand? = nil,
         waitsInPaletteUntilAvailable: Bool = false,
         recentTabDirection: RecentTabSwitchDirection? = nil,
+        managesPalette: Bool = false,
         run: @escaping @MainActor (BrowserCommandActions, ShortcutCommand) -> Void
     ) {
         self.kind = kind
@@ -244,6 +254,7 @@ struct BrowserMacCommand {
         self.withoutWindow = withoutWindow
         self.waitsInPaletteUntilAvailable = waitsInPaletteUntilAvailable
         self.recentTabDirection = recentTabDirection
+        self.managesPalette = managesPalette
         self.run = run
     }
 

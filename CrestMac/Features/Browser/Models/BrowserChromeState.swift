@@ -53,6 +53,12 @@ final class BrowserChromeState {
         commandPaletteMode != nil
     }
 
+    /// Whether the palette is open to edit the shown tab's address.
+    var isEditingLocation: Bool {
+        guard case .editLocation = commandPaletteMode else { return false }
+        return true
+    }
+
     // MARK: - Initializers
 
     init(
@@ -113,6 +119,16 @@ final class BrowserChromeState {
 
     func openLocation(_ address: String = "") {
         commandPaletteMode = .editLocation(address)
+    }
+
+    /// Edits `address`, or puts the editor away when it is already showing,
+    /// as pressing Open Location's keys again does.
+    func toggleLocation(_ address: String) {
+        if isEditingLocation {
+            dismissCommandPalette()
+        } else {
+            openLocation(address)
+        }
     }
 
     func presentCommandPalette() {

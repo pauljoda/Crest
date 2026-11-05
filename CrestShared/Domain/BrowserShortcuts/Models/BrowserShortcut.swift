@@ -2,8 +2,11 @@ struct BrowserShortcut: Codable, Equatable, Hashable, Sendable {
     let key: BrowserShortcutKey
     let modifiers: ShortcutModifiers
 
+    /// A shortcut holds a supported modifier, so a plain key keeps reaching
+    /// the focused text field, unless its key types nothing, as a function
+    /// key does.
     var isValid: Bool {
-        !modifiers.intersection(.supported).isEmpty
+        !modifiers.intersection(.supported).isEmpty || key.standsAlone
     }
 }
 
@@ -53,6 +56,12 @@ extension BrowserShortcut {
 enum BrowserShortcutKey: Codable, Hashable, Sendable {
     case character(Character)
     case special(ShortcutSpecialKey)
+
+    /// Whether the key makes a shortcut without a modifier.
+    var standsAlone: Bool {
+        guard case .special(let key) = self else { return false }
+        return key.standsAlone
+    }
 
     private enum CodingKeys: String, CodingKey {
         case character

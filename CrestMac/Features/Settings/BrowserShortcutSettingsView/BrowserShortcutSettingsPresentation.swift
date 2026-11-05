@@ -26,7 +26,7 @@ enum BrowserShortcutSettingsPresentation {
     static let guidance: LocalizedStringResource =
         "Click a shortcut, then press the new keys."
     static let invalidShortcut: LocalizedStringResource =
-        "Use a supported key with Command, Option, Control, or Shift."
+        "Use a function key, or a key with Command, Option, Control, or Shift."
     static let typeShortcut: LocalizedStringResource = "Type Shortcut"
     static let unassigned: LocalizedStringResource = "Unassigned"
     static let recorderHelp: LocalizedStringResource =

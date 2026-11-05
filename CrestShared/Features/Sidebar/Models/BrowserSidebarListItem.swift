@@ -51,6 +51,12 @@ struct BrowserSidebarListItem: Identifiable, Equatable {
     /// departure under, spelled as the sidebar always spelled it.
     var collectionMotionID: String { id.collectionMotionID }
 
+    /// Whether the item is one tab's row, which shares its height with every
+    /// other: a folder is as tall as what it holds, and a split as its members.
+    var isTabRow: Bool {
+        if case .tab = content { true } else { false }
+    }
+
     /// The first tab the row stands for, or nil for a folder.
     var firstTabID: UUID? {
         switch content {

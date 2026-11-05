@@ -28,8 +28,9 @@ public sealed record ShortcutChord {
     public int Modifiers { get; }
 
     /// A chord needs at least one supported modifier, so a plain key keeps
-    /// reaching the focused text field.
-    public bool IsValid => (Modifiers & SupportedModifiers) != 0;
+    /// reaching the focused text field, unless its key types nothing, as a
+    /// function key does.
+    public bool IsValid => (Modifiers & SupportedModifiers) != 0 || (IsSpecial && ShortcutSpecialKey.Named(Key)?.StandsAlone == true);
 
     /// The chord as the platform reads it.
     public KeyCombination Keys => new(Key, IsSpecial, (ShortcutModifiers)Modifiers);
@@ -67,7 +68,8 @@ public sealed record ShortcutChord {
 
     /// The chord `keys` spell when a person may bind it: a character of usable
     /// length or a special key this build knows, held with at least one
-    /// supported modifier. Null for keys that can never be a shortcut.
+    /// supported modifier unless it is a function key. Null for keys that can
+    /// never be a shortcut.
     public static ShortcutChord? Usable(KeyCombination keys) {
         ArgumentNullException.ThrowIfNull(keys);
         if (keys.IsSpecialKey ? ShortcutSpecialKey.Named(keys.Key) is null : keys.Key.Length is 0 or > MaximumCharacterLength) return null;
