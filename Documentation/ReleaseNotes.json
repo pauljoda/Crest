@@ -5094,6 +5094,10 @@
       "category": "fixed",
       "message": "A long sidebar with many folders scrolls smoothly."
     },
+    "chromium-page-written-windows-show": {
+      "category": "fixed",
+      "message": "On Chromium pages, a window a site opens and fills in itself, such as presentation speaker notes or a Slack huddle, now shows its content instead of staying blank."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
