@@ -5105,6 +5105,10 @@
     "chromium-extension-popup-edit-shortcuts": {
       "category": "fixed",
       "message": "On Chromium, Copy, Cut, Paste and the other Edit shortcuts work in extension popups and side panels."
+    },
+    "chromium-extension-badge-shows-blocked-count": {
+      "category": "fixed",
+      "message": "On Chromium, an extension's toolbar icon shows the count its blocking rules report, such as uBlock Origin Lite's blocked requests."
     }
   }
 }
