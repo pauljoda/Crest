@@ -5098,6 +5098,10 @@
       "category": "fixed",
       "message": "On Chromium pages, a window a site opens and fills in itself, such as presentation speaker notes or a Slack huddle, now shows its content instead of staying blank."
     },
+    "chromium-share-this-tab-uses-crest-picker": {
+      "category": "fixed",
+      "message": "On Chromium pages, a site that asks to share its own tab now asks in Crest's sharing picker over the page, instead of in a separate window."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
