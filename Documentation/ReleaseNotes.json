@@ -5074,6 +5074,10 @@
       "category": "improved",
       "message": "A shortcut can be a function key on its own, such as F12 for Show Web Inspector."
     },
+    "save-or-unsave-current-tab-command": {
+      "category": "new",
+      "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."

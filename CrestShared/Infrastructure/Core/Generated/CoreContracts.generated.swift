@@ -18186,6 +18186,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case mostRecentTabBackward
         case clearSiteCookies
         case clearSiteCache
+        case toggleSelectedTabSaved
     }
 
     let tag: Int
@@ -20161,6 +20162,23 @@ struct ShortcutCommand: Hashable, Sendable {
         offersInPalette: true,
         isReservedFromPages: false
     )
+    static let toggleSelectedTabSaved = ShortcutCommand(
+        tag: 74,
+        kind: .toggleSelectedTabSaved,
+        name: "toggleSelectedTabSaved",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Save or Unsave Current Tab"),
+        searchTerms: LocalizedStringResource("saved tabs keep bookmark unsave current"),
+        menuTitle: LocalizedStringResource("Save or Unsave Tab"),
+        symbol: "bookmark",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -20236,7 +20254,8 @@ struct ShortcutCommand: Hashable, Sendable {
         capturePage,
         mostRecentTabBackward,
         clearSiteCookies,
-        clearSiteCache
+        clearSiteCache,
+        toggleSelectedTabSaved
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -20362,6 +20381,7 @@ struct ShortcutMenu: Hashable, Sendable {
         groups: [
             [
                 ShortcutCommand.toggleSelectedTabPinned,
+                ShortcutCommand.toggleSelectedTabSaved,
                 ShortcutCommand.duplicateTab,
                 ShortcutCommand.reopenClosedTab,
                 ShortcutCommand.clearUnpinnedTabs,
