@@ -56,10 +56,17 @@ struct BrowserSidebarSplitGroupRow: View {
         .modifier(
             SidebarSpaceRoleCleanupModifier(
                 isAvailable: configuration.isAvailableForDisplay,
-                hasPendingActions: renameRequest != nil || iconRequest != nil || tintRequest != nil,
+                hasPendingActions: hasPendingActions,
                 cancel: clearDeferredActions
             )
         )
+        .keepsSidebarFolderDrawn(hasPendingActions)
+    }
+
+    /// Whether a rename, an icon choice or a colour choice is under way,
+    /// which the row's view holds until it ends.
+    private var hasPendingActions: Bool {
+        renameRequest != nil || iconRequest != nil || tintRequest != nil
     }
 
     private var configuration: BrowserSidebarSplitGroupRowConfiguration {

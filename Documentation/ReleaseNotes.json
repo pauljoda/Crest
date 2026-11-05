@@ -5090,6 +5090,10 @@
       "category": "fixed",
       "message": "Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over."
     },
+    "long-sidebars-with-folders-scroll-smoothly": {
+      "category": "fixed",
+      "message": "A long sidebar with many folders scrolls smoothly."
+    },
     "chromium-page-written-windows-show": {
       "category": "fixed",
       "message": "On Chromium pages, a window a site opens and fills in itself, such as presentation speaker notes or a Slack huddle, now shows its content instead of staying blank."
