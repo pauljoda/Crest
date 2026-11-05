@@ -5109,6 +5109,10 @@
     "chromium-extension-badge-shows-blocked-count": {
       "category": "fixed",
       "message": "On Chromium, an extension's toolbar icon shows the count its blocking rules report, such as uBlock Origin Lite's blocked requests."
+    },
+    "chromium-passkey-phone-and-security-key": {
+      "category": "fixed",
+      "message": "On Chromium pages, when this Mac has no passkey for a site, signing in with a passkey now offers your phone's QR code or a security key instead of stopping at \"No passkeys available\"."
     }
   }
 }

@@ -1745,7 +1745,19 @@
  #include "base/feature_list.h"
  #include "base/functional/bind.h"
  #include "base/functional/callback.h"
-@@ -807,6 +808,21 @@
+@@ -787,6 +788,11 @@
+ void AuthenticatorRequestDialogController::TransitionToModalWebAuthnRequest() {
+   FIDO_LOG(EVENT) << "TransitionToModalWebAuthnRequest from step: "
+                   << model_->step();
++#if BUILDFLAG(IS_MAC)
++  // The person asked for a passkey on another device or a security key, which
++  // the system sheet doesn't offer.
++  crest_dispatched_icloud_keychain_ = true;
++#endif
+ 
+   // Dispatch requests to any plugged in authenticators.
+   for (auto& authenticator : ephemeral_state_.saved_authenticators_) {
+@@ -807,6 +813,21 @@
    if (pending_step_) {
      SetCurrentStep(*pending_step_);
      pending_step_.reset();
@@ -1754,12 +1766,12 @@
 +                 "crest-control-plane") &&
 +             !crest_dispatched_icloud_keychain_ && allow_icloud_keychain_ &&
 +             transport_availability_.has_icloud_keychain) {
-+    // Crest sends passkeys to the system sheet the way Safari does: the macOS
-+    // sheet performs Touch ID/iCloud Keychain and offers its own nearby-device,
-+    // QR and security-key fallbacks, so Chromium's mechanism sheet is not a
-+    // useful first step. This runs once per request; if the user cancels the
-+    // system sheet, `OnUserConsentDenied` calls `StartOver`, which lands on
-+    // Chromium's mechanism selection with this branch already spent.
++    // Crest sends passkeys to the system sheet first, the way Safari does:
++    // the macOS sheet reaches the passkeys of every provider on this Mac. It
++    // offers no phone or security key, which Chromium's mechanism list does,
++    // so a sheet that ends with no passkey for the site (`OnNoPasskeys`), or
++    // one the person cancels (`OnUserConsentDenied`), starts over on that
++    // list. This runs once per request.
 +    crest_dispatched_icloud_keychain_ = true;
 +    ephemeral_state_.did_invoke_platform_despite_no_priority_mechanism_ = true;
 +    StartICloudKeychain();
@@ -1767,22 +1779,50 @@
    } else if (model_->mechanisms.empty()) {
      if (transport_availability_.request_type ==
              device::FidoRequestType::kMakeCredential &&
+@@ -1379,6 +1400,26 @@
+ }
+ 
+ bool AuthenticatorRequestDialogController::OnNoPasskeys() {
++#if BUILDFLAG(IS_MAC)
++  // The system sheet Crest opened first ends without showing anything when
++  // this Mac has no passkey for the site. A passkey on a phone or a security
++  // key may still sign in, so offer Chromium's own mechanisms instead.
++  if (crest_dispatched_icloud_keychain_ &&
++      ephemeral_state_.did_invoke_platform_despite_no_priority_mechanism_ &&
++      ui_presentation() == UIPresentation::kModal &&
++      std::ranges::any_of(model_->mechanisms, [](const Mechanism& mechanism) {
++        if (std::holds_alternative<Mechanism::ICloudKeychain>(mechanism.type)) {
++          return false;
++        }
++        const auto* credential =
++            std::get_if<Mechanism::Credential>(&mechanism.type);
++        return !credential ||
++               credential->value().source != AuthenticatorType::kICloudKeychain;
++      })) {
++    StartOver();
++    return true;
++  }
++#endif
+   SetCurrentStep(Step::kErrorNoPasskeys);
+   return true;
+ }
 --- a/chrome/browser/webauthn/authenticator_request_dialog_controller.h
 +++ b/chrome/browser/webauthn/authenticator_request_dialog_controller.h
-@@ -502,6 +502,13 @@
+@@ -501,6 +501,14 @@
+   // attachment=platform should default to iCloud Keychain rather than the
    // profile authenticator.
    bool should_create_in_icloud_keychain_ = false;
- 
++
 +#if BUILDFLAG(IS_MAC)
 +  // Set once Crest has sent this request straight to the macOS system passkey
-+  // sheet, so that cancelling it returns to Chromium's own mechanism list
-+  // instead of reopening the system sheet.
++  // sheet, or the person asked for a passkey on another device, so that the
++  // request goes on in Chromium's own mechanism list instead of reopening the
++  // system sheet.
 +  bool crest_dispatched_icloud_keychain_ = false;
 +#endif
-+
+ 
    // enclave_enabled_status_ determines whether Google Password Manager entries
    // should be offered both for `makeCredential` or `getAssertion`. If reauth
-   // needed, instead of offering the actual passkeys or creating a passkey,
 --- a/chrome/browser/ui/toasts/toast_controller.cc
 +++ b/chrome/browser/ui/toasts/toast_controller.cc
 @@ -3,6 +3,11 @@
