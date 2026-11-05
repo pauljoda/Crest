@@ -27,6 +27,13 @@ private struct ColorsPanelHold: NSViewRepresentable {
         private weak var popover: NSPopover?
         /// How the popover closes when the panel isn't open.
         private var behavior = NSPopover.Behavior.transient
+        /// Whether the panel is editing a color well in this popover: the
+        /// popover was on screen as the panel opened, which a click on its own
+        /// well does and which closes any other popover, or one of its wells
+        /// became the panel's since.
+        private var opensPanel = false
+        /// Whether the panel was open when the popover last looked.
+        private var panelWasOpen = false
 
         // MARK: - Actions - Observation
 
@@ -38,6 +45,7 @@ private struct ColorsPanelHold: NSViewRepresentable {
                 (#selector(popoverDidShow), NSPopover.didShowNotification),
                 (#selector(windowDidChangeOcclusion), NSWindow.didChangeOcclusionStateNotification),
                 (#selector(windowWillClose), NSWindow.willCloseNotification),
+                (#selector(panelColorDidChange), NSColorPanel.colorDidChangeNotification),
             ]
             for (selector, name) in observations {
                 NotificationCenter.default.addObserver(self, selector: selector, name: name, object: nil)
@@ -50,6 +58,10 @@ private struct ColorsPanelHold: NSViewRepresentable {
             else { return }
             popover = shown
             behavior = shown.behavior
+            // A popover that opens over a panel already open isn't the one
+            // whose well opened it.
+            panelWasOpen = Self.panelIsOpen
+            opensPanel = false
             followColorsPanel()
         }
 
@@ -59,6 +71,11 @@ private struct ColorsPanelHold: NSViewRepresentable {
             DispatchQueue.main.async { [weak self] in self?.followColorsPanel() }
         }
 
+        /// A well that becomes the panel's sets the panel to its color.
+        @objc private func panelColorDidChange(_ notification: Notification) {
+            followColorsPanel()
+        }
+
         @objc private func windowWillClose(_ notification: Notification) {
             guard notification.object is NSColorPanel else { return }
             // The panel is still visible while it closes.
@@ -66,6 +83,10 @@ private struct ColorsPanelHold: NSViewRepresentable {
         }
 
         // MARK: - Actions - Lookup
+
+        private static var panelIsOpen: Bool {
+            NSColorPanel.sharedColorPanelExists && NSColorPanel.shared.isVisible
+        }
 
         /// Whether `view` or a view inside it is a color well the Colors panel
         /// is editing now.
@@ -80,8 +101,13 @@ private struct ColorsPanelHold: NSViewRepresentable {
         /// still closes for a click anywhere outside it.
         private func followColorsPanel() {
             guard let popover else { return }
-            let panelIsOpen = NSColorPanel.sharedColorPanelExists && NSColorPanel.shared.isVisible
-            let opensPanel = popover.contentViewController.map { Self.holdsActiveColorWell($0.view) } ?? false
+            let panelIsOpen = Self.panelIsOpen
+            if panelIsOpen, !panelWasOpen { opensPanel = true }
+            if panelIsOpen, popover.contentViewController.map({ Self.holdsActiveColorWell($0.view) }) == true {
+                opensPanel = true
+            }
+            if !panelIsOpen { opensPanel = false }
+            panelWasOpen = panelIsOpen
             popover.behavior = panelIsOpen && opensPanel ? .semitransient : behavior
         }
     }
