@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "shift-number-shortcuts-record-as-the-number",
+    "development": "long-sidebars-with-folders-scroll-smoothly",
     "nightly": "mac-peek-size"
   }
 }
