@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Keeps a Crest popover open while the system Colors panel is on screen. A
-/// popover closes when the person clicks outside it, and the panel a color
-/// well opens is outside it, so typing a hex value there put the popover and
-/// its color well away. While the panel is open the popover closes only for a
-/// click in its own window, and once the panel closes it goes back to closing
-/// for any click outside it.
+/// Keeps a Crest popover open while the system Colors panel is editing a color
+/// well inside it. A popover closes when the person clicks outside it, and the
+/// panel is outside it, so typing a hex value there put the popover and its
+/// color well away. While the panel edits its well the popover closes only for
+/// a click in its own window; once the panel closes, or for any popover whose
+/// well it isn't editing, a click anywhere outside closes it as before.
 struct CrestPlatformPopoverModifier: ViewModifier {
     func body(content: Content) -> some View {
         content.background { ColorsPanelHold() }
@@ -55,7 +55,8 @@ private struct ColorsPanelHold: NSViewRepresentable {
 
         @objc private func windowDidChangeOcclusion(_ notification: Notification) {
             guard notification.object is NSColorPanel else { return }
-            followColorsPanel()
+            // The well that opens the panel becomes active as the panel shows.
+            DispatchQueue.main.async { [weak self] in self?.followColorsPanel() }
         }
 
         @objc private func windowWillClose(_ notification: Notification) {
@@ -64,12 +65,24 @@ private struct ColorsPanelHold: NSViewRepresentable {
             DispatchQueue.main.async { [weak self] in self?.followColorsPanel() }
         }
 
+        // MARK: - Actions - Lookup
+
+        /// Whether `view` or a view inside it is a color well the Colors panel
+        /// is editing now.
+        private static func holdsActiveColorWell(_ view: NSView) -> Bool {
+            (view as? NSColorWell)?.isActive == true || view.subviews.contains(where: holdsActiveColorWell)
+        }
+
         // MARK: - Mutators
 
+        /// Holds the popover only while the panel is open for a color well
+        /// inside it, so any other popover, such as a permission request,
+        /// still closes for a click anywhere outside it.
         private func followColorsPanel() {
             guard let popover else { return }
             let panelIsOpen = NSColorPanel.sharedColorPanelExists && NSColorPanel.shared.isVisible
-            popover.behavior = panelIsOpen ? .semitransient : behavior
+            let opensPanel = popover.contentViewController.map { Self.holdsActiveColorWell($0.view) } ?? false
+            popover.behavior = panelIsOpen && opensPanel ? .semitransient : behavior
         }
     }
 }
