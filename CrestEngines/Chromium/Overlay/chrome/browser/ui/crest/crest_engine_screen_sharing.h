@@ -9,6 +9,7 @@
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "chrome/browser/media/webrtc/capture_policy_utils.h"
 #include "chrome/browser/media/webrtc/desktop_media_picker.h"
 #include "chrome/browser/media/webrtc/media_stream_ui.h"
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
@@ -34,14 +35,16 @@ namespace crest {
 // page's site may ask, from its Space's choices. The platform then offers the
 // person the tabs of the page's profile, or only the page's own tab when it
 // asked to share that, and the system's own sharing picker for a window or a
-// display. A tab is the engine's own to capture; the system's picker asks the
-// person which window or display to share. Either choice is the consent, and
-// neither needs Screen Recording access, so nothing lists or captures the
-// screen before the person picks, and nothing asks the system for access. A
-// window or display reaches the page as the picker's session, which the engine
-// captures with the filter the system handed it. The question lasts only while
-// the document that asked stays in its page, as Chrome's picker closes with
-// the page.
+// display. What it offers stays within the capture policy for the page's
+// origin, as Chrome's picker does, and the system's picker offers no display
+// when the page left displays out. A tab is the engine's own to capture; the
+// system's picker asks the person which window or display to share. Either
+// choice is the consent, and neither needs Screen Recording access, so
+// nothing lists or captures the screen before the person picks, and nothing
+// asks the system for access. A window or display reaches the page as the
+// picker's session, which the engine captures with the filter the system
+// handed it. The question lasts only while the document that asked stays in
+// its page, as Chrome's picker closes with the page.
 class ScreenSharingPicker final : public DesktopMediaPicker, public content::WebContentsObserver {
  public:
   explicit ScreenSharingPicker(const content::MediaStreamRequest& request);
@@ -71,6 +74,8 @@ class ScreenSharingPicker final : public DesktopMediaPicker, public content::Web
   // Offers the tabs the page may share, or goes on to the system's picker
   // when there are none.
   void Offer();
+  // Opens the system's picker, or refuses the request when the capture policy
+  // allows no window.
   void OpenSystemPicker();
   void Opened(content::DesktopMediaID::Id session);
   void Chosen(webrtc::DesktopCapturer::Source source);
@@ -79,6 +84,8 @@ class ScreenSharingPicker final : public DesktopMediaPicker, public content::Web
   void WithdrawOffer();
   // The pages the request may share as a tab.
   std::vector<content::WebContents*> ShareableTabs() const;
+  // The tab of the document that asked, while it exists.
+  content::WebContents* RequestingTab() const;
 
   // The document that asked, and what it asked for.
   const GURL origin_;
@@ -86,7 +93,12 @@ class ScreenSharingPicker final : public DesktopMediaPicker, public content::Web
   const bool excludes_own_tab_;
   // The document asked to share its own tab (preferCurrentTab).
   const bool shares_own_tab_;
+  // The document left displays out (monitorTypeSurfaces: "exclude").
+  const bool excludes_screens_;
   const bool asks_audio_;
+  // The most the capture policy lets the page's origin share, read when the
+  // request is shown. Nothing until then.
+  AllowedScreenCaptureLevel capture_level_ = AllowedScreenCaptureLevel::kDisallowed;
   DoneCallback done_;
   // The page that asked, once a page Crest shows asked.
   std::optional<engine::Guid> page_;

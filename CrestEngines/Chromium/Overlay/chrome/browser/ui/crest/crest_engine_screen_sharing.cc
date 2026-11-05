@@ -88,6 +88,7 @@ ScreenSharingPicker::ScreenSharingPicker(const content::MediaStreamRequest& requ
       requester_(request.render_process_id, request.render_frame_id),
       excludes_own_tab_(request.exclude_self_browser_surface),
       shares_own_tab_(request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE_THIS_TAB),
+      excludes_screens_(request.exclude_monitor_type_surfaces),
       asks_audio_(request.audio_type == blink::mojom::MediaStreamType::DISPLAY_AUDIO_CAPTURE) {}
 
 ScreenSharingPicker::~ScreenSharingPicker() {
@@ -115,6 +116,9 @@ void ScreenSharingPicker::Show(const Params& params,
     return;
   }
   page_ = page->id();
+  if (content::WebContents* requesting = RequestingTab()) {
+    capture_level_ = capture_policy::GetAllowedCaptureLevel(origin_, requesting);
+  }
   Observe(params.web_contents);
   question_ = EngineBinding::Get().Prompts().AskToShareScreen(
       page->id(), origin_, params.web_contents->GetLastCommittedURL(),
@@ -183,14 +187,26 @@ void ScreenSharingPicker::Offer() {
   EngineBinding::Get().Present(std::move(offered));
 }
 
-// The system's picker asks the person. It offers a window or a display; what
-// it shows and the capture it grants are the system's own.
+// The system's picker asks the person. It offers a window or a display, or
+// only a window when the page left displays out or the capture policy allows
+// no display; what it shows and the capture it grants are the system's own.
+// A policy that allows tabs at most refuses the request instead. The refusal
+// is posted, since the person's answer that led here may still be running.
 void ScreenSharingPicker::OpenSystemPicker() {
+  if (capture_level_ < AllowedScreenCaptureLevel::kWindow) {
+    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+        FROM_HERE, base::BindOnce(&ScreenSharingPicker::Finish, weak_factory_.GetWeakPtr(),
+                                  Refusal(MediaStreamRequestResult::CAPTURE_NOT_ALLOWED_BY_POLICY)));
+    return;
+  }
+  const DesktopMediaID::Type type =
+      excludes_screens_ || capture_level_ < AllowedScreenCaptureLevel::kDesktop ? DesktopMediaID::TYPE_WINDOW
+                                                                                  : DesktopMediaID::TYPE_NONE;
   auto ui = content::GetUIThreadTaskRunner({});
   content::GetIOThreadTaskRunner({})->PostTask(
       FROM_HERE,
       base::BindOnce(
-          &content::desktop_capture::OpenNativeScreenCapturePicker, DesktopMediaID::TYPE_NONE,
+          &content::desktop_capture::OpenNativeScreenCapturePicker, type,
           base::BindPostTask(ui, base::BindOnce(&ScreenSharingPicker::Opened, weak_factory_.GetWeakPtr())),
           base::BindPostTask(ui, base::BindOnce(&ScreenSharingPicker::Chosen, weak_factory_.GetWeakPtr())),
           base::BindPostTask(ui, base::BindOnce(&ScreenSharingPicker::Finish, weak_factory_.GetWeakPtr(),
@@ -275,27 +291,33 @@ void ScreenSharingPicker::WithdrawOffer() {
   offer_.reset();
 }
 
-// The live pages of the requesting tab's profile, as Chrome offers the tabs
-// of the capturer's profile. The requesting tab is one of them unless the
-// document asked to leave it out, and the only one when it asked to share
-// its own tab.
+// The live pages of the requesting tab's profile that the capture policy lets
+// the page's origin share, as Chrome offers the tabs of the capturer's
+// profile. The requesting tab is one of them unless the document asked to
+// leave it out, and the only one when it asked to share its own tab.
 std::vector<content::WebContents*> ScreenSharingPicker::ShareableTabs() const {
   std::vector<content::WebContents*> tabs;
-  content::RenderFrameHost* requester = content::RenderFrameHost::FromID(requester_);
-  content::WebContents* own = requester ? content::WebContents::FromRenderFrameHost(requester) : nullptr;
+  content::WebContents* own = RequestingTab();
   if (!own) {
     return tabs;
   }
+  const DesktopMediaList::WebContentsFilter includable =
+      capture_policy::GetIncludableWebContentsFilter(origin_, capture_level_);
   for (EnginePage* page : EngineBinding::Get().LivePages()) {
     content::WebContents* contents = page->web_contents();
     if (page->phase() != EnginePage::Phase::kLive || contents->GetBrowserContext() != own->GetBrowserContext() ||
         (shares_own_tab_ ? contents != own : excludes_own_tab_ && contents == own) || contents->IsCrashed() ||
-        !contents->GetPrimaryMainFrame()->IsRenderFrameLive()) {
+        !contents->GetPrimaryMainFrame()->IsRenderFrameLive() || !includable.Run(contents)) {
       continue;
     }
     tabs.push_back(contents);
   }
   return tabs;
+}
+
+content::WebContents* ScreenSharingPicker::RequestingTab() const {
+  content::RenderFrameHost* requester = content::RenderFrameHost::FromID(requester_);
+  return requester ? content::WebContents::FromRenderFrameHost(requester) : nullptr;
 }
 
 bool AnswerShareChoice(const engine::ChooseShareSource& choice) {
