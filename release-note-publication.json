@@ -3,6 +3,6 @@
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
     "development": "long-sidebars-with-folders-scroll-smoothly",
-    "nightly": "mac-peek-size"
+    "nightly": "long-sidebars-with-folders-scroll-smoothly"
   }
 }

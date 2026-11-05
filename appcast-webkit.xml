@@ -6,48 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.153</title>
-            <pubDate>Tue, 03 Nov 2026 17:16:08 +0000</pubDate>
+            <title>0.8.181</title>
+            <pubDate>Thu, 05 Nov 2026 17:29:26 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1491</sparkle:version>
-            <sparkle:shortVersionString>0.8.153</sparkle:shortVersionString>
+            <sparkle:version>1508</sparkle:version>
+            <sparkle:shortVersionString>0.8.181</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 22 user-facing changes.
+Showing the 12 most recent highlights from 29 user-facing changes.
 
 ### New
 
-- In Peek on iPhone and iPad, the More button shrinks the page to a preview with Open in New Tab, Copy Link, Share and Download Linked File beneath it.
-- On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size.
+- Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts.
+- When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings › Shortcuts, and switching Spaces now always reaches Crest.
 
 ### Improved
 
-- On Mac, a Quick Window that opens where another already is opens a little below and to the right of it, so both stay in view.
-- On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system’s link preview.
+- A shortcut can be a function key on its own, such as F12 for Show Web Inspector.
 
 ### Fixed
 
-- On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them.
-- On Mac, a Quick Window for a link from another app opens over the window you're in and on its display, instead of over a Crest window that may be on another display, and comes to the Space you're on.
-- On Mac, Command-` (Move focus to next window) moves between Crest's windows, Quick Windows included, when a Chromium page has focus.
-- On Mac, a link from another app that opens a Quick Window already open for it brings that Quick Window to the window you're in, and Quick Windows opening at a screen's edge no longer open on top of each other.
-- On Mac, a Quick Window for a link from a window that spans two displays opens on the display you're using and fits on it.
-- On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before.
-- A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available.
-- Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup.
+- An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs.
+- On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link.
+- Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them.
+- Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started.
+- Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs.
+- New Quick Window and Open in Quick Window from the command palette work in a private window, opening a private Quick Window as the shortcut does.
+- Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in.
+- Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over.
+- A long sidebar with many folders scrolls smoothly.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/8c54c4111351d62a7c7acc806c78d89855757417...dce2aa95ab5e59955c0fd454216b639614567aaa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.153-2026-11-03-1491-r491.1/Installer-Crest-0.8.153-nightly-2026-11-03-dce2aa9-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/dce2aa95ab5e59955c0fd454216b639614567aaa...d2a5b66636085effddfd2f2e98ebaccee64357ab) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.181-2026-11-05-1508-r508.1/Installer-Crest-0.8.181-nightly-2026-11-05-d2a5b66-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.153-2026-11-03-1491-r491.1/Installer-Crest-0.8.153-nightly-2026-11-03-dce2aa9-arm64.dmg" length="216801427" type="application/octet-stream" sparkle:edSignature="lx3TasptWg7s9Pzrl/9kBGAXCUjI3rtAaA+ErPLiFfXCHB9ERysZ5FNSY+DIINWBy+k5VghGGnrYMiTv02duDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.181-2026-11-05-1508-r508.1/Installer-Crest-0.8.181-nightly-2026-11-05-d2a5b66-arm64.dmg" length="216886418" type="application/octet-stream" sparkle:edSignature="IJaqeegbradDzjH5oGql6sqfwxkYuMOxaHtW5KUL4zuuh6h4lM/5v5pAH7Uyk1+zDXJlPxDQkeWkoqopVeoTAA=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -133,6 +133,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 8bwBMMhfbNYksMo5RMaB8qClHgwQKtLUC3c6ydATsHJRMyIRdFwPEY7C88vsQ107sVz49MhxTvo8oL4z3a7WAA==
-length: 10139
+edSignature: y8qo8ojY8QC6K0xo57ThDvWil6B8M4FqxDEGFw1ZbBzYk/r9ycOg9XCc5BIXQGPWM1RI7WjjAuLx2BoUKf2jBg==
+length: 10072
 -->
