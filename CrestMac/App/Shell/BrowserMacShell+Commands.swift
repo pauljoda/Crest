@@ -26,15 +26,17 @@ extension BrowserMacShell {
     /// binding no Crest command claims, such as an extension's, and answers
     /// whether it was taken. The shell is offered every key down before any
     /// view sees it, when an engine is about to hand one to a page, and when
-    /// the menu bar's items let one go.
+    /// the menu bar's items let one go; `stage` says which.
     ///
-    /// While `pageSeesFirst`, a page is still to see the key, as in other
-    /// browsers: only a command the core reserves from pages, and an engine
-    /// binding, run now. The page's engine hands a key the page lets go to the
-    /// menu bar, which runs the command then. Otherwise Crest's own views,
-    /// such as the location field or the sidebar, get every Crest shortcut
-    /// before they see the key.
-    func handleShortcut(_ event: NSEvent, pageSeesFirst: Bool) -> Bool {
+    /// Before a page, the command's preference decides, as in other browsers:
+    /// Prefer Crest runs it now; Use Both runs it on a quick second press of
+    /// keys the page kept; otherwise the page's engine hands a key the page
+    /// lets go to the menu bar, which runs the command then. Crest's own
+    /// views, such as the location field or the sidebar, get every Crest
+    /// shortcut before they see the key. Text editing keys bound to a command
+    /// always reach the focused page or field first, and the menu bar runs the
+    /// command when the field has nothing to do with them.
+    func handleShortcut(_ event: NSEvent, at stage: BrowserMacKeyStage) -> Bool {
         // While a Most Recent Tab shortcut is held, its keys are the
         // switcher's and no page or command sees them.
         if event.type == .keyDown, recentTabSwitcher.handleKeyDown(event) { return true }
@@ -52,7 +54,7 @@ extension BrowserMacShell {
         // so it cycles here for every page.
         if BrowserMacWindowCycling.cycle(for: event) { return true }
         // The application menu runs Settings once a page lets the key go.
-        if !pageSeesFirst, shortcut == BrowserShortcut(key: .character(","), modifiers: .command) {
+        if !stage.pageSeesFirst, shortcut == BrowserShortcut(key: .character(","), modifiers: .command) {
             BrowserMacApplicationAction.settings.perform(in: self)
             return true
         }
@@ -61,7 +63,8 @@ extension BrowserMacShell {
         let context = windows.activeContext
         guard context != nil || windows.isQuickWindowKey else { return false }
         if let command = application.shortcuts.command(for: event, isEnabled: canPerform) {
-            guard command.isReservedFromPages || !pageSeesFirst else { return false }
+            if stage.viewSeesFirst, application.shortcuts.yieldsToTextEditing(command) { return false }
+            if stage.pageSeesFirst, !runsBeforePage(command, pressed: event, shortcut: shortcut) { return false }
             if let direction = BrowserMacCommand.of(command)?.recentTabDirection,
                 recentTabSwitcher.begin(direction: direction)
             {
@@ -76,6 +79,45 @@ extension BrowserMacShell {
         // as it does in Chrome.
         guard let page = pageActions?.commandPage else { return false }
         return engineHost.handleUnclaimedShortcut(event, page: page)
+    }
+
+    /// Whether `command` runs before the focused page sees `event`, a press of
+    /// `shortcut`: its preference is Prefer Crest, or it is Use Both and this
+    /// presses again keys the page kept. Any other Use Both press is one the
+    /// page sees first, unless an input method is composing text there.
+    private func runsBeforePage(_ command: ShortcutCommand, pressed event: NSEvent, shortcut: BrowserShortcut) -> Bool {
+        guard let preference = application?.shortcuts.preference(for: command) else { return false }
+        if preference.runsBeforePage { return true }
+        guard preference.takesSecondPress,
+            (NSApp.keyWindow?.firstResponder as? NSTextInputClient)?.hasMarkedText() != true
+        else { return false }
+        if pageKeptShortcut.isSecondPress(event, of: command, shortcut: shortcut) { return true }
+        pageKeptShortcut.pageSees(event, of: command, shortcut: shortcut)
+        return false
+    }
+
+    /// Takes `event` at the menu bar before any item matches it, and answers
+    /// whether it was taken. A press a page let go is no longer one it kept,
+    /// and one whose second press already ran its command is dropped. Text
+    /// editing keys bound to a command go to the Edit menu's item while the
+    /// focused page or field takes text and the item can act, and to the
+    /// command otherwise, wherever its menu sits.
+    func menuBarReceives(_ event: NSEvent, editMenu: NSMenu?) -> Bool {
+        if pageKeptShortcut.pageLetGo(event) { return true }
+        guard let application, event.type == .keyDown, let shortcut = BrowserShortcut(event: event),
+            let command = application.shortcuts.command(for: shortcut, isEnabled: canPerform),
+            application.shortcuts.yieldsToTextEditing(command)
+        else { return false }
+        if (NSApp.keyWindow?.firstResponder as? NSView)?.inputContext != nil, let editMenu,
+            let item = editMenu.items.first(where: { BrowserShortcut(keyEquivalentOf: $0) == shortcut })
+        {
+            editMenu.update()
+            if item.isEnabled, let action = item.action, NSApp.sendAction(action, to: item.target, from: item) {
+                return true
+            }
+        }
+        perform(command)
+        return true
     }
 
     // MARK: - Actions - Commands

@@ -10118,7 +10118,13 @@
     "Practice window" : {
 
     },
+    "Prefer Crest" : {
+
+    },
     "Prefer open tabs" : {
+
+    },
+    "Prefer Website" : {
 
     },
     "Preparing" : {
@@ -10159,6 +10165,12 @@
           }
         }
       }
+    },
+    "Press %@ again to %@" : {
+
+    },
+    "Press %@ Again to %@" : {
+
     },
     "Press Tab to %@" : {
 
@@ -15216,6 +15228,9 @@
     "Use a public search engine host, not a local or numeric address." : {
 
     },
+    "Use Both" : {
+
+    },
     "Use Built-In Shortcuts" : {
 
     },
@@ -15577,6 +15592,9 @@
 
     },
     "Wheat" : {
+
+    },
+    "When a Website Uses These Keys" : {
 
     },
     "When Crest opens" : {
