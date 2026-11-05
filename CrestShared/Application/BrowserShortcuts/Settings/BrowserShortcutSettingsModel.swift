@@ -43,6 +43,18 @@ final class BrowserShortcutSettingsModel {
         shortcuts.isCustomized(command)
     }
 
+    func preference(for command: ShortcutCommand) -> ShortcutPreference {
+        shortcuts.preference(for: command)
+    }
+
+    func choosesPreference(_ command: ShortcutCommand) -> Bool {
+        shortcuts.choosesPreference(command)
+    }
+
+    func choose(_ preference: ShortcutPreference, for command: ShortcutCommand) {
+        shortcuts.choose(preference, for: command)
+    }
+
     var commandGroups: [BrowserShortcutCommandGroup] {
         let matches = shortcuts.offeredCommands.filter {
             searchProvider.matches(

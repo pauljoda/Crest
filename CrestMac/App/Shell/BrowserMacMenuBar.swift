@@ -95,6 +95,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
     private func editMenu(in bar: BrowserMacMainMenu) {
         let edit = submenu(String(localized: "Edit"), in: bar)
+        bar.editMenu = edit
         standard(String(localized: "Undo"), Selector(("undo:")), key: "z", in: edit)
         standard(String(localized: "Redo"), Selector(("redo:")), key: "z", modifiers: [.command, .shift], in: edit)
         edit.addItem(.separator())
