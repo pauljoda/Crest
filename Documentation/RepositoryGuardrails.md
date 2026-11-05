@@ -114,12 +114,14 @@ with:
 python3 -m unittest discover -s Scripts/Tests
 ```
 
-`Scripts/validate.sh` runs this suite before the app tests. The manually
-dispatched **Build Crest** workflow also runs it in a separate macOS job,
-including release workflow, version, release-note publication, public-source,
-and CloudKit environment contracts. These tests do
-not build the app; the shell-based version tests require macOS `plutil`, Git,
-zsh, and ripgrep.
+`Scripts/validate.sh` runs this suite before the app tests. The **Build Crest**
+workflow runs it on Linux, where the tests that need macOS `plutil` skip, and
+again in full on the macOS runner of the Chromium host build, or of the iOS
+build when a change skips the Mac builds. The suite covers release workflow,
+version, release-note publication, public-source, and CloudKit environment
+contracts. These tests do not build the app; they need Python 3.11 or newer,
+Git, zsh, `patch` and a C++ compiler, and the version and Xcode Cloud guard
+tests also need macOS `plutil`.
 
 `Scripts/check-public-source.py` separately inspects the exact Git index and
 rejects coding-assistant instructions or state, machine-local editor files,

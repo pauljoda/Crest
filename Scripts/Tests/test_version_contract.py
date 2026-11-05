@@ -14,6 +14,10 @@ import unittest
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
 CHECK_SCRIPT = REPOSITORY_ROOT / "Scripts" / "check-version.sh"
 SET_SCRIPT = REPOSITORY_ROOT / "Scripts" / "set-version.sh"
+# Only macOS ships plutil; CI runs these on its macOS build runners.
+REQUIRES_PLUTIL = unittest.skipUnless(
+    shutil.which("plutil"), "check-version.sh reads the Info.plists with macOS plutil"
+)
 
 
 class VersionContractTests(unittest.TestCase):
@@ -94,6 +98,7 @@ class VersionContractTests(unittest.TestCase):
             check=True,
         )
 
+    @REQUIRES_PLUTIL
     def test_repository_contract_passes_static_validation(self) -> None:
         result = subprocess.run(
             [str(CHECK_SCRIPT), "--static"],
@@ -123,6 +128,7 @@ class VersionContractTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("strict X.Y.Z SemVer", result.stderr)
 
+    @REQUIRES_PLUTIL
     def test_static_check_rejects_literal_plist_versions(self) -> None:
         plist = self.fixture_root / "CrestMac" / "Configuration" / "Crest-Info.plist"
         contents = plist.read_text().replace("$(MARKETING_VERSION)", "0.3.0")
@@ -133,6 +139,7 @@ class VersionContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must substitute $(MARKETING_VERSION)", result.stderr)
 
+    @REQUIRES_PLUTIL
     def test_static_check_rejects_configuration_drift(self) -> None:
         project = self.fixture_root / "project.yml"
         contents = project.read_text().replace(
