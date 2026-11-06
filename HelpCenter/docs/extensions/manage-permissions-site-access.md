@@ -23,7 +23,7 @@ The install review lists the permission warnings Chromium reports for the extens
 
 ## Change website access
 
-In the expanded row, select **Manage Permissions in Chromium**. Chromium's page for that extension opens in the same Space, where you can change its site access and other permissions. The change applies only to this Space's installation.
+In the expanded row, select **Manage Permissions in Chromium**. Chromium's page for that extension opens in the same Space, where you can change its site access and other permissions. The change applies only to this Space's installation, which every Space of its Sub-Space group shares.
 
 ## Turn an extension off without removing it
 
@@ -31,6 +31,6 @@ Use the **Enabled** switch on the extension's row. The installation and its data
 
 ## Remove it and its data
 
-Expand the row, select **Remove Extension**, and confirm **Remove from _Space_**. Crest removes the extension and its data from that Space. Other Spaces are unchanged.
+Expand the row, select **Remove Extension**, and confirm **Remove from _Space_**. Crest removes the extension and its data from that Space, or from every Space of its Sub-Space group. Other Spaces are unchanged.
 
 Private Spaces must be unlocked before Crest shows or changes their installed extensions.
