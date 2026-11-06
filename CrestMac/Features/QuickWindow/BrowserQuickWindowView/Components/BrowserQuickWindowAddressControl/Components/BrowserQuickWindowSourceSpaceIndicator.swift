@@ -37,7 +37,7 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
         .accessibilityLabel("Current Quick Window Space")
         .accessibilityValue(space?.name ?? "Space")
         .accessibilityIdentifier("quick-window-source-space")
-        .popover(isPresented: $isPickerPresented, arrowEdge: .bottom) {
+        .crestPopover(isPresented: $isPickerPresented, arrowEdge: .bottom) {
             if let space {
                 BrowserQuickWindowSpacePicker(
                     spaces: spaces,
@@ -46,7 +46,6 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
                     isPickerPresented = false
                     selectSpace(candidate.assignment)
                 }
-                .crestFlyoutStyle()
             }
         }
     }

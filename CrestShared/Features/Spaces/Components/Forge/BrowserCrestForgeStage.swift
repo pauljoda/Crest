@@ -150,7 +150,7 @@ struct BrowserCrestForgeStage: View {
             // A part the crest doesn't draw opens the step that adds it.
             if isDrawn { openLayer = layer } else { openStep(layer.enablingStep(for: branding)) }
         }
-        .popover(
+        .crestPopover(
             isPresented: Binding(get: { openLayer == layer }, set: { if !$0, openLayer == layer { openLayer = nil } }),
             arrowEdge: .bottom
         ) {
@@ -169,7 +169,7 @@ struct BrowserCrestForgeStage: View {
         ) {
             openSidebarColor = role
         }
-        .popover(
+        .crestPopover(
             isPresented: Binding(
                 get: { openSidebarColor == role }, set: { if !$0, openSidebarColor == role { openSidebarColor = nil } }),
             arrowEdge: .bottom

@@ -33,6 +33,12 @@ extension BrandColor {
     private static let dimmedBrightness: ClosedRange<Double> = 0.08...0.12
     /// How much of a color's saturation stays once it is fully dimmed.
     private static let dimmedSaturation = 0.8
+    /// How far apart a color's strongest and weakest components may be for a
+    /// palette to still place it with the grays.
+    private static let grayChroma = 0.1
+    /// How far round the wheel a palette's hues start, so the crimsons that
+    /// sit just short of red lead the reds rather than trail the purples.
+    private static let paletteHueOffset = 0.1
 
     // MARK: - Variables
 
@@ -88,6 +94,31 @@ extension BrandColor {
     /// How light the color looks, from 0 for black to 1 for white.
     var luminance: Double {
         0.2126 * red + 0.7152 * green + 0.0722 * blue
+    }
+
+    /// Whether the color comes before `other` in a palette: the grays first,
+    /// darkest first, then the hues from the crimsons round the wheel.
+    func precedesInPalette(_ other: BrandColor) -> Bool {
+        paletteOrder < other.paletteOrder
+    }
+
+    /// Where the color sits in a palette: whether it has a hue, then how
+    /// light a gray is or how far round the wheel a hue is.
+    private var paletteOrder: (Int, Double) {
+        let spread = Swift.max(red, green, blue) - Swift.min(red, green, blue)
+        guard spread >= Self.grayChroma else { return (0, luminance) }
+        return (1, (hue(spread: spread) + Self.paletteHueOffset).truncatingRemainder(dividingBy: 1))
+    }
+
+    /// The color's hue, from 0 for red round the wheel to 1, for a color
+    /// whose strongest and weakest components are `spread` apart.
+    private func hue(spread: Double) -> Double {
+        let highest = Swift.max(red, green, blue)
+        let sector =
+            highest == red
+            ? (green - blue) / spread : highest == green ? (blue - red) / spread + 2 : (red - green) / spread + 4
+        let turn = sector / 6
+        return turn < 0 ? turn + 1 : turn
     }
 
     // MARK: - Actions - Components

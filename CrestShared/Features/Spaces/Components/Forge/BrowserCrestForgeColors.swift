@@ -159,15 +159,34 @@ extension SpaceBranding {
     }
 }
 
-/// The tinctures the templates are made of, a template to a column, darkest
-/// first.
+/// The tinctures the templates are made of, in rows as wide as there are
+/// templates: the darkest row first, each row running from its neutrals
+/// through the hues.
 struct BrowserCrestForgePalette: View {
+    // MARK: - Static Variables
+
+    /// The templates hold different numbers of tinctures, so a column for
+    /// each left gaps and strays at the foot of the grid. Every tincture once,
+    /// in rows of one lightness, fills it.
+    private static let rows: [[BrandColor]] = {
+        var tinctures: [BrandColor] = []
+        for tincture in SpaceHouse.all.flatMap(\.tinctures)
+        where !tinctures.contains(where: { $0.matches(tincture) }) {
+            tinctures.append(tincture)
+        }
+        let width = SpaceHouse.all.count
+        let byLightness = tinctures.sorted { $0.luminance < $1.luminance }
+        return stride(from: 0, to: byLightness.count, by: width).map { start in
+            byLightness[start..<min(start + width, byLightness.count)].sorted { $0.precedesInPalette($1) }
+        }
+    }()
+
+    // MARK: - Variables
+
     let title: LocalizedStringResource
     var caption: LocalizedStringResource? = nil
     let color: BrandColor
     let select: (BrandColor) -> Void
-
-    private let houses = SpaceHouse.all
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -179,13 +198,11 @@ struct BrowserCrestForgePalette: View {
             }
             // Each swatch's ring already holds its color clear of the next, so
             // the grid adds only a little room of its own.
-            HStack(alignment: .top, spacing: CrestSpacing.extraSmall) {
-                ForEach(houses, id: \.self) { house in
-                    VStack(spacing: CrestSpacing.extraSmall) {
-                        ForEach(house.tinctures, id: \.self) { tincture($0) }
+            Grid(horizontalSpacing: CrestSpacing.extraSmall, verticalSpacing: CrestSpacing.extraSmall) {
+                ForEach(Self.rows, id: \.self) { row in
+                    GridRow {
+                        ForEach(row, id: \.self) { tincture($0) }
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(Text(house.title))
                 }
             }
             ColorPicker(
@@ -197,6 +214,8 @@ struct BrowserCrestForgePalette: View {
         .padding(14)
         .fixedSize()
     }
+
+    // MARK: - Actions - Drawing
 
     private func tincture(_ tincture: BrandColor) -> some View {
         CrestSelectableCard(

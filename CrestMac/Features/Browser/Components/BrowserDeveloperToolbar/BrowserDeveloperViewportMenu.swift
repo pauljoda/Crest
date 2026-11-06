@@ -33,7 +33,7 @@ struct BrowserDeveloperViewportMenu: View {
 
     var body: some View {
         viewportMenu
-            .popover(isPresented: $showsCustomSizeEditor, arrowEdge: .top) {
+            .crestPopover(isPresented: $showsCustomSizeEditor, arrowEdge: .top) {
                 BrowserDeveloperCustomViewportFields(width: $width, height: $height) {
                     guard let viewport = BrowserDeveloperViewport.customSize(width: width, height: height) else {
                         return

@@ -41,7 +41,7 @@ struct BrowserMacDownloadFeedbackLayer: View {
                         .font(.body.weight(.medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
-                        .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 12)) }
+                        .crestFlyoutStyle(in: .rect(cornerRadius: 12))
                         .padding(.leading, 16)
                         .padding(.bottom, context.destination == nil ? 16 : 56)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)

@@ -8,7 +8,7 @@ struct BrowserPlatformEmojiVariantModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .buttonStyle(BrowserEmojiVariantButtonStyle { isPresented = true })
-            .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds)) {
+            .crestPopover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds)) {
                 BrowserEmojiVariantPicker(variants: choice.variants, selectEmoji: selectEmoji)
                     .presentationCompactAdaptation(.popover)
             }

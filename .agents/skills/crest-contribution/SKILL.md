@@ -100,6 +100,12 @@ type you touch. The rules that matter most:
   does. Apply `crestMenuActionLabelStyle()` inside each `Menu` and
   `contextMenu` builder, submenus included; applied to the control that opens
   the menu, it does not reach the rows.
+- **Every popover uses `crestPopover`.** Present popovers with
+  `crestPopover(isPresented:)` or `crestPopover(item:)`, never SwiftUI's
+  `popover`. A popover inherits the Space's ink or a forced scheme from the
+  view it comes from, while macOS draws its glass from the page behind it;
+  `crestPopover` draws the content on Crest's solid flyout surface, in that
+  surface's own appearance, and keeps it open while the Colors panel is in use.
 - **No modal notices.** Informational feedback such as "copied" or "captured"
   goes through the top-of-window notice capsule
   (`BrowserChromeState.showNotice`). Alerts and sheets appear only when the
