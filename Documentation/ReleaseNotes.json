@@ -5169,6 +5169,14 @@
     "finder-pdf-open-with": {
       "category": "new",
       "message": "On Mac, Crest appears in Finder’s Open With menu for PDFs, without becoming your default PDF app."
+    },
+    "responsive-with-many-spaces-and-extensions": {
+      "category": "improved",
+      "message": "Crest stays more responsive with many Spaces and extensions: pages scroll smoothly while extensions such as ad blockers update their badge counts, and loading a page saves the session less often."
+    },
+    "quit-after-failed-save": {
+      "category": "fixed",
+      "message": "Quitting after a session save failed tries that save again, instead of waiting for it to time out."
     }
   }
 }

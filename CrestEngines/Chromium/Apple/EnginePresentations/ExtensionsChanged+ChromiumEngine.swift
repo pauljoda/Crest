@@ -3,7 +3,7 @@
 
     extension ExtensionsChanged {
         @MainActor func present(on engine: ChromiumEngine) {
-            ChromiumComposition.extensions.refresh()
+            ChromiumComposition.extensions.refresh(profile: profileID)
         }
     }
 #endif
