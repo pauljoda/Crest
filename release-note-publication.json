@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "space-color-grid-and-custom-hex",
+    "development": "settings-space-click-opens-its-page",
     "nightly": "long-sidebars-with-folders-scroll-smoothly"
   }
 }

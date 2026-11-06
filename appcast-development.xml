@@ -6,31 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.191</title>
-            <pubDate>Fri, 06 Nov 2026 18:20:30 +0000</pubDate>
+            <title>0.8.192</title>
+            <pubDate>Fri, 06 Nov 2026 18:59:05 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1520</sparkle:version>
-            <sparkle:shortVersionString>0.8.191</sparkle:shortVersionString>
+            <sparkle:version>1521</sparkle:version>
+            <sparkle:shortVersionString>0.8.192</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- On Chromium pages, Discord stays signed in after Crest restarts, updates or unloads its tab, and a page unloaded to save memory can still save its work before it goes.
-- Popovers and prompts such as the color and icon pickers, Site Controls, the save-password prompt and the screen-sharing picker stay readable whatever the Space’s text color, Crest’s appearance or the page behind them.
-- The color grid in a Space’s appearance fills its rows without gaps, and typing a hex value in the Colors window no longer closes the color popover.
+- On Mac, clicking a Space in Settings opens its page even when the pointer moves a little during the click, instead of sometimes doing nothing or opening it late.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/bdf225961a7a2f20df72b4b4aaba4b0fcd86e083...f47da47249aec7164789f5ecaad55d866736d08d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.191-2026-11-06-1520-r520.1/Installer-Crest-0.8.191-development-2026-11-06-f47da47-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/f47da47249aec7164789f5ecaad55d866736d08d...a5869625551eddaec9e8980e40400b6f21fbd26a) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.192-2026-11-06-1521-r521.1/Installer-Crest-0.8.192-development-2026-11-06-a586962-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.191-2026-11-06-1520-r520.1/Installer-Crest-0.8.191-development-2026-11-06-f47da47-arm64.dmg" length="216923290" type="application/octet-stream" sparkle:edSignature="CpcMxLVR51Vzibx5njm8BjI3GbhYB6LbFxjbL+OXLdHteoSUfbMVDI0DcAaNGiIYVGc5kEnoCpkAQStLaDs+Ag=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.192-2026-11-06-1521-r521.1/Installer-Crest-0.8.192-development-2026-11-06-a586962-arm64.dmg" length="216952987" type="application/octet-stream" sparkle:edSignature="nmty5DiQh2Cl1asjXAavKZgQYZEwh+Ow/REfnCa+NAuPcaNGcQBfOSqERGZ4mddY1QMM19pRWpPXybGGOSYMCw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -62,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: rpzR+WW07hSjTGwOHmU74o0NgnACA5BWVNrat3dvqTlWtIb7VzPmU7cOjfHl+IfsTxcmyTFXQ2kVXCmaATJ+BQ==
-length: 4442
+edSignature: +2Pn/9xuePjcJeXUbZVcKUPAMKKDgz9Iy9J5k8cgKq6zjdb+W7klNz37F8bndcxINGb6xydUB0sRrh0qJPCSCw==
+length: 4060
 -->
