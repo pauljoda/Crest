@@ -14,6 +14,7 @@ import SwiftUI
 /// the device edges and there is no frame left to draw.
 struct BrowserRootDetailSurface<Content: View>: View {
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
     @Environment(\.layoutDirection) private var layoutDirection
     let adjoinsLeadingSidebar: Bool
     let usesBorderlessFrame: Bool
@@ -29,7 +30,9 @@ struct BrowserRootDetailSurface<Content: View>: View {
     var frameInsets: (EdgeInsets) -> EdgeInsets = { $0 }
     let content: Content
 
-    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
+    private var appearance: BrowserChromeAppearance {
+        .device(windowCornerRadius: windowCornerRadius, isFullScreen: isWindowFullScreen)
+    }
 
     var body: some View {
         BrowserRootContentSurface(

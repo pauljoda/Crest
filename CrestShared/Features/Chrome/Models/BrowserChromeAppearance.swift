@@ -33,14 +33,15 @@ struct BrowserChromeAppearance: Equatable {
     }
 
     /// The device's choices in a window whose corners have
-    /// `windowCornerRadius`. Building it in a view's body tracks the border
-    /// width and the sidebar side, as a page frame should.
+    /// `windowCornerRadius`, and which is in full screen when `isFullScreen`.
+    /// Building it in a view's body tracks the border width and the sidebar
+    /// side, as a page frame should.
     @MainActor
     static func device(
-        _ store: BrowserDeviceAppearanceStore = .shared, windowCornerRadius: CGFloat?
+        _ store: BrowserDeviceAppearanceStore = .shared, windowCornerRadius: CGFloat?, isFullScreen: Bool = false
     ) -> Self {
         Self(
-            sidebarOnRight: store.sidebarOnRight, borderWidth: store.windowBorderWidth,
+            sidebarOnRight: store.sidebarOnRight, borderWidth: store.borderWidth(inFullScreen: isFullScreen),
             windowCornerRadius: windowCornerRadius)
     }
 
@@ -108,6 +109,8 @@ struct BrowserChromeAppearance: Equatable {
 enum BrowserChromeAppearancePreference {
     static let sidebarOnRightKey = "crest.appearance.sidebar-on-right"
     static let borderWidthKey = "crest.appearance.window-border-width"
+    static let fullScreenMatchesBorderKey = "crest.appearance.fullscreen-matches-window-border"
+    static let fullScreenBorderWidthKey = "crest.appearance.fullscreen-border-width"
     static let borderlessKey = "crest.appearance.borderless"
     static let defaults = defaults(for: .current)
 
@@ -149,4 +152,7 @@ extension EnvironmentValues {
     /// framed page follows on Mac. A full-screen window has none, and only the
     /// Mac measures its window.
     @Entry var browserWindowCornerRadius: CGFloat? = nil
+    /// Whether the window a view is in is in full screen, where its pages take
+    /// the full-screen border. Only the Mac's windows go full screen.
+    @Entry var browserWindowIsFullScreen = false
 }

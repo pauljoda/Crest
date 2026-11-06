@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The shared Window group, plus the window choices only the desktop has:
 /// light or dark, how far dark dims Space colors, Space page motion, the
-/// sidebar hover area and whether it stays live over a page in full screen.
+/// sidebar hover area and whether it stays live over a page in full screen,
+/// and the border pages take in a full-screen window.
 struct BrowserPlatformAppearanceSettingsSection: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -24,6 +25,11 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             $appearance.sidebarRevealWidth, default: SidebarRevealWidthPreference.defaultValue)
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
+        let fullScreenMatchesBorder = CrestSettingValue(
+            $appearance.fullScreenMatchesWindowBorder, default: BrowserLookAndFeelDefaults.fullScreenMatchesWindowBorder
+        )
+        let fullScreenBorder = CrestSettingValue(
+            $appearance.fullScreenBorderWidth, default: BrowserLookAndFeelDefaults.fullScreenBorderWidth)
 
         return BrowserWindowAppearanceGroup(
             space: space,
@@ -34,6 +40,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 motion.resettable("Animate pages when switching Spaces"),
                 revealWidth.resettable("Sidebar hover area"),
                 fullscreenReveal.resettable("Show sidebar on hover in full screen"),
+                fullScreenMatchesBorder.resettable("Same border in full screen"),
+                fullScreenBorder.resettable("Full-screen border"),
             ]
         ) {
             CrestSettingRow("Appearance", setting: mode.resettable("Appearance")) {
@@ -82,6 +90,24 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-fullscreen-reveal")
             }
+
+            CrestSettingRow(
+                "Same border in full screen",
+                setting: fullScreenMatchesBorder.resettable("Same border in full screen")
+            ) {
+                Toggle("Same border in full screen", isOn: fullScreenMatchesBorder.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("fullscreen-matches-window-border")
+            }
+
+            CrestSettingSlider(
+                "Full-screen border",
+                value: fullScreenBorder,
+                range: BrowserChromeAppearance.borderWidthRange,
+                readout: .points(zero: "Borderless"),
+                identifier: "fullscreen-border-width"
+            )
+            .disabled(appearance.fullScreenMatchesWindowBorder)
         }
     }
 }

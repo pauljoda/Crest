@@ -2,10 +2,13 @@ import SwiftUI
 
 struct BrowserQuickWindowPageSurface: View {
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
     @Environment(\.layoutDirection) private var layoutDirection
     let model: BrowserQuickWindowModel
 
-    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
+    private var appearance: BrowserChromeAppearance {
+        .device(windowCornerRadius: windowCornerRadius, isFullScreen: isWindowFullScreen)
+    }
 
     var body: some View {
         BrowserRootContentSurface(

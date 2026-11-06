@@ -40,6 +40,7 @@ struct BrowserSplitPageSurface: View {
     /// The core's app preference; an unbound preview store keeps click-to-focus.
     private var appPreferences: BrowserAppPreferenceStore { .shared }
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
     @Environment(\.browserMacWindows) private var windows
     @State private var cardFrames = BrowserSplitCardFrameRegistry()
     /// Where the card-frame space begins in the window, so a pointer measured in
@@ -65,9 +66,10 @@ struct BrowserSplitPageSurface: View {
         BrowserSplitColumnsView(
             members: displayMembers,
             focusedTabID: isSelectedSpace ? model.pages.activeTabID : model.browser.selectedTabID(in: space.id),
-            frameInsets: BrowserChromeAppearance.device(windowCornerRadius: nil).pageInsets(
-                docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection
-            ),
+            frameInsets: BrowserChromeAppearance.device(windowCornerRadius: nil, isFullScreen: isWindowFullScreen)
+                .pageInsets(
+                    docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection
+                ),
             accent: space.settings.look.primaryColor.color,
             placeholderIndex: placeholderIndex,
             liftedTabID: isSelectedSpace ? model.splitCardLift.carriedTabID : nil,
@@ -111,7 +113,10 @@ struct BrowserSplitPageSurface: View {
                 }
             }
         )
-        .environment(\.browserSplitUsesBorderlessFrame, BrowserDeviceAppearanceStore.shared.isBorderless)
+        .environment(
+            \.browserSplitUsesBorderlessFrame,
+            BrowserDeviceAppearanceStore.shared.isBorderless(inFullScreen: isWindowFullScreen)
+        )
         .background {
             if isSelectedSpace {
                 BrowserSplitCardPointerMonitor(

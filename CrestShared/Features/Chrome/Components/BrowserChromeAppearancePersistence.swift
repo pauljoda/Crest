@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Supplies the window's own corner at the scene boundary. The device's border
+/// Supplies the window's own corner, and whether it is in full screen, at the
+/// scene boundary. The device's border
 /// and sidebar side reach the views that draw them from
 /// ``BrowserDeviceAppearanceStore``, so changing them never changes a window's
 /// environment.
@@ -13,6 +14,7 @@ struct BrowserChromeAppearancePersistence: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.browserWindowCornerRadius, isWindowFullScreen ? nil : windowCornerRadius)
+            .environment(\.browserWindowIsFullScreen, isWindowFullScreen)
             #if os(macOS)
                 // The window's corners change shape with its chrome, so the
                 // radius is read live rather than assumed.

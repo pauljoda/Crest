@@ -14,9 +14,11 @@ struct BrowserPageFrameTitleBarSurface: View {
     let docked: Bool
 
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
 
     private var insets: EdgeInsets {
-        BrowserChromeAppearance.device(windowCornerRadius: nil).pageInsets(docked: docked, direction: layoutDirection)
+        BrowserChromeAppearance.device(windowCornerRadius: nil, isFullScreen: isWindowFullScreen)
+            .pageInsets(docked: docked, direction: layoutDirection)
     }
 
     var body: some View {

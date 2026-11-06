@@ -10,6 +10,7 @@ import SwiftUI
 struct BrowserRootPageSurface: View, @MainActor Equatable {
     @Environment(\.spaceContentPresentation) private var contentPresentation
     @Environment(\.browserMacWindows) private var windows
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
     let model: BrowserRootModel
     let space: SpaceModel
     let isSelectedSpace: Bool
@@ -124,7 +125,8 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
             BrowserRootDetailSurface(
                 adjoinsLeadingSidebar:
                     model.sidebarPresentation.reservesSidebarWidth,
-                usesBorderlessFrame: BrowserDeviceAppearanceStore.shared.isBorderless,
+                usesBorderlessFrame: BrowserDeviceAppearanceStore.shared.isBorderless(
+                    inFullScreen: isWindowFullScreen),
                 isStartPage: previewsStartPage || shownTab?.surface == .startPage,
                 hasActivePage: surfacePage != nil,
                 completedNavigationCount: surfacePage?.completedNavigationCount ?? 0,

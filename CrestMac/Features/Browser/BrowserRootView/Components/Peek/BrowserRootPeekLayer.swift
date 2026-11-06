@@ -9,6 +9,7 @@ struct BrowserRootPeekLayer: View {
     let docked: Bool
 
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
 
     @ViewBuilder
     var body: some View {
@@ -26,7 +27,7 @@ struct BrowserRootPeekLayer: View {
                 reservedLeadingWidth: 0,
                 layoutDirection: layoutDirection,
                 spaceAccess: model.spaceAccess,
-                frameInsets: BrowserChromeAppearance.device(windowCornerRadius: nil)
+                frameInsets: BrowserChromeAppearance.device(windowCornerRadius: nil, isFullScreen: isWindowFullScreen)
                     .pageInsets(docked: docked, direction: layoutDirection)
             )
             .environment(

@@ -5125,6 +5125,10 @@
     "chromium-page-takes-clicks-after-drag": {
       "category": "fixed",
       "message": "On Chromium pages, dragging an item or a link no longer leaves the page unable to take clicks until it reloads."
+    },
+    "full-screen-window-border": {
+      "category": "new",
+      "message": "A full-screen window can give its pages their own border, or none, in Settings → Appearance → Window, while windows keep theirs."
     }
   }
 }

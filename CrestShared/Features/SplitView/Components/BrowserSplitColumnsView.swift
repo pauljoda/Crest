@@ -70,13 +70,16 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     @ViewBuilder let panelContent: Panel
 
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
+    @Environment(\.browserWindowIsFullScreen) private var isWindowFullScreen
     @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
     @Environment(\.browserSplitInterCardGap) private var interCardGap
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
 
-    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
+    private var appearance: BrowserChromeAppearance {
+        .device(windowCornerRadius: windowCornerRadius, isFullScreen: isWindowFullScreen)
+    }
 
     var body: some View {
         GeometryReader { proxy in

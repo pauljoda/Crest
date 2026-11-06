@@ -9,6 +9,8 @@ enum BrowserLookAndFeelDefaults {
     static let appearanceMode = BrowserAppearanceMode.standard
     static let darkSpaceDimming = 0.0
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
+    static let fullScreenMatchesWindowBorder = true
+    static let fullScreenBorderWidth: Double = 0
     static let sidebarOnRight = false
     static let surfaceMaterial = CrestSurfaceMaterial.standard
     static let cornerRadius: Double = 10
@@ -44,6 +46,8 @@ enum BrowserLookAndFeelDefaults {
         appearance.spaceIconSizing = spaceIconSizing
         appearance.spaceIconScale = spaceIconScale
         appearance.windowBorderWidth = windowBorderWidth
+        appearance.fullScreenMatchesWindowBorder = fullScreenMatchesWindowBorder
+        appearance.fullScreenBorderWidth = fullScreenBorderWidth
         appearance.sidebarOnRight = sidebarOnRight
         appearance.tabScale = tabScale
         appearance.pinColumns = pinColumns

@@ -162,12 +162,33 @@ final class BrowserDeviceAppearanceStore {
     var windowBorderWidth: Double {
         didSet {
             isBorderless = BrowserChromeAppearance(borderWidth: windowBorderWidth).borderless
+            refreshFullScreenBorderless()
             saveSoon()
         }
     }
     /// Whether pages run to the window's edges. A view that only asks this
     /// reads it rather than the width, so a drag across the width leaves it be.
     private(set) var isBorderless: Bool
+    /// Whether a full-screen window frames its pages as ``windowBorderWidth``
+    /// does, rather than with ``fullScreenBorderWidth``. Only the Mac's
+    /// windows go full screen.
+    var fullScreenMatchesWindowBorder: Bool {
+        didSet {
+            refreshFullScreenBorderless()
+            saveSoon()
+        }
+    }
+    /// How wide the frame around every page is in a full-screen window, in
+    /// points, once it no longer matches the window's.
+    var fullScreenBorderWidth: Double {
+        didSet {
+            refreshFullScreenBorderless()
+            saveSoon()
+        }
+    }
+    /// Whether pages run to the edges of a full-screen window, kept apart from
+    /// the widths as ``isBorderless`` is.
+    private(set) var isFullScreenBorderless: Bool
     /// Whether the sidebar stands on the window's right.
     var sidebarOnRight: Bool {
         didSet { saveSoon() }
@@ -286,6 +307,16 @@ final class BrowserDeviceAppearanceStore {
             ?? BrowserLookAndFeelDefaults.windowBorderWidth
         windowBorderWidth = borderWidth
         isBorderless = BrowserChromeAppearance(borderWidth: borderWidth).borderless
+        let matchesBorder =
+            chrome.object(forKey: BrowserChromeAppearancePreference.fullScreenMatchesBorderKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.fullScreenMatchesWindowBorder
+        let fullScreenWidth =
+            chrome.object(forKey: BrowserChromeAppearancePreference.fullScreenBorderWidthKey) as? Double
+            ?? BrowserLookAndFeelDefaults.fullScreenBorderWidth
+        fullScreenMatchesWindowBorder = matchesBorder
+        fullScreenBorderWidth = fullScreenWidth
+        isFullScreenBorderless =
+            BrowserChromeAppearance(borderWidth: matchesBorder ? borderWidth : fullScreenWidth).borderless
         sidebarOnRight = chrome.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
@@ -372,6 +403,20 @@ final class BrowserDeviceAppearanceStore {
         }
     }
 
+    // MARK: - Actions - Window Frame
+
+    /// How wide the frame around every page is, in points, in a window that
+    /// is in full screen when `inFullScreen`.
+    func borderWidth(inFullScreen: Bool) -> Double {
+        inFullScreen && !fullScreenMatchesWindowBorder ? fullScreenBorderWidth : windowBorderWidth
+    }
+
+    /// Whether pages run to the edges of a window that is in full screen when
+    /// `inFullScreen`.
+    func isBorderless(inFullScreen: Bool) -> Bool {
+        inFullScreen ? isFullScreenBorderless : isBorderless
+    }
+
     // MARK: - Actions - Space Colors
 
     /// Whether a window in `colorScheme` dims Space colors `dimming` of the way.
@@ -403,6 +448,10 @@ final class BrowserDeviceAppearanceStore {
         write(foldersIconOnly, forKey: BrowserFolderAppearancePreference.iconOnlyKey, in: defaults)
         write(foldersTintTitle, forKey: BrowserFolderAppearancePreference.tintsTitleKey, in: defaults)
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
+        write(
+            fullScreenMatchesWindowBorder, forKey: BrowserChromeAppearancePreference.fullScreenMatchesBorderKey,
+            in: chrome)
+        write(fullScreenBorderWidth, forKey: BrowserChromeAppearancePreference.fullScreenBorderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
     }
@@ -429,6 +478,16 @@ final class BrowserDeviceAppearanceStore {
     private func observeChanges() {
         tabs.changed = { [weak self] in self?.saveSoon() }
         address.changed = { [weak self] in self?.saveSoon() }
+    }
+
+    // MARK: - Mutators
+
+    /// Brings ``isFullScreenBorderless`` up to the widths and the choice
+    /// between them.
+    private func refreshFullScreenBorderless() {
+        let borderless = BrowserChromeAppearance(borderWidth: borderWidth(inFullScreen: true)).borderless
+        guard isFullScreenBorderless != borderless else { return }
+        isFullScreenBorderless = borderless
     }
 
     #if os(macOS)
