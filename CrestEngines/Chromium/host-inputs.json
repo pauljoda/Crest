@@ -69,19 +69,27 @@
   },
   "chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h": {
     "before": "3a2ca97d02c1e182d2b38dad867bda37fe9e43000f0104484342fcb7fc578d9f",
-    "after": "2759a2aa983bad887b4768f65907ceedc4f4ea96a2ca7f3091fe928a493aefcb"
+    "after": "f31c3a99590bfe8171ab54e7a09a380556fad8877440842f57938bb5a134444b"
   },
   "chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm": {
     "before": "aaa0c10718139088d534b765039300b7f3774dbdd27c1ddc5f827b916cbc5f76",
-    "after": "64a17cc03db0edd16b5c37e1c5ce79ee3783b93668a1a868d895bef59bf048c1"
+    "after": "8762ebaacc54203ac2d0cd0edec9e7160d6e64dd28cf4500dface724a43ca62c"
+  },
+  "content/browser/renderer_host/render_widget_host_view_mac.h": {
+    "before": "61b5c6516f3dd77be2e6cd58ac11e285afe45060318f64ccdf2bdad3279856cc",
+    "after": "a8da364997ed7a87af2a5df15924064e6a77c30d847904d163d118e307d81d65"
+  },
+  "content/browser/renderer_host/render_widget_host_view_mac.mm": {
+    "before": "17b9ac1271936dc3dcc2840544c556edf680cd5c54642115c5c8c24fd6b650df",
+    "after": "c8e33b082e718a711c24223d094fb3eb39a35f502a5c1e5aa62f528e7acabc81"
   },
   "content/browser/web_contents/web_contents_view_mac.mm": {
     "before": "068b7938942a1e5feb54917b31fc4827d2a1de749a811219f5b0bcfda851d329",
-    "after": "ca86019ffb4119f4fbe475b6fa143af8fd4798aa8311e7740cc6053431e4ae3e"
+    "after": "c1eb33bfff9b9ef61bc7e018df64343aea73313f727a28507b690de0ab38cae4"
   },
   "content/public/browser/web_contents_view_delegate.h": {
     "before": "60cf4992f87376a9abbe408e4af59eb77dbd879d796dc5077d0b4ceae70bb400",
-    "after": "2f36a2c8d75b2528cfadc64bb79871fe365ca86c6ac3c71738517ef185108dd3"
+    "after": "15742b355c839fed76de92a540c82aa1003cab546dc882226f27a9845287b27d"
   },
   "chrome/browser/chrome_content_browser_client.cc": {
     "before": "b17feacbe58f8d000c40c8eb3b1d6ac8b98a2dd734466e9eee091de951f98522",

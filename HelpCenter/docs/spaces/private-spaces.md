@@ -7,7 +7,7 @@ keywords: [private browsing, incognito, authentication, privacy]
 
 # Browse with a Private Space
 
-Create a Private Space when the browsing session should not become part of normal durable browser state.
+Open a private window with **New Private Window** (**Shift-Command-N**) when the browsing session should not become part of normal durable browser state.
 
 Private Spaces use non-persistent website storage. They do not write normal history or participate in ordinary Crest sync. Closing the private session discards its transient pages and website data.
 

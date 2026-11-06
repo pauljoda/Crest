@@ -372,8 +372,10 @@ class EngineBinding {
   base::OnceCallback<void(bool)> ErasureAnswer(const engine::Guid& erasure);
   void Forget(const std::string& page);
   // Destroys `contents`, the WebContents of `page`, after the shell drops
-  // the views beside it.
-  void DestroyContents(const std::string& page, content::WebContents* contents);
+  // the views beside it. With `runs_before_unload`, its document first runs
+  // its beforeunload handlers without asking the person (see
+  // EngineBrowsers::DestroyAfterBeforeUnload).
+  void DestroyContents(const std::string& page, content::WebContents* contents, bool runs_before_unload = false);
   void ScheduleFlush();
   void Flush();
 

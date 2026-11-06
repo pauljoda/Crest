@@ -7,7 +7,7 @@ keywords: [iCloud, CloudKit, sync, conflict, Mac, iPad, iPhone]
 
 # Sync Crest across devices
 
-Open **Settings → Sync** and enable **Sync Crest with iCloud** on each device signed into the same Apple Account.
+Open **Settings → Sync** and turn on **Sync with iCloud** on each device signed into the same Apple Account.
 
 ## What sync carries
 

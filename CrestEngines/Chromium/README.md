@@ -489,7 +489,17 @@ tab closed deletes itself on a later task, as it does under Views: the unload
 and tab strip code that emptied it is still running when its window closes. Chromium never
 discards a Crest page (`chrome.tabs.discard` or its own memory saver), because a
 discard replaces the tab's WebContents; the core unloads pages under memory
-pressure instead.
+pressure instead. A page the core closes without asking first, as one unloaded
+under memory pressure, runs its document's beforeunload handlers before its
+WebContents goes, as a discard does: no dialog, and the tab goes once they
+answer or Chromium's beforeunload timeout ends. A document that agreed to go
+when the core asked runs them only once.
+
+Each page reports its own frame as its window: `outerWidth`, `outerHeight`,
+`screenX` and `screenY` describe the page, not the Crest window with its
+sidebar and toolbar. A window that counted them would look to a page like one
+with DevTools docked, which some sites answer by hiding their sign-in from
+storage.
 
 A docked DevTools frontend is mounted inside the Crest page card it inspects.
 This build never creates Chrome's Views contents container, so the

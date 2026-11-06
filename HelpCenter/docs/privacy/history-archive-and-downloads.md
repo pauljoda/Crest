@@ -29,7 +29,7 @@ An unsafe-file warning requires its own decision. Resuming a transfer does not a
 
 ## Retention per Space
 
-On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space. Choose **1 Day, 1 Week, 30 Days, 90 Days, 1 Year, or Forever** independently for History, Archived Tabs, and Download Records.
+On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space. Choose **1 Day, 1 Week, 30 Days, 90 Days, 1 Year, or Forever** independently for History, Archived Tabs, and Download Records. The Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share these choices.
 
 Crest checks retention when it opens, after sync, and every 15 minutes while active. Shortening a duration can permanently remove older synchronized records, so Crest confirms the destructive change first.
 

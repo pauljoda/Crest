@@ -23,7 +23,7 @@ Extensions run only on Chromium pages in Crest for Mac. Pages you open in WebKit
 
 ## Spaces and private windows
 
-- Each Space has its own installation and data. Copying an extension to another Space installs it fresh; its data does not follow.
+- Each Space has its own installation and data. Copying an extension to another Space installs it fresh; its data does not follow. The Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share one installation.
 - Private windows use a fresh, separate profile and do not run installed extensions. You cannot install or remove extensions from a private window.
 - A locked Space cannot receive an extension until you unlock it.
 

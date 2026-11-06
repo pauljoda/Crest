@@ -1248,8 +1248,16 @@ bool EnginePage::AnswerBeforeUnload(bool proceed) {
     return false;
   }
   checks_before_unload_ = false;
+  if (proceed && web_contents()) {
+    agreed_to_go_ = web_contents()->GetPrimaryPage().GetWeakPtr();
+  }
   Report(engine::BeforeUnloadAnswered{.page_id = id_, .proceeds = proceed});
   return true;
+}
+
+bool EnginePage::AwaitsBeforeUnload() {
+  content::WebContents* contents = web_contents();
+  return contents && agreed_to_go_.get() != &contents->GetPrimaryPage();
 }
 
 void EnginePage::RequestClose() {
