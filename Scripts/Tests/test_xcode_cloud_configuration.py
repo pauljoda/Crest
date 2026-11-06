@@ -14,6 +14,10 @@ import unittest
 import xml.etree.ElementTree as ET
 
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
+# Only macOS ships plutil; CI runs these on its macOS build runners.
+REQUIRES_PLUTIL = unittest.skipUnless(
+    shutil.which("plutil"), "the Xcode Cloud guards read plists with macOS plutil"
+)
 
 class XcodeCloudConfigurationTests(unittest.TestCase):
     @staticmethod
@@ -48,6 +52,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 self.assertIn(blueprint_name, archivable_blueprints)
 
 
+    @REQUIRES_PLUTIL
     def test_post_clone_guard_accepts_submission_xcode_and_rejects_unknown_prerelease(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_clone.sh"
 
@@ -111,6 +116,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                         self.assertIn("beta or prerelease", result.stderr)
 
 
+    @REQUIRES_PLUTIL
     def test_post_xcodebuild_guard_rejects_archived_version_drift(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_xcodebuild.sh"
         expected_version = self.marketing_version()
@@ -168,6 +174,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                             result.stderr,
                         )
 
+    @REQUIRES_PLUTIL
     def test_post_xcodebuild_uploads_app_store_export_only_without_ad_hoc_export(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_xcodebuild.sh"
 
