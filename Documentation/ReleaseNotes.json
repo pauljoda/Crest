@@ -5181,6 +5181,10 @@
     "ios-tab-drop-on-space-icon": {
       "category": "fixed",
       "message": "On iPhone and iPad, dropping a dragged tab on a Space icon in the sidebar moves it to that Space."
+    },
+    "fullscreen-page-survives-space-swipe": {
+      "category": "improved",
+      "message": "On Mac, with Show sidebar on hover in full screen turned on, a full-screen page stays full screen when you swipe to another Space, and takes over the window again when you swipe back."
     }
   }
 }
