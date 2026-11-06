@@ -5117,6 +5117,10 @@
     "chromium-touch-id-offered-to-sites": {
       "category": "fixed",
       "message": "On Chromium pages, sites that check for Touch ID before offering it, such as Duo, now offer it when this Mac can keep passkeys."
+    },
+    "chromium-private-web-store-install": {
+      "category": "fixed",
+      "message": "On Chromium, a private or trusted-tester Chrome Web Store extension installs in a Space signed in to an account that can see it, instead of failing with HTTP 401."
     }
   }
 }
