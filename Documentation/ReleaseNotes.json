@@ -5122,6 +5122,10 @@
       "category": "fixed",
       "message": "On Chromium, a private or trusted-tester Chrome Web Store extension installs in a Space signed in to an account that can see it, instead of failing with HTTP 401."
     },
+    "chromium-page-takes-clicks-after-drag": {
+      "category": "fixed",
+      "message": "On Chromium pages, dragging an item or a link no longer leaves the page unable to take clicks until it reloads."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."

@@ -77,7 +77,7 @@
   },
   "content/browser/web_contents/web_contents_view_mac.mm": {
     "before": "068b7938942a1e5feb54917b31fc4827d2a1de749a811219f5b0bcfda851d329",
-    "after": "d4eeefb1d08c6cbee9143788dd97b294db547033f31668c4b9ca96222b9cfaa5"
+    "after": "ca86019ffb4119f4fbe475b6fa143af8fd4798aa8311e7740cc6053431e4ae3e"
   },
   "content/public/browser/web_contents_view_delegate.h": {
     "before": "60cf4992f87376a9abbe408e4af59eb77dbd879d796dc5077d0b4ceae70bb400",
@@ -498,5 +498,17 @@
   "chrome/browser/webauthn/chrome_web_authentication_delegate.cc": {
     "before": "6027d0e3e08eb1b83fc59759aa8f4a6789cbb2364ff83867ead42e2809828775",
     "after": "e40a90875ae980658d1f46a5fd0892f325f94ef2946d6962a2a6bee38678afc0"
+  },
+  "content/app_shim_remote_cocoa/web_contents_view_cocoa.mm": {
+    "before": "21dcbb23c547fff01e212ec2f7ac972fe1dbd04a37fd1860fdb7b42605279d05",
+    "after": "f4856b42f74ac99658f8c7b2c33c3417f86ee907eb89b63400d4fe7ec7317f22"
+  },
+  "content/browser/web_contents/web_drag_dest_mac.mm": {
+    "before": "72f4f9a0a9e2b1f79db6ad962cfad2cdff893285d6c1dcdf0cd2de1a2e6094f2",
+    "after": "12f1eabd3a9b57f5de7f51fa6e8df967ed1529b2e9808804083adc8f8e144370"
+  },
+  "content/browser/web_contents/web_drag_dest_mac.h": {
+    "before": "9446cf9e2f40ba77e1fcff8ee74ba632e32d8bd21286d4cc0a847a590a975c2c",
+    "after": "86c3004fd8c3bc8da412efaa7a9ba6f7396eab53065d3bb072137ce79efbf1a7"
   }
 }
