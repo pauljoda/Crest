@@ -327,12 +327,18 @@ private struct BrowserSettingsSpaceGroupDrag: ViewModifier {
     @Binding var dropTargetID: UUID?
     let join: (SpaceModel) -> Bool
 
+    /// The row as it takes drags: none while arranging, a drop for a group's
+    /// primary, and a drag and a drop for any other Space.
     func body(content: Content) -> some View {
         if isArranging {
             content
         } else if !browser.leadsGroup(space) {
+            // The list drags the row as it drags any row, once the pointer
+            // has moved a few points, so a click that moves a little still
+            // chooses the Space. A drag of the row's own starts after a
+            // point and keeps such a click from choosing it.
             content
-                .onDrag {
+                .itemProvider {
                     draggedSpaceID = space.id
                     return NSItemProvider(object: space.id.uuidString as NSString)
                 }
