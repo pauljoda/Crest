@@ -59,6 +59,7 @@ em { font-weight: 400; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   color: var(--paper);
   transition: background .3s ease, color .3s ease, box-shadow .3s ease;
 }
@@ -72,7 +73,7 @@ em { font-weight: 400; }
 .brand-mark { width: 2.65rem; height: 2.65rem; flex: 0 0 auto; filter: drop-shadow(0 .3rem .6rem rgba(4, 9, 18, .2)); }
 nav { display: flex; align-items: center; gap: 1.45rem; font-size: .74rem; font-weight: 800; letter-spacing: .04em; }
 nav a { text-decoration: none; }
-nav a:not(.nav-cta) { position: relative; }
+nav a:not(.nav-cta) { position: relative; white-space: nowrap; }
 nav a:not(.nav-cta)::after { content: ""; position: absolute; left: 0; right: 100%; bottom: -.35rem; height: 1px; background: currentColor; transition: right .2s ease; }
 nav a:not(.nav-cta):hover::after { right: 0; }
 .nav-cta { border: 1px solid currentColor; padding: .68rem 1rem; }
@@ -582,7 +583,7 @@ section:target .reveal { opacity: 1; transform: none; }
 .privacy-contact a { color: var(--ink); text-underline-offset: .2em; }
 
 @media (max-width: 1100px) {
-  .site-header nav a:not(.nav-cta) { display: none; }
+  .site-header nav a:not(.nav-cta):not([href$="guides/"]) { display: none; }
   .hero { padding-top: 7rem; }
   .hero-grid { grid-template-columns: minmax(0, 1fr); }
   .hero-copy { max-width: 790px; padding-bottom: 0; }
@@ -676,6 +677,7 @@ section:target .reveal { opacity: 1; transform: none; }
 
 @media (max-width: 520px) {
   .wordmark .brand-mark { width: 2.25rem; height: 2.25rem; }
+  .site-header nav { gap: 1rem; }
   .hero h1 { font-size: clamp(3.7rem, 19vw, 5.2rem); }
   .hero-actions { align-items: flex-start; flex-direction: column; gap: 1rem; }
   .hero-product-button { width: 100%; }
@@ -744,6 +746,12 @@ section:target .reveal { opacity: 1; transform: none; }
   .privacy-article > section { padding-bottom: 3.5rem; margin-bottom: 3.5rem; }
   .privacy-article h2 { font-size: clamp(2.7rem,13vw,4rem); }
   .privacy-attribution { margin-inline: 0; padding: 1.35rem; }
+}
+
+@media (max-width: 380px) {
+  .site-header .wordmark span { display: none; }
+  .site-header nav { gap: .7rem; }
+  .site-header .nav-cta { padding: .5rem .55rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

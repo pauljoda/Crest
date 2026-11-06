@@ -316,7 +316,7 @@ html:not(.noanim) .mac.is-hidden .peek{transform:translateY(105%)}
 .pg.hasfloat .dsc h3{font-size:calc(50*var(--u))}
 .pg.hasfloat .dsc .body{margin-top:calc(26*var(--u));font-size:calc(14.5*var(--u))}
 .pg .float{position:absolute;right:calc(44*var(--u));top:calc(120*var(--u));width:48%}
-@container (max-width:720px){.dsc{grid-template-columns:1fr;padding:calc(40*var(--u)) calc(50*var(--u)) 0}.pg .float{display:none}.pg.hasfloat .dsc h3,.pg.hasfloat .dsc .body{grid-column:auto}}
+@container (max-width:720px){.dsc,.pg.hasfloat .dsc{grid-template-columns:1fr;padding:calc(40*var(--u)) calc(50*var(--u)) 0}.pg .float{display:none}.pg.hasfloat .dsc h3,.pg.hasfloat .dsc .body{grid-column:auto}}
 
 /* Quick Window (720×460) */
 .qw{container-type:inline-size}
@@ -354,8 +354,9 @@ html:not(.noanim) .mac.is-hidden .peek{transform:translateY(105%)}
 
 /* =============================================================== feature tour (scroll-pinned in the hero) */
 .scrolly{position:relative;height:calc(var(--n,3) * 70svh + 100svh)}
-.tour .stage{position:sticky;top:var(--stick,64px)}
-.tour-in{--grow:0;--maxw:calc((100svh - 64px - 6.5rem) * 1.7305);width:min(calc(min(1240px,100vw - 2.5rem) + (min(1520px,100vw - 2rem) - min(1240px,100vw - 2.5rem)) * var(--grow)),var(--maxw));margin:0 auto;display:grid;gap:.9rem}
+.tour .stage{position:sticky;top:var(--stick,64px);container-type:inline-size}
+/* The window takes the width it is given, capped by the height it has, and scales to it. */
+.tour-in{--grow:0;--maxw:calc((100svh - 64px - 6.5rem) * 1.7305);width:min(calc(min(1240px,100% - 2.5rem) + (min(1520px,100% - 2rem) - min(1240px,100% - 2.5rem)) * var(--grow)),var(--maxw));margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:.9rem}
 .tour-in .mac{max-height:calc(100svh - 64px - 6rem)}
 html:not(.noanim) .tour-in .mac{animation:rise 1s cubic-bezier(.2,.7,.2,1) both .1s}
 @keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
@@ -367,6 +368,9 @@ html:not(.noanim) .tour-in .mac{animation:rise 1s cubic-bezier(.2,.7,.2,1) both 
 .segs.light button:hover{background:rgba(20,32,44,.05)}
 .segs.light button[aria-selected=true]{background:var(--ink);color:#fff}
 .tour-segs{color:#f4f1ea;opacity:calc(var(--grow));transition:opacity .3s}
+/* The feature tabs stay on one line, scaling with the page rather than the window. */
+.tour-segs{justify-self:center;margin:0;max-width:calc(100cqi - 2rem);font-size:clamp(.65rem,calc((100cqi - 2rem) / 67),.85rem);gap:.3em;padding:.35em;border-radius:1.65em}
+.tour-segs button{font-size:1em;padding:.53em 1em}
 .tour-cap,.tour-dots{display:none}
 @media (max-width:760px){
   .tour-segs{display:none}
@@ -477,6 +481,58 @@ html.noanim .tbelt{animation:none}
 .parity td:first-child{color:rgba(241,239,233,.6);width:50%}
 .parity td:nth-child(2){font-weight:600}
 
+/* =============================================================== sub-spaces: Settings over a Work group (SessionPreviewSeed's grouped session) */
+.subs-fig{margin:0}
+.subs-fig .tile-p svg{width:calc(18*var(--u));height:calc(18*var(--u));opacity:.8}
+.gaddr{justify-content:center;font-size:calc(12*var(--u));opacity:.72}
+.gpick{display:flex;align-items:center;gap:calc(2*var(--u));padding:calc(3*var(--u));border-radius:calc(9*var(--u));background:rgba(255,255,255,.07);margin:0 auto}
+.gpick .ring{display:flex;gap:calc(2*var(--u));margin:0;padding:0;border-radius:calc(8*var(--u));background:rgba(196,150,214,.12);box-shadow:inset 0 0 0 calc(1.5*var(--u)) rgba(196,150,214,.45)}
+.gpick i{width:calc(38*var(--u));height:calc(30*var(--u));border-radius:calc(7*var(--u));display:grid;place-items:center}
+.gpick i img{width:calc(24*var(--u));height:calc(24*var(--u));opacity:.72}
+.gpick i.on{background:rgba(255,255,255,.16)}
+.gpick i.on img{opacity:1}
+.pg.settings{background:#1f2023;color:#e8e8ea;display:grid;grid-template-columns:calc(226*var(--u)) minmax(0,1fr);box-shadow:0 0 0 calc(1*var(--u)) rgba(0,0,0,.35)}
+.mac-win .pg.settings svg{stroke-width:1.7}
+.st-side{background:#26272b;padding:calc(12*var(--u)) calc(10*var(--u));display:flex;flex-direction:column;gap:calc(1*var(--u));min-width:0;border-right:1px solid rgba(255,255,255,.06)}
+.st-app{display:flex;align-items:center;gap:calc(10*var(--u));padding:calc(2*var(--u)) calc(6*var(--u)) calc(10*var(--u));font-size:calc(13.5*var(--u));font-weight:700}
+.st-app img{width:calc(30*var(--u));height:calc(30*var(--u))}
+.st-find{height:calc(28*var(--u));display:flex;align-items:center;gap:calc(7*var(--u));padding:0 calc(9*var(--u));margin-bottom:calc(8*var(--u));border-radius:calc(7*var(--u));background:rgba(255,255,255,.07);font-size:calc(12.5*var(--u));color:rgba(255,255,255,.55)}
+.st-find svg{width:calc(13*var(--u));height:calc(13*var(--u))}
+.st-row{height:calc(30*var(--u));display:flex;align-items:center;gap:calc(10*var(--u));padding:0 calc(8*var(--u));border-radius:calc(7*var(--u));font-size:calc(13*var(--u));white-space:nowrap}
+.st-row svg{width:calc(17*var(--u));height:calc(17*var(--u));flex:0 0 auto}
+.st-row img{width:calc(18*var(--u));height:calc(18*var(--u));flex:0 0 auto}
+.st-row.sub{padding-left:calc(30*var(--u))}
+.st-row.on{background:rgba(255,255,255,.09)}
+.st-row .more{margin-left:auto;letter-spacing:.08em;opacity:.7}
+.st-head{display:flex;align-items:center;justify-content:space-between;height:calc(30*var(--u));padding:calc(10*var(--u)) calc(8*var(--u)) 0;font-size:calc(11.5*var(--u));color:rgba(255,255,255,.5)}
+.st-head span{display:flex;gap:calc(14*var(--u))}
+.st-head svg{width:calc(13*var(--u));height:calc(13*var(--u))}
+.st-main{min-width:0;display:flex;flex-direction:column}
+.st-top{padding:calc(16*var(--u)) calc(22*var(--u)) calc(14*var(--u));border-bottom:1px solid rgba(255,255,255,.08)}
+.st-name{display:flex;align-items:center;gap:calc(10*var(--u));font-size:calc(16*var(--u));font-weight:700}
+.st-name img{width:calc(24*var(--u));height:calc(24*var(--u))}
+.st-name svg{margin-left:auto;width:calc(17*var(--u));height:calc(17*var(--u));opacity:.8}
+.st-crests{display:flex;align-items:center;gap:calc(18*var(--u));margin-top:calc(12*var(--u))}
+.st-crests span{display:flex;gap:calc(3*var(--u));padding:calc(4*var(--u));border-radius:calc(9*var(--u));background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.st-crests i{width:calc(34*var(--u));height:calc(30*var(--u));border-radius:calc(7*var(--u));display:grid;place-items:center}
+.st-crests i.on{background:rgba(160,52,70,.35);box-shadow:inset 0 0 0 1px rgba(214,96,110,.45)}
+.st-crests img{width:calc(22*var(--u));height:calc(22*var(--u))}
+.st-crests svg{width:calc(15*var(--u));height:calc(15*var(--u));opacity:.85}
+.st-seg{align-self:center;display:flex;margin:calc(14*var(--u)) 0 calc(6*var(--u));padding:calc(2*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.07);font-size:calc(13*var(--u))}
+.st-seg span{padding:calc(5*var(--u)) calc(15*var(--u));border-radius:calc(6*var(--u))}
+.st-seg span.on{background:rgba(255,255,255,.14)}
+.st-body{width:calc(560*var(--u));max-width:calc(100% - 40*var(--u));margin:0 auto;font-size:calc(13*var(--u))}
+.st-body h5{margin:calc(18*var(--u)) 0 calc(8*var(--u)) calc(10*var(--u));font-size:calc(13.5*var(--u));font-weight:700}
+.st-card{border-radius:calc(10*var(--u));background:rgba(255,255,255,.055)}
+.st-card div{display:flex;align-items:center;justify-content:space-between;gap:calc(10*var(--u));min-height:calc(38*var(--u));margin:0 calc(10*var(--u));border-top:1px solid rgba(255,255,255,.07)}
+.st-card div:first-child{border-top:0}
+.st-card em{font-style:normal;display:flex;align-items:center;gap:calc(8*var(--u));color:rgba(255,255,255,.88)}
+.st-card em svg{width:calc(13*var(--u));height:calc(13*var(--u));opacity:.7}
+.st-card b{font-weight:400;padding:calc(5*var(--u)) calc(12*var(--u));border-radius:calc(6*var(--u));background:rgba(255,255,255,.1)}
+.st-card .tg{width:calc(34*var(--u));height:calc(19*var(--u));border-radius:999px;background:rgba(255,255,255,.18);position:relative}
+.st-card .tg::after{content:"";position:absolute;left:calc(2*var(--u));top:calc(2*var(--u));width:calc(15*var(--u));height:calc(15*var(--u));border-radius:50%;background:#f4f4f6}
+.st-note{margin:calc(8*var(--u)) calc(10*var(--u)) calc(20*var(--u));font-size:calc(11*var(--u));color:rgba(255,255,255,.55)}
+
 /* =============================================================== devices */
 .devstack{display:grid;gap:1.4rem}
 .ds-scene{position:relative;aspect-ratio:16/8.6;max-height:70vh}
@@ -543,7 +599,7 @@ footer a{color:rgba(241,239,233,.88);text-decoration:none}
 footer a:hover{color:#fff}
 footer p{max-width:62rem}
 footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(241,239,233,.35)}
-#crests,#arc,#devices,#import,#more,#get{scroll-margin-top:72px}
+#crests,#arc,#sub-spaces,#devices,#import,#more,#get{scroll-margin-top:72px}
 </style>
 </head>
 <body>
@@ -662,7 +718,8 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
       <table class="parity">
         <thead><tr><th>Arc</th><th>Crest</th></tr></thead>
         <tbody>
-          <tr><td>Spaces + Profiles</td><td>Spaces</td></tr>
+          <tr><td>Spaces</td><td>Spaces</td></tr>
+          <tr><td>Profiles</td><td>Sub-Spaces</td></tr>
           <tr><td>Sidebar</td><td>Sidebar</td></tr>
           <tr><td>Favorites</td><td>Pinned sites</td></tr>
           <tr><td>Pinned Tabs</td><td>Saved tabs</td></tr>
@@ -686,6 +743,17 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
         </tbody>
       </table>
     </details>
+  </div>
+</section>
+
+<section class="section" id="sub-spaces" aria-labelledby="sub-spaces-title">
+  <div class="wrap">
+    <div class="head rv">
+      <h2 class="h2" id="sub-spaces-title">Many banners, one sign-in.</h2>
+      <p class="lede">Sub-Spaces share sign-ins, history, passwords, and extensions, like Spaces on one Arc profile. Each keeps its own tabs and colors.</p>
+      <a class="text-link" href="guides/sub-spaces/">Sub-Spaces guide →</a>
+    </div>
+    <figure class="subs-fig mac rv" id="subs-mac" role="img" aria-label="Crest Settings with Client A and Client B under Work, and the Space picker outlining Work, Client A, and Client B apart from Personal"></figure>
   </div>
 </section>
 
@@ -1061,6 +1129,70 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
   /* a different template, in its banner's background, on each load unless ?crest= pins one */
   if(!q.get('crest')){var pick=ORDER[Math.floor(Math.random()*ORDER.length)];state.work=pick;state.mode=CHIP_MODE[pick]}
   setTemplate(state.work,state.mode);
+
+  /* ---------------------------------------------------------- Sub-Spaces: Settings over the grouped preview session
+     (SessionPreviewSeed.makeGrouped): Work leads Client A and Client B, and Personal stands alone. */
+  (function(){
+    var el=document.getElementById('subs-mac'); if(!el)return;
+    function g(d,c){return '<svg viewBox="0 0 24 24"'+(c?' style="color:'+c+'"':'')+'>'+d+'</svg>'}
+    var S={
+      globe:g('<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4a12 12 0 0 1 0 16M12 4a12 12 0 0 0 0 16"/>'),
+      code:g('<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 5l-4 14"/>'),
+      lines:g('<circle cx="12" cy="12" r="9"/><path d="M7 9h10M8.5 12h7M10 15h4"/>'),
+      compass:g('<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'),
+      side:g('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M9 5v14"/>'),
+      play:g('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m10 9 5 3-5 3z"/>'),
+      doc:g('<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>'),
+      drop:g('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'),
+      gear:g('<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>')
+    };
+    var N=[
+      ['General',g('<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>','#c9ccd2')],
+      ['Tabs',g('<rect x="3" y="7" width="13" height="13" rx="2"/><path d="M8 4h11a2 2 0 0 1 2 2v11"/>','#6aa6f2')],
+      ['Search',g('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>','#f0a24a')],
+      ['Appearance',g('<path d="M12 3a9 9 0 1 0 0 18c1.4 0 1.8-1.2 1.2-2.2-.8-1.3.1-2.8 1.6-2.8H17a4 4 0 0 0 4-4c0-5-4-9-9-9z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>','#ee7d93')],
+      ['Links',g('<path d="M10 14 14 10M8.5 11.5l-2 2a3.2 3.2 0 0 0 4.5 4.5l2-2M15.5 12.5l2-2A3.2 3.2 0 0 0 13 6l-2 2"/>','#62c48e')],
+      ['Engines',g('<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>','#8da2f2')],
+      ['Shortcuts',g('<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M7 14h10"/>','#e8c24e')],
+      ['Sync',g('<path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5z"/>','#9fb0c4')],
+      ['Privacy',g('<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v7c0 4-2.5 7-6 7-2.5 0-4-1.4-5.5-3.5L4 13.8a1.5 1.5 0 0 1 2.4-1.8L8 14"/>','#e8644f')]
+    ];
+    var END=[
+      ['Agents',g('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>','#7fd394')],
+      ['Advanced',g('<rect x="3" y="5" width="18" height="6" rx="3"/><rect x="3" y="13" width="18" height="6" rx="3"/><circle cx="15" cy="8" r="1.6"/><circle cx="8" cy="16" r="1.6"/>','#c9ccd2')],
+      ['About',g('<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.4"/>','#e4b54c')]
+    ];
+    var GROUP=[['lion','Work'],['meadow','Client A'],['sun','Client B']], ALONE=['winter','Personal'];
+    var row=function(r){return '<div class="st-row">'+r[1]+r[0]+'</div>'};
+    var sb='<aside class="sb"><div class="sb-title"><span class="lights"><i></i><i></i><i></i></span><span class="navc mute">'+I.back+I.fwd+I.reload+'</span></div>'
+      +'<div class="addr gaddr">Search or enter website</div>'
+      +'<div class="tiles">'+[S.globe,S.code,S.lines,S.compass].map(function(x){return '<i class="tile-p">'+x+'</i>'}).join('')+'</div>'
+      +'<div class="row space">'+img(crest('lion'))+'Work<span class="more">···</span></div>'
+      +'<div class="row fold"><span class="ic">'+I.folder+'</span>Build the Browser<span class="count">3</span></div>'
+      +[[S.side,'Apple sidebars'],[S.play,'WebKit for SwiftUI'],[S.doc,'SwiftUI']].map(function(k){return '<div class="row child"><span class="ic">'+k[0]+'</span>'+k[1]+'</div>'}).join('')
+      +'<div class="rule"></div><div class="row new"><span class="ic">+</span>New Tab</div>'
+      +'<div class="row act"><span class="ic">'+S.gear+'</span>Settings<span class="x">✕</span></div>'
+      +'<div class="row"><span class="ic">'+S.drop+'</span>Liquid Glass notes</div>'
+      +'<div class="grow"></div><div class="sb-foot">'+I.sidebar+'<span class="gpick"><span class="ring">'
+      +GROUP.map(function(s,i){return '<i'+(i===0?' class="on"':'')+'>'+img(crest(s[0]))+'</i>'}).join('')
+      +'</span><i>'+img(crest(ALONE[0]))+'</i></span><span class="arch">'+I.archive+'</span></div></aside>';
+    var side='<div class="st-side"><div class="st-app">'+img('assets/crest-logo.svg')+'Crest Browser</div>'
+      +'<div class="st-find">'+I.search+'Search settings</div>'+N.map(row).join('')
+      +'<div class="st-head">Spaces<span>'+g('<path d="M4 20h4L19 9l-4-4L4 16z"/>')+g('<path d="M12 5v14M5 12h14"/>')+'</span></div>'
+      +GROUP.map(function(s,i){return '<div class="st-row'+(i?' sub':' on')+'">'+img(crest(s[0]))+s[1]+(i?'':'<span class="more">···</span>')+'</div>'}).join('')
+      +'<div class="st-row">'+img(crest(ALONE[0]))+ALONE[1]+'</div><div class="st-head"></div>'+END.map(row).join('')+'</div>';
+    var updown=g('<path d="m8 9 4-4 4 4M8 15l4 4 4-4"/>');
+    var main='<div class="st-main"><div class="st-top"><div class="st-name">'+img(crest('lion'))+'Work'+g('<circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01" stroke-width="2.4"/>')+'</div>'
+      +'<div class="st-crests"><span>'+GROUP.map(function(s,i){return '<i'+(i===0?' class="on"':'')+'>'+img(crest(s[0]))+'</i>'}).join('')+'</span>'+g('<path d="M12 5v14M5 12h14"/>')+'</div></div>'
+      +'<div class="st-seg"><span>Appearance</span><span class="on">Browsing</span><span>Privacy</span><span>Passwords</span></div>'
+      +'<div class="st-body"><h5>Browsing</h5><div class="st-card">'
+      +'<div>Search with<em>Default (Google)'+updown+'</em></div><div>Search suggestions<em>Default (Off)'+updown+'</em></div><div>Archive current tabs<em>After 12 Hours'+updown+'</em></div><div><b>Archive Now</b></div></div>'
+      +'<p class="st-note">Search suggestions send what you type to the search engine.</p>'
+      +'<div class="st-card"><div>Separate Pinned Tabs<span class="tg"></span></div></div>'
+      +'<p class="st-note">Every Space of Work’s group shows Work’s pinned tabs.</p>'
+      +'<h5>Downloads</h5><div class="st-card"><div>Ask where to save each download<span class="tg"></span></div><div>Download location<em>Downloads</em></div></div></div></div>';
+    el.innerHTML='<div class="mac-win" style="--field:'+field('lion','diagonal',WIN[0],WIN[1])+'">'+sb+'<div class="pg settings">'+side+main+'</div></div>';
+  })();
 
   /* ---------------------------------------------------------- device stack */
   var ds=document.getElementById('devstack');

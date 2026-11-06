@@ -49,6 +49,6 @@ Type arithmetic such as `24 * 7` to see the answer; **Return** copies it.
 
 ## What the palette remembers
 
-The palette learns which result you choose for what you type, so the result you usually pick for "gi" leads next time. It remembers this for each Space on this device only, never syncs it, and never learns in a private window. Clearing a Space's history forgets it too, and **Settings → Search → Clear Learned Choices** forgets everything it learned.
+The palette learns which result you choose for what you type, so the result you usually pick for "gi" leads next time. It remembers this for each Space, or each Sub-Space group, on this device only, never syncs it, and never learns in a private window. Clearing a Space's history forgets it too, and **Settings → Search → Clear Learned Choices** forgets everything it learned.
 
 Search suggestions from your search engine are optional, never fetched in a private window, and separate from the tabs, history, and actions the palette finds on your device.

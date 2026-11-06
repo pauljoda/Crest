@@ -26,7 +26,7 @@ Crest does not install Firefox add-ons or Safari Web Extensions. Many of them al
 | Package | Support |
 | --- | --- |
 | Chrome Web Store extensions | Supported. Chromium checks the publisher's signature and the extension's ID before Crest shows its install review. |
-| Extensions in more than one Space | Each Space gets its own installation and data. A copy reuses your approval only when the extension's identity, version and permission warnings match what you reviewed. |
+| Extensions in more than one Space | Each Space gets its own installation and data, except that the Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share one. A copy reuses your approval only when the extension's identity, version and permission warnings match what you reviewed. |
 | Unpacked extensions | For development. Install them from Chromium's extension manager in developer mode, linked from each Space's Extensions page in Settings. |
 | Firefox `.xpi` packages | Not supported. |
 | Safari Web Extensions, Safari content blockers, Safari App Extensions | Not supported. |

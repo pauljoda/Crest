@@ -9,7 +9,7 @@ keywords: [extension permissions, website access, site access, Space isolation]
 
 # Manage permissions and website access per Space
 
-Every Space keeps its own extension installations, permissions and website access. Allowing a tool in Work does not grant it the same access in Personal or on another Mac.
+Every Space keeps its own extension installations, permissions and website access. Allowing a tool in Work does not grant it the same access in Personal or on another Mac. The Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share one installation, with its permissions and website access.
 
 ## At installation
 

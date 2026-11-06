@@ -22,7 +22,7 @@ Choose a detected browser, then review each source Space, profile, or window. De
 | Safari | Bookmarks, windows, open tabs, and pinned tabs |
 | Firefox | Profiles, windows, open tabs, pinned tabs, and tab groups |
 
-If your browser isn't listed, choose **Browser not listed?** and Crest looks for other Chromium-based browsers on your Mac. Not every browser can be found this way; you can [request support for one](https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
+If your browser isn't listed, choose **Scan for more** and Crest looks for other Chromium-based browsers on your Mac. Not every browser can be found this way; you can [request support for one](https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
 
 In the review, each Space shows the Chrome Web Store extensions it brings under its address bar. Turn off any you don't want, and Crest installs the rest once the import finishes, without asking about each one.
 

@@ -22,7 +22,7 @@ Chromium starts the first time you need it. If WebKit is your default and no pag
 1. Open **Crest Settings → Engines**.
 2. Select **Chromium** or **WebKit**.
 
-The default applies to pages you open afterwards. Open pages keep their engine, and links a page opens stay on that page's engine. Select **Use Recommended Default** to return to Chromium.
+The default applies to pages you open afterwards. Open pages keep their engine, and links a page opens stay on that page's engine. After you choose an engine, select **Use Recommended** to return to Chromium.
 
 ## Open a website in the other engine
 
@@ -49,7 +49,7 @@ When a page asks for protected video Chromium can't play, such as before the mod
 
 ## After updating from a WebKit-only Crest
 
-The previous stable 0.6 release used WebKit only. Updating to Crest 0.7 keeps your Spaces, tabs, history and Crest Passwords. New pages open in Chromium unless you choose WebKit as your default. Each engine keeps separate website data, so Chromium does not inherit your WebKit sign-ins. Your existing WebKit website data remains available to pages opened in WebKit.
+Crest 0.6 and earlier used WebKit only. Updating from one of them keeps your Spaces, tabs, history and Crest Passwords. New pages open in Chromium unless you choose WebKit as your default. Each engine keeps separate website data, so Chromium does not inherit your WebKit sign-ins. Your existing WebKit website data remains available to pages opened in WebKit.
 
 Extensions installed in earlier versions do not carry over. Install them again from the Chrome Web Store.
 

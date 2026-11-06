@@ -38,7 +38,7 @@ In the sidebar, drag the split's header to move the whole group. Drag an individ
 
 ## iPad and iPhone
 
-iPad uses the same resizable column model as Mac. On iPhone, the group remains complete but one card fills the screen at a time. Swipe horizontally on the compact toolbar to page between cards; the gesture intentionally does nothing when the current tab is not in Split View.
+iPad uses the same resizable column model as Mac. On iPhone, the group remains complete but one card fills the screen at a time. Swipe left or right on the address bar to move card by card; past the last card, the swipe carries on to the Space's next tab.
 
 ## Sync behavior
 

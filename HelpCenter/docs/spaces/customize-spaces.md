@@ -14,7 +14,7 @@ Open a Space’s context menu to edit it, or open its page in Settings. On Mac, 
 Crest offers two presentation styles:
 
 - **Banner** uses Crest Studio: begin with a template, then choose a shape, field division, pattern, trim, and heraldic artwork. Use independent colors for the parts of your design, or make an identity with an emoji, monogram, or searchable SF Symbol.
-- **Traditional Gradient** blends one to three colors with direction, intensity, and optional texture.
+- **Gradient**, the last choice in Crest Studio's **Sidebar** step, blends one to three colors with direction, intensity, and optional texture.
 
 The result appears in the Space picker and browser chrome on Mac, iPad, and iPhone.
 

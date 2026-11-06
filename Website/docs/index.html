@@ -36,7 +36,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png">
   <link rel="mask-icon" href="../assets/crest-logo.svg" color="#101827">
   <link rel="manifest" href="../site.webmanifest">
-  <link rel="stylesheet" href="../styles.css?v=20260816-direct-split-parity">
+  <link rel="stylesheet" href="../styles.css?v=20261106-nav-guides">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -112,10 +112,12 @@
           <tr><td>Appearance and controls</td><td>Banners, permissions, website data, and other preferences remain contextual.</td></tr>
         </tbody>
       </table>
+      <h3>Sub-Spaces</h3>
+      <p>A Sub-Space shares another Space's sign-ins, history, passwords, and extensions while keeping its own tabs and look, like Spaces on one Arc profile. <a href="../guides/sub-spaces/">Share sign-ins across Spaces with Sub-Spaces</a>.</p>
       <h3>Make a Space recognizable</h3>
       <p>Think of every Space as a banner. Open the Space editor to choose its colors and crest; the full sidebar wears that identity and carries it into the Space switcher, making a context change visible before you read its name.</p>
-      <h3>Banner or Traditional Gradient</h3>
-      <p><strong>Banner mode</strong> uses distinct color fields and heraldic patterns for an expressive, unmistakable Space. <strong>Traditional Gradient mode</strong> preserves the familiar Arc-style theme: blend one to three colors into a smooth atmosphere, then adjust its direction, strength, readability, and optional texture.</p>
+      <h3>Banner or Gradient</h3>
+      <p><strong>Banner mode</strong> uses distinct color fields and heraldic patterns for an expressive, unmistakable Space. <strong>Gradient</strong>, the last choice in Crest Studio's Sidebar step, preserves the familiar Arc-style theme: blend one to three colors into a smooth atmosphere, then adjust its direction, strength, readability, and optional texture.</p>
       <h3>Private Spaces</h3>
       <p>A Private Space is temporary. Its website data is non-persistent and it stays out of normal history, restoration, archive, and synchronization.</p>
 
@@ -135,7 +137,7 @@
 
       <h2 id="quick-and-peek">Quick Window and Peek</h2>
       <h3>Quick Window</h3>
-      <p>Quick Window carries forward the idea behind Arc's Tiny Arc. On Mac, links opened from other apps can arrive in a lightweight browser instead of immediately joining your durable tabs. Choose the right Space and it uses that Space's signed-in session and Crest Passwords; close it when you are done, or keep it by opening it as a full tab.</p>
+      <p>Quick Window carries forward the idea behind Arc's Little Arc. On Mac, links opened from other apps can arrive in a lightweight browser instead of immediately joining your durable tabs. Choose the right Space and it uses that Space's signed-in session and Crest Passwords; close it when you are done, or keep it by opening it as a full tab.</p>
       <h3>Peek</h3>
       <p>Peek opens a link above the page you are reading. Close it to return immediately, or open it in the current or another Space when it earns a permanent place.</p>
 
@@ -144,12 +146,12 @@
       <p><a href="../guides/link-routing/">Build and test a Link Routing rule.</a></p>
 
       <h2 id="migration">Moving to Crest</h2>
-      <p>On Mac, Crest can discover Arc, Zen, Chrome, Safari, Firefox, and other Chromium browsers and turn their browsing data into a visual import review. Choose one or more sources, then work through every Space or profile before anything is committed. If your browser isn&rsquo;t listed, choose <strong>Browser not listed?</strong> and Crest looks for other Chromium-based browsers on your Mac.</p>
+      <p>On Mac, Crest can discover Arc, Zen, Chrome, Safari, Firefox, and other Chromium browsers and turn their browsing data into a visual import review. Choose one or more sources, then work through every Space or profile before anything is committed. If your browser isn&rsquo;t listed, choose <strong>Scan for more</strong> and Crest looks for other Chromium-based browsers on your Mac.</p>
       <table class="docs-table">
         <thead><tr><th>Source</th><th>What Crest can bring over</th></tr></thead>
         <tbody>
-          <tr><td>Arc</td><td>Spaces, tabs, folders, split views, colors, icons, extensions, and passwords.</td></tr>
-          <tr><td>Zen</td><td>Spaces from every profile, Essentials, pinned tabs, folders, split views, open tabs, icons, and colors.</td></tr>
+          <tr><td>Arc</td><td>Spaces (each profile's as one Sub-Space group), tabs, folders, split views, colors, icons, extensions, and passwords.</td></tr>
+          <tr><td>Zen</td><td>Spaces from every profile (each profile's as one Sub-Space group), Essentials, pinned tabs, folders, split views, open tabs, icons, and colors.</td></tr>
           <tr><td>Chrome</td><td>Profiles, bookmarks, open tabs, tab groups, split views, extensions, and passwords.</td></tr>
           <tr><td>Brave, Edge, Vivaldi, Opera, Dia, Comet, Aside, ego lite, Chromium, and Chrome Beta, Dev, and Canary</td><td>Profiles, bookmarks, open tabs, tab groups, split views, extensions, and passwords.</td></tr>
           <tr><td>Safari</td><td>Bookmarks, windows, open tabs, and pinned tabs.</td></tr>
@@ -159,7 +161,7 @@
       <h3>Review before anything moves</h3>
       <p>Keep or remove individual tabs and folders, choose whether a source becomes a new Space or joins an existing one, and include supported passwords only when you want them. Each Space shows the Chrome Web Store extensions it brings under its address bar; Crest installs the ones you keep once the import finishes. The before-and-after preview updates as you make decisions.</p>
       <h3>Customize during setup</h3>
-      <p>Open <strong>Customize Space</strong> from the review to rename the destination and edit its colors, crest, and Banner or Traditional Gradient presentation before importing.</p>
+      <p>Open <strong>Customize Space</strong> from the review to rename the destination and edit its colors, crest, and Banner or Gradient presentation before importing.</p>
       <div class="docs-callout"><strong>Mac first, then everywhere:</strong> direct browser migration happens in Crest for Mac. Once imported, your Spaces and tabs can sync to iPad and iPhone with iCloud.</div>
 
       <h2 id="engines">Chromium and WebKit</h2>
@@ -221,6 +223,6 @@
       </table>
     </article>
   </main>
-  <footer><a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a><p>A native browser for Mac, iPad, and iPhone.</p><div><a href="../#hall">Spaces</a><a href="../#tour">Split View</a><a href="../#more">Features</a><a href="../guides/">Help</a><a href="../support/">Support</a><a href="../privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer">Download for Mac</a><a href="https://ko-fi.com/pauljoda/tiers" target="_blank" rel="noopener noreferrer">Support open source software</a><a href="../">Product site</a></div></footer>
+  <footer><a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a><p>A native browser for Mac, iPad, and iPhone.</p><div><a href="../#crests">Spaces</a><a href="../#tour">Split View</a><a href="../#more">Features</a><a href="../guides/">Help</a><a href="../support/">Support</a><a href="../privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer">Download for Mac</a><a href="https://ko-fi.com/pauljoda/tiers" target="_blank" rel="noopener noreferrer">Support open source software</a><a href="../">Product site</a></div></footer>
 </body>
 </html>
