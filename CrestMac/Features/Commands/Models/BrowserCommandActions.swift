@@ -419,8 +419,8 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
-    func cleanupCurrentTabs() {
-        browser.cleanupCurrentTabs()
+    func clearCurrentTabs() {
+        guard browser.clearShownSpaceTabs(accessController: spaceAccess) else { return }
         pages.reconcile()
         pages.select()
     }

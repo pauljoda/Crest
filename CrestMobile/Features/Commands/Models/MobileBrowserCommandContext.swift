@@ -44,7 +44,7 @@ struct MobileBrowserCommandContext {
     let toggleSelectedTabPinned: () -> Void
     let duplicateSelectedTab: () -> Void
     let reopenClosedTab: () -> Void
-    let cleanupCurrentTabs: () -> Void
+    let clearCurrentTabs: () -> Void
     let dismissSelectedTab: () -> Void
     let archiveSelectedTab: () -> Void
     let selectPreviousTab: () -> Void

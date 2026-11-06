@@ -11,12 +11,16 @@ struct BrowserSpacePickerSegment: View {
     let space: BrowserSpaceIdentity
     let reorderState: BrowserSidebarReorderState
     let metrics: BrowserSpacePickerMetrics
+    /// The part of the picker's scroll lane on screen, in global coordinates,
+    /// or nil before it is measured.
+    var visibleRegion: CGRect? = nil
 
     var body: some View {
         BrowserSpacePickerIcon(space: space, metrics: metrics)
             .browserSidebarReorderZone(
                 .space(space.assignment),
-                state: reorderState
+                state: reorderState,
+                visibleRegion: visibleRegion
             )
             .accessibilityHint(
                 "Select this Space, or drop a tab to move it here"

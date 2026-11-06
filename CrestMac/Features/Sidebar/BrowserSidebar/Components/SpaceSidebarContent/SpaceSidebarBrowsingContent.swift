@@ -66,7 +66,7 @@ struct SpaceSidebarBrowsingContent: View {
                 openNewTab: openNewTab,
                 createFolder: beginCreatingFolder,
                 showHistory: showHistory,
-                cleanup: browser.cleanupCurrentTabs,
+                cleanup: { _ = tabActions.clearCurrentTabs() },
                 toggleSavedTabs: toggleSavedTabs
             )
         )

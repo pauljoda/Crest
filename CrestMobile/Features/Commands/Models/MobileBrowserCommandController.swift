@@ -91,9 +91,11 @@ struct MobileBrowserCommandController {
         return browser.shownTab?.id
     }
 
-    func cleanupCurrentTabs() {
-        browser.cleanupCurrentTabs()
+    @discardableResult
+    func clearCurrentTabs() -> Bool {
+        guard browser.clearShownSpaceTabs(accessController: spaceAccess) else { return false }
         synchronizePages()
+        return true
     }
 
     @discardableResult

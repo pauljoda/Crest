@@ -19,6 +19,35 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertTrue(context.browser.shownSpace!.archive.contains(tabID: context.tab.id))
     }
 
+    /// Clear Unpinned Tabs archives the shown Space's open tabs however recently
+    /// they were used, keeps its pinned and saved tabs, and leaves other Spaces
+    /// alone, even a tab there past its cleanup lifetime.
+    func testClearUnpinnedTabsCommandArchivesOnlyTheShownSpacesOpenTabs() throws {
+        let address = try XCTUnwrap(URL(string: "https://example.com"))
+        let shown = TabState.Seed(title: "Shown", url: address, placement: .current)
+        let recent = TabState.Seed(title: "Recent", url: address, placement: .current)
+        let pinned = TabState.Seed(title: "Pinned", url: address, placement: .pinned)
+        let saved = TabState.Seed(title: "Saved", url: address, placement: .saved)
+        let elsewhere = TabState.Seed(
+            title: "Elsewhere", url: address, placement: .current, lastActivatedAt: .now.addingTimeInterval(-86_400))
+        let space = SpaceState.Seed(
+            name: "Shown", symbol: "circle", accent: .indigo, folders: [], tabs: [shown, recent, pinned, saved])
+        let other = SpaceState.Seed(
+            name: "Other", symbol: "circle", accent: .indigo, folders: [], tabs: [elsewhere])
+        let browser = BrowserStore.hostingPages(
+            SessionState.Seed(spaces: [space, other]), showing: space.id, tabs: [space.id: shown.id])
+        let actions = BrowserCommandActions(
+            browser: browser, pages: BrowserPagePool(browser: browser), chrome: BrowserChromeState(), windows: nil)
+
+        actions.perform(.clearUnpinnedTabs)
+
+        let cleared = try XCTUnwrap(browser.spaceModel(space.id))
+        XCTAssertEqual(Set(cleared.tabs.models.map(\.id)), [pinned.id, saved.id])
+        XCTAssertTrue(cleared.archive.contains(tabID: shown.id))
+        XCTAssertTrue(cleared.archive.contains(tabID: recent.id))
+        XCTAssertTrue(try XCTUnwrap(browser.spaceModel(other.id)).tabs.contains(elsewhere.id))
+    }
+
     private final class DeferredDismissal: BrowserPageDismissalAuthorizing {
         var pending: (@MainActor () -> Bool)?
         func performDismissal(

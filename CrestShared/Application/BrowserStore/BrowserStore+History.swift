@@ -41,10 +41,6 @@ extension BrowserStore {
         sendRecords(RemoveHistoryAddress(workspaceID: family.workspaceID, spaceID: spaceID, address: address))
     }
 
-    func cleanupCurrentTabs() {
-        sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: nil))
-    }
-
     /// Applies every Space's tab, stored-record and download retention
     /// policies to a session that is already running, rather than only at
     /// launch. Windows share one session, and the core sweeps it at most once

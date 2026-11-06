@@ -10,13 +10,14 @@ struct BrowserWindowLayoutPersistence {
         transaction.restore(persistedWidth: width)
     }
 
-    /// Returns a fallback preference only when no per-window store is available.
+    /// Returns the committed width so it also becomes the width new windows
+    /// open with. A window with its own store keeps the width as well, so
+    /// reopening that window restores what it had.
     func commitSidebarWidth(_ width: CGFloat, transaction: inout BrowserSidebarWidthTransaction) -> CGFloat? {
         transaction.resize(to: width)
         guard let committedWidth = transaction.commit() else { return nil }
-        guard let windowState else { return committedWidth }
-        windowState.captureSidebar(width: Double(committedWidth))
-        return nil
+        windowState?.captureSidebar(width: Double(committedWidth))
+        return committedWidth
     }
 
     func seedSplitLayout(
