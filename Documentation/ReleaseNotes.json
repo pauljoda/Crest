@@ -5125,6 +5125,10 @@
     "chromium-page-takes-clicks-after-drag": {
       "category": "fixed",
       "message": "On Chromium pages, dragging an item or a link no longer leaves the page unable to take clicks until it reloads."
+    },
+    "chromium-discord-stays-signed-in": {
+      "category": "fixed",
+      "message": "On Chromium pages, Discord stays signed in after Crest restarts, updates or unloads its tab, and a page unloaded to save memory can still save its work before it goes."
     }
   }
 }

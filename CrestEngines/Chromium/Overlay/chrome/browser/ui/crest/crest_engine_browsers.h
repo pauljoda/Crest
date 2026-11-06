@@ -69,6 +69,18 @@ class EngineBrowsers final {
   bool Activate(content::WebContents* contents);
   // Deletes `contents` from the Browser that holds it.
   void Destroy(content::WebContents* contents);
+  // Deletes `contents` once its document has run its beforeunload handlers,
+  // without asking the person, as Chromium does when it discards a tab. A
+  // page that keeps something out of storage while it runs, as a site that
+  // hides its sign-in from developer tools, puts it back before it goes. One
+  // with no handlers, or whose renderer is gone, goes at once; one whose
+  // handlers never answer goes after Chromium's beforeunload timeout, or
+  // kDepartureLimit when its renderer stops meanwhile.
+  void DestroyAfterBeforeUnload(content::WebContents* contents);
+  // The beforeunload handlers of `contents` answered. True when it was
+  // waiting for them to go, which it does on the next turn: Chromium is still
+  // inside the answer.
+  bool BeforeUnloadFinished(content::WebContents* contents);
 
   // The Browser that holds `contents`, or nullptr.
   Browser* Holding(content::WebContents* contents) const;
@@ -126,9 +138,15 @@ class EngineBrowsers final {
   // a page the core created registers first.
   void OfferSoon(content::WebContents* contents, bool foreground);
   void Offer(base::WeakPtr<content::WebContents> contents, bool foreground);
+  // Deletes `contents`, which waited for its beforeunload handlers, if it is
+  // still there.
+  void Depart(base::WeakPtr<content::WebContents> contents);
 
   const raw_ref<EngineBinding> binding_;
   std::vector<std::unique_ptr<KeptBrowser>> kept_;
+  // The tabs whose pages closed and that wait for their documents'
+  // beforeunload handlers before they go.
+  std::vector<base::WeakPtr<content::WebContents>> departing_;
   // The Browser Chromium started with, whose profile is the engine's own.
   raw_ptr<Browser> bootstrap_ = nullptr;
   // The Browser of the page in use, which Chromium counts as active.

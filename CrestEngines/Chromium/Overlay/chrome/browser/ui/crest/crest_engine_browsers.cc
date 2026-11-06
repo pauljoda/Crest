@@ -7,6 +7,7 @@
 #include "base/functional/bind.h"
 #include "base/location.h"
 #include "base/task/sequenced_task_runner.h"
+#include "base/time/time.h"
 #include "chrome/browser/platform_util.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
@@ -27,6 +28,15 @@
 #include "ui/base/page_transition_types.h"
 
 namespace crest {
+
+namespace {
+
+// How long a closed page's tab waits for beforeunload handlers whose renderer
+// stopped before they answered. A renderer that hangs in them is answered
+// sooner, by Chromium's own beforeunload timeout.
+constexpr base::TimeDelta kDepartureLimit = base::Seconds(2);
+
+}  // namespace
 
 // A Browser the engine created for itself: the Space whose tabs it opens,
 // whether the Crest window reserved for it has opened, and whether that window
@@ -194,6 +204,39 @@ bool EngineBrowsers::Activate(content::WebContents* contents) {
 void EngineBrowsers::Destroy(content::WebContents* contents) {
   if (KeptBrowser* kept = HoldingKept(contents)) {
     kept->strip->DetachAndDeleteWebContentsAt(kept->strip->GetIndexOfWebContents(contents));
+  }
+}
+
+void EngineBrowsers::DestroyAfterBeforeUnload(content::WebContents* contents) {
+  if (!contents || !HoldingKept(contents)) {
+    return;
+  }
+  if (!contents->NeedToFireBeforeUnloadOrUnloadEvents()) {
+    Destroy(contents);
+    return;
+  }
+  departing_.push_back(contents->GetWeakPtr());
+  // A discard's beforeunload never shows a dialog: a handler that asks to
+  // stay is answered at once, and the tab goes all the same.
+  contents->DispatchBeforeUnload(/*auto_cancel=*/true);
+  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+      FROM_HERE, base::BindOnce(&EngineBrowsers::Depart, weak_factory_.GetWeakPtr(), contents->GetWeakPtr()),
+      kDepartureLimit);
+}
+
+bool EngineBrowsers::BeforeUnloadFinished(content::WebContents* contents) {
+  if (std::ranges::none_of(departing_, [&](const auto& departing) { return departing.get() == contents; })) {
+    return false;
+  }
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+      FROM_HERE, base::BindOnce(&EngineBrowsers::Depart, weak_factory_.GetWeakPtr(), contents->GetWeakPtr()));
+  return true;
+}
+
+void EngineBrowsers::Depart(base::WeakPtr<content::WebContents> contents) {
+  std::erase_if(departing_, [&](const auto& departing) { return !departing || departing.get() == contents.get(); });
+  if (contents) {
+    Destroy(contents.get());
   }
 }
 

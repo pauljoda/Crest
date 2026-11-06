@@ -651,13 +651,18 @@ void EngineBinding::Live(EnginePage& page, content::WebContents* contents) {
   page.LoadPending();
 }
 
-// A page closed keeping its state hands the core what brings it back.
+// A page closed keeping its state hands the core what brings it back. A
+// document the core did not ask before it closed, as one unloaded to give
+// memory back, runs its beforeunload handlers before it goes, as it would
+// when Chromium closes or discards a tab.
 void EngineBinding::Close(const engine::ClosePage& closing) {
   const std::string key = GuidText(closing.page_id);
   std::optional<engine::PageRestoreState> restore_state;
   content::WebContents* contents = nullptr;
+  bool runs_before_unload = false;
   if (auto page = pages_.extract(key)) {
     contents = page.mapped()->web_contents();
+    runs_before_unload = page.mapped()->AwaitsBeforeUnload();
     if (closing.keeps_state) {
       restore_state = page.mapped()->RestoreState();
     }
@@ -675,7 +680,7 @@ void EngineBinding::Close(const engine::ClosePage& closing) {
   if (notifications_) {
     notifications_->Forget(closing.page_id);
   }
-  DestroyContents(key, contents);
+  DestroyContents(key, contents, runs_before_unload);
   Report(engine::PageClosed{.page_id = closing.page_id, .restore_state = std::move(restore_state)});
 }
 
@@ -1496,11 +1501,15 @@ void EngineBinding::DestroyPage(const std::string& key) {
   }
 }
 
-void EngineBinding::DestroyContents(const std::string& key, content::WebContents* contents) {
+void EngineBinding::DestroyContents(const std::string& key, content::WebContents* contents, bool runs_before_unload) {
   if (shell_) {
     shell_->ReleasePage(key);
   }
-  Browsers().Destroy(contents);
+  if (runs_before_unload) {
+    Browsers().DestroyAfterBeforeUnload(contents);
+  } else {
+    Browsers().Destroy(contents);
+  }
 }
 
 void EngineBinding::ReleaseProfile(const std::string& id) {
@@ -1643,7 +1652,13 @@ void OnDevToolsClosing(content::WebContents* inspected) {
 }
 
 bool AnswerBeforeUnload(content::WebContents* contents, bool proceed) {
-  EnginePage* page = EngineBinding::Get().PageFor(contents);
+  EngineBinding& binding = EngineBinding::Get();
+  // A closed page's tab that waited for its document's handlers goes, however
+  // they answered.
+  if (binding.Browsers().BeforeUnloadFinished(contents)) {
+    return true;
+  }
+  EnginePage* page = binding.PageFor(contents);
   return page && page->AnswerBeforeUnload(proceed);
 }
 

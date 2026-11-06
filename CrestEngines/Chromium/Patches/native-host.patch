@@ -831,11 +831,12 @@
  void RenderViewContextMenuMacCocoa::CancelToolkitMenu() {
 --- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h
 +++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h
-@@ -49,6 +49,7 @@
+@@ -49,6 +49,8 @@
        content::RenderWidgetHost* render_widget_host,
        bool is_popup) override;
    content::WebDragDestDelegate* GetDragDestDelegate() override;
 +  bool HandleDragStart(const content::DropData& data) override;
++  bool ReportsPageAsWindow() override;
    void ShowContextMenu(content::RenderFrameHost& render_frame_host,
                         const content::ContextMenuParams& params) override;
    void StoreFocus() override;
@@ -849,7 +850,7 @@
  #include "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.h"
  #include "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_remote_cocoa.h"
  #include "chrome/browser/ui/cocoa/tab_contents/web_drag_bookmark_handler_mac.h"
-@@ -76,6 +77,10 @@
+@@ -76,6 +77,16 @@
                       weak_ptr_factory_.GetWeakPtr()));
  }
  
@@ -857,9 +858,82 @@
 +  return crest::BeginLinkDrag(web_contents_, data);
 +}
 +
++// Crest insets each page beside its sidebar and toolbar, which a page would
++// otherwise count as part of its window.
++bool ChromeWebContentsViewDelegateViewsMac::ReportsPageAsWindow() {
++  return crest::IsEnabled();
++}
++
  void ChromeWebContentsViewDelegateViewsMac::BuildMenuAsync(
      content::RenderFrameHost& render_frame_host,
      const content::ContextMenuParams& params,
+--- a/content/browser/renderer_host/render_widget_host_view_mac.h
++++ b/content/browser/renderer_host/render_widget_host_view_mac.h
+@@ -529,6 +529,12 @@
+   // Specify the element to return as the accessibility parent of the
+   // |cocoa_view_|.
+   void SetParentAccessibilityElement(id parent_accessibility_element);
++
++  // Reports the view's own frame as the window its page sees, for an embedder
++  // that insets its pages inside a larger window. The page's outerWidth,
++  // outerHeight, screenX and screenY then describe the page, not the
++  // embedder's window around it.
++  void SetReportsViewAsWindow(bool reports_view_as_window);
+ 
+   RenderWidgetHostViewMac* PopupChildHostView() {
+     return popup_child_host_view_;
+@@ -654,6 +660,10 @@
+   // (where the origin is the upper-left corner of Screen::GetPrimaryDisplay).
+   gfx::Rect window_frame_in_screen_dip_;
+ 
++  // Whether the view's own frame stands for its window (see
++  // SetReportsViewAsWindow).
++  bool reports_view_as_window_ = false;
++
+   // Whether or not the NSView's NSWindow is the key window.
+   bool is_window_key_ = false;
+ 
+--- a/content/browser/renderer_host/render_widget_host_view_mac.mm
++++ b/content/browser/renderer_host/render_widget_host_view_mac.mm
+@@ -434,6 +434,11 @@
+       setAccessibilityParentElement:parent_accessibility_element];
+ }
+ 
++void RenderWidgetHostViewMac::SetReportsViewAsWindow(
++    bool reports_view_as_window) {
++  reports_view_as_window_ = reports_view_as_window;
++}
++
+ RenderWidgetHostViewCocoa* RenderWidgetHostViewMac::GetInProcessNSView() const {
+   if (in_process_ns_view_bridge_)
+     return in_process_ns_view_bridge_->GetNSView();
+@@ -1549,6 +1554,11 @@
+ }
+ 
+ gfx::Rect RenderWidgetHostViewMac::GetBoundsInScreen() {
++  // A page inset in a larger window would otherwise count the embedder's
++  // window around it as its own, which pages read as docked developer tools.
++  if (reports_view_as_window_) {
++    return GetViewBounds();
++  }
+   return window_frame_in_screen_dip_;
+ }
+ 
+@@ -2069,6 +2079,14 @@
+ 
+   if (view_size_changed)
+     UpdateScreenInfo();
++
++  // The view moving inside its window moves the window its page sees.
++  if (reports_view_as_window_ && attached_to_window && !destroy_pending()) {
++    if (host()->delegate())
++      host()->delegate()->SendScreenRects();
++    else
++      host()->SendScreenRects();
++  }
+ }
+ 
+ void RenderWidgetHostViewMac::OnWindowFrameInScreenChanged(
 --- a/content/browser/web_contents/web_contents_view_mac.mm
 +++ b/content/browser/web_contents/web_contents_view_mac.mm
 @@ -264,6 +264,11 @@
@@ -874,7 +948,15 @@
  
    [drag_dest_ initiateDragWithRenderWidgetHost:source_rwh dropData:drop_data];
    drag_source_start_rwh_ = source_rwh->GetWeakPtr();
-@@ -691,10 +696,16 @@
+@@ -464,6 +469,7 @@
+   if (delegate()) {
+     view->SetDelegate(
+         delegate()->GetDelegateForHost(render_widget_host, /*is_popup=*/false));
++    view->SetReportsViewAsWindow(delegate()->ReportsPageAsWindow());
+   }
+
+   // Add the RenderWidgetHostView to the ui::Layer hierarchy.
+@@ -691,10 +697,16 @@
  void WebContentsViewMac::EndDrag(uint32_t drag_operation,
                                   const gfx::PointF& local_point,
                                   const gfx::PointF& screen_point) {
@@ -896,15 +978,20 @@
  void WebContentsViewMac::PerformEndDrag(uint32_t drag_operation,
 --- a/content/public/browser/web_contents_view_delegate.h
 +++ b/content/public/browser/web_contents_view_delegate.h
-@@ -51,6 +51,10 @@
- 
+@@ -51,6 +51,15 @@
+
    // Returns a delegate to process drags not handled by content.
    virtual WebDragDestDelegate* GetDragDestDelegate();
 +
 +  // Lets a native embedder consume an approved renderer drag without starting
 +  // an OS drag session. The default preserves the normal Chromium path.
 +  virtual bool HandleDragStart(const DropData& data) { return false; }
- 
++
++  // Whether a native embedder that insets its pages inside a larger window
++  // reports each page's own frame as the window the page sees. The default
++  // reports the NSWindow, as Chromium does.
++  virtual bool ReportsPageAsWindow() { return false; }
+
    // Shows a context menu.
    //
 --- a/chrome/browser/chrome_content_browser_client.cc

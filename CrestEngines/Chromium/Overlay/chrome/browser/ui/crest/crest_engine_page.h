@@ -197,6 +197,10 @@ class EnginePage final : public content::WebContentsObserver,
   // The engine fired the page's beforeunload. Answers whether the core had
   // asked, which then hears `proceed`.
   bool AnswerBeforeUnload(bool proceed);
+  // Whether the document the page shows has yet to run its beforeunload
+  // handlers before it goes: it has not agreed to go since the core last
+  // asked, as a close the core prepares asks first.
+  bool AwaitsBeforeUnload();
   // The page's own script asked to close its window, once its document
   // agreed to go; the core decides whether the page closes.
   void RequestClose();
@@ -359,6 +363,8 @@ class EnginePage final : public content::WebContentsObserver,
   bool presents_adopted_commit_ = false;
   // The core asked whether the page may go and waits for the answer.
   bool checks_before_unload_ = false;
+  // The document that agreed to go when the core last asked.
+  base::WeakPtr<content::Page> agreed_to_go_;
   // The title last reported.
   std::string reported_title_;
   // The move within the document waiting for its title, and the latest
