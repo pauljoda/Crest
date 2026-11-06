@@ -68,4 +68,67 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(core.Current.Spaces[0].SplitGroups);
     }
 
+    /// A Space with no pinned tab whose first saved tab and first open tab
+    /// each sit in a collapsed folder, ahead of a loose saved tab and two loose
+    /// open tabs.
+    private sealed class FoldedSpace {
+        public Guid Space { get; } = Guid.NewGuid();
+        public Guid FoldedSaved { get; } = Guid.NewGuid();
+        public Guid LooseSaved { get; } = Guid.NewGuid();
+        public Guid FoldedOpen { get; } = Guid.NewGuid();
+        public Guid Shown { get; } = Guid.NewGuid();
+        public Guid NextOpen { get; } = Guid.NewGuid();
+        public JsonNode Session { get; }
+
+        public FoldedSpace() {
+            Guid savedFolder = Guid.NewGuid(), openFolder = Guid.NewGuid();
+            Session = SavedSession().Document["session"]!;
+            Session.AsObject().Remove("disposableSeedMarker");
+            Session.AsObject().Remove("selectedSpaceID");
+            var space = Session["spaces"]![0]!.AsObject();
+            space["id"] = SwiftId(Space);
+            space["tabs"] = new JsonArray(Tab(FoldedSaved, "saved", savedFolder), Tab(LooseSaved, "saved", null),
+                Tab(FoldedOpen, "current", openFolder), Tab(Shown, "current", null), Tab(NextOpen, "current", null));
+            space["folders"] = new JsonArray(Folder(savedFolder, "saved"), Folder(openFolder, "current"));
+            space.Remove("selectedTabID");
+        }
+
+        private static JsonObject Tab(Guid id, string placement, Guid? folder) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Page",
+            ["url"] = $"https://folded.example/{id}",
+            ["placement"] = placement,
+            ["savedURL"] = placement == "current" ? null : $"https://folded.example/{id}",
+            ["folderID"] = folder is { } folderId ? SwiftId(folderId) : null,
+            ["symbol"] = "globe",
+            ["lastActivatedAt"] = 800000000.0
+        };
+
+        private static JsonObject Folder(Guid id, string location) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Folder",
+            ["location"] = location,
+            ["isCollapsed"] = true
+        };
+    }
+
+    [Fact]
+    public void ATabTheSpaceFallsBackToIsOneThePersonCanSeeInTheSidebar() {
+        var f = new FoldedSpace();
+        using var device = new TestDevice(f.Session);
+        var window = device.Open(f.Space, (f.Space, f.Shown));
+
+        // Deleting the shown tab skips the open tab in a collapsed folder.
+        device.Send(new DeleteTab(device.Workspace, window, f.Space, f.Shown));
+        Assert.Equal(f.NextOpen, device.Tab(window, f.Space));
+
+        // Clearing the open tabs skips the saved tab in a collapsed folder.
+        device.Send(new ClearCurrentTabs(device.Workspace, window, f.Space));
+        Assert.Equal(f.LooseSaved, device.Tab(window, f.Space));
+
+        // With the Saved section collapsed too, a window that shows the Space
+        // on its own shows no tab.
+        device.Send(new ExpandSavedTabs(device.Workspace, f.Space, IsExpanded: false));
+        Assert.Null(device.Tab(device.Open(f.Space), f.Space));
+    }
 }

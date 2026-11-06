@@ -62,8 +62,9 @@ public sealed partial class BrowserContractsTests {
     public void ALockedSpaceListsNoRecentTabsUntilItUnlocks() {
         var session = GuardedSession();
         var identity = Identity(session);
+        var tab = Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>());
         using var device = new TestDevice(session);
-        var window = device.Open(identity.Space);
+        var window = device.Open(identity.Space, (identity.Space, tab));
         var shown = device.Tab(window, identity.Space);
 
         Assert.Empty(RecentFocus(device, window));

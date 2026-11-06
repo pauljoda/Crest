@@ -5,12 +5,12 @@ namespace CrestCore.Contracts;
 
 /// Deletes a tab from any section and keeps it in the archive as an open tab.
 /// The window that asked returns to the tab it showed before, or to the tab
-/// its Space falls back to.
+/// its Space falls back to, one a person can see in the sidebar, or none.
 public sealed record DeleteTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId) : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     /// Deletes the tab into the archive as an open tab. The issuing window
-    /// shows the tab it showed before, or the one its Space falls back to.
+    /// shows the tab it showed before, else the Space's fallback tab.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         var edited = BrowserTabCollection.Restore(space);
@@ -18,10 +18,11 @@ public sealed record DeleteTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gu
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         var fallback = followUp.FallbackAfterDismissing(space.Id, TabId, space.Tabs.Select(tab => tab.Id).ToHashSet());
         var selected = edited.DismissTabs([TabId], followUp.Window?.Tab(space.Id), fallback, turn.Now, deleting: true,
-            ensureSelection: true, resetArchivePlacement: true);
+            ensureSelection: false, resetArchivePlacement: true);
         edited.PruneSplitMetadata();
-        followUp.ShowTab(space.Id, selected);
-        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Deletion, followUp);
+        var remaining = edited.Capture(space);
+        followUp.ShowTab(space.Id, selected ?? remaining.FallbackTab());
+        return new(turn.Basis.Replacing(remaining), SyncStaging.Deletion, followUp);
     }
 
     #endregion
