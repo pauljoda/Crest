@@ -5153,6 +5153,10 @@
     "clear-unpinned-tabs-clears-the-space": {
       "category": "fixed",
       "message": "Clear Unpinned Tabs and Shift-Command-K clear the Space’s open tabs, as the sidebar’s Clear does, however recently they were used."
+    },
+    "address-completion-steady-while-typing": {
+      "category": "fixed",
+      "message": "The inline address completion and the search provider chip in the command bar no longer flicker while you type."
     }
   }
 }
