@@ -361,8 +361,8 @@ internal sealed class SessionStorage : IDisposable {
             lock (queue) {
                 while (!pendingIsNew && !stopping) Monitor.Wait(queue);
                 if (!pendingIsNew) return;
-                var due = DateTime.UtcNow + SaveBehindDelay;
-                while (!stopping && !expedited && due - DateTime.UtcNow is { Ticks: > 0 } remaining) Monitor.Wait(queue, remaining);
+                var waited = System.Diagnostics.Stopwatch.StartNew();
+                while (!stopping && !expedited && SaveBehindDelay - waited.Elapsed is { Ticks: > 0 } remaining) Monitor.Wait(queue, remaining);
                 pendingIsNew = false;
                 expedited = false;
             }
