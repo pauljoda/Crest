@@ -61,7 +61,8 @@ struct BrowserSpaceSwitcherCompactPicker: View {
             ) { space in
                 if let reorderState {
                     BrowserSpacePickerSegment(
-                        space: space, reorderState: reorderState, metrics: metrics
+                        space: space, reorderState: reorderState, metrics: metrics,
+                        visibleRegion: viewport.isEmpty ? nil : viewport
                     )
                 } else {
                     BrowserSpacePickerIcon(space: space, metrics: metrics)

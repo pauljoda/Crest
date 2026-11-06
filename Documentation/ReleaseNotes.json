@@ -5177,6 +5177,10 @@
     "quit-after-failed-save": {
       "category": "fixed",
       "message": "Quitting after a session save failed tries that save again, instead of waiting for it to time out."
+    },
+    "ios-tab-drop-on-space-icon": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, dropping a dragged tab on a Space icon in the sidebar moves it to that Space."
     }
   }
 }
