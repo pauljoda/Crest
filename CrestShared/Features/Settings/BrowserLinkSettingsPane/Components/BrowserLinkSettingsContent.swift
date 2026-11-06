@@ -14,7 +14,8 @@ struct BrowserLinkSettingsContent: View {
         BrowserExternalLinkDestinationSection(
             destination: externalDestinationBinding,
             spaceID: externalSpaceBinding,
-            spaces: availableSpaces
+            spaces: availableSpaces,
+            opensOverFullScreenApps: quickWindowOverFullScreenBinding
         )
 
         BrowserQuickWindowSettingsSection(
@@ -124,6 +125,15 @@ struct BrowserLinkSettingsContent: View {
     private var dragsLinksToPeekBinding: Binding<Bool>? {
         #if os(macOS)
             links.binding(.dragsLinksToPeek, reading: \.dragsLinksToPeek)
+        #else
+            nil
+        #endif
+    }
+
+    /// Only a Mac app takes a full-screen Space of its own.
+    private var quickWindowOverFullScreenBinding: Binding<Bool>? {
+        #if os(macOS)
+            links.binding(.opensQuickWindowsOverFullScreenApps, reading: \.opensQuickWindowsOverFullScreenApps)
         #else
             nil
         #endif

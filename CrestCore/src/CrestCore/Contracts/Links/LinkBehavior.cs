@@ -35,9 +35,15 @@ public sealed class LinkBehavior {
     public static readonly LinkBehavior CleansCopiedLinks = new(name: "cleansCopiedLinks",
         isOn: preferences => preferences.CleansCopiedLinks, setting: (preferences, on) => preferences with { CleansCopiedLinks = on });
 
+    /// A Quick Window opens over another app's full-screen Space on Mac. Off
+    /// switches to a desktop to show it.
+    public static readonly LinkBehavior OpensQuickWindowsOverFullScreenApps = new(
+        name: "opensQuickWindowsOverFullScreenApps", isOn: preferences => preferences.OpensQuickWindowsOverFullScreenApps,
+        setting: (preferences, on) => preferences with { OpensQuickWindowsOverFullScreenApps = on });
+
     public static IReadOnlyList<LinkBehavior> All { get; } =
         [FocusesNewTabs, FollowsMovedTabs, OpensPeekAutomatically, DragsLinksToPeek, DimsPageBehindPeek, RemembersSpaceBySite,
-            CleansCopiedLinks];
+            CleansCopiedLinks, OpensQuickWindowsOverFullScreenApps];
 
     #endregion
 
