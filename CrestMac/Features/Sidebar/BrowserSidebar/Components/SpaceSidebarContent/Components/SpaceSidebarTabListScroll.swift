@@ -17,6 +17,11 @@ import SwiftUI
 /// sidebar's layout from ever settling. The stack keeps each section at its
 /// own height, so the room left below them goes to `background` and never to
 /// a row that can stretch, such as the new-tab row.
+///
+/// It also keeps the band of the list that is on screen, in the list's own
+/// coordinates, so an open folder well away from it can be drawn as a block
+/// of its own height rather than built in full. See
+/// `BrowserFolderOffscreenPlaceholder`.
 struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -26,6 +31,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
 
     @State private var scrollRegionID = UUID()
     @State private var viewport = BrowserSidebarScrollViewport()
+    @State private var visibleBand = BrowserSidebarVisibleBand()
 
     var body: some View {
         GeometryReader { geometry in
@@ -42,6 +48,8 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: geometry.size.height, alignment: .top)
+                .coordinateSpace(BrowserSidebarVisibleBand.contentSpace)
+                .environment(\.browserSidebarVisibleBand, visibleBand)
                 .background {
                     // A ScrollView's outer background is a native sibling of
                     // its NSScrollView. The bridge needs the document ancestry.
@@ -53,6 +61,14 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 }
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
+            .onScrollGeometryChange(for: CGRect.self) {
+                $0.visibleRect
+            } action: { _, rect in
+                visibleBand.follow(rect)
+            }
+            .onChange(of: sidebarInteraction.sidebarReorderState.hasLiftInFlight, initial: true) { _, isLifting in
+                visibleBand.hold(isLifting)
+            }
             .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
             .scrollClipDisabled(
                 !BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle

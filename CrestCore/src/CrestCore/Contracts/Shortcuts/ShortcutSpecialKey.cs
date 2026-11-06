@@ -68,6 +68,10 @@ public sealed class ShortcutSpecialKey {
     /// A function key's number, counting from one.
     public int? FunctionKeyNumber { get; }
 
+    /// Whether the key makes a shortcut without a modifier: a function key
+    /// types nothing into a text field, so it can stand alone.
+    public bool StandsAlone => FunctionKeyNumber is not null;
+
     #endregion
 
     #region Constructors

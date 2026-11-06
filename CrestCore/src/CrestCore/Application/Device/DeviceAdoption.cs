@@ -17,9 +17,13 @@ internal sealed class DeviceAdoption {
     /// The windows the Chromium composition kept open for its next launch,
     /// which it listed in its defaults.
     public static readonly DeviceAdoption OpenWindows = new(marker: "open-windows", olderBuildsRead: false);
+    /// The shortcuts earlier releases saved naming a digit key by the symbol
+    /// Shift types on it, which now name the digit.
+    public static readonly DeviceAdoption ShiftedDigitShortcuts = new(marker: "shifted-digit-shortcuts", olderBuildsRead: false);
 
     public static IReadOnlyList<DeviceAdoption> All { get; } =
-        [WindowRecords, SitePermissions, Shortcuts, LinkPreferences, CloudTransport, SetupDraft, SetupCompletion, OpenWindows];
+        [WindowRecords, SitePermissions, Shortcuts, LinkPreferences, CloudTransport, SetupDraft, SetupCompletion, OpenWindows,
+            ShiftedDigitShortcuts];
 
     #endregion
 

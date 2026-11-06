@@ -69,14 +69,15 @@ private struct LayoutKeyPress: BrowserShortcutKeyPress {
     }
 }
 
-/// A chord reads the key the menu bar matches. A layout whose ⌘ layer types
+/// A chord reads the key the menu bar matches. A digit key held with Shift
+/// reads as its digit, as the catalog names ⇧⌘2. A layout whose ⌘ layer types
 /// other characters, such as Dvorak – QWERTY ⌘ or Russian, reads a chord
 /// with ⌘ from that layer, and every other layout reads it exactly as typed,
 /// so shortcuts saved on those layouts keep their meaning.
 final class BrowserShortcutKeyboardLayoutTests: XCTestCase {
     // MARK: - Actions - Reading
 
-    func testStandardLayoutsReadEveryChordAsTyped() throws {
+    func testStandardLayoutsReadEveryChordAsTypedAndShiftedDigitsAsTheirDigit() throws {
         let layouts = [
             "com.apple.keylayout.US", "com.apple.keylayout.ABC", "com.apple.keylayout.British",
             "com.apple.keylayout.Dvorak", "com.apple.keylayout.Colemak", "com.apple.keylayout.German",
@@ -92,6 +93,29 @@ final class BrowserShortcutKeyboardLayoutTests: XCTestCase {
                         BrowserShortcutKey(event: press), Self.typedKey(press),
                         "\(layout.id) key \(keyCode) \(modifiers.rawValue)")
                 }
+            }
+        }
+    }
+
+    /// ⇧⌘2 is the same chord on a US layout, where Shift types @ on the key,
+    /// on German, where it types ", and on French, where Shift types the digit
+    /// itself.
+    func testShiftedDigitKeysReadTheirDigitWhateverSymbolTheLayoutShows() throws {
+        let cases: [(String, Int, Character)] = [
+            ("com.apple.keylayout.US", kVK_ANSI_2, "2"), ("com.apple.keylayout.US", kVK_ANSI_0, "0"),
+            ("com.apple.keylayout.German", kVK_ANSI_2, "2"), ("com.apple.keylayout.German", kVK_ANSI_7, "7"),
+            ("com.apple.keylayout.French", kVK_ANSI_2, "2"),
+        ]
+        let layouts = cases.compactMap { id, keyCode, digit in KeyboardLayout(id).map { ($0, keyCode, digit) } }
+        try XCTSkipIf(layouts.isEmpty, "No standard keyboard layout is installed")
+        for (layout, keyCode, digit) in layouts {
+            for modifiers: ShortcutModifiers in [
+                [.command, .shift], [.command, .option, .shift], [.control, .shift],
+            ] {
+                XCTAssertEqual(
+                    BrowserShortcut(event: layout.press(keyCode, modifiers)),
+                    BrowserShortcut(key: .character(digit), modifiers: modifiers),
+                    "\(layout.id) key \(keyCode) \(modifiers.rawValue)")
             }
         }
     }
@@ -132,10 +156,16 @@ final class BrowserShortcutKeyboardLayoutTests: XCTestCase {
 
     // MARK: - Actions - Support
 
-    /// What the press read before layers were considered: as typed with only
-    /// Shift, and a special key by its code.
+    /// What the press read before layers were considered: a digit key with
+    /// Shift as its digit, any other key as typed with only Shift, and a
+    /// special key by its code.
     private static func typedKey(_ press: LayoutKeyPress) -> BrowserShortcutKey? {
         if let special = ShortcutSpecialKey(keyCode: press.keyCode) { return .special(special) }
+        if press.modifierFlags.contains(.shift), let unshifted = press.characters(byApplyingModifiers: []),
+            unshifted.count == 1, let digit = unshifted.first, digit.isASCII, digit.isNumber
+        {
+            return .character(digit)
+        }
         guard let characters = press.charactersIgnoringModifiers?.lowercased(), characters.count == 1,
             let character = characters.first, !character.isNewline, !character.isWhitespace
         else { return nil }

@@ -293,7 +293,7 @@ engine::ExtensionActionList EngineExtensions::PageActions(content::WebContents* 
     }
     list.actions.push_back(engine::ExtensionAction{.id = extension->id(),
                                                    .name = extension->name(),
-                                                   .badge = action->GetExplicitlySetBadgeText(tab),
+                                                   .badge = action->GetDisplayBadgeText(tab),
                                                    .icon = IconPNG(state.IconFor(*extension, action, tab)),
                                                    .pinned = model && model->IsActionPinned(extension->id()),
                                                    .enabled = true});
@@ -341,7 +341,7 @@ engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std
     list.actions.push_back(
         engine::ExtensionAction{.id = extension->id(),
                                 .name = extension->name(),
-                                .badge = action->GetExplicitlySetBadgeText(tab),
+                                .badge = action->GetDisplayBadgeText(tab),
                                 .icon = IconPNG(state.IconFor(*extension, action, tab)),
                                 .pinned = true,
                                 .enabled = action->action_type() != extensions::ActionInfo::Type::kPage});

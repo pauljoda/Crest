@@ -15,7 +15,9 @@ struct BrowserShortcutList: View {
                                 command: command,
                                 shortcut: model.shortcut(for: command),
                                 isCustomized: model.isCustomized(command),
+                                preference: model.choosesPreference(command) ? model.preference(for: command) : nil,
                                 record: { model.record($0, for: command) },
+                                choose: { model.choose($0, for: command) },
                                 reset: { model.reset(command) },
                                 reportInvalidShortcut:
                                     model.reportInvalidShortcut
@@ -49,7 +51,11 @@ private struct BrowserShortcutRow: View {
     let command: ShortcutCommand
     let shortcut: BrowserShortcut?
     let isCustomized: Bool
+    /// Who answers the keys while a focused page uses them too, or nil for a
+    /// command that keeps its own.
+    let preference: ShortcutPreference?
     let record: (BrowserShortcut?) -> Void
+    let choose: (ShortcutPreference) -> Void
     let reset: () -> Void
     let reportInvalidShortcut: () -> Void
 
@@ -92,6 +98,7 @@ private struct BrowserShortcutRow: View {
                         action: reset
                     )
                     .disabled(!isCustomized)
+                    if let preference { preferenceSection(preference) }
                 }
                 .crestMenuActionLabelStyle()
             } label: {
@@ -121,5 +128,22 @@ private struct BrowserShortcutRow: View {
             BrowserShortcutSettingsMetrics.rowVerticalPadding
         )
         .accessibilityElement(children: .contain)
+    }
+
+    /// The menu's choice of who answers the keys while a focused page uses
+    /// them too.
+    private func preferenceSection(_ preference: ShortcutPreference) -> some View {
+        Section(BrowserShortcutSettingsPresentation.whenWebsiteUsesKeys) {
+            Picker(
+                BrowserShortcutSettingsPresentation.whenWebsiteUsesKeys,
+                selection: Binding(get: { preference }, set: choose)
+            ) {
+                ForEach(ShortcutPreference.all, id: \.self) { option in
+                    Label(option.title, systemImage: option.symbol).tag(option)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        }
     }
 }

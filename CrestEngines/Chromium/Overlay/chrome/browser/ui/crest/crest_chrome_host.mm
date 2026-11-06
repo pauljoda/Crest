@@ -24,6 +24,7 @@
 #include "base/functional/callback_helpers.h"
 #include "base/task/sequenced_task_runner.h"
 #include "base/files/file_util.h"
+#include "components/input/native_web_keyboard_event.h"
 #include "components/prefs/pref_service.h"
 #include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
 #include "chrome/browser/profiles/delete_profile_helper.h"
@@ -188,6 +189,17 @@
 @end
 
 namespace {
+// Blink leaves the Mac's editing keys, such as Copy and Paste, to the menu
+// bar, so a key an extension's document did not use goes there, as a tab's
+// does (CrestBrowserWindow::HandleKeyboardEvent). The Edit items act on the
+// first responder, which is the extension's page.
+bool PassToMenuBar(const input::NativeWebKeyboardEvent& event, NSWindow* window) {
+  NSEvent* native_event = event.os_event.Get();
+  if (event.GetType() != input::NativeWebKeyboardEvent::Type::kRawKeyDown || !native_event ||
+      native_event.type != NSEventTypeKeyDown || !window.isKeyWindow) return false;
+  return [NSApp.mainMenu performKeyEquivalent:native_event];
+}
+
 // AppKit hosting follows Mori's native ExtensionView bridge (MIT; see
 // ThirdParty/Mori-LICENSE). Each instance belongs to one Crest page/profile.
 class ExtensionPopup final : public extensions::ExtensionView,
@@ -257,7 +269,9 @@ class ExtensionPopup final : public extensions::ExtensionView,
   void RenderFrameCreated(content::RenderFrameHost* frame) override {
     if (auto* view = frame->GetView()) view->EnableAutoResize(gfx::Size(25, 25), gfx::Size(800, 600));
   }
-  bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent&) override { return false; }
+  bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent& event) override {
+    return PassToMenuBar(event, window_);
+  }
   void OnLoaded() override {
     NSWindow* parent = anchor_view_.window;
     if (!parent || !window_ || presented_) { if (!parent) Close(); return; }
@@ -402,7 +416,9 @@ class ExtensionSidePanel final : public extensions::ExtensionView,
   // The card is laid out by the row, so the panel document never resizes it.
   void ResizeDueToAutoResize(content::WebContents*, const gfx::Size&) override {}
   void RenderFrameCreated(content::RenderFrameHost*) override {}
-  bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent&) override { return false; }
+  bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent& event) override {
+    return PassToMenuBar(event, container_.window);
+  }
   void OnLoaded() override {}
   void OnExtensionHostDestroyed(extensions::ExtensionHost* host) override {
     if (host_.get() == host) host_.release();

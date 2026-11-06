@@ -48,6 +48,20 @@ final class BrowserShortcutStore {
         self.init(core: CrestCore())
     }
 
+    // MARK: - Actions - Adoption
+
+    /// Names, once, the shortcuts an earlier release saved with the symbol
+    /// Shift types on a digit key by that digit, reading `digits` from the
+    /// keyboard layout in use.
+    func adoptShiftedDigits(_ digits: [ShiftedDigit]) {
+        do {
+            try core.send(AdoptShiftedDigitShortcuts(digits: digits))
+        } catch {
+            Self.log.error(
+                "The core could not rename the saved shifted digits: \(DiagnosticLog.describe(error))")
+        }
+    }
+
     // MARK: - Actions - Bindings
 
     func shortcut(for command: ShortcutCommand) -> BrowserShortcut? {
@@ -56,6 +70,23 @@ final class BrowserShortcutStore {
 
     func isCustomized(_ command: ShortcutCommand) -> Bool {
         core.state.shortcuts[command]?.isCustomized == true
+    }
+
+    /// Who answers `command`'s keys while a focused page uses them too.
+    func preference(for command: ShortcutCommand) -> ShortcutPreference {
+        core.state.shortcuts[command]?.preference ?? command.defaultPreference
+    }
+
+    /// Whether a person may choose who answers `command`'s keys: a command
+    /// reserved from pages, or one bound to text editing keys, cannot.
+    func choosesPreference(_ command: ShortcutCommand) -> Bool {
+        core.state.shortcuts[command]?.choosesPreference == true
+    }
+
+    /// Whether `command` is bound to keys a focused text field edits with, so
+    /// it takes them only when the field has nothing to do with them.
+    func yieldsToTextEditing(_ command: ShortcutCommand) -> Bool {
+        core.state.shortcuts[command]?.yieldsToTextEditing == true
     }
 
     func commands(assignedTo shortcut: BrowserShortcut) -> [ShortcutCommand] {
@@ -73,6 +104,12 @@ final class BrowserShortcutStore {
     /// Binds `shortcut` to `command`, taking it from every command that holds it.
     func reassign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> any BrowserShortcutAssignmentResult {
         answer(ReassignShortcut(command: command, keys: shortcut.keys))
+    }
+
+    /// Makes `preference` answer `command`'s keys while a focused page uses
+    /// them too.
+    func choose(_ preference: ShortcutPreference, for command: ShortcutCommand) {
+        _ = answer(ChooseShortcutPreference(command: command, preference: preference))
     }
 
     func clearShortcut(for command: ShortcutCommand) {

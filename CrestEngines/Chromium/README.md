@@ -334,7 +334,9 @@ below the control it was opened from, flipping above and sliding along the
 screen at an edge, and Chromium's auto-resize keeps following the document. It
 dismisses on a click outside, on Escape, when its window moves, resizes or
 minimises, when Crest goes to the background, and when the extension closes
-its popup, is unloaded or has its host destroyed.
+its popup, is unloaded or has its host destroyed. A key the popup's or a side
+panel's document does not use goes to the menu bar, as a tab's does, so Copy,
+Paste and the other Edit shortcuts reach the extension's page.
 
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`
@@ -427,16 +429,20 @@ Passkeys use the macOS system sheet, as they do in the WebKit engine. Chromium's
 iCloud Keychain authenticator is only discovered when the browser holds
 `com.apple.developer.web-browser.public-key-credential` and the request carries
 the NSWindow the sheet is presented from. Chromium finds that window through a
-`views::Widget`, which Crest windows do not have, so in Crest mode the window the
-page contents actually live in is used instead. With the authenticator available,
-Crest skips Chromium's own mechanism sheet and sends both `get()` and `create()`
-straight to the system, which performs Touch ID or iCloud Keychain and offers its
-own nearby-device, QR and security-key fallbacks. Cancelling the system sheet
-returns to Chromium's mechanism list once, so the engine's phone, USB and
-security-key flows stay reachable. Creation defaults to iCloud Keychain rather
-than a browser-owned store, and Chromium's staged rollout features for that
-choice do not apply. A build without the entitlement, such as the review package, keeps
-Chromium's own sheet, so passkeys there are not a test of Crest's behaviour.
+`views::Widget`, which Crest windows do not have, so in Crest mode the window
+the page contents actually live in is used instead. With the authenticator
+available, Crest skips Chromium's own mechanism sheet and sends both `get()` and
+`create()` straight to the system, which reaches the passkeys of every provider
+on the Mac and performs Touch ID. The system sheet offers no phone or security
+key. When it ends with no passkey for the site, the request goes on in
+Chromium's mechanism list, as cancelling the sheet does when that list has more
+than one choice, so the engine's phone (QR code), USB and security-key flows
+stay reachable. Choosing a passkey from another device in a sign-in field's
+suggestions goes to that list directly. Creation defaults to iCloud Keychain
+rather than a browser-owned store, and Chromium's staged rollout features for
+that choice do not apply. A build without the entitlement, such as the review
+package, keeps Chromium's own sheet, so passkeys there are not a test of Crest's
+behaviour.
 
 A private window works like incognito. Its pages use an off-the-record
 profile that is new each time private browsing opens, is always derived from

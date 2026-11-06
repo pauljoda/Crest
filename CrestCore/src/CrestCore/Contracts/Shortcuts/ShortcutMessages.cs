@@ -14,16 +14,22 @@ public sealed record NumberedSelectionList(IReadOnlyList<NumberedSelection> Sele
 /// changed any shortcut, including one this device does not offer.
 public sealed record ShortcutsChanged(IReadOnlyList<ShortcutBinding> Bindings, bool IsCustomized) : Change;
 
-/// The keys one command answers to now, or null when it has none, and whether
-/// they are the person's choice rather than the default.
-public sealed record ShortcutBinding(ShortcutCommand Command, KeyCombination? Keys, bool IsCustomized);
+/// The keys one command answers to now, or null when it has none; whether the
+/// keys or the preference are the person's choice rather than the default; who
+/// answers the keys while a focused page uses them too, and whether a person
+/// may choose that; and whether the keys are ones a focused text field edits
+/// with, which the command then takes only when the field has nothing to do
+/// with them.
+public sealed record ShortcutBinding(ShortcutCommand Command, KeyCombination? Keys, bool IsCustomized, ShortcutPreference Preference,
+    bool ChoosesPreference, bool YieldsToTextEditing);
 
 #endregion
 
 #region Rejections
 
-/// The keys can never be a shortcut: they hold no supported modifier, so a
-/// plain key would never reach the focused text field, or they name no key.
+/// The keys can never be a shortcut: they hold no supported modifier and are
+/// not a function key, so a plain key would never reach the focused text
+/// field, or they name no key.
 public sealed record InvalidShortcut(KeyCombination Keys) : Rejection;
 
 /// Other offered commands answer to the keys already.
@@ -46,6 +52,10 @@ public sealed record NumberedChoices(Guid ShownSpaceId, IReadOnlyList<Guid> Tabs
 /// A numbered command, what it selects from, and where it leads: the Space
 /// `SpaceId`, and for a tab the tab `TabId` the window shows there.
 public sealed record NumberedSelection(ShortcutCommand Command, NumberedSelectionTarget Target, Guid SpaceId, Guid? TabId);
+
+/// A digit key of the keyboard layout in use: the symbol Shift types on it,
+/// and the digit it types alone.
+public sealed record ShiftedDigit(string Symbol, string Digit);
 
 /// A command's default key combination on one platform. A default that
 /// `YieldsToOverrides` stays unbound while the person has given its keys to

@@ -5066,6 +5066,54 @@
       "category": "fixed",
       "message": "Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs."
     },
+    "private-palette-opens-quick-windows": {
+      "category": "fixed",
+      "message": "New Quick Window and Open in Quick Window from the command palette work in a private window, opening a private Quick Window as the shortcut does."
+    },
+    "function-keys-make-shortcuts-alone": {
+      "category": "improved",
+      "message": "A shortcut can be a function key on its own, such as F12 for Show Web Inspector."
+    },
+    "save-or-unsave-current-tab-command": {
+      "category": "new",
+      "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
+    },
+    "press-a-shortcut-again-when-a-website-keeps-it": {
+      "category": "new",
+      "message": "When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings › Shortcuts, and switching Spaces now always reaches Crest."
+    },
+    "command-z-undo-stays-in-text-fields": {
+      "category": "fixed",
+      "message": "Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in."
+    },
+    "shift-number-shortcuts-record-as-the-number": {
+      "category": "fixed",
+      "message": "Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over."
+    },
+    "long-sidebars-with-folders-scroll-smoothly": {
+      "category": "fixed",
+      "message": "A long sidebar with many folders scrolls smoothly."
+    },
+    "chromium-page-written-windows-show": {
+      "category": "fixed",
+      "message": "On Chromium pages, a window a site opens and fills in itself, such as presentation speaker notes or a Slack huddle, now shows its content instead of staying blank."
+    },
+    "chromium-share-this-tab-uses-crest-picker": {
+      "category": "fixed",
+      "message": "On Chromium pages, a site that asks to share its own tab now asks in Crest's sharing picker over the page, instead of in a separate window."
+    },
+    "chromium-extension-popup-edit-shortcuts": {
+      "category": "fixed",
+      "message": "On Chromium, Copy, Cut, Paste and the other Edit shortcuts work in extension popups and side panels."
+    },
+    "chromium-extension-badge-shows-blocked-count": {
+      "category": "fixed",
+      "message": "On Chromium, an extension's toolbar icon shows the count its blocking rules report, such as uBlock Origin Lite's blocked requests."
+    },
+    "chromium-passkey-phone-and-security-key": {
+      "category": "fixed",
+      "message": "On Chromium pages, when this Mac has no passkey for a site, signing in with a passkey now offers your phone's QR code or a security key instead of stopping at \"No passkeys available\"."
+    },
     "mac-address-bar-above-pages": {
       "category": "new",
       "message": "On the Mac, the address bar, site controls and back, forward and reload buttons can sit above each page instead of in the sidebar, with one bar per pane in Split View. Turn on Address bar above pages in Appearance settings."

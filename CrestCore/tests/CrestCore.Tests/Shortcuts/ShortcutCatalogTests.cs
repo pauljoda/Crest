@@ -21,7 +21,7 @@ public sealed class ShortcutCatalogTests {
         "showDownloads", "webInspectorInstructions", "splitWithNextTab", "focusNextSplitCard", "focusPreviousSplitCard",
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
         "toggleTranslationToolbar", "openFile", "findNext", "findPrevious", "capturePage",
-        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache"
+        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache", "toggleSelectedTabSaved"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;
@@ -50,8 +50,8 @@ public sealed class ShortcutCatalogTests {
     /// out of its reach.
     [Fact]
     public void OnlyOpeningClosingAndSwitchingTabsAndWindowsAreReservedFromPages() => Assert.Equal([
-        "newWindow", "newTab", "newPrivateWindow", "closeTabOrWindow", "closeWindow", "reopenClosedTab", "previousTab", "nextTab",
-        "mostRecentTab", "mostRecentTabBackward"
+        "newWindow", "newBlankWindow", "newTab", "newQuickWindow", "newPrivateWindow", "closeTabOrWindow", "closeWindow",
+        "reopenClosedTab", "previousTab", "nextTab", "mostRecentTab", "mostRecentTabBackward"
     ], ShortcutCommand.All.Where(command => command.IsReservedFromPages).Select(command => command.Name));
 
     [Theory]
