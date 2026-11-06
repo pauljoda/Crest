@@ -5114,6 +5114,10 @@
       "category": "fixed",
       "message": "On Chromium pages, when this Mac has no passkey for a site, signing in with a passkey now offers your phone's QR code or a security key instead of stopping at \"No passkeys available\"."
     },
+    "chromium-touch-id-offered-to-sites": {
+      "category": "fixed",
+      "message": "On Chromium pages, sites that check for Touch ID before offering it, such as Duo, now offer it when this Mac can keep passkeys."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."

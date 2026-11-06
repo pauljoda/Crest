@@ -494,5 +494,9 @@
   "chrome/browser/new_tab_page/feature_promo_helper/new_tab_page_feature_promo_helper.cc": {
     "before": "3efb0306b800e66924556bdad10c8e78d85f17c6591d04dc409e9484fe3e8fcc",
     "after": "ab0a8556b5650c98a4cecfc7ba0a874f10f76fdd703099bc2e19a2280675c923"
+  },
+  "chrome/browser/webauthn/chrome_web_authentication_delegate.cc": {
+    "before": "6027d0e3e08eb1b83fc59759aa8f4a6789cbb2364ff83867ead42e2809828775",
+    "after": "e40a90875ae980658d1f46a5fd0892f325f94ef2946d6962a2a6bee38678afc0"
   }
 }
