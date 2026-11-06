@@ -4068,6 +4068,9 @@
     "Copy Setup" : {
 
     },
+    "Copy URL" : {
+
+    },
     "copy url address clipboard" : {
       "localizations" : {
         "ar" : {
@@ -4087,6 +4090,9 @@
           }
         }
       }
+    },
+    "Copy URL button" : {
+
     },
     "Corner radius" : {
 

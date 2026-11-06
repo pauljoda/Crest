@@ -5161,6 +5161,10 @@
     "download-finished-notice": {
       "category": "new",
       "message": "On Mac, a notice at the top of the window names each download as it finishes."
+    },
+    "address-copy-url-button": {
+      "category": "new",
+      "message": "On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings › Appearance › Address field."
     }
   }
 }

@@ -33,6 +33,9 @@ struct SpaceSidebarAddressBand: View {
             }
         } trailingAccessory: {
             if let siteControl {
+                if let copyURLPage {
+                    BrowserAddressCopyURLButton(page: copyURLPage)
+                }
                 BrowserSiteControlButton(configuration: siteControl)
             }
         }
@@ -80,6 +83,15 @@ struct SpaceSidebarAddressBand: View {
     private var isSecure: Bool {
         if let page = displayedPage { return page.live.security.isSecure }
         return selectedTab?.url.flatMap(URL.init(string:))?.scheme?.lowercased() == "https"
+    }
+
+    /// The page the Copy URL button copies, while the person turned the
+    /// button on and the page has an address to copy.
+    private var copyURLPage: BrowserPage? {
+        guard BrowserDeviceAppearanceStore.shared.address.showsCopyURLButton,
+            let page = displayedPage, page.live.documentURL != nil
+        else { return nil }
+        return page
     }
 
     private var siteControl: BrowserSiteControlConfiguration? {

@@ -30,6 +30,12 @@ struct BrowserAddressAppearanceGroup: View {
                 Toggle("Animate into command palette", isOn: paletteMorph.binding)
                     .labelsHidden()
             }
+            #if os(macOS)
+                CrestSettingRow("Copy URL button", setting: copyURLButton.resettable("Copy URL button")) {
+                    Toggle("Copy URL button", isOn: copyURLButton.binding)
+                        .labelsHidden()
+                }
+            #endif
         }
     }
 
@@ -53,12 +59,22 @@ struct BrowserAddressAppearanceGroup: View {
             default: BrowserLookAndFeelDefaults.address.animatesIntoCommandPalette)
     }
 
+    private var copyURLButton: CrestSettingValue<Bool> {
+        CrestSettingValue(
+            $appearance.address.showsCopyURLButton,
+            default: BrowserLookAndFeelDefaults.address.showsCopyURLButton)
+    }
+
     private var settings: [CrestResettableSetting] {
-        [
+        var settings = [
             fill.resettable("Color fill"),
             border.resettable("Border"),
             outline.resettable("Accent outline while editing"),
             paletteMorph.resettable("Animate into command palette"),
         ]
+        #if os(macOS)
+            settings.append(copyURLButton.resettable("Copy URL button"))
+        #endif
+        return settings
     }
 }
