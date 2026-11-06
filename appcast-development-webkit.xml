@@ -6,29 +6,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.181</title>
-            <pubDate>Thu, 05 Nov 2026 16:53:17 +0000</pubDate>
+            <title>0.8.189</title>
+            <pubDate>Fri, 06 Nov 2026 15:02:29 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1507</sparkle:version>
-            <sparkle:shortVersionString>0.8.181</sparkle:shortVersionString>
+            <sparkle:version>1515</sparkle:version>
+            <sparkle:shortVersionString>0.8.189</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- A long sidebar with many folders scrolls smoothly.
+- On Chromium pages, a window a site opens and fills in itself, such as presentation speaker notes or a Slack huddle, now shows its content instead of staying blank.
+- On Chromium pages, a site that asks to share its own tab now asks in Crest's sharing picker over the page, instead of in a separate window.
+- On Chromium, Copy, Cut, Paste and the other Edit shortcuts work in extension popups and side panels.
+- On Chromium, an extension's toolbar icon shows the count its blocking rules report, such as uBlock Origin Lite's blocked requests.
+- On Chromium pages, when this Mac has no passkey for a site, signing in with a passkey now offers your phone's QR code or a security key instead of stopping at "No passkeys available".
+- On Chromium pages, sites that check for Touch ID before offering it, such as Duo, now offer it when this Mac can keep passkeys.
+- On Chromium, a private or trusted-tester Chrome Web Store extension installs in a Space signed in to an account that can see it, instead of failing with HTTP 401.
+- On Chromium pages, dragging an item or a link no longer leaves the page unable to take clicks until it reloads.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/5d8413ae3a8d2c59ec31b4f8a7c06ca5dc137762...d2a5b66636085effddfd2f2e98ebaccee64357ab) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.181-2026-11-05-1507-r507.1/Installer-Crest-0.8.181-development-2026-11-05-d2a5b66-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/d2a5b66636085effddfd2f2e98ebaccee64357ab...378e850c1a6f366af140702f9253765b02f51344) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.189-2026-11-06-1515-r515.1/Installer-Crest-0.8.189-development-2026-11-06-378e850-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.181-2026-11-05-1507-r507.1/Installer-Crest-0.8.181-development-2026-11-05-d2a5b66-arm64.dmg" length="216913051" type="application/octet-stream" sparkle:edSignature="6mRX3LUXie3tyP2xAr5Mbl23iDPz++4L0GCkdq6I4ByTDSR9DIdzcgNoVhEtRYsj0ai5/LZeHPH4+WDv1H6VCQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.189-2026-11-06-1515-r515.1/Installer-Crest-0.8.189-development-2026-11-06-378e850-arm64.dmg" length="216854682" type="application/octet-stream" sparkle:edSignature="KWktFtLTljadsUudd4UlRVqEcJGwuKKvBK4tGZtAm56IOT7WUJ/g8Wh1S8l+79AYHIRHjEYFGQ3TePCzf2YGBA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +67,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: a9ILkb0qYvaobumWfxuZVTBxxtkRghvYbRcl5HjvKW9d4hFrxe3kBlxMs1zOB72softDlgE811+qZM1hHs5eCg==
-length: 3949
+edSignature: ceO1wEq1P1nAXkrsWODK3OH6M+TaogPTQBRKcsn24vvREnZylohHDyaQlRL/WHsVvFycv9F0nyDO1RmZxk+zDQ==
+length: 5035
 -->
