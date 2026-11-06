@@ -9,7 +9,7 @@ keywords: [extension commands, keyboard shortcut, extension shortcuts, Space]
 
 # Set extension keyboard shortcuts
 
-Extensions can declare keyboard commands, such as opening their popup. Chromium keeps these shortcuts for each Space's installation, so changing one in Work does not change it in Personal.
+Extensions can declare keyboard commands, such as opening their popup. Chromium keeps these shortcuts for each Space's installation, so changing one in Work does not change it in Personal. The Spaces of a [Sub-Space](../spaces/sub-spaces.md) group share one installation and its shortcuts.
 
 ## Change a shortcut
 

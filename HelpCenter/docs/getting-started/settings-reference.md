@@ -49,7 +49,7 @@ A Space's crest, colors, and sidebar background live on the Space's Appearance p
 
 ## Links
 
-Choose what happens to links from other apps, which Space supplies their signed-in session, and how long Quick Windows remain recoverable. Under Peek, choose whether eligible links from pinned or saved pages open in Peek, which modifier click opens it, and, on Mac, whether to **Drag links to Peek** and **Dim the page behind Peek**. Link Routing rules live here too.
+Choose what happens to links from other apps, which Space supplies their signed-in session, and how long Quick Windows remain recoverable. Under Peek, choose whether eligible links from pinned or saved pages open in Peek, which modifier click opens it, and, on Mac, whether to **Drag links to Peek**, **Dim the page behind Peek** and **Peek size**. Link Routing rules live here too.
 
 ## Engines
 
@@ -57,7 +57,7 @@ On Mac, choose whether new pages open in Chromium or WebKit, and manage website 
 
 ## Shortcuts
 
-Search the complete Mac command catalog, record a replacement, inspect conflicts, clear an assignment, or restore the default. Extension shortcuts are set on Chromium's extension shortcuts page, opened from **Shortcuts…** on a Space's Extensions page, because they belong to the extension installed in that Space.
+Search the complete Mac command catalog, record a replacement, inspect conflicts, clear an assignment, or restore the default. Choose **Prefer Crest**, **Use Both** or **Prefer Website** for what happens when a website uses the same keys. The New Quick Window shortcut works from any app while Crest is open. Extension shortcuts are set on Chromium's extension shortcuts page, opened from **Shortcuts…** on a Space's Extensions page, because they belong to the extension installed in that Space.
 
 ## Sync
 
@@ -83,7 +83,7 @@ Each Space's page has these tabs:
 
 Click **+** next to the Spaces heading to add a Space. Its Appearance page opens with the name ready to type. Click the pencil next to it to rearrange: drag Spaces by their handles, then click the checkmark when done.
 
-Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **New Sub-Space**, **Make Sub-Space of**, **Lock Space**, and **Delete**. Crest needs at least one Space.
+Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **New Sub-Space**, **Make Sub-Space of**, **Separate from "Primary"…**, **Lock Space**, and **Delete**, or **Delete "Primary" and Its Sub-Spaces…** for a group's primary. Crest needs at least one Space.
 
 [Sub-Spaces](../spaces/sub-spaces.md) are indented under their primary, and a group's page shows the crests of its Spaces, with **+** to add one. Drag a Space onto another, or among a group's Sub-Spaces, to add it to that group; drag it out to separate it. The Privacy and Passwords pages of a group say they are shared by its Sub-Spaces, and its Browsing page has **Separate Pinned Tabs**.
 

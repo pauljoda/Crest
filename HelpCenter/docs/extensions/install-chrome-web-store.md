@@ -13,7 +13,7 @@ Crest for Mac installs Chrome extensions from the Chrome Web Store. Extensions r
 
 ## Before you add it
 
-Switch to the Space that should own the extension. Its package, enablement, permissions, storage and pinning stay separate from every other Space and device.
+Switch to the Space that should own the extension. Its package, enablement, permissions, storage and pinning stay separate from every other Space and device, except the other Spaces of its [Sub-Space](../spaces/sub-spaces.md) group, which share it.
 
 ## Install the extension
 

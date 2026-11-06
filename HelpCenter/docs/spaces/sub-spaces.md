@@ -28,6 +28,7 @@ Every Space of a group uses the same:
 - Crest Passwords
 - Extensions on Mac
 - Site permissions and content-blocking choices
+- How long History, Archived Tabs and Download Records are kept
 - Lock, and whether coding agents may use it
 
 Each Space keeps its own:
@@ -88,7 +89,7 @@ To move a whole group, drag its primary. On Mac, dragging a Sub-Space among its 
 
 ## Separate a Sub-Space
 
-Right-click the Sub-Space in the Settings sidebar, or open the **…** menu on its page, and choose **Separate from "Primary"…**, or drag it out of its group in the Settings sidebar on Mac. On iPhone and iPad, touch and hold it in **Settings → Spaces**. The Space keeps its tabs and goes back to its own sign-ins, website data and extensions.
+Right-click the Sub-Space in the Settings sidebar, or open the **…** menu on its page, and choose **Separate from "Primary"…**, or drag it out of its group in the Settings sidebar on Mac. On iPhone and iPad, touch and hold it in **Settings → Spaces**. The Space keeps its tabs and goes back to its own sign-ins, website data and extensions. History it recorded while in the group stays with the group.
 
 A primary can't be separated. To end a group, separate or delete each of its Sub-Spaces.
 
@@ -106,7 +107,7 @@ Deleting a primary asks which of its Sub-Spaces keeps the group, with its sign-i
 
 ## Open a page under another account
 
-To open a link with another Space's sign-ins on Mac, right-click it and choose a Space from **Open Link in**. The page opens in a Quick Window in that Space's session, so you can see the same site under another account. Choose **Keep** to move it into that Space. **Open This Page in** in Site Controls does the same for the page you're on. The Spaces of one group are listed together.
+To open a link with another Space's sign-ins on Mac, right-click it and choose a Space from **Open Link in**. The page opens in a Quick Window in that Space's session, so you can see the same site under another account. Choose **Open in** and the Space to move it there. **Open This Page in** in Site Controls does the same for the page you're on. The Spaces of one group are listed together.
 
 ## Use Sub-Spaces on older devices
 

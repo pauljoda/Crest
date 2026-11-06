@@ -70,6 +70,9 @@ Tap **Control-Tab** to jump to the tab you used last. On a Mac, hold it to see y
 | Show or Hide Translation Toolbar | Shift-Command-L |
 | Toggle Content Blocking | Unassigned |
 | Find in Page | Command-F |
+| Find Next | Command-G |
+| Find Previous | Shift-Command-G |
+| Capture Page | Shift-Command-2 |
 | Zoom In | Command-+ |
 | Zoom Out | Command-- |
 | Actual Size | Command-0 |

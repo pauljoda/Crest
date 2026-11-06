@@ -12,10 +12,11 @@ Many Crest actions stay out of the permanent chrome. This is the practical map f
 ## iPhone
 
 - Swipe vertically on the address capsule to move between the page and tab viewer.
-- Swipe horizontally on the compact toolbar to page between cards in Split View. Outside a split, this gesture intentionally does nothing.
+- Swipe left or right on the address bar to move through the Space's tabs. In a Split View, it moves card by card first.
+- Swipe in from a page's left edge to go back, and from its right edge to go forward.
 - Swipe from the sidebar’s chosen edge to reveal it. Set a left- or right-side sidebar in **Settings → Appearance**.
 - Swipe or scroll the Space picker to move between Spaces.
-- Touch and hold tabs, folders, links, and Space controls for context actions.
+- Touch and hold tabs, folders, and Space controls for context actions. Touch and hold a link to open it in Peek.
 
 ## Mac and iPad
 

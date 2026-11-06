@@ -2,7 +2,7 @@
 title: Use Peek and Quick Window
 description: Preview links without losing your place and handle links opened from other apps.
 slug: /peek-and-quick-window
-keywords: [Peek, Quick Window, Tiny Arc, preview, external links, transient browsing]
+keywords: [Peek, Quick Window, Little Arc, preview, external links, transient browsing]
 ---
 
 # Use Peek and Quick Window
@@ -23,15 +23,15 @@ Drag a webpage link to pull out a live preview that follows your gesture and fad
 
 Choose this behavior in **Settings → Links → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
 
-On Mac, Peek dims only the page behind it by default. Turn off **Settings → Links → Dim the page behind Peek** to keep that page at full brightness.
+On Mac, Peek dims only the page behind it by default. Turn off **Settings → Links → Dim the page behind Peek** to keep that page at full brightness. **Peek size** sets how much of the window Peek uses, and **Test Peek** opens a sample to try it.
 
-On iPhone and iPad, touch and hold webpage links for the native link preview and actions, including opening a link in another Space. Touch and hold an image for image actions such as saving it.
+On iPhone and iPad, touch and hold a link to open it in Peek, which grows from the link. Peek's **…** offers **Open in New Tab**, **Copy Link**, **Share…** and **Download Linked File**. Touch and hold an image for image actions such as saving it.
 
 ## Quick Window
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
 
-To see a link under another account on Mac, right-click it and choose a Space from **Open Link in**: it opens in a Quick Window with that Space's sign-ins, and **Keep** moves it into that Space. **Open This Page in** in Site Controls does the same for the current page.
+To see a link under another account on Mac, right-click it and choose a Space from **Open Link in**: it opens in a Quick Window with that Space's sign-ins, and **Open in** moves it into that Space. **Open This Page in** in Site Controls does the same for the current page.
 
 On Mac, a Quick Window has a browser window's controls: Back and Forward, Site Controls for the page's permissions and extensions, and the Space's pinned extensions, with the ones that don't fit behind **»**. Click its address or press **Command-L** to search or go somewhere else in the same Quick Window. Right-click a link and choose **Open Link in New Quick Window** to open it in another Quick Window.
 
