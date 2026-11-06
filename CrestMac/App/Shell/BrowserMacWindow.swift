@@ -3,10 +3,14 @@ import AppKit
 /// Every window the shell opens. All native close routes, including
 /// accessibility and traffic-light actions, pass through `close()`, which asks
 /// the window's close gate first; AppKit still owns `performClose` and the
-/// delegate's checks.
+/// delegate's checks. A panel, so a Quick Window can open over another app's
+/// full-screen Space; every other kind behaves as a plain window.
 @MainActor
-final class BrowserMacWindow: NSWindow {
+final class BrowserMacWindow: NSPanel {
     // MARK: - Variables
+
+    /// A panel cannot become main by default; these windows can.
+    override var canBecomeMain: Bool { true }
 
     var closeGate: BrowserWindowCloseGate?
     /// What the window's content does with a mouse's Back and Forward buttons
