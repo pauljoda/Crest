@@ -26,7 +26,7 @@ struct MobileBrowserCommand {
         .duplicateTab, isEnabled: { $0.canDuplicateSelectedTab }, run: { $0.duplicateSelectedTab() })
     static let reopenClosedTab = MobileBrowserCommand(
         .reopenClosedTab, isEnabled: { $0.canReopenClosedTab }, run: { $0.reopenClosedTab() })
-    static let clearUnpinnedTabs = MobileBrowserCommand(.clearUnpinnedTabs) { $0.cleanupCurrentTabs() }
+    static let clearUnpinnedTabs = MobileBrowserCommand(.clearUnpinnedTabs) { $0.clearCurrentTabs() }
     static let archiveTab = MobileBrowserCommand(
         .archiveTab, isEnabled: { $0.canArchiveSelectedTab }, run: { $0.archiveSelectedTab() })
     static let previousTab = MobileBrowserCommand(

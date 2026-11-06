@@ -5149,6 +5149,10 @@
     "sidebar-more-tabs-hit-area": {
       "category": "fixed",
       "message": "Tapping just below the sidebar’s Show more tabs arrow scrolls the list instead of opening the tab behind it, and VoiceOver names the arrow on iPhone and iPad."
+    },
+    "clear-unpinned-tabs-clears-the-space": {
+      "category": "fixed",
+      "message": "Clear Unpinned Tabs and Shift-Command-K clear the Space’s open tabs, as the sidebar’s Clear does, however recently they were used."
     }
   }
 }
