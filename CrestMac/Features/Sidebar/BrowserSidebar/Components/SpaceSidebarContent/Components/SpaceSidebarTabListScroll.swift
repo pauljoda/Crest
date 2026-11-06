@@ -11,12 +11,12 @@ import SwiftUI
 /// region gives up address focus, because on this shell the address field keeps
 /// it until something takes it away.
 ///
-/// The list's sections are stacked as they are: each makes its own rows lazily,
-/// and a lazy stack around them would size every section from an estimate,
-/// which with the section's own lazy rows inside could keep the sidebar's
-/// layout from ever settling. The stack keeps each section at its own height,
-/// so the room left below them goes to `background` and never to a row that
-/// can stretch, such as the new-tab row.
+/// The list's sections are stacked as they are: each makes its own tab rows
+/// lazily, and a lazy stack around them would size every section from an
+/// estimate, which with the section's own lazy rows inside could keep the
+/// sidebar's layout from ever settling. The stack keeps each section at its
+/// own height, so the room left below them goes to `background` and never to
+/// a row that can stretch, such as the new-tab row.
 struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
