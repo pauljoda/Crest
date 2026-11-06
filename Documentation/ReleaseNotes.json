@@ -5305,6 +5305,10 @@
     "cold-launch-link-opens-in-front": {
       "category": "fixed",
       "message": "On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them."
+    },
+    "quick-window-over-full-screen": {
+      "category": "new",
+      "message": "On Mac, turn on Open over full-screen apps in Links settings to open a link from an app in full screen in a Quick Window over that app, instead of switching to another desktop."
     }
   }
 }

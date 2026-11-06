@@ -26,26 +26,22 @@ struct BrowserMacWindowKind: Hashable {
         name: "browser", title: ProductIdentity.name, styleMask: browsingStyle, hidesTitle: true,
         contentSize: browserContentSize,
         minimumContentSize: browserMinimumContentSize,
-        savesFrame: true, hasWindowModel: true, hasPageRow: true)
+        savesFrame: true, hasWindowModel: true, hasPageRow: true, collectionBehavior: .fullScreenPrimary)
     /// A browser window over a torn-off tab's own workspace, placed where the
     /// tab was dropped and never kept.
     static let temporary = BrowserMacWindowKind(
         name: "temporary", title: ProductIdentity.name, styleMask: browsingStyle, hidesTitle: true,
         contentSize: browserContentSize,
         minimumContentSize: browserMinimumContentSize,
-        hasWindowModel: true, hasPageRow: true)
+        hasWindowModel: true, hasPageRow: true, collectionBehavior: .fullScreenPrimary)
     /// The one private browsing window.
     static let `private` = BrowserMacWindowKind(
         name: "private", title: String(localized: "Private Browsing"), styleMask: browsingStyle, hidesTitle: true,
-        contentSize: CGSize(width: 1200, height: 820), hasPageRow: true, isSingleton: true)
-    /// A Quick Window, which shows one page of a Space.
-    static let quick = BrowserMacWindowKind(
-        name: "quick", title: String(localized: "Quick Window"), styleMask: browsingStyle, hidesTitle: true,
-        contentSize: CGSize(
-            width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight),
-        minimumContentSize: CGSize(
-            width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight),
-        collectionBehavior: .moveToActiveSpace)
+        contentSize: CGSize(width: 1200, height: 820), hasPageRow: true, isSingleton: true,
+        collectionBehavior: .fullScreenPrimary)
+    /// A Quick Window, which shows one page of a Space. Every Quick Window is
+    /// this kind, whether or not it opens over full-screen apps.
+    static let quick = quick(overFullScreenApps: false)
     /// Crest Setup, which fills the screen it opens on. The setup content is
     /// fully flexible above its minimum, so the window keeps the size it opens
     /// at rather than the content's ideal one, which is that minimum.
@@ -103,7 +99,7 @@ struct BrowserMacWindowKind: Hashable {
     let identifier: String?
     /// How the window joins the Mac's Spaces, beyond AppKit's own: a Quick
     /// Window comes to the Space the person is on rather than taking them to
-    /// the Space it opened on.
+    /// the Space it opened on, and may join another app's full-screen Space.
     let collectionBehavior: NSWindow.CollectionBehavior
 
     // MARK: - Initializers
@@ -139,6 +135,20 @@ struct BrowserMacWindowKind: Hashable {
         request.kind == .temporary ? temporary : browser
     }
 
+    /// A Quick Window that opens over another app's full-screen Space when
+    /// `overFullScreenApps`, as a panel that leaves that app active, or else
+    /// one the Mac switches to a desktop to show.
+    static func quick(overFullScreenApps: Bool) -> BrowserMacWindowKind {
+        BrowserMacWindowKind(
+            name: "quick", title: String(localized: "Quick Window"),
+            styleMask: overFullScreenApps ? browsingStyle.union(.nonactivatingPanel) : browsingStyle, hidesTitle: true,
+            contentSize: CGSize(
+                width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight),
+            minimumContentSize: CGSize(
+                width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight),
+            collectionBehavior: overFullScreenApps ? [.moveToActiveSpace, .fullScreenAuxiliary] : .moveToActiveSpace)
+    }
+
     /// A new window of this kind, identified by `windowID` unless the kind has
     /// a fixed identifier, which the shell keeps and closes itself.
     func makeWindow(identifiedBy windowID: UUID) -> BrowserMacWindow {
@@ -148,6 +158,11 @@ struct BrowserMacWindowKind: Hashable {
         window.identifier = NSUserInterfaceItemIdentifier(identifier ?? windowID.uuidString)
         window.title = title
         window.isReleasedWhenClosed = false
+        // Undo the panel defaults that differ from a window's.
+        window.hidesOnDeactivate = false
+        window.isFloatingPanel = false
+        window.becomesKeyOnlyIfNeeded = false
+        window.isExcludedFromWindowsMenu = false
         // The core decides which windows a launch reopens; AppKit restores
         // none of its own.
         window.isRestorable = false
