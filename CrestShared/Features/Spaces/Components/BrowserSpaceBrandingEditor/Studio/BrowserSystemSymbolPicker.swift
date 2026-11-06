@@ -16,7 +16,7 @@ struct BrowserSystemSymbolPicker: View {
         .accessibilityLabel("Choose SF Symbol")
         .accessibilityValue(selection)
         .help(selection.isEmpty ? "Choose an SF Symbol" : selection)
-        .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .trailing) {
+        .crestPopover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .trailing) {
             BrowserSystemSymbolCatalogPicker(selection: $selection, loadNames: loadNames)
                 .presentationCompactAdaptation(.sheet)
         }

@@ -5129,6 +5129,14 @@
     "chromium-discord-stays-signed-in": {
       "category": "fixed",
       "message": "On Chromium pages, Discord stays signed in after Crest restarts, updates or unloads its tab, and a page unloaded to save memory can still save its work before it goes."
+    },
+    "popovers-read-on-their-own-surface": {
+      "category": "fixed",
+      "message": "Popovers and prompts such as the color and icon pickers, Site Controls, the save-password prompt and the screen-sharing picker stay readable whatever the Space’s text color, Crest’s appearance or the page behind them."
+    },
+    "space-color-grid-and-custom-hex": {
+      "category": "fixed",
+      "message": "The color grid in a Space’s appearance fills its rows without gaps, and typing a hex value in the Colors window no longer closes the color popover."
     }
   }
 }

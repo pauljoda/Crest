@@ -30,7 +30,7 @@ struct BrowserDeveloperSiteSettingsControl: View {
             isActive: isPresented,
             action: { isPresented.toggle() }
         )
-        .popover(isPresented: $isPresented, arrowEdge: .top) {
+        .crestPopover(isPresented: $isPresented, arrowEdge: .top) {
             BrowserSiteSettingsContent(
                 page: page,
                 permissionCenter: permissionCenter,

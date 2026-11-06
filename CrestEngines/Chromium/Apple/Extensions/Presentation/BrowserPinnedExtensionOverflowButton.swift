@@ -32,7 +32,7 @@ struct BrowserPinnedExtensionOverflowButton: View {
         .background { BrowserExtensionPopupAnchorReader(popupAnchor: $popupAnchor) }
         .accessibilityLabel("More Pinned Extensions")
         .help("More Pinned Extensions")
-        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+        .crestPopover(isPresented: $isPresented, arrowEdge: .bottom) {
             VStack(spacing: Self.spacing) {
                 ForEach(actions) { action in
                     BrowserPinnedExtensionActionButton(
@@ -44,7 +44,6 @@ struct BrowserPinnedExtensionOverflowButton: View {
                 }
             }
             .padding(CrestSpacing.small)
-            .crestFlyoutStyle()
         }
     }
 

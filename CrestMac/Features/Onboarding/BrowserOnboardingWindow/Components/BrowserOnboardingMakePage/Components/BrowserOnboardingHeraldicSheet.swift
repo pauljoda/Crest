@@ -101,7 +101,7 @@ struct BrowserOnboardingHeraldicSheet: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(CrestBrandTheme.textDisplay)
             }
-            .popover(isPresented: $browsesEmblems, arrowEdge: .bottom) {
+            .crestPopover(isPresented: $browsesEmblems, arrowEdge: .bottom) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         BrowserCrestStudioHeraldicEmblemControls(
