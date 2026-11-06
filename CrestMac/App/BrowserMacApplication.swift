@@ -39,6 +39,8 @@ final class BrowserMacApplication {
     /// Answers the core's questions about every engine's downloads: where each
     /// file goes, and whether to keep one its engine warned about.
     let downloadPrompts: BrowserDownloadPrompts
+    /// Confirms each download that finishes while the app is running.
+    let downloadNotices: BrowserDownloadNotices
     /// Offers a switch to another engine for protected video, and a way back.
     let engineMoveNotices: BrowserEngineMoveNotices
     /// Follows the system's memory pressure for every window's pages; nil in
@@ -298,6 +300,7 @@ final class BrowserMacApplication {
         privateWindowCloseGate = BrowserWindowCloseGate(core: core) { [windowID = privateBrowser.windowID] in
             PrepareToCloseWindows(requestID: UUID(), windowIDs: [windowID])
         }
+        downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess)
         engineMoveNotices = BrowserEngineMoveNotices(core: core)
         let downloadDialogs = BrowserDialogPresenter()
         downloadPrompts = BrowserDownloadPrompts(core: core) { asked, dismissal in

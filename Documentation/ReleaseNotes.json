@@ -5157,6 +5157,10 @@
     "address-completion-steady-while-typing": {
       "category": "fixed",
       "message": "The inline address completion and the search provider chip in the command bar no longer flicker while you type."
+    },
+    "download-finished-notice": {
+      "category": "new",
+      "message": "On Mac, a notice at the top of the window names each download as it finishes."
     }
   }
 }
