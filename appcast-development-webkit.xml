@@ -7,35 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.8.189</title>
-            <pubDate>Fri, 06 Nov 2026 15:02:29 +0000</pubDate>
+            <pubDate>Fri, 06 Nov 2026 15:47:18 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1515</sparkle:version>
+            <sparkle:version>1518</sparkle:version>
             <sparkle:shortVersionString>0.8.189</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### Maintenance
 
-- On Chromium pages, a window a site opens and fills in itself, such as presentation speaker notes or a Slack huddle, now shows its content instead of staying blank.
-- On Chromium pages, a site that asks to share its own tab now asks in Crest's sharing picker over the page, instead of in a separate window.
-- On Chromium, Copy, Cut, Paste and the other Edit shortcuts work in extension popups and side panels.
-- On Chromium, an extension's toolbar icon shows the count its blocking rules report, such as uBlock Origin Lite's blocked requests.
-- On Chromium pages, when this Mac has no passkey for a site, signing in with a passkey now offers your phone's QR code or a security key instead of stopping at "No passkeys available".
-- On Chromium pages, sites that check for Touch ID before offering it, such as Duo, now offer it when this Mac can keep passkeys.
-- On Chromium, a private or trusted-tester Chrome Web Store extension installs in a Space signed in to an account that can see it, instead of failing with HTTP 401.
-- On Chromium pages, dragging an item or a link no longer leaves the page unable to take clicks until it reloads.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/d2a5b66636085effddfd2f2e98ebaccee64357ab...378e850c1a6f366af140702f9253765b02f51344) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.189-2026-11-06-1515-r515.1/Installer-Crest-0.8.189-development-2026-11-06-378e850-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/378e850c1a6f366af140702f9253765b02f51344...c3e394ecd856123e009deee04d936e06ca4c0c13) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.189-2026-11-06-1518-r518.1/Installer-Crest-0.8.189-development-2026-11-06-c3e394e-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.189-2026-11-06-1515-r515.1/Installer-Crest-0.8.189-development-2026-11-06-378e850-arm64.dmg" length="216854682" type="application/octet-stream" sparkle:edSignature="KWktFtLTljadsUudd4UlRVqEcJGwuKKvBK4tGZtAm56IOT7WUJ/g8Wh1S8l+79AYHIRHjEYFGQ3TePCzf2YGBA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.189-2026-11-06-1518-r518.1/Installer-Crest-0.8.189-development-2026-11-06-c3e394e-arm64.dmg" length="216874138" type="application/octet-stream" sparkle:edSignature="bum7OJz5r9B4NR3FXchOsGpjYfBl0To8e6qcl2mObRhe51NhjbGoo/bpTNsuMCOoFap8kG8ZZN1Q0Ee3XgdNCQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -67,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ceO1wEq1P1nAXkrsWODK3OH6M+TaogPTQBRKcsn24vvREnZylohHDyaQlRL/WHsVvFycv9F0nyDO1RmZxk+zDQ==
-length: 5035
+edSignature: dE4YRBdxhRGeGUtrE6IZF2LSRQyFSsYBg14rR29/jX0tS8feqIxjBVcZOBlMWNDCr3uacad1h/7wm3GOcJjjDw==
+length: 3943
 -->
