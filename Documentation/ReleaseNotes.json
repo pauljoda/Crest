@@ -5138,6 +5138,10 @@
       "category": "fixed",
       "message": "The color grid in a Space’s appearance fills its rows without gaps, and typing a hex value in the Colors window no longer closes the color popover."
     },
+    "settings-space-click-opens-its-page": {
+      "category": "fixed",
+      "message": "On Mac, clicking a Space in Settings opens its page even when the pointer moves a little during the click, instead of sometimes doing nothing or opening it late."
+    },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
       "message": "Crest stays more responsive with many Spaces, especially when each Space has its own extensions."
