@@ -34,12 +34,16 @@ private struct ColorsPanelHold: NSViewRepresentable {
         private var opensPanel = false
         /// Whether the panel was open when the popover last looked.
         private var panelWasOpen = false
+        /// Follows the clicks and keys the popover's window handles.
+        private var eventMonitor: Any?
 
         // MARK: - Actions - Observation
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             NotificationCenter.default.removeObserver(self)
+            if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
+            eventMonitor = nil
             guard window != nil else { return }
             let observations: [(Selector, Notification.Name)] = [
                 (#selector(popoverDidShow), NSPopover.didShowNotification),
@@ -50,6 +54,18 @@ private struct ColorsPanelHold: NSViewRepresentable {
             for (selector, name) in observations {
                 NotificationCenter.default.addObserver(self, selector: selector, name: name, object: nil)
             }
+            eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .keyDown]) { [weak self] event in
+                self?.windowWillHandle(event)
+                return event
+            }
+        }
+
+        /// A well clicked while the panel already shows its color becomes the
+        /// panel's without the panel posting anything, so the popover looks
+        /// again once its window has handled the click or key.
+        private func windowWillHandle(_ event: NSEvent) {
+            guard event.window === window else { return }
+            DispatchQueue.main.async { [weak self] in self?.followColorsPanel() }
         }
 
         @objc private func popoverDidShow(_ notification: Notification) {
