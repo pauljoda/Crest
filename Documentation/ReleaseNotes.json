@@ -5165,6 +5165,10 @@
     "address-copy-url-button": {
       "category": "new",
       "message": "On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings › Appearance › Address field."
+    },
+    "finder-pdf-open-with": {
+      "category": "new",
+      "message": "On Mac, Crest appears in Finder’s Open With menu for PDFs, without becoming your default PDF app."
     }
   }
 }
