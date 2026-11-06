@@ -862,18 +862,38 @@
      const content::ContextMenuParams& params,
 --- a/content/browser/web_contents/web_contents_view_mac.mm
 +++ b/content/browser/web_contents/web_contents_view_mac.mm
-@@ -265,6 +265,11 @@
+@@ -264,6 +264,11 @@
+   }
  
    NSDragOperation mask = static_cast<NSDragOperation>(allowed_operations);
- 
++
 +  if (delegate_ && delegate_->HandleDragStart(drop_data)) {
 +    web_contents_->SystemDragEnded(source_rwh);
 +    return;
 +  }
-+
+ 
    [drag_dest_ initiateDragWithRenderWidgetHost:source_rwh dropData:drop_data];
    drag_source_start_rwh_ = source_rwh->GetWeakPtr();
+@@ -691,10 +696,16 @@
+ void WebContentsViewMac::EndDrag(uint32_t drag_operation,
+                                  const gfx::PointF& local_point,
+                                  const gfx::PointF& screen_point) {
++  // Crest: an aborted drop ends the drag as cancelled, so the page doesn't
++  // act on the move or copy the system reported.
+   [drag_dest_
+-      endDrag:base::BindOnce(&WebContentsViewMac::PerformEndDrag,
+-                             deferred_close_weak_ptr_factory_.GetWeakPtr(),
+-                             drag_operation, local_point, screen_point)];
++            endDrag:base::BindOnce(&WebContentsViewMac::PerformEndDrag,
++                                   deferred_close_weak_ptr_factory_.GetWeakPtr(),
++                                   drag_operation, local_point, screen_point)
++      ifDropAborted:base::BindOnce(&WebContentsViewMac::PerformEndDrag,
++                                   deferred_close_weak_ptr_factory_.GetWeakPtr(),
++                                   static_cast<uint32_t>(NSDragOperationNone),
++                                   local_point, screen_point)];
+ }
  
+ void WebContentsViewMac::PerformEndDrag(uint32_t drag_operation,
 --- a/content/public/browser/web_contents_view_delegate.h
 +++ b/content/public/browser/web_contents_view_delegate.h
 @@ -51,6 +51,10 @@
@@ -3369,3 +3389,143 @@
                std::move(callback)));
  }
  
+--- a/content/app_shim_remote_cocoa/web_contents_view_cocoa.mm
++++ b/content/app_shim_remote_cocoa/web_contents_view_cocoa.mm
+@@ -242,7 +242,15 @@
+                         image:(NSImage*)image
+                        offset:(NSPoint)offset
+                  isPrivileged:(BOOL)isPrivileged {
+-  if (!_host || !ui::IsDragSessionInitiationAllowed()) {
++  if (!_host) {
++    return;
++  }
++  // Crest: a refused session ends the page's drag as a cancelled one. The
++  // page ignores input until the drag it began ends, so returning without
++  // ending it would leave the page unusable until it reloads.
++  if (!ui::IsDragSessionInitiationAllowed()) {
++    [self endDragAtScreenPoint:NSEvent.mouseLocation
++                     operation:NSDragOperationNone];
+     return;
+   }
+ 
+@@ -340,7 +348,17 @@
+   if (!_host) {
+     return;
+   }
++
++  [self endDragAtScreenPoint:screenPoint operation:operation];
++
++  // The drag is complete. Disconnect the drag source.
++  [_dragSource webContentsIsGone];
++  _dragSource = nil;
++}
+ 
++// Tells the host the drag this view started ended at `screenPoint`.
++- (void)endDragAtScreenPoint:(NSPoint)screenPoint
++                   operation:(NSDragOperation)operation {
+   NSPoint localPoint = NSZeroPoint;
+   if (self.window) {
+     NSPoint basePoint = [self.window convertPointFromScreen:screenPoint];
+@@ -358,10 +376,6 @@
+       GetSanitizedFlippedPoint(screenPoint, screenFrame.size.height);
+ 
+   _host->EndDrag(operation, local_point_f, screen_point_f);
+-
+-  // The drag is complete. Disconnect the drag source.
+-  [_dragSource webContentsIsGone];
+-  _dragSource = nil;
+ }
+ 
+ // NSDraggingDestination methods
+--- a/content/browser/web_contents/web_drag_dest_mac.mm
++++ b/content/browser/web_contents/web_drag_dest_mac.mm
+@@ -10,6 +10,7 @@
+ 
+ #include <algorithm>
+ #include <optional>
++#include <utility>
+ 
+ #include "base/apple/bridging.h"
+ #include "base/apple/foundation_util.h"
+@@ -155,6 +156,12 @@
+   // `completeDropAsync` after the "drop" event has fired.
+   base::ScopedClosureRunner _endDragRunner;
+ 
++  // Crest: what ends this view's drag instead of `_endDragRunner` when the
++  // pending drop is aborted, and whether a drop was aborted before this view's
++  // drag ended.
++  base::OnceClosure _abortedEndDrag;
++  bool _dropAborted;
++
+   // Store DraggingInfo for async callbacks.
+   std::unique_ptr<remote_cocoa::mojom::DraggingInfo> _pendingDragEnteredInfo;
+   std::unique_ptr<remote_cocoa::mojom::DraggingInfo> _pendingDragUpdatedInfo;
+@@ -196,6 +203,7 @@
+ // This ensures all state is properly reset when a drag operation fails or
+ // needs to abort, preventing state leaks and inconsistencies.
+ - (void)cleanupDragState {
++  const bool abortsDrop = _dropInProgress;
+   _currentRWHForDrag.reset();
+ 
+   _dropDataUnfiltered.reset();
+@@ -212,9 +220,19 @@
+   ++_dragUpdatedSequenceNumber;
+   ++_dropSequenceNumber;
+ 
+-  // Release any pending endDrag closure without running it.
+-  // This is an abort/error path - we don't want to fire dragend events.
+-  std::ignore = _endDragRunner.Release();
++  // Crest: a pending endDrag closure means the drag this view started has
++  // ended, and the page ignores input until it hears so. No drop happened, so
++  // the drag ends as cancelled where an aborted end was given; a drag that
++  // hasn't ended yet ends as cancelled when it does.
++  base::OnceClosure aborted = std::move(_abortedEndDrag);
++  if (_endDragRunner && aborted) {
++    std::ignore = _endDragRunner.Release();
++    std::move(aborted).Run();
++  } else if (_endDragRunner) {
++    base::ScopedClosureRunner endDragRunner(std::move(_endDragRunner));
++  } else if (abortsDrop) {
++    _dropAborted = true;
++  }
+ }
+ 
+ // Call to set whether or not we should allow the drop. Takes effect the
+@@ -736,12 +754,23 @@
+ - (void)initiateDragWithRenderWidgetHost:(content::RenderWidgetHostImpl*)rwhi
+                                 dropData:(const content::DropData&)dropData {
+   _dragSecurityInfo.OnDragInitiated(rwhi, dropData);
++  _dropAborted = false;
+ }
+ 
+ - (bool)didInitiateDrag {
+   return _dragSecurityInfo.did_initiate();
+ }
+ 
++- (void)endDrag:(base::OnceClosure)closure
++    ifDropAborted:(base::OnceClosure)aborted {
++  if (std::exchange(_dropAborted, false) && !_dropInProgress) {
++    [self endDrag:std::move(aborted)];
++    return;
++  }
++  _abortedEndDrag = _dropInProgress ? std::move(aborted) : base::OnceClosure();
++  [self endDrag:std::move(closure)];
++}
++
+ - (void)endDrag:(base::OnceClosure)closure {
+   _dragSecurityInfo.OnDragEnded();
+ 
+--- a/content/browser/web_contents/web_drag_dest_mac.h
++++ b/content/browser/web_contents/web_drag_dest_mac.h
+@@ -113,6 +113,11 @@
+ // since it should be fired first.
+ - (void)endDrag:(base::OnceClosure)closure;
+ 
++// Crest: as `endDrag:`, except that if the "drop" still pending is aborted
++// instead, or a drop was aborted since the drag began, `aborted` runs in place
++// of `closure`, so the drag ends as cancelled.
++- (void)endDrag:(base::OnceClosure)closure ifDropAborted:(base::OnceClosure)aborted;
++
+ // Async drag callbacks (called from async helpers).
+ - (void)dragEnterHitTestDidCompleteForView:
+             (base::WeakPtr<content::RenderWidgetHostViewBase>)targetView
