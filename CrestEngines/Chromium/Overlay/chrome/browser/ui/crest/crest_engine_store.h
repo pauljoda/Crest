@@ -11,10 +11,11 @@
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/raw_ref.h"
+#include "base/memory/scoped_refptr.h"
 #include "base/memory/weak_ptr.h"
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
+#include "url/gurl.h"
 
-class GURL;
 class Profile;
 
 namespace content {
@@ -27,6 +28,7 @@ class CrxInstallError;
 }
 
 namespace network {
+class SharedURLLoaderFactory;
 class SimpleURLLoader;
 namespace mojom {
 class URLResponseHead;
@@ -81,8 +83,11 @@ class PageStore final {
 // the request Chromium's Web Store installer sends. Crest downloads it here
 // rather than through that installer, so one package can be installed into
 // every Space the person picks, and Chromium's CrxInstaller judges it in each;
-// nothing here limits or inspects it. Destroying it stops the request and
-// deletes what it received.
+// nothing here limits or inspects it. It asks without cookies, as Chromium's
+// installer does for a public item, and asks once more with the profile's
+// cookies when the service refuses, since a private or trusted-tester item is
+// served only to an account that can see it. Destroying it stops the request
+// and deletes what it received.
 class WebStoreDownload final {
  public:
   // The fraction of the package received, once the response names its size.
@@ -96,10 +101,15 @@ class WebStoreDownload final {
   ~WebStoreDownload();
 
  private:
+  // Requests the package, with the profile's cookies or without.
+  void Begin(bool with_cookies);
   void Started(const GURL& url, const network::mojom::URLResponseHead& head);
   void Progressed(uint64_t received);
   void Finished(base::FilePath path);
 
+  const scoped_refptr<network::SharedURLLoaderFactory> factory_;
+  const GURL url_;
+  bool with_cookies_ = false;
   std::unique_ptr<network::SimpleURLLoader> loader_;
   int64_t length_ = -1;
   const Progress progress_;
