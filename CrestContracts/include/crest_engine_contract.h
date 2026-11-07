@@ -29,7 +29,7 @@ namespace crest::engine {
 // SHA-256 of the engine contract alone. A binding registers with it, so the
 // core refuses an engine built against any other contract.
 inline constexpr std::array<uint8_t, 32> kFingerprint = {
-    0xcb, 0xce, 0x24, 0xaa, 0xb7, 0x87, 0xca, 0x86, 0xc6, 0xe7, 0x53, 0x0e, 0xf2, 0x9d, 0x5f, 0x6a, 0x9d, 0x93, 0xad, 0xf9, 0x67, 0xcf, 0x80, 0xa8, 0x27, 0x2b, 0x22, 0x28, 0x01, 0x3c, 0x00, 0xe3};
+    0x87, 0x85, 0x2c, 0x33, 0xcd, 0x14, 0xa0, 0x3a, 0x79, 0x9a, 0x90, 0x69, 0x8e, 0x12, 0x3b, 0x9e, 0x6a, 0x30, 0xe1, 0xfc, 0x48, 0xc3, 0xa3, 0x63, 0x14, 0xa2, 0x8d, 0x09, 0xa1, 0x53, 0x19, 0x5d};
 
 // A GUID in RFC 4122 byte order, as the wire carries it.
 using Guid = std::array<uint8_t, 16>;
@@ -2510,6 +2510,21 @@ inline bool Read(WireReader& reader, OpenInspector& value) {
       && Read(reader, value.panel);
 }
 
+struct PageBlocksContent {
+  Guid page_id = {};
+  std::string url;
+
+  friend bool operator==(const PageBlocksContent&, const PageBlocksContent&) = default;
+};
+inline void Write(WireWriter& writer, const PageBlocksContent& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.url);
+}
+inline bool Read(WireReader& reader, PageBlocksContent& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.url);
+}
+
 struct PageCaptured {
   Guid page_id = {};
   Guid capture_id = {};
@@ -2724,6 +2739,27 @@ inline void Write(WireWriter& writer, const PageHeader& value) {
 inline bool Read(WireReader& reader, PageHeader& value) {
   return Read(reader, value.name)
       && Read(reader, value.value);
+}
+
+struct PageHidingStyle {
+  Guid page_id = {};
+  std::string url;
+  std::vector<std::string> classes;
+  std::vector<std::string> ids;
+
+  friend bool operator==(const PageHidingStyle&, const PageHidingStyle&) = default;
+};
+inline void Write(WireWriter& writer, const PageHidingStyle& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.url);
+  Write(writer, value.classes);
+  Write(writer, value.ids);
+}
+inline bool Read(WireReader& reader, PageHidingStyle& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.url)
+      && Read(reader, value.classes)
+      && Read(reader, value.ids);
 }
 
 struct PageHistoryEntry {
@@ -5326,12 +5362,20 @@ inline bool Read(WireReader& reader, EnginePresentation& value) {
   }
 }
 
-using EngineQuestion = std::variant<LinkActivation>;
+using EngineQuestion = std::variant<LinkActivation, PageBlocksContent, PageHidingStyle>;
 template <typename T>
 struct EngineQuestionAnswer;
 template <>
 struct EngineQuestionAnswer<LinkActivation> {
   using Type = LinkNavigationAnswer;
+};
+template <>
+struct EngineQuestionAnswer<PageBlocksContent> {
+  using Type = bool;
+};
+template <>
+struct EngineQuestionAnswer<PageHidingStyle> {
+  using Type = std::string;
 };
 inline void Write(WireWriter& writer, const EngineQuestion& value) {
   writer.WriteVarint(value.index());
@@ -5341,6 +5385,18 @@ inline bool Read(WireReader& reader, EngineQuestion& value) {
   switch (reader.ReadTag()) {
     case 0: {
       LinkActivation member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 1: {
+      PageBlocksContent member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 2: {
+      PageHidingStyle member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;

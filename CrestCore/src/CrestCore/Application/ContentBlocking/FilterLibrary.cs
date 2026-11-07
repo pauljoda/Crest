@@ -54,6 +54,10 @@ internal sealed class FilterLibrary {
     /// uBlock Origin's own syntax, which the engine reads.
     private static readonly string[] WebKitConditions = ["env_safari", "ext_ublock"];
 
+    /// The `!#if` tokens that hold for an engine that checks each request
+    /// itself, as Chromium does.
+    private static readonly string[] ChromiumConditions = ["env_chromium", "ext_ublock"];
+
     /// Crest's own rules: third-party loads from well-known advertising and
     /// analytics hosts. They block before any list arrives, and beside them.
     private const string BaselineRules = """
@@ -82,6 +86,7 @@ internal sealed class FilterLibrary {
     private readonly Lock gate = new();
     private readonly string? folder;
     private readonly IReadOnlySet<string> conditions;
+    private readonly IReadOnlySet<string> engineConditions;
     private readonly IReadOnlyList<string> languages;
     private readonly Func<IReadOnlyDictionary<FilterList, bool>> choices;
     private readonly Action<Change> announce;
@@ -99,6 +104,14 @@ internal sealed class FilterLibrary {
     /// A list changed while other downloads were out: the lists convert once
     /// the last of them reports.
     private bool rebuildDeferred;
+    /// The slot an engine that checks each request itself checks against,
+    /// made when one first asks for it, and the filter in force in it, which
+    /// also answers what a page hides.
+    private ContentFilterSlot? slot;
+    private ContentFilter? engine;
+    private string? engineKey;
+    private string? buildingEngineKey;
+    private bool engineRebuildWanted;
 
     #endregion
 
@@ -115,6 +128,7 @@ internal sealed class FilterLibrary {
         ArgumentNullException.ThrowIfNull(clock);
         folder = storageDirectory is null ? null : Path.Combine(storageDirectory, "ContentFilter");
         conditions = new HashSet<string>([.. WebKitConditions, .. platform.FilterConditions]);
+        engineConditions = new HashSet<string>([.. ChromiumConditions, .. platform.FilterConditions]);
         this.languages = languages ?? [];
         this.choices = choices;
         this.announce = announce;
@@ -276,9 +290,18 @@ internal sealed class FilterLibrary {
         }
     }
 
+    /// Brings every output up to date with the lists: the content rules, and
+    /// the engine filter once an engine checks requests itself.
+    private void Rebuild() {
+        RebuildRules();
+        bool checksRequests;
+        lock (gate) checksRequests = slot is not null;
+        if (checksRequests) RebuildEngine();
+    }
+
     /// Converts the lists again unless their rules are the ones in force: at
     /// once from what an earlier conversion stored, or on a worker.
-    private void Rebuild() {
+    private void RebuildRules() {
         var chosen = choices();
         string key;
         List<(FilterList List, string Digest)> inputs;
@@ -329,7 +352,7 @@ internal sealed class FilterLibrary {
             }
         }
         if (built is not null) announce(new ContentRuleListsChanged(built));
-        if (again) Rebuild();
+        if (again) RebuildRules();
     }
 
     /// The compiled lists for `rules`: as many rules as fit beside every
@@ -398,6 +421,115 @@ internal sealed class FilterLibrary {
     }
 
     private string RulesPath(string identifier) => Path.Combine(folder!, "rules", identifier + ".json");
+
+    #endregion
+
+    #region Actions - Engine filter
+
+    /// The address of the slot an engine that checks each request itself
+    /// checks against with `crest_content_filter_slot_check`. The first ask
+    /// makes it and compiles the filter; the slot lives as long as the core.
+    public nint SlotAddress() {
+        lock (gate) slot ??= new ContentFilterSlot();
+        RebuildEngine();
+        lock (gate) return slot.Address;
+    }
+
+    /// The style sheet that hides what the filter hides on a page at `url`
+    /// showing `classes` and `ids`: one rule per selector, so a selector the
+    /// page's engine cannot read costs only itself. Empty before the filter is
+    /// compiled.
+    public string HidingStyle(string url, IReadOnlyList<string> classes, IReadOnlyList<string> ids) {
+        ContentFilter? current;
+        lock (gate) current = engine;
+        if (current is null) return "";
+        var resources = current.ResourcesFor(url);
+        var generic = resources.GenericHide ? [] : current.HiddenSelectors(classes, ids, resources.Exceptions);
+        var style = new StringBuilder();
+        foreach (var selector in resources.HideSelectors.Concat(generic).Distinct())
+            style.Append(selector).Append("{display:none!important}\n");
+        return style.ToString();
+    }
+
+    /// Compiles the engine filter again unless the one in force matches the
+    /// lists: at once from what an earlier compile saved, or on a worker.
+    private void RebuildEngine() {
+        var chosen = choices();
+        string key;
+        List<(FilterList List, string Digest)> inputs;
+        lock (gate) {
+            inputs = [.. FilterList.All.Where(list => IsOn(list, chosen))
+                .Select(list => (List: list, Digest: copies.GetValueOrDefault(list)?.Digest))
+                .Where(input => input.Digest is not null).Select(input => (input.List, input.Digest!))];
+            key = EngineKey(inputs);
+            if (key == engineKey) return;
+            if (buildingEngineKey is not null) {
+                engineRebuildWanted = true;
+                return;
+            }
+            buildingEngineKey = key;
+        }
+        _ = Task.Run(() => BuildEngine(key, inputs));
+    }
+
+    private void BuildEngine(string key, IReadOnlyList<(FilterList List, string Digest)> inputs) {
+        ContentFilter? built = null;
+        bool again;
+        try {
+            built = SavedEngine(key);
+            if (built is null) {
+                var texts = new List<string> { BaselineRules };
+                foreach (var (list, _) in inputs)
+                    if (ReadText(list) is { } text) texts.Add(new FilterListText(text).Resolved(engineConditions));
+                built = ContentFilter.Compile(texts);
+                SaveEngine(key, built);
+            }
+        } catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException
+            or DllNotFoundException or EntryPointNotFoundException) {
+            built?.Dispose();
+            built = null;
+        } finally {
+            lock (gate) {
+                buildingEngineKey = null;
+                again = engineRebuildWanted;
+                engineRebuildWanted = false;
+                if (built is not null) {
+                    slot?.Install(built);
+                    engine?.Dispose();
+                    engine = built;
+                    engineKey = key;
+                }
+            }
+        }
+        if (again) RebuildEngine();
+    }
+
+    /// The key of the engine filter `inputs` compile to: it changes with any
+    /// list's text, with the engine and with the conditions.
+    private string EngineKey(IReadOnlyList<(FilterList List, string Digest)> inputs) {
+        var description = new StringBuilder("engine:").Append(RulesRevision).Append('\n');
+        description.AppendJoin(',', engineConditions.Order(StringComparer.Ordinal)).Append('\n');
+        foreach (var (list, digest) in inputs) description.Append(list.Name).Append(':').Append(digest).Append('\n');
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(description.ToString())));
+    }
+
+    /// The engine filter an earlier compile saved for `key`, or null. A filter
+    /// this library cannot read, such as one a previous version saved, is
+    /// compiled again.
+    private ContentFilter? SavedEngine(string key) {
+        if (folder is null) return null;
+        string path = Path.Combine(folder, "engine", key[..16] + ".dat");
+        return File.Exists(path) ? ContentFilter.Load(File.ReadAllBytes(path)) : null;
+    }
+
+    /// Saves the engine filter for `key`, the only one kept.
+    private void SaveEngine(string key, ContentFilter filter) {
+        if (folder is null) return;
+        string directory = Path.Combine(folder, "engine");
+        WriteAtomically(Path.Combine(directory, key[..16] + ".dat"), filter.Save());
+        foreach (var stale in Directory.EnumerateFiles(directory, "*.dat"))
+            if (Path.GetFileNameWithoutExtension(stale) != key[..16]) File.Delete(stale);
+    }
 
     #endregion
 

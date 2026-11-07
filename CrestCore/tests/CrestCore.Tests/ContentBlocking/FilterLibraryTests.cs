@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Nodes;
 
@@ -9,10 +10,11 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// What the device subscribes to, when each list is downloaded again, and the
-/// content rules WebKit compiles from them: a wrong answer blocks nothing, or
+/// What the device subscribes to, when each list is downloaded again, and what
+/// each engine enforces from them: the content rules WebKit compiles, and the
+/// filter and hiding rules Chromium checks. A wrong answer blocks nothing, or
 /// too much, without anything on screen saying so.
-public sealed class FilterLibraryTests {
+public sealed partial class FilterLibraryTests {
     private static readonly DateTimeOffset Start = new(2026, 11, 7, 12, 0, 0, TimeSpan.Zero);
 
     private sealed class Library {
@@ -38,6 +40,27 @@ public sealed class FilterLibraryTests {
     }
 
     private static string Action(JsonNode rule) => rule["action"]!["type"]!.GetValue<string>();
+
+    /// The check the Chromium engine calls with the slot's address.
+    [LibraryImport("crest_content_filter")]
+    private static unsafe partial int crest_content_filter_slot_check(nint slot,
+        ContentFilterLibrary.Request* request, ContentFilterLibrary.Decision* decision);
+
+    private static unsafe bool SlotBlocks(nint slot, string url, string page) {
+        byte[] urlBytes = Encoding.UTF8.GetBytes(url), pageBytes = Encoding.UTF8.GetBytes(page);
+        ContentFilterLibrary.Decision decision = default;
+        fixed (byte* urlPointer = urlBytes)
+        fixed (byte* pagePointer = pageBytes) {
+            var request = new ContentFilterLibrary.Request {
+                Url = new() { Bytes = urlPointer, Length = (nuint)urlBytes.Length },
+                SourceUrl = new() { Bytes = pagePointer, Length = (nuint)pageBytes.Length },
+                Kind = (byte)ContentFilter.RequestKind.Script,
+                Method = (byte)ContentFilter.RequestMethod.Get
+            };
+            Assert.Equal(ContentFilterLibrary.Ok, crest_content_filter_slot_check(slot, &request, &decision));
+        }
+        return decision.Verdict == ContentFilterLibrary.Block;
+    }
 
     [Fact]
     public void ConditionalBlocksResolveForThePlatformAndTheHeaderSaysWhenAListExpires() {
@@ -164,5 +187,57 @@ public sealed class FilterLibraryTests {
         library.Choices[FilterList.EasyList] = false;
         library.Filters.SubscriptionsChanged(new ChangeFeed());
         Assert.Single(library.NextRules().Identifiers);
+    }
+
+    [Fact]
+    public void AnEngineThatChecksRequestsGetsTheListsForChromiumThroughTheSlotAndTheirHidingRules() {
+        var library = new Library();
+        library.Filters.Fetched(FilterList.EasyList, """
+            ! Title: Chromium
+            ||ads.example^
+            @@||ads.example/allowed^
+            !#if env_chromium
+            ||chromium-ads.example^
+            ##.chromium-only
+            !#endif
+            !#if env_safari
+            ||safari-ads.example^
+            ##.safari-only
+            !#endif
+            ##.ad-banner
+            ###sponsor
+            news.example##.site-ad
+            news.example#@#.ad-banner
+            """, null, null, new ChangeFeed());
+
+        // Nothing hides until an engine asks for the slot, which compiles the
+        // lists on a worker.
+        Assert.Equal("", library.Filters.HidingStyle("https://other.example/", ["ad-banner"], []));
+        nint slot = library.Filters.SlotAddress();
+        Assert.NotEqual(0, slot);
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (!SlotBlocks(slot, "https://ads.example/tag.js", "https://other.example/")) {
+            Assert.True(DateTime.UtcNow < deadline, "The engine filter never reached the slot.");
+            Thread.Sleep(20);
+        }
+        Assert.Equal(slot, library.Filters.SlotAddress());
+
+        Assert.False(SlotBlocks(slot, "https://ads.example/allowed/tag.js", "https://other.example/"));
+        Assert.True(SlotBlocks(slot, "https://chromium-ads.example/tag.js", "https://other.example/"));
+        Assert.False(SlotBlocks(slot, "https://safari-ads.example/tag.js", "https://other.example/"));
+        Assert.True(SlotBlocks(slot, "https://doubleclick.net/tag.js", "https://other.example/"));
+
+        string elsewhere = library.Filters.HidingStyle("https://other.example/",
+            ["ad-banner", "chromium-only", "safari-only", "article"], ["sponsor"]);
+        Assert.Contains(".ad-banner{display:none!important}", elsewhere);
+        Assert.Contains(".chromium-only{display:none!important}", elsewhere);
+        Assert.Contains("#sponsor{display:none!important}", elsewhere);
+        Assert.DoesNotContain(".safari-only", elsewhere);
+        Assert.DoesNotContain(".article", elsewhere);
+        Assert.DoesNotContain(".site-ad", elsewhere);
+
+        string onSite = library.Filters.HidingStyle("https://news.example/story", ["ad-banner"], []);
+        Assert.Contains(".site-ad{display:none!important}", onSite);
+        Assert.DoesNotContain(".ad-banner", onSite);
     }
 }

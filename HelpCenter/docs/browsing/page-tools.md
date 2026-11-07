@@ -57,4 +57,4 @@ Export and Share are available through menus and the command palette even when n
 
 ## Content and site controls
 
-The contextual site controls also expose the page's engine, Reader and turning content blocking off for the site where the engine offers them, permissions, extension actions, and developer status. On Chromium pages, blocking ads and trackers comes from the extensions you install. Decisions for camera, microphone, automatic downloads, popups, or external-app handoff are remembered within the current Space.
+The contextual site controls also expose the page's engine, Reader and turning content blocking off for the site where the engine offers them, permissions, extension actions, and developer status. Decisions for camera, microphone, automatic downloads, popups, or external-app handoff are remembered within the current Space.

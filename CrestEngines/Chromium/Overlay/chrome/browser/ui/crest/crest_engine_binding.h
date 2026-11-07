@@ -170,6 +170,15 @@ class EngineBinding {
   // The page that follows `contents`, for the engine's own hooks, or nullptr
   // when no page does.
   EnginePage* PageFor(content::WebContents* contents);
+  // Whether the page `page` blocks ads and trackers in the document at `url`
+  // it is about to show, as the core decides; false when it cannot answer.
+  bool BlocksContent(const engine::Guid& page, const GURL& url);
+  // The style sheet hiding what the content filter hides in `page`'s document
+  // at `url`, which shows `classes` and `ids`; empty when there is none.
+  std::string HidingStyle(const engine::Guid& page,
+                          const GURL& url,
+                          std::vector<std::string> classes,
+                          std::vector<std::string> ids);
   // The page that opened `contents`: its opener's, or for a window a link
   // opened without one, as target="_blank" does, the page the link was in.
   // nullptr when no page Crest follows opened it.

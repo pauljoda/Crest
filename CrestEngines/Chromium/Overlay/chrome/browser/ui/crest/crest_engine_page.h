@@ -17,6 +17,7 @@
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
 #include "components/favicon/core/favicon_driver_observer.h"
 #include "components/find_in_page/find_result_observer.h"
+#include "chrome/browser/ui/crest/crest_request_filter.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "url/gurl.h"
@@ -89,6 +90,9 @@ class EnginePage final : public content::WebContentsObserver,
   ~EnginePage() override;
 
   const engine::Guid& id() const { return id_; }
+  // Whether the page blocks ads and trackers in the document it shows, which
+  // its request filter reads.
+  scoped_refptr<PageFilter> RequestFilter() const { return request_filter_; }
   // The page's identity as the platform spells it.
   const std::string& key() const { return key_; }
   const std::string& profile() const { return profile_; }
@@ -257,6 +261,7 @@ class EnginePage final : public content::WebContentsObserver,
   // content::WebContentsObserver:
   void DidStartNavigation(content::NavigationHandle* navigation) override;
   void DidRedirectNavigation(content::NavigationHandle* navigation) override;
+  void ReadyToCommitNavigation(content::NavigationHandle* navigation) override;
   void DidFinishNavigation(content::NavigationHandle* navigation) override;
   void DidStartLoading() override;
   void DidStopLoading() override;
@@ -293,6 +298,8 @@ class EnginePage final : public content::WebContentsObserver,
   void OnFindTabHelperDestroyed(find_in_page::FindTabHelper* helper) override;
 
   void ApplyZoom();
+  // Hides the elements the content filter hides in `frame`'s loaded document.
+  void HideElements(content::RenderFrameHost* frame);
   void Present(engine::EnginePresentation presentation);
   // Presents the page's part in tab sharing.
   void PresentSharing();
@@ -403,6 +410,9 @@ class EnginePage final : public content::WebContentsObserver,
   std::unique_ptr<PageInfoBars> infobars_;
   std::unique_ptr<PageInspector> inspector_;
   std::unique_ptr<PageContent> content_;
+  // Whether the page blocks ads and trackers, decided by the core as each of
+  // its documents commits.
+  const scoped_refptr<PageFilter> request_filter_ = base::MakeRefCounted<PageFilter>();
   std::unique_ptr<PageAgent> agent_;
   bool observes_activity_ = false;
   std::unique_ptr<PageStore> store_;

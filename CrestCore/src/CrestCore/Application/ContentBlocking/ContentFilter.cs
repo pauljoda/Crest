@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using static CrestCore.Application.ContentFilterLibrary;
 
@@ -51,6 +52,11 @@ internal sealed class ContentFilter : IDisposable {
     /// follow them in every compiled list they are split into, since an
     /// exception in one list never reaches another.
     public sealed record ContentRules(IReadOnlyList<string> Rules, IReadOnlyList<string> Exceptions);
+
+    /// What a page hides by the filter's site rules: selectors to hide, the
+    /// generic selectors those rules exempt, and whether the site turns generic
+    /// hiding off altogether.
+    public sealed record PageResources(IReadOnlyList<string> HideSelectors, IReadOnlyList<string> Exceptions, bool GenericHide);
 
     /// A call that uses lists lent to the library.
     private unsafe delegate void LentTexts(Text* texts, nuint count);
@@ -136,6 +142,47 @@ internal sealed class ContentFilter : IDisposable {
             foreach (var pin in pins) pin.Free();
         }
     }
+
+    #endregion
+
+    #region Actions - Hiding
+
+    /// What a page at `url` hides by the filter's site rules.
+    public unsafe PageResources ResourcesFor(string url) {
+        ArgumentNullException.ThrowIfNull(url);
+        var json = LendText(url, text => {
+            Allocation buffer = default;
+            Require(crest_content_filter_page_resources(Handle, text, &buffer), "describe a page");
+            return Take(ref buffer);
+        });
+        using var resources = JsonDocument.Parse(json);
+        var root = resources.RootElement;
+        return new PageResources(Strings(root.GetProperty("hide_selectors")), Strings(root.GetProperty("exceptions")),
+            root.GetProperty("generichide").GetBoolean());
+    }
+
+    /// The generic hide selectors for a page that shows `classes` and `ids`,
+    /// leaving out what the page's `exceptions` exempt.
+    public unsafe IReadOnlyList<string> HiddenSelectors(IEnumerable<string> classes, IEnumerable<string> ids,
+        IEnumerable<string> exceptions) {
+        var query = new JsonObject {
+            ["classes"] = Array(classes),
+            ["ids"] = Array(ids),
+            ["exceptions"] = Array(exceptions)
+        }.ToJsonString();
+        var json = LendText(query, text => {
+            Allocation buffer = default;
+            Require(crest_content_filter_hidden_selectors(Handle, text, &buffer), "find a page's hidden selectors");
+            return Take(ref buffer);
+        });
+        using var selectors = JsonDocument.Parse(json);
+        return Strings(selectors.RootElement);
+    }
+
+    private static IReadOnlyList<string> Strings(JsonElement array) =>
+        [.. array.EnumerateArray().Select(item => item.GetString() ?? "")];
+
+    private static JsonArray Array(IEnumerable<string> names) => [.. names.Select(name => (JsonNode?)name)];
 
     #endregion
 

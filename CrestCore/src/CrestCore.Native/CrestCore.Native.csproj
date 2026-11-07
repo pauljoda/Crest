@@ -30,6 +30,9 @@
     </ReadLinesFromFile>
     <ItemGroup>
       <NativeLibrary Include="$(CrestContentFilterLibraryPath)" />
+      <!-- An engine that checks each request itself calls the slot check directly,
+           without the core's managed code. -->
+      <LinkerArg Include="-Wl,-exported_symbol,_crest_content_filter_slot_check" />
     </ItemGroup>
   </Target>
 </Project>

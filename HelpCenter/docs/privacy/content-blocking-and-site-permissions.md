@@ -11,13 +11,13 @@ Privacy decisions belong to the current Space. A permission granted to a work ac
 
 ## Content blocking
 
-Crest blocks ads and trackers with the filter lists that ad blockers use: EasyList, EasyPrivacy and uBlock Origin's lists, plus a regional list for your language. It applies on iPhone, iPad, and WebKit pages on Mac. The lists download from their maintainers and stay up to date on their own.
+Crest blocks ads and trackers with the filter lists that ad blockers use: EasyList, EasyPrivacy and uBlock Origin's lists, plus a regional list for your language. It applies on iPhone, iPad and Mac, to Chromium and WebKit pages alike. The lists download from their maintainers and stay up to date on their own.
 
 To turn blocking on or off for a Space, use **Block ads and trackers** in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space. The same page lists the filter lists you can turn on or off, such as cookie notices and other annoyances. Lists apply to every Space that blocks.
 
 When a site doesn’t work with blocking, choose **Turn Off Blocking on** the site from the page’s actions, or assign **Toggle Content Blocking** a shortcut. The site stays unblocked in that Space until you turn blocking on again from the same place or from the Space’s privacy settings.
 
-Chromium pages on Mac don’t use these lists yet. Install a content-blocking extension, such as uBlock Origin Lite, in each Space that needs it. Extensions do not run on WebKit pages.
+On Chromium pages, a content-blocking extension you install works alongside the lists. Extensions do not run on WebKit pages.
 
 ## Malicious sites and downloads
 

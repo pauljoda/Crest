@@ -5201,6 +5201,10 @@
     "ad-blocking-filter-lists": {
       "category": "new",
       "message": "On iPhone, iPad and WebKit pages on Mac, Crest blocks ads and trackers with EasyList, EasyPrivacy, uBlock Origin’s lists and a list for your language, which stay up to date on their own. Turn blocking off for a site from the page’s actions, and turn on more lists, such as cookie notices, in a Space’s privacy settings."
+    },
+    "chromium-ad-blocking": {
+      "category": "improved",
+      "message": "Chromium pages on Mac block ads and trackers with the same filter lists as WebKit pages, and follow each Space’s blocking setting and the sites where you turned blocking off."
     }
   }
 }

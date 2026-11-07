@@ -1,5 +1,7 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 
+#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+
 #include <os/log.h>
 #include <os/signpost.h>
 
@@ -13,6 +15,7 @@
 #include "base/memory/ref_counted_memory.h"
 #include "base/pickle.h"
 #include "base/strings/string_util.h"
+#include "base/json/json_writer.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/uuid.h"
 #include "chrome/browser/ui/crest/crest_engine_agent.h"
@@ -733,6 +736,64 @@ void EnginePage::DOMContentLoaded(content::RenderFrameHost* frame) {
   if (content_ && frame && !frame->IsInPrimaryMainFrame()) {
     content_->DocumentAvailable(frame);
   }
+  HideElements(frame);
+}
+
+// The core decides, as each of the page's documents is about to commit,
+// whether the page blocks ads and trackers there, so its request filter
+// applies the answer to every request the document makes.
+void EnginePage::ReadyToCommitNavigation(content::NavigationHandle* navigation) {
+  if (!navigation->IsInPrimaryMainFrame() || navigation->IsSameDocument()) {
+    return;
+  }
+  request_filter_->SetBlocks(binding_->BlocksContent(id_, navigation->GetURL()));
+}
+
+// Hides what the content filter hides in `frame`'s loaded document: the
+// classes and ids it shows go to the core, and Crest's own world adopts the
+// style sheet the core answers. The page's scripts never see Crest's script,
+// though a page that replaces the document's adopted sheets drops the sheet.
+void EnginePage::HideElements(content::RenderFrameHost* frame) {
+  if (!frame || !request_filter_->Blocks() || !frame->GetLastCommittedURL().SchemeIsHTTPOrHTTPS()) {
+    return;
+  }
+  static constexpr char16_t kCollect[] =
+      u"(() => { const classes = new Set(), ids = new Set();"
+      u" for (const element of document.querySelectorAll('[class],[id]')) {"
+      u"   for (const name of element.classList) classes.add(name);"
+      u"   if (element.id) ids.add(element.id); }"
+      u" return {classes: [...classes].slice(0, 4000), ids: [...ids].slice(0, 4000)}; })()";
+  frame->ExecuteJavaScriptInIsolatedWorld(
+      kCollect,
+      base::BindOnce(
+          [](base::WeakPtr<EnginePage> page, content::GlobalRenderFrameHostId frame_id, base::Value shown) {
+            auto* frame = content::RenderFrameHost::FromID(frame_id);
+            if (!page || !frame || !shown.is_dict()) {
+              return;
+            }
+            auto names = [&shown](const char* key) {
+              std::vector<std::string> names;
+              if (const base::ListValue* list = shown.GetDict().FindList(key)) {
+                for (const base::Value& name : *list) {
+                  if (name.is_string()) names.push_back(name.GetString());
+                }
+              }
+              return names;
+            };
+            const std::string style = page->binding_->HidingStyle(page->id_, frame->GetLastCommittedURL(),
+                                                                  names("classes"), names("ids"));
+            if (style.empty()) {
+              return;
+            }
+            std::string literal;
+            base::JSONWriter::Write(base::Value(style), &literal);
+            frame->ExecuteJavaScriptInIsolatedWorld(
+                u"(() => { const sheet = new CSSStyleSheet(); sheet.replaceSync(" + base::UTF8ToUTF16(literal) +
+                    u"); document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]; })()",
+                base::DoNothing(), kContentWorldID);
+          },
+          weak_factory_.GetWeakPtr(), frame->GetGlobalId()),
+      kContentWorldID);
 }
 
 // A frame of the page's own site asked for a key system this engine does not

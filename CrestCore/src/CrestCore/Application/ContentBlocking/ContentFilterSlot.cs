@@ -14,6 +14,10 @@ internal sealed class ContentFilterSlot : IDisposable {
 
     private readonly SlotHandle handle;
 
+    /// The slot's address, for an engine that checks each request through
+    /// `crest_content_filter_slot_check`. It stays valid while the slot lives.
+    internal nint Address => handle.DangerousGetHandle();
+
     #endregion
 
     #region Constructors

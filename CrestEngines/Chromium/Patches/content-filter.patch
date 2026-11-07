@@ -1,0 +1,43 @@
+# Crest: each Crest page's requests pass the core's content filter first.
+# The filter is chrome/browser/ui/crest/crest_request_filter.cc in the overlay.
+
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -5,6 +5,7 @@
+ #include "chrome/browser/chrome_content_browser_client.h"
+ #if BUILDFLAG(IS_MAC)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#include "chrome/browser/ui/crest/crest_request_filter.h"
+ #endif
+ 
+ #include <algorithm>
+@@ -6814,6 +6815,10 @@
+     network::mojom::URLLoaderFactoryOverridePtr* factory_override,
+     scoped_refptr<base::SequencedTaskRunner> navigation_response_task_runner,
+     bool is_for_network_service) {
++#if BUILDFLAG(IS_MAC)
++  // A Crest page's requests pass its content filter first.
++  crest::FilterRequests(frame, type, factory_builder);
++#endif
+ #if BUILDFLAG(ENABLE_EXTENSIONS_CORE)
+   auto* web_request_api =
+       extensions::BrowserContextKeyedAPIFactory<extensions::WebRequestAPI>::Get(
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -3347,6 +3347,7 @@
+       "crest/crest_browser_window.mm",
+       "crest/crest_chrome_hooks.h",
+       "crest/crest_chrome_host.mm",
++      "crest/crest_content_filter.h",
+       "crest/crest_app.h",
+       "crest/crest_core.h",
+       "crest/crest_engine.h",
+@@ -3385,6 +3386,8 @@
+       "crest/crest_engine_store.h",
+       "crest/crest_engine_tab_groups.cc",
+       "crest/crest_engine_tab_groups.h",
++      "crest/crest_request_filter.cc",
++      "crest/crest_request_filter.h",
+       "crest/CrestChromiumHost.h",
+     ]
+ 

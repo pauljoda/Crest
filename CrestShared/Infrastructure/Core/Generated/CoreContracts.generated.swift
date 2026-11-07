@@ -4429,6 +4429,13 @@ struct PageArea: Equatable, Sendable {
     var height: Double
 }
 
+struct PageBlocksContent: EngineQuestion, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let url: String
+}
+
 struct PageCaptured: Equatable, Sendable {
     let pageID: UUID
     let captureID: UUID
@@ -4515,6 +4522,15 @@ struct PageGroupChanged: EngineEvent, Equatable, Sendable {
 struct PageHeader: Equatable, Sendable {
     let name: String
     let value: String
+}
+
+struct PageHidingStyle: EngineQuestion, Equatable, Sendable {
+    typealias Answer = String
+
+    let pageID: UUID
+    let url: String
+    let classes: [String]
+    let ids: [String]
 }
 
 struct PageHistoryArchive: Equatable, Sendable {

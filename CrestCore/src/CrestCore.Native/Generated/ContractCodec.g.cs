@@ -14,12 +14,12 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xbb, 0xaa, 0x75, 0x7e, 0x01, 0x7f, 0xdd, 0x7f, 0x71, 0x40, 0xa1, 0x6c, 0xb3, 0xa4, 0x36, 0xc2, 0xf6, 0xae, 0xaa, 0x8d, 0x40, 0xca, 0x10, 0xf9, 0x17, 0x61, 0xbd, 0x8a, 0xc4, 0x3e, 0x4b, 0x6a
+        0xcd, 0xfa, 0x1d, 0xc2, 0x3e, 0xc5, 0x38, 0x61, 0x47, 0xb3, 0x8c, 0x88, 0x4f, 0x49, 0xef, 0x9a, 0xfe, 0xd3, 0xca, 0x99, 0x95, 0xc5, 0x9b, 0x98, 0x68, 0xdc, 0x53, 0x01, 0xdd, 0xb0, 0x9c, 0x93
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
     public static ReadOnlySpan<byte> EngineFingerprint => [
-        0xcb, 0xce, 0x24, 0xaa, 0xb7, 0x87, 0xca, 0x86, 0xc6, 0xe7, 0x53, 0x0e, 0xf2, 0x9d, 0x5f, 0x6a, 0x9d, 0x93, 0xad, 0xf9, 0x67, 0xcf, 0x80, 0xa8, 0x27, 0x2b, 0x22, 0x28, 0x01, 0x3c, 0x00, 0xe3
+        0x87, 0x85, 0x2c, 0x33, 0xcd, 0x14, 0xa0, 0x3a, 0x79, 0x9a, 0x90, 0x69, 0x8e, 0x12, 0x3b, 0x9e, 0x6a, 0x30, 0xe1, 0xfc, 0x48, 0xc3, 0xa3, 0x63, 0x14, 0xa2, 0x8d, 0x09, 0xa1, 0x53, 0x19, 0x5d
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -3446,6 +3446,8 @@ public static class ContractCodec {
         int tag = reader.ReadTag();
         switch (tag) {
             case 0: return ReadLinkActivation(reader);
+            case 1: return ReadPageBlocksContent(reader);
+            case 2: return ReadPageHidingStyle(reader);
             default: throw new WireFormatException($"Unknown EngineQuestion tag {tag}.");
         }
     }
@@ -3457,6 +3459,14 @@ public static class ContractCodec {
             case LinkActivation member:
                 writer.WriteTag(0);
                 WriteLinkActivation(writer, member);
+                break;
+            case PageBlocksContent member:
+                writer.WriteTag(1);
+                WritePageBlocksContent(writer, member);
+                break;
+            case PageHidingStyle member:
+                writer.WriteTag(2);
+                WritePageHidingStyle(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract EngineQuestion.");
         }
@@ -3910,6 +3920,14 @@ public static class ContractCodec {
             case LinkActivation asked:
                 var answer0 = answers.Ask(engine, asked);
                 WriteLinkNavigationAnswer(writer, answer0);
+                break;
+            case PageBlocksContent asked:
+                var answer1 = answers.Ask(engine, asked);
+                writer.WriteBool(answer1);
+                break;
+            case PageHidingStyle asked:
+                var answer2 = answers.Ask(engine, asked);
+                writer.WriteString(answer2);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(question), question.GetType().Name, "Not a contract EngineQuestion.");
         }
@@ -13149,6 +13167,20 @@ public static class ContractCodec {
         }
     }
 
+    public static PageBlocksContent ReadPageBlocksContent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageBlocksContent(
+            reader.ReadGuid(),
+            reader.ReadString());
+    }
+
+    public static void WritePageBlocksContent(WireWriter writer, PageBlocksContent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteString(value.Url);
+    }
+
     public static PageChanged ReadPageChanged(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new PageChanged(
@@ -13279,6 +13311,30 @@ public static class ContractCodec {
         writer.WriteCount(value.PageIds.Count);
         foreach (var itemPageIds in value.PageIds) {
             writer.WriteGuid(itemPageIds);
+        }
+    }
+
+    public static PageHidingStyle ReadPageHidingStyle(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageHidingStyle(
+            reader.ReadGuid(),
+            reader.ReadString(),
+            reader.ReadList(() => reader.ReadString()),
+            reader.ReadList(() => reader.ReadString()));
+    }
+
+    public static void WritePageHidingStyle(WireWriter writer, PageHidingStyle value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteString(value.Url);
+        writer.WriteCount(value.Classes.Count);
+        foreach (var itemClasses in value.Classes) {
+            writer.WriteString(itemClasses);
+        }
+        writer.WriteCount(value.Ids.Count);
+        foreach (var itemIds in value.Ids) {
+            writer.WriteString(itemIds);
         }
     }
 

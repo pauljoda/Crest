@@ -25,6 +25,7 @@ INPUTS = (
     "CrestContracts/include/crest_app.h",
     "CrestContracts/include/crest_engine.h",
     "CrestContracts/include/crest_engine_contract.h",
+    "CrestCore/native/ContentFilter/include/crest_content_filter.h",
     "Scripts/control-plane/prepare-chromium.py",
     "Scripts/control-plane/apply-chromium-host.py",
     "Scripts/control-plane/configure-chromium.py",

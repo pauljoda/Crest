@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xbb, 0xaa, 0x75, 0x7e, 0x01, 0x7f, 0xdd, 0x7f, 0x71, 0x40, 0xa1, 0x6c, 0xb3, 0xa4, 0x36, 0xc2, 0xf6, 0xae, 0xaa, 0x8d, 0x40, 0xca, 0x10, 0xf9, 0x17, 0x61, 0xbd, 0x8a, 0xc4, 0x3e, 0x4b, 0x6a
+        0xcd, 0xfa, 0x1d, 0xc2, 0x3e, 0xc5, 0x38, 0x61, 0x47, 0xb3, 0x8c, 0x88, 0x4f, 0x49, 0xef, 0x9a, 0xfe, 0xd3, 0xca, 0x99, 0x95, 0xc5, 0x9b, 0x98, 0x68, 0xdc, 0x53, 0x01, 0xdd, 0xb0, 0x9c, 0x93
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0xcb, 0xce, 0x24, 0xaa, 0xb7, 0x87, 0xca, 0x86, 0xc6, 0xe7, 0x53, 0x0e, 0xf2, 0x9d, 0x5f, 0x6a, 0x9d, 0x93, 0xad, 0xf9, 0x67, 0xcf, 0x80, 0xa8, 0x27, 0x2b, 0x22, 0x28, 0x01, 0x3c, 0x00, 0xe3
+        0x87, 0x85, 0x2c, 0x33, 0xcd, 0x14, 0xa0, 0x3a, 0x79, 0x9a, 0x90, 0x69, 0x8e, 0x12, 0x3b, 0x9e, 0x6a, 0x30, 0xe1, 0xfc, 0x48, 0xc3, 0xa3, 0x63, 0x14, 0xa2, 0x8d, 0x09, 0xa1, 0x53, 0x19, 0x5d
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -487,6 +487,8 @@ enum CoreCodec {
         let tag = try reader.readTag()
         switch tag {
         case 0: return try LinkActivation(from: &reader)
+        case 1: return try PageBlocksContent(from: &reader)
+        case 2: return try PageHidingStyle(from: &reader)
         default: throw WireError.malformed("Unknown EngineQuestion tag \(tag)")
         }
     }
@@ -15164,6 +15166,29 @@ extension PageArea {
     }
 }
 
+extension PageBlocksContent {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let url = try reader.readString()
+        self.init(pageID: pageID, url: url)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeString(url)
+    }
+
+    func encodeEngineQuestion(into writer: inout WireWriter) {
+        writer.writeTag(1)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension PageCaptured {
     init(from reader: inout WireReader) throws(WireError) {
         let pageID = try reader.readUUID()
@@ -15508,6 +15533,51 @@ extension PageHeader {
     func encode(into writer: inout WireWriter) {
         writer.writeString(name)
         writer.writeString(value)
+    }
+}
+
+extension PageHidingStyle {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let url = try reader.readString()
+        let classesCount = try reader.readCount()
+        var classes: [String] = []
+        classes.reserveCapacity(classesCount)
+        for _ in 0..<classesCount {
+            let classesElement = try reader.readString()
+            classes.append(classesElement)
+        }
+        let idsCount = try reader.readCount()
+        var ids: [String] = []
+        ids.reserveCapacity(idsCount)
+        for _ in 0..<idsCount {
+            let idsElement = try reader.readString()
+            ids.append(idsElement)
+        }
+        self.init(pageID: pageID, url: url, classes: classes, ids: ids)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeString(url)
+        writer.writeCount(classes.count)
+        for element0 in classes {
+            writer.writeString(element0)
+        }
+        writer.writeCount(ids.count)
+        for element0 in ids {
+            writer.writeString(element0)
+        }
+    }
+
+    func encodeEngineQuestion(into writer: inout WireWriter) {
+        writer.writeTag(2)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> String {
+        let answer = try reader.readString()
+        return answer
     }
 }
 

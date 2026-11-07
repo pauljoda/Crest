@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 using Microsoft.Win32.SafeHandles;
 
@@ -19,6 +20,9 @@ internal static unsafe partial class ContentFilterLibrary {
         public byte* Bytes;
         public nuint Length;
     }
+
+    /// A call made with UTF-8 text lent to the library.
+    public delegate T LentText<T>(Text text);
 
     /// Bytes the library allocated, freed with `crest_content_filter_buffer_free`.
     [StructLayout(LayoutKind.Sequential)]
@@ -91,6 +95,16 @@ internal static unsafe partial class ContentFilterLibrary {
 
     #endregion
 
+    #region Actions - Texts
+
+    /// Lends `text` as UTF-8 to the call `use` makes, and answers what it answers.
+    public static T LendText<T>(string text, LentText<T> use) {
+        var bytes = Encoding.UTF8.GetBytes(text);
+        fixed (byte* lent = bytes) return use(new Text { Bytes = lent, Length = (nuint)bytes.Length });
+    }
+
+    #endregion
+
     #region Actions - Buffers
 
     /// The buffer's bytes, copied out, after which the buffer is freed.
@@ -123,6 +137,12 @@ internal static unsafe partial class ContentFilterLibrary {
 
     [LibraryImport(Library)]
     public static partial int crest_content_filter_content_rules(Text* lists, nuint count, Allocation* buffer);
+
+    [LibraryImport(Library)]
+    public static partial int crest_content_filter_page_resources(FilterHandle filter, Text url, Allocation* buffer);
+
+    [LibraryImport(Library)]
+    public static partial int crest_content_filter_hidden_selectors(FilterHandle filter, Text query, Allocation* buffer);
 
     [LibraryImport(Library)]
     private static partial void crest_content_filter_buffer_free(Allocation* buffer);

@@ -54,6 +54,9 @@ enum BrowserEngineRegistration {
     /// - A page's web notifications reach Crest's own system delivery, which
     ///   the WebKit pages share; a service worker's or an extension's
     ///   notifications are closed without showing.
+    /// - Content blocking checks each request of a page against the core's
+    ///   filter, and hides elements with the filter's basic element-hiding
+    ///   rules; procedural cosmetic filters and scriptlets are not applied.
     static let chromium = BrowserAdapterRegistration(
         kind: .chromium,
         implementation: .chromiumMacOS,
@@ -63,8 +66,9 @@ enum BrowserEngineRegistration {
             .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
             .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
             .extensions, .translation, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
+            .contentBlocking,
         ],
-        unavailable: [.reader, .contentBlocking, .protectedMedia],
+        unavailable: [.reader, .protectedMedia],
         archiveFormat: .mhtml)
 
     private static var desktopWebKit: [EngineCapability] {

@@ -118,6 +118,7 @@ after the last. Every patch states its reason in its header.
 | `safe-browsing-reports-off.patch` | Whatever the Safe Browsing setting, no download pings, extended reporting, enhanced protection, client-side phishing reports or SCT auditing. |
 | `certificate-transparency-enforced.patch` | Enforces Certificate Transparency, which Chromium does only in Google Chrome builds. |
 | `manifest-v2-extensions.patch` | Keeps Manifest V2 extensions loading, without deprecation warnings. |
+| `content-filter.patch` | Puts each Crest page's requests through the core's content filter, which blocks ads and trackers from the enabled filter lists. |
 
 `network-time-off`, `intranet-redirect-detector-off`, most of
 `privacy-defaults`, `certificate-transparency-enforced` and

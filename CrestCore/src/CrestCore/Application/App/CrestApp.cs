@@ -59,7 +59,6 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     // messages reach.
     internal Downloads Downloads => downloads;
     internal Device Device => device;
-
     internal FilterLibrary Filters => filters;
     internal Pages Pages => pages;
     internal Prompts Prompts => prompts;
@@ -200,6 +199,15 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         if (!query.AnsweredUnderLock) return query.Answer(this);
         lock (gate) return query.Answer(this);
     }
+
+    #endregion
+
+    #region Actions - Content filter
+
+    /// The address of the content filter slot an engine that checks each
+    /// request itself passes to `crest_content_filter_slot_check`. The first
+    /// ask compiles the filter; the slot lives as long as the core.
+    public nint ContentFilterSlot() => filters.SlotAddress();
 
     #endregion
 
