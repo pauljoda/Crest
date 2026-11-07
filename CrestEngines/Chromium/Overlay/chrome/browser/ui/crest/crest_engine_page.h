@@ -420,6 +420,10 @@ class EnginePage final : public content::WebContentsObserver,
 
 // An engine address in Crest's namespace, where `chrome://` is `crest://`.
 std::string PresentedURL(const GURL& url);
+// `url` presented as the platform's URL type holds it exactly, so an address
+// the platform hands back matches it: Foundation accepts only the characters
+// RFC 3986 allows, and rewrites a path, query or fragment holding any other.
+std::string PlatformURL(const GURL& url);
 // A Crest address as the engine loads it.
 GURL EngineURL(const std::string& url);
 
