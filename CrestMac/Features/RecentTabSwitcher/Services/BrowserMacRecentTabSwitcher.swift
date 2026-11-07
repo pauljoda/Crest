@@ -176,7 +176,9 @@ final class BrowserMacRecentTabSwitcher {
                 current.actions.pages.select()
             }
             guard let self, self.hold?.model === current.model else { return }
-            if let outcome = current.model.session.closeCompleted(item, succeeded: closed) {
+            if let outcome = current.model.session.closeCompleted(
+                item, succeeded: closed, currentItems: current.model.browser.recentTabItems())
+            {
                 self.end(outcome)
             } else {
                 self.updatePresentation()

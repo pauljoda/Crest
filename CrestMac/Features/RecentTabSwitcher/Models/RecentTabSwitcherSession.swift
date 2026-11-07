@@ -175,7 +175,9 @@ struct RecentTabSwitcherSession: Equatable {
 
     /// Removes an approved close. Its right-hand neighbor takes the same
     /// index, or the last remaining item when the rightmost one was closed.
-    mutating func closeCompleted(_ item: RecentTabItem, succeeded: Bool) -> Outcome? {
+    mutating func closeCompleted(
+        _ item: RecentTabItem, succeeded: Bool, currentItems: [RecentTabItem]
+    ) -> Outcome? {
         guard pendingCloseItem == item else { return nil }
         pendingCloseItem = nil
         guard succeeded else { return releasedWhileClosing ? .cancel : nil }
@@ -183,7 +185,8 @@ struct RecentTabSwitcherSession: Equatable {
         items.remove(at: index)
         if index < highlightedIndex { highlightedIndex -= 1 }
         highlightedIndex = min(highlightedIndex, max(items.count - 1, 0))
-        if items.isEmpty { return .cancel }
+        // Other windows may have removed or changed a card while approval was pending.
+        if let outcome = refresh(items: currentItems) { return outcome }
         return releasedWhileClosing ? finish() : nil
     }
 

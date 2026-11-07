@@ -5201,6 +5201,10 @@
     "recent-tab-switcher-stays-open-while-closing": {
       "category": "fixed",
       "message": "Closing a tab in the recent tab switcher keeps it open and highlights the next preview. Closing the final preview leaves the browser window open with no tab selected."
+    },
+    "recent-tab-switcher-delayed-close-keeps-current-selection": {
+      "category": "fixed",
+      "message": "The recent tab switcher skips tabs closed while a confirmation is pending and preserves a newer tab selection when the final preview closes."
     }
   }
 }
