@@ -5189,6 +5189,10 @@
     "tabs-settings-shift-note-placement": {
       "category": "fixed",
       "message": "In Settings › Tabs, the note about holding Shift now sits under Switch to tabs opened from links, the only setting it changes."
+    },
+    "peek-opens-bracketed-links": {
+      "category": "fixed",
+      "message": "Links on Facebook, and other links with brackets in their address, open in Peek instead of a blank page or an error page."
     }
   }
 }

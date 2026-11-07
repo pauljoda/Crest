@@ -122,6 +122,31 @@ std::string ReplacingScheme(std::string_view value, std::string_view from, std::
   return std::string(to) + std::string(value.substr(from.size()));
 }
 
+// `part`, a path, query or fragment Chromium canonicalized, with the
+// characters RFC 3986 leaves out of it percent-encoded. Chromium keeps
+// brackets, braces, bars, carets, backslashes, backticks and lone percent
+// signs there, as a link's `c[0]=` does; its escapes stay as they are.
+std::string EscapedForPlatform(std::string_view part) {
+  static constexpr std::string_view kExcluded = "[]{}|^\\`#";
+  static constexpr char kDigits[] = "0123456789ABCDEF";
+  std::string escaped;
+  escaped.reserve(part.size());
+  for (size_t index = 0; index < part.size(); ++index) {
+    const char character = part[index];
+    const bool escapes = character == '%' && index + 2 < part.size() && base::IsHexDigit(part[index + 1]) &&
+                         base::IsHexDigit(part[index + 2]);
+    if (kExcluded.find(character) == std::string_view::npos && (character != '%' || escapes)) {
+      escaped.push_back(character);
+      continue;
+    }
+    const auto byte = static_cast<unsigned char>(character);
+    escaped.push_back('%');
+    escaped.push_back(kDigits[byte >> 4]);
+    escaped.push_back(kDigits[byte & 0x0f]);
+  }
+  return escaped;
+}
+
 // Why a navigation failed, by Chromium's `net::Error` code, in the terms both
 // engines report.
 engine::NavigationError NavigationErrorFor(int code) {
@@ -179,6 +204,24 @@ int IconPixels(const SkBitmap& bitmap) {
 
 std::string PresentedURL(const GURL& url) {
   return ReplacingScheme(url.possibly_invalid_spec(), kEngineScheme, kCrestScheme);
+}
+
+std::string PlatformURL(const GURL& url) {
+  if (!url.is_valid()) {
+    return PresentedURL(url);
+  }
+  const std::string path = EscapedForPlatform(url.path());
+  const std::string query = EscapedForPlatform(url.query());
+  const std::string ref = EscapedForPlatform(url.ref());
+  GURL::Replacements replacements;
+  replacements.SetPathStr(path);
+  if (url.has_query()) {
+    replacements.SetQueryStr(query);
+  }
+  if (url.has_ref()) {
+    replacements.SetRefStr(ref);
+  }
+  return PresentedURL(url.ReplaceComponents(replacements));
 }
 
 GURL EngineURL(const std::string& url) {
