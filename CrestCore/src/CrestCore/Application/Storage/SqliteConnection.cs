@@ -165,6 +165,9 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_agent_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_agent (position INTEGER PRIMARY KEY, team TEXT, signing TEXT, path TEXT, "
             + "client TEXT, name TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_filter_list (name TEXT PRIMARY KEY, is_on INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_blocking_site (space TEXT NOT NULL, scheme TEXT NOT NULL, host TEXT NOT NULL, "
+            + "port INTEGER NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (space, scheme, host, port))");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -174,8 +177,33 @@ internal sealed class SqliteConnection : IDisposable {
         PaletteMemories = ReadPaletteMemories(),
         SearchCatalog = ReadSearchCatalog(),
         Agents = ReadAgents(),
-        ReopeningPages = ReadReopeningPages()
+        ReopeningPages = ReadReopeningPages(),
+        FilterListChoices = ReadFilterListChoices(),
+        BlockingSites = ReadBlockingSites()
     };
+
+    /// The lists the person turned on or off. A list this build does not know
+    /// is left out.
+    private Dictionary<FilterList, bool> ReadFilterListChoices() {
+        var choices = new Dictionary<FilterList, bool>();
+        Rows("SELECT name, is_on FROM device_filter_list", statement => {
+            if (FilterList.Named(Sqlite.ColumnText(statement, 0)) is { } list) choices[list] = Sqlite.sqlite3_column_int(statement, 1) != 0;
+        });
+        return choices;
+    }
+
+    /// The sites where Spaces block nothing, in the order they were added. A
+    /// row whose Space or origin does not read is left out.
+    private List<SiteContentBlocking> ReadBlockingSites() {
+        var sites = new List<SiteContentBlocking>();
+        Rows("SELECT space, scheme, host, port FROM device_blocking_site ORDER BY position", statement => {
+            if (Identity(statement, 0) is not { } space) return;
+            var origin = new SiteOrigin(Sqlite.ColumnText(statement, 1), Sqlite.ColumnText(statement, 2),
+                Sqlite.sqlite3_column_int(statement, 3));
+            if (origin.IsValid) sites.Add(new(space, origin));
+        });
+        return sites;
+    }
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
     private SearchCatalog? ReadSearchCatalog() {
@@ -403,6 +431,9 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
         if (written is null || !records.Agents.Equals(written.Agents)) WriteAgents(records.Agents);
         if (written is null || records.ReopeningPages != written.ReopeningPages) WriteReopeningPages(records.ReopeningPages);
+        if (written is null || !SameChoices(records.FilterListChoices, written.FilterListChoices))
+            WriteFilterListChoices(records.FilterListChoices);
+        if (written is null || !records.BlockingSites.SequenceEqual(written.BlockingSites)) WriteBlockingSites(records.BlockingSites);
     }
 
     /// The search catalog as its one document, or no row before it was first restored.
@@ -601,6 +632,30 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("DELETE FROM device_setup_draft");
         if (draft is null) return;
         Insert("INSERT INTO device_setup_draft(id, document) VALUES(0,?)", statement => Bind(statement, 1, draft.Document));
+    }
+
+    private static bool SameChoices(IReadOnlyDictionary<FilterList, bool> choices, IReadOnlyDictionary<FilterList, bool> written) =>
+        choices.Count == written.Count && choices.All(entry => written.TryGetValue(entry.Key, out bool isOn) && isOn == entry.Value);
+
+    private void WriteFilterListChoices(IReadOnlyDictionary<FilterList, bool> choices) {
+        Execute("DELETE FROM device_filter_list");
+        foreach (var (list, isOn) in choices)
+            Insert("INSERT INTO device_filter_list(name, is_on) VALUES(?,?)", statement => {
+                Bind(statement, 1, list.Name);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 2, isOn ? 1 : 0));
+            });
+    }
+
+    private void WriteBlockingSites(IReadOnlyList<SiteContentBlocking> sites) {
+        Execute("DELETE FROM device_blocking_site");
+        InsertInOrder("INSERT INTO device_blocking_site(space, scheme, host, port, position) VALUES(?,?,?,?,?)",
+            sites, (statement, site, index) => {
+                Bind(statement, 1, Spelling(site.SpaceId));
+                Bind(statement, 2, site.Origin.Scheme);
+                Bind(statement, 3, site.Origin.Host);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 4, site.Origin.Port));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
+            });
     }
 
     private void WriteReopeningPages(bool reopening) {

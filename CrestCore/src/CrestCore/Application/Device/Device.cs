@@ -118,6 +118,7 @@ internal sealed partial class Device {
         keptTabGroups.AddRange(records.TabGroups);
         paletteMemories = records.PaletteMemories.ToImmutableDictionary();
         searchCatalog = records.SearchCatalog;
+        RestoreContentBlocking(records);
     }
 
     #endregion
@@ -345,7 +346,9 @@ internal sealed partial class Device {
         PaletteMemories = paletteMemories,
         SearchCatalog = searchCatalog,
         Agents = agents,
-        ReopeningPages = reopeningPages
+        ReopeningPages = reopeningPages,
+        FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
+        BlockingSites = [.. keptBlockingSites]
     };
 
     #endregion

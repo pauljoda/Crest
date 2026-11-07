@@ -1914,6 +1914,9 @@
     "Adds or removes this password from the selection." : {
 
     },
+    "Ads and Trackers" : {
+
+    },
     "ads trackers privacy protection" : {
       "localizations" : {
         "ar" : {
@@ -2144,6 +2147,9 @@
 
     },
     "Animate pages when switching Spaces" : {
+
+    },
+    "Annoyances" : {
 
     },
     "Another browser" : {
@@ -2781,7 +2787,7 @@
         }
       }
     },
-    "Block known ads and trackers" : {
+    "Block ads and trackers" : {
 
     },
     "Block known trackers" : {
@@ -2791,6 +2797,9 @@
 
     },
     "Blocked for Session" : {
+
+    },
+    "Blocking off" : {
 
     },
     "Blood" : {
@@ -4145,6 +4154,9 @@
 
     },
     "Couldn’t open language downloads." : {
+
+    },
+    "Couldn’t update" : {
 
     },
     "Country" : {
@@ -6227,6 +6239,9 @@
           }
         }
       }
+    },
+    "Filter lists updated %@" : {
+
     },
     "Find" : {
 
@@ -10663,6 +10678,9 @@
     "Region" : {
 
     },
+    "Regional" : {
+
+    },
     "Regular" : {
       "extractionState" : "manual"
     },
@@ -14762,7 +14780,14 @@
         }
       }
     },
+    "Turn Off Blocking on %@" : {
+
+    },
+    "Turn Off Blocking on This Site" : {
+
+    },
     "Turn Off Content Blocking in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14773,6 +14798,7 @@
       }
     },
     "Turn On Balanced Content Blocking in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14781,6 +14807,15 @@
           }
         }
       }
+    },
+    "Turn On Blocking" : {
+
+    },
+    "Turn on blocking for %@" : {
+
+    },
+    "Turn On Blocking on %@" : {
+
     },
     "Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings." : {
       "localizations" : {

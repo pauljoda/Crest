@@ -17,7 +17,7 @@ public sealed class DevicePlatform {
         importsBrowsers: true,
         sharesPagesAcrossWindows: true,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesDesktopSetup,
-        setupHoldsFirstWindow: true, showcaseOpensStartPage: false, offersAgents: true);
+        setupHoldsFirstWindow: true, showcaseOpensStartPage: false, offersAgents: true, filterConditions: []);
 
     /// iPhone and iPad hold on under warning pressure and give back one page
     /// under critical pressure. Beyond that the system reclaims WebKit's page
@@ -30,7 +30,7 @@ public sealed class DevicePlatform {
         criticalReleaseLimit: _ => 1, keepsSetupDraft: true, choosesLook: false, importsBrowsers: false,
         sharesPagesAcrossWindows: false,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesMobileSetup,
-        setupHoldsFirstWindow: false, showcaseOpensStartPage: true, offersAgents: false);
+        setupHoldsFirstWindow: false, showcaseOpensStartPage: true, offersAgents: false, filterConditions: ["env_mobile"]);
 
     public static IReadOnlyList<DevicePlatform> All { get; } = [Desktop, Mobile];
 
@@ -70,6 +70,11 @@ public sealed class DevicePlatform {
     /// may use Crest. The core's own rule, which no platform reads.
     internal bool OffersAgents { get; }
 
+    /// The `!#if` tokens that hold on this platform in the filter lists the
+    /// core prepares, beside its engine's own. The core's own rule, which no
+    /// platform reads.
+    internal IReadOnlyList<string> FilterConditions { get; }
+
     /// The most pages pressure at each level may take back, from the number of
     /// eligible pages.
     private readonly IReadOnlyDictionary<MemoryPressureLevel, Func<int, int>> releaseLimits;
@@ -84,7 +89,8 @@ public sealed class DevicePlatform {
 
     private DevicePlatform(string name, Func<int, int> warningReleaseLimit, Func<int, int> criticalReleaseLimit,
         bool keepsSetupDraft, bool choosesLook, bool importsBrowsers, bool sharesPagesAcrossWindows,
-        Func<LaunchEnvironment, bool> forcesSetup, bool setupHoldsFirstWindow, bool showcaseOpensStartPage, bool offersAgents) {
+        Func<LaunchEnvironment, bool> forcesSetup, bool setupHoldsFirstWindow, bool showcaseOpensStartPage, bool offersAgents,
+        IReadOnlyList<string> filterConditions) {
         Name = name;
         KeepsSetupDraft = keepsSetupDraft;
         ChoosesLook = choosesLook;
@@ -93,6 +99,7 @@ public sealed class DevicePlatform {
         SetupHoldsFirstWindow = setupHoldsFirstWindow;
         ShowcaseOpensStartPage = showcaseOpensStartPage;
         OffersAgents = offersAgents;
+        FilterConditions = filterConditions;
         this.forcesSetup = forcesSetup;
         releaseLimits = new Dictionary<MemoryPressureLevel, Func<int, int>> {
             [MemoryPressureLevel.Warning] = warningReleaseLimit,

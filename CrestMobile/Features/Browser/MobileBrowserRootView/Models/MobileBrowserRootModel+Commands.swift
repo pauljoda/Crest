@@ -52,8 +52,7 @@ extension MobileBrowserRootModel {
             canToggleTranslationToolbar: usesPageToolbars && pageActions?.isAvailable == true
                 && pageActions?.readerModeState.isActive != true,
             isTranslationToolbarVisible: pageActions?.activePage?.translation.showsToolbar == true,
-            contentBlockingActionTitle: ContentBlockingPolicy.switchTitle(
-                for: browser.shownSpace?.settings.browsingPreferences.contentBlocking),
+            contentBlockingActionTitle: contentBlockingAction?.title ?? "Turn Off Blocking on This Site",
             openNewTab: openNewTab,
             togglePrivateBrowsing: togglePrivateBrowsing,
             openLocation: openLocation,

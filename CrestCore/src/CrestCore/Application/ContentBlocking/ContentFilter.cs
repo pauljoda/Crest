@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 
 using static CrestCore.Application.ContentFilterLibrary;
 
@@ -46,11 +46,11 @@ internal sealed class ContentFilter : IDisposable {
     /// One network request a page makes, from the document at `SourceUrl`.
     public sealed record Request(string Url, string SourceUrl, RequestKind Kind, RequestMethod Method = RequestMethod.Get);
 
-    /// Filter lists as WebKit content rules: the rules that block or hide, and
-    /// the `ignore-previous-rules` exceptions that must follow them in every
-    /// compiled list they are split into, since an exception in one list never
-    /// reaches another.
-    public sealed record ContentRules(IReadOnlyList<JsonObject> Rules, IReadOnlyList<JsonObject> Exceptions);
+    /// Filter lists as WebKit content rules, each rule its JSON text: the rules
+    /// that block or hide, and the `ignore-previous-rules` exceptions that must
+    /// follow them in every compiled list they are split into, since an
+    /// exception in one list never reaches another.
+    public sealed record ContentRules(IReadOnlyList<string> Rules, IReadOnlyList<string> Exceptions);
 
     /// A call that uses lists lent to the library.
     private unsafe delegate void LentTexts(Text* texts, nuint count);
@@ -116,13 +116,12 @@ internal sealed class ContentFilter : IDisposable {
             Require(crest_content_filter_content_rules(texts, count, &buffer), "convert its lists to content rules");
             json = Take(ref buffer);
         });
-        var converted = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("The content rules are empty.");
-        return new ContentRules(Objects(converted["rules"]), Objects(converted["exceptions"]));
+        using var converted = JsonDocument.Parse(json);
+        return new ContentRules(Texts(converted.RootElement, "rules"), Texts(converted.RootElement, "exceptions"));
     }
 
-    private static IReadOnlyList<JsonObject> Objects(JsonNode? array) =>
-        [.. (array?.AsArray() ?? []).Select(rule => rule?.DeepClone().AsObject()
-            ?? throw new InvalidOperationException("A content rule is empty."))];
+    private static IReadOnlyList<string> Texts(JsonElement rules, string name) =>
+        [.. rules.GetProperty(name).EnumerateArray().Select(rule => rule.GetRawText())];
 
     /// Lends `lists` to the library as UTF-8 texts for the call `use` makes.
     private static unsafe void Lend(IReadOnlyList<string> lists, LentTexts use) {

@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 using CrestCore.Application;
 
 using Xunit;
@@ -89,11 +91,12 @@ public sealed class ContentFilterTests {
     [Fact]
     public void ContentRulesKeepExceptionsApartFromTheRulesTheyUndo() {
         var rules = ContentRulesFor(["||track.example^\nnews.example##.sponsored", "@@||track.example/ok^"]);
+        static string Action(string rule) => JsonNode.Parse(rule)!["action"]!["type"]!.GetValue<string>();
 
-        Assert.Contains(rules.Rules, rule => rule["action"]?["type"]?.GetValue<string>() == "block");
-        Assert.Contains(rules.Rules, rule => rule["action"]?["type"]?.GetValue<string>() == "css-display-none");
+        Assert.Contains(rules.Rules, rule => Action(rule) == "block");
+        Assert.Contains(rules.Rules, rule => Action(rule) == "css-display-none");
         Assert.NotEmpty(rules.Exceptions);
-        Assert.All(rules.Exceptions, rule => Assert.Equal("ignore-previous-rules", rule["action"]?["type"]?.GetValue<string>()));
-        Assert.DoesNotContain(rules.Rules, rule => rule["action"]?["type"]?.GetValue<string>() == "ignore-previous-rules");
+        Assert.All(rules.Exceptions, rule => Assert.Equal("ignore-previous-rules", Action(rule)));
+        Assert.DoesNotContain(rules.Rules, rule => Action(rule) == "ignore-previous-rules");
     }
 }

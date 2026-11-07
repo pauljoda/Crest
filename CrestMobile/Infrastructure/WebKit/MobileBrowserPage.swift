@@ -216,7 +216,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.cancelStagedPeek = cancelStagedPeek
         contentRuleSession = BrowserPageContentRuleSession(
             ruleLists: webKitPage.contentRuleLists,
-            additionalRuleList: contentRuleList
+            additionalRuleList: contentRuleList,
+            blocksSite: webKitPage.blocksSite
         )
         spaceName = space.settings.name
         navigationContext = BrowserPageNavigationContext(
@@ -986,6 +987,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        // The site it goes to may have content blocking turned off, or on.
+        if let url { contentRuleSession.navigating(to: url, in: webView) }
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         translation.reset()

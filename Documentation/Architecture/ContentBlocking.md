@@ -1,53 +1,72 @@
 # Content blocking
 
-Crest's Balanced protection is one bundled ruleset that WebKit applies through
-its native content-rule-list API. Each Space turns it on or off independently.
+Crest blocks ads and trackers with filter lists in EasyList and uBlock Origin
+syntax, matched by Brave's open-source engine,
+[adblock-rust](https://github.com/brave/adblock-rust), which the core links as
+its content filter (`CrestCore/native/ContentFilter`). The core owns the lists,
+their updates, each Space's choice and the sites where a Space turned blocking
+off, and it produces what each engine enforces.
 
-## Built-in protection
+## Lists
 
-The bundled rules block a deliberately small set of well-known third-party ad
-and analytics hosts. They give a privacy baseline without downloading remote
-rule sources, parsing third-party filter syntax, or placing another project's
-converter inside Crest's trusted update path.
+`FilterList` in the core is the catalog: EasyList, EasyPrivacy, uBlock Origin's
+own lists, regional lists, and opt-in lists for annoyances and cookie notices,
+some of them AdGuard's builds for uBlock Origin. A list is on by default, on by
+default for readers of its language, or off, and the person's own choices
+override that. The choices are device preferences and do not sync.
 
-The portable core owns the rules. `ContentBlockingPolicy.Balanced` in
-`CrestCore` carries the blocked host suffixes and a versioned identifier, and
-the `BalancedProtectionRules` query returns them as a `ContentRuleList`: that
-identifier with the WebKit content-rule source. WebKit's binding compiles the
-source once, caches the resulting `WKContentRuleList` under the identifier, and
-builds each page in a Space where Balanced protection is on with it. If the core cannot answer, nothing
-is compiled. Turning protection on or off reloads the visible pages so the
-change takes effect without touching another Space.
+Crest never ships a copy of a list. The platform downloads what the core says is
+due (`DueFilterListFetches`) from the list's maintainers, with the validators of
+the copy it holds, and hands the result back (`FilterListFetched`,
+`FilterListNotModified`, `FilterListFetchFailed`). The core keeps each copy as a
+file in a `ContentFilter` folder beside the session file, outside the session,
+its sync and its recovery checkpoint. A list is due again when its `Expires`
+header says, kept between twelve hours and a week and spread by a tenth so
+devices do not ask at once; a failed download is retried later each time.
 
-## Extensions provide broader blocking
+uBlock Origin's lists wrap platform-specific rules in `!#if` blocks, which the
+engine would read as comments. `FilterListText` resolves them for the platform
+before the engine sees them: Safari's conditions for WebKit, plus `env_mobile`
+on iPhone and iPad.
 
-Crest does not ship a downloadable filter-list catalog or accept custom
-Adblock-style list URLs. People who want broader coverage, cosmetic filtering,
-regional lists or project-specific rules can install a content-blocking
-extension. Extensions keep their own source, update and licensing decisions,
-so Crest never redistributes or converts those lists.
+Until the first list arrives, Crest's own baseline rules block third-party
+loads from well-known advertising and analytics hosts. They stay beside the
+lists afterwards.
 
-The split is intentional:
+## Spaces and sites
 
-- Crest owns a small first-party baseline that can be reviewed.
-- Extensions own advanced blocking and the list ecosystems people choose.
-- A failed extension cannot change Crest's bundled rules or another Space's
-  extension state.
+A Space's `ContentBlockingPolicy` decides whether it blocks at all: Balanced
+applies the lists, Off blocks nothing. The Space's privacy settings switch it.
+
+A page's actions turn blocking off, or on again, for the site it shows, in its
+Space (`SetSiteContentBlocking`). The device store keeps a persistent Space's
+sites; any other Space's, such as a private one's, last as long as the process.
+A deleted Space's sites go with it. `ContentBlockingApplies` answers whether a
+page of a Space blocks on a site.
+
+## WebKit
+
+WebKit has no per-request callback, so the core converts the lists into WebKit
+content rules on a worker, never under its lock, and announces the result as a
+`ContentRuleListSet`. WebKit evaluates each compiled list on its own, so an
+exception in one list never reaches a rule in another: the core converts every
+list that is on together and splits the rules into lists of at most 70,000,
+well under WebKit's 150,000, with every exception repeated at the end of each.
+Each list's identifier changes with its rules, so a rule-list store compiles
+it once and keeps it across launches; the core answers the source of one the
+store lacks (`ContentRuleListSource`), and the lists Crest compiled earlier are
+removed when no set names them.
+
+Each page owns its user content controller. A main-frame navigation installs
+or removes Crest's lists for the site it goes to before the page loads it, so a
+site's switch costs no compilation. A list update takes effect on each page's
+next navigation; the page whose site the person switched reloads. Rules that
+WebKit cannot express, such as scriptlets, redirects and procedural element
+hiding, are left out for now. An isolated launch compiles into a store of its
+own under the temporary folder.
 
 ## Chromium
 
-Crest's built-in protection is a WebKit content-rule list, so it has no effect
-on Chromium. Chromium's own subresource filter depends on Safe Browsing list
-distribution that Crest does not run, and Crest does not convert its rules into
-a second format for one engine. The Chromium registration therefore declares
-`content-blocking` unavailable. The Privacy settings section shows no Balanced
-control and says instead that blocking comes from the extensions the person
-installs, and the page menu item is not installed. Blocking on Chromium comes
-from an extension such as uBlock Origin Lite.
-
-## Compatibility
-
-Balanced protection can occasionally break a site because it blocks known
-third-party hosts. On WebKit, the page and command menus let the person turn
-content blocking off for the current Space. An extension may add its own site
-controls.
+Chromium pages do not yet enforce the lists; until they do, the Chromium
+registration declares `content-blocking` unavailable, and blocking there comes
+from an extension the person installs.

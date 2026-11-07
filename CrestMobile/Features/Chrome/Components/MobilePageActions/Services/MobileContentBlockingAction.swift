@@ -1,5 +1,7 @@
-/// Switches content blocking for the Space of the page the window shows, and
-/// brings resident pages in line with it.
+import Foundation
+
+/// Turns blocking off, or on again, for the site of the page the window shows,
+/// in its Space, and brings resident pages in line with it.
 @MainActor
 struct MobileContentBlockingAction {
     // MARK: - Variables
@@ -7,6 +9,12 @@ struct MobileContentBlockingAction {
     private let browser: BrowserStore
     private let pageAssignment: () -> BrowserTabRuntimeAssignment?
     private let reconcile: () async -> Void
+    private let reload: () -> Void
+    /// What the shown page offers for blocking on its site, where its Space blocks.
+    let siteSwitch: SiteContentBlockingSwitch?
+
+    /// What the action says it does.
+    var title: LocalizedStringResource { siteSwitch?.title ?? "Turn Off Blocking on This Site" }
 
     // MARK: - Initializers
 
@@ -17,21 +25,23 @@ struct MobileContentBlockingAction {
         self.browser = browser
         pageAssignment = { pages.pageAssignment }
         reconcile = { await pages.reconcileContentBlocking() }
+        reload = { pages.reload() }
+        siteSwitch = SiteContentBlockingSwitch(
+            core: browser.core, spaceID: browser.shownSpace?.id, url: pages.activePage?.webView.url)
     }
 
     // MARK: - Actions - Switching
 
-    /// Switches the policy while the page the action was built for is still
-    /// the one the window shows, answering whether it did.
+    /// Switches the site while the page the action was built for is still the
+    /// one the window shows, answering whether it did. The page reloads so the
+    /// change shows.
     @discardableResult
     func perform() async -> Bool {
         guard let assignment = pageAssignment(), browser.shownTabAssignment == assignment,
-            let space = browser.shownSpace
+            let siteSwitch, (try? browser.core.send(siteSwitch.intent)) != nil
         else { return false }
-        var preferences = space.settings.browsingPreferences
-        preferences.contentBlocking = preferences.contentBlocking.switched
-        browser.updateBrowsingPreferences(preferences, in: space.id)
         await reconcile()
+        reload()
         return true
     }
 }

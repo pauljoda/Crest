@@ -5197,6 +5197,10 @@
     "content-filter-engine-in-core": {
       "category": "internal",
       "message": "Build Brave’s open-source ad-blocking engine into the core on every platform, prebuilt so building Crest needs no Rust unless the engine itself changes."
+    },
+    "ad-blocking-filter-lists": {
+      "category": "new",
+      "message": "On iPhone, iPad and WebKit pages on Mac, Crest blocks ads and trackers with EasyList, EasyPrivacy, uBlock Origin’s lists and a list for your language, which stay up to date on their own. Turn blocking off for a site from the page’s actions, and turn on more lists, such as cookie notices, in a Space’s privacy settings."
     }
   }
 }

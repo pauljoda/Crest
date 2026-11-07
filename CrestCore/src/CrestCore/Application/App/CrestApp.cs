@@ -52,10 +52,15 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     /// Reading other browsers' data and browser-data files, and exports.
     private readonly Portability portability;
 
+    /// The device's filter lists and the content rules made from them.
+    private readonly FilterLibrary filters;
+
     // The areas each message routes itself to, which only the core's own
     // messages reach.
     internal Downloads Downloads => downloads;
     internal Device Device => device;
+
+    internal FilterLibrary Filters => filters;
     internal Pages Pages => pages;
     internal Prompts Prompts => prompts;
     internal Extensions Extensions => extensions;
@@ -97,6 +102,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
             device = new(configuration.Platform, storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower, clock);
+            filters = new(null, configuration.Platform, configuration.Languages, () => device.FilterListChoices, Announce, clock);
             engines.Prefer(device.DefaultEngine);
             pages = new(device, engines, clock, ids);
             prompts = new(device, pages);
@@ -110,6 +116,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
         device = new(configuration.Platform, storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower, clock);
+        filters = new(directory, configuration.Platform, configuration.Languages, () => device.FilterListChoices, Announce, clock);
         engines.Prefer(device.DefaultEngine);
         pages = new(device, engines, clock, ids);
         prompts = new(device, pages);

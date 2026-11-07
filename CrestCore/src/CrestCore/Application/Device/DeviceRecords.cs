@@ -49,6 +49,13 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// settle or the person agrees to quit.
     public bool ReopeningPages { get; init; }
 
+    /// The filter lists the person turned on or off.
+    public IReadOnlyDictionary<FilterList, bool> FilterListChoices { get; init; } = new Dictionary<FilterList, bool>();
+
+    /// The persistent session's Spaces' sites where they block no ads or
+    /// trackers, in the order they were added.
+    public IReadOnlyList<SiteContentBlocking> BlockingSites { get; init; } = [];
+
     #endregion
 
     #region Actions - Adoption
@@ -76,7 +83,10 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && PaletteMemories.Count == other.PaletteMemories.Count
         && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
         && Agents.Equals(other.Agents)
-        && ReopeningPages == other.ReopeningPages;
+        && ReopeningPages == other.ReopeningPages
+        && FilterListChoices.Count == other.FilterListChoices.Count
+        && FilterListChoices.All(entry => other.FilterListChoices.TryGetValue(entry.Key, out bool isOn) && isOn == entry.Value)
+        && BlockingSites.SequenceEqual(other.BlockingSites);
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

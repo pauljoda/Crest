@@ -11,13 +11,13 @@ Privacy decisions belong to the current Space. A permission granted to a work ac
 
 ## Content blocking
 
-Crest includes a small built-in ad and tracker ruleset that can be enabled or disabled per Space. It uses WebKit, so it applies on iPhone, iPad, and WebKit pages on Mac. Use the site controls or assign **Toggle Content Blocking** a shortcut when a site needs a quick exception.
+Crest blocks ads and trackers with the filter lists that ad blockers use: EasyList, EasyPrivacy and uBlock Origin's lists, plus a regional list for your language. It applies on iPhone, iPad, and WebKit pages on Mac. The lists download from their maintainers and stay up to date on their own.
 
-To change it for a Space, turn **Block known ads and trackers** on or off in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space.
+To turn blocking on or off for a Space, use **Block ads and trackers** in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space. The same page lists the filter lists you can turn on or off, such as cookie notices and other annoyances. Lists apply to every Space that blocks.
 
-Chromium pages on Mac have no built-in blocking. Install a content-blocking extension, such as uBlock Origin Lite, in each Space that needs it. Extensions do not run on WebKit pages.
+When a site doesn’t work with blocking, choose **Turn Off Blocking on** the site from the page’s actions, or assign **Toggle Content Blocking** a shortcut. The site stays unblocked in that Space until you turn blocking on again from the same place or from the Space’s privacy settings.
 
-For broader filter-list coverage, install a content-blocking extension in the Space that needs it. Built-in protection and an extension can have different rule coverage, so check which layer is active before assuming the page itself is broken.
+Chromium pages on Mac don’t use these lists yet. Install a content-blocking extension, such as uBlock Origin Lite, in each Space that needs it. Extensions do not run on WebKit pages.
 
 ## Malicious sites and downloads
 

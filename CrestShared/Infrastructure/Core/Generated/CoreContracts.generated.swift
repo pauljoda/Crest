@@ -131,6 +131,7 @@ enum Change: Equatable, Sendable {
     case cloudMergeBegan(CloudMergeBegan)
     case cloudSyncAdvanced(CloudSyncAdvanced)
     case cloudTransportChanged(CloudTransportChanged)
+    case contentRuleListsChanged(ContentRuleListsChanged)
     case dataDeleted(DataDeleted)
     case downloadApprovalAsked(DownloadApprovalAsked)
     case downloadDestinationAsked(DownloadDestinationAsked)
@@ -141,6 +142,7 @@ enum Change: Equatable, Sendable {
     case enginesChanged(EnginesChanged)
     case extensionInstallAsked(ExtensionInstallAsked)
     case extensionInstallChanged(ExtensionInstallChanged)
+    case filterListsChanged(FilterListsChanged)
     case foldersChanged(FoldersChanged)
     case historyChanged(HistoryChanged)
     case installedExtensionsChanged(InstalledExtensionsChanged)
@@ -166,6 +168,7 @@ enum Change: Equatable, Sendable {
     case setupFlowChanged(SetupFlowChanged)
     case shortcutsChanged(ShortcutsChanged)
     case sidebarChanged(SidebarChanged)
+    case siteContentBlockingChanged(SiteContentBlockingChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
@@ -217,6 +220,7 @@ enum Rejection: Equatable, Error, Sendable {
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
     case closePreparationUnderway(ClosePreparationUnderway)
+    case contentRuleListUnavailable(ContentRuleListUnavailable)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
     case currentTabsOnly(CurrentTabsOnly)
     case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
@@ -232,6 +236,7 @@ enum Rejection: Equatable, Error, Sendable {
     case engineNotRegistered(EngineNotRegistered)
     case extensionNotChangeable(ExtensionNotChangeable)
     case fileUnreadable(FileUnreadable)
+    case filterListTooLarge(FilterListTooLarge)
     case folderAlreadyExists(FolderAlreadyExists)
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
@@ -577,6 +582,7 @@ extension Change {
         case .cloudMergeBegan(let change): change.apply(to: state)
         case .cloudSyncAdvanced(let change): change.apply(to: state)
         case .cloudTransportChanged(let change): change.apply(to: state)
+        case .contentRuleListsChanged(let change): change.apply(to: state)
         case .dataDeleted(let change): change.apply(to: state)
         case .downloadApprovalAsked(let change): change.apply(to: state)
         case .downloadDestinationAsked(let change): change.apply(to: state)
@@ -587,6 +593,7 @@ extension Change {
         case .enginesChanged(let change): change.apply(to: state)
         case .extensionInstallAsked(let change): change.apply(to: state)
         case .extensionInstallChanged(let change): change.apply(to: state)
+        case .filterListsChanged(let change): change.apply(to: state)
         case .foldersChanged(let change): change.apply(to: state)
         case .historyChanged(let change): change.apply(to: state)
         case .installedExtensionsChanged(let change): change.apply(to: state)
@@ -612,6 +619,7 @@ extension Change {
         case .setupFlowChanged(let change): change.apply(to: state)
         case .shortcutsChanged(let change): change.apply(to: state)
         case .sidebarChanged(let change): change.apply(to: state)
+        case .siteContentBlockingChanged(let change): change.apply(to: state)
         case .sitePermissionsChanged(let change): change.apply(to: state)
         case .spaceLockChanged(let change): change.apply(to: state)
         case .spaceSettingsChanged(let change): change.apply(to: state)
@@ -652,6 +660,7 @@ extension Change {
         case .cloudMergeBegan(let change): change.apply(to: core, in: &batch)
         case .cloudSyncAdvanced(let change): change.apply(to: core, in: &batch)
         case .cloudTransportChanged(let change): change.apply(to: core, in: &batch)
+        case .contentRuleListsChanged(let change): change.apply(to: core, in: &batch)
         case .dataDeleted(let change): change.apply(to: core, in: &batch)
         case .downloadApprovalAsked(let change): change.apply(to: core, in: &batch)
         case .downloadDestinationAsked(let change): change.apply(to: core, in: &batch)
@@ -662,6 +671,7 @@ extension Change {
         case .enginesChanged(let change): change.apply(to: core, in: &batch)
         case .extensionInstallAsked(let change): change.apply(to: core, in: &batch)
         case .extensionInstallChanged(let change): change.apply(to: core, in: &batch)
+        case .filterListsChanged(let change): change.apply(to: core, in: &batch)
         case .foldersChanged(let change): change.apply(to: core, in: &batch)
         case .historyChanged(let change): change.apply(to: core, in: &batch)
         case .installedExtensionsChanged(let change): change.apply(to: core, in: &batch)
@@ -687,6 +697,7 @@ extension Change {
         case .setupFlowChanged(let change): change.apply(to: core, in: &batch)
         case .shortcutsChanged(let change): change.apply(to: core, in: &batch)
         case .sidebarChanged(let change): change.apply(to: core, in: &batch)
+        case .siteContentBlockingChanged(let change): change.apply(to: core, in: &batch)
         case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
         case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
         case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
@@ -727,6 +738,7 @@ extension Change {
         case .cloudMergeBegan(let change): change.note(in: &receipts)
         case .cloudSyncAdvanced(let change): change.note(in: &receipts)
         case .cloudTransportChanged(let change): change.note(in: &receipts)
+        case .contentRuleListsChanged(let change): change.note(in: &receipts)
         case .dataDeleted(let change): change.note(in: &receipts)
         case .downloadApprovalAsked(let change): change.note(in: &receipts)
         case .downloadDestinationAsked(let change): change.note(in: &receipts)
@@ -737,6 +749,7 @@ extension Change {
         case .enginesChanged(let change): change.note(in: &receipts)
         case .extensionInstallAsked(let change): change.note(in: &receipts)
         case .extensionInstallChanged(let change): change.note(in: &receipts)
+        case .filterListsChanged(let change): change.note(in: &receipts)
         case .foldersChanged(let change): change.note(in: &receipts)
         case .historyChanged(let change): change.note(in: &receipts)
         case .installedExtensionsChanged(let change): change.note(in: &receipts)
@@ -762,6 +775,7 @@ extension Change {
         case .setupFlowChanged(let change): change.note(in: &receipts)
         case .shortcutsChanged(let change): change.note(in: &receipts)
         case .sidebarChanged(let change): change.note(in: &receipts)
+        case .siteContentBlockingChanged(let change): change.note(in: &receipts)
         case .sitePermissionsChanged(let change): change.note(in: &receipts)
         case .spaceLockChanged(let change): change.note(in: &receipts)
         case .spaceSettingsChanged(let change): change.note(in: &receipts)
@@ -1095,6 +1109,7 @@ struct AppConfiguration: Equatable, Sendable {
     let storageDirectory: String?
     let platform: DevicePlatform
     let importNames: [ImportSpaceNames]?
+    let languages: [String]?
 }
 
 struct AppPreferences: Equatable, Sendable {
@@ -1299,11 +1314,6 @@ struct AutomaticDownloadVerdict: Equatable, Sendable {
 
 struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
-}
-
-struct BalancedProtectionRules: Query, Equatable, Sendable {
-    typealias Answer = ContentRuleList
-
 }
 
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
@@ -1861,6 +1871,13 @@ struct ConfigureCloudSync: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let canReachCloud: Bool
 }
 
+struct ContentBlockingApplies: Query, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let spaceID: UUID
+    let origin: SiteOrigin?
+}
+
 struct ContentFrame: Equatable, Sendable, Identifiable {
     let id: String
     let isMainFrame: Bool
@@ -1884,6 +1901,29 @@ struct ContentMessagePosted: Equatable, Sendable {
 struct ContentRuleList: Equatable, Sendable {
     let identifier: String
     let source: String
+}
+
+struct ContentRuleListSet: Equatable, Sendable {
+    let identifiers: [String]
+}
+
+struct ContentRuleListSource: Query, Equatable, Sendable {
+    typealias Answer = ContentRuleList
+
+    let identifier: String
+}
+
+struct ContentRuleListUnavailable: Equatable, Sendable {
+    let identifier: String
+}
+
+struct ContentRuleLists: Query, Equatable, Sendable {
+    typealias Answer = ContentRuleListSet
+
+}
+
+struct ContentRuleListsChanged: CoreChange, Equatable, Sendable {
+    let lists: ContentRuleListSet
 }
 
 struct ContentScriptEvaluated: Equatable, Sendable {
@@ -2463,6 +2503,11 @@ struct DropTargets: Query, Equatable, Sendable {
     let selection: TabSelection
 }
 
+struct DueFilterListFetches: Query, Equatable, Sendable {
+    typealias Answer = [FilterListFetch]
+
+}
+
 struct DuplicateCredential: Equatable, Sendable {
 }
 
@@ -2937,6 +2982,43 @@ struct FileUnreadable: Equatable, Sendable {
     }
 }
 
+struct FilterListFetch: Equatable, Sendable {
+    let list: FilterList
+    let url: String
+    let entityTag: String?
+    let lastModified: String?
+}
+
+struct FilterListFetchFailed: Intent, Equatable, Sendable {
+    let list: FilterList
+}
+
+struct FilterListFetched: Intent, Equatable, Sendable {
+    let list: FilterList
+    let text: String
+    let entityTag: String?
+    let lastModified: String?
+}
+
+struct FilterListNotModified: Intent, Equatable, Sendable {
+    let list: FilterList
+}
+
+struct FilterListState: Equatable, Sendable {
+    let list: FilterList
+    let isOn: Bool
+    let updatedAt: Date?
+    let isFailing: Bool
+}
+
+struct FilterListTooLarge: Equatable, Sendable {
+    let limitBytes: Int
+}
+
+struct FilterListsChanged: CoreChange, Equatable, Sendable {
+    let lists: [FilterListState]
+}
+
 struct FindChromiumBrowsers: Query, Equatable, Sendable {
     typealias Answer = [ImportFoundBrowser]
 
@@ -3121,6 +3203,16 @@ struct GetAgentPreferences: Query, Equatable, Sendable {
 
 struct GetEnginePreferences: Query, Equatable, Sendable {
     typealias Answer = EnginePreferences
+
+}
+
+struct GetFilterLists: Query, Equatable, Sendable {
+    typealias Answer = [FilterListState]
+
+}
+
+struct GetSiteContentBlocking: Query, Equatable, Sendable {
+    typealias Answer = [SiteContentBlocking]
 
 }
 
@@ -5846,6 +5938,11 @@ struct SetDownloadDestination: Intent, DownloadIntent, Equatable, Sendable {
     let filename: String
 }
 
+struct SetFilterList: Intent, Equatable, Sendable {
+    let list: FilterList
+    let isOn: Bool
+}
+
 struct SetFolderColor: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -5893,6 +5990,12 @@ struct SetSeparatePinnedTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let separates: Bool
+}
+
+struct SetSiteContentBlocking: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let blocks: Bool
 }
 
 struct SetSitePermission: PageRequest, Equatable, Sendable {
@@ -6240,6 +6343,15 @@ struct SidebarRow: Equatable, Sendable, Identifiable {
     let parentFolderID: UUID?
     let depth: Int
     let members: [UUID]
+}
+
+struct SiteContentBlocking: Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+}
+
+struct SiteContentBlockingChanged: CoreChange, Equatable, Sendable {
+    let sites: [SiteContentBlocking]
 }
 
 struct SiteDataRead: EngineEvent, Equatable, Sendable {
@@ -9674,68 +9786,24 @@ struct ContentBlockingPolicy: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
-    var switchTitle: LocalizedStringResource { facts.switchTitle }
-    var identifier: String? { facts.identifier }
-    var blockedHostSuffixes: [String] { facts.blockedHostSuffixes }
     var blocksContent: Bool { facts.blocksContent }
     private let facts: Facts
 
-    private init(
-        tag: Int,
-        name: String,
-        title: LocalizedStringResource,
-        switchTitle: LocalizedStringResource,
-        identifier: String?,
-        blockedHostSuffixes: [String],
-        blocksContent: Bool
-    ) {
+    private init(tag: Int, name: String, title: LocalizedStringResource, blocksContent: Bool) {
         self.tag = tag
-        facts = Facts(
-            name: name,
-            title: title,
-            switchTitle: switchTitle,
-            identifier: identifier,
-            blockedHostSuffixes: blockedHostSuffixes,
-            blocksContent: blocksContent
-        )
+        facts = Facts(name: name, title: title, blocksContent: blocksContent)
     }
 
     static let balanced = ContentBlockingPolicy(
         tag: 0,
         name: "balanced",
         title: LocalizedStringResource("Balanced"),
-        switchTitle: LocalizedStringResource("Turn Off Content Blocking in This Space"),
-        identifier: "com.pauldavis.crest.content-blocking.balanced.v2",
-        blockedHostSuffixes: [
-            "doubleclick.net",
-            "googleadservices.com",
-            "googlesyndication.com",
-            "google-analytics.com",
-            "googletagmanager.com",
-            "ads-twitter.com",
-            "analytics.twitter.com",
-            "scorecardresearch.com",
-            "quantserve.com",
-            "hotjar.com",
-            "segment.io",
-            "segment.com",
-            "mixpanel.com",
-            "amplitude.com",
-            "clarity.ms",
-            "nr-data.net",
-            "taboola.com",
-            "outbrain.com",
-            "snap.licdn.com"
-        ],
         blocksContent: true
     )
     static let off = ContentBlockingPolicy(
         tag: 1,
         name: "off",
         title: LocalizedStringResource("Off"),
-        switchTitle: LocalizedStringResource("Turn On Balanced Content Blocking in This Space"),
-        identifier: nil,
-        blockedHostSuffixes: [],
         blocksContent: false
     )
 
@@ -9756,24 +9824,11 @@ struct ContentBlockingPolicy: Hashable, Sendable {
     private final class Facts: Sendable {
         let name: String
         let title: LocalizedStringResource
-        let switchTitle: LocalizedStringResource
-        let identifier: String?
-        let blockedHostSuffixes: [String]
         let blocksContent: Bool
 
-        init(
-            name: String,
-            title: LocalizedStringResource,
-            switchTitle: LocalizedStringResource,
-            identifier: String?,
-            blockedHostSuffixes: [String],
-            blocksContent: Bool
-        ) {
+        init(name: String, title: LocalizedStringResource, blocksContent: Bool) {
             self.name = name
             self.title = title
-            self.switchTitle = switchTitle
-            self.identifier = identifier
-            self.blockedHostSuffixes = blockedHostSuffixes
             self.blocksContent = blocksContent
         }
     }
@@ -13666,6 +13721,313 @@ struct ExternalSchemeDisposition: Hashable, Sendable {
         init(kind: Kinds, name: String) {
             self.kind = kind
             self.name = name
+        }
+    }
+}
+
+/// The members of the core's `FilterList`. A member's wire tag is its index in `all`.
+struct FilterList: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: String { facts.title }
+    var group: FilterListGroup { facts.group }
+    var source: String { facts.source }
+    var isDefault: Bool { facts.isDefault }
+    var languages: [String] { facts.languages }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        title: String,
+        group: FilterListGroup,
+        source: String,
+        isDefault: Bool,
+        languages: [String]
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            title: title,
+            group: group,
+            source: source,
+            isDefault: isDefault,
+            languages: languages
+        )
+    }
+
+    static let easyList = FilterList(
+        tag: 0,
+        name: "easylist",
+        title: "EasyList",
+        group: FilterListGroup.ads,
+        source: "https://easylist.to/easylist/easylist.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let easyPrivacy = FilterList(
+        tag: 1,
+        name: "easyprivacy",
+        title: "EasyPrivacy",
+        group: FilterListGroup.ads,
+        source: "https://easylist.to/easylist/easyprivacy.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let uBlockFilters = FilterList(
+        tag: 2,
+        name: "ublock-filters",
+        title: "uBlock filters",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let uBlockPrivacy = FilterList(
+        tag: 3,
+        name: "ublock-privacy",
+        title: "uBlock filters – Privacy",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let uBlockBadware = FilterList(
+        tag: 4,
+        name: "ublock-badware",
+        title: "uBlock filters – Badware risks",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let uBlockQuickFixes = FilterList(
+        tag: 5,
+        name: "ublock-quick-fixes",
+        title: "uBlock filters – Quick fixes",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let uBlockUnbreak = FilterList(
+        tag: 6,
+        name: "ublock-unbreak",
+        title: "uBlock filters – Unbreak",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt",
+        isDefault: true,
+        languages: []
+    )
+    static let adGuardBase = FilterList(
+        tag: 7,
+        name: "adguard-base",
+        title: "AdGuard Base",
+        group: FilterListGroup.ads,
+        source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt",
+        isDefault: false,
+        languages: []
+    )
+    static let easyListGermany = FilterList(
+        tag: 8,
+        name: "easylist-germany",
+        title: "EasyList Germany",
+        group: FilterListGroup.regional,
+        source: "https://easylist.to/easylistgermany/easylistgermany.txt",
+        isDefault: false,
+        languages: ["de"]
+    )
+    static let listeFr = FilterList(
+        tag: 9,
+        name: "liste-fr",
+        title: "Liste FR",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/liste_fr.txt",
+        isDefault: false,
+        languages: ["fr"]
+    )
+    static let easyListItaly = FilterList(
+        tag: 10,
+        name: "easylist-italy",
+        title: "EasyList Italy",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt",
+        isDefault: false,
+        languages: ["it"]
+    )
+    static let easyListDutch = FilterList(
+        tag: 11,
+        name: "easylist-dutch",
+        title: "EasyList Dutch",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt",
+        isDefault: false,
+        languages: ["nl"]
+    )
+    static let easyListSpanish = FilterList(
+        tag: 12,
+        name: "easylist-spanish",
+        title: "EasyList Spanish",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt",
+        isDefault: false,
+        languages: ["es"]
+    )
+    static let easyListPolish = FilterList(
+        tag: 13,
+        name: "easylist-polish",
+        title: "EasyList Polish",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt",
+        isDefault: false,
+        languages: ["pl"]
+    )
+    static let easyListChina = FilterList(
+        tag: 14,
+        name: "easylist-china",
+        title: "EasyList China",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistchina.txt",
+        isDefault: false,
+        languages: ["zh"]
+    )
+    static let adGuardJapanese = FilterList(
+        tag: 15,
+        name: "adguard-japanese",
+        title: "AdGuard Japanese",
+        group: FilterListGroup.regional,
+        source: "https://filters.adtidy.org/extension/ublock/filters/7.txt",
+        isDefault: false,
+        languages: ["ja"]
+    )
+    static let adGuardRussian = FilterList(
+        tag: 16,
+        name: "adguard-russian",
+        title: "AdGuard Russian",
+        group: FilterListGroup.regional,
+        source: "https://filters.adtidy.org/extension/ublock/filters/1.txt",
+        isDefault: false,
+        languages: ["ru", "uk", "be"]
+    )
+    static let adGuardTurkish = FilterList(
+        tag: 17,
+        name: "adguard-turkish",
+        title: "AdGuard Turkish",
+        group: FilterListGroup.regional,
+        source: "https://filters.adtidy.org/extension/ublock/filters/13.txt",
+        isDefault: false,
+        languages: ["tr"]
+    )
+    static let easyListCookie = FilterList(
+        tag: 18,
+        name: "easylist-cookie",
+        title: "EasyList Cookie List",
+        group: FilterListGroup.annoyances,
+        source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt",
+        isDefault: false,
+        languages: []
+    )
+    static let adGuardAnnoyances = FilterList(
+        tag: 19,
+        name: "adguard-annoyances",
+        title: "AdGuard Annoyances",
+        group: FilterListGroup.annoyances,
+        source: "https://filters.adtidy.org/extension/ublock/filters/14.txt",
+        isDefault: false,
+        languages: []
+    )
+
+    static let all: [FilterList] = [
+        easyList,
+        easyPrivacy,
+        uBlockFilters,
+        uBlockPrivacy,
+        uBlockBadware,
+        uBlockQuickFixes,
+        uBlockUnbreak,
+        adGuardBase,
+        easyListGermany,
+        listeFr,
+        easyListItaly,
+        easyListDutch,
+        easyListSpanish,
+        easyListPolish,
+        easyListChina,
+        adGuardJapanese,
+        adGuardRussian,
+        adGuardTurkish,
+        easyListCookie,
+        adGuardAnnoyances
+    ]
+
+    static func named(_ name: String?) -> FilterList? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FilterList, rhs: FilterList) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: String
+        let group: FilterListGroup
+        let source: String
+        let isDefault: Bool
+        let languages: [String]
+
+        init(name: String, title: String, group: FilterListGroup, source: String, isDefault: Bool, languages: [String]) {
+            self.name = name
+            self.title = title
+            self.group = group
+            self.source = source
+            self.isDefault = isDefault
+            self.languages = languages
+        }
+    }
+}
+
+/// The members of the core's `FilterListGroup`. A member's wire tag is its index in `all`.
+struct FilterListGroup: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let ads = FilterListGroup(tag: 0, name: "ads", title: LocalizedStringResource("Ads and Trackers"))
+    static let regional = FilterListGroup(tag: 1, name: "regional", title: LocalizedStringResource("Regional"))
+    static let annoyances = FilterListGroup(tag: 2, name: "annoyances", title: LocalizedStringResource("Annoyances"))
+
+    static let all: [FilterListGroup] = [ads, regional, annoyances]
+
+    static func named(_ name: String?) -> FilterListGroup? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FilterListGroup, rhs: FilterListGroup) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }

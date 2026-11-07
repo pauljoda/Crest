@@ -1121,6 +1121,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // actually starts provisional navigation.
         linkDrag?.cancel()
         isRegionCapturePresented = false
+        // The site it goes to may have content blocking turned off, or on.
+        if let url, let webKit = webKitAdapter { webKit.contentRuleSession.navigating(to: url, in: webKit.webView) }
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         translation.reset()

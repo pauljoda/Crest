@@ -101,7 +101,8 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         webKit = webKitPage.engine
         contentRuleSession = BrowserPageContentRuleSession(
             ruleLists: webKitPage.contentRuleLists,
-            additionalRuleList: contentRuleList
+            additionalRuleList: contentRuleList,
+            blocksSite: webKitPage.blocksSite
         )
         ownsUserContentController = webKitPage.ownsUserContentController
         self.geolocationService = geolocationService

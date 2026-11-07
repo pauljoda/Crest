@@ -76,7 +76,8 @@ struct BrowserMacCommand {
         title: { ($0.shownPage?.readerModeState ?? .unavailable).actionTitle },
         run: { $0.shownPage?.toggleReaderMode() })
     static let toggleContentBlocking = BrowserMacCommand(
-        .toggleContentBlocking, actsOnPage: true, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
+        .toggleContentBlocking, actsOnPage: true,
+        isAvailable: { $0.supportsEngineCapability(.contentBlocking) && $0.siteContentBlocking != nil },
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
     static let findInPage = BrowserMacCommand(
         .findInPage, actsOnPage: true, isAvailable: { $0.canFind },

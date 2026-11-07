@@ -94,6 +94,7 @@ struct MobilePageActionsContent: View {
         ) {
             Task { await contentBlockingAction.perform() }
         }
+        .disabled(contentBlockingAction.siteSwitch == nil)
 
         if let page = pages.activePage {
             sitePermissions(for: page)
@@ -226,6 +227,6 @@ struct MobilePageActionsContent: View {
     }
 
     private var contentBlockingActionTitle: LocalizedStringResource {
-        ContentBlockingPolicy.switchTitle(for: browser.shownSpace?.settings.browsingPreferences.contentBlocking)
+        contentBlockingAction.title
     }
 }
