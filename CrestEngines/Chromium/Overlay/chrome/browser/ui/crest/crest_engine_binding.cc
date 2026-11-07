@@ -796,7 +796,7 @@ bool EngineBinding::StageForPeek(EnginePage& page, content::OpenURLParams& param
   }
   params.crest_download_fallback = nullptr;
   PresentPeekSoon(page, engine::PeekRequested{.page_id = page.id(),
-                                              .url = PresentedURL(params.url),
+                                              .url = PlatformURL(params.url),
                                               .decision = engine::LinkNavigationDecision::kPeekModifier,
                                               .staged_link_id = link});
   return true;
@@ -822,7 +822,7 @@ bool EngineBinding::KeepsLinkForPeek(content::NavigationHandle& navigation) {
   if (!page) {
     return false;
   }
-  const std::string url = PresentedURL(navigation.GetURL());
+  const std::string url = PlatformURL(navigation.GetURL());
   const auto answer = Ask(engine::LinkActivation{
       .page_id = page->id(), .url = url, .gesture = {.user_activated = true, .top_level = true}});
   if (!answer || !OpensPeek(answer->decision)) {
@@ -903,7 +903,7 @@ bool EngineBinding::KeepsWindowLinkForPeek(content::NavigationHandle& navigation
     routed_tabs_.erase(routed);
     return false;
   }
-  const std::string url = PresentedURL(navigation.GetURL());
+  const std::string url = PlatformURL(navigation.GetURL());
   const auto answer = Ask(engine::LinkActivation{
       .page_id = source->id(), .url = url, .gesture = {.user_activated = true, .top_level = true}});
   if (!answer || !OpensPeek(answer->decision)) {
@@ -966,9 +966,11 @@ bool EngineBinding::LoadStagedLink(const std::string& key, const std::string& to
   }
   const StagedLink& link = *staged.mapped();
   const EnginePage* source = Find(link.source);
+  // The Peek asks for the link at the address it was told, as the platform
+  // holds it, so a link whose query keeps brackets still matches.
   if (!source || !source->web_contents() || source->profile() != page->profile() ||
       source->window() != page->window() || source->navigation_revision() != link.revision ||
-      source->navigation_generation() != link.generation || link.request.url != url ||
+      source->navigation_generation() != link.generation || PlatformURL(link.request.url) != PlatformURL(url) ||
       !page->web_contents()->GetController().IsInitialNavigation()) {
     return false;
   }

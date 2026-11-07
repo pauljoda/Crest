@@ -121,7 +121,7 @@ struct BrowserLinkContextCapture: Equatable, Sendable {
     private static func webDestination(_ value: Any?) -> URL? {
         guard let string = value as? String,
             string.count <= maximumURLLength,
-            let url = URL(string: string),
+            let url = address(string),
             // The same gate every other link affordance uses, so the menu can
             // never offer a `javascript:` or `data:` destination that the
             // new-tab path would refuse a moment later.
@@ -133,7 +133,7 @@ struct BrowserLinkContextCapture: Equatable, Sendable {
     private static func mediaSource(_ value: Any?) -> URL? {
         guard let string = value as? String,
             string.count <= maximumURLLength,
-            let url = URL(string: string),
+            let url = address(string),
             let scheme = url.scheme?.lowercased(),
             ["http", "https", "blob", "data"].contains(scheme)
         else { return nil }
@@ -141,6 +141,15 @@ struct BrowserLinkContextCapture: Equatable, Sendable {
             return nil
         }
         return url
+    }
+
+    /// The address a page serialized, as written when Foundation accepts it.
+    /// A page keeps characters such as a query's brackets that RFC 3986 leaves
+    /// out, as a link's `c[0]=` does; `URL(string:)` then re-encodes the whole
+    /// query, escapes included, so only those characters are escaped here.
+    private static func address(_ string: String) -> URL? {
+        URL(string: string, encodingInvalidCharacters: false)
+            ?? URL(dataRepresentation: Data(string.utf8), relativeTo: nil)
     }
 
     private static func selection(_ value: Any?) -> String? {
