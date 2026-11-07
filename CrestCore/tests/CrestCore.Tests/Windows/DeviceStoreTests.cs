@@ -101,7 +101,7 @@ public sealed partial class BrowserContractsTests {
         // Showing the Space again shows its fallback tab.
         app.Send(new ShowSpace(showing, first));
         var back = Shown(app.Send(new ShowSpace(showing, second)));
-        Assert.Equal(Window.FallbackTab(session.Current.Spaces[1]), ShownTab(back, second));
+        Assert.Equal(session.Current.Spaces[1].FallbackTab(), ShownTab(back, second));
         // A tab that is gone publishes nothing, and a window that is not open is refused.
         Assert.Empty(Own(app.Send(new ShowTab(showing, second, shownTab))));
         Assert.Equal(new WindowNotOpen(Guid.Empty), Assert.Throws<Rejected>(() => app.Send(new ShowSpace(Guid.Empty, first))).Rejection);

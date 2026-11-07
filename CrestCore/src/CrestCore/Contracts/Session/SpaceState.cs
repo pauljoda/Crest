@@ -114,6 +114,16 @@ public sealed record SpaceState(
     /// <see cref="SidebarOutline.Stops"/>.</summary>
     public IReadOnlyList<SidebarRow> Stops() => Sidebar.Stops(Folders, Shows);
 
+    /// <summary>The tab the Space shows when no window chose one: of the tabs a person
+    /// can see in its sidebar, and its Start Pages, which have no row, the first of the
+    /// section that ranks first, in sidebar order. None when no tab is visible, so a tab
+    /// inside a collapsed folder or section is never chosen.</summary>
+    public Guid? FallbackTab() {
+        Guid[] visible = [.. Stops().Select(stop => stop.Members[0]), .. Tabs.Where(tab => tab.IsStartPage).Select(tab => tab.Id)];
+        var placements = Tabs.ToDictionary(tab => tab.Id, tab => tab.Placement);
+        return TabPlacement.Fallback([.. visible.Select(id => placements[id])]) is { } index ? visible[index] : null;
+    }
+
     /// <summary>The tab one step in <paramref name="direction"/> from the shown tab shows,
     /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
     public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
