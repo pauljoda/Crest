@@ -11,6 +11,7 @@ the area that receives it:
 | `src/CrestCore/Domain` | Tab and Space behavior, durable state, navigation, and sync policy. No JSON or native dependencies. Namespace `CrestCore.Domain`. |
 | `src/CrestCore/Application` | Session commands, the session file, imports, and sync transitions. It owns the JSON-backed native and persistence formats and the SQLite file they are stored in, and calls typed domain rules. Namespace `CrestCore.Application`. |
 | `src/CrestCore.Native` | C exports that adapt native callers to the application layer, and the generated wire codec. |
+| `native/ContentFilter` | The content filter: Brave's adblock engine behind a C interface the core links statically. Builds download it prebuilt; see its README. |
 | `tools/CrestCore.Generator` | Generates the codec, the Swift models and the C tag header from the contract records: the types the core exports in the `CrestCore.Contracts` namespace, wherever their files sit. It reads each record's data and ignores its methods. |
 | `CrestCore.Tests` | Behavioral contracts for the corresponding source areas. |
 

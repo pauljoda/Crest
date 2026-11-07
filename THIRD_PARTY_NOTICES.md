@@ -6,12 +6,16 @@ Crest ships these third-party runtime components:
 | --- | --- | --- | --- |
 | [Sparkle](https://github.com/sparkle-project/Sparkle) | 2.9.5 | Signed software updates on macOS | MIT-style license with bundled BSD, MIT, and zlib-style notices |
 | [.NET runtime](https://github.com/dotnet/runtime) (Native AOT) | 10.0.5 | Crest's core, compiled ahead of time into every app | MIT, with bundled third-party notices |
+| [adblock-rust](https://github.com/brave/adblock-rust), Brave's ad-block engine | 0.13.5 | Crest's content filter, compiled into the core on every platform | MPL-2.0, built from MIT, Apache-2.0, Unicode-3.0 and Unlicense Rust crates |
 | [Chromium](https://www.chromium.org/), with Crest's patches, some adapted from [ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium) | 156.0.8078.80 | The Chromium engine in Crest's Chromium build for macOS | BSD-3-Clause, with bundled third-party licenses |
 
 The complete notices are preserved in
 [`ThirdParty/Sparkle-LICENSE.txt`](ThirdParty/Sparkle-LICENSE.txt),
-[`ThirdParty/DotNet-LICENSE.txt`](ThirdParty/DotNet-LICENSE.txt) and
-[`ThirdParty/Chromium-LICENSE.txt`](ThirdParty/Chromium-LICENSE.txt).
+[`ThirdParty/DotNet-LICENSE.txt`](ThirdParty/DotNet-LICENSE.txt),
+[`ThirdParty/ContentFilter-LICENSES.txt`](ThirdParty/ContentFilter-LICENSES.txt) and
+[`ThirdParty/Chromium-LICENSE.txt`](ThirdParty/Chromium-LICENSE.txt). The content
+filter's notices cover adblock-rust and every Rust crate its lock file resolves,
+and the license audit keeps that list in step with the lock.
 Chromium includes many third-party components under their own licenses; the
 Chromium build lists every one of them, with its license text, at
 `chrome://credits`.
@@ -29,8 +33,12 @@ SwiftUI, and WebKit.
 
 Crest's source tree is generated with MIT-licensed
 [XcodeGen](https://github.com/yonaskolb/XcodeGen). The optional dead-code audit
-uses MIT-licensed [Periphery](https://github.com/peripheryapp/periphery). These
-tools are not linked into or redistributed with Crest.
+uses MIT-licensed [Periphery](https://github.com/peripheryapp/periphery). The
+content filter is compiled with the MIT- and Apache-2.0-licensed
+[Rust](https://www.rust-lang.org/) toolchain its crate pins; contributors and
+release builds download the prebuilt library instead, and need the toolchain
+only to change the content filter itself. These tools are not linked into or
+redistributed with Crest.
 
 The GitHub workflows use pinned MIT-licensed actions from `actions/*`,
 including `actions/setup-dotnet` for the core, and the MIT-licensed source in

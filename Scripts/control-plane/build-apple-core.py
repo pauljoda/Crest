@@ -35,8 +35,10 @@ def main():
     # Xcode's TARGETNAME otherwise renames every referenced assembly to Crest.
     inherited = {"PATH", "HOME", "TMPDIR", "USER", "LOGNAME", "SHELL", "LANG", "DEVELOPER_DIR",
                  "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy"}
+    # The content filter's own settings, and where Rust lives, reach its fetch.
+    inherited |= {"CARGO_HOME", "RUSTUP_HOME"}
     environment = {k: v for k, v in os.environ.items()
-                   if k in inherited or k.startswith(("DOTNET_", "NUGET_", "LC_"))}
+                   if k in inherited or k.startswith(("DOTNET_", "NUGET_", "LC_", "CREST_CONTENT_FILTER_"))}
     environment["SDKROOT"] = subprocess.check_output(
         ["xcrun", "--sdk", platform, "--show-sdk-path"], text=True).strip()
     version = subprocess.check_output([dotnet, "--version"], cwd=core, env=environment, text=True).strip()
@@ -46,7 +48,13 @@ def main():
     inputs += list((repo / "CrestShared/Infrastructure/Core/Generated").glob("*.swift"))
     inputs += list(core.glob("Directory.*")) + [core / "global.json", Path(__file__).resolve(),
                                                repo / "Scripts/control-plane/package-apple-core.py"]
-    digest = hashlib.sha256(f"{version}:{platform}:{sdk}:{os.environ.get('DEVELOPER_DIR', '')}".encode())
+    # The content filter library the core links: the one its lock names, or
+    # its sources compiled while they differ from the lock.
+    crate = core / "native/ContentFilter"
+    inputs += [p for p in crate.rglob("*") if p.is_file() and "target" not in p.relative_to(crate).parts]
+    inputs += [repo / "Scripts/control-plane/content_filter.py", repo / "Scripts/control-plane/fetch-content-filter.py"]
+    digest = hashlib.sha256(f"{version}:{platform}:{sdk}:{os.environ.get('DEVELOPER_DIR', '')}:"
+                            f"{os.environ.get('CREST_CONTENT_FILTER_FROM_SOURCE', '')}".encode())
     for path in sorted(inputs):
         digest.update(str(path.relative_to(repo)).encode())
         digest.update(path.read_bytes())

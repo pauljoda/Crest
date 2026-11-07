@@ -4,6 +4,8 @@
     <NativeLib>Shared</NativeLib>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- The apps' deployment target (project.yml), which the content filter is built for too. -->
+    <AppleMinOSVersion>26.1</AppleMinOSVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../CrestCore/CrestCore.csproj" />
@@ -12,5 +14,22 @@
     <!-- The session file uses the system SQLite on every Apple platform. -->
     <DirectPInvoke Include="libsqlite3" />
     <NativeLibrary Include="-lsqlite3" />
+    <!-- The content filter is linked in statically: the prebuilt library the
+         lock in CrestCore/native/ContentFilter names, for the runtime published. -->
+    <DirectPInvoke Include="crest_content_filter" />
   </ItemGroup>
+  <Target Name="CrestContentFilterLibrary" BeforeTargets="SetupOSSpecificProps"
+      Condition="'$(RuntimeIdentifier)' == 'osx-arm64' or '$(RuntimeIdentifier)' == 'ios-arm64' or '$(RuntimeIdentifier)' == 'iossimulator-arm64'">
+    <PropertyGroup>
+      <CrestContentFilterPathFile>$(IntermediateOutputPath)content-filter.path</CrestContentFilterPathFile>
+    </PropertyGroup>
+    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)../../../Scripts/control-plane/fetch-content-filter.py&quot; --runtime $(RuntimeIdentifier) &gt; &quot;$(CrestContentFilterPathFile)&quot;"
+        IgnoreStandardErrorWarningFormat="true" />
+    <ReadLinesFromFile File="$(CrestContentFilterPathFile)">
+      <Output TaskParameter="Lines" PropertyName="CrestContentFilterLibraryPath" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <NativeLibrary Include="$(CrestContentFilterLibraryPath)" />
+    </ItemGroup>
+  </Target>
 </Project>
