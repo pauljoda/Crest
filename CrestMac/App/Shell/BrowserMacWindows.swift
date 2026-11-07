@@ -389,8 +389,9 @@ final class BrowserMacWindows {
         BrowserNoticeCenter.shared.register(quickWindow.chrome.notices) { [weak self] in
             self?.quickWindow(request.id)?.isKeyWindow == true
         }
+        let overFullScreenApps = application.browser.linkPreferences.preferences.opensQuickWindowsOverFullScreenApps
         show(
-            .quick, id: request.id, closeGate: model.closeGate,
+            .quick(overFullScreenApps: overFullScreenApps), id: request.id, closeGate: model.closeGate,
             content: { window in
                 BrowserQuickWindowWindowSurface(
                     model: model, spaceAccess: application.spaceAccess, pagePoolRegistry: application.pagePoolRegistry,

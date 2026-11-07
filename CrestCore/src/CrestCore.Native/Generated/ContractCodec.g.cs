@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x9f, 0x23, 0x19, 0x6a, 0xb0, 0x44, 0xa9, 0xc4, 0x10, 0xc5, 0xbf, 0xfa, 0x21, 0xb7, 0x83, 0xee, 0x99, 0xff, 0x39, 0x3f, 0xd4, 0x7e, 0x28, 0x27, 0x23, 0x48, 0x6d, 0xb6, 0x65, 0x3f, 0x3f, 0x1d
+        0x38, 0x3a, 0x74, 0xa3, 0xc6, 0x7c, 0x9e, 0xcf, 0xb8, 0x6b, 0x89, 0xe4, 0xf7, 0x7d, 0x3a, 0x3b, 0xb6, 0x04, 0x2f, 0x12, 0x7e, 0x0d, 0x94, 0x8b, 0x3a, 0xa9, 0xdb, 0xe8, 0x3f, 0x69, 0xa6, 0x05
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -11371,6 +11371,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             ReadQuickWindowArchivePolicy(reader),
             reader.ReadBool(),
+            reader.ReadBool(),
             reader.ReadList(() => ReadLinkRoute(reader)),
             reader.ReadList(() => ReadRememberedSite(reader)));
     }
@@ -11393,6 +11394,7 @@ public static class ContractCodec {
         writer.WriteBool(value.DimsPageBehindPeek);
         WriteQuickWindowArchivePolicy(writer, value.ArchivePolicy);
         writer.WriteBool(value.RemembersSpaceBySite);
+        writer.WriteBool(value.OpensQuickWindowsOverFullScreenApps);
         writer.WriteCount(value.Routes.Count);
         foreach (var itemRoutes in value.Routes) {
             WriteLinkRoute(writer, itemRoutes);
