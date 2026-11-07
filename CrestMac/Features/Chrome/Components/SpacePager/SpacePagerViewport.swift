@@ -20,7 +20,16 @@ final class SpacePagerViewport<Content: View>: NSView {
         var commitsSelection: Bool
     }
 
+    /// The order the strip runs along: every Space in its order, except
+    /// while a slide jumps to a Space further away than next door.
     private(set) var spaces: [SpaceModel] = []
+    /// Every Space in its order.
+    private var allSpaces: [SpaceModel] = []
+    /// The Spaces a running slide jumps between. The strip's order puts them
+    /// next door until the slide ends, so it moves one page between them.
+    private var jump: (origin: UUID, target: UUID)? {
+        didSet { arrangeStrip() }
+    }
     /// What the Spaces were at the last update, kept as values: the models
     /// change in place, so only a snapshot tells an update what moved.
     private var shownAssignments: [BrowserSpaceRuntimeAssignment] = []
@@ -114,7 +123,8 @@ final class SpacePagerViewport<Content: View>: NSView {
         self.presentation = presentation
         pendingContentTopInsets = contentTopInsets
         self.bands = bands
-        self.spaces = spaces
+        allSpaces = spaces
+        arrangeStrip()
         self.selectedSpaceID = selectedSpaceID
         self.isInteractionLocked = isInteractionLocked
         newSpaceStep = spaceStep?.id == self.spaceStep?.id ? nil : spaceStep
@@ -138,7 +148,9 @@ final class SpacePagerViewport<Content: View>: NSView {
             // Actual authoritative selection changes supersede native motion;
             // unrelated updates carrying the old ID do not.
             expectedSelection = nil
-            if let heading = motion?.settledDestination, !reduceMotion,
+            // A jump's strip doesn't hold the Spaces in their order, so a
+            // selection made during one starts again from where it began.
+            if let heading = motion?.settledDestination, jump == nil, !reduceMotion,
                 let step = step(from: heading, to: selectedSpaceID)
             {
                 // The slide no longer decides the selection, even if it ends
@@ -148,17 +160,21 @@ final class SpacePagerViewport<Content: View>: NSView {
                 prepareHosts(around: heading, retaining: selectedSpaceID, refreshContent: false)
                 continueSettlingOnScreen(to: selectedSpaceID, from: heading, step: step)
             } else {
+                let wasMoving = motion != nil
                 cancelMotion()
                 gesture.cancelCurrentGesture()
-                if let origin = presentationSpaceID, !reduceMotion, let step = step(from: origin, to: selectedSpaceID) {
+                // A Space further away than next door slides in as a
+                // neighbour does, one page, from a strip at rest.
+                if let origin = presentationSpaceID, !reduceMotion,
+                    let step = step(from: origin, to: selectedSpaceID)
+                        ?? (wasMoving ? nil : beginJump(from: origin, to: selectedSpaceID))
+                {
                     // Retained pages keep their visible content until the slide
                     // finishes. The latest roots are supplied at completion.
                     prepareHosts(around: selectedSpaceID, retaining: origin, refreshContent: false)
                     animate(to: selectedSpaceID, step: step, commitsSelection: false)
                     return
                 }
-                // A direct nonadjacent choice presents its authoritative page.
-                // It does not create a compressed strip of unrelated neighbors.
                 presentationSpaceID = selectedSpaceID
             }
         }
@@ -288,6 +304,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         stopHostAnimations()
         releaseSharedBand()
         presentationSpaceID = origin.spaceID
+        // A swipe during a jump pages between the Spaces in their order, from
+        // the page it took over.
+        jump = nil
         motion = Motion(
             generation: generation, origin: origin, offset: inheritedOffset,
             initialOffset: inheritedOffset,
@@ -403,6 +422,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         stopPresentationSampling()
         generation &+= 1
         motion = nil
+        jump = nil
         stopHostAnimations()
         releaseSharedBand()
         positionHosts()
@@ -434,6 +454,25 @@ final class SpacePagerViewport<Content: View>: NSView {
         if abs(targetIndex - originIndex) == 1 { return targetIndex - originIndex }
         guard spaces.count > 2, let direction = newSpaceStep?.direction(from: origin, to: target) else { return nil }
         return direction == .next ? 1 : -1
+    }
+
+    /// Puts `target` next door to `origin` in the strip's order where they lie
+    /// further apart, and answers which way the slide between them goes; nil
+    /// where there is no jump to make.
+    private func beginJump(from origin: UUID, to target: UUID) -> Int? {
+        guard SpacePagerPresentation.jumpOrder(allSpaces, from: origin, to: target, id: \.id) != nil,
+            let originIndex = allSpaces.firstIndex(where: { $0.id == origin }),
+            let targetIndex = allSpaces.firstIndex(where: { $0.id == target })
+        else { return nil }
+        jump = (origin, target)
+        return targetIndex > originIndex ? 1 : -1
+    }
+
+    /// Lays the strip out in its order, or in a running jump's.
+    private func arrangeStrip() {
+        spaces =
+            jump.flatMap { SpacePagerPresentation.jumpOrder(allSpaces, from: $0.origin, to: $0.target, id: \.id) }
+            ?? allSpaces
     }
 
     /// Continues the settling slide toward `destination` once the update that
@@ -672,6 +711,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         stopPresentationSampling()
         let committedSelection = expectedSelection ?? selectedSpaceID
         motion = nil
+        jump = nil
         presentationSpaceID = destination
         if current.commitsSelection, destination != committedSelection { expectedSelection = destination }
         stopHostAnimations()

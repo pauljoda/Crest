@@ -20,6 +20,7 @@ enum BrowserRootMetrics {
     static let noticeMaximumWidth: CGFloat = 520
     static let sidebarResizeControlZIndex: Double = 3
     static let floatingSidebarZIndex: Double = 4
+    static let floatingSidebarResizeControlZIndex: Double = 5
     static let utilityFanZIndex: Double = 8
     static let commandPaletteZIndex: Double = 10
     static let peekZIndex: Double = 20

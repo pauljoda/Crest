@@ -4,6 +4,8 @@ import SwiftUI
 /// owns selection and page activation; neither is changed for every drag frame.
 /// Only a scroll a person drives settles on another Space: a hardware keyboard's
 /// focus also scrolls this view, and the pager then returns to the selected one.
+/// A Space chosen further away than next door scrolls in as a neighbour does:
+/// the strip puts it next door until the scroll comes to rest.
 struct PlatformSpacePager<Content: View>: View {
     // MARK: - Variables
 
@@ -17,6 +19,20 @@ struct PlatformSpacePager<Content: View>: View {
     @Environment(\.spacePagerPresentation) private var presentation
     @State private var progress = TouchSpacePagerProgress()
     @State private var visibleSpaceID: UUID?
+    /// The order the strip runs along while it scrolls to a Space further
+    /// away than next door, or nil for the Spaces' own order.
+    @State private var jumpOrder: [UUID]?
+    /// Whether a jump has just come to rest, and the strip taking the Spaces'
+    /// own order again has to bring the Space it reached back on screen.
+    @State private var isEndingJump = false
+
+    /// The Spaces in the order the strip runs along.
+    private var strip: [SpaceModel] {
+        guard let jumpOrder else { return spaces }
+        let byID = Dictionary(spaces.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let ordered = jumpOrder.compactMap { byID[$0] }
+        return ordered.count == spaces.count ? ordered : spaces
+    }
 
     // MARK: - Initializers
 
@@ -42,7 +58,7 @@ struct PlatformSpacePager<Content: View>: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 0) {
-                        ForEach(spaces) { space in
+                        ForEach(strip) { space in
                             // A Space keeps its page when it joins or leaves a group.
                             content(space, space.id == selectedSpaceID)
                                 .frame(width: viewport.size.width, height: viewport.size.height, alignment: .top)
@@ -62,11 +78,12 @@ struct PlatformSpacePager<Content: View>: View {
                     geometry.containerSize.width > 0
                         ? geometry.contentOffset.x / geometry.containerSize.width : 0
                 } action: { _, position in
-                    progress.update(position: position, ids: spaces.map(\.id), presentation: presentation)
+                    progress.update(position: position, ids: strip.map(\.id), presentation: presentation)
                 }
                 .onScrollPhaseChange { _, phase in
-                    progress.update(phase: phase, ids: spaces.map(\.id), presentation: presentation)
+                    progress.update(phase: phase, ids: strip.map(\.id), presentation: presentation)
                     guard phase == .idle else { return }
+                    endJump()
                     if progress.isPersonDriven {
                         commitVisibleSpace()
                     } else {
@@ -75,6 +92,16 @@ struct PlatformSpacePager<Content: View>: View {
                 }
                 .onChange(of: selectedSpaceID) { _, spaceID in
                     show(spaceID)
+                }
+                .onChange(of: jumpOrder) { _, _ in
+                    // The Space a jump reached stands elsewhere in the
+                    // Spaces' own order, which the strip takes again here.
+                    guard isEndingJump else { return }
+                    isEndingJump = false
+                    guard let visibleSpaceID else { return }
+                    var transaction = Transaction(animation: nil)
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) { proxy.scrollTo(visibleSpaceID, anchor: .center) }
                 }
                 .onChange(of: isInteractionLocked) { _, _ in
                     recenter(using: proxy)
@@ -111,8 +138,29 @@ struct PlatformSpacePager<Content: View>: View {
 
     private func show(_ spaceID: UUID) {
         guard visibleSpaceID != spaceID else { return }
+        if !reduceMotion, let visibleSpaceID {
+            // The Space on show keeps its place in the jump's order, so the
+            // strip doesn't move until the scroll below begins. A neighbour
+            // takes the Spaces' own order.
+            let order = SpacePagerPresentation.jumpOrder(spaces, from: visibleSpaceID, to: spaceID, id: \.id)
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { jumpOrder = order?.map(\.id) }
+        }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
             visibleSpaceID = spaceID
+        }
+    }
+
+    /// Puts the strip back in the Spaces' own order once a jump comes to
+    /// rest.
+    private func endJump() {
+        guard jumpOrder != nil else { return }
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isEndingJump = true
+            jumpOrder = nil
         }
     }
 
@@ -121,6 +169,7 @@ struct PlatformSpacePager<Content: View>: View {
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
+            jumpOrder = nil
             visibleSpaceID = selectedSpaceID
             proxy.scrollTo(selectedSpaceID, anchor: .center)
         }

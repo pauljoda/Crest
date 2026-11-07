@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
+    // MARK: - Variables
+
     let presentation: BrowserSidebarPresentation
     let width: CGFloat
     let edge: HorizontalEdge
@@ -10,10 +12,15 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     /// Whether the pointer brought a floating sidebar out by reaching the
     /// window edge.
     let isRevealedByPointer: Bool
+    /// Whether the sidebar's edge is being dragged to resize it, which keeps
+    /// a floating sidebar out until the drag lets go.
+    let isResizing: Bool
     let hoverChanged: @MainActor @Sendable (Bool) -> Void
     let content: Content
 
     @Environment(\.layoutDirection) private var layoutDirection
+
+    // MARK: - Initializers
 
     init(
         presentation: BrowserSidebarPresentation,
@@ -23,6 +30,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         reduceTransparency: Bool,
         spaces: [SpaceModel] = [],
         isRevealedByPointer: Bool = false,
+        isResizing: Bool = false,
         hoverChanged: @escaping @MainActor @Sendable (Bool) -> Void,
         @ViewBuilder content: () -> Content
     ) {
@@ -33,9 +41,12 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         self.reduceTransparency = reduceTransparency
         self.spaces = spaces
         self.isRevealedByPointer = isRevealedByPointer
+        self.isResizing = isResizing
         self.hoverChanged = hoverChanged
         self.content = content()
     }
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         cardSurface
@@ -63,6 +74,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                         // page still gets every click and scroll there.
                         BrowserSidebarHoverTracker(
                             isRevealedByPointer: isRevealedByPointer,
+                            isResizing: isResizing,
                             exitMargin: presentation.exitMargin,
                             exitEdge: pageEdge,
                             onHoverChange: hoverChanged
@@ -90,7 +102,13 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
 
     private var cardSurface: some View {
         content
+            // The column's own layout settles at once when the sidebar
+            // changes place, and the column moves as one piece with the
+            // surface around it: its rows, header and native Space pages
+            // take the surface's transition rather than standing still
+            // while the card slides in around them.
             .animation(nil, value: presentation)
+            .geometryGroup()
             .frame(width: width)
             .frame(maxHeight: .infinity)
             .background {

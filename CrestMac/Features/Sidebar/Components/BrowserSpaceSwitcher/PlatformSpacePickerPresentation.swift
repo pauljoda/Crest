@@ -115,7 +115,7 @@ final class SpacePickerPresentationView: NSView {
             strokes[space.id] =
                 color.blended(withFraction: CrestSpaceIconPickerMetrics.strokeLift, of: reading) ?? color
         }
-        if let snapshot = presentation.snapshot, snapshot.spaceIDs == ids {
+        if let snapshot = presentation.snapshot, snapshot.order(of: ids, id: { $0 }) != nil {
             receive(snapshot)
         } else if let selectedSpaceID, let index = ids.firstIndex(of: selectedSpaceID) {
             drawHighlight(at: CGFloat(index))
@@ -143,10 +143,17 @@ final class SpacePickerPresentationView: NSView {
     }
 
     private func receive(_ snapshot: SpacePagerPresentation.Snapshot) {
-        guard snapshot.spaceIDs == spaceIDs, snapshot.position.isFinite else { return }
+        guard snapshot.order(of: spaceIDs, id: { $0 }) != nil, snapshot.position.isFinite else { return }
         // Core Animation owns the complete release. Reinstalling from sampled
         // positions would turn a delayed callback into the visible catch-up jump.
         if let transition = snapshot.transition, activeTransition == transition { return }
+        // A jump between Spaces far apart moves the pager along another order;
+        // the selection travels between the icons where they stand.
+        let published = snapshot
+        let snapshot = SpacePagerPresentation.Snapshot(
+            generation: published.generation, spaceIDs: spaceIDs,
+            position: published.place(published.position, among: spaceIDs), phase: published.phase,
+            destinationID: published.destinationID, transition: published.transition)
         let previous = lastSnapshot
         lastSnapshot = snapshot
         let visibleScrollOffset =
@@ -195,7 +202,8 @@ final class SpacePickerPresentationView: NSView {
                 startOffset: clipView.bounds.minX, destinationOffset: destinationOffset)
         }
         if let transition = snapshot.transition {
-            if animateHighlight(transition) { activeTransition = transition }
+            let positions = transition.positions.map { published.place($0, among: spaceIDs) }
+            if animateHighlight(transition, through: positions) { activeTransition = transition }
             if let scrollSegment, let layer = clipView.layer {
                 let start = NSValue(point: CGPoint(x: scrollSegment.startOffset, y: clipView.bounds.minY))
                 let end = NSValue(point: CGPoint(x: scrollSegment.destinationOffset, y: clipView.bounds.minY))
@@ -208,17 +216,19 @@ final class SpacePickerPresentationView: NSView {
         }
     }
 
-    private func animateHighlight(_ transition: SpacePagerSettlement) -> Bool {
-        let frames = transition.positions.compactMap { selectionFrame(at: $0) }
-        let colors = transition.positions.compactMap { interpolated(self.colors, at: $0) }
-        let strokes = transition.positions.compactMap { interpolated(self.strokes, at: $0) }
-        guard frames.count == transition.positions.count, colors.count == frames.count, strokes.count == frames.count
+    /// Moves the selection along `transition`, through the icons at
+    /// `positions`, one for each of the transition's own.
+    private func animateHighlight(_ transition: SpacePagerSettlement, through positions: [CGFloat]) -> Bool {
+        let frames = positions.compactMap { selectionFrame(at: $0) }
+        let colors = positions.compactMap { interpolated(self.colors, at: $0) }
+        let strokes = positions.compactMap { interpolated(self.strokes, at: $0) }
+        guard frames.count == positions.count, colors.count == frames.count, strokes.count == frames.count
         else { return false }
-        animateOutline(transition)
+        animateOutline(transition, through: positions)
         transition.animate(
             highlight, keyPath: "position", values: frames.map { NSValue(point: CGPoint(x: $0.midX, y: $0.midY)) })
         transition.animate(highlight, keyPath: "bounds.size", values: frames.map { NSValue(size: $0.size) })
-        let insets = transition.positions.map { selectionInset(at: $0) }
+        let insets = positions.map { selectionInset(at: $0) }
         transition.animate(
             highlight, keyPath: "path", values: zip(frames, insets).map { selectionPath(in: $0.size, inset: $1) })
         transition.animate(
@@ -232,10 +242,10 @@ final class SpacePickerPresentationView: NSView {
 
     /// Moves the group outline on the selection's clock: it grows into a
     /// group, holds within one and shrinks back as the selection leaves.
-    private func animateOutline(_ transition: SpacePagerSettlement) {
-        let outlines = transition.positions.map { outlineFrame(at: $0) }
-        let colors = transition.positions.compactMap { outlineColor(self.colors, at: $0) }
-        let strokes = transition.positions.compactMap { outlineColor(self.strokes, at: $0) }
+    private func animateOutline(_ transition: SpacePagerSettlement, through positions: [CGFloat]) {
+        let outlines = positions.map { outlineFrame(at: $0) }
+        let colors = positions.compactMap { outlineColor(self.colors, at: $0) }
+        let strokes = positions.compactMap { outlineColor(self.strokes, at: $0) }
         guard outlines.allSatisfy({ $0 != nil }), colors.count == outlines.count, strokes.count == outlines.count
         else {
             groupOutline.isHidden = true

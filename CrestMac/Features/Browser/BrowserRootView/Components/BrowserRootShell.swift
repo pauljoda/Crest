@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserRootShell: View, BrowserChromeAnimating {
+    // MARK: - Variables
+
     let model: BrowserRootModel
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
@@ -22,6 +24,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     private var sidebarEdge: HorizontalEdge {
         BrowserChromeAppearance.sidebarEdge(onRight: sidebarOnRight, in: layoutDirection)
     }
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -194,6 +198,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             reduceTransparency: reduceTransparency,
             spaces: model.browser.availableSpaces,
             isRevealedByPointer: model.isFloatingSidebarRevealedByPointer,
+            isResizing: model.sidebarWidthTransaction.isResizing,
             hoverChanged: {
                 model.sidebarSurfaceHoverChanged(
                     $0,

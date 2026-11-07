@@ -7,6 +7,8 @@ extension EnvironmentValues {
 
 /// Fixed chrome follows visible Space progress without observing it in tab rows.
 struct SpaceForegroundBlend: ViewModifier {
+    // MARK: - Variables
+
     let ids: [UUID]
     let brandings: [SpaceBranding]
     let accents: [Color]
@@ -24,6 +26,15 @@ struct SpaceForegroundBlend: ViewModifier {
         }
     }
 
+    /// Each Space's index in the order the pager's position runs along.
+    private var arrangement: [Int] {
+        guard let order = foreground.order else { return Array(ids.indices) }
+        let indices = order.compactMap { ids.firstIndex(of: $0) }
+        return indices.count == ids.count ? indices : Array(ids.indices)
+    }
+
+    // MARK: - Initializers
+
     init(spaces: [SpaceModel], selectedSpaceID: UUID?) {
         ids = spaces.map(\.id)
         brandings = spaces.map(\.settings.look)
@@ -31,12 +42,16 @@ struct SpaceForegroundBlend: ViewModifier {
         self.selectedSpaceID = selectedSpaceID
     }
 
+    // MARK: - Actions - Presentation
+
     func body(content: Content) -> some View {
+        let tones = tones
+        let arrangement = arrangement
         content
             .modifier(
                 SpaceForegroundTone(
                     position: foreground.position ?? CGFloat(tones.firstIndex { $0.id == selectedSpaceID } ?? 0),
-                    tones: tones, accents: accents)
+                    tones: arrangement.map { tones[$0] }, accents: arrangement.map { accents[$0] })
             )
             .onAppear { foreground.connect(presentation, tones: tones, selectedSpaceID: selectedSpaceID) }
             .onChange(of: tones) { _, _ in
