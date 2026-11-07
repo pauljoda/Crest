@@ -121,13 +121,17 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
     private func receive(_ snapshot: SpacePagerPresentation.Snapshot?) {
         guard !spaces.isEmpty, let makeRoot else { return }
         if let transition = snapshot?.transition, activeTransition == transition { return }
-        let transition = snapshot?.spaceIDs == spaces.map(\.id) ? snapshot?.transition : nil
+        // The order the pager's position runs along, which a jump between
+        // Spaces far apart rearranges so the two fade straight into each other.
+        let order = snapshot?.order(of: spaces)
+        let spaces = order ?? self.spaces
+        let transition = order == nil ? nil : snapshot?.transition
         activeTransition = transition
         let count = spaces.count
         // A step around the ends of the Spaces runs up to one Space past either end.
         let reach: CGFloat = count > 2 ? 1 : 0
         let position: CGFloat
-        if let snapshot, snapshot.spaceIDs == spaces.map(\.id), snapshot.position.isFinite {
+        if let snapshot, order != nil, snapshot.position.isFinite {
             position = min(CGFloat(count - 1) + reach, max(-reach, snapshot.position))
         } else {
             position = CGFloat(spaces.firstIndex { $0.id == selectedSpace?.id } ?? 0)

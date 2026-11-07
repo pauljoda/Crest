@@ -81,8 +81,12 @@ final class SpaceBackdropBlendController<Background: View>: UIViewController {
 
     private func receive(_ snapshot: SpacePagerPresentation.Snapshot?) {
         guard !spaces.isEmpty, let makeBackground else { return }
+        // The order the pager's position runs along, which a jump between
+        // Spaces far apart rearranges so the two fade straight into each other.
+        let order = snapshot?.order(of: spaces)
+        let spaces = order ?? self.spaces
         let position =
-            snapshot?.spaceIDs == spaces.map(\.id)
+            order != nil
             ? snapshot?.position ?? 0 : CGFloat(spaces.firstIndex { $0.id == selectedSpace?.id } ?? 0)
         guard let interpolation = SpacePagerInterpolation(position: position, count: spaces.count) else { return }
         let range = max(0, interpolation.lower - 1)...min(spaces.count - 1, interpolation.upper + 1)

@@ -5189,6 +5189,10 @@
     "peek-opens-bracketed-links": {
       "category": "fixed",
       "message": "Links on Facebook, and other links with brackets in their address, open in Peek instead of a blank page or an error page."
+    },
+    "sidebar-slides-as-one": {
+      "category": "improved",
+      "message": "On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn’t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window’s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge."
     }
   }
 }

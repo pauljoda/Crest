@@ -6,7 +6,13 @@ import SwiftUI
 /// web history gestures continue to belong to WebKit.
 @MainActor
 final class SpaceContentPagerView<Content: View & Equatable>: NSView {
+    /// The order the strip runs along: the pager's, which is every Space in
+    /// its order except while a slide jumps to a Space further away.
     private var spaces: [SpaceModel] = []
+    /// Every Space in its order.
+    private var allSpaces: [SpaceModel] = []
+    /// The pinned tab each Space shows, for the Spaces that show one.
+    private var shownPins: [UUID: UUID] = [:]
     private var selectedSpaceID: UUID?
     private var lockedSpaceIDs: Set<UUID> = []
     /// The places in the strip where a Space and the next one show the same
@@ -51,15 +57,10 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         for key in hosts.keys where changedLocks.contains(key.spaceID) || !assignments.contains(key) {
             hosts.removeValue(forKey: key)?.removeFromSuperview()
         }
-        self.spaces = spaces
+        allSpaces = spaces
+        self.shownPins = shownPins
         self.selectedSpaceID = selectedSpaceID
         self.lockedSpaceIDs = lockedSpaceIDs
-        sharedPages = Set(
-            spaces.indices.dropLast().filter { index in
-                let (space, next) = (spaces[index], spaces[index + 1])
-                return space.profileID == next.profileID && shownPins[space.id] != nil
-                    && shownPins[space.id] == shownPins[next.id]
-            })
         self.layoutDirection = layoutDirection
         self.makeRoot = makeRoot
         if self.presentation !== presentation {
@@ -68,6 +69,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
             presentation?.observe(owner: self) { [weak self] in self?.receive($0) }
         }
         let current = matchingSnapshot ?? restingSnapshot(selectedSpaceID)
+        arrange(current.order(of: allSpaces) ?? allSpaces)
         snapshot = current
         prepareHosts(
             at: current.position, destination: current.destinationID, refresh: current.phase == .idle,
@@ -116,18 +118,31 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     }
 
     private var matchingSnapshot: SpacePagerPresentation.Snapshot? {
-        guard let value = presentation?.snapshot, value.spaceIDs == spaces.map(\.id) else { return nil }
+        guard let value = presentation?.snapshot, value.order(of: allSpaces) != nil else { return nil }
         return value
     }
 
     private func restingSnapshot(_ id: UUID) -> SpacePagerPresentation.Snapshot {
         .init(
-            generation: 0, spaceIDs: spaces.map(\.id),
-            position: CGFloat(spaces.firstIndex { $0.id == id } ?? 0), phase: .idle, destinationID: id)
+            generation: 0, spaceIDs: allSpaces.map(\.id),
+            position: CGFloat(allSpaces.firstIndex { $0.id == id } ?? 0), phase: .idle, destinationID: id)
+    }
+
+    /// Lays the strip out in `order`, and finds the places in it where a Space
+    /// and the next one show the same page.
+    private func arrange(_ order: [SpaceModel]) {
+        spaces = order
+        sharedPages = Set(
+            order.indices.dropLast().filter { index in
+                let (space, next) = (order[index], order[index + 1])
+                return space.profileID == next.profileID && shownPins[space.id] != nil
+                    && shownPins[space.id] == shownPins[next.id]
+            })
     }
 
     private func receive(_ value: SpacePagerPresentation.Snapshot) {
-        guard value.spaceIDs == spaces.map(\.id) else { return }
+        guard let order = value.order(of: allSpaces) else { return }
+        arrange(order)
         // A selection that arrives mid-slide leaves the roots built for the
         // Space selected before it, so the page it lands on would never take
         // input. A settled slide supplies the latest roots, as the sidebar's

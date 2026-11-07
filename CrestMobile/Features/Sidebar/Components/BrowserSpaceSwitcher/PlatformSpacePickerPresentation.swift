@@ -91,14 +91,20 @@ final class SpacePickerPresentationView: UIView {
                 ancestor = candidate.superview
             }
             presentation.observe(owner: self) { [weak self] in self?.receive($0) }
-            if presentation.snapshot?.spaceIDs != ids {
+            if presentation.snapshot?.order(of: ids, id: { $0 }) == nil {
                 draw(at: CGFloat(ids.firstIndex { $0 == selectedSpaceID } ?? 0))
             }
         }
     }
 
     private func receive(_ snapshot: SpacePagerPresentation.Snapshot) {
-        guard snapshot.spaceIDs == ids, snapshot.position.isFinite else { return }
+        guard snapshot.order(of: ids, id: { $0 }) != nil, snapshot.position.isFinite else { return }
+        // A jump between Spaces far apart moves the pager along another order;
+        // the selection travels between the icons where they stand.
+        let published = snapshot
+        let snapshot = SpacePagerPresentation.Snapshot(
+            generation: published.generation, spaceIDs: ids, position: published.place(published.position, among: ids),
+            phase: published.phase, destinationID: published.destinationID, transition: published.transition)
         let previous = lastSnapshot
         lastSnapshot = snapshot
         if snapshot.phase != .idle, let scrollView, let destinationID = snapshot.destinationID,

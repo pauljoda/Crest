@@ -1,12 +1,16 @@
 import SwiftUI
 
 struct BrowserRootShellControls: View {
+    // MARK: - Variables
+
     let model: BrowserRootModel
     @Binding var storedSidebarWidth: Double
     var sidebarEdge: HorizontalEdge = .leading
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
+
+    // MARK: - Actions - Presentation
 
     @ViewBuilder
     var body: some View {
@@ -36,29 +40,33 @@ struct BrowserRootShellControls: View {
                 }
             }
         case .docked:
-            BrowserSidebarResizeHandle(
-                width: model.sidebarWidthBinding,
-                onResizeEnded: commitSidebarWidth,
-                edge: sidebarEdge
-            )
-            .offset(x: resizeHandleOffset)
-            .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
+            resizeHandle(cardInset: 0)
+                .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
         case .floating:
-            EmptyView()
+            // The card's own edge resizes the width the docked sidebar keeps.
+            // The card takes the hits around itself, so the handle rides above it.
+            resizeHandle(cardInset: BrowserSidebarPresentation.floatingCardInset)
+                .zIndex(BrowserRootMetrics.floatingSidebarResizeControlZIndex)
         }
+    }
+
+    /// The handle that resizes the sidebar, at its edge beside the page past
+    /// `cardInset`, on whichever side the sidebar is.
+    private func resizeHandle(cardInset: CGFloat) -> some View {
+        BrowserSidebarResizeHandle(
+            width: model.sidebarWidthBinding,
+            onResizeEnded: commitSidebarWidth,
+            edge: sidebarEdge
+        )
+        .offset(
+            x: layoutDirection.leadingOffset(
+                (cardInset + model.sidebarWidth - BrowserRootMetrics.sidebarResizeHandleOffset)
+                    * (sidebarEdge == .leading ? 1 : -1)))
     }
 
     /// How wide the collapsed sidebar's reveal strip is, as Settings sets it.
     private var revealPointerWidth: CGFloat {
         SidebarRevealWidthPreference.width(BrowserDeviceAppearanceStore.shared.sidebarRevealWidth)
-    }
-
-    /// Where the docked sidebar's resize handle sits: at the sidebar's edge,
-    /// on whichever side the sidebar is.
-    private var resizeHandleOffset: CGFloat {
-        layoutDirection.leadingOffset(
-            (model.sidebarWidth - BrowserRootMetrics.sidebarResizeHandleOffset)
-                * (sidebarEdge == .leading ? 1 : -1))
     }
 
     private var interactionCapabilities: BrowserInteractionCapabilities {
@@ -68,6 +76,8 @@ struct BrowserRootShellControls: View {
     private var revealMetrics: BrowserCollapsedSidebarRevealMetrics {
         .resolve(interactionCapabilities)
     }
+
+    // MARK: - Actions - Sidebar
 
     private func collapsedSidebarHoverChanged(_ isHovering: Bool) {
         guard isHovering, model.isWindowFocused else { return }

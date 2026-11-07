@@ -6,8 +6,14 @@ import AppKit
 /// Hover is the pointer resting on the region, held open for as long as
 /// something the sidebar opened is still in use: a menu started inside it, a
 /// popover or sheet it presented, an extension popup that took the keyboard
-/// from its window, or a field of its own being typed into. A hold only keeps a
-/// hover the pointer started; it never reveals the sidebar on its own.
+/// from its window, a field of its own being typed into, or a drag of its edge
+/// that resizes it. A hold only keeps a hover the pointer started; it never
+/// reveals the sidebar on its own.
+///
+/// Reaching for the edge of a window that stands away from the screen's edge
+/// often carries the pointer out of the window. Out past the sidebar's side of
+/// the window, the pointer keeps the sidebar out as the exit margin does; back
+/// over the page, the hover lets go after the hold's usual delay.
 ///
 /// Menu tracking can leave an exit queued after the pointer has returned to
 /// the sidebar. Sample the current position instead of trusting that event.
@@ -38,6 +44,16 @@ final class BrowserSidebarHoverTrackingView: NSView {
         }
     }
 
+    /// Whether the sidebar's edge is being dragged to resize it. The drag
+    /// carries the pointer past the region as the sidebar follows it, and
+    /// holds the hover until the pointer lets go.
+    var isResizing = false {
+        didSet {
+            guard oldValue, !isResizing else { return }
+            beginHoldRelease()
+        }
+    }
+
     private let notificationCenter: NotificationCenter
     private let pointerLocation: @MainActor () -> NSPoint
     private let heldPopovers = NSHashTable<NSPopover>.weakObjects()
@@ -51,6 +67,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
     private var holdReleaseRevision = 0
     private var isReleasingHold = false
     private var lastReportedHover: Bool?
+    /// Samples the pointer while it is out of the window, where no tracking
+    /// area reports it, until it comes back.
+    private var outsideWatch: Task<Void, Never>?
 
     /// Whether the pointer is on the region, counting the exit margin only for
     /// a hover already under way: the margin keeps the sidebar out, but never
@@ -64,16 +83,39 @@ final class BrowserSidebarHoverTrackingView: NSView {
     }
 
     /// Whether the pointer that revealed the sidebar has gone somewhere a
-    /// slide-in cannot explain: out of the window, or into another app. It
-    /// can get there before the region first reports it inside, and nothing
-    /// in the region reports an exit it never saw an entry for.
+    /// slide-in cannot explain: out of the window on the page's side, or into
+    /// another app. It can get there before the region first reports it
+    /// inside, and nothing in the region reports an exit it never saw an entry
+    /// for.
     private var hasRevealingPointerLeft: Bool {
         guard isRevealedByPointer, let window else { return false }
-        return !window.isKeyWindow || !window.frame.contains(pointerLocation())
+        return !window.isKeyWindow || (!window.frame.contains(pointerLocation()) && !isPointerBeyondSidebarSide)
+    }
+
+    /// Whether the pointer is out of the key window on a floating card's side:
+    /// past the window's edge there, or above or below the card. Only a
+    /// floating card, the region with an exit margin, comes and goes with
+    /// the pointer.
+    private var isPointerBeyondSidebarSide: Bool {
+        guard exitMargin > 0, let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
+        let screenLocation = pointerLocation()
+        guard !window.frame.contains(screenLocation) else { return false }
+        let location = convert(window.convertPoint(fromScreen: screenLocation), from: nil)
+        let sidebar = bounds.divided(atDistance: exitMargin, from: exitEdge).remainder
+        return exitEdge == .maxXEdge ? location.x < sidebar.maxX : location.x > sidebar.minX
+    }
+
+    /// Whether the pointer out past the sidebar's side of the window keeps the
+    /// sidebar out: for a hover under way, or for the pointer that has just
+    /// brought it out, as with the exit margin, never to bring it out.
+    private var isPointerHeldOutside: Bool {
+        (lastReportedHover == true || (lastReportedHover == nil && isRevealedByPointer))
+            && isPointerBeyondSidebarSide
     }
 
     private var isHeldOpen: Bool {
-        !trackingMenus.isEmpty
+        isResizing
+            || !trackingMenus.isEmpty
             || !heldPopovers.allObjects.isEmpty
             || !heldWindows.allObjects.isEmpty
             || isReleasingHold
@@ -124,6 +166,10 @@ final class BrowserSidebarHoverTrackingView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    isolated deinit {
+        outsideWatch?.cancel()
+    }
+
     // MARK: - Actions - Hover
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -135,6 +181,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
         notificationCenter.removeObserver(self)
         firstResponderObservation = nil
         trackingMenus.removeAll()
+        stopWatchingOutside()
         heldPopovers.removeAllObjects()
         heldWindows.removeAllObjects()
         holdReleaseRevision += 1
@@ -203,14 +250,42 @@ final class BrowserSidebarHoverTrackingView: NSView {
     func refreshPointerHover() {
         guard window != nil else { return }
         releaseWindowsNoLongerShown()
-        let isHovering = isPointerInside || (lastReportedHover == true && isHeldOpen)
+        let isOutside = isPointerHeldOutside
+        followPointer(outside: isOutside)
+        let isHovering = isPointerInside || isOutside || (lastReportedHover == true && isHeldOpen)
         // A newly revealed sidebar starts offscreen while it slides in.
         // Absence before its first entry is not a pointer exit, unless the
-        // pointer that revealed it has already left the window.
+        // pointer that revealed it has already left the window on the page's
+        // side.
         guard isHovering || lastReportedHover != nil || hasRevealingPointerLeft else { return }
         guard isHovering != lastReportedHover else { return }
         lastReportedHover = isHovering
         onHoverChange(isHovering)
+    }
+
+    /// Watches for the pointer's return while it is out past the sidebar's
+    /// side of the window. Once it is back, the hover lets go after the
+    /// hold's usual delay, as when any other hold ends.
+    private func followPointer(outside isOutside: Bool) {
+        if isOutside {
+            guard outsideWatch == nil else { return }
+            // The watch ends with the view as well as when cancelled.
+            outsideWatch = Task { @MainActor [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(33))
+                    guard let self, !Task.isCancelled else { return }
+                    refreshPointerHover()
+                }
+            }
+        } else if outsideWatch != nil {
+            stopWatchingOutside()
+            beginHoldRelease()
+        }
+    }
+
+    private func stopWatchingOutside() {
+        outsideWatch?.cancel()
+        outsideWatch = nil
     }
 
     private func isPointer(in rect: NSRect) -> Bool {
