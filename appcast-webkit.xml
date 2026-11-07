@@ -6,48 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.181</title>
-            <pubDate>Thu, 05 Nov 2026 17:29:26 +0000</pubDate>
+            <title>0.8.193</title>
+            <pubDate>Sat, 07 Nov 2026 15:28:55 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1508</sparkle:version>
-            <sparkle:shortVersionString>0.8.181</sparkle:shortVersionString>
+            <sparkle:version>1561</sparkle:version>
+            <sparkle:shortVersionString>0.8.193</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 29 user-facing changes.
+Showing the 12 most recent highlights from 23 user-facing changes.
 
 ### New
 
-- Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts.
-- When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings › Shortcuts, and switching Spaces now always reaches Crest.
+- On Mac, a notice at the top of the window names each download as it finishes.
+- On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings › Appearance › Address field.
+- On Mac, Crest appears in Finder’s Open With menu for PDFs, without becoming your default PDF app.
 
 ### Improved
 
-- A shortcut can be a function key on its own, such as F12 for Show Web Inspector.
+- Crest stays more responsive with many Spaces and extensions: pages scroll smoothly while extensions such as ad blockers update their badge counts, and loading a page saves the session less often.
+- On Mac, with Show sidebar on hover in full screen turned on, a full-screen page stays full screen when you swipe to another Space, and takes over the window again when you swipe back.
 
 ### Fixed
 
-- An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs.
-- On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link.
-- Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them.
-- Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started.
-- Pressing Command-L again closes the address field it opened, and another shortcut such as Command-S or Command-W closes the open address field or new tab prompt before it runs.
-- New Quick Window and Open in Quick Window from the command palette work in a private window, opening a private Quick Window as the shortcut does.
-- Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in.
-- Recording a shortcut with Shift and a number key, such as Shift-Command-2, now records the number on every keyboard layout, so Settings catches a clash with Crest's own Shift-number shortcuts. Shortcuts recorded this way before are carried over.
-- A long sidebar with many folders scrolls smoothly.
+- On Mac, clicking a Space in Settings opens its page even when the pointer moves a little during the click, instead of sometimes doing nothing or opening it late.
+- New windows open at the sidebar width you last chose, rather than the default width.
+- Tapping just below the sidebar’s Show more tabs arrow scrolls the list instead of opening the tab behind it, and VoiceOver names the arrow on iPhone and iPad.
+- Clear Unpinned Tabs and Shift-Command-K clear the Space’s open tabs, as the sidebar’s Clear does, however recently they were used.
+- The inline address completion and the search provider chip in the command bar no longer flicker while you type.
+- Quitting after a session save failed tries that save again, instead of waiting for it to time out.
+- On iPhone and iPad, dropping a dragged tab on a Space icon in the sidebar moves it to that Space.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/dce2aa95ab5e59955c0fd454216b639614567aaa...d2a5b66636085effddfd2f2e98ebaccee64357ab) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.181-2026-11-05-1508-r508.1/Installer-Crest-0.8.181-nightly-2026-11-05-d2a5b66-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/d2a5b66636085effddfd2f2e98ebaccee64357ab...b989841175a007105be19558b472a190914b9dc6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.193-2026-11-07-1561-r561.1/Installer-Crest-0.8.193-nightly-2026-11-07-b989841-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.181-2026-11-05-1508-r508.1/Installer-Crest-0.8.181-nightly-2026-11-05-d2a5b66-arm64.dmg" length="216886418" type="application/octet-stream" sparkle:edSignature="IJaqeegbradDzjH5oGql6sqfwxkYuMOxaHtW5KUL4zuuh6h4lM/5v5pAH7Uyk1+zDXJlPxDQkeWkoqopVeoTAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.193-2026-11-07-1561-r561.1/Installer-Crest-0.8.193-nightly-2026-11-07-b989841-arm64.dmg" length="216932498" type="application/octet-stream" sparkle:edSignature="yNYjgpgTLt22E4cxHGeqT6QhkJsIARvqjj4b9EUBfQUURdZ4r7ueRuB98FnXJnvDmLTxU8hQK5SeHkDuihJnAA=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -133,6 +133,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: y8qo8ojY8QC6K0xo57ThDvWil6B8M4FqxDEGFw1ZbBzYk/r9ycOg9XCc5BIXQGPWM1RI7WjjAuLx2BoUKf2jBg==
-length: 10072
+edSignature: 3Yd1AuXF5Byw76soSRfeIpYVURK/FyyPeoD/JnpwndB8I2vXrdCH6val+IZrhZdM/Di79GlGLRJL0y3JeQdeBA==
+length: 9844
 -->
