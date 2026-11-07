@@ -6,45 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.193</title>
-            <pubDate>Fri, 06 Nov 2026 21:41:45 +0000</pubDate>
+            <title>0.8.194</title>
+            <pubDate>Sat, 07 Nov 2026 17:14:07 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1550</sparkle:version>
-            <sparkle:shortVersionString>0.8.193</sparkle:shortVersionString>
+            <sparkle:version>1562</sparkle:version>
+            <sparkle:shortVersionString>0.8.194</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- On Mac, a notice at the top of the window names each download as it finishes.
-- On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings › Appearance › Address field.
-- On Mac, Crest appears in Finder’s Open With menu for PDFs, without becoming your default PDF app.
-
-### Improved
-
-- Crest stays more responsive with many Spaces and extensions: pages scroll smoothly while extensions such as ad blockers update their badge counts, and loading a page saves the session less often.
-- On Mac, with Show sidebar on hover in full screen turned on, a full-screen page stays full screen when you swipe to another Space, and takes over the window again when you swipe back.
-
 ### Fixed
 
-- New windows open at the sidebar width you last chose, rather than the default width.
-- Tapping just below the sidebar’s Show more tabs arrow scrolls the list instead of opening the tab behind it, and VoiceOver names the arrow on iPhone and iPad.
-- Clear Unpinned Tabs and Shift-Command-K clear the Space’s open tabs, as the sidebar’s Clear does, however recently they were used.
-- The inline address completion and the search provider chip in the command bar no longer flicker while you type.
-- Quitting after a session save failed tries that save again, instead of waiting for it to time out.
-- On iPhone and iPad, dropping a dragged tab on a Space icon in the sidebar moves it to that Space.
+- Links on Facebook, and other links with brackets in their address, open in Peek instead of a blank page or an error page.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/71d883d057bcb64be40229a87ddef8c1cea7f16e...b989841175a007105be19558b472a190914b9dc6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.193-2026-11-06-1550-r550.1/Installer-Crest-0.8.193-development-2026-11-06-b989841-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b989841175a007105be19558b472a190914b9dc6...3fb2f3a3041b0ec3265642ee9bc0329aef677f9b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.194-2026-11-07-1562-r562.1/Installer-Crest-0.8.194-development-2026-11-07-3fb2f3a-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.193-2026-11-06-1550-r550.1/Installer-Crest-0.8.193-development-2026-11-06-b989841-arm64.dmg" length="216963738" type="application/octet-stream" sparkle:edSignature="qbsfv2vCg+MMbupuvZBwYss/vDjTCHStjPDEUsG9etz14OkqHJ5lHKUcLiOIWP6cQ+YuYhSvQ+QcD9c3JX5CBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.194-2026-11-07-1562-r562.1/Installer-Crest-0.8.194-development-2026-11-07-3fb2f3a-arm64.dmg" length="216966299" type="application/octet-stream" sparkle:edSignature="mQzHtvTvgAA8yF1l2MIShJK1g3nOsXyPvMo6pypU6pFWF8voTRWC3J94tPGtbMQcPkVMHVfqHYG43MiVzIe8Aw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -76,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 5ypn0aCTQjTtMLivcrvn+YglpiWFUO+kbOG6/vfRIqeauwtvwfhTYgI7TOTh9woXNsaG2uaGbiSz/2jjzgwWAw==
-length: 5323
+edSignature: sOg0PyURZid5uoCAHfKrPyEiyeQRBqppxfDT/pQOFaqBzTlKYBMVCyz+RvRyRykpieC/f09EycYc5CosvGvqCg==
+length: 4020
 -->
