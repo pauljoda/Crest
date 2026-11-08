@@ -6,48 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.193</title>
-            <pubDate>Sat, 07 Nov 2026 15:28:55 +0000</pubDate>
+            <title>0.8.195</title>
+            <pubDate>Sun, 08 Nov 2026 15:53:48 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1561</sparkle:version>
-            <sparkle:shortVersionString>0.8.193</sparkle:shortVersionString>
+            <sparkle:version>1565</sparkle:version>
+            <sparkle:shortVersionString>0.8.195</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 23 user-facing changes.
-
-### New
-
-- On Mac, a notice at the top of the window names each download as it finishes.
-- On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings › Appearance › Address field.
-- On Mac, Crest appears in Finder’s Open With menu for PDFs, without becoming your default PDF app.
-
 ### Improved
 
-- Crest stays more responsive with many Spaces and extensions: pages scroll smoothly while extensions such as ad blockers update their badge counts, and loading a page saves the session less often.
-- On Mac, with Show sidebar on hover in full screen turned on, a full-screen page stays full screen when you swipe to another Space, and takes over the window again when you swipe back.
+- On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn’t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window’s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge.
 
 ### Fixed
 
-- On Mac, clicking a Space in Settings opens its page even when the pointer moves a little during the click, instead of sometimes doing nothing or opening it late.
-- New windows open at the sidebar width you last chose, rather than the default width.
-- Tapping just below the sidebar’s Show more tabs arrow scrolls the list instead of opening the tab behind it, and VoiceOver names the arrow on iPhone and iPad.
-- Clear Unpinned Tabs and Shift-Command-K clear the Space’s open tabs, as the sidebar’s Clear does, however recently they were used.
-- The inline address completion and the search provider chip in the command bar no longer flicker while you type.
-- Quitting after a session save failed tries that save again, instead of waiting for it to time out.
-- On iPhone and iPad, dropping a dragged tab on a Space icon in the sidebar moves it to that Space.
+- Links on Facebook, and other links with brackets in their address, open in Peek instead of a blank page or an error page.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/d2a5b66636085effddfd2f2e98ebaccee64357ab...b989841175a007105be19558b472a190914b9dc6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.193-2026-11-07-1561-r561.1/Installer-Crest-0.8.193-nightly-2026-11-07-b989841-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b989841175a007105be19558b472a190914b9dc6...e16a309b8e8893a88a64816cbad5610285e67138) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.195-2026-11-08-1565-r565.1/Installer-Crest-0.8.195-nightly-2026-11-08-e16a309-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.193-2026-11-07-1561-r561.1/Installer-Crest-0.8.193-nightly-2026-11-07-b989841-arm64.dmg" length="216932498" type="application/octet-stream" sparkle:edSignature="yNYjgpgTLt22E4cxHGeqT6QhkJsIARvqjj4b9EUBfQUURdZ4r7ueRuB98FnXJnvDmLTxU8hQK5SeHkDuihJnAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.195-2026-11-08-1565-r565.1/Installer-Crest-0.8.195-nightly-2026-11-08-e16a309-arm64.dmg" length="216973459" type="application/octet-stream" sparkle:edSignature="5/5O+rC3UIVxhfipI4L/TgJGeKOcIfnsLob32+ZwVfAlN2wR+iCk0Oe1lzXHzm/r3j1HL1OG9VaxsSO2Q1xDAg=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -133,6 +118,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 3Yd1AuXF5Byw76soSRfeIpYVURK/FyyPeoD/JnpwndB8I2vXrdCH6val+IZrhZdM/Di79GlGLRJL0y3JeQdeBA==
-length: 9844
+edSignature: +IwkKjampCP7nOrwvJxvYQEVEfrnLohN0oGVkKC6uGVgmL8EaKgZnq7DjiNb/v9PNuw70DnSub88NwhIqjkrAw==
+length: 8691
 -->
