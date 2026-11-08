@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "sidebar-slides-as-one",
+    "development": "built-in-ad-blocking",
     "nightly": "sidebar-slides-as-one"
   }
 }
