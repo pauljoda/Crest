@@ -13,7 +13,7 @@
   },
   "chrome/browser/ui/BUILD.gn": {
     "before": "035033312cf59d29452cc0f80b8b0575034742ad0d3c6625856e8441aad243aa",
-    "after": "5650f9c6a16f8683972eec798fe1932c47b361e591f8722d314dca1d427602fd"
+    "after": "acaacfb4cb694e0f3b2ff8cf1ca1668226192644f7beebd1b67c32f429546be8"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "11d896864e9a2616e3cf7d8c2b17d3d2b1669df923d07c22b5d8b2d740d7344c",
@@ -93,7 +93,7 @@
   },
   "chrome/browser/chrome_content_browser_client.cc": {
     "before": "b17feacbe58f8d000c40c8eb3b1d6ac8b98a2dd734466e9eee091de951f98522",
-    "after": "e06154790cff29b7fea32c53883720e2343d785050c5637b416eeb4042446a5f"
+    "after": "3864e513180f387f6f64e482202256a0645e1d054ac12ce756e31bf3b32f3bf1"
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc": {
     "before": "3da36864557eaa878b73c7133347c7416ba492e0fa20805940e1f7d5145b673c",
@@ -518,5 +518,13 @@
   "content/browser/web_contents/web_drag_dest_mac.h": {
     "before": "9446cf9e2f40ba77e1fcff8ee74ba632e32d8bd21286d4cc0a847a590a975c2c",
     "after": "86c3004fd8c3bc8da412efaa7a9ba6f7396eab53065d3bb072137ce79efbf1a7"
+  },
+  "chrome/renderer/BUILD.gn": {
+    "before": "8e279cf4d793fa758d9ee67ff84ae311d02abd65e39cdad35c46440956583d05",
+    "after": "bed9b01bf1ed73157610e756ce68db71b45ffb537d5415ba126314acbf62eadf"
+  },
+  "chrome/renderer/chrome_content_renderer_client.cc": {
+    "before": "f6bca3a5f240d6c30e2f14f0f4f8b616173d7f2d481dbcc02aa96c70acef2460",
+    "after": "4f9d6c6f1f40d51c8384bdc5fa628450f8791f4d1a295f4bd8804c63de991338"
   }
 }

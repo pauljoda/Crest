@@ -2,7 +2,7 @@
 title: Content blocking and site permissions
 description: Control ads, trackers, camera, microphone, pop-ups, downloads, and external apps per Space.
 slug: /content-blocking-and-site-permissions
-keywords: [content blocking, ads, trackers, permissions, camera, microphone, pop-ups, downloads]
+keywords: [content blocking, ads, trackers, filter lists, block element, permissions, camera, microphone, pop-ups, downloads]
 ---
 
 # Content blocking and site permissions
@@ -11,13 +11,15 @@ Privacy decisions belong to the current Space. A permission granted to a work ac
 
 ## Content blocking
 
-Crest includes a small built-in ad and tracker ruleset that can be enabled or disabled per Space. It uses WebKit, so it applies on iPhone, iPad, and WebKit pages on Mac. Use the site controls or assign **Toggle Content Blocking** a shortcut when a site needs a quick exception.
+Crest blocks ads and trackers with the filter lists that ad blockers use: EasyList, EasyPrivacy and uBlock Origin's lists, plus a regional list for your language. It applies on iPhone, iPad and Mac, to Chromium and WebKit pages alike. Blocked ads leave no empty boxes behind, and floating video players are hidden. Like uBlock Origin, Crest also runs the small fixes the lists include for sites that work around ad blockers. The lists download from their maintainers and stay up to date on their own.
 
-To change it for a Space, turn **Block known ads and trackers** on or off in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space.
+To turn blocking on or off for a Space, use **Block ads and trackers** in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space. The same page lists the filter lists you can turn on or off, such as cookie notices and other annoyances. Under **Your Lists**, add any other list by its address; under **My Filters**, write your own rules, one per line, in the lists' syntax. Lists and your filters apply to every Space that blocks.
 
-Chromium pages on Mac have no built-in blocking. Install a content-blocking extension, such as uBlock Origin Lite, in each Space that needs it. Extensions do not run on WebKit pages.
+To hide something the lists miss, choose **Block Element** from the page's actions, or on Mac from the **Page** menu or by right-clicking it. Point at the element, or tap it. The bar at the bottom shows what you picked; use its arrows to choose the larger element around it or the smaller one inside, then choose **Block**. Crest adds the rule to My Filters for that site. To bring back what you blocked on a site, choose **Show Blocked Elements** from the same place.
 
-For broader filter-list coverage, install a content-blocking extension in the Space that needs it. Built-in protection and an extension can have different rule coverage, so check which layer is active before assuming the page itself is broken.
+When a site doesn’t work with blocking, choose **Turn Off Blocking on** the site from the page’s actions, or assign **Toggle Content Blocking** a shortcut. The site stays unblocked in that Space until you turn blocking on again from the same place or from the Space’s privacy settings.
+
+On Chromium pages, a content-blocking extension you install works alongside the lists. Extensions do not run on WebKit pages.
 
 ## Malicious sites and downloads
 

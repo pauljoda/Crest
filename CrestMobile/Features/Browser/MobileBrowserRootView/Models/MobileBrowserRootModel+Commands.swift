@@ -23,6 +23,9 @@ extension MobileBrowserRootModel {
         let contentBlockingAction = pageActions.map {
             MobileContentBlockingAction(browser: browser, pages: $0)
         }
+        let blockedElements = pageActions.map {
+            BrowserBlockedElements(core: browser.core, pageURL: $0.activePage?.webView.url)
+        }
         return MobileBrowserCommandContext(
             isPrivateBrowsing: browser.isPrivateBrowsing,
             canGoBack: pageActions?.canGoBack == true,
@@ -52,8 +55,7 @@ extension MobileBrowserRootModel {
             canToggleTranslationToolbar: usesPageToolbars && pageActions?.isAvailable == true
                 && pageActions?.readerModeState.isActive != true,
             isTranslationToolbarVisible: pageActions?.activePage?.translation.showsToolbar == true,
-            contentBlockingActionTitle: ContentBlockingPolicy.switchTitle(
-                for: browser.shownSpace?.settings.browsingPreferences.contentBlocking),
+            contentBlockingActionTitle: contentBlockingAction?.title ?? "Turn Off Blocking on This Site",
             openNewTab: openNewTab,
             togglePrivateBrowsing: togglePrivateBrowsing,
             openLocation: openLocation,
@@ -178,6 +180,18 @@ extension MobileBrowserRootModel {
             toggleContentBlocking: {
                 guard let contentBlockingAction else { return }
                 _ = await contentBlockingAction.perform()
+            },
+            pickElementToBlock: {
+                guard let page = pageActions?.activePage else { return }
+                Task { await page.pickElementToBlock() }
+            },
+            hasBlockedElements: blockedElements?.exist == true,
+            showBlockedElements: {
+                guard let pageActions, let blockedElements else { return }
+                Task {
+                    await blockedElements.show(
+                        refresh: { await pageActions.reloadContentBlocking() }, reload: { pageActions.reload() })
+                }
             },
             presentFind: { pageActions?.presentFind() },
             zoomIn: { pageActions?.zoomIn() },

@@ -30,6 +30,8 @@ struct CrestMobileApp: App {
 private final class BrowserMobileApplication {
     let browser: BrowserStore
     let cloudSync: BrowserCloudSyncController
+    /// Keeps the filter lists content blocking uses up to date.
+    let filterLists: BrowserFilterListUpdater
     let onboardingProgress: BrowserOnboardingProgressStore
     let onboardingCoordinator: BrowserOnboardingCoordinator
     let pages: MobileBrowserPageStore
@@ -131,6 +133,7 @@ private final class BrowserMobileApplication {
 
         self.browser = browser
         self.cloudSync = cloudSync
+        filterLists = BrowserFilterListUpdater(core: core)
         // The device store keeps whether setup was completed here, carried
         // once from what an older release kept in its defaults.
         _ = try? core.send(AdoptSetupCompletion(completed: legacyDevice.setupCompleted))
@@ -210,6 +213,7 @@ private final class BrowserMobileApplication {
         )
         .task {
             self.browser.family.configureSpaceDataCleanup(self.pageStoreRegistry, from: self.browser)
+            self.filterLists.start()
             await self.cloudSync.start()
         }
     }

@@ -20,6 +20,8 @@ PACKAGE_RESOLVED_PATH = (
     / "Package.resolved"
 )
 PACKAGE_LOCK_PATH = REPOSITORY_ROOT / "HelpCenter" / "package-lock.json"
+CARGO_LOCK_PATH = REPOSITORY_ROOT / "CrestCore" / "native" / "ContentFilter" / "Cargo.lock"
+CONTENT_FILTER_NOTICES_PATH = REPOSITORY_ROOT / "ThirdParty" / "ContentFilter-LICENSES.txt"
 WORKFLOW_DIRECTORY = REPOSITORY_ROOT / ".github" / "workflows"
 
 ALLOWED_NPM_LICENSES = {
@@ -93,6 +95,46 @@ def audit_bundled_components(catalog: dict) -> int:
     return len(catalog.get("bundledComponents", []))
 
 
+# Each license expression a content filter crate may declare. Every one is
+# permissive or, like Crest itself, MPL-2.0.
+ALLOWED_CRATE_LICENSES = {
+    "(MIT OR Apache-2.0) AND Unicode-3.0",
+    "Apache-2.0",
+    "Apache-2.0 OR MIT",
+    "MIT",
+    "MIT OR Apache-2.0",
+    "MIT/Apache-2.0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense OR MIT",
+}
+
+
+def audit_content_filter_crates(catalog: dict) -> int:
+    """The crates Cargo.lock resolves are the reviewed ones, each with an
+    allowed license and its text in the content filter's notices."""
+    locked = re.findall(r'^\[\[package\]\]\nname = "([^"]+)"\nversion = "([^"]+)"',
+                        CARGO_LOCK_PATH.read_text(), re.M)
+    actual = {f"{name} {version}" for name, version in locked if name != "crest-content-filter"}
+    expected = catalog["contentFilterCrates"]
+    if actual != set(expected):
+        raise RuntimeError(
+            "Content filter crate inventory changed; update the license catalog and run "
+            "Scripts/control-plane/content_filter.py notices: "
+            f"added {sorted(actual - set(expected))}, removed {sorted(set(expected) - actual)}."
+        )
+    notices = CONTENT_FILTER_NOTICES_PATH.read_text()
+    failures = [
+        f"{crate}: {license_name}" for crate, license_name in expected.items()
+        if license_name not in ALLOWED_CRATE_LICENSES or f"{crate} (" not in notices
+    ]
+    if failures:
+        raise RuntimeError(
+            "Content filter crates with an unreviewed license or no notice:\n  " + "\n  ".join(sorted(failures))
+        )
+    return len(actual)
+
+
 def audit_npm_packages(catalog: dict) -> int:
     package_lock = load_json(PACKAGE_LOCK_PATH)
     packages = package_lock.get("packages", {})
@@ -158,6 +200,7 @@ def main() -> int:
         swift_count = audit_swift_packages(catalog)
         data_count = audit_bundled_data(catalog)
         component_count = audit_bundled_components(catalog)
+        crate_count = audit_content_filter_crates(catalog)
         npm_count = audit_npm_packages(catalog)
         action_count = audit_workflow_actions(catalog)
     except RuntimeError as error:
@@ -166,7 +209,8 @@ def main() -> int:
 
     print(
         f"License audit passed: {swift_count} runtime Swift package, "
-        f"{component_count} bundled components, {data_count} bundled data set, "
+        f"{component_count} bundled components, {crate_count} content filter crates, "
+        f"{data_count} bundled data set, "
         f"{npm_count} Help Center packages, and "
         f"{action_count} workflow action repositories are declared and reviewed."
     )

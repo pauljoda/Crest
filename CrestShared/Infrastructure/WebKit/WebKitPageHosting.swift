@@ -26,4 +26,7 @@ protocol WebKitPageHosting: BrowserPromptPresenting {
     /// the opener's handler, which hands it to the popup's page through
     /// `WebKitEngineBinding.page(showing:)`.
     func receiveCredentialMessage(_ message: WKScriptMessage)
+    /// Answers a message from the cosmetic bridge in this page's web view,
+    /// handed on the same way.
+    func receiveCosmeticFilterMessage(_ message: WKScriptMessage)
 }

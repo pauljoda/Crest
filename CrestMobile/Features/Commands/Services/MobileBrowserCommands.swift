@@ -126,6 +126,8 @@ struct MobileBrowserCommands: Commands {
         CommandMenu("Page") {
             button(.toggleReaderMode)
             button(.toggleContentBlocking)
+            button(.blockElement)
+            button(.showBlockedElements)
 
             Divider()
 

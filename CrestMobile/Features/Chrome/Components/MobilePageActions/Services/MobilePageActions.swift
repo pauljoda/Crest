@@ -41,4 +41,7 @@ protocol MobilePageActions {
     func exportWebArchive(to destination: MobileBrowserFileExportDestination)
     /// Brings every resident page in line with its Space's content blocking.
     func reconcileContentBlocking() async
+    /// Puts the content rules the core converted last in force on every
+    /// resident page.
+    func reloadContentBlocking() async
 }

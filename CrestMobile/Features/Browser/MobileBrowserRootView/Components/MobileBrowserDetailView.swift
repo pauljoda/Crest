@@ -199,6 +199,25 @@ struct MobileBrowserDetailView: View {
                 )
             }
         }
+        .overlay(alignment: .bottom) {
+            if let page, page.elementPicker.isActive {
+                BrowserElementPickerBar(picker: page.elementPicker)
+                    .padding(
+                        .horizontal,
+                        isCompact
+                            ? MobileBrowserChromeLayout.compactFindHorizontalPadding
+                            : MobileBrowserChromeLayout.regularFindHorizontalPadding
+                    )
+                    .padding(
+                        .bottom,
+                        isCompact && showsCompactToolbar
+                            ? compactBottomChromeHeight + MobileBrowserChromeLayout.compactFindToolbarGap
+                            : MobileBrowserChromeLayout.findFallbackBottomPadding
+                    )
+                    .zIndex(2)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .toolbar {
             if isCompact, showsCompactToolbar, controlPlacement.movesControlsToToolbar {
                 compactToolbarItems(pageActions: pageActions)
@@ -207,6 +226,10 @@ struct MobileBrowserDetailView: View {
         .animation(
             CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
             value: page?.isFindPresented
+        )
+        .animation(
+            CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
+            value: page?.elementPicker.isActive
         )
         .animation(
             CrestMotion.toolbar.unlessReducingMotion(reduceMotion),

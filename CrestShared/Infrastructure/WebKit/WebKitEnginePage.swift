@@ -18,6 +18,8 @@ final class WebKitEnginePage: EngineHostedPage {
     let engine: BrowserWebKitPageEngine
     /// The content rules the page was built with.
     let contentRuleLists: [WKContentRuleList]
+    /// Whether the page's Space blocks at a URL's site, which the core answers.
+    let blocksSite: @MainActor (URL?) -> Bool
     /// False when the page shares the user content controller of the page its
     /// configuration came from, which every popup does: WebKit copies the
     /// opener's configuration and the copy keeps the same controller.
@@ -52,6 +54,7 @@ final class WebKitEnginePage: EngineHostedPage {
 
     init(
         id: UUID, profileID: UUID, webView: WKWebView, contentRuleLists: [WKContentRuleList],
+        blocksSite: @escaping @MainActor (URL?) -> Bool = { _ in true },
         ownsUserContentController: Bool, isPrivate: Bool = false, restoring: PageRestoreState? = nil
     ) {
         self.id = id
@@ -59,6 +62,7 @@ final class WebKitEnginePage: EngineHostedPage {
         self.webView = webView
         engine = BrowserWebKitPageEngine(webView: webView)
         self.contentRuleLists = contentRuleLists
+        self.blocksSite = blocksSite
         self.ownsUserContentController = ownsUserContentController
         self.isPrivate = isPrivate
         self.restoring = restoring

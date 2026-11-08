@@ -5193,6 +5193,10 @@
     "sidebar-slides-as-one": {
       "category": "improved",
       "message": "On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn’t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window’s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge."
+    },
+    "built-in-ad-blocking": {
+      "category": "new",
+      "message": "Crest blocks ads and trackers on every page, on Mac, iPhone and iPad, with EasyList, EasyPrivacy, uBlock Origin’s lists and a list for your language, which stay up to date on their own. Blocked ads leave no empty boxes, floating video players are hidden, and the lists’ fixes for sites that fight ad blockers run too. Add your own lists or filters in a Space’s privacy settings, choose Block Element to hide anything the lists miss, and turn blocking off for a site from the page’s actions."
     }
   }
 }

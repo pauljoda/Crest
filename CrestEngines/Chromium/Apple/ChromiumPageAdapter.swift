@@ -24,11 +24,18 @@
             handle: { [weak self] event in self?.page?.handleLinkDrag(event) })
         private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =
             ChromiumPictureInPicturePageController(page: enginePage)
-        // Chromium presents favicons and its error pages itself; reader and
-        // content blocking are unavailable.
+        // Chromium presents favicons and its error pages itself; reader is
+        // unavailable.
         var readerModeSession: BrowserReaderModeSession? { nil }
         var faviconSession: BrowserFaviconSession? { nil }
-        var isContentBlockingActive: Bool { false }
+        /// The engine's request filter blocks for the document the page shows
+        /// when the core says its Space blocks on that site.
+        var isContentBlockingActive: Bool {
+            guard let page, let url = page.live.documentURL, let origin = SiteOrigin(url: url),
+                let core = page.host?.browser.core
+            else { return false }
+            return (try? core.query(ContentBlockingApplies(spaceID: page.spaceID, origin: origin))) == true
+        }
         /// Chromium's binding reports the page's navigations to the core itself.
         var reporter: EnginePageReporter? { nil }
         /// Fills go through the engine's content scripting.

@@ -20,6 +20,8 @@ struct BrowserWebPageSurface: View {
     /// knows it; the sharing bars lead there.
     var goToSharingCounterpart: (() -> Void)? = nil
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// The agent using the page's tab now, when one does.
     private var agent: AgentSessionState? {
         guard let tabID = browser.core.state.pages[page.corePage.id]?.tabID else { return nil }
@@ -72,16 +74,24 @@ struct BrowserWebPageSurface: View {
                     .zIndex(BrowserWebPageSurfaceMetrics.agentPointerZIndex)
             }
 
-            if let agent {
-                BrowserAgentPageBar(session: agent) {
-                    if let tabID = browser.core.state.pages[page.corePage.id]?.tabID {
-                        _ = try? browser.core.send(StopAgentTab(tabID: tabID))
-                    }
+            // The bars along the page's foot stack, the picker's above an
+            // agent's.
+            VStack(spacing: BrowserWebPageSurfaceMetrics.overlayPadding) {
+                if page.elementPicker.isActive {
+                    BrowserElementPickerBar(picker: page.elementPicker)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .transition(.opacity)
+                if let agent {
+                    BrowserAgentPageBar(session: agent) {
+                        if let tabID = browser.core.state.pages[page.corePage.id]?.tabID {
+                            _ = try? browser.core.send(StopAgentTab(tabID: tabID))
+                        }
+                    }
+                    .transition(.opacity)
+                }
             }
+            .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
 
             BrowserWebPageFailureOverlay(
                 page: page,
@@ -123,6 +133,7 @@ struct BrowserWebPageSurface: View {
                     .zIndex(BrowserWebPageSurfaceMetrics.feedbackZIndex)
             }
         }
+        .animation(reduceMotion ? nil : CrestMotion.step, value: page.elementPicker.isActive)
     }
 
     /// The questions the find bar asks, bound to this surface's page.

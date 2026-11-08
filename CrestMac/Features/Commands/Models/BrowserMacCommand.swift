@@ -76,8 +76,17 @@ struct BrowserMacCommand {
         title: { ($0.shownPage?.readerModeState ?? .unavailable).actionTitle },
         run: { $0.shownPage?.toggleReaderMode() })
     static let toggleContentBlocking = BrowserMacCommand(
-        .toggleContentBlocking, actsOnPage: true, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
+        .toggleContentBlocking, actsOnPage: true,
+        isAvailable: { $0.supportsEngineCapability(.contentBlocking) && $0.siteContentBlocking != nil },
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
+    static let blockElement = BrowserMacCommand(
+        .blockElement, actsOnPage: true,
+        isAvailable: { $0.supportsEngineCapability(.contentBlocking) && $0.commandPageShowsSite },
+        run: { $0.blockElement() })
+    static let showBlockedElements = BrowserMacCommand(
+        .showBlockedElements, actsOnPage: true,
+        isAvailable: { $0.supportsEngineCapability(.contentBlocking) && $0.commandPageBlockedElements.exist },
+        run: { $0.showBlockedElements() })
     static let findInPage = BrowserMacCommand(
         .findInPage, actsOnPage: true, isAvailable: { $0.canFind },
         run: { $0.presentFind() })
@@ -163,7 +172,9 @@ struct BrowserMacCommand {
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,
-        toggleReaderMode, toggleContentBlocking, findInPage, findNext, findPrevious, zoomIn, zoomOut, actualSize,
+        toggleReaderMode, toggleContentBlocking, blockElement, showBlockedElements,
+        findInPage, findNext, findPrevious, zoomIn, zoomOut,
+        actualSize,
         copyPageLink,
         copyPageLinkAsMarkdown,
         sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,

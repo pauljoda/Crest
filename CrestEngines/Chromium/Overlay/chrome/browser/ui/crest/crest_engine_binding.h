@@ -170,6 +170,12 @@ class EngineBinding {
   // The page that follows `contents`, for the engine's own hooks, or nullptr
   // when no page does.
   EnginePage* PageFor(content::WebContents* contents);
+  // Whether the page `page` blocks ads and trackers in the document at `url`
+  // it is about to show, as the core decides; false when it cannot answer.
+  bool BlocksContent(const engine::Guid& page, const GURL& url);
+  // The scriptlets the page `page` runs in its own world for the document at
+  // `url`, as the core answers them; empty for none or when it cannot answer.
+  std::string InjectedScript(const engine::Guid& page, const GURL& url);
   // The page that opened `contents`: its opener's, or for a window a link
   // opened without one, as target="_blank" does, the page the link was in.
   // nullptr when no page Crest follows opened it.

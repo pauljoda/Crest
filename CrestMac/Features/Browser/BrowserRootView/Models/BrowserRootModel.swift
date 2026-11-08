@@ -151,6 +151,8 @@ extension BrowserRootModel {
         }
         await pages.prepareContentBlocking()
         isPrepared = true
+        // Pages opened while the rules compiled were built without them.
+        await pages.reconcileContentBlocking()
         synchronizeSelection()
     }
 

@@ -9,6 +9,9 @@ import shutil
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import content_filter  # noqa: E402
+
 
 def main():
     repo = Path(__file__).resolve().parents[2]
@@ -35,6 +38,8 @@ def main():
     # Xcode's TARGETNAME otherwise renames every referenced assembly to Crest.
     inherited = {"PATH", "HOME", "TMPDIR", "USER", "LOGNAME", "SHELL", "LANG", "DEVELOPER_DIR",
                  "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy"}
+    # The content filter's own settings, and where Rust lives, reach its fetch.
+    inherited |= {"CREST_CONTENT_FILTER_FROM_SOURCE", "CREST_CONTENT_FILTER_REPOSITORY", "CARGO_HOME", "RUSTUP_HOME"}
     environment = {k: v for k, v in os.environ.items()
                    if k in inherited or k.startswith(("DOTNET_", "NUGET_", "LC_"))}
     environment["SDKROOT"] = subprocess.check_output(
@@ -46,7 +51,13 @@ def main():
     inputs += list((repo / "CrestShared/Infrastructure/Core/Generated").glob("*.swift"))
     inputs += list(core.glob("Directory.*")) + [core / "global.json", Path(__file__).resolve(),
                                                repo / "Scripts/control-plane/package-apple-core.py"]
-    digest = hashlib.sha256(f"{version}:{platform}:{sdk}:{os.environ.get('DEVELOPER_DIR', '')}".encode())
+    # The content filter library the core links: the one its lock names, or
+    # its sources compiled while they differ from the lock.
+    for name in content_filter.INPUTS + (content_filter.LOCK, "Scripts/control-plane/fetch-content-filter.py"):
+        path = repo / name
+        inputs += [p for p in path.rglob("*") if p.is_file()] if path.is_dir() else [path]
+    digest = hashlib.sha256(f"{version}:{platform}:{sdk}:{os.environ.get('DEVELOPER_DIR', '')}:"
+                            f"{os.environ.get('CREST_CONTENT_FILTER_FROM_SOURCE', '')}".encode())
     for path in sorted(inputs):
         digest.update(str(path.relative_to(repo)).encode())
         digest.update(path.read_bytes())

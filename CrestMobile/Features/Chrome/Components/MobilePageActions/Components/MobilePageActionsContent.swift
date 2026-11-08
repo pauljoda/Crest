@@ -94,6 +94,22 @@ struct MobilePageActionsContent: View {
         ) {
             Task { await contentBlockingAction.perform() }
         }
+        .disabled(contentBlockingAction.siteSwitch == nil)
+
+        if let page = pages.activePage, page.canPickElementToBlock {
+            Button(ShortcutCommand.blockElement) {
+                Task { await page.pickElementToBlock() }
+            }
+        }
+
+        if blockedElements.exist {
+            Button(ShortcutCommand.showBlockedElements) {
+                let elements = blockedElements
+                Task {
+                    await elements.show(refresh: { await pages.reloadContentBlocking() }, reload: { pages.reload() })
+                }
+            }
+        }
 
         if let page = pages.activePage {
             sitePermissions(for: page)
@@ -221,11 +237,15 @@ struct MobilePageActionsContent: View {
         }
     }
 
+    private var blockedElements: BrowserBlockedElements {
+        BrowserBlockedElements(core: browser.core, pageURL: pages.activePage?.webView.url)
+    }
+
     private var contentBlockingAction: MobileContentBlockingAction {
         MobileContentBlockingAction(browser: browser, pages: pages)
     }
 
     private var contentBlockingActionTitle: LocalizedStringResource {
-        ContentBlockingPolicy.switchTitle(for: browser.shownSpace?.settings.browsingPreferences.contentBlocking)
+        contentBlockingAction.title
     }
 }
