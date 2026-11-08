@@ -18,7 +18,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var isAddressEditing = false
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
-    @State var historyAssignment: BrowserSpaceRuntimeAssignment?
+    @State var presentedListSheet: MobileBrowserSidebarSpaceSheet?
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
@@ -155,7 +155,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsPresented:
                         navigation.compactSidebarPresentation.showsSidebar,
                     sidebarIsDocked: false,
-                    utilityPresentation: navigation.utilityPresentation
+                    utilityPresentation: navigation.utilityPresentation,
+                    hideSidebar: hideRegularSidebar
                 )
                 .modifier(
                     BrowserPlatformObservedTapModifier(claimsTaps: true) {
@@ -228,7 +229,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 // History and download prompts present from it; the floating
                 // sidebar lives on it too.
                 .sheet(isPresented: settingsSheet(overPage: true)) { settingsSheetContent }
-                .sheet(item: historySheet(overPage: true)) { historySheetContent($0) }
+                .sheet(item: listSheet(overPage: true)) { listSheetContent($0) }
                 .modifier(downloadRiskConfirmation(overPage: true))
             ),
             regular: { layout in
@@ -277,7 +278,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         sidebarIsDocked:
                             navigation.regularSidebarIsDocked,
                         utilityPresentation:
-                            navigation.utilityPresentation
+                            navigation.utilityPresentation,
+                        hideSidebar: hideRegularSidebar
                     )
                     .environment(
                         \.browserSettingsUsesLiveSidebar,
@@ -375,7 +377,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: model.lockedSpaceIDs) {
             model.settings.reconcile()
         }
-        .sheet(item: historySheet(overPage: false)) { historySheetContent($0) }
+        .sheet(item: listSheet(overPage: false)) { listSheetContent($0) }
+        .onChange(of: browser.shownSpace.map(BrowserSpaceRuntimeAssignment.init(space:))) { _, assignment in
+            // A list belongs to the Space it opened for, as the sidebar's do.
+            if presentedListSheet?.assignment != assignment { presentedListSheet = nil }
+        }
         .modifier(downloadRiskConfirmation(overPage: false))
         .modifier(
             MobileBrowserRootLifecycleModifier(

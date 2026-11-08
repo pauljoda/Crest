@@ -1,11 +1,12 @@
 import SwiftUI
 import UIKit
 
-/// Tells `action` about a tap inside the content without taking part in the
-/// tap. A SwiftUI tap gesture on a container competes with the controls inside
-/// it, and an iPad pointer's click goes to the container instead of the button
-/// under it; this watches from the window, which sees every touch, and never
-/// claims one.
+/// Tells `action` about a touch inside the content without taking part in it:
+/// a tap, the start of a drag such as a scroll, or a second finger coming down
+/// for a pinch. A SwiftUI tap gesture on a container competes with the controls
+/// inside it, and an iPad pointer's click goes to the container instead of the
+/// button under it; this watches from the window, which sees every touch, and
+/// never claims one.
 ///
 /// The window sees a touch wherever it lands, so content drawn over other
 /// observed content, such as a sidebar floating over the page, claims its
@@ -65,9 +66,9 @@ private struct BrowserObservedTapAnchor: UIViewRepresentable {
                 self.observer = nil
             }
             guard let window else { return }
-            let observer = BrowserTapObserverRecognizer { [weak self] touch in
-                guard let self, self.window != nil, self.contains(touch),
-                    self.claimsTaps || !Self.isClaimed(touch)
+            let observer = BrowserTapObserverRecognizer { [weak self] window, point in
+                guard let self, self.window === window, self.contains(point),
+                    self.claimsTaps || !Self.isClaimed(point, in: window)
                 else { return }
                 self.action?()
             }
@@ -85,14 +86,15 @@ private struct BrowserObservedTapAnchor: UIViewRepresentable {
             }
         }
 
-        /// Whether content that claims its taps is on screen where `touch`
-        /// landed.
-        private static func isClaimed(_ touch: UITouch) -> Bool {
-            claiming.allObjects.contains { $0.window === touch.window && $0.isShown && $0.contains(touch) }
+        /// Whether content that claims its taps is on screen at `point`, in
+        /// `window`'s coordinates.
+        private static func isClaimed(_ point: CGPoint, in window: UIWindow?) -> Bool {
+            claiming.allObjects.contains { $0.window === window && $0.isShown && $0.contains(point) }
         }
 
-        private func contains(_ touch: UITouch) -> Bool {
-            bounds.contains(touch.location(in: self))
+        /// Whether `point`, in the window's coordinates, is inside the content.
+        private func contains(_ point: CGPoint) -> Bool {
+            bounds.contains(convert(point, from: nil))
         }
 
         /// Whether the anchor and everything holding it are drawn.
@@ -102,15 +104,18 @@ private struct BrowserObservedTapAnchor: UIViewRepresentable {
     }
 }
 
-/// Sees a touch end close to where it began, reports it, and fails, so it
-/// never holds up, cancels or outranks anything else the touch reaches.
+/// Reports a touch once — when it ends close to where it began, travels far
+/// enough to be a drag, or is joined by a second finger — and fails, so it
+/// never holds up, cancels or outranks anything else the touch reaches. It
+/// reports where the touch began, in the window's coordinates, so a drag is
+/// judged by the content it started on rather than the content it reached.
 private final class BrowserTapObserverRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private static let slop: CGFloat = 10
-    private let tapped: @MainActor (UITouch) -> Void
+    private let observed: @MainActor (UIWindow?, CGPoint) -> Void
     private var start: CGPoint?
 
-    init(tapped: @escaping @MainActor (UITouch) -> Void) {
-        self.tapped = tapped
+    init(observed: @escaping @MainActor (UIWindow?, CGPoint) -> Void) {
+        self.observed = observed
         super.init(target: nil, action: nil)
         cancelsTouchesInView = false
         delaysTouchesBegan = false
@@ -119,8 +124,9 @@ private final class BrowserTapObserverRecognizer: UIGestureRecognizer, UIGesture
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        guard touches.count == 1, let touch = touches.first, start == nil else {
-            state = .failed
+        guard let touch = touches.first else { return }
+        guard touches.count == 1, start == nil else {
+            report(touch)
             return
         }
         start = touch.location(in: nil)
@@ -129,11 +135,11 @@ private final class BrowserTapObserverRecognizer: UIGestureRecognizer, UIGesture
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let start, let touch = touches.first else { return }
         let point = touch.location(in: nil)
-        if hypot(point.x - start.x, point.y - start.y) > Self.slop { state = .failed }
+        if hypot(point.x - start.x, point.y - start.y) > Self.slop { report(touch) }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
-        if state == .possible, let touch = touches.first { tapped(touch) }
+        if let touch = touches.first { report(touch) }
         state = .failed
     }
 
@@ -144,6 +150,12 @@ private final class BrowserTapObserverRecognizer: UIGestureRecognizer, UIGesture
     override func reset() {
         super.reset()
         start = nil
+    }
+
+    private func report(_ touch: UITouch) {
+        guard state == .possible else { return }
+        observed(touch.window, start ?? touch.location(in: nil))
+        state = .failed
     }
 
     func gestureRecognizer(

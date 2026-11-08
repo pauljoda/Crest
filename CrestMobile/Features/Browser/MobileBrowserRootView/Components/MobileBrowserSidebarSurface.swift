@@ -62,6 +62,9 @@ struct MobileBrowserSidebarSurface: View {
     let sidebarIsPresented: Bool
     let sidebarIsDocked: Bool
     let utilityPresentation: BrowserUtilityPresentationState
+    /// Puts a floating sidebar away, from the arrow at its bottom corner.
+    /// `nil` where this placement never floats.
+    var hideSidebar: (() -> Void)?
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
@@ -174,7 +177,8 @@ struct MobileBrowserSidebarSurface: View {
             toggleSidebar: toggleSidebar,
             showsSidebarToggle: showsSidebarToggle,
             sidebarIsPresented: sidebarIsPresented,
-            sidebarIsDocked: sidebarIsDocked
+            sidebarIsDocked: sidebarIsDocked,
+            hideSidebar: hideSidebar
         )
     }
 

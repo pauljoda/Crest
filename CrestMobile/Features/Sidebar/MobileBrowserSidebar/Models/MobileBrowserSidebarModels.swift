@@ -36,6 +36,8 @@ struct MobileBrowserSidebarContentConfiguration {
     let showsSidebarToggle: Bool
     let sidebarIsPresented: Bool
     let sidebarIsDocked: Bool
+    /// Puts a floating sidebar away, from the arrow at its bottom corner.
+    let hideSidebar: (() -> Void)?
 }
 
 /// The sidebar's utility sheets and Space foreground.

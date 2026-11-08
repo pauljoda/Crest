@@ -389,12 +389,6 @@ extension MobileBrowserRootModel {
         layoutPersistence.commitSidebarWidth(width, transaction: &sidebarWidthTransaction)
     }
 
-    func revealSidebarForUtilityCommand(
-        presentation: MobileBrowserPresentation
-    ) {
-        presentation.revealSidebar(on: navigation)
-    }
-
     func hideRegularSidebar(reduceMotion: Bool) {
         navigation.utilityPresentation.dismiss()
         withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {

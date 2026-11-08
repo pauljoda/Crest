@@ -3,11 +3,13 @@ import SwiftUI
 /// The invisible strip along the leading edge that brings a collapsed sidebar
 /// back.
 ///
-/// It is a button in every shell, because the reveal has to be reachable by
-/// something other than the gesture that usually performs it — a pointer that
-/// never rests on the edge, Full Keyboard Access, VoiceOver. What each shell's
-/// inputs add on top of the button is capability-driven: a resting pointer
-/// where there is one, an inward swipe where there are fingers.
+/// It is a button to assistive technologies in every shell, because the reveal
+/// has to be reachable by something other than the gesture that usually
+/// performs it — Full Keyboard Access, VoiceOver. A pointer shell also takes a
+/// click on it, for a pointer that never rests on the edge. On touch only the
+/// inward swipe opens it: a finger that merely lands on the edge is usually
+/// reaching for the page. What each shell's inputs add is capability-driven: a
+/// resting pointer where there is one, an inward swipe where there are fingers.
 ///
 /// A resting pointer reveals the sidebar only in the focused window. A pointer
 /// crossing the edge of a window behind another is on its way somewhere else,
@@ -32,31 +34,46 @@ struct BrowserCollapsedSidebarRevealControl: View {
     }
 
     var body: some View {
-        Button(action: showSidebar) {
-            revealArea
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Show Sidebar Temporarily")
-        .accessibilityIdentifier("show-sidebar")
-        .help(hint)
-        .onHover { isHovering in
-            guard revealsOnHover, metrics.revealsOnHover, isWindowFocused, isHovering else { return }
-            showSidebar()
-        }
-        .frame(width: width)
-        .frame(maxHeight: .infinity)
-        // Simultaneous rather than exclusive: the button already claims the
-        // press, and a swipe that has to wait for it to fail would have to
-        // travel the width of the strip before it started.
-        .simultaneousGesture(
-            DragGesture(minimumDistance: metrics.swipeDistance ?? 0)
-                .onEnded(revealIfSwipedInward),
-            isEnabled: metrics.swipeDistance != nil
-        )
+        pressTarget
+            .accessibilityLabel("Show Sidebar Temporarily")
+            .accessibilityIdentifier("show-sidebar")
+            .help(hint)
+            .onHover { isHovering in
+                guard revealsOnHover, metrics.revealsOnHover, isWindowFocused, isHovering else { return }
+                showSidebar()
+            }
+            .frame(width: width)
+            .frame(maxHeight: .infinity)
+            // Simultaneous rather than exclusive: where the strip is a button it
+            // already claims the press, and a swipe that has to wait for it to
+            // fail would have to travel the width of the strip before it
+            // started.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: metrics.swipeDistance ?? 0)
+                    .onEnded(revealIfSwipedInward),
+                isEnabled: metrics.swipeDistance != nil
+            )
     }
 
     private var width: CGFloat {
         metrics.revealsOnHover ? pointerWidth ?? metrics.width : metrics.width
+    }
+
+    /// The strip as a button where a press reveals the sidebar, and otherwise
+    /// as an area assistive technologies still activate as one.
+    @ViewBuilder
+    private var pressTarget: some View {
+        if metrics.revealsOnPress {
+            Button(action: showSidebar) {
+                revealArea
+            }
+            .buttonStyle(.plain)
+        } else {
+            revealArea
+                .accessibilityElement()
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { showSidebar() }
+        }
     }
 
     /// Where the strip answers: all of it, or on touch only its top and bottom,

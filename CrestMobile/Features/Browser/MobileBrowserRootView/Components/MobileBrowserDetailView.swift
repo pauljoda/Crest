@@ -48,6 +48,8 @@ struct MobileBrowserDetailView: View {
     /// The address bar's swipe through the shown Space's tabs, which moves
     /// the page area and the bar together.
     @State private var tabSwipe = MobileTabSwipe()
+    /// Whether the software keyboard is on screen.
+    @State private var keyboardIsShown = false
     /// The namespace in which the command palette grows out of the compact
     /// address bar.
     @Namespace private var compactPaletteNamespace
@@ -111,36 +113,24 @@ struct MobileBrowserDetailView: View {
                             .safeAreaPadding(.bottom, 0)
                             .zIndex(1)
                     }
-                } else if compactToolbarIsHidden {
-                    MobileCompactDomainChip(
-                        url: page?.live.documentURL,
-                        showToolbar: showCompactToolbar
-                    )
-                    .safeAreaPadding(.bottom, 0)
-                    .zIndex(1)
                 } else {
-                    MobileCompactPageToolbar(
-                        browser: browser,
-                        pageActions: pageActions,
-                        downloadsAccess: compactDownloadsAccess,
-                        address: $address,
-                        isAddressEditing: $isAddressEditing,
-                        submitAddress: submitAddress,
-                        beginNewTab: beginNewTab,
-                        showTabViewer: showTabViewer,
-                        showHistory: showHistory,
-                        hideToolbar: hideCompactToolbar,
-                        tabSwipe: tabSwipe,
-                        canSwipeTabs: swipeShownTab != nil,
-                        swipeNeighbors: { browser.swipeNeighbors },
-                        showSwipedTab: showSwipedTab,
-                        compactTransitionEnded: compactTransitionEnded,
-                        openPalette: paletteMode == nil ? nil : openLocation,
-                        isPaletteShown: isCompactPaletteShown,
-                        commandSurfaceNamespace: compactPaletteNamespace,
-                        commandPaletteHandoff: compactPaletteHandoff
-                    )
-                    .safeAreaPadding(.bottom, 0)
+                    Group {
+                        if compactToolbarIsHidden {
+                            MobileCompactDomainChip(
+                                url: page?.live.documentURL,
+                                showToolbar: showCompactToolbar
+                            )
+                            .safeAreaPadding(.bottom, 0)
+                        } else {
+                            compactPageToolbar(pageActions: pageActions)
+                        }
+                    }
+                    // The page has the keyboard, so the bar slides down out
+                    // of its way and comes back up once the keyboard goes.
+                    .offset(y: keyboardHidesToolbar ? MobileBrowserPageViewport.compactToolbarHeight : 0)
+                    .opacity(keyboardHidesToolbar ? 0 : 1)
+                    .allowsHitTesting(!keyboardHidesToolbar)
+                    .accessibilityHidden(keyboardHidesToolbar)
                     .zIndex(1)
                 }
             }
@@ -235,6 +225,16 @@ struct MobileBrowserDetailView: View {
             CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
             value: compactToolbarIsHidden
         )
+        .animation(
+            CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
+            value: keyboardHidesToolbar
+        )
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardIsShown = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardIsShown = false
+        }
         .sheet(item: $downloadsAssignment) { assignment in
             MobileDownloadsView(
                 browser: browser,
@@ -545,10 +545,49 @@ struct MobileBrowserDetailView: View {
             .accessibilityHidden(true)
     }
 
+    /// The compact page's address bar, with the page's controls around it.
+    private func compactPageToolbar(pageActions: MobileSelectedPageActionPort?) -> some View {
+        MobileCompactPageToolbar(
+            browser: browser,
+            pageActions: pageActions,
+            downloadsAccess: compactDownloadsAccess,
+            address: $address,
+            isAddressEditing: $isAddressEditing,
+            submitAddress: submitAddress,
+            beginNewTab: beginNewTab,
+            showTabViewer: showTabViewer,
+            showHistory: showHistory,
+            hideToolbar: hideCompactToolbar,
+            tabSwipe: tabSwipe,
+            canSwipeTabs: swipeShownTab != nil,
+            swipeNeighbors: { browser.swipeNeighbors },
+            showSwipedTab: showSwipedTab,
+            compactTransitionEnded: compactTransitionEnded,
+            openPalette: paletteMode == nil ? nil : openLocation,
+            isPaletteShown: isCompactPaletteShown,
+            commandSurfaceNamespace: compactPaletteNamespace,
+            commandPaletteHandoff: compactPaletteHandoff
+        )
+        .safeAreaPadding(.bottom, 0)
+    }
+
     private var compactBottomChromeHeight: CGFloat {
-        compactToolbarIsHidden
+        if keyboardHidesToolbar {
+            return 0
+        }
+        return compactToolbarIsHidden
             ? MobileBrowserPageViewport.compactDomainChipHeight
             : MobileBrowserPageViewport.compactToolbarHeight
+    }
+
+    /// Whether the page's bar is out of the way of the keyboard. Typing into
+    /// the page, such as filling in a form, needs the room more than the bar
+    /// does; the bar stays while its own field, the palette or the find bar
+    /// has the keyboard, and on the Start Page, whose field is the bar.
+    private var keyboardHidesToolbar: Bool {
+        guard isCompact, keyboardIsShown, !isAddressEditing, !isCompactPaletteShown else { return false }
+        guard let page = pages.activePage, !page.isFindPresented, !page.elementPicker.isActive else { return false }
+        return browser.shownTab.map { $0.surface != .startPage } ?? false
     }
 
     private var selectedSpaceIsLocked: Bool {

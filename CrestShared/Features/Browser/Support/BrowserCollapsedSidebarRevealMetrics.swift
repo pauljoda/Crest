@@ -17,6 +17,10 @@ struct BrowserCollapsedSidebarRevealMetrics: Equatable, Sendable {
     /// Whether a pointer resting on the strip is enough on its own.
     let revealsOnHover: Bool
 
+    /// Whether pressing the strip reveals the sidebar. A finger resting on the
+    /// edge is usually on its way to the page, so on touch only a swipe does.
+    let revealsOnPress: Bool
+
     /// The share of the strip's height, centred on the edge, that the strip
     /// leaves to the page: a swipe in there steps the page's history, and only
     /// the top and bottom of the edge bring the sidebar back.
@@ -28,11 +32,12 @@ struct BrowserCollapsedSidebarRevealMetrics: Equatable, Sendable {
         width: 14,
         swipeDistance: nil,
         revealsOnHover: true,
+        revealsOnPress: true,
         pageNavigationShare: 0
     )
 
-    /// A touch shell: a strip wide enough to aim a finger at, opened by an
-    /// inward swipe at the top or bottom of the edge.
+    /// A touch shell: a strip wide enough to aim a finger at, opened only by
+    /// an inward swipe at the top or bottom of the edge.
     ///
     /// Hover is deliberately unspent here even where a trackpad is attached.
     /// The same strip still has to answer a finger, and a pointer brushing the
@@ -42,6 +47,7 @@ struct BrowserCollapsedSidebarRevealMetrics: Equatable, Sendable {
         width: 26,
         swipeDistance: 10,
         revealsOnHover: false,
+        revealsOnPress: false,
         pageNavigationShare: 0.5
     )
 
