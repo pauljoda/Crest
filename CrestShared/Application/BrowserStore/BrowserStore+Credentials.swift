@@ -33,17 +33,21 @@ extension BrowserStore {
         return try await groupDescriptors(of: spaceID) { try await credentialVault.descriptors(in: $0) }
     }
 
-    /// How many saved passwords of the Space's group no longer read back,
-    /// which every list and suggestion leaves out.
-    func unreadableCredentialCount(in spaceID: UUID) async throws -> Int {
+    /// The passwords the Space's group keeps, with how many more no longer
+    /// read back, which every list and suggestion leaves out: one read of
+    /// each vault.
+    func savedCredentialInventory(in spaceID: UUID) async throws -> CredentialInventory {
         guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        var count = 0
+        var descriptors: [CredentialDescriptor] = []
+        var unreadableCount = 0
         for vault in credentialSpaceIDs(of: spaceID) {
-            count += try await credentialVault.unreadableCredentialCount(in: vault)
+            let inventory = try await credentialVault.inventory(in: vault)
+            descriptors += inventory.descriptors
+            unreadableCount += inventory.unreadableCount
         }
-        return count
+        return CredentialInventory(descriptors: descriptors, unreadableCount: unreadableCount)
     }
 
     func credentialSuggestions(

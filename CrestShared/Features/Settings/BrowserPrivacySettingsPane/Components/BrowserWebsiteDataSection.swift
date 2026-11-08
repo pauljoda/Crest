@@ -22,7 +22,7 @@ struct BrowserWebsiteDataSection: View {
                     if !sites.isEmpty {
                         BrowserCredentialSearchField(
                             title: "Search Websites", text: $query, accessibilityIdentifier: "website-data-search")
-                        ForEach(list.sites(matching: query), id: \.site) { site in
+                        CrestFormRows(list.sites(matching: query), id: \.site) { site in
                             BrowserWebsiteDataRow(site: site, isRemoving: list.isRemoving) {
                                 Task { await list.remove([site]) }
                             }

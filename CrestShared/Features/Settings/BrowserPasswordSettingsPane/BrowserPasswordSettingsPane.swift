@@ -366,7 +366,7 @@ struct BrowserPasswordSettingsPane: View {
                     .foregroundStyle(.secondary)
             }
         } else {
-            ForEach(descriptors) { descriptor in
+            CrestFormRows(descriptors) { descriptor in
                 BrowserPasswordDescriptorRow(
                     descriptor: descriptor,
                     space: space?.identity,

@@ -11,7 +11,7 @@ struct BrowserSavedSitePermissionSection: View {
                 Text("No saved permissions")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(records) { record in
+                CrestFormRows(records) { record in
                     BrowserSitePermissionRecordRow(
                         record: record,
                         permissionCenter: permissionCenter
