@@ -772,6 +772,23 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// Whether Apple's Add to Home Screen can take the page: a web page, not a
+    /// blank, internal or file one.
+    var canAddToHomeScreen: Bool {
+        ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+    }
+
+    /// Opens Apple's Add to Home Screen for the page, where the person adds it
+    /// as a web app or as a bookmark that opens in their default browser. On
+    /// iPad its sheet points at `source`, the control that asked, a frame in
+    /// the window.
+    func addToHomeScreen(from source: CGRect?) {
+        guard canAddToHomeScreen else { return }
+        MobileBrowserDialogPresenter.present(
+            MobileBrowserHomeScreenActivityController(webView: webView, title: live.title, favicon: faviconData),
+            from: source, fallback: {})
+    }
+
     func pdfData() async throws -> Data {
         guard webView.url != nil else { throw BrowserPageExportError.pageUnavailable }
         return try await enginePage.export(.pdf)
