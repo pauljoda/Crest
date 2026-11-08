@@ -5,6 +5,9 @@ struct MobilePageActionsContent: View {
     let pages: any MobilePageActions
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
+    /// The frame in the window of the control that opened these actions,
+    /// which a sheet they open points at on iPad.
+    var source: CGRect? = nil
 
     var body: some View {
         if let downloadsAccess {
@@ -68,6 +71,13 @@ struct MobilePageActionsContent: View {
 
         }
         .labelStyle(.iconOnly)
+
+        if pages.canAddToHomeScreen {
+            Button("Add to Home Screen", systemImage: "plus.app") {
+                pages.addToHomeScreen(from: source)
+            }
+            .accessibilityIdentifier("page-actions-add-to-home-screen")
+        }
 
         Button(
             pages.preferredContentModeActionTitle,
