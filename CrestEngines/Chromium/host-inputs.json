@@ -521,10 +521,10 @@
   },
   "chrome/renderer/BUILD.gn": {
     "before": "8e279cf4d793fa758d9ee67ff84ae311d02abd65e39cdad35c46440956583d05",
-    "after": "bed9b01bf1ed73157610e756ce68db71b45ffb537d5415ba126314acbf62eadf"
+    "after": "f4de0bebe6da81108691368dc515ff5cbd8c217f832c601289cc52291053bae2"
   },
   "chrome/renderer/chrome_content_renderer_client.cc": {
     "before": "f6bca3a5f240d6c30e2f14f0f4f8b616173d7f2d481dbcc02aa96c70acef2460",
-    "after": "4f9d6c6f1f40d51c8384bdc5fa628450f8791f4d1a295f4bd8804c63de991338"
+    "after": "643c796935815801e35455d006dd1f5b81be9a656c9a3cc4a079064c329d4e9e"
   }
 }

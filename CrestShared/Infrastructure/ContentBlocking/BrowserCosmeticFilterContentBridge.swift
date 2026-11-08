@@ -8,9 +8,12 @@ import Foundation
 /// and ids, for the lists' generic rules, and the frames, images and objects
 /// they load. It applies the answer: style rules, the procedural filters,
 /// re-run as the document changes, and the collapse of elements whose loads
-/// the filter blocks. Generic rules applied as elements appear, rather than
-/// by the engine as a page first renders, keep sites from mistaking the
-/// hiding for a reason to complain about blocking.
+/// the filter blocks. On Chromium the style rules go into user style sheets,
+/// which the page's scripts can neither read nor override; WebKit has no such
+/// sheet, so there they go into a sheet this world adopts and keeps in place.
+/// Generic rules applied as elements appear, rather than by the engine as a
+/// page first renders, keep sites from mistaking the hiding for a reason to
+/// complain about blocking.
 @MainActor
 enum BrowserCosmeticFilterContentBridge {
     static let messageHandlerName = "crestCosmetics"
@@ -51,6 +54,10 @@ enum BrowserCosmeticFilterContentBridge {
           let stopped = false, first = true, blocking = false;
           let sendTimer = 0, proceduralTimer = 0, sweepTimer = 0, sheet = null, observer = null, inserted = 0;
           const styleRules = [];
+          // Chromium's renderer gives this world alone a way to add user style
+          // sheets; WebKit has none.
+          const userSheet = globalThis.__crestUserSheet ?? null;
+          let scratch = null;
 
           const post = (message) => { try { handler.postMessage(message); } catch (_) {} };
           const hide = (element) => { try { element.style.setProperty("display", "none", "important"); } catch (_) {} };
@@ -120,6 +127,24 @@ enum BrowserCosmeticFilterContentBridge {
           }
 
           function addStyle(text) {
+            if (userSheet) {
+              // Each rule is parsed alone and kept as the browser writes it
+              // back, so a malformed one can't swallow the rules after it.
+              try {
+                scratch ??= new CSSStyleSheet();
+                const rules = [];
+                for (const rule of text.split("\n")) {
+                  if (!rule) continue;
+                  try {
+                    scratch.insertRule(rule, 0);
+                    rules.push(scratch.cssRules[0].cssText);
+                    scratch.deleteRule(0);
+                  } catch (_) {}
+                }
+                if (rules.length) userSheet.insert(rules.join("\n"));
+              } catch (_) {}
+              return;
+            }
             try {
               sheet ??= new CSSStyleSheet();
               adopt();
