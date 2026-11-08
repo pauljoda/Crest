@@ -139,10 +139,25 @@ its compiled filter for the page's Space and the site it shows:
   `:matches-css()` and the `:remove()` and `:style()` actions. The bridge
   applies them and applies them again as the document changes.
 - As elements appear: the generic hiding rules for the classes and ids they
-  show, as style rules in one sheet the bridge adopts, and whether the frames,
-  images and objects they load are ones the filter blocks; those elements
-  collapse. The bridge puts the sheet back as the document changes if the page
-  removes it, turns it off or deletes its rules.
+  show, and whether the frames, images and objects they load are ones the
+  filter blocks; those elements collapse.
+
+The hiding rules, the site's and the generic ones alike, go where the page's
+scripts cannot reach them where the engine allows it:
+
+- On Chromium, each frame's renderer gives Crest's content world alone
+  `__crestUserSheet.insert(css)` (`chrome/renderer/crest/crest_user_sheet.cc`,
+  wired by `content-filter.patch`), which adds the rules to the document as a
+  user style sheet, as extensions' injected CSS is. The page can't list or read
+  such a sheet, so it can't learn which rules matched the site, the person's
+  own included, and user `!important` rules win over the page's, inline styles
+  included. The bridge parses each rule on its own first and passes the
+  browser's own rewrite of it, so a malformed rule can't swallow the next.
+- WebKit has no user style sheet a page can't reach, and its content rules'
+  `css-display-none` applies before the first render, which is what bait checks
+  catch. There the rules go into one sheet the bridge adopts, which it puts back
+  as the document changes if the page removes it, turns it off or deletes its
+  rules.
 
 Generic rules apply as elements appear on both engines, rather than through
 WebKit's content rules before a page first renders: sites that check whether a
