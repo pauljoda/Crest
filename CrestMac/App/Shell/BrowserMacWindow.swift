@@ -28,12 +28,24 @@ final class BrowserMacWindow: NSWindow {
         super.zoom(sender)
     }
 
+    /// Starts entering or leaving full screen on the next turn of the main
+    /// queue. AppKit lays the window out as a transition starts, so the
+    /// window's pages would join it on the stack of whoever asked. The
+    /// Chromium engine asks from inside its own work on a tab, such as closing
+    /// the tab that was full screen, and a page joining the window calls
+    /// straight back into that work.
     override func toggleFullScreen(_ sender: Any?) {
+        DispatchQueue.main.async { [weak self] in
+            self?.startFullScreenTransition()
+        }
+    }
+
+    private func startFullScreenTransition() {
         if !styleMask.contains(.fullScreen) {
             wasZoomedBeforeFullScreen = isZoomed
             if !isZoomed { frameBeforeZoom = frame }
         }
-        super.toggleFullScreen(sender)
+        super.toggleFullScreen(nil)
     }
 
     // MARK: - Actions - Closing

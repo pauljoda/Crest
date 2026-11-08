@@ -5205,6 +5205,14 @@
     "add-to-home-screen": {
       "category": "new",
       "message": "On iPhone and iPad, Add to Home Screen in a page’s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser."
+    },
+    "full-screen-tab-close-crash": {
+      "category": "fixed",
+      "message": "On Mac, closing a tab while its Chromium page is full screen no longer makes Crest quit."
+    },
+    "full-screen-survives-page-moves": {
+      "category": "fixed",
+      "message": "On Chromium pages on Mac, a full-screen page stays full screen when it moves to its next slide or video, instead of dropping back inside the window’s border and sidebar."
     }
   }
 }
