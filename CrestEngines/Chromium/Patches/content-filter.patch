@@ -1,0 +1,119 @@
+# Crest: each Crest page's requests pass the core's content filter first, and
+# its documents run the filter's scriptlets before their own scripts. The
+# filter is chrome/browser/ui/crest/crest_request_filter.cc in the overlay; the
+# renderer runs the scriptlets crest_engine_scriptlets.cc hands each main frame
+# through Chromium's js_injection component.
+
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -5,6 +5,7 @@
+ #include "chrome/browser/chrome_content_browser_client.h"
+ #if BUILDFLAG(IS_MAC)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#include "chrome/browser/ui/crest/crest_request_filter.h"
+ #endif
+ 
+ #include <algorithm>
+@@ -6814,6 +6815,10 @@
+     network::mojom::URLLoaderFactoryOverridePtr* factory_override,
+     scoped_refptr<base::SequencedTaskRunner> navigation_response_task_runner,
+     bool is_for_network_service) {
++#if BUILDFLAG(IS_MAC)
++  // A Crest page's requests pass its content filter first.
++  crest::FilterRequests(frame, type, isolation_info, factory_builder);
++#endif
+ #if BUILDFLAG(ENABLE_EXTENSIONS_CORE)
+   auto* web_request_api =
+       extensions::BrowserContextKeyedAPIFactory<extensions::WebRequestAPI>::Get(
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -3347,6 +3347,7 @@
+       "crest/crest_browser_window.mm",
+       "crest/crest_chrome_hooks.h",
+       "crest/crest_chrome_host.mm",
++      "crest/crest_content_filter.h",
+       "crest/crest_app.h",
+       "crest/crest_core.h",
+       "crest/crest_engine.h",
+@@ -3385,6 +3386,10 @@
+       "crest/crest_engine_store.h",
+       "crest/crest_engine_tab_groups.cc",
+       "crest/crest_engine_tab_groups.h",
++      "crest/crest_engine_scriptlets.cc",
++      "crest/crest_engine_scriptlets.h",
++      "crest/crest_request_filter.cc",
++      "crest/crest_request_filter.h",
+       "crest/CrestChromiumHost.h",
+     ]
+ 
+@@ -3405,6 +3410,8 @@
+       "//chrome/browser/ui/views/frame:immersive_mode_controller_mac_impl",
+       "//chrome/browser/ui/views/frame:immersive_mode_overlay_views_mac",
+       "//chrome/browser/ui/views/frame:immersive_mode_overlay_views_mac_impl",
++      "//components/js_injection/common:common_mojom",
++      "//components/origin_matcher",
+     ]
+ 
+     # Any circular includes must depend on the target
+--- a/chrome/renderer/BUILD.gn
++++ b/chrome/renderer/BUILD.gn
+@@ -159,6 +159,7 @@
+     "//components/guest_view/buildflags",
+     "//components/heap_profiling/in_process",
+     "//components/history_clusters/core",
++    "//components/js_injection/renderer",
+     "//components/language/core/common",
+     "//components/lens",
+     "//components/lens:lens_mojo",
+--- a/chrome/renderer/chrome_content_renderer_client.cc
++++ b/chrome/renderer/chrome_content_renderer_client.cc
+@@ -276,6 +276,10 @@
+ 
+ #if BUILDFLAG(ENABLE_LIBRARY_CDMS) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_ANDROID)
+ #include "chrome/renderer/media/chrome_key_systems.h"
++#endif
++
++#if BUILDFLAG(IS_MAC)
++#include "components/js_injection/renderer/js_communication.h"
+ #endif
+ 
+ using autofill::AutofillAgent;
+@@ -656,6 +660,11 @@
+   service_manager::BinderRegistry* registry = render_frame_observer->registry();
+ 
+   new prerender::NoStatePrefetchRenderFrameObserver(render_frame);
++
++#if BUILDFLAG(IS_MAC)
++  // Crest's content filter gives a frame's documents scriptlets to run first.
++  new js_injection::JsCommunication(render_frame);
++#endif
+ 
+   auto content_settings_delegate =
+       std::make_unique<ChromeContentSettingsAgentDelegate>(render_frame);
+@@ -1487,6 +1496,26 @@
+ 
+ void ChromeContentRendererClient::RunScriptsAtDocumentStart(
+     content::RenderFrame* render_frame) {
++#if BUILDFLAG(IS_MAC)
++  // Crest's scriptlets run before the page's own scripts, in its own world.
++  if (auto* scriptlets = js_injection::JsCommunication::Get(render_frame)) {
++    class FrameWatch final : public content::RenderFrameObserver {
++     public:
++      explicit FrameWatch(content::RenderFrame* frame)
++          : content::RenderFrameObserver(frame) {}
++      void OnDestruct() override { gone_ = true; }
++      bool gone() const { return gone_; }
++
++     private:
++      bool gone_ = false;
++    } watch(render_frame);
++    scriptlets->RunScripts(
++        js_injection::mojom::DocumentInjectionTime::kDocumentStart);
++    if (watch.gone()) {
++      return;
++    }
++  }
++#endif
+ #if BUILDFLAG(ENABLE_EXTENSIONS_CORE)
+   extensions::ExtensionsRendererClient::Get()->RunScriptsAtDocumentStart(
+       render_frame);

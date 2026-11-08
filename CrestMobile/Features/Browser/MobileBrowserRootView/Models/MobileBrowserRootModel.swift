@@ -79,6 +79,8 @@ extension MobileBrowserRootModel {
         guard !hasPreparedBrowser else { return false }
         await pages.prepareContentBlocking()
         hasPreparedBrowser = true
+        // Pages opened while the rules compiled were built without them.
+        await pages.reconcileContentBlocking()
         if startupBehavior.opensNewTab {
             return showDefaultSpaceForNewTab()
         }

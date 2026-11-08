@@ -186,4 +186,8 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     func reconcileContentBlocking() async {
         await pages.reconcileContentBlocking()
     }
+
+    func reloadContentBlocking() async {
+        await pages.reloadContentBlocking()
+    }
 }

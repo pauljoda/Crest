@@ -87,7 +87,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         kind: .privacy, name: "privacy", title: "Privacy & Permissions", navigationTitle: "Privacy",
         subtitle: "Site access and data",
         searchTerms:
-            "content blocking ads trackers camera microphone site access history cookies data website cache clear browsing",
+            "content blocking ads trackers filter lists EasyList uBlock AdGuard my filters camera microphone site access history cookies data website cache clear browsing",
         symbol: "hand.raised", tincture: .dragonFire)
     static let passwords = BrowserSettingsDestination(
         kind: .passwords, name: "passwords", title: "Passwords", subtitle: "Credentials and autofill",

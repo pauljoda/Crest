@@ -27,6 +27,11 @@ public abstract record Configuration;
 /// class the core answers for, whose defaults its rules apply, such as each
 /// shortcut's default keys. `ImportNames` holds the names an import gives the
 /// Spaces it names itself, in the person's language; a source missing there
-/// names them in English.
+/// names them in English. `Languages` are the languages the person reads, as
+/// BCP 47 tags in their order of preference, which decide the regional filter
+/// lists a device has on before the person chooses. `FilterResourcesUrl`
+/// replaces where the content filter's scriptlet and redirect resources come
+/// from, for an isolated launch that tests a copy not yet published.
 public sealed record AppConfiguration(string? StorageDirectory, DevicePlatform Platform,
-    IReadOnlyList<ImportSpaceNames>? ImportNames = null) : Configuration;
+    IReadOnlyList<ImportSpaceNames>? ImportNames = null, IReadOnlyList<string>? Languages = null,
+    string? FilterResourcesUrl = null) : Configuration;

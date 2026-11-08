@@ -1779,6 +1779,9 @@
         }
       }
     },
+    "Add" : {
+
+    },
     "Add Accent Color" : {
 
     },
@@ -1912,6 +1915,24 @@
       }
     },
     "Adds or removes this password from the selection." : {
+
+    },
+    "AdGuard Annoyances" : {
+
+    },
+    "AdGuard Base" : {
+
+    },
+    "AdGuard Japanese" : {
+
+    },
+    "AdGuard Russian" : {
+
+    },
+    "AdGuard Turkish" : {
+
+    },
+    "Ads and Trackers" : {
 
     },
     "ads trackers privacy protection" : {
@@ -2144,6 +2165,9 @@
 
     },
     "Animate pages when switching Spaces" : {
+
+    },
+    "Annoyances" : {
 
     },
     "Another browser" : {
@@ -2781,7 +2805,10 @@
         }
       }
     },
-    "Block known ads and trackers" : {
+    "Block ads and trackers" : {
+
+    },
+    "Block Element" : {
 
     },
     "Block known trackers" : {
@@ -2791,6 +2818,9 @@
 
     },
     "Blocked for Session" : {
+
+    },
+    "Blocking off" : {
 
     },
     "Blood" : {
@@ -3332,6 +3362,12 @@
     "Choose sidebar widget" : {
 
     },
+    "Choose the Element Around It" : {
+
+    },
+    "Choose the Element Inside" : {
+
+    },
     "Choose the focused card" : {
 
     },
@@ -3530,6 +3566,9 @@
 
     },
     "Click the name to rename" : {
+
+    },
+    "Click what you want to block" : {
 
     },
     "Click, then press the new shortcut" : {
@@ -3969,6 +4008,9 @@
     "content blocking ads trackers camera microphone site access history cookies data website cache clear browsing" : {
 
     },
+    "content blocking ads trackers filter lists EasyList uBlock AdGuard my filters camera microphone site access history cookies data website cache clear browsing" : {
+
+    },
     "Continue" : {
 
     },
@@ -4145,6 +4187,9 @@
 
     },
     "Couldn’t open language downloads." : {
+
+    },
+    "Couldn’t update" : {
 
     },
     "Country" : {
@@ -5683,6 +5728,33 @@
         }
       }
     },
+    "EasyList" : {
+
+    },
+    "EasyList China" : {
+
+    },
+    "EasyList Cookie List" : {
+
+    },
+    "EasyList Dutch" : {
+
+    },
+    "EasyList Germany" : {
+
+    },
+    "EasyList Italy" : {
+
+    },
+    "EasyList Polish" : {
+
+    },
+    "EasyList Spanish" : {
+
+    },
+    "EasyPrivacy" : {
+
+    },
     "Edge" : {
 
     },
@@ -5836,6 +5908,9 @@
 
     },
     "Enter an HTTP or HTTPS website." : {
+
+    },
+    "Enter an https address." : {
 
     },
     "Enter Full Screen" : {
@@ -6227,6 +6302,12 @@
           }
         }
       }
+    },
+    "Filter list address" : {
+
+    },
+    "Filter lists updated %@" : {
+
     },
     "Find" : {
 
@@ -6791,6 +6872,9 @@
           }
         }
       }
+    },
+    "hide remove ads annoyance picker filter" : {
+
     },
     "Hide Sidebar" : {
       "localizations" : {
@@ -8047,6 +8131,9 @@
         }
       }
     },
+    "Liste FR" : {
+
+    },
     "little arc quick lookup" : {
       "localizations" : {
         "ar" : {
@@ -8479,6 +8566,9 @@
     },
     "Muted" : {
       "comment" : "A tab's mark while its page plays with its sound muted."
+    },
+    "My Filters" : {
+
     },
     "Name" : {
       "localizations" : {
@@ -9118,6 +9208,9 @@
 
     },
     "One per row" : {
+
+    },
+    "One rule per line, as filter lists write them." : {
 
     },
     "One-time macOS permission · No folder search" : {
@@ -10663,6 +10756,9 @@
     "Region" : {
 
     },
+    "Regional" : {
+
+    },
     "Regular" : {
       "extractionState" : "manual"
     },
@@ -11357,6 +11453,9 @@
           }
         }
       }
+    },
+    "Revert" : {
+
     },
     "Review" : {
 
@@ -12430,6 +12529,9 @@
           }
         }
       }
+    },
+    "Show Blocked Elements" : {
+
     },
     "Show Developer Toolbar" : {
 
@@ -13735,6 +13837,9 @@
     "Tap the name to rename" : {
 
     },
+    "Tap what you want to block" : {
+
+    },
     "Teal" : {
 
     },
@@ -14041,6 +14146,9 @@
 
     },
     "These credentials are valid and will be imported. Review the security limitation before continuing." : {
+
+    },
+    "These filters are too long to keep." : {
 
     },
     "These items cannot be placed here. Choose another destination." : {
@@ -14518,6 +14626,9 @@
         }
       }
     },
+    "Too large to use" : {
+
+    },
     "Too many agents are allowed. Forget one in Settings first." : {
 
     },
@@ -14762,7 +14873,14 @@
         }
       }
     },
+    "Turn Off Blocking on %@" : {
+
+    },
+    "Turn Off Blocking on This Site" : {
+
+    },
     "Turn Off Content Blocking in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14773,6 +14891,7 @@
       }
     },
     "Turn On Balanced Content Blocking in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14781,6 +14900,15 @@
           }
         }
       }
+    },
+    "Turn On Blocking" : {
+
+    },
+    "Turn on blocking for %@" : {
+
+    },
+    "Turn On Blocking on %@" : {
+
     },
     "Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings." : {
       "localizations" : {
@@ -14846,6 +14974,21 @@
     "Typing" : {
 
     },
+    "uBlock filters" : {
+
+    },
+    "uBlock filters – Badware risks" : {
+
+    },
+    "uBlock filters – Privacy" : {
+
+    },
+    "uBlock filters – Quick fixes" : {
+
+    },
+    "uBlock filters – Unbreak" : {
+
+    },
     "Ultra Thick" : {
 
     },
@@ -14895,6 +15038,9 @@
 
     },
     "Undock Sidebar" : {
+
+    },
+    "unhide restore undo picker filter" : {
 
     },
     "Unicorn" : {
@@ -15710,6 +15856,9 @@
     "You approve each destination in the Save dialog." : {
 
     },
+    "You can add up to %lld lists." : {
+
+    },
     "You can add up to %lld search providers." : {
 
     },
@@ -15761,6 +15910,9 @@
 
     },
     "Your example Space" : {
+
+    },
+    "Your Lists" : {
 
     },
     "Your pinned and saved tabs are still in the sidebar." : {

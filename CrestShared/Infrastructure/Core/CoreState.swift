@@ -152,6 +152,25 @@ final class CoreState {
         set { publish(newValue, into: \.linkPreferencesStorage, as: \.linkPreferences) }
     }
     @ObservationIgnored private var linkPreferencesStorage: LinkPreferences?
+    /// Every filter list as the settings show it, as the core last published them.
+    var filterLists: FilterLists {
+        get { observed(\.filterListsStorage, as: \.filterLists) }
+        set { publish(newValue, into: \.filterListsStorage, as: \.filterLists) }
+    }
+    @ObservationIgnored private var filterListsStorage = FilterLists(lists: [], customLists: [], customFilters: "")
+    /// The content rule lists a page that blocks applies, as the core last
+    /// published them. Nil until WebKit's binding first asks for them.
+    var contentRuleLists: ContentRuleListSet? {
+        get { observed(\.contentRuleListsStorage, as: \.contentRuleLists) }
+        set { publish(newValue, into: \.contentRuleListsStorage, as: \.contentRuleLists) }
+    }
+    @ObservationIgnored private var contentRuleListsStorage: ContentRuleListSet?
+    /// The sites where Spaces block no ads or trackers.
+    var blockingSites: [SiteContentBlocking] {
+        get { observed(\.blockingSitesStorage, as: \.blockingSites) }
+        set { publish(newValue, into: \.blockingSitesStorage, as: \.blockingSites) }
+    }
+    @ObservationIgnored private var blockingSitesStorage: [SiteContentBlocking] = []
     /// This device's search catalog, its providers as the device searches with
     /// them and its default search, as the core last published them. Nil only
     /// until the launch restores the catalog.

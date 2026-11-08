@@ -46,7 +46,7 @@
       "url": "https://crestbrowser.com/privacy/",
       "name": "Crest Privacy",
       "description": "How Crest handles local browsing data, optional iCloud sync, search requests, and third-party services.",
-      "dateModified": "2026-09-30",
+      "dateModified": "2026-11-08",
       "inLanguage": "en-US",
       "isPartOf": { "@id": "https://crestbrowser.com/#website" },
       "about": { "@id": "https://crestbrowser.com/#software" },
@@ -80,7 +80,7 @@
   <main id="privacy-content">
     <section class="privacy-hero" aria-labelledby="privacy-title">
       <div class="privacy-hero-copy">
-        <p class="eyebrow">Privacy · Effective September 30, 2026</p>
+        <p class="eyebrow">Privacy · Effective November 8, 2026</p>
         <h1 id="privacy-title">Your browsing<br>stays <em>yours.</em></h1>
         <p>Crest has no account system, analytics pipeline, advertising SDK, or browsing-data backend. Crest does not collect or receive your browsing history, searches, passwords, cookies, or website data.</p>
       </div>
@@ -130,7 +130,7 @@
           <p class="privacy-index">03</p>
           <h2>Requests go where you send them.</h2>
           <p>When you visit a website or search the web, Crest sends the request directly to that website or to your selected search provider. The recipient and the network carrying the request may receive ordinary connection information such as your IP address, browser details, and the page or search you requested. Their policies—not Crest's—govern what they do with it.</p>
-          <p>When content blocking is enabled, Crest applies its bundled rules locally to WebKit pages. Crest does not download third-party filter lists; users who want broader blocking, or blocking on Chromium pages, can install a compatible extension.</p>
+          <p>When content blocking is on, Crest blocks ads and trackers on your device, on Chromium and WebKit pages, using public filter lists such as EasyList and uBlock Origin&rsquo;s. Crest downloads each list you use directly from its maintainer, with no cookies and nothing about the pages you visit; like any website, the maintainer receives ordinary connection information such as your IP address. The same applies to a list you add by its address, which Crest downloads from that address, and to the small scripts some lists use to fix sites that fight ad blockers, which Crest downloads from its own GitHub releases and checks against a fingerprint built into the app before using. The lists you add and the filters you write stay on your device and are not synced.</p>
           <p>On Mac, Crest&rsquo;s Chromium engine is Chromium with Crest&rsquo;s privacy changes. It sends Google none of your browsing, form, account or usage data. It contacts Google&rsquo;s update service only to keep certificate revocation lists, trusted root certificates, the file types download warnings use, the Widevine module for protected video, and your extensions up to date. Those requests name each component or extension and its version, and carry no identifier for you or your device. When you install an extension from the Chrome Web Store, Crest downloads it from the same service. Extensions you add can see and send data according to their own permissions and policies.</p>
           <p>Chromium does not include a site or download reputation service or remote Web Push. Read the <a href="../guides/content-blocking-and-site-permissions/">engine protection and notification details</a> for the controls and limits.</p>
         </section>

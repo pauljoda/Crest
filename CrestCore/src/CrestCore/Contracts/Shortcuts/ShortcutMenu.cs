@@ -41,7 +41,8 @@ public sealed class ShortcutMenu {
         Numbered(NumberedSelectionTarget.Space)
     ]);
     public static readonly ShortcutMenu Page = new(name: "page", title: "Page", groups: [
-        [ShortcutCommand.ToggleReaderMode, ShortcutCommand.ToggleContentBlocking],
+        [ShortcutCommand.ToggleReaderMode, ShortcutCommand.ToggleContentBlocking, ShortcutCommand.BlockElement,
+            ShortcutCommand.ShowBlockedElements],
         [ShortcutCommand.FindInPage, ShortcutCommand.FindNext, ShortcutCommand.FindPrevious],
         [ShortcutCommand.ZoomIn, ShortcutCommand.ZoomOut, ShortcutCommand.ActualSize],
         [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF,

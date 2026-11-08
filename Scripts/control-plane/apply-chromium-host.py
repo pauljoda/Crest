@@ -15,6 +15,8 @@ import chromium_engine  # noqa: E402
 # The engine contract's headers in CrestContracts/include that the binding
 # compiles against. chromium_engine.py keys the published engine on them.
 ENGINE_CONTRACT = ("crest_core.h", "crest_app.h", "crest_engine.h", "crest_engine_contract.h")
+# The content filter's C interface, which the binding's request filter calls.
+CONTENT_FILTER_HEADER = "CrestCore/native/ContentFilter/include/crest_content_filter.h"
 
 
 def main():
@@ -78,9 +80,11 @@ def main():
             destination.parent.mkdir(parents=True, exist_ok=True)
             if not destination.is_file() or destination.read_bytes() != path.read_bytes():
                 shutil.copy(path, destination)
-    # The host header, and the engine contract the binding implements: the C
-    # ABI it registers through and the generated C++ codec.
-    headers = [host / "Apple/CrestChromiumHost.h"] + [repo / "CrestContracts/include" / name for name in ENGINE_CONTRACT]
+    # The host header, the engine contract the binding implements (the C ABI
+    # it registers through and the generated C++ codec), and the content
+    # filter's C interface it checks requests through.
+    headers = [host / "Apple/CrestChromiumHost.h", repo / CONTENT_FILTER_HEADER]
+    headers += [repo / "CrestContracts/include" / name for name in ENGINE_CONTRACT]
     for header in headers:
         destination = source / "chrome/browser/ui/crest" / header.name
         if not destination.is_file() or destination.read_bytes() != header.read_bytes():

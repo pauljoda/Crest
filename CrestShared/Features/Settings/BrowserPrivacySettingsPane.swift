@@ -45,8 +45,11 @@ struct BrowserPrivacySettingsPane: View {
                 if supportsContentBlocking {
                     BrowserContentBlockingSettingsSection(
                         policy: contentBlockingPolicyBinding,
-                        errorDescription: contentBlockingErrorDescription
+                        errorDescription: contentBlockingErrorDescription,
+                        sitesWithoutBlocking: sitesWithoutBlocking,
+                        blockAgain: blockAgain
                     )
+                    BrowserFilterListsSettingsSection(core: browser.core)
                 }
 
                 if browser.core.state.offers(.permissions) {
@@ -105,6 +108,17 @@ struct BrowserPrivacySettingsPane: View {
                 Text("Makes every site ask again in this Space")
             }
         }
+    }
+
+    /// The sites where the shown Space turned blocking off.
+    private var sitesWithoutBlocking: [SiteOrigin] {
+        guard let selectedSpaceID, canRevealSelectedSpaceData else { return [] }
+        return browser.core.state.blockingSites.filter { $0.spaceID == selectedSpaceID }.map(\.origin)
+    }
+
+    private func blockAgain(_ site: SiteOrigin) {
+        guard let selectedSpaceID else { return }
+        _ = try? browser.core.send(SetSiteContentBlocking(spaceID: selectedSpaceID, origin: site, blocks: true))
     }
 
     private var records: [SitePermissionRecordState] {

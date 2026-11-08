@@ -65,6 +65,11 @@ work in that one pull request.
   the publish is planned with the merge.
 - Swift, native core, and packaging changes reuse the published engine and
   need no new one.
+- The core links a prebuilt content filter the same way:
+  `CrestCore/native/ContentFilter/artifact.lock.json` names it, and a change to
+  that crate or its build recipe needs a maintainer to publish a new
+  `content-filter-<key>` release, as its README describes. Say so in the pull
+  request too.
 
 ## Test retention and cleanup
 

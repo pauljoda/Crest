@@ -125,6 +125,12 @@ private struct BrowserRootSessionFollower: ViewModifier {
             ) {
                 model.reconcileContentBlocking()
             }
+            .onChange(of: model.browser.core.state.contentRuleLists) {
+                model.reloadContentBlocking()
+            }
+            .onChange(of: model.browser.core.state.blockingSites) {
+                model.reconcileContentBlocking()
+            }
             .onChange(
                 of: runtimeSessionProjection.credentialAccessState,
                 initial: true

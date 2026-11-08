@@ -1,0 +1,8 @@
+{
+  "ublock": "1.75.4",
+  "source": "https://github.com/gorhill/uBlock/archive/refs/tags/1.75.4.tar.gz",
+  "sourceSHA256": "ca3a6fd43aec99c002e3bb1cb1d97b34eea4228ef35f8c076b55644caa397870",
+  "asset": "ublock-resources.json",
+  "assetSHA256": "e9cbfd34a2708f446a114dc17e8aba8e772541c0999b4a29950df0368fa3ad09",
+  "tag": "ublock-resources-1.75.4"
+}

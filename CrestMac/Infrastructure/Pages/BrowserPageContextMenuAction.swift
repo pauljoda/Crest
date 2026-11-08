@@ -1,10 +1,11 @@
 import AppKit
 import Foundation
 
-/// Crest-owned actions placed ahead of an engine's page menu. Engines keep
-/// their own editing and extension rows; these actions use Crest's Space and
-/// tab routing after the menu closes. Each row carries what it does to the
-/// page, given the page's navigation context and the tab it comes from.
+/// Crest-owned actions placed around an engine's page menu: link and
+/// selection rows ahead of it, page rows after it. Engines keep their own
+/// editing and extension rows; these actions use Crest's Space and tab
+/// routing after the menu closes. Each row carries what it does to the page,
+/// given the page's navigation context and the tab it comes from.
 struct BrowserPageContextMenuAction {
     // MARK: - Types
 
@@ -15,6 +16,7 @@ struct BrowserPageContextMenuAction {
         case split
         case space(UUID)
         case quickWindow
+        case blockElement
     }
 
     /// Runs the row on the page, answering whether it did. A page without a
@@ -38,6 +40,10 @@ struct BrowserPageContextMenuAction {
         if case .space = kind { return true }
         return false
     }
+
+    /// Whether the row acts on the page rather than on a link or selection,
+    /// and so follows the engine's rows.
+    var isTrailing: Bool { kind == .blockElement }
 
     // MARK: - Initializers
 
@@ -106,6 +112,16 @@ struct BrowserPageContextMenuAction {
             page.openLinkInSplitView(linkURL)
             return true
         }
+    }
+
+    /// Starts the element picker on what the person right-clicked, to block
+    /// it on the page's site from now on.
+    static let blockElement = BrowserPageContextMenuAction(
+        kind: .blockElement, title: String(localized: "Block Element"), symbolName: "eye.slash", linkURL: nil,
+        selectionText: nil
+    ) { page, _, _ in
+        Task { await page.pickElementToBlock(fromContextMenu: true) }
+        return true
     }
 
     /// Searches for `selectionText` with the engine titled `engineTitle`.
@@ -197,9 +213,12 @@ struct BrowserPageContextMenu {
             group.submenu = submenu
             items.append(group)
         }
-        items.append(contentsOf: actions.filter { !$0.isSpaceDestination }.map(item(for:)))
+        items.append(contentsOf: actions.filter { !$0.isSpaceDestination && !$0.isTrailing }.map(item(for:)))
         for (index, item) in items.enumerated() { menu.insertItem(item, at: index) }
-        if menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
+        if !items.isEmpty, menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
+        let trailing = actions.filter(\.isTrailing).map(item(for:))
+        if !trailing.isEmpty, menu.items.last?.isSeparatorItem == false { menu.addItem(.separator()) }
+        for item in trailing { menu.addItem(item) }
     }
 
     private func item(for action: BrowserPageContextMenuAction) -> NSMenuItem {
@@ -242,7 +261,15 @@ extension BrowserPage: BrowserPageContextMenuHost {
         {
             actions.append(.search(selectionText, with: search.engineTitle))
         }
+        if canPickElementToBlock { actions.append(.blockElement) }
         return actions
+    }
+
+    /// Whether the page's bridge can start the element picker: its engine
+    /// blocks content and it shows a site on the web.
+    private var canPickElementToBlock: Bool {
+        cosmeticFilters != nil && pageEngine.registration.supports(.contentBlocking)
+            && ["http", "https"].contains(live.displayURL?.scheme?.lowercased() ?? "")
     }
 
     /// Runs a row the menu offered, while the page still offers it for the

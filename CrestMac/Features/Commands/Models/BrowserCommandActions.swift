@@ -257,9 +257,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     // MARK: - Conditions
 
+    /// What the shown page offers for blocking on its site, where its Space blocks.
+    var siteContentBlocking: SiteContentBlockingSwitch? {
+        SiteContentBlockingSwitch(core: browser.core, spaceID: shownPageSpace?.id, url: shownPage?.live.documentURL)
+    }
+
     var contentBlockingActionTitle: LocalizedStringResource {
-        ContentBlockingPolicy.switchTitle(
-            for: shownPageSpace?.settings.browsingPreferences.contentBlocking)
+        siteContentBlocking?.title ?? "Turn Off Blocking on This Site"
     }
 
     /// The engines the shown page can move to: every registered engine but
@@ -351,13 +355,34 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         chrome.showURLCopiedFeedback()
     }
 
-    /// Switches content blocking for the Space of the page the window shows.
+    /// Turns blocking off, or on again, for the site of the page the window
+    /// shows, in its Space, and reloads the page so the change shows.
     func toggleContentBlocking() {
-        guard let space = shownPageSpace else { return }
-        var preferences = space.settings.browsingPreferences
-        preferences.contentBlocking = preferences.contentBlocking.switched
-        browser.updateBrowsingPreferences(preferences, in: space.id)
-        Task { await pages.reconcileContentBlocking() }
+        guard let toggle = siteContentBlocking, (try? browser.core.send(toggle.intent)) != nil else { return }
+        Task {
+            await pages.reconcileContentBlocking()
+            pages.reload(.standard)
+        }
+    }
+
+    /// Starts the element picker in the page the window shows.
+    func blockElement() {
+        guard let page = commandPage else { return }
+        Task { await page.pickElementToBlock() }
+    }
+
+    /// What the person blocked on the site of the page the window shows.
+    var commandPageBlockedElements: BrowserBlockedElements {
+        BrowserBlockedElements(core: browser.core, pageURL: commandPage?.live.displayURL)
+    }
+
+    /// Shows again what the person blocked on the site of the page the window
+    /// shows, reloading the page once the rules without it are in force.
+    func showBlockedElements() {
+        let elements = commandPageBlockedElements
+        Task {
+            await elements.show(refresh: { await pages.reloadContentBlocking() }, reload: { pages.reload(.standard) })
+        }
     }
 
     func zoomIn() {

@@ -293,11 +293,17 @@ final class WebKitEngineBinding: EngineBinding {
                 self?.mediaActivityMayHaveChanged(in: message.webView)
             }
         }
+        let spaceID = space?.id
         return WebKitEnginePage(
             id: creation.pageID,
             profileID: creation.profileID,
             webView: BrowserPlatformWebKit.makeWebView(configuration: configuration),
             contentRuleLists: contentRuleLists,
+            blocksSite: { [weak self] url in
+                guard let spaceID, let core = self?.core else { return true }
+                let origin = url.flatMap(SiteOrigin.init(url:))
+                return (try? core.query(ContentBlockingApplies(spaceID: spaceID, origin: origin))) ?? true
+            },
             ownsUserContentController: popup == nil,
             isPrivate: creation.isPrivate,
             restoring: creation.restoreState)

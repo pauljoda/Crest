@@ -14,5 +14,6 @@ struct BrowserPageNavigationStarted: BrowserPageEngineEvent {
         page.sitePermissionRequests.cancelAll()
         page.mediaSessionCoordinator?.prepareForNavigation()
         page.removeWebNotifications()
+        page.elementPicker.cancel()
     }
 }
