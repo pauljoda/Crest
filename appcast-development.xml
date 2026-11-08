@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.197</title>
-            <pubDate>Sun, 08 Nov 2026 19:02:54 +0000</pubDate>
+            <title>0.8.198</title>
+            <pubDate>Sun, 08 Nov 2026 19:49:53 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1567</sparkle:version>
-            <sparkle:shortVersionString>0.8.197</sparkle:shortVersionString>
+            <sparkle:version>1568</sparkle:version>
+            <sparkle:shortVersionString>0.8.198</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### New
 
-- On Chromium pages on Mac, sites can no longer see which of your blocking rules they match or bring back what Crest hides.
+- On iPhone and iPad, Add to Home Screen in a page’s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/8e00d0c993ae8528e47af80cda6571a243fc87c2...0260c8cd36041277a6c78fe29bac8864a9360e1e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.197-2026-11-08-1567-r567.1/Installer-Crest-0.8.197-development-2026-11-08-0260c8c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/0260c8cd36041277a6c78fe29bac8864a9360e1e...842b274d383303ff0229c20a03d8f7b8b2479fe2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.198-2026-11-08-1568-r568.1/Installer-Crest-0.8.198-development-2026-11-08-842b274-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.197-2026-11-08-1567-r567.1/Installer-Crest-0.8.197-development-2026-11-08-0260c8c-arm64.dmg" length="218744986" type="application/octet-stream" sparkle:edSignature="azIROv7Wu1Vcmfe0HnClnrSEl7Pu6DlOwwuqB0xnIK+68gOgpEguo8n9YNkTOQdxfR1k7Xpo9/3YEz2yMPuWCg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.198-2026-11-08-1568-r568.1/Installer-Crest-0.8.198-development-2026-11-08-842b274-arm64.dmg" length="218751130" type="application/octet-stream" sparkle:edSignature="ekfUCRX4H9vcqgmbnTKrAztX6ygOddjw34yM+k1GGX9h+BUl7pgSWo8K+XcdiF6DP82PAgO6kZoETPpRu2dACQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ipY1w8MXBn4+b+jeHZ+GTwGH+2XcOBUJJmnAJ7ucTshOZuZClUDs+1VDY0xFRWOvbhHvQxZvBd5DcC4pOTDLDQ==
-length: 4023
+edSignature: kZv9jcp1fOct8jvuwlH/mJw634vdcHI1oa9SXVwGqoROQ+2yZL81WVGWUwypnVgGzJoTHp390CZGA876nY2TDg==
+length: 4075
 -->

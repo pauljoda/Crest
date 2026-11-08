@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "ad-hiding-out-of-sites-reach",
+    "development": "add-to-home-screen",
     "nightly": "sidebar-slides-as-one"
   }
 }
