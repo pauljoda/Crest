@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.196</title>
-            <pubDate>Sun, 08 Nov 2026 18:31:57 +0000</pubDate>
+            <title>0.8.197</title>
+            <pubDate>Sun, 08 Nov 2026 19:02:54 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1566</sparkle:version>
-            <sparkle:shortVersionString>0.8.196</sparkle:shortVersionString>
+            <sparkle:version>1567</sparkle:version>
+            <sparkle:shortVersionString>0.8.197</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Improved
 
-- Crest blocks ads and trackers on every page, on Mac, iPhone and iPad, with EasyList, EasyPrivacy, uBlock Origin’s lists and a list for your language, which stay up to date on their own. Blocked ads leave no empty boxes, floating video players are hidden, and the lists’ fixes for sites that fight ad blockers run too. Add your own lists or filters in a Space’s privacy settings, choose Block Element to hide anything the lists miss, and turn blocking off for a site from the page’s actions.
+- On Chromium pages on Mac, sites can no longer see which of your blocking rules they match or bring back what Crest hides.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/e16a309b8e8893a88a64816cbad5610285e67138...8e00d0c993ae8528e47af80cda6571a243fc87c2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.196-2026-11-08-1566-r566.1/Installer-Crest-0.8.196-development-2026-11-08-8e00d0c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/8e00d0c993ae8528e47af80cda6571a243fc87c2...0260c8cd36041277a6c78fe29bac8864a9360e1e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.197-2026-11-08-1567-r567.1/Installer-Crest-0.8.197-development-2026-11-08-0260c8c-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.196-2026-11-08-1566-r566.1/Installer-Crest-0.8.196-development-2026-11-08-8e00d0c-arm64.dmg" length="218699931" type="application/octet-stream" sparkle:edSignature="dEwIIodS2TnMumiv2j06YdOMWMshPFs1h7DU3jwxERXtMTC9qIT837qv13f9j1UA8h1NeCiiGa3pOx79iGzWDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.197-2026-11-08-1567-r567.1/Installer-Crest-0.8.197-development-2026-11-08-0260c8c-arm64.dmg" length="218744986" type="application/octet-stream" sparkle:edSignature="azIROv7Wu1Vcmfe0HnClnrSEl7Pu6DlOwwuqB0xnIK+68gOgpEguo8n9YNkTOQdxfR1k7Xpo9/3YEz2yMPuWCg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Jro6MnTo2+M8BAHAa+WJ7VU7Vi9cVcCKCXBMjNFi/JkJfyCDePt5B12ReIlwMCTSlHdJwppkPxRK3jhclmYFBg==
-length: 4395
+edSignature: ipY1w8MXBn4+b+jeHZ+GTwGH+2XcOBUJJmnAJ7ucTshOZuZClUDs+1VDY0xFRWOvbhHvQxZvBd5DcC4pOTDLDQ==
+length: 4023
 -->
