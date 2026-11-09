@@ -55,7 +55,7 @@
     "enable_reporting": false,
     "enable_service_discovery": false,
     "enable_updater": false,
-    "enable_widevine": true,
+    "enable_widevine": false,
     "exclude_unwind_tables": true,
     "fatal_linker_warnings": false,
     "ffmpeg_branding": "Chrome",
