@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "chromium-protected-video-opens-in-webkit",
+    "development": "chromium-pages-load-after-157",
     "nightly": "start-page-tap-puts-keyboard-away"
   }
 }

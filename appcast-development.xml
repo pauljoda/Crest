@@ -6,30 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.215</title>
-            <pubDate>Mon, 09 Nov 2026 20:07:02 +0000</pubDate>
+            <title>0.8.216</title>
+            <pubDate>Mon, 09 Nov 2026 21:12:55 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1575</sparkle:version>
-            <sparkle:shortVersionString>0.8.215</sparkle:shortVersionString>
+            <sparkle:version>1576</sparkle:version>
+            <sparkle:shortVersionString>0.8.216</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes.
-- On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium.
+- On Mac, pages in Chromium load again instead of stopping with "This page stopped responding" after updating to 0.8.215.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/cacc868ad039477f29347afad50cb539357a24e5...ede843084ee8f89f6aba4f90fb51b1fc64cc4f69) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.215-2026-11-09-1575-r575.1/Installer-Crest-0.8.215-development-2026-11-09-ede8430-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/ede843084ee8f89f6aba4f90fb51b1fc64cc4f69...74b3c75d050a90ffdb5c08bc4d2ba7fce734d62e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.216-2026-11-09-1576-r576.1/Installer-Crest-0.8.216-development-2026-11-09-74b3c75-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.215-2026-11-09-1575-r575.1/Installer-Crest-0.8.215-development-2026-11-09-ede8430-arm64.dmg" length="220149915" type="application/octet-stream" sparkle:edSignature="BK7inPLWO2oGrel0vLsZlz0RuEdzqXioK2Y/CScy6gqJ79pjQ2m+PjUs3W0Lg1JwhB0bT008k0Gby2u8P3YHCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.216-2026-11-09-1576-r576.1/Installer-Crest-0.8.216-development-2026-11-09-74b3c75-arm64.dmg" length="219710597" type="application/octet-stream" sparkle:edSignature="2rhOZS67qacVjKhJzSoamel7RLPFeGtrztqTVZwQU1xZ2vdwPHNpajJ12PcRnigTiXhHNWKQ4Cqku7YFSxXyBA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -61,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 0tcwOi5QGirNOxWSOIy/h9xbkY8P/hye6o7/gFcWBndt7XoGax9N72FsxULqZxMBvGjbS3aCmkfqErKunvraBQ==
-length: 4161
+edSignature: LdlVDYtIpfkNbO8fdpNNLPJWNKMDdWcn32Pkc4UMhRxKxi/j5/g0Srdc60mMWWXbdjN+tZxx+fQVXrUimnjmBA==
+length: 4018
 -->
