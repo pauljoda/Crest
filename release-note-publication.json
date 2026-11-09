@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "keyboard-hides-address-bar",
+    "development": "ad-blocking-settings-review-fixes",
     "nightly": "sidebar-slides-as-one"
   }
 }
