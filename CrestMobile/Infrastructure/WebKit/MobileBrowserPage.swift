@@ -1132,10 +1132,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         session.receive(scriptMessage)
     }
 
-    /// Whether the page's bridge can start the element picker: it shows a
-    /// site on the web and its bridge has posted.
+    /// Whether the page's bridge can start the element picker: Crest blocks,
+    /// it shows a site on the web and its bridge has posted.
     var canPickElementToBlock: Bool {
-        cosmeticFilters != nil && ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+        cosmeticFilters?.blocksContent == true && ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
     }
 
     /// Lets the person point at an element of the page to block on its site

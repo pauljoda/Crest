@@ -5241,6 +5241,14 @@
     "keyboard-hides-address-bar": {
       "category": "improved",
       "message": "On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes."
+    },
+    "ad-blocking-settings": {
+      "category": "improved",
+      "message": "Ad blocking has its own page in Settings and applies to every Space alike. Choose Off, Balanced or Strict, which also hides cookie notices and other annoyances, then turn single lists on or off, update them all at once, subscribe to more lists by address, write your own rules, and see the sites where blocking is off."
+    },
+    "ad-blocking-settings-review-fixes": {
+      "category": "internal",
+      "message": "Keep a site turned off from a persistent Space after a private window turned it off, and show the level a migrated device starts at as soon as its Spaces open"
     }
   }
 }

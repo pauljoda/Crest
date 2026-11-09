@@ -171,6 +171,7 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_custom_filter_list (id TEXT PRIMARY KEY, url TEXT NOT NULL, is_on INTEGER NOT NULL, "
             + "position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_custom_filters (id INTEGER PRIMARY KEY CHECK (id = 0), text TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_content_blocking (id INTEGER PRIMARY KEY CHECK (id = 0), level TEXT NOT NULL)");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -181,6 +182,7 @@ internal sealed class SqliteConnection : IDisposable {
         SearchCatalog = ReadSearchCatalog(),
         Agents = ReadAgents(),
         ReopeningPages = ReadReopeningPages(),
+        ContentBlockingLevel = ReadContentBlockingLevel(),
         FilterListChoices = ReadFilterListChoices(),
         BlockingSites = ReadBlockingSites(),
         CustomFilterLists = ReadCustomFilterLists(),
@@ -189,6 +191,15 @@ internal sealed class SqliteConnection : IDisposable {
 
     /// The lists the person turned on or off. A list this build does not know
     /// is left out.
+    /// The level ad blocking blocks at, or null for none kept or a level this
+    /// build does not know.
+    private ContentBlockingLevel? ReadContentBlockingLevel() {
+        ContentBlockingLevel? level = null;
+        Rows("SELECT level FROM device_content_blocking", statement =>
+            level = ContentBlockingLevel.Named(Sqlite.ColumnText(statement, 0)));
+        return level;
+    }
+
     private Dictionary<FilterList, bool> ReadFilterListChoices() {
         var choices = new Dictionary<FilterList, bool>();
         Rows("SELECT name, is_on FROM device_filter_list", statement => {
@@ -454,6 +465,8 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
         if (written is null || !records.Agents.Equals(written.Agents)) WriteAgents(records.Agents);
         if (written is null || records.ReopeningPages != written.ReopeningPages) WriteReopeningPages(records.ReopeningPages);
+        if (written is null || records.ContentBlockingLevel != written.ContentBlockingLevel)
+            WriteContentBlockingLevel(records.ContentBlockingLevel);
         if (written is null || !SameChoices(records.FilterListChoices, written.FilterListChoices))
             WriteFilterListChoices(records.FilterListChoices);
         if (written is null || !records.BlockingSites.SequenceEqual(written.BlockingSites)) WriteBlockingSites(records.BlockingSites);
@@ -662,6 +675,12 @@ internal sealed class SqliteConnection : IDisposable {
 
     private static bool SameChoices(IReadOnlyDictionary<FilterList, bool> choices, IReadOnlyDictionary<FilterList, bool> written) =>
         choices.Count == written.Count && choices.All(entry => written.TryGetValue(entry.Key, out bool isOn) && isOn == entry.Value);
+
+    private void WriteContentBlockingLevel(ContentBlockingLevel? level) {
+        Execute("DELETE FROM device_content_blocking");
+        if (level is null) return;
+        Insert("INSERT INTO device_content_blocking(id, level) VALUES(0,?)", statement => Bind(statement, 1, level.Name));
+    }
 
     private void WriteFilterListChoices(IReadOnlyDictionary<FilterList, bool> choices) {
         Execute("DELETE FROM device_filter_list");

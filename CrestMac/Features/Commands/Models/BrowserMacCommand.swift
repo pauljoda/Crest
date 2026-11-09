@@ -81,7 +81,10 @@ struct BrowserMacCommand {
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
     static let blockElement = BrowserMacCommand(
         .blockElement, actsOnPage: true,
-        isAvailable: { $0.supportsEngineCapability(.contentBlocking) && $0.commandPageShowsSite },
+        isAvailable: {
+            $0.supportsEngineCapability(.contentBlocking) && $0.commandPageShowsSite
+                && $0.browser.core.state.filterLists.level.blocksContent
+        },
         run: { $0.blockElement() })
     static let showBlockedElements = BrowserMacCommand(
         .showBlockedElements, actsOnPage: true,

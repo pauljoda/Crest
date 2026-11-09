@@ -29,7 +29,7 @@ public sealed class FilterList {
     public static readonly FilterList UBlockUnbreak = new(name: "ublock-unbreak", title: "uBlock filters – Unbreak",
         FilterListGroup.Ads, source: UBlock + "unbreak.min.txt", isDefault: true);
     public static readonly FilterList AdGuardBase = new(name: "adguard-base", title: "AdGuard Base", FilterListGroup.Ads,
-        source: AdGuard + "2_without_easylist.txt");
+        source: AdGuard + "2_without_easylist.txt", isStrict: true);
 
     public static readonly FilterList EasyListGermany = new(name: "easylist-germany", title: "EasyList Germany",
         FilterListGroup.Regional, source: "https://easylist.to/easylistgermany/easylistgermany.txt", languages: ["de"]);
@@ -53,9 +53,9 @@ public sealed class FilterList {
         FilterListGroup.Regional, source: AdGuard + "13.txt", languages: ["tr"]);
 
     public static readonly FilterList EasyListCookie = new(name: "easylist-cookie", title: "EasyList Cookie List",
-        FilterListGroup.Annoyances, source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt");
+        FilterListGroup.Annoyances, source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt", isStrict: true);
     public static readonly FilterList AdGuardAnnoyances = new(name: "adguard-annoyances", title: "AdGuard Annoyances",
-        FilterListGroup.Annoyances, source: AdGuard + "14.txt");
+        FilterListGroup.Annoyances, source: AdGuard + "14.txt", isStrict: true);
 
     public static IReadOnlyList<FilterList> All { get; } = [
         EasyList, EasyPrivacy, UBlockFilters, UBlockPrivacy, UBlockBadware, UBlockQuickFixes, UBlockUnbreak, AdGuardBase,
@@ -78,8 +78,11 @@ public sealed class FilterList {
     /// Where its maintainers publish it.
     public string Source { get; }
 
-    /// On unless the person turns it off.
+    /// On at every level that blocks, unless the person turns it off.
     public bool IsDefault { get; }
+
+    /// On at the Strict level, unless the person turns it off.
+    public bool IsStrict { get; }
 
     /// The languages, as ISO 639-1 codes, whose readers get a regional list
     /// unless they turn it off.
@@ -90,12 +93,13 @@ public sealed class FilterList {
     #region Constructors
 
     private FilterList(string name, string title, FilterListGroup group, string source, bool isDefault = false,
-        IReadOnlyList<string>? languages = null) {
+        bool isStrict = false, IReadOnlyList<string>? languages = null) {
         Name = name;
         Title = title;
         Group = group;
         Source = source;
         IsDefault = isDefault;
+        IsStrict = isStrict;
         Languages = languages ?? [];
     }
 
@@ -105,10 +109,14 @@ public sealed class FilterList {
 
     public static FilterList? Named(string? name) => All.FirstOrDefault(list => list.Name == name);
 
-    /// Whether a device whose readers prefer `languages`, as BCP 47 tags, has
-    /// the list on before the person chooses.
-    public bool IsOnByDefault(IReadOnlyList<string> languages) =>
-        IsDefault || languages.Any(tag => Languages.Contains(tag.Split('-', '_')[0].ToLowerInvariant()));
+    /// Whether `level` turns the list on for a device whose readers prefer
+    /// `languages`, as BCP 47 tags. Off blocks nothing, and the lists beneath
+    /// it keep the Balanced choice.
+    public bool IsOnByDefault(ContentBlockingLevel level, IReadOnlyList<string> languages) {
+        ArgumentNullException.ThrowIfNull(level);
+        return IsDefault || (IsStrict && level.IncludesStrictLists)
+            || languages.Any(tag => Languages.Contains(tag.Split('-', '_')[0].ToLowerInvariant()));
+    }
 
     #endregion
 }

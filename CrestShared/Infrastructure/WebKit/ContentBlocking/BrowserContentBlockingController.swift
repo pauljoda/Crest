@@ -34,10 +34,11 @@ final class BrowserContentBlockingController {
         rules.invalidate()
     }
 
-    /// Prepares the rule lists any Space of `workspace` needs, and answers
-    /// what changed since the last reconciliation.
-    func reconcile(in workspace: WorkspaceModel?) async -> BrowserContentBlockingUpdate {
-        let state = BrowserContentBlockingSessionState(workspace: workspace)
+    /// Prepares the rule lists the Spaces of `workspace` need under the
+    /// device's `policy`, and answers what changed since the last
+    /// reconciliation.
+    func reconcile(in workspace: WorkspaceModel?, policy: ContentBlockingPolicy) async -> BrowserContentBlockingUpdate {
+        let state = BrowserContentBlockingSessionState(workspace: workspace, policy: policy)
         if state.policiesBySpaceID.values.contains(where: \.blocksContent) {
             await prepare()
         }

@@ -36,6 +36,10 @@ public sealed partial class CrestApp {
         device.AttachPersistent(session, storedSelection, workspaceId);
         session.AttachSync(storedSync!);
         foreach (var (source, copy) in repairedCopies) Announce(new TabCopied(workspaceId, source, copy));
+        // A device that never chose a level blocks at Balanced until its
+        // persistent Spaces can say otherwise, so another level they give it
+        // is announced, and kept from then on.
+        if (device.OpeningChangesContentBlockingLevel()) Announce(new FilterListsChanged(filters.States()));
     }
 
     /// `session`, a seed, repaired as the file's session is when it loads,
