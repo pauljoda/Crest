@@ -13,7 +13,7 @@ Your Spaces, tabs, history, passwords and settings are the same whichever engine
 
 ## Chromium
 
-Crest's Chromium engine is Chromium with Crest's privacy changes. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, protected video support and your extensions up to date. It runs [Chrome Web Store extensions](../extensions/install-chrome-web-store.md).
+Crest's Chromium engine is Chromium with Crest's privacy changes. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, download warnings and your extensions up to date. It runs [Chrome Web Store extensions](../extensions/install-chrome-web-store.md).
 
 Chromium starts the first time you need it. If WebKit is your default and no page uses Chromium, it stays unloaded. Opening a Chromium page or an extension starts it, and it stays running until you quit Crest.
 
@@ -45,7 +45,7 @@ Rules match the website's scheme, host and port. A rule for `example.com` does n
 
 Protected video plays in WebKit, with Apple's FairPlay. Netflix, Disney+, Max and Prime Video open in WebKit unless you choose an engine for them.
 
-When a page in Chromium asks for protected video, Crest automatically switches to WebKit to play it with FairPlay, unless you have explicitly chosen an engine for that website. The switch checks for unsaved work first. Choosing **Stay on Page** keeps the page in Chromium and leaves its website rule unchanged; repeated requests from that document do not prompt again. After an allowed move, the website opens in WebKit on later visits. Select **Move Back** to return it to Chromium, or remove its rule in Settings. Playback still depends on the site's support for FairPlay.
+When a page in Chromium asks for protected video, Crest automatically switches to WebKit to play it with FairPlay, unless you have explicitly chosen an engine for that website. A video player the page embeds from another website does not switch it; choose **Page → Open Page in WebKit** instead. The switch checks for unsaved work first. Choosing **Stay on Page** keeps the page in Chromium and leaves its website rule unchanged; repeated requests from that document do not prompt again. After an allowed move, the website opens in WebKit on later visits. Select **Move Back** to return it to Chromium, or remove its rule in Settings. Playback still depends on the site's support for FairPlay.
 
 ## After updating from a WebKit-only Crest
 

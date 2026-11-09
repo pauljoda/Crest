@@ -45,8 +45,9 @@ away from Google, and runs Chrome Web Store extensions. Any website or page can
 open in **WebKit** instead, which adds Reader, whole-page translation, built-in
 content blocking, and FairPlay video. Chromium leaves protected video to
 WebKit: Netflix, Disney+, Max and Prime Video open in WebKit, and any other
-page that asks for protected video switches to WebKit automatically,
-respecting any unsaved-changes prompt before moving it. Choose the default engine and
+page that asks for protected video, itself or from a frame of its own site,
+switches to WebKit automatically, respecting any unsaved-changes prompt before
+moving it. Choose the default engine and
 per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine
 supports.
