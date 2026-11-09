@@ -16,7 +16,7 @@ Crest blocks ads and trackers with the filter lists that ad blockers use: EasyLi
 Open **Settings → Ad Blocking** and choose how much Crest blocks:
 
 - **Off** blocks nothing.
-- **Balanced** blocks ads and trackers while keeping sites working. This is where Crest starts.
+- **Balanced** blocks ads and trackers while keeping sites working. This is where Crest starts, unless you had turned blocking off in every Space, when it starts at Off.
 - **Strict** also hides cookie notices and other annoyances, and adds AdGuard's ad list. A few sites may not work.
 
 Each level turns the filter lists below it on or off. You can still turn a single list on or off; the setting then says **Customized**, and its reset button brings back the level's lists. **Update Now** downloads every list again.
@@ -25,7 +25,7 @@ Under **Your Lists**, subscribe to any other list by its address; it stays up to
 
 To hide something the lists miss, choose **Block Element** from the page's actions, or on Mac from the **Page** menu or by right-clicking it. Point at the element, or tap it. The bar at the bottom shows what you picked; use its arrows to choose the larger element around it or the smaller one inside, then choose **Block**. Crest adds the rule to My Filters for that site. To bring back what you blocked on a site, choose **Show Blocked Elements** from the same place.
 
-When a site doesn’t work with blocking, choose **Turn Off Blocking on** the site from the page’s actions, or assign **Toggle Content Blocking** a shortcut. The site stays unblocked in every Space until you turn blocking on again from the same place or from **Sites with Blocking Off** in Settings → Ad Blocking.
+When a site doesn’t work with blocking, choose **Turn Off Blocking on** the site from the page’s actions, or assign **Toggle Content Blocking** a shortcut. The site stays unblocked in every Space until you turn blocking on again from the same place or from **Sites with Blocking Off** in Settings → Ad Blocking. Turned off from a private window, it stays unblocked only until Crest quits.
 
 On Chromium pages, a content-blocking extension you install works alongside the lists. Extensions do not run on WebKit pages.
 

@@ -61,21 +61,23 @@ Blocking holds for every Space alike. `ContentBlockingLevel` decides how much
 Crest blocks: Off blocks nothing, Balanced turns on the lists that block ads and
 trackers without breaking sites, and Strict adds AdGuard Base and the annoyance
 lists. Choosing a level that blocks (`SetContentBlockingLevel`) sets every
-catalog list to what it turns on and forgets the person's own choices; Off keeps
-them for when blocking is on again. `FilterLists.IsCustomized` says the person
-turned a list against the level, and choosing the level again restores it. The
-device store keeps the level. A device that never chose one starts Off only if
-every persistent Space had blocking off, from when each Space chose for itself,
-and Balanced otherwise; that first answer is kept. Spaces still carry their old
-`ContentBlockingPolicy`, so older builds read their sessions, but it no longer
-decides anything.
+catalog list to what it turns on and forgets the person's own choices, from Off
+as from another level; Off blocks nothing and leaves the lists as they are.
+`FilterLists.IsCustomized` says the person turned a list against the level, and
+choosing the level again restores it. The device store keeps the level. A device
+that never chose one starts Off only if every persistent Space had blocking off,
+from when each Space chose for itself, and Balanced otherwise; that first answer
+is kept, and announced when the persistent session opens. Spaces still carry
+their old `ContentBlockingPolicy`, so older builds read their sessions, but it
+no longer decides anything.
 
-A page's actions turn blocking off, or on again, for the site it shows, in
-every Space (`SetSiteContentBlocking`). The device store keeps a site turned off
-from a persistent Space; one turned off from any other Space, such as a private
-one, lasts as long as the process and goes with that Space. Turning a site on
-again removes it however it was kept, from any Space. `ContentBlockingApplies`
-answers whether a page blocks on a site.
+A page's actions turn blocking off, or on again, for the site it shows, in every
+Space (`SetSiteContentBlocking`). The device store keeps a site turned off from
+a persistent Space, even one a private Space turned off first; one turned off
+from any other Space, such as a private one, lasts as long as the process and
+goes with that Space. Turning a site on again removes it however it was kept,
+from any Space. `ContentBlockingApplies` answers whether a page blocks on a
+site.
 
 Settings has a page of its own for all of it: the level, the catalog's lists by
 group with Update Now, the lists the person added and the field that adds one,

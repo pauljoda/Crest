@@ -110,8 +110,8 @@ public sealed class FilterList {
     public static FilterList? Named(string? name) => All.FirstOrDefault(list => list.Name == name);
 
     /// Whether `level` turns the list on for a device whose readers prefer
-    /// `languages`, as BCP 47 tags. Off blocks nothing, but the lists keep the
-    /// Balanced choice beneath it, so turning blocking on again restores them.
+    /// `languages`, as BCP 47 tags. Off blocks nothing, and the lists beneath
+    /// it keep the Balanced choice.
     public bool IsOnByDefault(ContentBlockingLevel level, IReadOnlyList<string> languages) {
         ArgumentNullException.ThrowIfNull(level);
         return IsDefault || (IsStrict && level.IncludesStrictLists)

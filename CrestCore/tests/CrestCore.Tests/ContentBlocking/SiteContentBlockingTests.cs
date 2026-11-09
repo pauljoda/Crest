@@ -150,10 +150,15 @@ public sealed partial class BrowserContractsTests {
             }
         }
         {
-            var (app, _, spaces) = DeviceApp(directory);
+            // Until the persistent Spaces open, the core can only answer
+            // Balanced; opening them announces the level they settle on.
+            var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
             using var disposal = app;
+            Assert.Equal(ContentBlockingLevel.Balanced, app.Query(new GetFilterLists()).Level);
+            var (workspace, opened) = TestWorkspaces.OpenStored(app);
+            Assert.Equal(ContentBlockingLevel.Off, Assert.Single(opened.OfType<FilterListsChanged>()).Lists.Level);
             Assert.Equal(ContentBlockingLevel.Off, app.Query(new GetFilterLists()).Level);
-            Assert.False(app.Query(new ContentBlockingApplies(SpaceId(spaces[0]!), null)));
+            Assert.False(app.Query(new ContentBlockingApplies(app.Workspace(workspace).Current.Spaces[0].Id, null)));
             app.Send(new SetContentBlockingLevel(ContentBlockingLevel.Balanced));
         }
         {
@@ -162,6 +167,32 @@ public sealed partial class BrowserContractsTests {
             using var disposal = app;
             Assert.Equal(ContentBlockingLevel.Balanced, app.Query(new GetFilterLists()).Level);
             Assert.True(app.Query(new ContentBlockingApplies(SpaceId(spaces[0]!), null)));
+        }
+    }
+
+    [Fact]
+    public void ASitePrivateBrowsingTurnedOffIsKeptOnceAPersistentSpaceTurnsItOff() {
+        using var directory = new StorageDirectory();
+        var site = new SiteOrigin("https", "news.example", 443);
+        Guid space;
+        {
+            var (app, _, spaces) = DeviceApp(directory);
+            using var disposal = app;
+            space = SpaceId(spaces[0]!);
+            var privateWorkspace = TestWorkspaces.Opened(app.Send(new OpenWorkspace(WorkspaceKind.Private, null)));
+            var privateSpace = app.Workspace(privateWorkspace).Current.Spaces[0].Id;
+            app.Send(new SetSiteContentBlocking(privateSpace, site, Blocks: false));
+            Assert.Equal([new SiteContentBlocking(privateSpace, site)], app.Query(new GetSiteContentBlocking()));
+            Assert.Empty(app.Send(new SetSiteContentBlocking(privateSpace, site, Blocks: false)));
+
+            var kept = Assert.Single(app.Send(new SetSiteContentBlocking(space, site, Blocks: false)).OfType<SiteContentBlockingChanged>());
+            Assert.Equal([new SiteContentBlocking(space, site)], kept.Sites);
+            Assert.Empty(app.Send(new SetSiteContentBlocking(privateSpace, site, Blocks: false)));
+        }
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            Assert.Equal([new SiteContentBlocking(space, site)], app.Query(new GetSiteContentBlocking()));
         }
     }
 

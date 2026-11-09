@@ -67,10 +67,7 @@ internal sealed partial class Device {
             lock (gate)
                 if (contentBlockingLevel is { } chosen) return chosen;
             if (Persistent() is not (_, var authority)) return ContentBlockingLevel.Balanced;
-            var spaces = authority.Current.Spaces;
-            var level = spaces.Count > 0 && spaces.All(space => !space.Settings.BrowsingPreferences.ContentBlocking.BlocksContent)
-                ? ContentBlockingLevel.Off
-                : ContentBlockingLevel.Balanced;
+            var level = FirstLevel(authority);
             lock (gate) {
                 if (contentBlockingLevel is null) {
                     contentBlockingLevel = level;
@@ -79,6 +76,15 @@ internal sealed partial class Device {
                 return contentBlockingLevel;
             }
         }
+    }
+
+    /// Whether the persistent session, now attached, gives a device that
+    /// never chose a level another level than the Balanced the core answered
+    /// before it could.
+    internal bool OpeningChangesContentBlockingLevel() {
+        lock (gate)
+            if (contentBlockingLevel is not null) return false;
+        return Persistent() is (_, var authority) && FirstLevel(authority) != ContentBlockingLevel.Balanced;
     }
 
     /// Every site where Crest blocks nothing.
@@ -94,8 +100,8 @@ internal sealed partial class Device {
 
     /// Blocks at `level` from now on. A level that blocks sets every catalog
     /// list to what it turns on, forgetting the lists the person turned on or
-    /// off; Off keeps them for when blocking is on again. Answers whether that
-    /// changed anything.
+    /// off, from Off as from another level; Off blocks nothing and leaves the
+    /// lists as they are. Answers whether that changed anything.
     internal bool SetContentBlockingLevel(ContentBlockingLevel level) {
         ArgumentNullException.ThrowIfNull(level);
         var current = ContentBlockingLevel;
@@ -219,8 +225,9 @@ internal sealed partial class Device {
 
     /// Blocks, or stops blocking, ads and trackers on `origin` everywhere, from
     /// a page of `spaceId`: turning it off from a Space of the persistent
-    /// session keeps the site in the device store, and from any other only for
-    /// the process; turning it on again removes the site however it was kept,
+    /// session keeps the site in the device store, even one another Space
+    /// turned off for the process alone, and from any other only for the
+    /// process; turning it on again removes the site however it was kept,
     /// whichever Space asks. Refused for an origin that is not valid, or for
     /// turning it off from a locked Space.
     internal void SetBlocking(Guid spaceId, SiteOrigin origin, bool blocks, ChangeFeed changes) {
@@ -235,7 +242,10 @@ internal sealed partial class Device {
                 storesChange = keptBlockingSites.RemoveAll(site => site.Origin == origin) > 0;
                 if (passingBlockingSites.RemoveAll(site => site.Origin == origin) == 0 && !storesChange) return;
             } else {
-                if (keptBlockingSites.Concat(passingBlockingSites).Any(site => site.Origin == origin)) return;
+                if (keptBlockingSites.Any(site => site.Origin == origin)) return;
+                bool passing = passingBlockingSites.Any(site => site.Origin == origin);
+                if (passing && !keeps) return;
+                passingBlockingSites.RemoveAll(site => site.Origin == origin);
                 (keeps ? keptBlockingSites : passingBlockingSites).Add(new(spaceId, origin));
                 storesChange = keeps;
             }
@@ -266,6 +276,15 @@ internal sealed partial class Device {
         if (!attached.Any(entry => entry.Value.Current.Space(spaceId) is not null)) return false;
         if (origin is null) return true;
         lock (gate) return !keptBlockingSites.Concat(passingBlockingSites).Any(site => site.Origin == origin);
+    }
+
+    /// The level a device that never chose one starts at: Off when every
+    /// Space of the persistent session had blocking off, and Balanced otherwise.
+    private static ContentBlockingLevel FirstLevel(NativeSessionAuthority persistent) {
+        var spaces = persistent.Current.Spaces;
+        return spaces.Count > 0 && spaces.All(space => !space.Settings.BrowsingPreferences.ContentBlocking.BlocksContent)
+            ? ContentBlockingLevel.Off
+            : ContentBlockingLevel.Balanced;
     }
 
     /// Takes the device store's choices and sites at launch.
