@@ -309,7 +309,7 @@
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
     "before": "2563f81bc40597e1cc900eaa781db848cfe806f6be35d0afcb02eb7282a835b9",
-    "after": "db69617879b554793514d01f9abaefdaf1b4b6b4c35daf9e1d41468481970c20"
+    "after": "466efe1efb6664736248f67c93db35e8c97149f2a1cb3424f85d11b06f0c64cf"
   },
   "chrome/browser/media/webrtc/display_media_access_handler.cc": {
     "before": "270e82e3b59e57c7303d1c083d664720f52de222894cc7f1600faa325a5df87e",
@@ -343,9 +343,13 @@
     "before": "ef3e5ce6a2eb4a16ad3e18d1aa1056f0260cdf139035bf7ebae900bb6be5cb6c",
     "after": "f6541ce08e2c02945419200f65689c1ef22ef39b9b0870bff7da2ae1c5460a6e"
   },
+  "chrome/browser/webid/federated_identity_api_permission_context.cc": {
+    "before": "66f01f7beb77e116332208a03e3ff9cc64da443f4dc5d73412a1934bbcd8fe28",
+    "after": "e12a329506034ecb12af45369bb4edaad79c6bfa05c88ef53250d88a1171f5db"
+  },
   "content/browser/webid/request_handler.cc": {
     "before": "5c1cd1f262f8111e80413c7b4571051b25d7296c3b5c028e739be5538f259e34",
-    "after": "9dfd5c9ed6064e0868ff6650035427e89de97a5dfa4093097730b7659e008cc0"
+    "after": "e3ba3248130a2007d16f82fdb861bb83d471f72b7f05288c2f101179e4bf1b4f"
   },
   "chrome/browser/mac/code_sign_clone_manager.mm": {
     "before": "8804a902d8fb7bada733411500857b3dd835a3be5b55850a13ff060398f31d39",

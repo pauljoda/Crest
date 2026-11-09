@@ -2440,7 +2440,7 @@
  
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -55,6 +55,14 @@
+@@ -55,6 +55,13 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
@@ -2448,14 +2448,13 @@
 +#include "chrome/common/chrome_features.h"
 +#include "components/lens/lens_features.h"
 +#include "components/security_interstitials/core/features.h"
-+#include "content/public/common/content_features.h"
 +#include "media/base/media_switches.h"
 +#endif
 +
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chrome/common/channel_info.h"
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
-@@ -127,6 +135,33 @@
+@@ -127,6 +134,28 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
@@ -2467,11 +2466,6 @@
 +  // command line can still turn the picker off.
 +  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
-+    // Crest keeps federated sign-in (FedCM) off.
-+    // Disabling it explicitly also hides the API from pages, which otherwise
-+    // keep it, so sites sign in through their own pop-up or redirect, as in
-+    // Safari. Crest has no account chooser to show for such a request.
-+    feature_overrides.DisableFeature(features::kFedCm);
 +    // An http:// address that can't be upgraded to HTTPS loads over HTTP
 +    // without a warning, as in Safari. HTTPS-First's warning is a tab-scoped
 +    // dialog, which needs a Views host that Crest's pages don't have.
@@ -3145,6 +3139,31 @@
 +      [[CrestApplicationEvents alloc] init]];
 +}
 +}
+--- a/chrome/browser/webid/federated_identity_api_permission_context.cc
++++ b/chrome/browser/webid/federated_identity_api_permission_context.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "chrome/browser/webid/federated_identity_api_permission_context.h"
+ 
++#include "base/command_line.h"
+ #include "chrome/browser/browser_features.h"
+ #include "chrome/browser/content_settings/cookie_settings_factory.h"
+ #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
+@@ -38,6 +39,14 @@
+     const url::Origin& relying_party_embedder) {
+   if (!base::FeatureList::IsEnabled(features::kFedCm))
+     return PermissionStatus::BLOCKED_VARIATIONS;
++  // Crest has no account chooser to show, so it refuses every FedCM request,
++  // a click included. Pages keep the API, as in Chrome: turning the feature
++  // off would hide it, and fingerprinting scripts read a Chrome without it as
++  // a tampered browser, so fraud checks turn away the person's sign-ins and
++  // payments.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    return PermissionStatus::BLOCKED_VARIATIONS;
++  }
+ 
+   const GURL rp_embedder_url = relying_party_embedder.GetURL();
+ 
 --- a/content/browser/webid/request_handler.cc
 +++ b/content/browser/webid/request_handler.cc
 @@ -325,7 +325,10 @@
@@ -3152,8 +3171,8 @@
    FederatedApiPermissionStatus permission_status = GetApiPermissionStatus();
  
 -  if (!CanBypassPermissionStatusCheck(spec_->rp_mode(),
-+  // A click lifts embargo and site settings, but not a build that has FedCM
-+  // turned off: such a browser may have no account chooser to show.
++  // A click lifts embargo and site settings, but not FedCM being unavailable
++  // in this browser, as it is in Crest, which has no account chooser to show.
 +  if (permission_status == FederatedApiPermissionStatus::BLOCKED_VARIATIONS ||
 +      !CanBypassPermissionStatusCheck(spec_->rp_mode(),
                                        spec_->mediation_requirement())) {
