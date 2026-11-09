@@ -16,6 +16,34 @@ final class BrowserAgentCatalogTests: XCTestCase {
 
     // MARK: - Actions - Catalogs
 
+    /// An agent reads a request's headers except the ones that carry the
+    /// person's sign-ins, whatever a site calls them.
+    func testNetworkRequestDetailHidesSignInHeadersWhateverTheirName() throws {
+        let request = PageNetworkRequest(
+            sequence: 1, url: "https://example.com/api", method: "GET", resourceType: "fetch", status: 200,
+            mimeType: "application/json",
+            requestHeaders: [
+                PageHeader(name: "Accept", value: "application/json"),
+                PageHeader(name: "Cookie", value: "sid=1"),
+                PageHeader(name: "X-Auth-Token", value: "secret-1"),
+                PageHeader(name: "x-amz-security-token", value: "secret-2"),
+            ],
+            responseHeaders: [
+                PageHeader(name: "Content-Type", value: "application/json"),
+                PageHeader(name: "Set-Cookie", value: "sid=2"),
+            ],
+            started: Date(), duration: 1, bytes: 2, failure: nil)
+        let detail = try JSONDecoder().decode(
+            [String: AgentJSON].self, from: JSONEncoder().encode(BrowserMacAgents.RequestDetail(request)))
+        let hidden = "(hidden by Crest)"
+        XCTAssertEqual(detail["requestHeaders"]?["Accept"]?.string, "application/json")
+        XCTAssertEqual(detail["requestHeaders"]?["Cookie"]?.string, hidden)
+        XCTAssertEqual(detail["requestHeaders"]?["X-Auth-Token"]?.string, hidden)
+        XCTAssertEqual(detail["requestHeaders"]?["x-amz-security-token"]?.string, hidden)
+        XCTAssertEqual(detail["responseHeaders"]?["Content-Type"]?.string, "application/json")
+        XCTAssertEqual(detail["responseHeaders"]?["Set-Cookie"]?.string, hidden)
+    }
+
     func testPrivateCreationValidatesBeforeMutationAndNeverExposesPrivateTabs() async throws {
         let fixture = try BrowserAgentFixture()
         let before = fixture.application.stackedWindowIDs
