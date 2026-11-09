@@ -23,14 +23,17 @@ ENGINE_APP_ENTITLEMENTS = {
     "com.apple.security.personal-information.location": True,
     "com.apple.security.personal-information.photos-library": True,
 }
-# V8 in these helpers maps executable memory (chrome/app/helper-*-entitlements.plist).
-JIT_HELPER_SUFFIXES = ("Helper (Renderer).app", "Helper (GPU).app")
+# V8 in the renderer and GPU helpers maps executable memory
+# (chrome/app/helper-*-entitlements.plist). Chromium ships each helper kind in
+# more than one flavor, such as "(Renderer)" and "(Aperitif Renderer)", and
+# signs every flavor of a kind alike (chrome/installer/mac/signing/parts.py).
+JIT_HELPER_SUFFIXES = ("Renderer).app", "GPU).app")
 BUNDLE_SUFFIXES = {".app", ".framework", ".xpc", ".appex", ".plugin", ".docktileplugin", ".bundle"}
 MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
 # The engine is built as Chromium and finds its helpers by these built names
 # (chrome/BUILD.gn, chrome/common/chrome_constants.cc).
 ENGINE_HELPER_NAME = "Chromium Helper"
-ENGINE_ALERTS_HELPER = "Chromium Helper (Alerts).app"
+ENGINE_ALERTS_HELPER_SUFFIX = "Alerts).app"
 # How the engine's localized InfoPlist.strings spell its product name.
 ENGINE_PRODUCT_NAMES = ("Chromium", "क्रोमियम")
 
@@ -48,14 +51,15 @@ def engine_helpers(frameworks):
 
 
 def remove_engine_alerts_helper(frameworks):
-    """Chromium posts alert-style notifications from a helper app with its own
-    bundle identifier, which Notification Center lists as "Chromium". A host
+    """Chromium posts alert-style notifications from an alerts helper app, one
+    per helper flavor, with its own bundle identifier, which Notification
+    Center lists as "Chromium". A host
     package replaces the engine's macOS notification bridge before the bridge
     creates that helper's launcher, and nothing else launches it, so the
     package leaves it out rather than ship an app that could register under
     another name."""
     for helper in engine_helpers(frameworks):
-        if helper.name == ENGINE_ALERTS_HELPER:
+        if helper.stem.startswith(ENGINE_HELPER_NAME) and helper.name.endswith(ENGINE_ALERTS_HELPER_SUFFIX):
             shutil.rmtree(helper)
 
 
@@ -125,7 +129,7 @@ def sign_for_distribution(output, identity, app_entitlements):
     for path in sorted(loose, key=depth, reverse=True):
         codesign(path)
     for path in sorted(bundles, key=depth, reverse=True):
-        jit = path.name.endswith(JIT_HELPER_SUFFIXES)
+        jit = path.stem.startswith(ENGINE_HELPER_NAME) and path.name.endswith(JIT_HELPER_SUFFIXES)
         codesign(path, {"com.apple.security.cs.allow-jit": True} if jit else None)
     codesign(output, app_entitlements)
 

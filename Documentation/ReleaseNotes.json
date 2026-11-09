@@ -5261,6 +5261,10 @@
     "chromium-protected-video-opens-in-webkit": {
       "category": "fixed",
       "message": "On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium."
+    },
+    "chromium-pages-load-after-157": {
+      "category": "fixed",
+      "message": "On Mac, pages in Chromium load again instead of stopping with \"This page stopped responding\" after updating to 0.8.215."
     }
   }
 }
