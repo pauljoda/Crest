@@ -35,7 +35,6 @@ constexpr Annotation kDirected[] = {
     "devtools_network_resource",
     "dns_over_https",
     "dns_transaction",
-    "dom_distiller",
     "download_bubble_retry_download",
     "download_manager_resume",
     "download_web_contents_frame",

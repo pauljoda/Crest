@@ -29,7 +29,7 @@
        extensions::BrowserContextKeyedAPIFactory<extensions::WebRequestAPI>::Get(
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4539,6 +4539,7 @@
+@@ -4540,6 +4540,7 @@
        "ui/crest/crest_browser_window.mm",
        "ui/crest/crest_chrome_hooks.h",
        "ui/crest/crest_chrome_host.mm",
@@ -37,7 +37,7 @@
        "ui/crest/crest_app.h",
        "ui/crest/crest_core.h",
        "ui/crest/crest_engine.h",
-@@ -4577,6 +4578,10 @@
+@@ -4578,6 +4579,10 @@
        "ui/crest/crest_engine_store.h",
        "ui/crest/crest_engine_tab_groups.cc",
        "ui/crest/crest_engine_tab_groups.h",
@@ -48,7 +48,7 @@
        "ui/crest/CrestChromiumHost.h",
      ]
  
-@@ -4603,6 +4608,8 @@
+@@ -4604,6 +4609,8 @@
        "//chrome/browser/ui/views/frame:immersive_mode_controller_mac_impl",
        "//chrome/browser/ui/views/frame:immersive_mode_overlay_views_mac",
        "//chrome/browser/ui/views/frame:immersive_mode_overlay_views_mac_impl",

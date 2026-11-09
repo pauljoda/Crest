@@ -2,10 +2,10 @@
   "schemaVersion": 2,
   "status": "source-preparation",
   "chromium": {
-    "version": "156.0.8078.80",
-    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-156.0.8078.80-lite.tar.xz",
-    "hashManifest": "md5  831563a77c448aadbb6ae2eee9d0c4e1  chromium-156.0.8078.80-lite.tar.xz\nsha1  e59c7eee5f75afe6519b211c83c7829cc7d1cb86  chromium-156.0.8078.80-lite.tar.xz\nsha224  4e9174a16fa32fea97e2a9170545196c6a05d332730802c21554df08  chromium-156.0.8078.80-lite.tar.xz\nsha256  6c4dc0a9e809ed3ad44b69a9d4622f147f3b3f9b34740ec8fc9735a78bbde80b  chromium-156.0.8078.80-lite.tar.xz\nsha384  f3c3ae064a589a1de13a2b0a8f20d082139d5ea7cc1c96c36eb2020c343564b41ddcf85af318861e0923134f86619383  chromium-156.0.8078.80-lite.tar.xz\nsha512  94f6ee6ac157cc248af3de9587e430cacd949a03a6280f39800bba4d9cdfdc5abad6a215fbed5a812ea2d4f96a9072e3f2b762e731381503f2e65bc88dcf3a51  chromium-156.0.8078.80-lite.tar.xz\n",
-    "sourceArchiveSha256": "6c4dc0a9e809ed3ad44b69a9d4622f147f3b3f9b34740ec8fc9735a78bbde80b"
+    "version": "157.0.8103.39",
+    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-157.0.8103.39-lite.tar.xz",
+    "hashManifest": "md5  c3fb9c796539a46377d22a9f551cc4b8  chromium-157.0.8103.39-lite.tar.xz\nsha1  62de9496f0941dbc5d041272a5a058be89889ce7  chromium-157.0.8103.39-lite.tar.xz\nsha224  42d33aa0de049f1069f27ab153388cca21e63318651f261f174ee7ee  chromium-157.0.8103.39-lite.tar.xz\nsha256  2d8f67d979af30ffb1e9628dbe29e00c13aacd3ba21be7bcfbaa4734a49b6c33  chromium-157.0.8103.39-lite.tar.xz\nsha384  7e8dae6aa11168ab1b5c047b98f288e5856a8b174880068a016005ed7380c8c3caf72b83da31a9f0636fe1ec8a3bbdec  chromium-157.0.8103.39-lite.tar.xz\nsha512  274fa04821709a0caf288348e2af6b0afd645b87316803b22d522ea84d26bde5a2c6286a60b584c0cc161bda6ff2458646de392873b7ab565b2696b8b7d41fe8  chromium-157.0.8103.39-lite.tar.xz\n",
+    "sourceArchiveSha256": "2d8f67d979af30ffb1e9628dbe29e00c13aacd3ba21be7bcfbaa4734a49b6c33"
   },
   "dependencies": [
     "src/third_party/llvm-build/Release+Asserts",
@@ -99,7 +99,7 @@
   },
   "performanceInputs": {
     "macSDKVersion": "26.5",
-    "pgoProfile": "chrome-mac-arm-8078-1793210039-70a79c5304368db0122ec98c91db5c4c6851ed9a-2bf76a0407535d2fe700f41a1ec47590d03948c0.profdata",
-    "pgoSHA256": "1acb662d07e224d2c38f2f8cb80b63c06b5b4c927ec90b79adde5843a26c5b88"
+    "pgoProfile": "chrome-mac-arm-8103-1793136895-c311c42d236e301c0c283cc2416d5ad35f954db1-26b6d4dad87976f1f950a3cdb2a31900c772e172.profdata",
+    "pgoSHA256": "ca33a8fc58bd326fb60bef9b64dd76f5b1bafdbc9b180bc082813e4c231294bd"
   }
 }

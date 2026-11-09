@@ -230,11 +230,12 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4534,6 +4534,52 @@
+@@ -4534,6 +4534,53 @@
    }
  
    if (is_mac) {
-+    sources += [
++    # Crest's host, which the `ui` library carried before 157 folded it in.
++    sources = [
 +      "ui/crest/crest_browser_window.h",
 +      "ui/crest/crest_browser_window.mm",
 +      "ui/crest/crest_chrome_hooks.h",
@@ -283,7 +284,7 @@
      deps += [
        ":app_controller_mac",
        ":chrome_browser_application_mac",
-@@ -4561,6 +4607,14 @@
+@@ -4561,6 +4608,14 @@
        "//components/remote_cocoa/app_shim",
        "//components/remote_cocoa/app_shim:features",
        "//components/remote_cocoa/browser",
