@@ -5253,6 +5253,14 @@
     "start-page-tap-puts-keyboard-away": {
       "category": "fixed",
       "message": "On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away."
+    },
+    "chromium-upstream-157-0-8103-39": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes."
+    },
+    "chromium-protected-video-opens-in-webkit": {
+      "category": "fixed",
+      "message": "On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium."
     }
   }
 }
