@@ -580,13 +580,12 @@ engine.
   other registered engine (**Open Page in WebKit**), recording no choice.
   Both read the registered engines, not what the device offers, so they are
   there before any page has opened on the other engine.
-- **Protected media.** Crest's Chromium plays Widevine once the component
-  updater has delivered its module. Video services whose players refuse it,
-  because Chromium's Widevine lacks the verified media path they require,
-  open in an engine with the `protected-media` capability unless the person
-  chose an engine for the site (`ProtectedMediaService`). When a page, or a
-  frame of its own site, asks for a key system Chromium lacks, such as
-  PlayReady or Widevine before its module arrives, Chromium reports
+- **Protected media.** Crest's Chromium is built without Widevine, whose
+  unbranded module lacks the verified media path most video services require.
+  The services `ProtectedMediaService` names open in an engine with the
+  `protected-media` capability from the start unless the person chose an
+  engine for the site. When a page, or a frame of its own site, asks for a key
+  system Chromium lacks, Widevine or PlayReady, Chromium reports
   `ProtectedMediaUnavailable`. The core automatically attempts a move once per
   document to an engine with the `protected-media` capability, which WebKit has
   through the platform's FairPlay. It checks `beforeunload` before moving and
@@ -1025,8 +1024,8 @@ merely visiting engine Settings does not.
   carry an engine and version tag, stay local to the profile, and never enter
   the session or CloudKit; an incompatible archive falls back to the tab's
   saved URL.
-- **Protected media.** Chromium reports a missing Widevine or PlayReady key
-  system from the requesting frame through the frame host to the page, which
+- **Protected media.** Chromium reports a requested Widevine or PlayReady key
+  system, neither of which it carries, from the requesting frame through the frame host to the page, which
   reports `ProtectedMediaUnavailable` when the frame is the main frame or of
   the same site.
 - **Services.** Exports, full-page captures and printing use a fixed,

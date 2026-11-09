@@ -5254,6 +5254,14 @@
       "category": "fixed",
       "message": "On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away."
     },
+    "chromium-upstream-157-0-8103-39": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes."
+    },
+    "chromium-protected-video-opens-in-webkit": {
+      "category": "fixed",
+      "message": "On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium."
+    },
     "crest-0-9-sub-spaces-ad-blocking-chromium": {
       "category": "new",
       "message": "Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance."

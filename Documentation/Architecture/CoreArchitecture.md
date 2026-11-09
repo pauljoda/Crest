@@ -268,12 +268,13 @@ address.
 
 ### Protected media fallback
 
-Crest's Chromium plays Widevine once its module has downloaded, but not for
-services that require Widevine's verified media path, which only Google
-Chrome's signature carries; `ProtectedMediaService` names those, and their
-sites open in WebKit unless the person chose an engine. WebKit plays FairPlay
-through the system's own content decryption, so a page whose video needs a key
-system Chromium lacks can also move to WebKit. Crest licenses nothing for this:
+Crest's Chromium carries no protected-media key system. It is built without
+Widevine, whose unbranded module lacks the verified media path most video
+services require, which only Google Chrome's signature carries. WebKit plays
+FairPlay through the system's own content decryption, so a page whose video
+needs a key system Chromium lacks moves to WebKit. `ProtectedMediaService`
+names the services known to need it, and their sites open in WebKit from the
+start unless the person chose an engine. Crest licenses nothing for this:
 it uses the platform's WebKit.
 
 1. A page asks for a key system Chromium cannot provide. The Chromium binding
