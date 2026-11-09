@@ -5241,6 +5241,10 @@
     "keyboard-hides-address-bar": {
       "category": "improved",
       "message": "On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes."
+    },
+    "hide-more-agent-sign-in-headers": {
+      "category": "fixed",
+      "message": "On Mac, coding agents no longer see authentication tokens in the headers of the requests they read, however a site names them."
     }
   }
 }
