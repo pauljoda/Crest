@@ -230,11 +230,23 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4534,6 +4534,53 @@
-   }
+@@ -4537,6 +4537,7 @@
+     deps += [
+       ":app_controller_mac",
+       ":chrome_browser_application_mac",
++      ":crest_host",
+       ":global_keyboard_shortcuts_mac",
+       "//chrome/browser/apps/app_shim",
+       "//chrome/browser/mac",
+@@ -5252,6 +5253,74 @@
+   sources = []
+ }
  
-   if (is_mac) {
-+    # Crest's host, which the `ui` library carried before 157 folded it in.
++if (is_mac) {
++  # Crest's host: its browser window, the engine it serves, and the protocols
++  # Crest's Swift UI calls. It includes //chrome/browser headers, so like every
++  # target circular with "browser" it carries browser_public_dependencies.
++  source_set("crest_host") {
 +    sources = [
 +      "ui/crest/crest_browser_window.h",
 +      "ui/crest/crest_browser_window.mm",
@@ -281,24 +293,26 @@
 +      "ui/crest/CrestChromiumHost.h",
 +    ]
 +
-     deps += [
-       ":app_controller_mac",
-       ":chrome_browser_application_mac",
-@@ -4561,6 +4608,14 @@
-       "//components/remote_cocoa/app_shim",
-       "//components/remote_cocoa/app_shim:features",
-       "//components/remote_cocoa/browser",
++    public_deps = [ ":browser_public_dependencies" ]
++    deps = [
++      "//media/mojo/mojom",
++      "//services/audio/public/mojom",
++      "//services/media_session/public/mojom",
++      "//ui/base/mojom:ui_base_types",
 +    ]
 +
-+    # The shell host implements the Objective-C protocols Crest's Swift UI
-+    # calls. A method missing from one must fail the build, not raise an
-+    # unrecognized selector at run time.
++    # A method missing from a protocol the Swift UI calls must fail the
++    # build, not raise an unrecognized selector at run time.
 +    cflags_objcc = [
 +      "-Werror=protocol",
 +      "-Werror=objc-method-access",
-     ]
-     frameworks = [
-       "Carbon.framework",
++    ]
++  }
++}
++
+ # These are the dependencies for the "browser" target that are outside of
+ # //chrome/browser. All gn targets that have circular dependencies with
+ # "browser" should include this dependency.
 --- a/chrome/browser/ui/tabs/tab_features.cc
 +++ b/chrome/browser/ui/tabs/tab_features.cc
 @@ -12,6 +12,10 @@

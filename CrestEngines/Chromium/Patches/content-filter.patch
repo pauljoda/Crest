@@ -29,7 +29,7 @@
        extensions::BrowserContextKeyedAPIFactory<extensions::WebRequestAPI>::Get(
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4540,6 +4540,7 @@
+@@ -5263,6 +5263,7 @@
        "ui/crest/crest_browser_window.mm",
        "ui/crest/crest_chrome_hooks.h",
        "ui/crest/crest_chrome_host.mm",
@@ -37,7 +37,7 @@
        "ui/crest/crest_app.h",
        "ui/crest/crest_core.h",
        "ui/crest/crest_engine.h",
-@@ -4578,6 +4579,10 @@
+@@ -5301,11 +5302,17 @@
        "ui/crest/crest_engine_store.h",
        "ui/crest/crest_engine_tab_groups.cc",
        "ui/crest/crest_engine_tab_groups.h",
@@ -48,15 +48,13 @@
        "ui/crest/CrestChromiumHost.h",
      ]
  
-@@ -4604,6 +4609,8 @@
-       "//chrome/browser/ui/views/frame:immersive_mode_controller_mac_impl",
-       "//chrome/browser/ui/views/frame:immersive_mode_overlay_views_mac",
-       "//chrome/browser/ui/views/frame:immersive_mode_overlay_views_mac_impl",
+     public_deps = [ ":browser_public_dependencies" ]
+     deps = [
 +      "//components/js_injection/common:common_mojom",
 +      "//components/origin_matcher",
-       "//chrome/browser/web_applications/extensions",
-       "//components/remote_cocoa/app_shim",
-       "//components/remote_cocoa/app_shim:features",
+       "//media/mojo/mojom",
+       "//services/audio/public/mojom",
+       "//services/media_session/public/mojom",
 --- a/chrome/renderer/BUILD.gn
 +++ b/chrome/renderer/BUILD.gn
 @@ -76,6 +76,8 @@
