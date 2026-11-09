@@ -5249,6 +5249,10 @@
     "ad-blocking-settings-review-fixes": {
       "category": "internal",
       "message": "Keep a site turned off from a persistent Space after a private window turned it off, and show the level a migrated device starts at as soon as its Spaces open"
+    },
+    "start-page-tap-puts-keyboard-away": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away."
     }
   }
 }
