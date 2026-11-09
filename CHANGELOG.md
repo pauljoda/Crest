@@ -7,6 +7,76 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-09
+
+Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of
+sign-ins while each keeps its own tabs and look, and built-in ad blocking on
+Mac, iPhone and iPad. Its Chromium engine is now built from Chromium itself,
+updated to 157, with Crest's own privacy changes. Quick Windows, Peek and the
+command palette do more, and Crest can follow the system's light or dark
+appearance.
+
+### Added
+
+- Share one set of sign-ins, history, passwords and extensions across several Spaces with Sub-Spaces, while each Space keeps its own tabs, folders and look. Make one from a Space's menu in Settings, or on Mac drag a Space into a group or out of one.
+- Show a group's pinned tabs in each of its Spaces, with one page behind each pin, or turn on Separate Pinned Tabs to give each Space its own.
+- Choose which Sub-Space keeps the group when you delete the Space that leads it, or delete the whole group. Locking any Space of a group locks the group.
+- Open a link or the current page in another Space's session, in a Quick Window, to use the same site under another account.
+- Import an Arc profile's Spaces, or a Zen profile's workspaces, as one group, and keep Spaces that shared sign-ins together.
+- Block ads and trackers on every page on Mac, iPhone and iPad, in Chromium and WebKit alike, with EasyList, EasyPrivacy, uBlock Origin's lists and a list for your language. Blocked ads leave no empty boxes, and floating video players are hidden.
+- Choose Off, Balanced or Strict in Settings › Ad Blocking, where Strict also hides cookie notices and other annoyances. Turn single lists on or off, update them at once, subscribe to more lists, and write your own filters.
+- Hide anything the lists miss with Block Element, and turn blocking off for a site from the page's actions.
+- Clear one site's cookies or cache from Site Controls, and see and remove the sites that keep data in each Space's Privacy settings, with history, cookies and cached files cleared by time range.
+- Keep Crest light or dark, or let it follow macOS. Spaces can dim their colors in dark, start from a plain Neutral look, and let their text color follow the system.
+- Hold Control-Tab on Mac to see previews of your five most recent tabs and switch to one.
+- Use Back and Forward, Site Controls, the Space's pinned extensions and the command palette in Quick Windows on Mac, switch a Quick Window to another Space from its address bar, and open a Quick Window from any app with its shortcut.
+- Open links in Peek with Shift-click, and choose a smaller Peek on Mac.
+- Capture part of a page as an image with Capture Page, Command-Shift-2.
+- Move the tab you're on into Saved Tabs or back with Save or Unsave Current Tab.
+- Press a shortcut again when a website keeps it, or choose for each shortcut whether Crest or the website comes first.
+- Drag finished downloads out to Finder or another app, and see a notice as each download finishes on Mac.
+- Show a Copy URL button in the address field, fit more Space icons in the sidebar, and let pins stretch to fill a row.
+- Keep the sidebar's hover edge working while a video plays full screen.
+- See where a coding agent works on a page and what each agent did, stop every agent at once, and have Crest ask before an agent opens a window.
+- On iPhone, open the command palette from the address bar. On iPhone and iPad, add a site to your Home Screen, open a new tab from the floating button at the bottom of the sidebar, and hold a link to open it in Peek.
+
+### Changed
+
+- Chromium is updated to 157.0.8103.39 and built from Chromium itself with Crest's privacy changes, instead of ungoogled-chromium. It sends Google none of your browsing, form or account data, and contacts Google only to keep certificate checks, download file type rules and your extensions up to date.
+- Protected video plays in WebKit with FairPlay. A Chromium page that asks for protected video switches to WebKit, and Netflix, Disney+, Max and Prime Video open there unless you choose an engine for them.
+- Chromium allows third-party cookies as Chrome does, except in private windows, so embedded sign-ins and payments work.
+- Calls in Chromium use UDP again, so they connect faster and sound better, while sites still can't see your local network addresses.
+- Sidebar folders indent what they hold, a closed folder is as tall as a tab, and the sidebar slides in with its tabs.
+- Pages show their loading progress in the address field.
+- Mac windows resize much smaller, so two fit side by side on a laptop screen.
+- Peek uses more of the page and dims the page behind it, and Quick Windows remember their size and cascade.
+- Errors, warnings and confirmations use Crest's own red, amber and green, and more results show as notices at the top of the window.
+- Every menu item shows its icon.
+- Crest stays more responsive with many Spaces and extensions.
+
+### Fixed
+
+- Scrolling the sidebar or laying out open folders no longer makes Crest stop responding, and an iCloud sync that arrives during a save no longer freezes it.
+- Crest on Mac no longer quits when you go back to a restored tab whose page never finished opening, when an extension opens its popup by itself, or when you close a full-screen Chromium tab.
+- Keyboard shortcuts follow layouts that change keys while Command is held, so Command-X cuts instead of quitting Crest.
+- If Crest quits unexpectedly while reopening your pages, the next launch asks whether to reopen them.
+- Discord and other Chromium sites stay signed in after Crest restarts, updates or unloads their tab.
+- Windows a site writes itself, such as speaker notes or a Slack huddle, show their content.
+- Passkeys in Chromium offer your phone or a security key when this Mac has none, and sites such as Duo offer Touch ID.
+- Extensions act on the page you're using in a Quick Window, Peek or split, their sign-in tabs show their page, and their popups stay open for Touch ID.
+- Passwords for IPv6 and unusually written IP addresses load and fill, and saved passwords survive Crest quitting partway through an import or a delete.
+- Quick Windows ask for site permissions instead of silently refusing them, and links from other apps open their Quick Window over the window you're in.
+- Turning off a Space's lock sticks, and lock changes reach your other devices.
+- Refusals such as a full split no longer show as sync failures.
+- Settings stays smooth with hundreds of saved passwords and site permissions.
+- On iPhone and iPad, low memory unloads one tab instead of several, Tab in a form no longer switches Spaces on iPad, and tapping the Start Page puts the keyboard away.
+
+### Upgrading
+
+- Devices that run an earlier Crest keep syncing. They show each Sub-Space as a Space on its own, signed out, until they update, and the first group you make reminds you to update your other devices.
+- Ad blocking starts at Balanced. If you had turned content blocking off in every Space, it starts at Off.
+- Mac still requires Apple silicon and macOS 26.1 or later. iPhone and iPad require iOS or iPadOS 26.1 or later.
+
 ## [0.8.50] - 2026-10-22
 
 Crest 0.8.50 brings Chromium 155 with its latest security fixes and stops
