@@ -100,7 +100,9 @@ extension BrowserPageOwner {
     /// icons, content blocking and credential access, compared between
     /// changes so each is reconciled only when it moved.
     var runtimeProjection: BrowserRuntimeSessionProjection {
-        BrowserRuntimeSessionProjection(workspace: browser.workspaceModel, images: browser.core.state.favicons)
+        BrowserRuntimeSessionProjection(
+            workspace: browser.workspaceModel, images: browser.core.state.favicons,
+            contentBlocking: browser.core.state.contentBlockingPolicy)
     }
 
     /// Releases the pages of tabs the window's workspace no longer holds and
@@ -133,7 +135,8 @@ extension BrowserPageOwner {
     /// workspace, reloading presented pages only when their Space's
     /// protection level changes.
     func reconcileContentBlocking() async {
-        let update = await contentBlocking.reconcile(in: browser.workspaceModel)
+        let update = await contentBlocking.reconcile(
+            in: browser.workspaceModel, policy: browser.core.state.contentBlockingPolicy)
         let presented = presentedTabIDsAcrossWindows
         for (tabID, runtime) in host.runtimes {
             let page = runtime.page

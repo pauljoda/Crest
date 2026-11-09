@@ -129,6 +129,9 @@ internal sealed class FilterLibrary {
     private readonly Dictionary<string, DateTimeOffset> leases = [];
     private ContentRuleListSet published = new([]);
     private string? publishedKey;
+    /// The set in force before the published one, whose rules the device
+    /// keeps for a switch back.
+    private (string Key, ContentRuleListSet Set)? previous;
     /// The rules being converted, and whether the inputs changed meanwhile.
     private string? buildingKey;
     private bool rebuildWanted;
@@ -180,9 +183,10 @@ internal sealed class FilterLibrary {
 
     #region Actions - Lists
 
-    /// Whether the device subscribes to `list`.
-    private bool IsOn(FilterList list, IReadOnlyDictionary<FilterList, bool> chosen) =>
-        chosen.TryGetValue(list, out bool isOn) ? isOn : list.IsOnByDefault(languages);
+    /// Whether the device subscribes to `list`: as the person turned it, or as
+    /// the level they chose turns it.
+    private bool IsOn(FilterList list, Device.FilterPreferences chosen) =>
+        chosen.Choices.TryGetValue(list, out bool isOn) ? isOn : list.IsOnByDefault(chosen.Level, languages);
 
     /// How a catalog list is named on the wire: the same on every device.
     internal static Guid IdOf(FilterList list) =>
@@ -197,22 +201,25 @@ internal sealed class FilterLibrary {
 
     /// The lists the device subscribes to: the catalog's, then the person's.
     private IEnumerable<Download> Lists(Device.FilterPreferences chosen) =>
-        FilterList.All.Where(list => IsOn(list, chosen.Choices)).Select(list => new Download(list.Name, IdOf(list), list.Source))
+        FilterList.All.Where(list => IsOn(list, chosen)).Select(list => new Download(list.Name, IdOf(list), list.Source))
             .Concat(chosen.CustomLists.Where(list => list.IsOn).Select(list => new Download(NameOf(list), list.Id, list.Url)));
 
-    /// Every list as the settings show it, and the person's own filters.
+    /// Ad blocking as the settings show it: the level, whether the person
+    /// turned any catalog list against it, every list, and their own filters.
     public FilterLists States() {
         var chosen = preferences();
+        bool customized = chosen.Level.BlocksContent
+            && FilterList.All.Any(list => IsOn(list, chosen) != list.IsOnByDefault(chosen.Level, languages));
         lock (gate) {
             var catalog = FilterList.All.Select(list => copies.TryGetValue(list.Name, out var copy)
-                ? new FilterListState(list, IsOn(list, chosen.Choices), copy.UpdatedAt, copy.Failures > 0)
-                : new FilterListState(list, IsOn(list, chosen.Choices), null, false));
+                ? new FilterListState(list, IsOn(list, chosen), copy.UpdatedAt, copy.Failures > 0)
+                : new FilterListState(list, IsOn(list, chosen), null, false));
             var custom = chosen.CustomLists.Select(list => {
                 copies.TryGetValue(NameOf(list), out var copy);
                 return new CustomFilterListState(list, copy?.Title ?? HostOf(list.Url), copy?.UpdatedAt, copy?.Failures > 0,
                     copy?.TooLarge == true);
             });
-            return new([.. catalog], [.. custom], chosen.CustomFilters);
+            return new(chosen.Level, customized, [.. catalog], [.. custom], chosen.CustomFilters);
         }
     }
 
@@ -237,6 +244,25 @@ internal sealed class FilterLibrary {
                 due.Add(new(source.Id, source.Url, holdsText ? copy!.EntityTag : null, holdsText ? copy!.LastModified : null));
             }
             return due;
+        }
+    }
+
+    /// Makes every list the device subscribes to, and the resources, due now,
+    /// as the person asked to update them, so the platform downloads each
+    /// again on its next ask. Answers whether any was held.
+    public bool RefreshAll() {
+        var chosen = preferences();
+        var now = clock.Now;
+        lock (gate) {
+            bool any = false;
+            foreach (var source in Lists(chosen).Append(resourcesDownload)) {
+                leases.Remove(source.Name);
+                if (!copies.TryGetValue(source.Name, out var copy) || copy.DueAt <= now) continue;
+                copies[source.Name] = copy with { DueAt = now };
+                any = true;
+            }
+            if (any) SaveState();
+            return any;
         }
     }
 
@@ -512,6 +538,7 @@ internal sealed class FilterLibrary {
 
     /// Puts the set converted for `key` in force. The caller holds the lock.
     private void Publish(string key, ContentRuleListSet set) {
+        if (publishedKey is not null && publishedKey != key) previous = (publishedKey, published);
         published = set;
         publishedKey = key;
         if (folder is null) {
@@ -519,11 +546,15 @@ internal sealed class FilterLibrary {
                 heldSources.Remove(stale);
             return;
         }
-        // A rules file no set names any more is never asked for again.
+        // A rules file neither this set nor the one before it names is never
+        // asked for again. The one before stays, so switching back, as
+        // between Balanced and Strict, restores it at once.
         try {
             foreach (var path in Directory.EnumerateFiles(Path.Combine(folder, "rules"))) {
                 string name = Path.GetFileNameWithoutExtension(path);
-                if (!set.Identifiers.Contains(name) && name != key) File.Delete(path);
+                bool named = set.Identifiers.Contains(name) || name == key
+                    || (previous is { } before && (before.Set.Identifiers.Contains(name) || name == before.Key));
+                if (!named) File.Delete(path);
             }
         } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
             // Stale files are left for the next set to remove.

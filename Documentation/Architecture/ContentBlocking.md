@@ -4,16 +4,18 @@ Crest blocks ads and trackers with filter lists in EasyList and uBlock Origin
 syntax, matched by Brave's open-source engine,
 [adblock-rust](https://github.com/brave/adblock-rust), which the core links as
 its content filter (`CrestCore/native/ContentFilter`). The core owns the lists,
-their updates, each Space's choice and the sites where a Space turned blocking
-off, and it produces what each engine enforces.
+their updates, the level blocking runs at and the sites where it is off, all of
+them the same in every Space, and it produces what each engine enforces.
 
 ## Lists
 
 `FilterList` in the core is the catalog: EasyList, EasyPrivacy, uBlock Origin's
 own lists, regional lists, and opt-in lists for annoyances and cookie notices,
-some of them AdGuard's builds for uBlock Origin. A list is on by default, on by
-default for readers of its language, or off, and the person's own choices
-override that. The choices are device preferences and do not sync.
+some of them AdGuard's builds for uBlock Origin. Each list says which levels
+turn it on: every level that blocks, Strict alone (AdGuard Base and the
+annoyance lists), or the levels that block for readers of its language. The
+person's own choices override the level. The choices are device preferences and
+do not sync.
 
 The person can also add up to 30 lists by address (`AddCustomFilterList`), turn
 each on or off and remove it, and keep their own filters, in the lists' syntax
@@ -29,7 +31,8 @@ alone, redirects included, reads each list as it arrives and stops one that
 grows past 15 MB (`FilterDownloadTooLarge`); the core refuses a list over that
 size or 300,000 rules, keeps the copy it held, and Settings says so under the
 list. It asks when the app starts, every hour, and whenever the lists change,
-so a list the person adds or turns on arrives at once. The core hashes, counts
+so a list the person adds or turns on arrives at once. Settings' Update Now
+makes every list due (`RefreshFilterLists`) and asks at once. The core hashes, counts
 and writes a download before the turn that publishes it, never under the
 app's lock. The core keeps each copy as a file in a
 `ContentFilter` folder beside the session file, outside the session, its sync
@@ -52,16 +55,31 @@ Until the first list arrives, Crest's own baseline rules block third-party
 loads from well-known advertising and analytics hosts. They stay beside the
 lists afterwards.
 
-## Spaces and sites
+## Level and sites
 
-A Space's `ContentBlockingPolicy` decides whether it blocks at all: Balanced
-applies the lists, Off blocks nothing. The Space's privacy settings switch it.
+Blocking holds for every Space alike. `ContentBlockingLevel` decides how much
+Crest blocks: Off blocks nothing, Balanced turns on the lists that block ads and
+trackers without breaking sites, and Strict adds AdGuard Base and the annoyance
+lists. Choosing a level that blocks (`SetContentBlockingLevel`) sets every
+catalog list to what it turns on and forgets the person's own choices; Off keeps
+them for when blocking is on again. `FilterLists.IsCustomized` says the person
+turned a list against the level, and choosing the level again restores it. The
+device store keeps the level. A device that never chose one starts Off only if
+every persistent Space had blocking off, from when each Space chose for itself,
+and Balanced otherwise; that first answer is kept. Spaces still carry their old
+`ContentBlockingPolicy`, so older builds read their sessions, but it no longer
+decides anything.
 
-A page's actions turn blocking off, or on again, for the site it shows, in its
-Space (`SetSiteContentBlocking`). The device store keeps a persistent Space's
-sites; any other Space's, such as a private one's, last as long as the process.
-A deleted Space's sites go with it. `ContentBlockingApplies` answers whether a
-page of a Space blocks on a site.
+A page's actions turn blocking off, or on again, for the site it shows, in
+every Space (`SetSiteContentBlocking`). The device store keeps a site turned off
+from a persistent Space; one turned off from any other Space, such as a private
+one, lasts as long as the process and goes with that Space. Turning a site on
+again removes it however it was kept, from any Space. `ContentBlockingApplies`
+answers whether a page blocks on a site.
+
+Settings has a page of its own for all of it: the level, the catalog's lists by
+group with Update Now, the lists the person added and the field that adds one,
+My Filters, and the sites with blocking off.
 
 ## WebKit
 
@@ -74,7 +92,11 @@ well under WebKit's 150,000, with every exception repeated at the end of each.
 Each list's identifier changes with its rules, so a rule-list store compiles
 it once and keeps it across launches; the core answers the source of one the
 store lacks (`ContentRuleListSource`), and the lists Crest compiled earlier are
-removed when no set names them.
+removed when no set names them. The set before the current one is kept, its
+converted rules in the core and its compiled lists in the store for the rest of
+the launch, so switching back, as between Balanced and Strict, applies at once.
+WebKit's store compiles on the main thread and parses a whole list first, so a
+set it has never seen still costs that parse once.
 
 Each page owns its user content controller. A main-frame navigation installs
 or removes Crest's lists for the site it goes to before the page loads it, so a
@@ -170,7 +192,7 @@ image. A collapsed slot shows again when something it may show arrives inside
 it, and the next sweep looks at it afresh, a few times at most. Crest's
 baseline also hides a JW Player video while it floats over the page.
 
-A page whose Space does not block on the site gets nothing, and the bridge
+A page on a site where Crest does not block gets nothing, and the bridge
 stops. The compiled filter is built on every platform for this: with
 Chromium's `!#if` conditions on the Mac, where Chromium also checks requests
 against it, and with Safari's on iPhone and iPad.

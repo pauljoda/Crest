@@ -33,7 +33,7 @@ struct BrowserSystemPrivacySettingsPane: View {
                 } header: {
                     Text("Spaces")
                 } footer: {
-                    CrestFormFootnote("Each Space keeps its own history, site permissions and blocking.")
+                    CrestFormFootnote("Each Space keeps its own history and site permissions.")
                 }
             }
         }

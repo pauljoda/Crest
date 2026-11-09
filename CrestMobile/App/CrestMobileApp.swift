@@ -211,6 +211,7 @@ private final class BrowserMobileApplication {
             \.browserSidebarWidgetRuntime,
             sidebarWidgets
         )
+        .environment(\.filterListUpdater, filterLists)
         .task {
             self.browser.family.configureSpaceDataCleanup(self.pageStoreRegistry, from: self.browser)
             self.filterLists.start()

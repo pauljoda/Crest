@@ -91,11 +91,14 @@ struct BrowserSettingsDestinationRouter: View {
                 BrowserPrivacySettingsPane(
                     browser: browser,
                     spaceAccess: spaceAccess,
-                    permissionCenter: permissionCenter,
-                    contentBlockingErrorDescription:
-                        contentBlockingErrorDescription
+                    permissionCenter: permissionCenter
                 )
             #endif
+        case .adBlocking:
+            BrowserAdBlockingSettingsPane(
+                browser: browser,
+                contentBlockingErrorDescription: contentBlockingErrorDescription
+            )
         case .extensions:
             BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess)
         case .passwords:

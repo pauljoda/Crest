@@ -410,6 +410,9 @@
         }
       }
     },
+    "%@, customized" : {
+
+    },
     "%@, Shared" : {
       "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
     },
@@ -1779,6 +1782,9 @@
         }
       }
     },
+    "Ad Blocking" : {
+
+    },
     "Add" : {
 
     },
@@ -1815,6 +1821,9 @@
 
     },
     "Add languages in System Settings › General › Language & Region." : {
+
+    },
+    "Add List" : {
 
     },
     "Add Packing list" : {
@@ -1936,6 +1945,9 @@
 
     },
     "Ads and Trackers" : {
+
+    },
+    "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced" : {
 
     },
     "ads trackers privacy protection" : {
@@ -2130,6 +2142,9 @@
 
     },
     "Already saved" : {
+
+    },
+    "Also hides cookie notices and other annoyances. A few sites may not work." : {
 
     },
     "Also share tab audio" : {
@@ -2809,7 +2824,7 @@
       }
     },
     "Block ads and trackers" : {
-
+      "extractionState" : "stale"
     },
     "Block Element" : {
 
@@ -2823,7 +2838,13 @@
     "Blocked for Session" : {
 
     },
+    "Blocking" : {
+
+    },
     "Blocking off" : {
+      "extractionState" : "stale"
+    },
+    "Blocks ads and trackers while keeping sites working." : {
 
     },
     "Blood" : {
@@ -3017,6 +3038,9 @@
 
     },
     "Camera & Microphone" : {
+
+    },
+    "camera microphone site access history cookies data website cache clear browsing" : {
 
     },
     "Cancel" : {
@@ -3978,6 +4002,7 @@
 
     },
     "Content blocking" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4653,6 +4678,9 @@
         }
       }
     },
+    "Crest doesn’t block ads or trackers." : {
+
+    },
     "Crest encountered an unexpected problem while opening %@." : {
       "localizations" : {
         "ar" : {
@@ -4963,6 +4991,9 @@
           }
         }
       }
+    },
+    "Customized" : {
+
     },
     "Cut" : {
 
@@ -5714,6 +5745,9 @@
     "Each Space gets an independent copy with the permissions you choose. Extension data stays separate." : {
 
     },
+    "Each Space keeps its own history and site permissions." : {
+
+    },
     "Each Space keeps its own history, site permissions and blocking." : {
 
     },
@@ -6310,6 +6344,9 @@
 
     },
     "Filter lists updated %@" : {
+
+    },
+    "Filter lists, your rules and sites" : {
 
     },
     "Find" : {
@@ -7014,6 +7051,9 @@
 
     },
     "https://example.com" : {
+
+    },
+    "https://example.com/list.txt" : {
 
     },
     "Hybrid" : {
@@ -9009,6 +9049,9 @@
     "No saved permissions" : {
 
     },
+    "No Sites Found" : {
+
+    },
     "No Space" : {
       "localizations" : {
         "ar" : {
@@ -9104,6 +9147,9 @@
       }
     },
     "Not signed in" : {
+
+    },
+    "Not yet" : {
 
     },
     "Notes why each result is there, such as “Often visited” or “Already open”." : {
@@ -9214,6 +9260,9 @@
 
     },
     "One rule per line, as filter lists write them." : {
+
+    },
+    "One rule per line, as filter lists write them. Block Element adds its rules here." : {
 
     },
     "One-time macOS permission · No folder search" : {
@@ -12068,6 +12117,9 @@
     "Search shortcuts" : {
 
     },
+    "Search Sites" : {
+
+    },
     "Search suggestions" : {
 
     },
@@ -12779,6 +12831,9 @@
 
     },
     "Site Settings" : {
+
+    },
+    "Sites with Blocking Off" : {
 
     },
     "Size" : {
@@ -13511,6 +13566,9 @@
       }
     },
     "Sub-Spaces" : {
+
+    },
+    "Subscribe to any list by its address. It updates with the built-in lists." : {
 
     },
     "Substitutions" : {
@@ -14876,6 +14934,9 @@
         }
       }
     },
+    "Turn blocking off for a site from its page menu. Ad blocking settings stay on this device." : {
+
+    },
     "Turn Off Blocking on %@" : {
 
     },
@@ -15220,6 +15281,9 @@
     "Update Installed" : {
 
     },
+    "Update Now" : {
+
+    },
     "Update password?" : {
       "localizations" : {
         "ar" : {
@@ -15229,6 +15293,9 @@
           }
         }
       }
+    },
+    "Updated" : {
+
     },
     "Updated your Spaces and added %lld tabs." : {
       "comment" : "Completion summary after updating existing Spaces.",
@@ -15337,6 +15404,9 @@
           }
         }
       }
+    },
+    "Updating…" : {
+
     },
     "URL completion: %@. Press Tab or Right Arrow to accept." : {
 

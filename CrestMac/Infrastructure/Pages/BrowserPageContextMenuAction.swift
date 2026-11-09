@@ -265,10 +265,10 @@ extension BrowserPage: BrowserPageContextMenuHost {
         return actions
     }
 
-    /// Whether the page's bridge can start the element picker: its engine
-    /// blocks content and it shows a site on the web.
+    /// Whether the page's bridge can start the element picker: Crest blocks,
+    /// its engine blocks content and it shows a site on the web.
     private var canPickElementToBlock: Bool {
-        cosmeticFilters != nil && pageEngine.registration.supports(.contentBlocking)
+        cosmeticFilters?.blocksContent == true && pageEngine.registration.supports(.contentBlocking)
             && ["http", "https"].contains(live.displayURL?.scheme?.lowercased() ?? "")
     }
 

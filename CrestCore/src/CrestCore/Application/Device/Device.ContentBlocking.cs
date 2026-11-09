@@ -2,18 +2,19 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// Which filter lists the device subscribes to, beyond those it has on by
-/// default, and the sites where a Space blocks nothing. The device store keeps
-/// the person's list choices and the persistent session's Spaces' sites; any
-/// other Space's sites, such as a private one's, live as long as the process.
-/// The Spaces of a Sub-Space group share their sites, as they share their
-/// site permissions.
+/// Ad blocking on this device, which holds for every page in every Space: the
+/// level it blocks at, which filter lists it subscribes to beyond those the
+/// level turns on, and the sites where it blocks nothing. The device store
+/// keeps the level, the person's list choices and the sites turned off from a
+/// persistent Space; a site turned off from any other Space, such as a private
+/// one, lasts as long as the process.
 internal sealed partial class Device {
     #region Types
 
-    /// What the person chose for filtering on this device: the catalog lists
-    /// turned on or off, the lists added by address, and their own filters.
-    internal sealed record FilterPreferences(IReadOnlyDictionary<FilterList, bool> Choices,
+    /// What the person chose for filtering on this device: the level, the
+    /// catalog lists turned on or off against what it turns on, the lists
+    /// added by address, and their own filters.
+    internal sealed record FilterPreferences(ContentBlockingLevel Level, IReadOnlyDictionary<FilterList, bool> Choices,
         IReadOnlyList<CustomFilterList> CustomLists, string CustomFilters);
 
     #endregion
@@ -26,7 +27,10 @@ internal sealed partial class Device {
     /// The longest the person's own filters may be.
     public const int MaximumCustomFiltersBytes = 512 * 1024;
 
-    /// The lists the person turned on or off; any other follows its default.
+    /// The level the person chose, or the one first answered for them; null
+    /// before either.
+    private ContentBlockingLevel? contentBlockingLevel;
+    /// The lists the person turned on or off; any other follows the level.
     private readonly Dictionary<FilterList, bool> filterListChoices = [];
     /// The lists the person added, in the order added.
     private readonly List<CustomFilterList> customFilterLists = [];
@@ -47,11 +51,37 @@ internal sealed partial class Device {
     /// What the person chose for filtering.
     internal FilterPreferences FilterChoices {
         get {
-            lock (gate) return new(new Dictionary<FilterList, bool>(filterListChoices), [.. customFilterLists], customFilters);
+            var level = ContentBlockingLevel;
+            lock (gate)
+                return new(level, new Dictionary<FilterList, bool>(filterListChoices), [.. customFilterLists], customFilters);
         }
     }
 
-    /// Every site where a Space blocks nothing.
+    /// The level Crest blocks at. Until the person chooses one, a device whose
+    /// persistent Spaces all had blocking off, from when each Space chose for
+    /// itself, blocks nothing, and any other blocks at Balanced; that first
+    /// answer is kept once the persistent session is attached. Called without
+    /// the device lock, since it reads the session.
+    internal ContentBlockingLevel ContentBlockingLevel {
+        get {
+            lock (gate)
+                if (contentBlockingLevel is { } chosen) return chosen;
+            if (Persistent() is not (_, var authority)) return ContentBlockingLevel.Balanced;
+            var spaces = authority.Current.Spaces;
+            var level = spaces.Count > 0 && spaces.All(space => !space.Settings.BrowsingPreferences.ContentBlocking.BlocksContent)
+                ? ContentBlockingLevel.Off
+                : ContentBlockingLevel.Balanced;
+            lock (gate) {
+                if (contentBlockingLevel is null) {
+                    contentBlockingLevel = level;
+                    storage?.EnqueueDevice(Records());
+                }
+                return contentBlockingLevel;
+            }
+        }
+    }
+
+    /// Every site where Crest blocks nothing.
     internal IReadOnlyList<SiteContentBlocking> BlockingSites {
         get {
             lock (gate) return [.. keptBlockingSites, .. passingBlockingSites];
@@ -61,6 +91,23 @@ internal sealed partial class Device {
     #endregion
 
     #region Actions - Filter lists
+
+    /// Blocks at `level` from now on. A level that blocks sets every catalog
+    /// list to what it turns on, forgetting the lists the person turned on or
+    /// off; Off keeps them for when blocking is on again. Answers whether that
+    /// changed anything.
+    internal bool SetContentBlockingLevel(ContentBlockingLevel level) {
+        ArgumentNullException.ThrowIfNull(level);
+        var current = ContentBlockingLevel;
+        lock (gate) {
+            bool resetsLists = level.BlocksContent && filterListChoices.Count > 0;
+            if (level == current && !resetsLists) return false;
+            contentBlockingLevel = level;
+            if (level.BlocksContent) filterListChoices.Clear();
+            storage?.EnqueueDevice(Records());
+            return true;
+        }
+    }
 
     /// Turns `list` on or off for good. Answers whether that changed anything.
     internal bool ChooseFilterList(FilterList list, bool isOn) {
@@ -170,61 +217,60 @@ internal sealed partial class Device {
 
     #region Actions - Sites
 
-    /// Blocks, or stops blocking, ads and trackers on `origin` in `spaceId`:
-    /// kept by the device store for a Space of the persistent session, and for
-    /// the process alone for any other. Refused for an origin that is not valid
-    /// or a locked Space.
+    /// Blocks, or stops blocking, ads and trackers on `origin` everywhere, from
+    /// a page of `spaceId`: turning it off from a Space of the persistent
+    /// session keeps the site in the device store, and from any other only for
+    /// the process; turning it on again removes the site however it was kept,
+    /// whichever Space asks. Refused for an origin that is not valid, or for
+    /// turning it off from a locked Space.
     internal void SetBlocking(Guid spaceId, SiteOrigin origin, bool blocks, ChangeFeed changes) {
         ArgumentNullException.ThrowIfNull(origin);
         ArgumentNullException.ThrowIfNull(changes);
         if (!origin.IsValid) throw new Rejected(new InvalidSiteOrigin(origin));
         var (keeps, locked) = ChoiceScope(spaceId);
-        if (locked) throw new Rejected(new SpaceLocked(spaceId));
-        var group = PermissionGroups()(spaceId);
-        var site = new SiteContentBlocking(spaceId, origin);
+        if (locked && !blocks) throw new Rejected(new SpaceLocked(spaceId));
         lock (gate) {
-            var sites = keeps ? keptBlockingSites : passingBlockingSites;
-            bool changed = blocks
-                ? sites.RemoveAll(kept => kept.Origin == origin && group.Contains(kept.SpaceId)) > 0
-                : !sites.Any(kept => kept.Origin == origin && group.Contains(kept.SpaceId));
-            if (!changed) return;
-            if (!blocks) sites.Add(site);
-            if (keeps) storage?.EnqueueDevice(Records());
+            bool storesChange;
+            if (blocks) {
+                storesChange = keptBlockingSites.RemoveAll(site => site.Origin == origin) > 0;
+                if (passingBlockingSites.RemoveAll(site => site.Origin == origin) == 0 && !storesChange) return;
+            } else {
+                if (keptBlockingSites.Concat(passingBlockingSites).Any(site => site.Origin == origin)) return;
+                (keeps ? keptBlockingSites : passingBlockingSites).Add(new(spaceId, origin));
+                storesChange = keeps;
+            }
+            if (storesChange) storage?.EnqueueDevice(Records());
             changes.Publish(new SiteContentBlockingChanged([.. keptBlockingSites, .. passingBlockingSites]));
         }
     }
 
-    /// Forgets the sites of a deleted Space.
+    /// Forgets the sites a deleted Space turned blocking off for that only the
+    /// process kept. A site turned off from a persistent Space holds
+    /// everywhere, so it outlives that Space.
     public void ForgetBlockingSites(Guid spaceId, ChangeFeed changes) {
         ArgumentNullException.ThrowIfNull(changes);
         lock (gate) {
-            int removed = keptBlockingSites.RemoveAll(site => site.SpaceId == spaceId);
-            removed += passingBlockingSites.RemoveAll(site => site.SpaceId == spaceId);
-            if (removed == 0) return;
-            storage?.EnqueueDevice(Records());
+            if (passingBlockingSites.RemoveAll(site => site.SpaceId == spaceId) == 0) return;
             changes.Publish(new SiteContentBlockingChanged([.. keptBlockingSites, .. passingBlockingSites]));
         }
     }
 
     /// Whether a page of `spaceId` showing `origin` blocks ads and trackers:
-    /// its Space's policy blocks, and the Space did not turn blocking off for
+    /// the device blocks at a level that blocks, and blocking is not off for
     /// the site. A Space no attached session holds blocks nothing. Called
     /// without the device lock, since it reads the sessions.
     internal bool Blocks(Guid spaceId, SiteOrigin? origin) {
+        if (!ContentBlockingLevel.BlocksContent) return false;
         KeyValuePair<Guid, NativeSessionAuthority>[] attached;
         lock (gate) attached = [.. workspaces];
-        var policy = attached.Select(entry => entry.Value.Current.Space(spaceId)).FirstOrDefault(space => space is not null)
-            ?.Settings.BrowsingPreferences.ContentBlocking;
-        if (policy?.BlocksContent != true) return false;
+        if (!attached.Any(entry => entry.Value.Current.Space(spaceId) is not null)) return false;
         if (origin is null) return true;
-        var group = PermissionGroups()(spaceId);
-        lock (gate)
-            return !keptBlockingSites.Concat(passingBlockingSites)
-                .Any(site => site.Origin == origin && group.Contains(site.SpaceId));
+        lock (gate) return !keptBlockingSites.Concat(passingBlockingSites).Any(site => site.Origin == origin);
     }
 
     /// Takes the device store's choices and sites at launch.
     private void RestoreContentBlocking(DeviceRecords records) {
+        contentBlockingLevel = records.ContentBlockingLevel;
         foreach (var (list, isOn) in records.FilterListChoices) filterListChoices[list] = isOn;
         customFilterLists.AddRange(records.CustomFilterLists.DistinctBy(list => list.Id));
         customFilters = records.CustomFilters;

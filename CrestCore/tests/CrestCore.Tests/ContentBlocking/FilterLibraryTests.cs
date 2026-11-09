@@ -22,11 +22,12 @@ public sealed partial class FilterLibraryTests {
         public readonly Dictionary<FilterList, bool> Choices = [];
         public readonly List<CustomFilterList> CustomLists = [];
         public string CustomFilters = "";
+        public ContentBlockingLevel Level = ContentBlockingLevel.Balanced;
         public readonly BlockingCollection<ContentRuleListSet> Announced = new();
         public readonly FilterLibrary Filters;
 
         public Library(IReadOnlyList<string>? languages = null, DevicePlatform? platform = null, string? resourcesDigest = null) {
-            Filters = new(null, platform ?? DevicePlatform.Desktop, languages ?? ["en-US"], () => new Device.FilterPreferences(Choices, CustomLists, CustomFilters), change => {
+            Filters = new(null, platform ?? DevicePlatform.Desktop, languages ?? ["en-US"], () => new Device.FilterPreferences(Level, Choices, CustomLists, CustomFilters), change => {
                 if (change is ContentRuleListsChanged changed) Announced.Add(changed.Lists);
             }, Clock, resourcesDigest: resourcesDigest);
         }
