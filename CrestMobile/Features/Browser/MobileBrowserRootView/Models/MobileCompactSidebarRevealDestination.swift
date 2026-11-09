@@ -24,26 +24,43 @@ struct MobileCompactSidebarRevealDestination: Equatable, Sendable {
 
     /// The full-screen tab viewer, which on a narrow phone *is* the docked
     /// sidebar. The page it was swiped from is left behind.
+    ///
+    /// The tab viewer shows a Space's lists as sheets, so a list a command
+    /// asks for comes up as one over whatever the window shows, without
+    /// leaving the page.
     static let tabViewer = MobileCompactSidebarRevealDestination(
-        name: "tabViewer", reveals: { $0.showTabViewer() })
+        name: "tabViewer", reveals: { $0.showTabViewer() },
+        presentsList: { content, surface in content.presentListSheet(surface) })
     /// The sidebar floating over the page, which stays on screen underneath it.
+    /// A list a command asks for slides in with it, in place of the tabs.
     static let floatingSidebar = MobileCompactSidebarRevealDestination(
         name: "floatingSidebar",
         reveals: { content in
             content.dismissAddressFocus()
             content.showRegularSidebar()
+        },
+        presentsList: { content, surface in
+            content.dismissAddressFocus()
+            content.showRegularSidebar()
+            content.navigation.utilityPresentation.present(surface)
         })
 
     // MARK: - Variables
 
     let name: String
     private let reveals: @MainActor @Sendable (MobileBrowserRootContent) -> Void
+    private let presentsList: @MainActor @Sendable (MobileBrowserRootContent, BrowserUtilitySurface) -> Void
 
     // MARK: - Initializers
 
-    private init(name: String, reveals: @escaping @MainActor @Sendable (MobileBrowserRootContent) -> Void) {
+    private init(
+        name: String,
+        reveals: @escaping @MainActor @Sendable (MobileBrowserRootContent) -> Void,
+        presentsList: @escaping @MainActor @Sendable (MobileBrowserRootContent, BrowserUtilitySurface) -> Void
+    ) {
         self.name = name
         self.reveals = reveals
+        self.presentsList = presentsList
     }
 
     // MARK: - Actions - Reveal
@@ -59,6 +76,12 @@ struct MobileCompactSidebarRevealDestination: Equatable, Sendable {
     @MainActor
     func reveal(in content: MobileBrowserRootContent) {
         reveals(content)
+    }
+
+    /// Brings one of the shown Space's lists up here.
+    @MainActor
+    func presentList(_ surface: BrowserUtilitySurface, in content: MobileBrowserRootContent) {
+        presentsList(content, surface)
     }
 
     // MARK: - Actions - Identity

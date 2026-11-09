@@ -23,6 +23,10 @@ struct MobileBrowserSidebarBottomChrome: View {
     /// top bar after the page's.
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
+        if showsHideButton {
+            ToolbarItem(placement: controlPlacement.spaceControlsPlacement) { hideButton }
+                .collapsing(at: .navigation)
+        }
         if configuration.showsSidebarToggle {
             ToolbarItem(placement: controlPlacement.spaceControlsPlacement) { sidebarToggle }
                 .collapsing(at: .navigation)
@@ -60,6 +64,25 @@ struct MobileBrowserSidebarBottomChrome: View {
             )
     }
 
+    /// Slides a floating sidebar back off its edge, the arrow pointing the
+    /// way it goes.
+    private var hideButton: some View {
+        Button {
+            configuration.hideSidebar?()
+        } label: {
+            MobileSpaceUtilityButtonLabel(
+                title: "Hide Sidebar", systemImage: sidebarOnRight ? "arrow.right.to.line" : "arrow.left.to.line")
+        }
+        .help("Hide Sidebar")
+        .accessibilityLabel("Hide Sidebar")
+        .accessibilityIdentifier("browser-sidebar-hide")
+    }
+
+    /// Only a floating sidebar has an edge to go back off.
+    private var showsHideButton: Bool {
+        configuration.hideSidebar != nil && !configuration.sidebarIsDocked
+    }
+
     private var sidebarToggle: some View {
         Button(action: configuration.toggleSidebar) {
             MobileSpaceUtilityButtonLabel(
@@ -92,8 +115,8 @@ struct MobileBrowserSidebarBottomChrome: View {
             accessController: configuration.context.spaceAccess)
     }
 
-    /// The sidebar toggle and New Tab in a capsule of their own at the
-    /// leading edge, and the Space's controls at the trailing edge. A sidebar
+    /// The hide arrow, the sidebar toggle and New Tab in a capsule of their
+    /// own at the leading edge, and the Space's controls at the trailing edge. A sidebar
     /// too narrow for both keeps every control in one capsule, toggle and New
     /// Tab first, which narrows its buttons as the sidebar narrows further.
     @ViewBuilder
@@ -118,13 +141,13 @@ struct MobileBrowserSidebarBottomChrome: View {
             .transition(.opacity)
         } else {
             HStack(spacing: 0) {
-                if configuration.showsSidebarToggle {
+                if showsLeadingControls {
                     leadingControls
                 }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 12)
-            .accessibilityHidden(!configuration.showsSidebarToggle)
+            .accessibilityHidden(!showsLeadingControls)
         }
     }
 
@@ -139,8 +162,15 @@ struct MobileBrowserSidebarBottomChrome: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 
+    private var showsLeadingControls: Bool {
+        showsHideButton || configuration.showsSidebarToggle
+    }
+
     @ViewBuilder
     private var leadingButtons: some View {
+        if showsHideButton {
+            hideButton
+        }
         if configuration.showsSidebarToggle {
             sidebarToggle
         }

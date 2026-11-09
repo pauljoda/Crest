@@ -5221,6 +5221,26 @@
     "settings-search-field-takes-typing": {
       "category": "fixed",
       "message": "On Mac, clicking the search field above saved passwords or website data now lets you type in it."
+    },
+    "floating-sidebar-opens-lists": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, History, Archive and Downloads from a keyboard shortcut, the menu bar or the command palette slide a hidden floating sidebar in with that list. A docked iPad sidebar stays docked, and an iPhone showing its tabs full screen opens the list as a sheet instead of doing nothing."
+    },
+    "floating-sidebar-leaves-on-scroll": {
+      "category": "improved",
+      "message": "On iPhone and iPad, scrolling or zooming the page puts a floating sidebar away, as tapping the page already did."
+    },
+    "floating-sidebar-hide-button": {
+      "category": "new",
+      "message": "On iPhone and iPad, a floating sidebar has an arrow at its bottom corner that slides it back off the screen."
+    },
+    "sidebar-edge-swipe-only": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, a tap at the edge of the screen no longer brings out a hidden sidebar; swipe in from the edge instead."
+    },
+    "keyboard-hides-address-bar": {
+      "category": "improved",
+      "message": "On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes."
     }
   }
 }
