@@ -6,30 +6,39 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.202</title>
-            <pubDate>Mon, 09 Nov 2026 01:00:41 +0000</pubDate>
+            <title>0.8.207</title>
+            <pubDate>Mon, 09 Nov 2026 01:38:00 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1570</sparkle:version>
-            <sparkle:shortVersionString>0.8.202</sparkle:shortVersionString>
+            <sparkle:version>1571</sparkle:version>
+            <sparkle:shortVersionString>0.8.207</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- On iPhone and iPad, a floating sidebar has an arrow at its bottom corner that slides it back off the screen.
+
+### Improved
+
+- On iPhone and iPad, scrolling or zooming the page puts a floating sidebar away, as tapping the page already did.
+- On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes.
+
 ### Fixed
 
-- On Mac, Settings stays smooth with hundreds of saved websites, passwords and site permissions: a Space’s Privacy and Passwords pages open quickly and scroll, search and remove without freezing.
-- On Mac, clicking the search field above saved passwords or website data now lets you type in it.
+- On iPhone and iPad, History, Archive and Downloads from a keyboard shortcut, the menu bar or the command palette slide a hidden floating sidebar in with that list. A docked iPad sidebar stays docked, and an iPhone showing its tabs full screen opens the list as a sheet instead of doing nothing.
+- On iPhone and iPad, a tap at the edge of the screen no longer brings out a hidden sidebar; swipe in from the edge instead.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c3972f3944e0048957d8c92f464976671f8c4d57...6b822063ba8f479da6bb08ebae92521bcd2b1566) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.202-2026-11-09-1570-r570.1/Installer-Crest-0.8.202-development-2026-11-09-6b82206-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/6b822063ba8f479da6bb08ebae92521bcd2b1566...66a1a2efc9f5f366da5d44d5071543260b12ac66) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.207-2026-11-09-1571-r571.1/Installer-Crest-0.8.207-development-2026-11-09-66a1a2e-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.202-2026-11-09-1570-r570.1/Installer-Crest-0.8.202-development-2026-11-09-6b82206-arm64.dmg" length="218698907" type="application/octet-stream" sparkle:edSignature="8fiDTQ1sCLcj2MsgxGHi1d0iFFwIIXhEp5HTtItX13zMr8Wpx72R2dvd6hszZO+pnN1PcGBhmf+QjU+mo5adDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.207-2026-11-09-1571-r571.1/Installer-Crest-0.8.207-development-2026-11-09-66a1a2e-arm64.dmg" length="218808987" type="application/octet-stream" sparkle:edSignature="WHiGTU7zptoygs2e1vDCU/CqnvaBed+yumOOFyhRYdrVc7F5ihjCBbWU3CrEuDTm8qrZnCmluOnYTO3xjYV0CA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -61,6 +70,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: cjFdpz3R5lo7X6ARUr/ZiwulHmHfWy4hKQYwqFbStfABGclAMK1TCljiKfnliyl7PEU61G0eViAeKanFFZPfDw==
-length: 4193
+edSignature: hrIjdp4+TupPIwtTLbcI7tOxW8mqQ3kJ5Jb/0ma9BXbf/3Wx6Ds3eTkY02V8RUQDVbz3lw7y/iN70drHOZ+mAA==
+length: 4714
 -->
