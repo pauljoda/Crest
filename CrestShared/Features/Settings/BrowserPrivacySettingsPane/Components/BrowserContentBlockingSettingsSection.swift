@@ -22,7 +22,7 @@ struct BrowserContentBlockingSettingsSection: View {
             }
 
             if policy.blocksContent {
-                ForEach(sitesWithoutBlocking, id: \.self) { site in
+                CrestFormRows(sitesWithoutBlocking, id: \.self) { site in
                     siteRow(site)
                 }
             }

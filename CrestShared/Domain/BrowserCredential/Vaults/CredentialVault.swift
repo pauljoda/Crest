@@ -1,5 +1,14 @@
 import Foundation
 
+// MARK: - Types
+
+/// A Space's saved passwords as settings lists them, and how many more no
+/// longer read back.
+struct CredentialInventory: Sendable {
+    let descriptors: [CredentialDescriptor]
+    let unreadableCount: Int
+}
+
 protocol CredentialVault: Sendable {
     func descriptors(in spaceID: UUID) async throws -> [CredentialDescriptor]
     func descriptors(
@@ -13,6 +22,9 @@ protocol CredentialVault: Sendable {
     /// How many of the Space's items no longer read back. The listings above
     /// leave them out, so the rest of the Space stays usable.
     func unreadableCredentialCount(in spaceID: UUID) async throws -> Int
+    /// The Space's readable descriptors and its unreadable count together, as
+    /// `descriptors(in:)` and `unreadableCredentialCount(in:)` answer them.
+    func inventory(in spaceID: UUID) async throws -> CredentialInventory
 
     func credential(id: UUID, in spaceID: UUID) async throws -> BrowserCredential?
     func save(_ credential: BrowserCredential, in spaceID: UUID) async throws
@@ -27,6 +39,14 @@ protocol CredentialVault: Sendable {
 }
 
 extension CredentialVault {
+    // MARK: - Actions - Reading
+
+    func inventory(in spaceID: UUID) async throws -> CredentialInventory {
+        CredentialInventory(
+            descriptors: try await descriptors(in: spaceID),
+            unreadableCount: try await unreadableCredentialCount(in: spaceID))
+    }
+
     // MARK: - Actions - Moving
 
     /// Saves every credential the Space `source` keeps into the Space
