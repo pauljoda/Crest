@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "full-screen-survives-page-moves",
+    "development": "settings-search-field-takes-typing",
     "nightly": "sidebar-slides-as-one"
   }
 }
