@@ -5265,6 +5265,10 @@
     "chromium-pages-load-after-157": {
       "category": "fixed",
       "message": "On Mac, pages in Chromium load again instead of stopping with \"This page stopped responding\" after updating to 0.8.215."
+    },
+    "content-filter-download-resumes": {
+      "category": "internal",
+      "message": "Resume the content filter download when the connection cuts it short, so Xcode Cloud archives no longer fail building the core"
     }
   }
 }

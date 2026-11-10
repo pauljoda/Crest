@@ -16,12 +16,15 @@ is 1, the library is compiled from source instead, which needs Rust.
 import argparse
 import fcntl
 import hashlib
+import http.client
 import io
 import os
 from pathlib import Path
 import platform
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -29,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import content_filter  # noqa: E402
 
 DOWNLOADS = "https://github.com/{repository}/releases/download/{tag}/{asset}"
+DOWNLOAD_ATTEMPTS = 5
 
 
 class Unpublished(Exception):
@@ -39,15 +43,40 @@ def verified(path: Path, digest: str) -> bool:
     return path.is_file() and content_filter.sha256(path) == digest
 
 
+def download(url: str) -> bytes:
+    """The file at `url`. A transfer the connection cuts short, as Xcode Cloud's
+    sometimes does, carries on from where it stopped, a few times at most."""
+    data = b""
+    failure = None
+    for attempt in range(DOWNLOAD_ATTEMPTS):
+        if attempt:
+            print(f"Retrying the download after {failure}", file=sys.stderr)
+            time.sleep(2 ** attempt)
+        request = urllib.request.Request(url, headers={"Range": f"bytes={len(data)}-"} if data else {})
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                # A server that ignores the range sends the whole file again.
+                if response.status != 206:
+                    data = b""
+                data += response.read()
+            return data
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                raise Unpublished(f"Cannot download {url}: {error}") from error
+            failure = error
+        except http.client.IncompleteRead as error:
+            data += error.partial
+            failure = error
+        except (OSError, http.client.HTTPException) as error:
+            failure = error
+    raise Unpublished(f"Cannot download {url}: {failure}")
+
+
 def unpack(lock: dict, cache: Path, repository: str):
     """Downloads the locked archive and keeps each member whose digest the lock records."""
     url = DOWNLOADS.format(repository=repository, tag=content_filter.release_tag(lock["key"]), asset=lock["archive"])
     print(f"Downloading the content filter {lock['archive']}", file=sys.stderr)
-    try:
-        with urllib.request.urlopen(url, timeout=120) as response:
-            data = response.read()
-    except OSError as error:
-        raise Unpublished(f"Cannot download {url}: {error}") from error
+    data = download(url)
     if hashlib.sha256(data).hexdigest() != lock["sha256"]:
         raise SystemExit(f"{lock['archive']} does not match the digest in {content_filter.LOCK}")
     with zipfile.ZipFile(io.BytesIO(data)) as bundle:
