@@ -149,7 +149,7 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-09) describe
+The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-10) describe
 Sub-Spaces, built-in ad blocking, and the Chromium engine now built from
 Chromium itself. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone and
 iPad use WebKit.

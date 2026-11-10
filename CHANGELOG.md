@@ -7,7 +7,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.9.0] - 2026-11-09
+## [0.9.0] - 2026-11-10
 
 Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of
 sign-ins while each keeps its own tabs and look, and built-in ad blocking on
