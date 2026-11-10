@@ -6,48 +6,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.213</title>
-            <pubDate>Mon, 09 Nov 2026 19:30:22 +0000</pubDate>
+            <title>0.8.217</title>
+            <pubDate>Tue, 10 Nov 2026 16:57:51 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1574</sparkle:version>
-            <sparkle:shortVersionString>0.8.213</sparkle:shortVersionString>
+            <sparkle:version>1577</sparkle:version>
+            <sparkle:shortVersionString>0.8.217</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 14 user-facing changes.
-
-### New
-
-- On iPhone and iPad, Add to Home Screen in a page’s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser.
-- On iPhone and iPad, a floating sidebar has an arrow at its bottom corner that slides it back off the screen.
-
 ### Improved
 
-- On iPhone and iPad, scrolling or zooming the page puts a floating sidebar away, as tapping the page already did.
-- On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes.
-- Ad blocking has its own page in Settings and applies to every Space alike. Choose Off, Balanced or Strict, which also hides cookie notices and other annoyances, then turn single lists on or off, update them all at once, subscribe to more lists by address, write your own rules, and see the sites where blocking is off.
+- On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away.
 
 ### Fixed
 
-- On Mac, closing a tab while its Chromium page is full screen no longer makes Crest quit.
-- On Chromium pages on Mac, a full-screen page stays full screen when it moves to its next slide or video, instead of dropping back inside the window’s border and sidebar.
-- On Mac, Settings stays smooth with hundreds of saved websites, passwords and site permissions: a Space’s Privacy and Passwords pages open quickly and scroll, search and remove without freezing.
-- On Mac, clicking the search field above saved passwords or website data now lets you type in it.
-- On iPhone and iPad, History, Archive and Downloads from a keyboard shortcut, the menu bar or the command palette slide a hidden floating sidebar in with that list. A docked iPad sidebar stays docked, and an iPhone showing its tabs full screen opens the list as a sheet instead of doing nothing.
-- On iPhone and iPad, a tap at the edge of the screen no longer brings out a hidden sidebar; swipe in from the edge instead.
-- On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away.
+- Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes.
+- On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium.
+- On Mac, pages in Chromium load again instead of stopping with "This page stopped responding" after updating to 0.8.215.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/e16a309b8e8893a88a64816cbad5610285e67138...cacc868ad039477f29347afad50cb539357a24e5) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.213-2026-11-09-1574-r574.1/Installer-Crest-0.8.213-nightly-2026-11-09-cacc868-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/cacc868ad039477f29347afad50cb539357a24e5...22ed6327520ca0fe8d1d46d28246b9aadb27aa40) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.217-2026-11-10-1577-r577.1/Installer-Crest-0.8.217-nightly-2026-11-10-22ed632-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.213-2026-11-09-1574-r574.1/Installer-Crest-0.8.213-nightly-2026-11-09-cacc868-arm64.dmg" length="218802322" type="application/octet-stream" sparkle:edSignature="8ILk8FtUxx2JAmIuQC1oYtU16gMmlRgwyRU+PVMol+GxJI6zdeV9EfCKIjbvAha/b31odMWEGZ8TTUJBkuITDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.217-2026-11-10-1577-r577.1/Installer-Crest-0.8.217-nightly-2026-11-10-22ed632-arm64.dmg" length="219744893" type="application/octet-stream" sparkle:edSignature="hS/F0/3kDZsPE+5ZIQemn8UhoJ8odYkyMQ2kHNqIecCQNP6VXtm6tzbwhxUUIj5hOinWTelndeM2CzFlz7g9DA=="/>
         </item>
         <item>
             <title>0.8.50</title>
@@ -133,6 +120,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: FV9PFgn4AraDbNnhL6wesSI9B3ZRvhmlQ9fVr3BjgSAfYi96tKe98xAXn9sEIU8uDS0hB5VfV9UysAZgWmT2Cw==
-length: 10229
+edSignature: 6mLYgDdZU0XAWwhgBQfOk/JEkqG3MzMZKy6Ygc4hhAbK6RxcuCft5rV4cPJJIj3mYBBFENe4EpieN57bnZCgBA==
+length: 8741
 -->
