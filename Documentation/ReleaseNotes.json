@@ -5273,6 +5273,10 @@
     "floating-sidebar-hide-arrow-removed": {
       "category": "improved",
       "message": "On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away."
+    },
+    "crest-0-9-sub-spaces-ad-blocking-chromium": {
+      "category": "new",
+      "message": "Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance."
     }
   }
 }
