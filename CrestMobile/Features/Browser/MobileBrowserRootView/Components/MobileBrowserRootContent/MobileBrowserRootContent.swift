@@ -155,8 +155,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsPresented:
                         navigation.compactSidebarPresentation.showsSidebar,
                     sidebarIsDocked: false,
-                    utilityPresentation: navigation.utilityPresentation,
-                    hideSidebar: hideRegularSidebar
+                    utilityPresentation: navigation.utilityPresentation
                 )
                 .modifier(
                     BrowserPlatformObservedTapModifier(claimsTaps: true) {
@@ -278,8 +277,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         sidebarIsDocked:
                             navigation.regularSidebarIsDocked,
                         utilityPresentation:
-                            navigation.utilityPresentation,
-                        hideSidebar: hideRegularSidebar
+                            navigation.utilityPresentation
                     )
                     .environment(
                         \.browserSettingsUsesLiveSidebar,

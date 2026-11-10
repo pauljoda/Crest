@@ -5269,6 +5269,10 @@
     "content-filter-download-resumes": {
       "category": "internal",
       "message": "Resume the content filter download when the connection cuts it short, so Xcode Cloud archives no longer fail building the core"
+    },
+    "floating-sidebar-hide-arrow-removed": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away."
     }
   }
 }
