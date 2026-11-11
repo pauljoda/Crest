@@ -5289,6 +5289,10 @@
     "arc-import-shared-profile-spaces": {
       "category": "fixed",
       "message": "On Mac, importing from Arc no longer quits Crest when Spaces that share an Arc profile aren't next to each other in Arc; they come in together, each with its own tabs."
+    },
+    "browser-import-keeps-spaces-without-passwords": {
+      "category": "fixed",
+      "message": "On Mac, when Crest can't unlock another browser's passwords during an import, as when Keychain access is denied, the import still brings that browser's Spaces and tabs and leaves only the passwords behind."
     }
   }
 }
