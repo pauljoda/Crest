@@ -5301,6 +5301,10 @@
     "peek-loads-when-page-updates-address": {
       "category": "fixed",
       "message": "On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing."
+    },
+    "cold-launch-link-opens-in-front": {
+      "category": "fixed",
+      "message": "On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them."
     }
   }
 }

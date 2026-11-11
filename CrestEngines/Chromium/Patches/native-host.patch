@@ -462,7 +462,20 @@
  #include "chrome/browser/app_mode/app_mode_utils.h"
  #include "chrome/browser/apps/app_service/app_service_proxy.h"
  #include "chrome/browser/apps/app_service/app_service_proxy_factory.h"
-@@ -1642,6 +1645,17 @@
+@@ -1502,6 +1505,12 @@
+   } else  // NOLINT
+ #endif
+   {
++#if BUILDFLAG(IS_MAC)
++    // Crest's shell decides which window a launch brings forward. The last
++    // used profile's Browser has no window, so activating it would raise the
++    // Crest window standing in for it, over the one the launch opened.
++    if (crest::IsEnabled()) return;
++#endif
+     ProfileLaunchObserver::set_profile_to_activate(last_used_profile);
+   }
+ }
+@@ -1642,6 +1651,17 @@
      bool ignore_profile_picker) {
    ProfileManager* profile_manager = g_browser_process->profile_manager();
    const base::FilePath& user_data_dir = profile_manager->user_data_dir();
