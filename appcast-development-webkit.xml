@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.1</title>
-            <pubDate>Wed, 11 Nov 2026 05:54:32 +0000</pubDate>
+            <title>0.9.2</title>
+            <pubDate>Wed, 11 Nov 2026 18:55:44 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1580</sparkle:version>
-            <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
+            <sparkle:version>1584</sparkle:version>
+            <sparkle:shortVersionString>0.9.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws.
+- The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f3c50759172f8650a0eaf55057c20067034d08be...2a4fc3bfad799bc4d85266c00cc0d25e6ae85565) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.1-2026-11-11-1580-r580.1/Installer-Crest-0.9.1-development-2026-11-11-2a4fc3b-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/2a4fc3bfad799bc4d85266c00cc0d25e6ae85565...b4697032c9361200aa1b3613f5a1e67a61ab90f7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.2-2026-11-11-1584-r584.1/Installer-Crest-0.9.2-development-2026-11-11-b469703-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.1-2026-11-11-1580-r580.1/Installer-Crest-0.9.1-development-2026-11-11-2a4fc3b-arm64.dmg" length="219772548" type="application/octet-stream" sparkle:edSignature="eW2t9hOYMEBG4S0Ueo9X/xkq9LI3OXzoZqMf0lQ+RM9RU7PLYwFwfCZJXoO4C5TjkZjyulUolNVh1bib+2OYBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.2-2026-11-11-1584-r584.1/Installer-Crest-0.9.2-development-2026-11-11-b469703-arm64.dmg" length="219752579" type="application/octet-stream" sparkle:edSignature="3xyGPYKih/3NUqzvGrTUgNcCLw3STuZg4IJGXW62lquXBvYW3xVWVRdfHB7eJXkV4gIIpCQfOqWmX+/o8h+YAA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: rSodqGHsIImbncmhTY0mUA9aXFZPqg9ZhQr+E5J7xt0dw4nPgRnKyNgiv3R979XChvxmx7gX3ZT/yFOG11DtCA==
-length: 4030
+edSignature: JMtf1SNC+fHv7Ck1zfCjdcOyXI8PGJ66oTlUjlXDIgDxqE9BejwZVdYDjRvg2CRl1bp8qXWUkgMvrmEYbQ9RBg==
+length: 4087
 -->
