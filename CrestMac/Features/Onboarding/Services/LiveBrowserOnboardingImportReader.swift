@@ -16,13 +16,7 @@ struct LiveBrowserOnboardingImportReader: BrowserOnboardingImportReading {
     func read(
         _ payload: BrowserDetectedImportPayload
     ) async throws -> BrowserOnboardingImportReadOutput {
-        let passwordCandidates =
-            payload.application.suppliesPasswords
-            ? try await BrowserPasswordImportReader.candidates(
-                from: payload.passwordStores,
-                application: payload.application
-            )
-            : []
+        let passwordCandidates = await Self.passwordCandidates(in: payload)
         try Task.checkCancellation()
 
         let query = ReadImport(source: payload.application, profiles: payload.profiles)
@@ -41,6 +35,22 @@ struct LiveBrowserOnboardingImportReader: BrowserOnboardingImportReading {
             extensionIcons: icons,
             leftOut: imported.leftOut
         )
+    }
+
+    // MARK: - Actions - Passwords
+
+    /// The passwords the browser keeps, or none when its password stores
+    /// can't be read, so its Spaces and tabs still come in for review.
+    private static func passwordCandidates(
+        in payload: BrowserDetectedImportPayload
+    ) async -> [BrowserPasswordImportCandidate] {
+        guard payload.application.suppliesPasswords else { return [] }
+        do {
+            return try await BrowserPasswordImportReader.candidates(
+                from: payload.passwordStores, application: payload.application)
+        } catch {
+            return []
+        }
     }
 
     // MARK: - Actions - Icons
