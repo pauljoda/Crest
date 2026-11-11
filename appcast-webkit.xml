@@ -6,6 +6,30 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.9.1</title>
+            <pubDate>Wed, 11 Nov 2026 06:33:45 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1581</sparkle:version>
+            <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### Fixed
+
+- Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws.
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/f3c50759172f8650a0eaf55057c20067034d08be...2a4fc3bfad799bc4d85266c00cc0d25e6ae85565) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.9.1/Installer-Crest-0.9.1-arm64.dmg)
+
+[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.9.1/Installer-Crest-0.9.1-arm64.dmg" length="219741252" type="application/octet-stream" sparkle:edSignature="CGguGRBhMwzZn2+NBD63MwsQoCqejyQbflVRU1Tu22ilK6ZxGFEsU1wJNCH3eWqvpKwGi19HUhxAppqd4lYNCA=="/>
+        </item>
+        <item>
             <title>0.9.0</title>
             <pubDate>Wed, 11 Nov 2026 01:17:06 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -163,6 +187,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: xjeiagTB40+oW5uGsSFXzlDAnL5w/hoMX/rLhx7JmprH1abXTMzpbiYKDzRUTLZuGOzEr+ZPSrkhA6OOksSoDg==
-length: 12187
+edSignature: jd/KgTounrASEUizGYBkdNVclGzw3bH6usGVDPgUHXyEivX4V3x5nCdcLa3AS1AVP0sMZs+eH0DQOrPcoHNWBA==
+length: 13614
 -->

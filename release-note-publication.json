@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channels": {
-    "stable": "crest-0-9-sub-spaces-ad-blocking-chromium",
+    "stable": "chromium-upstream-157-0-8103-51",
     "development": "chromium-upstream-157-0-8103-51",
     "nightly": "floating-sidebar-hide-arrow-removed"
   }
