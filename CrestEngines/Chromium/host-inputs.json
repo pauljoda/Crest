@@ -369,7 +369,7 @@
   },
   "chrome/browser/extensions/api/extension_action/extension_action_api.cc": {
     "before": "d0f6cf8a546631b933735d1d858f23ae94d0a33b58eaff1c35dfb46cfeb1dda4",
-    "after": "dad0d90ae6e3cbe36ee67d0fe89ea51a146144faf1dfcaa45cdf356f3daf59e9"
+    "after": "22d836ee7d22c1b98c3406e9f2c8a61d29087a303ddd521b0bb3e8e104923338"
   },
   "chrome/browser/extensions/extension_tab_util.cc": {
     "before": "eb8bf6ab8da535a9f3ac6a121d34eaa389733182d2c4f43a0398b8f6771bd86f",

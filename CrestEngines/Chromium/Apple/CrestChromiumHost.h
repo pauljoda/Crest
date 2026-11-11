@@ -51,6 +51,13 @@ typedef NS_ENUM(NSInteger, CrestEngineNoticeKind) {
 @property(nonatomic, readonly) NSUUID *space;
 @end
 
+// Where an extension's popup opens: a view in a Crest window, and the rect in
+// that view's coordinates the popup hangs from.
+@protocol CrestExtensionPopupAnchor <NSObject>
+@property(nonatomic, readonly) NSView *view;
+@property(nonatomic, readonly) NSRect rect;
+@end
+
 // Crest's own UI, which the Mac shell asks on the main thread for what only
 // Crest's windows can answer. The UI framework attaches it when it starts.
 NS_SWIFT_UI_ACTOR
@@ -108,6 +115,12 @@ NS_SWIFT_UI_ACTOR
 // Answers whether Crest's own drag took it; otherwise the engine's goes on.
 - (BOOL)beginLinkDrag:(NSURL *)url title:(NSString *)title page:(NSUUID *)pageID
     NS_SWIFT_NAME(beginLinkDrag(_:title:page:));
+// Where the popup that `extensionID` opened itself, with
+// `chrome.action.openPopup()`, shows over the page `pageID`: the control a
+// click on the extension's own button would have opened it from. Nil when the
+// page has no window.
+- (nullable id<CrestExtensionPopupAnchor>)extensionPopupAnchor:(NSString *)extensionID page:(NSUUID *)pageID
+    NS_SWIFT_NAME(extensionPopupAnchor(_:page:));
 @end
 
 // What an extension's `chrome.commands` shortcut did. A named command has

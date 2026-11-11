@@ -338,6 +338,18 @@ its popup, is unloaded or has its host destroyed. A key the popup's or a side
 panel's document does not use goes to the menu bar, as a tab's does, so Copy,
 Paste and the other Edit shortcuts reach the extension's page.
 
+An extension can open its own popup with `chrome.action.openPopup()`, as a
+password manager does when its button in a sign-in field is clicked while it is
+locked. Chromium shows that popup from the extension's button in its own
+toolbar, which a Crest window does not have, so in Crest mode the host opens it
+over the window's active page instead. It hangs from the extension's pinned
+tile, or from the pointer when the action is not pinned, and Chromium hears
+that it opened once its document is on screen. If the person moves to another
+page or window, or minimises or hides Crest, while it loads, it closes without
+showing. As in Chrome, it grants the
+extension no access to the page, runs no click, and is refused while the page
+already shows a popup or the window is not the one in use.
+
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`
 contains those engine-independent views; `ChromiumExtensionStore` supplies the
