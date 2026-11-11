@@ -205,9 +205,11 @@ Before publishing a stable tag:
 7. inspect the workflow's signature, notarization, Gatekeeper, checksum, and
    attestation results. Distribution packaging stops the release if an engine
    helper is an unknown kind or is signed with the wrong entitlements, or if the
-   signed package can't load a page;
-8. install the published disk image on a clean macOS account and exercise both
-   a manual update check and the normal relaunch path. For 0.7, cover an upgrade
+   signed package's engine can't load a page. That check runs the engine on its
+   own, so it covers signing and the engine helpers, not Crest's interface;
+8. install the published disk image on a clean macOS account, load real pages
+   in both engines, and exercise both a manual update check and the normal
+   relaunch path. For 0.7, cover an upgrade
    from the previous stable WebKit-only app and an existing Chromium build,
    preserving Space and tab identity, engine profiles, and unsaved-changes prompts.
 

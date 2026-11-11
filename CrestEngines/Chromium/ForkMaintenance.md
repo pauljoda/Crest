@@ -96,7 +96,9 @@ may add helper apps: packaging and publishing refuse any helper missing from
 `ENGINE_HELPER_KINDS` in `chromium_engine.py`, so give each the entitlements
 `chrome/installer/mac/signing/parts.py` gives it. Distribution packaging also
 runs the signed package's own helpers and refuses a package that can't load a
-page, because an unsigned build passes everything a hardened signature can break. The schedule
+page, because an unsigned build passes everything a hardened signature can break.
+That check runs the engine without Crest's interface, so before publishing an
+engine, also load real pages in Crest packaged with `--distribution`. The schedule
 builds a new milestone for review once the pinned one has no newer fix, but it
 ships only when its PR is merged. `fork.json.automaticMajorUpdates` can also let
 milestone updates release automatically.
