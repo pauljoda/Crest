@@ -6,6 +6,49 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.9.0</title>
+            <pubDate>Wed, 11 Nov 2026 01:17:06 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1579</sparkle:version>
+            <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 201 user-facing changes.
+
+### New
+
+- On iPhone and iPad, a floating sidebar has an arrow at its bottom corner that slides it back off the screen.
+- Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance.
+
+### Improved
+
+- On iPhone and iPad, scrolling or zooming the page puts a floating sidebar away, as tapping the page already did.
+- On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes.
+- Ad blocking has its own page in Settings and applies to every Space alike. Choose Off, Balanced or Strict, which also hides cookie notices and other annoyances, then turn single lists on or off, update them all at once, subscribe to more lists by address, write your own rules, and see the sites where blocking is off.
+- On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away.
+
+### Fixed
+
+- On iPhone and iPad, History, Archive and Downloads from a keyboard shortcut, the menu bar or the command palette slide a hidden floating sidebar in with that list. A docked iPad sidebar stays docked, and an iPhone showing its tabs full screen opens the list as a sheet instead of doing nothing.
+- On iPhone and iPad, a tap at the edge of the screen no longer brings out a hidden sidebar; swipe in from the edge instead.
+- On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away.
+- Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes.
+- On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium.
+- On Mac, pages in Chromium load again instead of stopping with "This page stopped responding" after updating to 0.8.215.
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/e16a309b8e8893a88a64816cbad5610285e67138...f3c50759172f8650a0eaf55057c20067034d08be) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.9.0/Installer-Crest-0.9.0-arm64.dmg)
+
+[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.9.0/Installer-Crest-0.9.0-arm64.dmg" length="219768389" type="application/octet-stream" sparkle:edSignature="UqQG/34hCApoN9VLreyai9o125fNAswmLAZbDqn9rUZDbqz4vYpKOsVEdNLX87zh5B8L4DM6CW1oTwQFtudmCQ=="/>
+        </item>
+        <item>
             <title>0.8.217</title>
             <pubDate>Tue, 10 Nov 2026 16:57:56 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -120,6 +163,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: XRNpDiaxrEbQi3xmMhvJ6ov7sn6Vh9fvsYg0YCrgQpXxBcgdG9Nx+xN6noEJ2WlPvxWpk3mIqvfIVhORlCv/Bw==
-length: 8741
+edSignature: xjeiagTB40+oW5uGsSFXzlDAnL5w/hoMX/rLhx7JmprH1abXTMzpbiYKDzRUTLZuGOzEr+ZPSrkhA6OOksSoDg==
+length: 12187
 -->
