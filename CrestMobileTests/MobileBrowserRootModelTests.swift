@@ -54,7 +54,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             tabs: Dictionary(
                 uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } }),
             browsingMode: browsingMode,
-            core: .hostingPages(contentRuleLists: EmptyMobileRootContentRuleListProvider())
+            core: .hostingPages(contentRuleLists: EmptyContentRuleListProvider())
         )
         let pages = MobileBrowserPageStore(
             browser: browser,
@@ -112,13 +112,6 @@ private struct MobileBrowserRootFixture {
     let pages: MobileBrowserPageStore
     let navigation: MobileBrowserNavigationState
     let model: MobileBrowserRootModel
-}
-
-@MainActor
-private final class EmptyMobileRootContentRuleListProvider:
-    BrowserContentRuleListProviding
-{
-    func balancedRuleLists() async throws -> [WKContentRuleList] { [] }
 }
 
 @MainActor

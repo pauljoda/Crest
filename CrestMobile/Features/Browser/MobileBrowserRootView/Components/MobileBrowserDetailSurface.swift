@@ -16,6 +16,7 @@ struct MobileBrowserDetailSurface: View {
     let handleWebContentInteraction: () -> Void
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
+    var newTabSearch: (() -> Void)?
     let showTabViewer: () -> Void
     let hideCompactToolbar: () -> Void
     let showCompactToolbar: () -> Void
@@ -30,6 +31,8 @@ struct MobileBrowserDetailSurface: View {
     var paletteMode: Binding<BrowserCommandPaletteMode?>?
     /// Opens the palette, as Open Location does.
     var openLocation: (() -> Void)?
+    var openPaletteURL: ((BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteMode) -> Bool)?
+    var downloadsAssignment: Binding<BrowserSpaceRuntimeAssignment?> = .constant(nil)
 
     var body: some View {
         MobileBrowserDetailView(
@@ -48,6 +51,7 @@ struct MobileBrowserDetailSurface: View {
             handleWebContentInteraction: handleWebContentInteraction,
             submitAddress: submitAddress,
             beginNewTab: beginNewTab,
+            newTabSearch: newTabSearch,
             showTabViewer: showTabViewer,
             hideCompactToolbar: hideCompactToolbar,
             showCompactToolbar: showCompactToolbar,
@@ -57,7 +61,9 @@ struct MobileBrowserDetailSurface: View {
             didPromoteTransientPage: didPromoteTransientPage,
             showHistory: showHistory,
             paletteMode: paletteMode,
-            openLocation: openLocation
+            openLocation: openLocation,
+            openPaletteURL: openPaletteURL,
+            downloadsAssignment: downloadsAssignment
         )
     }
 }

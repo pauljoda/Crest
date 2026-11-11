@@ -20,6 +20,7 @@ struct MobileBrowserRootView: View {
         windowState: BrowserWindowStateStore? = nil,
         suspendsCompactPagePresentation: Bool = false,
         startupBehavior: StartupBehavior = .showStartPage,
+        greeting: MobileWindowGreeting = MobileWindowGreeting(),
         togglePrivateBrowsing: @escaping () -> Void,
         closePrivateBrowsing: @escaping () -> Void
     ) {
@@ -42,6 +43,7 @@ struct MobileBrowserRootView: View {
                 spaceAccess: spaceAccess,
                 windowState: windowState,
                 startupBehavior: startupBehavior,
+                greeting: greeting,
                 persistedSidebarWidth:
                     windowState?.sidebarWidth.map { CGFloat($0) }
                     ?? fallbackWidth

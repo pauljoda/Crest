@@ -59,6 +59,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
             ["CREST_FORCE_ONBOARDING_SETUP": "1"],
             ["CREST_ISOLATED_CLOUD_SYNC_ID": "review"],
             ["CREST_UPDATE_TEST_FEED_URL": "http://localhost:48151/appcast.xml"],
+            ["CREST_STARTUP_FIXTURE": "search"],
         ]
 
         for values in fixtures {

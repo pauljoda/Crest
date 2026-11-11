@@ -7,7 +7,12 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
     /// Opens a new tab with its address field focused, for a launch that
     /// starts on one.
     let openNewTab: () -> Void
+    /// Puts search up over the shown tab by itself, for a launch that starts
+    /// on it or a person back after a while away; false when something else
+    /// holds the window.
+    let presentSearch: () -> Bool
 
+    @Environment(\.scenePhase) private var scenePhase
     @Binding var isAddressEditing: Bool
     @Binding var storedSidebarWidth: Double
     @State private var runtimeSessionProjection: BrowserRuntimeSessionProjection
@@ -20,12 +25,14 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
         model: MobileBrowserRootModel,
         presentation: MobileBrowserPresentation,
         openNewTab: @escaping () -> Void,
+        presentSearch: @escaping () -> Bool,
         isAddressEditing: Binding<Bool>,
         storedSidebarWidth: Binding<Double>
     ) {
         self.model = model
         self.presentation = presentation
         self.openNewTab = openNewTab
+        self.presentSearch = presentSearch
         _isAddressEditing = isAddressEditing
         _storedSidebarWidth = storedSidebarWidth
         _runtimeSessionProjection = State(
@@ -40,9 +47,10 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
         let preparedContent =
             content
             .task {
-                if await model.prepareBrowser() {
-                    openNewTab()
-                }
+                await model.prepareBrowser(openNewTab: openNewTab, presentSearch: presentSearch)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                sceneMoved(to: phase)
             }
             .modifier(
                 BrowserRootSelectionObserver(
@@ -132,6 +140,17 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
         }
         isAddressEditing = false
         BrowserAddressFocusDismissal.dismiss()
+    }
+
+    /// Notes the window leaving for the background, and greets a person
+    /// back after a while with search, when that is their startup choice.
+    private func sceneMoved(to phase: ScenePhase) {
+        let shownTabID = model.browser.shownTab?.id
+        if phase == .background {
+            model.greeting.leave(showing: shownTabID)
+        } else if phase == .active, model.greeting.comesBack(showing: shownTabID), model.greetsReturnWithSearch {
+            _ = presentSearch()
+        }
     }
 
     private func synchronizePageMetadata() {

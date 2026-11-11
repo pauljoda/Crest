@@ -100,7 +100,7 @@ struct MobilePageHistoryControls: View {
     }
 
     private func historyButton(
-        title: String,
+        title: LocalizedStringResource,
         systemImage: String,
         enabled: Bool,
         action: @escaping () -> Void

@@ -124,6 +124,18 @@ final class BrowserStore {
         return true
     }
 
+    /// Shows the tab of this window's Space used last while the window shows
+    /// none there, as after a phone launch, which the core chooses. False
+    /// when the window shows a tab already, or the Space has none to show.
+    @discardableResult
+    func showLastUsedTab() -> Bool {
+        guard shownTab == nil, sendWindowIntent(ShowLastUsedTab(windowID: windowID)), shownTab != nil else {
+            return false
+        }
+        windowRevision &+= 1
+        return true
+    }
+
     /// Shows the tab of this window's Space used least recently, which the
     /// core chooses. False when there is none.
     @discardableResult

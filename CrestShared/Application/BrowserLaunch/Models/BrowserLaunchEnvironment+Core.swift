@@ -11,6 +11,6 @@ extension BrowserLaunchEnvironment {
             usesInMemoryCredentials: usesInMemoryCredentialVault,
             forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesMacOnboardingSetup,
             forcesMobileSetup: forcesMobileOnboardingSetup,
-            usesUpdateTestFeed: isolatedSoftwareUpdateFeedURL != nil)
+            usesUpdateTestFeed: isolatedSoftwareUpdateFeedURL != nil, startupFixture: startupFixture)
     }
 }

@@ -185,6 +185,7 @@ struct MobileBrowserWindowScene: View {
                 windowState: model.windowState,
                 suspendsCompactPagePresentation: onboardingCoordinator.isMobilePresented,
                 startupBehavior: .lastActiveTab,
+                greeting: model.greeting,
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
             )
@@ -200,6 +201,7 @@ struct MobileBrowserWindowScene: View {
                 windowState: model.windowState,
                 suspendsCompactPagePresentation: onboardingCoordinator.isMobilePresented,
                 startupBehavior: model.startupBehavior,
+                greeting: model.greeting,
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
             )
@@ -280,6 +282,9 @@ struct MobileBrowserWindowScene: View {
         // The share sheet hands a link over as `crest://open`, which routes
         // as the web link it carries.
         let link = BrowserSharedLink(handOffURL: url)?.url ?? url
+        // The link claims the window now, before routing waits on anything,
+        // so search coming up by itself never covers it.
+        guard model.receiveExternalURL(link) else { return }
         Task {
             guard await model.routeExternalURL(link) else { return }
             withAnimation(modeAnimation) {

@@ -208,7 +208,7 @@ internal static class RecordedIntents {
         return new(workspace, DevicePlatform.Named(request["platform"]!.GetValue<string>())!, new(Flag("testRuntime"),
             Flag("previewRuntime"), Flag("isolatedSession"), Flag("namedProfile"), Flag("isolatedCloudSync"), Flag("resetSession"),
             Flag("showcase"), environment["subSpaces"]?.GetValue<bool>() ?? false, Flag("inMemoryCredentials"), Flag("onboardingWelcome"), Flag("desktopSetup"), Flag("mobileSetup"),
-            Flag("updateTestFeed")));
+            Flag("updateTestFeed"), StartupFixture: null));
     }
 
     /// `current` with the one preference a recorded `preferences.set` named

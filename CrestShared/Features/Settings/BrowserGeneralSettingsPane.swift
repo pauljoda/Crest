@@ -50,16 +50,12 @@ struct BrowserGeneralSettingsPane: View {
             }
 
             Section("Startup") {
-                #if os(macOS)
-                    Picker("When Crest opens", selection: $appPreferences.startupBehavior) {
-                        ForEach(StartupBehavior.settingsOrder, id: \.self) { behavior in
-                            Text(behavior.title).tag(behavior)
-                        }
+                Picker("When Crest opens", selection: startupChoice) {
+                    ForEach(StartupBehavior.settingsOrder, id: \.self) { behavior in
+                        Text(behavior.title).tag(behavior)
                     }
-                #else
-                    Toggle("Start on new tab", isOn: startsOnNewTab)
-                        .accessibilityIdentifier("start-on-new-tab")
-                #endif
+                }
+                .accessibilityIdentifier("startup-behavior-picker")
 
                 CrestSpaceMenuPicker(
                     "Default Space",
@@ -103,19 +99,17 @@ struct BrowserGeneralSettingsPane: View {
         }
     }
 
-    #if os(iOS)
-        // MARK: - Startup
+    // MARK: - Startup
 
-        /// A phone opens on a new tab in the default Space, or on its tab
-        /// viewer, which is its Start Page.
-        private var startsOnNewTab: Binding<Bool> {
-            Binding {
-                appPreferences.startupBehavior.opensNewTab
-            } set: { startsOnNewTab in
-                appPreferences.startupBehavior = startsOnNewTab ? .newTab : .showStartPage
-            }
+    /// The startup choice as the settings offer it, so a stored one they do
+    /// not offer shows as the offered choice it acts as.
+    private var startupChoice: Binding<StartupBehavior> {
+        Binding {
+            appPreferences.startupBehavior.settingsChoice
+        } set: { choice in
+            appPreferences.startupBehavior = choice
         }
-    #endif
+    }
 
     // MARK: - Default browser
 

@@ -5281,6 +5281,14 @@
     "chromium-upstream-157-0-8103-51": {
       "category": "fixed",
       "message": "Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws."
+    },
+    "mobile-search-on-open": {
+      "category": "new",
+      "message": "On iPhone and iPad, Crest can open straight to search: choose Open Search under When Crest opens, and your last tab stays behind the search field, which comes back after you've been away for a few minutes."
+    },
+    "mobile-toolbar-new-tab-button": {
+      "category": "improved",
+      "message": "On iPhone, when Crest opens to search, a New Tab button beside the Tabs button brings search up over the page you’re on, ready for where to go next."
     }
   }
 }

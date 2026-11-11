@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x75, 0x1e, 0x4a, 0xc3, 0x86, 0x64, 0xc4, 0x76, 0x6b, 0x2c, 0x5e, 0x96, 0xa0, 0xfe, 0x47, 0x32, 0x50, 0x82, 0xde, 0x2e, 0x51, 0xc5, 0xce, 0xb3, 0xb0, 0x2b, 0x7e, 0xf4, 0xeb, 0xbd, 0xb3, 0xd6
+        0xe5, 0xf7, 0x7b, 0x1a, 0xe0, 0xfc, 0xdb, 0x48, 0x58, 0x03, 0xbc, 0x4c, 0x21, 0xaa, 0x5d, 0xba, 0x8f, 0x9b, 0x0b, 0x4e, 0x0a, 0x02, 0xb6, 0x4f, 0x32, 0xe2, 0x14, 0x6e, 0x4d, 0xe6, 0x63, 0x37
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -281,26 +281,27 @@ public static class ContractCodec {
             case 253: return ReadShowAdjacentTab(reader);
             case 254: return ReadShowHistoryEntry(reader);
             case 255: return ReadShowImportSpace(reader);
-            case 256: return ReadShowLeastRecentTab(reader);
-            case 257: return ReadShowMostRecentTab(reader);
-            case 258: return ReadShowSetupStep(reader);
-            case 259: return ReadShowSpace(reader);
-            case 260: return ReadShowStartPage(reader);
-            case 261: return ReadShowTab(reader);
-            case 262: return ReadSplitTabs(reader);
-            case 263: return ReadStageLink(reader);
-            case 264: return ReadStartCloudSync(reader);
-            case 265: return ReadStartSetup(reader);
-            case 266: return ReadStepHistory(reader);
-            case 267: return ReadStepSplitMember(reader);
-            case 268: return ReadStopAgentTab(reader);
-            case 269: return ReadStopAllAgents(reader);
-            case 270: return ReadSweepExpiredRecords(reader);
-            case 271: return ReadTintSplit(reader);
-            case 272: return ReadToggleImportSource(reader);
-            case 273: return ReadTogglePin(reader);
-            case 274: return ReadUnassignShortcut(reader);
-            case 275: return ReadUnblockElements(reader);
+            case 256: return ReadShowLastUsedTab(reader);
+            case 257: return ReadShowLeastRecentTab(reader);
+            case 258: return ReadShowMostRecentTab(reader);
+            case 259: return ReadShowSetupStep(reader);
+            case 260: return ReadShowSpace(reader);
+            case 261: return ReadShowStartPage(reader);
+            case 262: return ReadShowTab(reader);
+            case 263: return ReadSplitTabs(reader);
+            case 264: return ReadStageLink(reader);
+            case 265: return ReadStartCloudSync(reader);
+            case 266: return ReadStartSetup(reader);
+            case 267: return ReadStepHistory(reader);
+            case 268: return ReadStepSplitMember(reader);
+            case 269: return ReadStopAgentTab(reader);
+            case 270: return ReadStopAllAgents(reader);
+            case 271: return ReadSweepExpiredRecords(reader);
+            case 272: return ReadTintSplit(reader);
+            case 273: return ReadToggleImportSource(reader);
+            case 274: return ReadTogglePin(reader);
+            case 275: return ReadUnassignShortcut(reader);
+            case 276: return ReadUnblockElements(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -1333,84 +1334,88 @@ public static class ContractCodec {
                 writer.WriteTag(255);
                 WriteShowImportSpace(writer, member);
                 break;
-            case ShowLeastRecentTab member:
+            case ShowLastUsedTab member:
                 writer.WriteTag(256);
+                WriteShowLastUsedTab(writer, member);
+                break;
+            case ShowLeastRecentTab member:
+                writer.WriteTag(257);
                 WriteShowLeastRecentTab(writer, member);
                 break;
             case ShowMostRecentTab member:
-                writer.WriteTag(257);
+                writer.WriteTag(258);
                 WriteShowMostRecentTab(writer, member);
                 break;
             case ShowSetupStep member:
-                writer.WriteTag(258);
+                writer.WriteTag(259);
                 WriteShowSetupStep(writer, member);
                 break;
             case ShowSpace member:
-                writer.WriteTag(259);
+                writer.WriteTag(260);
                 WriteShowSpace(writer, member);
                 break;
             case ShowStartPage member:
-                writer.WriteTag(260);
+                writer.WriteTag(261);
                 WriteShowStartPage(writer, member);
                 break;
             case ShowTab member:
-                writer.WriteTag(261);
+                writer.WriteTag(262);
                 WriteShowTab(writer, member);
                 break;
             case SplitTabs member:
-                writer.WriteTag(262);
+                writer.WriteTag(263);
                 WriteSplitTabs(writer, member);
                 break;
             case StageLink member:
-                writer.WriteTag(263);
+                writer.WriteTag(264);
                 WriteStageLink(writer, member);
                 break;
             case StartCloudSync member:
-                writer.WriteTag(264);
+                writer.WriteTag(265);
                 WriteStartCloudSync(writer, member);
                 break;
             case StartSetup member:
-                writer.WriteTag(265);
+                writer.WriteTag(266);
                 WriteStartSetup(writer, member);
                 break;
             case StepHistory member:
-                writer.WriteTag(266);
+                writer.WriteTag(267);
                 WriteStepHistory(writer, member);
                 break;
             case StepSplitMember member:
-                writer.WriteTag(267);
+                writer.WriteTag(268);
                 WriteStepSplitMember(writer, member);
                 break;
             case StopAgentTab member:
-                writer.WriteTag(268);
+                writer.WriteTag(269);
                 WriteStopAgentTab(writer, member);
                 break;
             case StopAllAgents member:
-                writer.WriteTag(269);
+                writer.WriteTag(270);
                 WriteStopAllAgents(writer, member);
                 break;
             case SweepExpiredRecords member:
-                writer.WriteTag(270);
+                writer.WriteTag(271);
                 WriteSweepExpiredRecords(writer, member);
                 break;
             case TintSplit member:
-                writer.WriteTag(271);
+                writer.WriteTag(272);
                 WriteTintSplit(writer, member);
                 break;
             case ToggleImportSource member:
-                writer.WriteTag(272);
+                writer.WriteTag(273);
                 WriteToggleImportSource(writer, member);
                 break;
             case TogglePin member:
-                writer.WriteTag(273);
+                writer.WriteTag(274);
                 WriteTogglePin(writer, member);
                 break;
             case UnassignShortcut member:
-                writer.WriteTag(274);
+                writer.WriteTag(275);
                 WriteUnassignShortcut(writer, member);
                 break;
             case UnblockElements member:
-                writer.WriteTag(275);
+                writer.WriteTag(276);
                 WriteUnblockElements(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
@@ -11650,7 +11655,8 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
-            reader.ReadBool());
+            reader.ReadBool(),
+            reader.ReadPresence() ? (StartupBehavior?)ReadStartupBehavior(reader) : null);
     }
 
     public static void WriteLaunchEnvironment(WireWriter writer, LaunchEnvironment value) {
@@ -11669,6 +11675,12 @@ public static class ContractCodec {
         writer.WriteBool(value.ForcesDesktopSetup);
         writer.WriteBool(value.ForcesMobileSetup);
         writer.WriteBool(value.UsesUpdateTestFeed);
+        if (value.StartupFixture is { } presentStartupFixture) {
+            writer.WritePresence(true);
+            WriteStartupBehavior(writer, presentStartupFixture);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static LaunchIsolation ReadLaunchIsolation(WireReader reader) {
@@ -17877,6 +17889,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.SourceSpaceId);
+    }
+
+    public static ShowLastUsedTab ReadShowLastUsedTab(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShowLastUsedTab(
+            reader.ReadGuid());
+    }
+
+    public static void WriteShowLastUsedTab(WireWriter writer, ShowLastUsedTab value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
     }
 
     public static ShowLeastRecentTab ReadShowLeastRecentTab(WireReader reader) {

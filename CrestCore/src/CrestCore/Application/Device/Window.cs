@@ -122,6 +122,20 @@ internal sealed class Window {
         return new(space.Id, [shown], null);
     }
 
+    /// The members of each split `space`'s sidebar shows, by member, from one
+    /// walk of its rows: the cards `Cards` answers for a tab in a split. A
+    /// member of more than one keeps the first, as `Cards` does.
+    private static Dictionary<Guid, IReadOnlyList<Guid>> SplitMembers(SpaceState space) {
+        var members = new Dictionary<Guid, IReadOnlyList<Guid>>();
+        foreach (var list in space.Sidebar.Lists)
+            foreach (var row in list.Rows) {
+                if (!row.Kind.GroupsTabs) continue;
+                IReadOnlyList<Guid> split = [.. row.Members];
+                foreach (var member in split) members.TryAdd(member, split);
+            }
+        return members;
+    }
+
     /// A copy a command reads while the device keeps editing the window.
     public Window Snapshot() => new(Id, WorkspaceId, Saved, ShownSpaceId, new(tabs), new(shares),
         recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)), [.. unseen], [.. departed]);
@@ -153,17 +167,31 @@ internal sealed class Window {
         return items;
     }
 
-    /// The Space's tab used last other than the shown one, as an item that
-    /// focuses the page of its split used last; never a Start Page, a tab
-    /// another window took over or one whose split holds one of `elsewhere`.
-    /// Null when there is none.
+    /// The Space's tab used last other than the shown one, if any, as an
+    /// item that focuses the page of its split used last; never a Start Page,
+    /// a tab another window took over or one whose split holds one of
+    /// `elsewhere`. Null when there is none. A phone reads it as it launches,
+    /// so it walks the sidebar once rather than once for every tab.
     public RecentTabItem? LastUsed(SpaceState space, IReadOnlySet<Guid> elsewhere) {
         ArgumentNullException.ThrowIfNull(space);
-        if (Tab(space.Id) is not { } shown) return null;
-        var shownItem = Cards(space, shown).TabIds;
-        return space.Tabs.Where(tab => !tab.IsStartPage && !shownItem.Contains(tab.Id) && !departed.Contains((space.Id, tab.Id))
-                && !Cards(space, tab.Id).TabIds.Any(elsewhere.Contains))
-            .MaxBy(tab => tab.LastActivatedAt) is { } last ? new(Cards(space, last.Id).TabIds, last.Id) : null;
+        ArgumentNullException.ThrowIfNull(elsewhere);
+        var splits = SplitMembers(space);
+        IReadOnlyList<Guid> Item(Guid tabId) => splits.GetValueOrDefault(tabId) ?? [tabId];
+        bool ShownElsewhere(Guid tabId) {
+            if (!splits.TryGetValue(tabId, out var split)) return elsewhere.Contains(tabId);
+            foreach (var member in split)
+                if (elsewhere.Contains(member)) return true;
+            return false;
+        }
+        IReadOnlyList<Guid> shownItem = Tab(space.Id) is { } shown ? Item(shown) : [];
+        TabState? last = null;
+        foreach (var tab in space.Tabs) {
+            if (tab.IsStartPage || shownItem.Contains(tab.Id) || departed.Contains((space.Id, tab.Id))
+                || ShownElsewhere(tab.Id)) continue;
+            // Of tabs used at the same moment, the first stands.
+            if (last is null || tab.LastActivatedAt > last.LastActivatedAt) last = tab;
+        }
+        return last is null ? null : new(Item(last.Id), last.Id);
     }
 
     /// Shows `space`, on the tab the window showed there while it still

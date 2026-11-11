@@ -9490,6 +9490,9 @@
         }
       }
     },
+    "Open Search" : {
+
+    },
     "Open Settings" : {
 
     },
@@ -13331,7 +13334,7 @@
 
     },
     "Start on new tab" : {
-
+      "extractionState" : "stale"
     },
     "Start Page" : {
       "localizations" : {

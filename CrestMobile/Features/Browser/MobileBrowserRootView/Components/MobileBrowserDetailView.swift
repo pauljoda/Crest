@@ -18,6 +18,9 @@ struct MobileBrowserDetailView: View {
     let handleWebContentInteraction: () -> Void
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
+    /// The compact toolbar's New Tab, which puts search up; nil leaves the
+    /// toolbar without the button.
+    var newTabSearch: (() -> Void)?
     let showTabViewer: () -> Void
     let hideCompactToolbar: () -> Void
     let showCompactToolbar: () -> Void
@@ -35,6 +38,12 @@ struct MobileBrowserDetailView: View {
     var paletteMode: Binding<BrowserCommandPaletteMode?>?
     /// Opens the palette, as Open Location does.
     var openLocation: (() -> Void)?
+    /// Opens what the rising palette chose as its mode says, such as in a new
+    /// tab for search mode; nil opens it in the shown tab.
+    var openPaletteURL: ((BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteMode) -> Bool)?
+    /// The Space whose Downloads the compact toolbar's menu shows as a sheet,
+    /// which the window keeps; a detail without that toolbar never sets it.
+    var downloadsAssignment: Binding<BrowserSpaceRuntimeAssignment?> = .constant(nil)
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -44,7 +53,6 @@ struct MobileBrowserDetailView: View {
     /// every page the area draws, the shown tab and the tabs the address
     /// bar's swipe slides in beside it, so each lays its page out alike.
     @State private var resolvedSafeAreaInsets = EdgeInsets()
-    @State private var downloadsAssignment: BrowserSpaceRuntimeAssignment?
     /// The address bar's swipe through the shown Space's tabs, which moves
     /// the page area and the bar together.
     @State private var tabSwipe = MobileTabSwipe()
@@ -144,7 +152,7 @@ struct MobileBrowserDetailView: View {
                         commands: commands,
                         isSourceAvailable: isPaletteSourceAvailable,
                         selectTab: selectStartPageTab,
-                        openURL: openStartPageURL,
+                        openURL: openRisingPaletteURL,
                         fieldFrame: anchor.map { proxy[$0] },
                         morphNamespace: compactPaletteNamespace
                     )
@@ -235,7 +243,7 @@ struct MobileBrowserDetailView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardIsShown = false
         }
-        .sheet(item: $downloadsAssignment) { assignment in
+        .sheet(item: downloadsAssignment) { assignment in
             MobileDownloadsView(
                 browser: browser,
                 pages: pages,
@@ -378,7 +386,7 @@ struct MobileBrowserDetailView: View {
         guard let space = browser.shownSpace, !spaceAccess.isLocked(space) else { return }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         _ = pages.downloadCenter.acknowledgeItems(for: space.profileID)
-        downloadsAssignment = assignment
+        downloadsAssignment.wrappedValue = assignment
     }
 
     /// The four questions the find bar asks, bound to the page it is over.
@@ -447,6 +455,10 @@ struct MobileBrowserDetailView: View {
             MobileHistoryToolbarControl(direction: .forward, port: port)
         }
         ToolbarItemGroup(placement: .bottomBar) {
+            if let newTabSearch {
+                Button("New Tab", systemImage: "plus", action: newTabSearch)
+                    .accessibilityIdentifier("new-tab-button")
+            }
             Button("Tabs", systemImage: "square.on.square", action: showTabViewer)
                 .accessibilityIdentifier("tab-viewer-button")
         }
@@ -556,6 +568,7 @@ struct MobileBrowserDetailView: View {
             isAddressEditing: $isAddressEditing,
             submitAddress: submitAddress,
             beginNewTab: beginNewTab,
+            newTabSearch: newTabSearch,
             showTabViewer: showTabViewer,
             showHistory: showHistory,
             hideToolbar: hideCompactToolbar,
@@ -631,6 +644,17 @@ struct MobileBrowserDetailView: View {
                 address = browser.shownTab?.url ?? ""
             }
         )
+    }
+
+    /// Opens what the rising palette chose: where its mode says when the
+    /// window decides, else in the shown tab.
+    private func openRisingPaletteURL(
+        _ source: BrowserTabRuntimeAssignment,
+        _ url: URL,
+        _ mode: BrowserCommandPaletteMode
+    ) -> Bool {
+        if let openPaletteURL { return openPaletteURL(source, url, mode) }
+        return openStartPageURL(source, url)
     }
 
     private func openStartPageURL(

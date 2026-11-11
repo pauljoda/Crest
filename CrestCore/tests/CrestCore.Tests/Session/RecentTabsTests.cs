@@ -56,6 +56,26 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(f.C5, device.Tab(window, f.Space));
     }
 
+    /// A window that shows no tab, as a phone window after launch, can show
+    /// the Space's tab used last, passing over one another window shows, and
+    /// keeps the tab it shows once it shows one.
+    [Fact]
+    public void AWindowShowingNoTabShowsTheSpacesTabUsedLast() {
+        var f = new OrderSpace();
+        using var device = new TestDevice(f.Session);
+        var window = device.Open(f.Space, (f.Space, null));
+        var other = device.Open(f.Space, (f.Space, f.C5));
+        ShowAll(device, other, f.Space, f.C3, f.C2);
+        Assert.Null(device.Tab(window, f.Space));
+
+        device.Send(new ShowLastUsedTab(window));
+        Assert.Equal(f.C3, device.Tab(window, f.Space));
+
+        ShowAll(device, other, f.Space, f.C5);
+        device.Send(new ShowLastUsedTab(window));
+        Assert.Equal(f.C3, device.Tab(window, f.Space));
+    }
+
     /// A locked Space lists none of its tabs to switch between, so neither
     /// the panel nor a quick jump reveals or shows them until it unlocks.
     [Fact]

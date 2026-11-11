@@ -73,10 +73,25 @@ internal sealed partial class Device {
         lock (gate) {
             var items = window.RecentItems(space);
             if (items.Count != 1) return items;
-            HashSet<Guid> elsewhere = [.. open.Values.Where(other => other.Id != window.Id)
-                .Select(other => other.Tab(space.Id)).OfType<Guid>()];
-            return window.LastUsed(space, elsewhere) is { } last ? [items[0], last] : items;
+            return LastUsedNowhereElse(window, space) is { } last ? [items[0], last] : items;
         }
+    }
+
+    /// The tab of `space` used last other than the one `window` shows there,
+    /// unless another open window shows it (see `Window.LastUsed`). Null in
+    /// a locked Space, whose tabs no window shows until it unlocks. The lock
+    /// is asked of the session before the device lock is taken.
+    internal RecentTabItem? LastUsed(Window window, SpaceState space) {
+        if (Workspace(window.WorkspaceId).IsLocked(space)) return null;
+        lock (gate) return LastUsedNowhereElse(window, space);
+    }
+
+    /// `Window.LastUsed` passing over the tabs the other open windows show.
+    /// The caller holds the device lock.
+    private RecentTabItem? LastUsedNowhereElse(Window window, SpaceState space) {
+        HashSet<Guid> elsewhere = [.. open.Values.Where(other => other.Id != window.Id)
+            .Select(other => other.Tab(space.Id)).OfType<Guid>()];
+        return window.LastUsed(space, elsewhere);
     }
 
     /// Where the open window stands in `spaceId`, or in the Space it shows

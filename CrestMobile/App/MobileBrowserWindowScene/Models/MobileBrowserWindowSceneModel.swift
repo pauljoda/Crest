@@ -28,6 +28,9 @@ final class MobileBrowserWindowSceneModel {
     let pageStoreRegistry: MobileBrowserPageStoreRegistry
     let spaceAccess: BrowserSpaceAccessController
     let startupBehavior: StartupBehavior
+    /// How the window greets the person by itself, for as long as it lives,
+    /// whichever browsing mode it shows.
+    let greeting = MobileWindowGreeting()
 
     @ObservationIgnored private let privateDownloads: MobileBrowserDownloads?
     /// Whether the window closed, taking its private workspace with it.
@@ -56,6 +59,10 @@ final class MobileBrowserWindowSceneModel {
     ) {
         // A scene restores the Space it showed and starts without a tab.
         let browser = rootBrowser.makeWindowStore(BrowserWindowOpening(id: id, saved: true, restoresTabs: false))
+        // The app's own store composes every scene but is never on screen, so
+        // it shows nothing in the core: a tab it showed would keep the scenes
+        // from showing that tab as the one their Space used last.
+        rootBrowser.close()
         let windowState = BrowserWindowStateStore(id: id, browser: browser, layouts: windowLayouts)
         let sidebarIsPresented = windowState.sidebarIsPresented ?? true
         let navigation = MobileBrowserNavigationState(
@@ -160,6 +167,15 @@ final class MobileBrowserWindowSceneModel {
         privateTransientBrowsing.dismissPeek()
         synchronizeSidebarPresentation(navigation)
         return .standard
+    }
+
+    /// Takes a link another app handed this window, before routing it, which
+    /// may wait for a Space to unlock: the window's greetings give way to it
+    /// at once. False for a link the window never opens.
+    func receiveExternalURL(_ url: URL) -> Bool {
+        guard ExternalWebLink.accepts(url) else { return false }
+        greeting.yieldToExternalLink()
+        return true
     }
 
     /// Opens a link another app handed this window where the core routes it,

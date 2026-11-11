@@ -104,6 +104,8 @@ Every fixture, forced-onboarding, setup, showcase, credential test, SwiftUI Prev
 
 Use `CREST_ISOLATED_PERSISTENCE_ID=<name>` when a validation profile needs to survive relaunches. Keep fixture launches isolated from normal browsing data.
 
+An isolated launch opens on the last active tab, where its fixture was staged, whatever startup choice the profile saved. To validate another choice, name it by its stored spelling with `CREST_STARTUP_FIXTURE`, for example `CREST_STARTUP_FIXTURE=search`; the flag isolates the launch by itself.
+
 ## Focused guard tests
 
 The architecture check above is the supported repository-wide gate. Run all

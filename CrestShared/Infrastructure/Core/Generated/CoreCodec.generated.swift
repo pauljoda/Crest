@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x75, 0x1e, 0x4a, 0xc3, 0x86, 0x64, 0xc4, 0x76, 0x6b, 0x2c, 0x5e, 0x96, 0xa0, 0xfe, 0x47, 0x32, 0x50, 0x82, 0xde, 0x2e, 0x51, 0xc5, 0xce, 0xb3, 0xb0, 0x2b, 0x7e, 0xf4, 0xeb, 0xbd, 0xb3, 0xd6
+        0xe5, 0xf7, 0x7b, 0x1a, 0xe0, 0xfc, 0xdb, 0x48, 0x58, 0x03, 0xbc, 0x4c, 0x21, 0xaa, 0x5d, 0xba, 0x8f, 0x9b, 0x0b, 0x4e, 0x0a, 0x02, 0xb6, 0x4f, 0x32, 0xe2, 0x14, 0x6e, 0x4d, 0xe6, 0x63, 0x37
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -273,26 +273,27 @@ enum CoreCodec {
         case 253: return try ShowAdjacentTab(from: &reader)
         case 254: return try ShowHistoryEntry(from: &reader)
         case 255: return try ShowImportSpace(from: &reader)
-        case 256: return try ShowLeastRecentTab(from: &reader)
-        case 257: return try ShowMostRecentTab(from: &reader)
-        case 258: return try ShowSetupStep(from: &reader)
-        case 259: return try ShowSpace(from: &reader)
-        case 260: return try ShowStartPage(from: &reader)
-        case 261: return try ShowTab(from: &reader)
-        case 262: return try SplitTabs(from: &reader)
-        case 263: return try StageLink(from: &reader)
-        case 264: return try StartCloudSync(from: &reader)
-        case 265: return try StartSetup(from: &reader)
-        case 266: return try StepHistory(from: &reader)
-        case 267: return try StepSplitMember(from: &reader)
-        case 268: return try StopAgentTab(from: &reader)
-        case 269: return try StopAllAgents(from: &reader)
-        case 270: return try SweepExpiredRecords(from: &reader)
-        case 271: return try TintSplit(from: &reader)
-        case 272: return try ToggleImportSource(from: &reader)
-        case 273: return try TogglePin(from: &reader)
-        case 274: return try UnassignShortcut(from: &reader)
-        case 275: return try UnblockElements(from: &reader)
+        case 256: return try ShowLastUsedTab(from: &reader)
+        case 257: return try ShowLeastRecentTab(from: &reader)
+        case 258: return try ShowMostRecentTab(from: &reader)
+        case 259: return try ShowSetupStep(from: &reader)
+        case 260: return try ShowSpace(from: &reader)
+        case 261: return try ShowStartPage(from: &reader)
+        case 262: return try ShowTab(from: &reader)
+        case 263: return try SplitTabs(from: &reader)
+        case 264: return try StageLink(from: &reader)
+        case 265: return try StartCloudSync(from: &reader)
+        case 266: return try StartSetup(from: &reader)
+        case 267: return try StepHistory(from: &reader)
+        case 268: return try StepSplitMember(from: &reader)
+        case 269: return try StopAgentTab(from: &reader)
+        case 270: return try StopAllAgents(from: &reader)
+        case 271: return try SweepExpiredRecords(from: &reader)
+        case 272: return try TintSplit(from: &reader)
+        case 273: return try ToggleImportSource(from: &reader)
+        case 274: return try TogglePin(from: &reader)
+        case 275: return try UnassignShortcut(from: &reader)
+        case 276: return try UnblockElements(from: &reader)
         default: throw WireError.malformed("Unknown Intent tag \(tag)")
         }
     }
@@ -12764,7 +12765,14 @@ extension LaunchEnvironment {
         let forcesDesktopSetup = try reader.readBool()
         let forcesMobileSetup = try reader.readBool()
         let usesUpdateTestFeed = try reader.readBool()
-        self.init(isTestRuntime: isTestRuntime, isPreviewRuntime: isPreviewRuntime, requestsIsolatedSession: requestsIsolatedSession, hasNamedProfile: hasNamedProfile, requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession, presentsShowcase: presentsShowcase, presentsSubSpaces: presentsSubSpaces, usesInMemoryCredentials: usesInMemoryCredentials, forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesDesktopSetup, forcesMobileSetup: forcesMobileSetup, usesUpdateTestFeed: usesUpdateTestFeed)
+        let startupFixture: StartupBehavior?
+        if try reader.readPresence() {
+            let startupFixtureValue = try StartupBehavior(from: &reader)
+            startupFixture = startupFixtureValue
+        } else {
+            startupFixture = nil
+        }
+        self.init(isTestRuntime: isTestRuntime, isPreviewRuntime: isPreviewRuntime, requestsIsolatedSession: requestsIsolatedSession, hasNamedProfile: hasNamedProfile, requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession, presentsShowcase: presentsShowcase, presentsSubSpaces: presentsSubSpaces, usesInMemoryCredentials: usesInMemoryCredentials, forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesDesktopSetup, forcesMobileSetup: forcesMobileSetup, usesUpdateTestFeed: usesUpdateTestFeed, startupFixture: startupFixture)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -12781,6 +12789,12 @@ extension LaunchEnvironment {
         writer.writeBool(forcesDesktopSetup)
         writer.writeBool(forcesMobileSetup)
         writer.writeBool(usesUpdateTestFeed)
+        if let present0 = startupFixture {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -22567,7 +22581,7 @@ extension ShowImportSpace {
     }
 }
 
-extension ShowLeastRecentTab {
+extension ShowLastUsedTab {
     init(from reader: inout WireReader) throws(WireError) {
         let windowID = try reader.readUUID()
         self.init(windowID: windowID)
@@ -22583,7 +22597,7 @@ extension ShowLeastRecentTab {
     }
 }
 
-extension ShowMostRecentTab {
+extension ShowLeastRecentTab {
     init(from reader: inout WireReader) throws(WireError) {
         let windowID = try reader.readUUID()
         self.init(windowID: windowID)
@@ -22595,6 +22609,22 @@ extension ShowMostRecentTab {
 
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(257)
+        encode(into: &writer)
+    }
+}
+
+extension ShowMostRecentTab {
+    init(from reader: inout WireReader) throws(WireError) {
+        let windowID = try reader.readUUID()
+        self.init(windowID: windowID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(windowID)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(258)
         encode(into: &writer)
     }
 }
@@ -22631,7 +22661,7 @@ extension ShowSetupStep {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(258)
+        writer.writeTag(259)
         encode(into: &writer)
     }
 }
@@ -22649,7 +22679,7 @@ extension ShowSpace {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(259)
+        writer.writeTag(260)
         encode(into: &writer)
     }
 }
@@ -22673,7 +22703,7 @@ extension ShowStartPage {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(260)
+        writer.writeTag(261)
         encode(into: &writer)
     }
 }
@@ -22704,7 +22734,7 @@ extension ShowTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(261)
+        writer.writeTag(262)
         encode(into: &writer)
     }
 }
@@ -24509,7 +24539,7 @@ extension SplitTabs {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(262)
+        writer.writeTag(263)
         encode(into: &writer)
     }
 }
@@ -24531,7 +24561,7 @@ extension StageLink {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(263)
+        writer.writeTag(264)
         encode(into: &writer)
     }
 }
@@ -24609,7 +24639,7 @@ extension StartCloudSync {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(264)
+        writer.writeTag(265)
         encode(into: &writer)
     }
 }
@@ -24638,7 +24668,7 @@ extension StartSetup {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(265)
+        writer.writeTag(266)
         encode(into: &writer)
     }
 }
@@ -24656,7 +24686,7 @@ extension StepHistory {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(266)
+        writer.writeTag(267)
         encode(into: &writer)
     }
 }
@@ -24678,7 +24708,7 @@ extension StepSplitMember {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(267)
+        writer.writeTag(268)
         encode(into: &writer)
     }
 }
@@ -24694,7 +24724,7 @@ extension StopAgentTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(268)
+        writer.writeTag(269)
         encode(into: &writer)
     }
 }
@@ -24708,7 +24738,7 @@ extension StopAllAgents {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(269)
+        writer.writeTag(270)
         encode(into: &writer)
     }
 }
@@ -24940,7 +24970,7 @@ extension SweepExpiredRecords {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(270)
+        writer.writeTag(271)
         encode(into: &writer)
     }
 }
@@ -25901,7 +25931,7 @@ extension TintSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(271)
+        writer.writeTag(272)
         encode(into: &writer)
     }
 }
@@ -25917,7 +25947,7 @@ extension ToggleImportSource {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(272)
+        writer.writeTag(273)
         encode(into: &writer)
     }
 }
@@ -25937,7 +25967,7 @@ extension TogglePin {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(273)
+        writer.writeTag(274)
         encode(into: &writer)
     }
 }
@@ -26112,7 +26142,7 @@ extension UnassignShortcut {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(274)
+        writer.writeTag(275)
         encode(into: &writer)
     }
 }
@@ -26128,7 +26158,7 @@ extension UnblockElements {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(275)
+        writer.writeTag(276)
         encode(into: &writer)
     }
 }

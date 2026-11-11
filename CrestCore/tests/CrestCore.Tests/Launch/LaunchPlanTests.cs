@@ -17,7 +17,7 @@ public sealed class LaunchPlanTests {
         bool On(string flag) => enabled.Contains(flag);
         return new(On("testRuntime"), On("previewRuntime"), On("isolatedSession"), On("namedProfile"), On("isolatedCloudSync"),
             On("resetSession"), On("showcase"), On("subSpaces"), On("inMemoryCredentials"), On("onboardingWelcome"), On("desktopSetup"),
-            On("mobileSetup"), On("updateTestFeed"));
+            On("mobileSetup"), On("updateTestFeed"), StartupFixture: null);
     }
 
     /// The plan the core answers before any session exists.
@@ -33,6 +33,20 @@ public sealed class LaunchPlanTests {
         Assert.False(installed.UsesEphemeralProfileStorage);
         // A profile name alone never isolates; it only keeps an isolated launch's storage.
         Assert.False(Plan(Environment("namedProfile")).RequiresIsolation);
+        Assert.True(Plan(Environment() with { StartupFixture = StartupBehavior.Search }).RequiresIsolation);
+    }
+
+    /// An isolated launch opens where its fixture was staged, on the last
+    /// active tab, unless it names the startup choice it validates. Only an
+    /// isolated launch reads that name, and setup still holds the window.
+    [Fact]
+    public void AnIsolatedLaunchOpensOnTheStartupChoiceItsFixtureNames() {
+        var isolated = Environment("isolatedSession");
+        Assert.Equal(StartupBehavior.LastActiveTab, Plan(isolated, DevicePlatform.Mobile).Startup);
+        var validating = isolated with { StartupFixture = StartupBehavior.Search };
+        Assert.Equal(StartupBehavior.Search, Plan(validating, DevicePlatform.Mobile).Startup);
+        Assert.Equal(StartupBehavior.LastActiveTab,
+            validating.Plan(DevicePlatform.Mobile, storedStartup: StartupBehavior.NewTab, hasActiveLaunchGate: true).Startup);
     }
 
 }

@@ -4,8 +4,11 @@ namespace CrestCore.Contracts;
 /// parsed: a fixture flag is on only for its exact enabled marker, and an
 /// update test feed only when it is a loopback address.
 /// `HasNamedProfile` marks a named isolated profile, which persists its own
-/// state across relaunches. These facts decide which launches must stay out
-/// of the installed profile, and what a window opens with.
+/// state across relaunches. `StartupFixture` names the startup choice an
+/// isolated launch opens with, for a fixture that validates that choice; an
+/// isolated launch otherwise opens on the last active tab. These facts decide
+/// which launches must stay out of the installed profile, and what a window
+/// opens with.
 public sealed record LaunchEnvironment(
     bool IsTestRuntime,
     bool IsPreviewRuntime,
@@ -19,12 +22,13 @@ public sealed record LaunchEnvironment(
     bool ForcesOnboardingWelcome,
     bool ForcesDesktopSetup,
     bool ForcesMobileSetup,
-    bool UsesUpdateTestFeed) {
+    bool UsesUpdateTestFeed,
+    StartupBehavior? StartupFixture) {
     #region Static Variables
 
     /// An installed launch that asks for nothing special.
     public static LaunchEnvironment Installed { get; } = new(false, false, false, false, false, false, false, false, false, false,
-        false, false, false);
+        false, false, false, null);
 
     #endregion
 
@@ -34,7 +38,7 @@ public sealed record LaunchEnvironment(
     internal bool RequiresIsolation => IsTestRuntime || IsPreviewRuntime || RequestsIsolatedSession
         || RequestsIsolatedCloudSync || ResetsSession || PresentsShowcase || PresentsSubSpaces
         || UsesInMemoryCredentials || ForcesOnboardingWelcome || ForcesDesktopSetup
-        || ForcesMobileSetup || UsesUpdateTestFeed;
+        || ForcesMobileSetup || UsesUpdateTestFeed || StartupFixture is not null;
 
     #endregion
 
@@ -49,13 +53,15 @@ public sealed record LaunchEnvironment(
             Startup(platform, isolated, storedStartup, hasActiveLaunchGate));
     }
 
-    /// The mobile showcase always opens on the Start Page. Setup and isolated
-    /// launches restore the last active tab so a fixture opens where it was
-    /// staged; everyone else gets their saved choice, or the documented
-    /// default for a person who never chose.
+    /// The mobile showcase always opens on the Start Page. Setup restores the
+    /// last active tab, and so does an isolated launch, so a fixture opens
+    /// where it was staged, unless it names the startup choice it validates;
+    /// everyone else gets their saved choice, or the documented default for a
+    /// person who never chose.
     private StartupBehavior Startup(DevicePlatform platform, bool isolated, StartupBehavior? stored, bool hasActiveLaunchGate) {
         if (platform.ShowcaseOpensStartPage && PresentsShowcase) return StartupBehavior.ShowStartPage;
-        if (hasActiveLaunchGate || isolated) return StartupBehavior.LastActiveTab;
+        if (hasActiveLaunchGate) return StartupBehavior.LastActiveTab;
+        if (isolated) return StartupFixture ?? StartupBehavior.LastActiveTab;
         return stored ?? AppPreferences.Default.Startup;
     }
 

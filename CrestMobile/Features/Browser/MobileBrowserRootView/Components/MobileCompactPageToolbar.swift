@@ -8,6 +8,8 @@ struct MobileCompactPageToolbar: View {
     @Binding var isAddressEditing: Bool
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
+    /// New Tab beside Tabs, which puts search up; nil leaves Tabs on its own.
+    let newTabSearch: (() -> Void)?
     let showTabViewer: () -> Void
     let showHistory: () -> Void
     let hideToolbar: () -> Void
@@ -28,8 +30,8 @@ struct MobileCompactPageToolbar: View {
     var commandSurfaceNamespace: Namespace.ID?
     var commandPaletteHandoff = BrowserCommandPaletteHandoff.neither
 
-    /// Where Back, Forward and Tabs are: beside the address here, or in the
-    /// side toolbar, which leaves the address on its own over the page.
+    /// Where Back, Forward, New Tab and Tabs are: beside the address here, or
+    /// in the side toolbar, which leaves the address on its own over the page.
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -75,13 +77,7 @@ struct MobileCompactPageToolbar: View {
 
             if !controlPlacement.movesControlsToToolbar {
                 GlassEffectContainer(spacing: 0) {
-                    MobileCompactIconButton(
-                        title: "Tabs",
-                        systemImage: "square.on.square",
-                        action: showTabViewer
-                    )
-                    .glassEffect(.regular.interactive(), in: .circle)
-                    .accessibilityIdentifier("tab-viewer-button")
+                    tabControls
                 }
             }
         }
@@ -105,6 +101,32 @@ struct MobileCompactPageToolbar: View {
             MobileTabSwipeGesture(
                 swipe: tabSwipe, isEnabled: canSwipeTabs && !isAddressEditing, neighbors: swipeNeighbors,
                 land: showSwipedTab))
+    }
+
+    /// The way to the tabs, with a new tab beside it in one capsule that
+    /// mirrors Back and Forward on the other side of the address.
+    @ViewBuilder
+    private var tabControls: some View {
+        if let newTabSearch {
+            HStack(spacing: 0) {
+                MobileCompactIconButton(title: "New Tab", systemImage: "plus", action: newTabSearch)
+                    .accessibilityIdentifier("new-tab-button")
+                Divider()
+                    .frame(height: MobileBrowserChromeLayout.historyDividerHeight)
+                    .opacity(MobileBrowserChromeLayout.historyDividerOpacity)
+                tabsButton
+            }
+            .padding(.horizontal, MobileBrowserChromeLayout.historyCapsuleHorizontalPadding)
+            .glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            tabsButton
+                .glassEffect(.regular.interactive(), in: .circle)
+        }
+    }
+
+    private var tabsButton: some View {
+        MobileCompactIconButton(title: "Tabs", systemImage: "square.on.square", action: showTabViewer)
+            .accessibilityIdentifier("tab-viewer-button")
     }
 
     private func reloadOrStop() {

@@ -22,7 +22,9 @@ struct MobileCompactCommandPaletteLayer: View {
     let commands: BrowserCommandPaletteCommandRegistry?
     let isSourceAvailable: (BrowserTabRuntimeAssignment) -> Bool
     let selectTab: (BrowserTabRuntimeAssignment, BrowserTabRuntimeAssignment) -> Bool
-    let openURL: (BrowserTabRuntimeAssignment, URL) -> Bool
+    /// Opens what the palette chose, from its source, as the mode it opened
+    /// for asks.
+    let openURL: (BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteMode) -> Bool
     let fieldFrame: CGRect?
     /// The namespace in which the palette grows out of the address bar.
     let morphNamespace: Namespace.ID
@@ -38,7 +40,7 @@ struct MobileCompactCommandPaletteLayer: View {
                 commands: commands,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
-                openURL: { source, url, _ in openURL(source, url) },
+                openURL: { source, url, _ in openURL(source, url, mode) },
                 dismiss: { self.mode = nil },
                 presentation: .rising,
                 morphNamespace: morphNamespace,

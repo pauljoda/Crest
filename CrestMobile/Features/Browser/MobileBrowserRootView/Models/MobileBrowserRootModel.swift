@@ -13,6 +13,9 @@ final class MobileBrowserRootModel {
     let windowState: BrowserWindowStateStore?
     private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: StartupBehavior
+    /// How the window greets the person by itself. The window keeps it, so
+    /// the root it shows again after private browsing shares it.
+    let greeting: MobileWindowGreeting
 
     var address = ""
     var hasPreparedBrowser = false
@@ -38,6 +41,7 @@ final class MobileBrowserRootModel {
         spaceAccess: BrowserSpaceAccessController,
         windowState: BrowserWindowStateStore?,
         startupBehavior: StartupBehavior,
+        greeting: MobileWindowGreeting = MobileWindowGreeting(),
         persistedSidebarWidth: CGFloat
     ) {
         self.browser = browser
@@ -50,6 +54,7 @@ final class MobileBrowserRootModel {
         self.windowState = windowState
         layoutPersistence = BrowserWindowLayoutPersistence(windowState: windowState)
         self.startupBehavior = startupBehavior
+        self.greeting = greeting
         sidebarWidthTransaction = BrowserSidebarWidthTransaction(
             persistedWidth: persistedSidebarWidth
         )
@@ -71,24 +76,47 @@ extension MobileBrowserRootModel {
     }
 
     /// Prepares the window's pages once, then applies the launch's startup
-    /// choice. True when the launch starts on a new tab in the default Space,
-    /// which this shows first; the view opens the tab, since it owns the
-    /// address field the tab focuses.
-    @discardableResult
-    func prepareBrowser() async -> Bool {
-        guard !hasPreparedBrowser else { return false }
+    /// choice: `openNewTab` for a launch that starts on a new tab in the
+    /// default Space, which this shows first, and `presentSearch` for one
+    /// that starts on search over the tab it restores, which answers false
+    /// when something else holds the window. The view does either, since it
+    /// owns the field each focuses.
+    ///
+    /// The window greets its launch once, so a root shown again, as after
+    /// private browsing, picks up where the window was. A root that went
+    /// away while it prepared greets no one, and neither does one whose
+    /// window showed something else meanwhile, or took a link another app
+    /// opened: what the person did instead is what they came for.
+    func prepareBrowser(openNewTab: () -> Void = {}, presentSearch: () -> Bool = { false }) async {
+        guard !hasPreparedBrowser else { return }
+        let shownBeforehand = (browser.selectedSpaceID, browser.shownTab?.id)
         await pages.prepareContentBlocking()
+        let greetsLaunch =
+            (startupBehavior.opensNewTab || startupBehavior.presentsSearch) && greeting.takeLaunch()
+        guard !Task.isCancelled else { return }
         hasPreparedBrowser = true
         // Pages opened while the rules compiled were built without them.
         await pages.reconcileContentBlocking()
         if startupBehavior.opensNewTab {
-            return showDefaultSpaceForNewTab()
+            if greetsLaunch, showDefaultSpaceForNewTab() { openNewTab() }
+            return
+        }
+        if startupBehavior.presentsSearch, greetsLaunch,
+            (browser.selectedSpaceID, browser.shownTab?.id) == shownBeforehand, presentSearch()
+        {
+            return
         }
         guard startupBehavior.activatesRestoredTab,
             !navigation.defersPageActivation
-        else { return false }
+        else { return }
         synchronizeSelection()
-        return false
+    }
+
+    /// Whether search greets a person back after a while away: their
+    /// startup choice as it stands now, outside private browsing, which
+    /// always opens where it was.
+    var greetsReturnWithSearch: Bool {
+        BrowserAppPreferenceStore.shared.startupBehavior.presentsSearch && !browser.isPrivateBrowsing
     }
 
     /// Shows the default Space for the launch's new tab, unless the window

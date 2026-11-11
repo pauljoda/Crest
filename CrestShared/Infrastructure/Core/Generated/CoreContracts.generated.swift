@@ -3810,7 +3810,8 @@ struct LaunchEnvironment: Equatable, Sendable {
         forcesOnboardingWelcome: false,
         forcesDesktopSetup: false,
         forcesMobileSetup: false,
-        usesUpdateTestFeed: false
+        usesUpdateTestFeed: false,
+        startupFixture: nil
     )
 
     var isTestRuntime: Bool
@@ -3826,6 +3827,7 @@ struct LaunchEnvironment: Equatable, Sendable {
     var forcesDesktopSetup: Bool
     var forcesMobileSetup: Bool
     var usesUpdateTestFeed: Bool
+    var startupFixture: StartupBehavior?
 }
 
 struct LaunchIsolation: Query, Equatable, Sendable {
@@ -6389,6 +6391,10 @@ struct ShowHistoryEntry: Intent, PageIntent, Equatable, Sendable {
 
 struct ShowImportSpace: Intent, SetupFlowIntent, Equatable, Sendable {
     let sourceSpaceID: UUID
+}
+
+struct ShowLastUsedTab: Intent, WindowIntent, Equatable, Sendable {
+    let windowID: UUID
 }
 
 struct ShowLeastRecentTab: Intent, WindowIntent, Equatable, Sendable {
@@ -23607,11 +23613,25 @@ struct StartupBehavior: Hashable, Sendable {
     var title: LocalizedStringResource { facts.title }
     var activatesRestoredTab: Bool { facts.activatesRestoredTab }
     var opensNewTab: Bool { facts.opensNewTab }
+    var presentsSearch: Bool { facts.presentsSearch }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, activatesRestoredTab: Bool, opensNewTab: Bool) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        activatesRestoredTab: Bool,
+        opensNewTab: Bool,
+        presentsSearch: Bool
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, activatesRestoredTab: activatesRestoredTab, opensNewTab: opensNewTab)
+        facts = Facts(
+            name: name,
+            title: title,
+            activatesRestoredTab: activatesRestoredTab,
+            opensNewTab: opensNewTab,
+            presentsSearch: presentsSearch
+        )
     }
 
     static let showStartPage = StartupBehavior(
@@ -23619,24 +23639,35 @@ struct StartupBehavior: Hashable, Sendable {
         name: "showStartPage",
         title: LocalizedStringResource("Show Start Page"),
         activatesRestoredTab: false,
-        opensNewTab: false
+        opensNewTab: false,
+        presentsSearch: false
     )
     static let lastActiveTab = StartupBehavior(
         tag: 1,
         name: "lastActiveTab",
         title: LocalizedStringResource("Open Last Active Tab"),
         activatesRestoredTab: true,
-        opensNewTab: false
+        opensNewTab: false,
+        presentsSearch: false
     )
     static let newTab = StartupBehavior(
         tag: 2,
         name: "newTab",
         title: LocalizedStringResource("Open a New Tab"),
         activatesRestoredTab: false,
-        opensNewTab: true
+        opensNewTab: true,
+        presentsSearch: false
+    )
+    static let search = StartupBehavior(
+        tag: 3,
+        name: "search",
+        title: LocalizedStringResource("Open Search"),
+        activatesRestoredTab: true,
+        opensNewTab: false,
+        presentsSearch: true
     )
 
-    static let all: [StartupBehavior] = [showStartPage, lastActiveTab, newTab]
+    static let all: [StartupBehavior] = [showStartPage, lastActiveTab, newTab, search]
 
     static func named(_ name: String?) -> StartupBehavior? {
         all.first { $0.name == name }
@@ -23655,12 +23686,20 @@ struct StartupBehavior: Hashable, Sendable {
         let title: LocalizedStringResource
         let activatesRestoredTab: Bool
         let opensNewTab: Bool
+        let presentsSearch: Bool
 
-        init(name: String, title: LocalizedStringResource, activatesRestoredTab: Bool, opensNewTab: Bool) {
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            activatesRestoredTab: Bool,
+            opensNewTab: Bool,
+            presentsSearch: Bool
+        ) {
             self.name = name
             self.title = title
             self.activatesRestoredTab = activatesRestoredTab
             self.opensNewTab = opensNewTab
+            self.presentsSearch = presentsSearch
         }
     }
 }

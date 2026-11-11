@@ -19,6 +19,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
     @State var presentedListSheet: MobileBrowserSidebarSpaceSheet?
+    /// The Space whose Downloads the compact toolbar's menu shows as a sheet.
+    @State var downloadsAssignment: BrowserSpaceRuntimeAssignment?
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
@@ -210,6 +212,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.handleRegularPageInteraction,
                         submitAddress: submitAddress,
                         beginNewTab: beginNewTab,
+                        newTabSearch: newTabSearch,
                         showTabViewer: showTabViewer,
                         hideCompactToolbar:
                             navigation.hideCompactToolbar,
@@ -221,7 +224,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         didPromoteTransientPage: model.activateSelectedTab,
                         showHistory: presentHistoryFromCommand,
                         paletteMode: $commandPaletteMode,
-                        openLocation: openLocation
+                        openLocation: openLocation,
+                        openPaletteURL: { source, url, mode in
+                            model.openPaletteURL(url, mode: mode, from: source)
+                        },
+                        downloadsAssignment: $downloadsAssignment
                     )
                 )
                 // The page covers the window while it shows, so Settings,
@@ -380,12 +387,25 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             // A list belongs to the Space it opened for, as the sidebar's do.
             if presentedListSheet?.assignment != assignment { presentedListSheet = nil }
         }
+        // The palette speaks for the tab it opened over, so another tab
+        // coming up, from a link or a choice made in it, puts it away. A
+        // window that showed no tab, as after launch, keeps it.
+        .onChange(of: browser.shownTabAssignment) { previous, _ in
+            guard previous != nil else { return }
+            dismissCommandPalette()
+        }
+        // A link another app opened is what the person came for, whether it
+        // shows in a tab or a Quick Window, so the palette makes way for it.
+        .onChange(of: model.greeting.externalLinkCount) {
+            dismissCommandPalette()
+        }
         .modifier(downloadRiskConfirmation(overPage: false))
         .modifier(
             MobileBrowserRootLifecycleModifier(
                 model: model,
                 presentation: presentation,
                 openNewTab: beginNewTab,
+                presentSearch: presentAutomaticSearch,
                 isAddressEditing: $isAddressEditing,
                 storedSidebarWidth: $storedRegularSidebarWidth
             )

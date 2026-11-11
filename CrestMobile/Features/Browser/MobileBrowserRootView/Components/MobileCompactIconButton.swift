@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct MobileCompactIconButton: View {
-    let title: String
+    /// What VoiceOver reads for the button, from the catalog.
+    let title: LocalizedStringResource
     let systemImage: String
     var enabled = true
     let action: () -> Void
@@ -22,7 +23,7 @@ struct MobileCompactIconButton: View {
                 : Color.secondary.opacity(CrestOpacity.controlDisabledForeground)
         )
         .disabled(!enabled)
-        .accessibilityLabel(title)
+        .accessibilityLabel(Text(title))
     }
 }
 

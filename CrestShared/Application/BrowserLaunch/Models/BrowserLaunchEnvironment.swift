@@ -19,6 +19,10 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     let forcesMobileOnboardingSetup: Bool
     let softwareUpdateWidgetFixture: String?
     let isolatedSoftwareUpdateFeedURL: URL?
+    /// The startup choice a fixture launch opens with, by its stored
+    /// spelling, for a validation of that choice; a spelling no choice has
+    /// is none.
+    let startupFixture: StartupBehavior?
     let isXCTestRuntime: Bool
     let isSwiftUIPreviewRuntime: Bool
     /// Whether this launch stays out of the installed profile. The core decides
@@ -68,6 +72,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         isolatedSoftwareUpdateFeedURL = Self.loopbackSoftwareUpdateFeedURL(
             values[Key.softwareUpdateTestFeedURL.rawValue]
         )
+        startupFixture = StartupBehavior.named(values[Key.startupFixture.rawValue])
         self.isXCTestRuntime = isXCTestRuntime
         self.isSwiftUIPreviewRuntime = isSwiftUIPreviewRuntime
         // Isolation is decided before any core exists, so the core answers it
@@ -136,5 +141,6 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         case forceOnboardingSetup = "CREST_FORCE_ONBOARDING_SETUP"
         case softwareUpdateWidgetFixture = "CREST_UPDATE_WIDGET_FIXTURE"
         case softwareUpdateTestFeedURL = "CREST_UPDATE_TEST_FEED_URL"
+        case startupFixture = "CREST_STARTUP_FIXTURE"
     }
 }
