@@ -18,18 +18,31 @@ struct LiveBrowserOnboardingImportCommitter:
         let directoryAccess = BrowserImportAccessStore.resolve(for: review.source)
         defer { directoryAccess?.stopAccessing() }
 
-        let passwords = try await selectedPasswords(for: review, payload: payload)
+        let prepared: BrowserOnboardingPreparedImport
+        do {
+            let passwords = try await selectedPasswords(for: review, payload: payload)
+            prepared = BrowserOnboardingPreparedImport(passwords: passwords)
+        } catch is BrowserPasswordImportError {
+            // Passwords that can't be read, as when the person denies the
+            // Keychain, stay behind; the Spaces and tabs still come in.
+            prepared = BrowserOnboardingPreparedImport(passwords: [], unreadPasswordCount: review.includedPasswordCount)
+        }
         try Task.checkCancellation()
-        return BrowserOnboardingPreparedImport(passwords: passwords)
+        return prepared
     }
 
+    /// Imports the review's Spaces, then the passwords read for it, counting
+    /// those that couldn't be read among the ones that couldn't be saved.
     func finalize(
         review: SetupImportReview,
         preparedImport: BrowserOnboardingPreparedImport,
         browser: BrowserStore
     ) async throws -> BrowserPasswordImportResult {
         try browser.importReviewedSpaces()
-        return await BrowserPasswordImportCommitter.commit(preparedImport.passwords, browser: browser)
+        let saved = await BrowserPasswordImportCommitter.commit(preparedImport.passwords, browser: browser)
+        return BrowserPasswordImportResult(
+            importedCount: saved.importedCount, skippedCount: saved.skippedCount,
+            unsavedCount: saved.unsavedCount + preparedImport.unreadPasswordCount)
     }
 
     /// The passwords the review brings, read only when it brings any.

@@ -1,7 +1,10 @@
 import Foundation
 
+/// What an import brings beside its Spaces: the passwords read for it, and
+/// how many more it asked for that couldn't be read.
 struct BrowserOnboardingPreparedImport {
     let passwords: [BrowserImportedPassword]
+    var unreadPasswordCount = 0
 }
 
 enum BrowserOnboardingFailureText: Equatable {
