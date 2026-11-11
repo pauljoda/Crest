@@ -3,12 +3,15 @@ import SwiftUI
 /// A compact page's bar in search mode: one capsule that opens search for a
 /// new tab, with New Tab inside it, in place of the address. The page's
 /// address lives in the page menu instead. It shows the page loading as the
-/// address bar does, and the palette grows out of it the same way.
+/// address bar does, and the palette grows out of it the same way. Touching
+/// and holding it offers a new tab in another Space, or private browsing.
 struct MobileCompactSearchBar: View {
     let browser: BrowserStore
     let progress: Double
     let isLoading: Bool
     let search: () -> Void
+    /// What touching and holding the bar offers besides a new tab here.
+    let newTabChoices: MobileSearchModeControls
     let transition: MobileCompactChromeTransition
     let transitionEnded: (CGSize) -> Void
     /// Moves to the tab before or after the shown one, which VoiceOver offers
@@ -24,7 +27,11 @@ struct MobileCompactSearchBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: search) {
+        // A tap searches for a new tab here; touching and holding opens the
+        // menu from the bar, which keeps its glass in place.
+        Menu {
+            newTabMenu
+        } label: {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 15, weight: .semibold))
@@ -46,7 +53,10 @@ struct MobileCompactSearchBar: View {
             .padding(.trailing, 6)
             .frame(maxWidth: .infinity, minHeight: 48)
             .contentShape(.capsule)
+        } primaryAction: {
+            search()
         }
+        .menuStyle(.button)
         .buttonStyle(.plain)
         .background {
             Capsule()
@@ -70,6 +80,30 @@ struct MobileCompactSearchBar: View {
         .accessibilityIdentifier("search-mode-field")
         .modifier(MobileTabStepActions(step: stepTab))
         .modifier(MobileCompactChromeTransitionModifier(transition: transition, transitionEnded: transitionEnded))
+    }
+
+    /// A new tab here or in another Space, and the way in or out of private
+    /// browsing.
+    @ViewBuilder
+    private var newTabMenu: some View {
+        Group {
+            Button("New Tab", systemImage: "plus", action: search)
+            ForEach(newTabChoices.otherSpaces) { space in
+                Button {
+                    newTabChoices.searchInSpace(space.id)
+                } label: {
+                    BrowserSpaceIdentityLabel(
+                        space: space, title: String(localized: "New Tab in \(space.identity.name)"))
+                }
+            }
+            Divider()
+            Button(
+                newTabChoices.isPrivateBrowsing ? "Leave Private Browsing" : "Private Browsing",
+                systemImage: ShortcutCommand.newPrivateWindow.symbol,
+                action: newTabChoices.togglePrivateBrowsing
+            )
+        }
+        .crestMenuActionLabelStyle()
     }
 
     /// The bar's frame, carrying the palette's identity while the bar holds

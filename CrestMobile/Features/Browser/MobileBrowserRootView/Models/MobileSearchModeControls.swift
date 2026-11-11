@@ -8,6 +8,15 @@ struct MobileSearchModeControls {
     /// Puts search up over the shown tab; what is opened from it goes to a
     /// new tab.
     let search: @MainActor () -> Void
+    /// The Spaces New Tab's menu offers a new tab in: the window's others
+    /// that are not locked.
+    let otherSpaces: [SpaceModel]
+    /// Moves to a Space and puts search up there, for a new tab in it.
+    let searchInSpace: @MainActor (UUID) -> Void
+    /// Whether the window browses privately, which New Tab's menu offers to
+    /// leave.
+    let isPrivateBrowsing: Bool
+    let togglePrivateBrowsing: @MainActor () -> Void
     /// Pins or unpins the shown tab, as the tab's own menu does.
     let toggleShownTabPinned: @MainActor () -> Void
     /// Whether the page menu is up. The window keeps it, so search does not

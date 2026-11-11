@@ -140,6 +140,7 @@ struct MobileCompactPageToolbar: View {
                 progress: pageActions?.activePage?.estimatedProgress ?? 0,
                 isLoading: pageActions?.activePage?.live.isLoading == true,
                 search: searchMode.search,
+                newTabChoices: searchMode,
                 transition: .revealTabViewer,
                 transitionEnded: compactTransitionEnded,
                 stepTab: tabStep,

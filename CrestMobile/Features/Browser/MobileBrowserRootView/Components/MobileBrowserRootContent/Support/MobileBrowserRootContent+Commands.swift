@@ -63,8 +63,18 @@ extension MobileBrowserRootContent {
     /// and the page menu. Nil otherwise, which keeps the address bar.
     var searchModeControls: MobileSearchModeControls? {
         guard BrowserAppPreferenceStore.shared.startupBehavior.presentsSearch else { return nil }
+        let lockedSpaceIDs = model.lockedSpaceIDs
         return MobileSearchModeControls(
             search: presentSearch,
+            otherSpaces: browser.spaceModels.filter {
+                $0.id != browser.shownSpace?.id && !lockedSpaceIDs.contains($0.id)
+            },
+            searchInSpace: { spaceID in
+                guard model.selectSpaceFromCommand(spaceID) else { return }
+                presentSearch()
+            },
+            isPrivateBrowsing: browser.isPrivateBrowsing,
+            togglePrivateBrowsing: { togglePrivateBrowsing() },
             toggleShownTabPinned: { model.commandController.toggleSelectedTabPinned() },
             isPageMenuPresented: $isPageMenuPresented
         )
