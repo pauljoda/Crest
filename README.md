@@ -5,7 +5,7 @@
   <p>Built with SwiftUI, running Chromium and WebKit on Mac, with separate Spaces for different parts of your life.</p>
   <p>
     <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
-    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver"></a>
+    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver&filter=v*"></a>
     <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-315f93"></a>
   </p>
   <p>
@@ -149,7 +149,9 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-10) describe
+[Crest 0.9.1](CHANGELOG.md#091---2026-11-10) updates Chromium to
+157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in
+the wild. The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-10) describe
 Sub-Spaces, built-in ad blocking, and the Chromium engine now built from
 Chromium itself. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone and
 iPad use WebKit.

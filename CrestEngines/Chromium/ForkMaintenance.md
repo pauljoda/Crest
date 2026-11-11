@@ -91,7 +91,12 @@ archive checksum, resolves the CIPD tools and the PGO profile the new source
 names, refreshes host hashes only after every Crest patch applies without fuzz,
 and restores the source lock and host hashes if preparation fails. Build
 failures leave the candidate available for inspection. New milestones need
-`--allow-major` here, and each needs the request review below. The schedule
+`--allow-major` here, and each needs the request review below. A new Chromium
+may add helper apps: packaging and publishing refuse any helper missing from
+`ENGINE_HELPER_KINDS` in `chromium_engine.py`, so give each the entitlements
+`chrome/installer/mac/signing/parts.py` gives it. Distribution packaging also
+runs the signed package's own helpers and refuses a package that can't load a
+page, because an unsigned build passes everything a hardened signature can break. The schedule
 builds a new milestone for review once the pinned one has no newer fix, but it
 ships only when its PR is merged. `fork.json.automaticMajorUpdates` can also let
 milestone updates release automatically.
