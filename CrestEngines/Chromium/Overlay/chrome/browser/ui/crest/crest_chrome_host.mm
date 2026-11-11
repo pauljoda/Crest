@@ -1075,6 +1075,10 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
 // opens it over the page `browser` shows, from the control Crest's UI names.
 // As in Chrome, a popup an extension opens itself grants no access to the page
 // and runs no click, and it does not replace a popup the page already shows.
+//
+// The popup keeps `browser` for as long as it lives, so it opens only from a
+// Browser Crest keeps for a window that is still open and in use. Chromium can
+// name another as its active Browser, such as one whose window has closed.
 bool OpenExtensionActionPopup(BrowserWindowInterface& browser_window, const extensions::Extension& extension,
                               ShowPopupCallback shown) {
   if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
@@ -1083,7 +1087,10 @@ bool OpenExtensionActionPopup(BrowserWindowInterface& browser_window, const exte
   content::WebContents* contents = browser->tab_strip_model()->GetActiveWebContents();
   auto& binding = crest::EngineBinding::Get();
   crest::EnginePage* page = contents ? binding.PageFor(contents) : nullptr;
-  if (!page) return false;
+  if (!page || browser->IsDeleteScheduled() || binding.Browsers().Holding(contents) != browser) return false;
+  const std::string window_id = binding.Browsers().WindowOf(browser);
+  NSWindow* window = window_id.empty() ? nil : [UI() windowWithID:UUIDFor(window_id)];
+  if (!window || !window.isKeyWindow) return false;
   if (PageViews* views = FindViews(page->key());
       views && views->web_contents() == contents && views->extension_popup && views->extension_popup->IsOpen())
     return false;
@@ -1094,7 +1101,7 @@ bool OpenExtensionActionPopup(BrowserWindowInterface& browser_window, const exte
   if (!popup_url.is_valid()) return false;
   id<CrestExtensionPopupAnchor> anchor = [UI() extensionPopupAnchor:base::SysUTF8ToNSString(extension.id())
                                                                page:UUIDFor(page->key())];
-  if (!anchor || !anchor.view.window) return false;
+  if (!anchor || anchor.view.window != window) return false;
   auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(extension, popup_url, browser);
   if (!popup) return false;
   ViewsFor(page->key(), contents).extension_popup =
