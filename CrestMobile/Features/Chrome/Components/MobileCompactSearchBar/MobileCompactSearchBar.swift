@@ -132,3 +132,28 @@ struct MobileCompactSearchBar: View {
         isLoading ? CGFloat(min(max(progress, 0.04), 1)) : 0
     }
 }
+
+#if DEBUG
+    #Preview("Search field") {
+        let fixture = MobileBrowserSidebarPreviewFixture()
+        let choices = MobileSearchModeControls(
+            search: {},
+            otherSpaces: [],
+            searchInSpace: { _ in },
+            isPrivateBrowsing: false,
+            togglePrivateBrowsing: {},
+            toggleShownTabPinned: {},
+            isPageMenuPresented: .constant(false)
+        )
+        VStack(spacing: 24) {
+            MobileCompactSearchBar(
+                browser: fixture.browser, progress: 0, isLoading: false, search: {}, newTabChoices: choices,
+                transition: .revealTabViewer, transitionEnded: { _ in })
+            MobileCompactSearchBar(
+                browser: fixture.browser, progress: 0.45, isLoading: true, search: {}, newTabChoices: choices,
+                transition: .revealTabViewer, transitionEnded: { _ in })
+        }
+        .padding()
+        .frame(width: 393)
+    }
+#endif

@@ -95,17 +95,16 @@ extension MobileBrowserRootModel {
         guard !hasPreparedBrowser else { return }
         let shownBeforehand = (browser.selectedSpaceID, browser.shownTab?.id)
         await pages.prepareContentBlocking()
-        // A root that went away while the rules compiled leaves the greeting
-        // to the one shown in its place.
         guard !Task.isCancelled else { return }
-        var greetsLaunch =
-            (startupBehavior.opensNewTab || startupBehavior.presentsSearch) && greeting.takeLaunch()
-        let linksBeforehand = greeting.externalLinkCount
         hasPreparedBrowser = true
         // Pages opened while the rules compiled were built without them.
         await pages.reconcileContentBlocking()
-        // A link another app opened meanwhile is what the person came for.
-        greetsLaunch = greetsLaunch && !Task.isCancelled && greeting.externalLinkCount == linksBeforehand
+        // A root that went away while it prepared leaves the greeting to the
+        // one shown in its place. The greeting is claimed only now, so a link
+        // another app opened meanwhile has already taken it.
+        guard !Task.isCancelled else { return }
+        let greetsLaunch =
+            (startupBehavior.opensNewTab || startupBehavior.presentsSearch) && greeting.takeLaunch()
         if startupBehavior.opensNewTab {
             if greetsLaunch, showDefaultSpaceForNewTab() { openNewTab() }
             return

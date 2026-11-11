@@ -5305,6 +5305,10 @@
     "mobile-search-mode-review-fixes": {
       "category": "internal",
       "message": "Search mode keeps its launch greeting through a cancelled preparation, yields to a link that arrives while it prepares, stays away from Find and the element picker, and closes the page menu for a link from another app. A startup fixture always isolates its launch."
+    },
+    "mobile-search-launch-greeting-after-setup": {
+      "category": "internal",
+      "message": "A window claims its launch search only once its pages are ready, so a view replaced while it prepared leaves the launch search to the one that takes its place. The search field gains a preview."
     }
   }
 }
