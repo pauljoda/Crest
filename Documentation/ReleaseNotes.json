@@ -5297,6 +5297,10 @@
     "mobile-search-field-new-tab-menu": {
       "category": "improved",
       "message": "On iPhone in search mode, touching and holding the search field offers a new tab in another Space, or private browsing."
+    },
+    "mobile-page-menu-save-tab": {
+      "category": "improved",
+      "message": "In the iPhone page menu, Save Tab keeps the page in the Space’s Saved Tabs. Touch and hold it to pin the tab instead."
     }
   }
 }

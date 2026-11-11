@@ -11042,6 +11042,9 @@
     "Remove from Folder" : {
 
     },
+    "Remove from Saved" : {
+
+    },
     "Remove from Selection" : {
 
     },
@@ -11800,6 +11803,9 @@
       }
     },
     "Save Setup" : {
+
+    },
+    "Save Tab" : {
 
     },
     "Save this tab" : {

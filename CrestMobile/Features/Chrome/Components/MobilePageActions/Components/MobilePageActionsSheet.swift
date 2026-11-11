@@ -166,7 +166,7 @@ struct MobilePageActionsSheet: View {
 
     // MARK: - Tiles
 
-    /// Find, Reader, Pin and Share: what a page is opened for most.
+    /// Find, Reader, Save and Share: what a page is opened for most.
     private var tiles: some View {
         HStack(spacing: CrestSpacing.small) {
             Button(ShortcutCommand.findInPage) { dismissThen(pages.presentFind) }
@@ -174,9 +174,7 @@ struct MobilePageActionsSheet: View {
                 dismissThen(pages.toggleReaderMode)
             }
             .disabled(!pages.readerModeState.canToggle)
-            Button(isShownTabPinned ? "Unpin Tab" : "Pin Tab", systemImage: isShownTabPinned ? "pin.slash" : "pin") {
-                dismissThen(toggleShownTabPinned)
-            }
+            saveTile
             if let url = pages.activeURL {
                 ShareLink(item: url) {
                     Label(ShortcutCommand.sharePage)
@@ -187,8 +185,42 @@ struct MobilePageActionsSheet: View {
         .buttonStyle(CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.card, showsRestingFill: true))
     }
 
+    /// Keeps the tab in the Space's Saved Tabs, below Pinned, or returns it
+    /// to the open tabs. Touching and holding it offers Pinned instead.
+    private var saveTile: some View {
+        Menu {
+            Button(isShownTabPinned ? "Unpin Tab" : "Pin Tab", systemImage: isShownTabPinned ? "pin.slash" : "pin") {
+                dismissThen(toggleShownTabPinned)
+            }
+            .crestMenuActionLabelStyle()
+        } label: {
+            Label(
+                isShownTabSaved ? "Remove from Saved" : "Save Tab",
+                systemImage: isShownTabSaved ? "bookmark.slash" : "bookmark"
+            )
+        } primaryAction: {
+            let placement: TabPlacement = isShownTabSaved ? .current : .saved
+            dismissThen { moveShownTab(to: placement) }
+        }
+        .menuStyle(.button)
+    }
+
     private var isShownTabPinned: Bool {
         browser.shownTab?.placement == .pinned
+    }
+
+    private var isShownTabSaved: Bool {
+        browser.shownTab?.placement == .saved
+    }
+
+    /// Moves the tab the menu is for, while its Space still shows it.
+    private func moveShownTab(to placement: TabPlacement) {
+        guard let tab = pages.pageAssignment else { return }
+        browser.moveTab(
+            tab.tabID,
+            matching: BrowserSpaceRuntimeAssignment(spaceID: tab.spaceID, profileID: tab.profileID),
+            to: placement
+        )
     }
 
     // MARK: - Rows
