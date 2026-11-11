@@ -11,13 +11,17 @@ public sealed class WorkspaceKind {
     #region Static Variables
 
     public static readonly WorkspaceKind Persistent = new(name: "persistent", opensDirectly: true, keepsFile: true,
-        isPrivate: false, ownsSpaces: true, keepsAppPreferences: true, isPractice: false, sharesPagesAcrossWindows: true);
+        isPrivate: false, ownsSpaces: true, keepsAppPreferences: true, isPractice: false, locksSpaces: true,
+        sharesPagesAcrossWindows: true);
     public static readonly WorkspaceKind Private = new(name: "private", opensDirectly: true, keepsFile: false,
-        isPrivate: true, ownsSpaces: true, keepsAppPreferences: false, isPractice: false, sharesPagesAcrossWindows: false);
+        isPrivate: true, ownsSpaces: true, keepsAppPreferences: false, isPractice: false, locksSpaces: false,
+        sharesPagesAcrossWindows: false);
     public static readonly WorkspaceKind Borrowed = new(name: "borrowed", opensDirectly: false, keepsFile: false,
-        isPrivate: false, ownsSpaces: false, keepsAppPreferences: false, isPractice: false, sharesPagesAcrossWindows: false);
+        isPrivate: false, ownsSpaces: false, keepsAppPreferences: false, isPractice: false, locksSpaces: true,
+        sharesPagesAcrossWindows: false);
     public static readonly WorkspaceKind Practice = new(name: "practice", opensDirectly: true, keepsFile: false,
-        isPrivate: false, ownsSpaces: true, keepsAppPreferences: false, isPractice: true, sharesPagesAcrossWindows: false);
+        isPrivate: false, ownsSpaces: true, keepsAppPreferences: false, isPractice: true, locksSpaces: true,
+        sharesPagesAcrossWindows: false);
 
     public static IReadOnlyList<WorkspaceKind> All { get; } = [Persistent, Private, Borrowed, Practice];
 
@@ -56,6 +60,12 @@ public sealed class WorkspaceKind {
     /// template.
     public bool IsPractice { get; }
 
+    /// A Space of the workspace may ask for the device owner before it shows.
+    /// A private one never does, whatever its settings say: it keeps nothing
+    /// once it closes, so a lock guards nothing and could only lock the person
+    /// out of the window they are browsing in.
+    public bool LocksSpaces { get; }
+
     /// The workspace's windows share its pages where the device lets them, so
     /// a page outlives the window that hosts it: the workspace's other windows
     /// show it, or its next window does. A page of a kind that does not, such
@@ -68,7 +78,7 @@ public sealed class WorkspaceKind {
     #region Constructors
 
     private WorkspaceKind(string name, bool opensDirectly, bool keepsFile, bool isPrivate, bool ownsSpaces,
-        bool keepsAppPreferences, bool isPractice, bool sharesPagesAcrossWindows) {
+        bool keepsAppPreferences, bool isPractice, bool locksSpaces, bool sharesPagesAcrossWindows) {
         Name = name;
         OpensDirectly = opensDirectly;
         KeepsFile = keepsFile;
@@ -76,6 +86,7 @@ public sealed class WorkspaceKind {
         OwnsSpaces = ownsSpaces;
         KeepsAppPreferences = keepsAppPreferences;
         IsPractice = isPractice;
+        LocksSpaces = locksSpaces;
         SharesPagesAcrossWindows = sharesPagesAcrossWindows;
     }
 

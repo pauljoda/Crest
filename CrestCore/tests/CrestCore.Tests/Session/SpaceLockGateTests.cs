@@ -310,4 +310,28 @@ public sealed partial class BrowserContractsTests {
             Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>()), TabPlacement.Current, null, null,
             LeavesSplit: false))).Rejection);
     }
+
+    [Fact]
+    public void APrivateSpaceNeverLocksWhateverPolicyItArrivesWith() {
+        using var app = new CrestApp();
+        var session = GuardedSession();
+        var identity = Identity(session);
+        var tab = Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>());
+        // A private window opened over a Space that asks for a lock shows it
+        // freely, even once everything locks, so nothing can shut the person
+        // out of the window they are browsing in.
+        var seeded = TestWorkspaces.Open(app, session, WorkspaceKind.Private);
+        Assert.Equal(SpaceAccessPolicy.Open, app.Workspace(seeded).Current.Spaces[0].Settings.AccessPolicy);
+        app.Send(new LockAllSpaces(SceneWentInactive: false));
+        app.Send(new RenameTab(seeded, identity.Space, tab, "Still open"));
+        Assert.Equal("Still open", app.Workspace(seeded).Current.Spaces[0].Tabs[0].CustomTitle);
+
+        // Turning a private Space's lock on is refused; leaving it off is not.
+        var fresh = TestWorkspaces.Opened(app.Send(new OpenWorkspace(WorkspaceKind.Private, Seed: null)));
+        var space = app.Workspace(fresh).Current.Spaces[0].Id;
+        Assert.Equal(new PrivateSpaceCannotLock(fresh), Assert.Throws<Rejected>(() =>
+            app.Send(new SetSpaceAccess(fresh, space, SpaceAccessPolicy.DeviceOwnerAuthentication))).Rejection);
+        app.Send(new SetSpaceAccess(fresh, space, SpaceAccessPolicy.Open));
+        Assert.Equal(SpaceAccessPolicy.Open, app.Workspace(fresh).Current.Spaces[0].Settings.AccessPolicy);
+    }
 }

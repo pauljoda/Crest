@@ -307,6 +307,7 @@ enum Rejection: Equatable, Error, Sendable {
     case pinsOneTabAtATime(PinsOneTabAtATime)
     case primaryCannotJoin(PrimaryCannotJoin)
     case primaryCannotSeparate(PrimaryCannotSeparate)
+    case privateSpaceCannotLock(PrivateSpaceCannotLock)
     case privateSpaceCannotShare(PrivateSpaceCannotShare)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case profileInUse(ProfileInUse)
@@ -416,6 +417,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .pinsOneTabAtATime(let value): value.message
         case .primaryCannotJoin(let value): value.message
         case .primaryCannotSeparate(let value): value.message
+        case .privateSpaceCannotLock(let value): value.message
         case .privateSpaceCannotShare(let value): value.message
         case .profileInUse(let value): value.message
         case .saveFailed(let value): value.message
@@ -5235,6 +5237,14 @@ struct PrimaryCannotSeparate: Equatable, Sendable {
 
     var message: LocalizedStringResource {
         LocalizedStringResource("Only a Sub-Space can be separated.")
+    }
+}
+
+struct PrivateSpaceCannotLock: Equatable, Sendable {
+    let workspaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Private windows can't be locked.")
     }
 }
 
@@ -24895,6 +24905,7 @@ struct WorkspaceKind: Hashable, Sendable {
     var ownsSpaces: Bool { facts.ownsSpaces }
     var keepsAppPreferences: Bool { facts.keepsAppPreferences }
     var isPractice: Bool { facts.isPractice }
+    var locksSpaces: Bool { facts.locksSpaces }
     private let facts: Facts
 
     private init(
@@ -24905,7 +24916,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: Bool,
         ownsSpaces: Bool,
         keepsAppPreferences: Bool,
-        isPractice: Bool
+        isPractice: Bool,
+        locksSpaces: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -24915,7 +24927,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: isPrivate,
             ownsSpaces: ownsSpaces,
             keepsAppPreferences: keepsAppPreferences,
-            isPractice: isPractice
+            isPractice: isPractice,
+            locksSpaces: locksSpaces
         )
     }
 
@@ -24927,7 +24940,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: true,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let `private` = WorkspaceKind(
         tag: 1,
@@ -24937,7 +24951,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: true,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: false
     )
     static let borrowed = WorkspaceKind(
         tag: 2,
@@ -24947,7 +24962,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: false,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let practice = WorkspaceKind(
         tag: 3,
@@ -24957,7 +24973,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: true
+        isPractice: true,
+        locksSpaces: true
     )
 
     static let all: [WorkspaceKind] = [persistent, `private`, borrowed, practice]
@@ -24982,6 +24999,7 @@ struct WorkspaceKind: Hashable, Sendable {
         let ownsSpaces: Bool
         let keepsAppPreferences: Bool
         let isPractice: Bool
+        let locksSpaces: Bool
 
         init(
             name: String,
@@ -24990,7 +25008,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: Bool,
             ownsSpaces: Bool,
             keepsAppPreferences: Bool,
-            isPractice: Bool
+            isPractice: Bool,
+            locksSpaces: Bool
         ) {
             self.name = name
             self.opensDirectly = opensDirectly
@@ -24999,6 +25018,7 @@ struct WorkspaceKind: Hashable, Sendable {
             self.ownsSpaces = ownsSpaces
             self.keepsAppPreferences = keepsAppPreferences
             self.isPractice = isPractice
+            self.locksSpaces = locksSpaces
         }
     }
 }

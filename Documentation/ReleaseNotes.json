@@ -5281,6 +5281,10 @@
     "chromium-upstream-157-0-8103-51": {
       "category": "fixed",
       "message": "Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws."
+    },
+    "private-browsing-space-never-locks": {
+      "category": "fixed",
+      "message": "The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it."
     }
   }
 }

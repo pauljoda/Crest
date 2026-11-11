@@ -10493,6 +10493,9 @@
     "Private windows" : {
 
     },
+    "Private windows can't be locked." : {
+
+    },
     "Private windows can't have Sub-Spaces." : {
 
     },
@@ -11273,6 +11276,21 @@
       }
     },
     "Requests permission" : {
+
+    },
+    "Require Face ID or passcode" : {
+
+    },
+    "Require Optic ID or passcode" : {
+
+    },
+    "Require passcode" : {
+
+    },
+    "Require password" : {
+
+    },
+    "Require Touch ID or passcode" : {
 
     },
     "Require Touch ID or password" : {
