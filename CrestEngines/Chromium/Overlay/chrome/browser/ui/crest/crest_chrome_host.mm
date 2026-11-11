@@ -314,18 +314,19 @@ class ExtensionPopup final : public extensions::ExtensionView,
   static constexpr CGFloat kScreenMargin = 8;
   static constexpr unsigned short kEscapeKeyCode = 53;
 
-  // Whether a popup an extension opened itself may still show: the person may
-  // have moved to another page, or minimised the window, while it loaded. The
-  // page it was opened over must still be its Browser's active tab and shown
-  // in `parent`, which must be on screen. A popup a click opened has no such
-  // page and always may.
+  // Whether a popup an extension opened itself may still show: while it
+  // loaded, the person may have moved to another page or window, or minimised
+  // or hidden Crest. The page it was opened over must still be its Browser's
+  // active tab and shown in `parent`, which must still be the key window, as
+  // `chrome.action.openPopup()` required when it was called. A popup a click
+  // opened has no such page and always may.
   bool StillOverItsPage(NSWindow* parent) const {
     if (!opened_over_) return true;
     content::WebContents* page = opened_over_->get();
     if (!page) return false;
     Browser* browser = crest::EngineBinding::Get().Browsers().Holding(page);
     NSView* view = page->GetNativeView().GetNativeNSView();
-    return browser && browser->tab_strip_model()->GetActiveWebContents() == page && !parent.isMiniaturized &&
+    return browser && browser->tab_strip_model()->GetActiveWebContents() == page && parent.isKeyWindow &&
            view.window == parent && !view.hiddenOrHasHiddenAncestor;
   }
 
