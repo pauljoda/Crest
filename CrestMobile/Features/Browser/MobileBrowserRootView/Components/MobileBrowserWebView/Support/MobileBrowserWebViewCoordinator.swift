@@ -23,6 +23,9 @@ final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelega
     /// The page's scroll view this coordinator follows, which changes as the
     /// page moves between hosts.
     private weak var followedScrollView: UIScrollView?
+    /// Where the drag stood when the bar last followed it, so turning back
+    /// within one drag counts from there.
+    private var chromeScrollBaseline: CGFloat = 0
 
     lazy var dismissFocusRecognizer: UITapGestureRecognizer = {
         let recognizer = UITapGestureRecognizer(
@@ -65,15 +68,20 @@ final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelega
     }
 
     /// A drag far enough down the page collapses the bar, and one back up, or
-    /// any drag at the very top, brings it back.
+    /// any drag at the very top, brings it back. Each turn of a drag counts
+    /// from where the bar last followed it.
     @objc private func pageScrolled(_ pan: UIPanGestureRecognizer) {
-        guard pan.state == .changed, let collapseChrome, let scrollView = pan.view as? UIScrollView else { return }
-        let travel = pan.translation(in: scrollView).y
+        guard let scrollView = pan.view as? UIScrollView else { return }
+        let translation = pan.translation(in: scrollView).y
+        if pan.state == .began { chromeScrollBaseline = translation }
+        guard pan.state == .changed, let collapseChrome else { return }
+        let travel = translation - chromeScrollBaseline
         let isAtTop = scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top
         if isAtTop {
             collapseChrome(false)
         } else if abs(travel) >= Self.chromeScrollDistance {
             collapseChrome(travel < 0)
+            chromeScrollBaseline = translation
         }
     }
 

@@ -40,7 +40,11 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         isSwiftUIPreviewRuntime: Bool = false
     ) {
         launchesInBackground = Self.isEnabled(.backgroundLaunch, in: values)
-        explicitlyRequiresIsolation = Self.isEnabled(.isolatedSession, in: values)
+        // A startup fixture isolates the launch even when its value is not a
+        // choice Crest knows, so a mistyped fixture never opens the installed
+        // profile.
+        explicitlyRequiresIsolation =
+            Self.isEnabled(.isolatedSession, in: values) || values[Key.startupFixture.rawValue] != nil
         persistentIsolationID = values[Key.persistentIsolationID.rawValue]
             .flatMap(Self.normalizedIsolationID)
         requestsIsolatedCloudSync = values["CREST_ISOLATED_CLOUD_SYNC_ID"] != nil

@@ -62,7 +62,7 @@ extension MobileBrowserRootContent {
     /// field that brings search up over the shown tab as it does on opening,
     /// and the page menu. Nil otherwise, which keeps the address bar.
     var searchModeControls: MobileSearchModeControls? {
-        guard BrowserAppPreferenceStore.shared.startupBehavior.presentsSearch else { return nil }
+        guard model.isInSearchMode else { return nil }
         let lockedSpaceIDs = model.lockedSpaceIDs
         return MobileSearchModeControls(
             search: presentSearch,
@@ -102,7 +102,8 @@ extension MobileBrowserRootContent {
     }
 
     /// Whether nothing else holds the window, so search may come up by
-    /// itself: no palette, page menu or address edit is under way, no
+    /// itself: no palette, page menu, Find, element pick or address edit is
+    /// under way, no
     /// Settings, History, Downloads or utility is open, no Quick Window or
     /// Peek shows, no risky download waits for an answer, setup is not over
     /// the window, and the Space it shows is not locked. Search the person
@@ -110,7 +111,9 @@ extension MobileBrowserRootContent {
     var leavesWindowToAutomaticSearch: Bool {
         let utilities = navigation.utilityPresentation
         let downloadQuestion = pages.downloadRiskConfirmation.request
+        let page = pages.activePage
         return commandPaletteMode == nil && !isAddressEditing && !isPageMenuPresented
+            && page?.isFindPresented != true && page?.elementPicker.isActive != true
             && !model.showsSettings && browser.shownTab?.nativeTabContent != .settings
             && presentedListSheet == nil && downloadsAssignment == nil
             && utilities.surface == nil && !utilities.isSidebarInteractionActive

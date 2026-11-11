@@ -5,6 +5,10 @@ import SwiftUI
 @Observable
 @MainActor
 final class MobileBrowserRootModel {
+    /// The startup choice a fixture launch names, which search mode follows
+    /// over the stored one.
+    private static let startupFixture = BrowserLaunchEnvironment.current.startupFixture
+
     let browser: BrowserStore
     let sidebarInteraction: BrowserSidebarInteractionState
     let pages: MobileBrowserPageStore
@@ -91,12 +95,17 @@ extension MobileBrowserRootModel {
         guard !hasPreparedBrowser else { return }
         let shownBeforehand = (browser.selectedSpaceID, browser.shownTab?.id)
         await pages.prepareContentBlocking()
-        let greetsLaunch =
-            (startupBehavior.opensNewTab || startupBehavior.presentsSearch) && greeting.takeLaunch()
+        // A root that went away while the rules compiled leaves the greeting
+        // to the one shown in its place.
         guard !Task.isCancelled else { return }
+        var greetsLaunch =
+            (startupBehavior.opensNewTab || startupBehavior.presentsSearch) && greeting.takeLaunch()
+        let linksBeforehand = greeting.externalLinkCount
         hasPreparedBrowser = true
         // Pages opened while the rules compiled were built without them.
         await pages.reconcileContentBlocking()
+        // A link another app opened meanwhile is what the person came for.
+        greetsLaunch = greetsLaunch && !Task.isCancelled && greeting.externalLinkCount == linksBeforehand
         if startupBehavior.opensNewTab {
             if greetsLaunch, showDefaultSpaceForNewTab() { openNewTab() }
             return
@@ -112,11 +121,16 @@ extension MobileBrowserRootModel {
         synchronizeSelection()
     }
 
-    /// Whether search greets a person back after a while away: their
-    /// startup choice as it stands now, outside private browsing, which
-    /// always opens where it was.
+    /// Whether search greets a person back after a while away: in search
+    /// mode, outside private browsing, which always opens where it was.
     var greetsReturnWithSearch: Bool {
-        BrowserAppPreferenceStore.shared.startupBehavior.presentsSearch && !browser.isPrivateBrowsing
+        isInSearchMode && !browser.isPrivateBrowsing
+    }
+
+    /// Whether the window is in search mode: the startup choice as it stands
+    /// now, or the one a fixture launch names, which the launch opened with.
+    var isInSearchMode: Bool {
+        (Self.startupFixture ?? BrowserAppPreferenceStore.shared.startupBehavior).presentsSearch
     }
 
     /// Shows the default Space for the launch's new tab, unless the window

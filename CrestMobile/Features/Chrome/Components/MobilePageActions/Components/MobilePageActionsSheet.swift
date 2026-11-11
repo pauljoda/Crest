@@ -186,11 +186,13 @@ struct MobilePageActionsSheet: View {
     }
 
     /// Keeps the tab in the Space's Saved Tabs, below Pinned, or returns it
-    /// to the open tabs. Touching and holding it offers Pinned instead.
+    /// to the open tabs. Touching and holding it offers Pinned instead. Both
+    /// move the tab while the menu still speaks for it, then close the menu.
     private var saveTile: some View {
         Menu {
             Button(isShownTabPinned ? "Unpin Tab" : "Pin Tab", systemImage: isShownTabPinned ? "pin.slash" : "pin") {
-                dismissThen(toggleShownTabPinned)
+                toggleShownTabPinned()
+                dismissThen {}
             }
             .crestMenuActionLabelStyle()
         } label: {
@@ -199,8 +201,8 @@ struct MobilePageActionsSheet: View {
                 systemImage: isShownTabSaved ? "bookmark.slash" : "bookmark"
             )
         } primaryAction: {
-            let placement: TabPlacement = isShownTabSaved ? .current : .saved
-            dismissThen { moveShownTab(to: placement) }
+            moveShownTab(to: isShownTabSaved ? .current : .saved)
+            dismissThen {}
         }
         .menuStyle(.button)
     }

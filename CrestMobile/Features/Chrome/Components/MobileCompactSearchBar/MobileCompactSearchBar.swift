@@ -6,6 +6,13 @@ import SwiftUI
 /// address bar does, and the palette grows out of it the same way. Touching
 /// and holding it offers a new tab in another Space, or private browsing.
 struct MobileCompactSearchBar: View {
+    // MARK: - Static Variables
+
+    /// The New Tab disc inside the capsule.
+    private static let newTabSize: CGFloat = 36
+
+    // MARK: - Variables
+
     let browser: BrowserStore
     let progress: Double
     let isLoading: Bool
@@ -45,7 +52,7 @@ struct MobileCompactSearchBar: View {
                     .font(.system(size: 15, weight: .bold))
                     .browserReadableForeground(over: .accentColor)
                     .frame(
-                        width: MobileCompactSearchBarLayout.newTabSize, height: MobileCompactSearchBarLayout.newTabSize
+                        width: Self.newTabSize, height: Self.newTabSize
                     )
                     .background(Color.accentColor, in: .circle)
             }

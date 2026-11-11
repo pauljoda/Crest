@@ -5301,6 +5301,10 @@
     "mobile-page-menu-save-tab": {
       "category": "improved",
       "message": "In the iPhone page menu, Save Tab keeps the page in the Space’s Saved Tabs. Touch and hold it to pin the tab instead."
+    },
+    "mobile-search-mode-review-fixes": {
+      "category": "internal",
+      "message": "Search mode keeps its launch greeting through a cancelled preparation, yields to a link that arrives while it prepares, stays away from Find and the element picker, and closes the page menu for a link from another app. A startup fixture always isolates its launch."
     }
   }
 }

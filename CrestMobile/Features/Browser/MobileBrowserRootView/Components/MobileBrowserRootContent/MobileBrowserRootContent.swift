@@ -400,6 +400,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         // shows in a tab or a Quick Window, so the palette makes way for it.
         .onChange(of: model.greeting.externalLinkCount) {
             dismissCommandPalette()
+            isPageMenuPresented = false
         }
         .modifier(downloadRiskConfirmation(overPage: false))
         .modifier(
