@@ -6,29 +6,30 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.2</title>
-            <pubDate>Wed, 11 Nov 2026 18:55:38 +0000</pubDate>
+            <title>0.9.4</title>
+            <pubDate>Wed, 11 Nov 2026 19:43:58 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1584</sparkle:version>
-            <sparkle:shortVersionString>0.9.2</sparkle:shortVersionString>
+            <sparkle:version>1586</sparkle:version>
+            <sparkle:shortVersionString>0.9.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it.
+- On Mac, importing from Arc no longer quits Crest when Spaces that share an Arc profile aren't next to each other in Arc; they come in together, each with its own tabs.
+- On Mac, when Crest can't unlock another browser's passwords during an import, as when Keychain access is denied, the import still brings that browser's Spaces and tabs and leaves only the passwords behind.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/2a4fc3bfad799bc4d85266c00cc0d25e6ae85565...b4697032c9361200aa1b3613f5a1e67a61ab90f7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.2-2026-11-11-1584-r584.1/Installer-Crest-0.9.2-development-2026-11-11-b469703-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b4697032c9361200aa1b3613f5a1e67a61ab90f7...558819c4837a82d884a7ab0fd407ae93702740d1) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.4-2026-11-11-1586-r586.1/Installer-Crest-0.9.4-development-2026-11-11-558819c-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.2-2026-11-11-1584-r584.1/Installer-Crest-0.9.2-development-2026-11-11-b469703-arm64.dmg" length="219752579" type="application/octet-stream" sparkle:edSignature="3xyGPYKih/3NUqzvGrTUgNcCLw3STuZg4IJGXW62lquXBvYW3xVWVRdfHB7eJXkV4gIIpCQfOqWmX+/o8h+YAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.4-2026-11-11-1586-r586.1/Installer-Crest-0.9.4-development-2026-11-11-558819c-arm64.dmg" length="219752579" type="application/octet-stream" sparkle:edSignature="IElGRM69Cn2QRX3D/pMzh90TT3UlAVAT5KGYS9N/5miwsX/jiM2T/c+qFRo69KZQMJZfJrBDG5oKhp/Dd1b5Cg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +61,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: wA+meCAxA2reZjE/dnbuekqDzS+ZsiWmFi7Hs0mZGtoq7VONlpcvvf8ZgSKv4FLdE/D/i11rQjEywPPZdKSHAA==
-length: 4087
+edSignature: 3IgcNn9U7g4LWTYBxudRgRYSacXcHKD5OVMg9dgFWVczXl8ekPZbivXI1ch/6mnJ+/oX2uX+mywfVkvgD8odAg==
+length: 4262
 -->
