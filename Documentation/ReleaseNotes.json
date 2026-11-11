@@ -5293,6 +5293,10 @@
     "browser-import-keeps-spaces-without-passwords": {
       "category": "fixed",
       "message": "On Mac, when Crest can't unlock another browser's passwords during an import, as when Keychain access is denied, the import still brings that browser's Spaces and tabs and leaves only the passwords behind."
+    },
+    "split-row-highlight-only-when-shown": {
+      "category": "fixed",
+      "message": "A Split View's row in the sidebar no longer looks selected while another tab is showing."
     }
   }
 }
