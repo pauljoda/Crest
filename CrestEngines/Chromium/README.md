@@ -344,7 +344,8 @@ locked. Chromium shows that popup from the extension's button in its own
 toolbar, which a Crest window does not have, so in Crest mode the host opens it
 over the window's active page instead. It hangs from the extension's pinned
 tile, or from the pointer when the action is not pinned, and Chromium hears
-that it opened once its document is on screen. As in Chrome, it grants the
+that it opened once its document is on screen. If the person moves to another
+page while it loads, it closes without showing. As in Chrome, it grants the
 extension no access to the page, runs no click, and is refused while the page
 already shows a popup or the window is not the one in use.
 

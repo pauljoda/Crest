@@ -7,6 +7,7 @@
 #include <map>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <string>
 #include <set>
 #include <vector>
@@ -203,14 +204,19 @@ bool PassToMenuBar(const input::NativeWebKeyboardEvent& event, NSWindow* window)
 
 // AppKit hosting follows Mori's native ExtensionView bridge (MIT; see
 // ThirdParty/Mori-LICENSE). Each instance belongs to one Crest page/profile.
-// `shown`, for a popup an extension opened itself, hears the popup's host once
-// the popup is on screen, or null when it closes first.
+// A popup an extension opened itself names the page it was opened over, and
+// shows only while that page is still the one in use; `shown` hears the
+// popup's host once it is on screen, or null when it closes first.
 class ExtensionPopup final : public extensions::ExtensionView,
                              public extensions::ExtensionHostObserver {
  public:
   ExtensionPopup(std::unique_ptr<extensions::ExtensionViewHost> host, NSView* anchor_view, NSRect anchor_rect,
-                 ShowPopupCallback shown = ShowPopupCallback())
-      : host_(std::move(host)), anchor_view_(anchor_view), anchor_rect_(anchor_rect), shown_(std::move(shown)) {
+                 content::WebContents* opened_over = nullptr, ShowPopupCallback shown = ShowPopupCallback())
+      : host_(std::move(host)),
+        anchor_view_(anchor_view),
+        anchor_rect_(anchor_rect),
+        opened_over_(opened_over ? std::make_optional(opened_over->GetWeakPtr()) : std::nullopt),
+        shown_(std::move(shown)) {
     host_->set_view(this);
     host_->AddObserver(this);
     auto weak = weak_factory_.GetWeakPtr();
@@ -281,6 +287,12 @@ class ExtensionPopup final : public extensions::ExtensionView,
   void OnLoaded() override {
     NSWindow* parent = anchor_view_.window;
     if (!parent || !window_ || presented_) { if (!parent) Close(); return; }
+    if (!StillOverItsPage(parent)) {
+      // The host is still delivering this load, so it goes after the call.
+      auto weak = weak_factory_.GetWeakPtr();
+      dispatch_async(dispatch_get_main_queue(), ^{ if (weak) weak->Close(); });
+      return;
+    }
     presented_ = true;
     Position();
     [parent addChildWindow:window_ ordered:NSWindowAbove];
@@ -301,6 +313,20 @@ class ExtensionPopup final : public extensions::ExtensionView,
   static constexpr CGFloat kAnchorGap = 6;
   static constexpr CGFloat kScreenMargin = 8;
   static constexpr unsigned short kEscapeKeyCode = 53;
+
+  // Whether a popup an extension opened itself may still show: the person may
+  // have moved to another page while it loaded. The page it was opened over
+  // must still be its Browser's active tab and shown in `parent`. A popup a
+  // click opened has no such page and always may.
+  bool StillOverItsPage(NSWindow* parent) const {
+    if (!opened_over_) return true;
+    content::WebContents* page = opened_over_->get();
+    if (!page) return false;
+    Browser* browser = crest::EngineBinding::Get().Browsers().Holding(page);
+    NSView* view = page->GetNativeView().GetNativeNSView();
+    return browser && browser->tab_strip_model()->GetActiveWebContents() == page && view.window == parent &&
+           !view.hiddenOrHasHiddenAncestor;
+  }
 
   // Places the popup under the control it was opened from, flipping above it
   // and sliding along the screen when there is not room below or beside it.
@@ -377,6 +403,7 @@ class ExtensionPopup final : public extensions::ExtensionView,
   NSArray* __strong observations_ = nil;
   NSSize content_size_ = NSMakeSize(kDefaultWidth, kDefaultHeight);
   bool presented_ = false;
+  const std::optional<base::WeakPtr<content::WebContents>> opened_over_;
   ShowPopupCallback shown_;
   base::WeakPtrFactory<ExtensionPopup> weak_factory_{this};
 };
@@ -1069,7 +1096,7 @@ bool OpenExtensionActionPopup(BrowserWindowInterface& browser_window, const exte
   auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(extension, popup_url, browser);
   if (!popup) return false;
   ViewsFor(page->key(), contents).extension_popup =
-      std::make_unique<ExtensionPopup>(std::move(popup), anchor.view, anchor.rect, std::move(shown));
+      std::make_unique<ExtensionPopup>(std::move(popup), anchor.view, anchor.rect, contents, std::move(shown));
   return true;
 }
 
