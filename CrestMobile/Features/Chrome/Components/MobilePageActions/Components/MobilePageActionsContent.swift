@@ -26,32 +26,7 @@ struct MobilePageActionsContent: View {
         }
 
         if let notice = pages.blockedPopupNotice {
-            Section("Automatic Pop-ups") {
-                if notice.status.offersAllow {
-                    Button {
-                        pages.allowAutomaticPopupsForBlockedSite()
-                    } label: {
-                        Label(
-                            "Allow Automatic Pop-ups",
-                            systemImage: notice.status.symbol
-                        )
-                    }
-                    .accessibilityLabel(
-                        notice.allowActionAccessibilityLabel
-                    )
-                    .accessibilityHint(
-                        notice.allowActionAccessibilityHint
-                    )
-                    .accessibilityIdentifier("allow-blocked-automatic-popups")
-                } else {
-                    Label(notice.title, systemImage: notice.status.symbol)
-                        .accessibilityLabel(
-                            Text(verbatim: "\(notice.title). \(notice.guidance)")
-                        )
-                    Text(notice.guidance)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            MobileBlockedPopupActions(notice: notice, allow: pages.allowAutomaticPopupsForBlockedSite)
         }
 
         ControlGroup {
@@ -122,7 +97,7 @@ struct MobilePageActionsContent: View {
         }
 
         if let page = pages.activePage {
-            sitePermissions(for: page)
+            MobileSitePermissionsMenu(page: page)
             Menu("Translate Page", systemImage: "translate") {
                 BrowserTranslationActions(translation: page.translation)
                     .crestMenuActionLabelStyle()
@@ -217,32 +192,6 @@ struct MobilePageActionsContent: View {
                     }
                 }
                 .crestMenuActionLabelStyle()
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func sitePermissions(for page: MobileBrowserPage) -> some View {
-        if let origin = page.live.documentURL.flatMap(SiteOrigin.init(url:)) {
-            Menu("Site Permissions", systemImage: "slider.horizontal.3") {
-                // A page on iOS cannot share the screen, so that choice is
-                // not offered here.
-                ForEach(SitePermission.all.filter { $0 != .screenSharing }, id: \.self) { permission in
-                    Picker(
-                        permission.title,
-                        selection: Binding {
-                            page.permissionCenter.decision(for: permission, origin: origin, in: page.spaceID)
-                        } set: { decision in
-                            page.permissionCenter.setDecision(
-                                decision, for: permission, origin: origin, in: page.spaceID)
-                        }
-                    ) {
-                        Text(permission.askChoiceTitle).tag(SitePermissionDecision.ask)
-                        Text("Allow").tag(SitePermissionDecision.grantPersistently)
-                        Text("Block").tag(SitePermissionDecision.denyPersistently)
-                    }
-                    .pickerStyle(.menu)
-                }
             }
         }
     }

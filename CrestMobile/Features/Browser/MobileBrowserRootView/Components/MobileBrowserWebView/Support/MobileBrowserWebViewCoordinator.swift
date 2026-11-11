@@ -2,6 +2,9 @@ import UIKit
 
 @MainActor
 final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelegate {
+    /// How far a drag goes before the bar follows it.
+    private static let chromeScrollDistance: CGFloat = 24
+
     /// Refreshed by the representable so a retained host never dismisses a
     /// sidebar through a stale window's navigation state.
     var handleInteraction: (() -> Void)?
@@ -10,8 +13,16 @@ final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelega
     /// `updateUIView` so the recognizer never holds a stale member's closure.
     var requestFocus: (() -> Void)?
 
+    /// Collapses the window's bar as the page scrolls down, or brings it back
+    /// as it scrolls up. Refreshed on every `updateUIView`.
+    var collapseChrome: ((Bool) -> Void)?
+
     /// Steps the page back or forward when a finger swipes in from its edge.
     let historySwipe = MobileHistorySwipe()
+
+    /// The page's scroll view this coordinator follows, which changes as the
+    /// page moves between hosts.
+    private weak var followedScrollView: UIScrollView?
 
     lazy var dismissFocusRecognizer: UITapGestureRecognizer = {
         let recognizer = UITapGestureRecognizer(
@@ -42,6 +53,28 @@ final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelega
 
     @objc private func requestCardFocus() {
         requestFocus?()
+    }
+
+    /// Follows the drags that scroll `scrollView`, alongside WebKit's own
+    /// handling of them, to move the window's bar out of the way.
+    func followScroll(of scrollView: UIScrollView) {
+        guard followedScrollView !== scrollView else { return }
+        followedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(pageScrolled(_:)))
+        scrollView.panGestureRecognizer.addTarget(self, action: #selector(pageScrolled(_:)))
+        followedScrollView = scrollView
+    }
+
+    /// A drag far enough down the page collapses the bar, and one back up, or
+    /// any drag at the very top, brings it back.
+    @objc private func pageScrolled(_ pan: UIPanGestureRecognizer) {
+        guard pan.state == .changed, let collapseChrome, let scrollView = pan.view as? UIScrollView else { return }
+        let travel = pan.translation(in: scrollView).y
+        let isAtTop = scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top
+        if isAtTop {
+            collapseChrome(false)
+        } else if abs(travel) >= Self.chromeScrollDistance {
+            collapseChrome(travel < 0)
+        }
     }
 
     func gestureRecognizer(

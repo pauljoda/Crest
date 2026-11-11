@@ -14,6 +14,9 @@ struct MobileBrowserWebView: UIViewRepresentable {
     /// false so the page still receives the tap it was given. `nil` outside a
     /// split, where there is no second card to focus.
     var requestFocus: (() -> Void)?
+    /// Collapses the window's bar as the page scrolls down, or brings it back
+    /// as it scrolls up; nil where the bar does not follow the page.
+    var collapseChrome: ((Bool) -> Void)?
     /// Keeps the page out of VoiceOver's reach, as for a page waiting out of
     /// sight for the address bar's swipe. WebKit's content answers VoiceOver
     /// itself, so SwiftUI's own hiding does not reach it.
@@ -34,6 +37,8 @@ struct MobileBrowserWebView: UIViewRepresentable {
             )
         }
         context.coordinator.handleInteraction = handleInteraction
+        context.coordinator.collapseChrome = collapseChrome
+        context.coordinator.followScroll(of: page.webView.scrollView)
         context.coordinator.historySwipe.install(on: host)
         context.coordinator.historySwipe.page = page
         page.historySwipe = context.coordinator.historySwipe
@@ -46,6 +51,8 @@ struct MobileBrowserWebView: UIViewRepresentable {
         host.attach(page.webView)
         hideFromAccessibility(host)
         context.coordinator.handleInteraction = handleInteraction
+        context.coordinator.collapseChrome = collapseChrome
+        context.coordinator.followScroll(of: page.webView.scrollView)
         context.coordinator.historySwipe.page = page
         page.historySwipe = context.coordinator.historySwipe
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)

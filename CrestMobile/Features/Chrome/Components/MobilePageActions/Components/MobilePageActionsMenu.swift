@@ -52,21 +52,7 @@ struct MobilePageActionsMenu: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier("page-actions-menu")
-        .pagePermissionHost(pages.activePage?.sitePermissionRequests)
-        .crestPopover(
-            item: Binding {
-                pages.activePage?.sitePermissionRequests.current
-            } set: { request in
-                if request == nil && pages.activePage?.sitePermissionRequests.current != nil {
-                    pages.activePage?.sitePermissionRequests.cancelAll()
-                }
-            }
-        ) { request in
-            if let controller = pages.activePage?.sitePermissionRequests {
-                BrowserPagePermissionPrompt(request: request, controller: controller)
-                    .presentationCompactAdaptation(.popover)
-            }
-        }
+        .modifier(MobilePagePermissionPrompts(pages: pages))
     }
 
     private var chromeLabel: some View {
@@ -99,6 +85,17 @@ struct MobilePageActionsMenu: View {
     }
 
     private var accessibilityLabel: String {
+        Self.accessibilityLabel(pages: pages, downloadsAccess: downloadsAccess)
+    }
+
+    private var accessibilityHint: String {
+        Self.accessibilityHint(pages: pages)
+    }
+
+    /// What VoiceOver reads for a control that opens the page's actions,
+    /// with what waits there: blocked pop-ups and new downloads.
+    static func accessibilityLabel(pages: any MobilePageActions, downloadsAccess: MobileDownloadsMenuAccess?) -> String
+    {
         var label =
             pages.blockedPopupNotice?.chromeAccessibilityLabel(
                 surfaceName: "Page Actions"
@@ -109,7 +106,7 @@ struct MobilePageActionsMenu: View {
         return label
     }
 
-    private var accessibilityHint: String {
+    static func accessibilityHint(pages: any MobilePageActions) -> String {
         guard pages.blockedPopupNotice != nil else {
             return "Opens controls for this webpage"
         }

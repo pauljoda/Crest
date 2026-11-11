@@ -8,8 +8,9 @@ struct MobileCompactPageToolbar: View {
     @Binding var isAddressEditing: Bool
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
-    /// New Tab beside Tabs, which puts search up; nil leaves Tabs on its own.
-    let newTabSearch: (() -> Void)?
+    /// Search mode's controls, which put a search field and the page menu in
+    /// place of the address; nil keeps the address bar.
+    let searchMode: MobileSearchModeControls?
     let showTabViewer: () -> Void
     let showHistory: () -> Void
     let hideToolbar: () -> Void
@@ -30,55 +31,17 @@ struct MobileCompactPageToolbar: View {
     var commandSurfaceNamespace: Namespace.ID?
     var commandPaletteHandoff = BrowserCommandPaletteHandoff.neither
 
-    /// Where Back, Forward, New Tab and Tabs are: beside the address here, or
-    /// in the side toolbar, which leaves the address on its own over the page.
+    /// Where Back, Forward and Tabs are: beside the address here, or in the
+    /// side toolbar, which leaves the address on its own over the page.
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: MobileBrowserChromeLayout.compactToolbarSpacing) {
-            if !controlPlacement.movesControlsToToolbar {
-                GlassEffectContainer(spacing: 0) {
-                    MobilePageHistoryControls(pageActions: pageActions, showHistory: showHistory)
-                }
-            }
-
-            MobileSplitBubbleBar(
-                cards: canSwipeTabs ? browser.shownCards : [],
-                shownTabID: browser.shownTab?.id,
-                swipe: tabSwipe,
-                favicons: browser.core.state.favicons,
-                profileID: browser.shownSpace?.profileID,
-                step: stepTab
-            ) {
-                MobileCompactAddressBar(
-                    browser: browser,
-                    text: $address,
-                    isEditing: $isAddressEditing,
-                    isSecure: pageActions?.activeURL?.scheme?.lowercased() == "https",
-                    progress: pageActions?.activePage?.estimatedProgress ?? 0,
-                    isLoading: pageActions?.activePage?.live.isLoading == true,
-                    pageActions: pageActions,
-                    downloadsAccess: downloadsAccess,
-                    hideToolbar: hideToolbar,
-                    reloadOrStop: reloadOrStop,
-                    transition: .revealTabViewer,
-                    transitionEnded: compactTransitionEnded,
-                    beginNewTab: beginNewTab,
-                    submit: submitAddress,
-                    stepTab: tabStep,
-                    openPalette: openPalette,
-                    isPaletteShown: isPaletteShown,
-                    commandSurfaceNamespace: commandSurfaceNamespace,
-                    commandPaletteHandoff: commandPaletteHandoff
-                )
-            }
-            .modifier(MobileTabSwipeShake(hits: tabSwipe.boundaryHits))
-
-            if !controlPlacement.movesControlsToToolbar {
-                GlassEffectContainer(spacing: 0) {
-                    tabControls
-                }
+            if let searchMode {
+                searchControls(searchMode)
+            } else {
+                addressControls
             }
         }
         .labelStyle(.iconOnly)
@@ -103,24 +66,97 @@ struct MobileCompactPageToolbar: View {
                 land: showSwipedTab))
     }
 
-    /// The way to the tabs, with a new tab beside it in one capsule that
-    /// mirrors Back and Forward on the other side of the address.
+    /// The page's history and address with the way to the tabs: the bar
+    /// outside search mode.
     @ViewBuilder
-    private var tabControls: some View {
-        if let newTabSearch {
-            HStack(spacing: 0) {
-                MobileCompactIconButton(title: "New Tab", systemImage: "plus", action: newTabSearch)
-                    .accessibilityIdentifier("new-tab-button")
-                Divider()
-                    .frame(height: MobileBrowserChromeLayout.historyDividerHeight)
-                    .opacity(MobileBrowserChromeLayout.historyDividerOpacity)
-                tabsButton
+    private var addressControls: some View {
+        if !controlPlacement.movesControlsToToolbar {
+            GlassEffectContainer(spacing: 0) {
+                MobilePageHistoryControls(pageActions: pageActions, showHistory: showHistory)
             }
-            .padding(.horizontal, MobileBrowserChromeLayout.historyCapsuleHorizontalPadding)
-            .glassEffect(.regular.interactive(), in: .capsule)
-        } else {
-            tabsButton
+        }
+
+        MobileSplitBubbleBar(
+            cards: canSwipeTabs ? browser.shownCards : [],
+            shownTabID: browser.shownTab?.id,
+            swipe: tabSwipe,
+            favicons: browser.core.state.favicons,
+            profileID: browser.shownSpace?.profileID,
+            step: stepTab
+        ) {
+            MobileCompactAddressBar(
+                browser: browser,
+                text: $address,
+                isEditing: $isAddressEditing,
+                isSecure: pageActions?.activeURL?.scheme?.lowercased() == "https",
+                progress: pageActions?.activePage?.estimatedProgress ?? 0,
+                isLoading: pageActions?.activePage?.live.isLoading == true,
+                pageActions: pageActions,
+                downloadsAccess: downloadsAccess,
+                hideToolbar: hideToolbar,
+                reloadOrStop: reloadOrStop,
+                transition: .revealTabViewer,
+                transitionEnded: compactTransitionEnded,
+                beginNewTab: beginNewTab,
+                submit: submitAddress,
+                stepTab: tabStep,
+                openPalette: openPalette,
+                isPaletteShown: isPaletteShown,
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: commandPaletteHandoff
+            )
+        }
+        .modifier(MobileTabSwipeShake(hits: tabSwipe.boundaryHits))
+
+        if !controlPlacement.movesControlsToToolbar {
+            GlassEffectContainer(spacing: 0) {
+                tabsButton
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+        }
+    }
+
+    /// Search mode's bar: the way to the tabs, a search field that opens a
+    /// new tab, and the page menu.
+    @ViewBuilder
+    private func searchControls(_ searchMode: MobileSearchModeControls) -> some View {
+        if !controlPlacement.movesControlsToToolbar {
+            GlassEffectContainer(spacing: 0) {
+                tabsButton
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+        }
+
+        MobileSplitBubbleBar(
+            cards: canSwipeTabs ? browser.shownCards : [],
+            shownTabID: browser.shownTab?.id,
+            swipe: tabSwipe,
+            favicons: browser.core.state.favicons,
+            profileID: browser.shownSpace?.profileID,
+            step: stepTab
+        ) {
+            MobileCompactSearchBar(
+                browser: browser,
+                progress: pageActions?.activePage?.estimatedProgress ?? 0,
+                isLoading: pageActions?.activePage?.live.isLoading == true,
+                search: searchMode.search,
+                transition: .revealTabViewer,
+                transitionEnded: compactTransitionEnded,
+                stepTab: tabStep,
+                isPaletteShown: isPaletteShown,
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: commandPaletteHandoff
+            )
+        }
+        .modifier(MobileTabSwipeShake(hits: tabSwipe.boundaryHits))
+
+        if let pageActions, pageActions.isAvailable {
+            GlassEffectContainer(spacing: 0) {
+                MobilePageMenuButton(pages: pageActions, downloadsAccess: downloadsAccess) {
+                    searchMode.isPageMenuPresented.wrappedValue = true
+                }
                 .glassEffect(.regular.interactive(), in: .circle)
+            }
         }
     }
 

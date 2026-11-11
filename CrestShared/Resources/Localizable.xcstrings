@@ -2826,6 +2826,9 @@
     "Block ads and trackers" : {
       "extractionState" : "stale"
     },
+    "Block Ads and Trackers" : {
+
+    },
     "Block Element" : {
 
     },
@@ -5843,6 +5846,9 @@
       }
     },
     "Edit Website Rule" : {
+
+    },
+    "Edits the address" : {
 
     },
     "Edit…" : {
@@ -9629,6 +9635,9 @@
     "Opens in" : {
 
     },
+    "Opens search for a new tab" : {
+
+    },
     "Opens the address field for editing" : {
       "localizations" : {
         "ar" : {
@@ -10418,6 +10427,9 @@
 
     },
     "Previous Widget" : {
+
+    },
+    "Print & Export" : {
 
     },
     "Print Page" : {
@@ -12076,6 +12088,9 @@
 
     },
     "Search or Enter Emoji" : {
+
+    },
+    "Search or Enter URL" : {
 
     },
     "Search or Enter URL…" : {
@@ -14995,6 +15010,9 @@
     },
     "Turn on Move Space to include it in this import." : {
       "extractionState" : "stale"
+    },
+    "Turning blocking off or on for this site reloads the page." : {
+
     },
     "Two" : {
       "extractionState" : "stale",

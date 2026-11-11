@@ -21,6 +21,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var presentedListSheet: MobileBrowserSidebarSpaceSheet?
     /// The Space whose Downloads the compact toolbar's menu shows as a sheet.
     @State var downloadsAssignment: BrowserSpaceRuntimeAssignment?
+    /// Whether search mode's page menu is up over the compact page.
+    @State var isPageMenuPresented = false
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
@@ -212,7 +214,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.handleRegularPageInteraction,
                         submitAddress: submitAddress,
                         beginNewTab: beginNewTab,
-                        newTabSearch: newTabSearch,
+                        searchMode: searchModeControls,
                         showTabViewer: showTabViewer,
                         hideCompactToolbar:
                             navigation.hideCompactToolbar,

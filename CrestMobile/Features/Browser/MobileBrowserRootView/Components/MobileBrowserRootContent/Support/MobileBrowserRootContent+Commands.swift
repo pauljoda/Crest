@@ -58,13 +58,16 @@ extension MobileBrowserRootContent {
         searchOverShownTab()
     }
 
-    /// The toolbar's New Tab while the Search startup choice is on: search
-    /// comes up over the shown tab as it does on opening, and a Start Page
-    /// takes the typing itself. Nil otherwise, which leaves the toolbar
-    /// without the button.
-    var newTabSearch: (() -> Void)? {
+    /// Search mode's bar while the Search startup choice is on: a search
+    /// field that brings search up over the shown tab as it does on opening,
+    /// and the page menu. Nil otherwise, which keeps the address bar.
+    var searchModeControls: MobileSearchModeControls? {
         guard BrowserAppPreferenceStore.shared.startupBehavior.presentsSearch else { return nil }
-        return presentSearch
+        return MobileSearchModeControls(
+            search: presentSearch,
+            toggleShownTabPinned: { model.commandController.toggleSelectedTabPinned() },
+            isPageMenuPresented: $isPageMenuPresented
+        )
     }
 
     /// Search over the shown tab, which stays behind it; what is opened from
@@ -89,15 +92,15 @@ extension MobileBrowserRootContent {
     }
 
     /// Whether nothing else holds the window, so search may come up by
-    /// itself: no palette or address edit is under way, no Settings, History,
-    /// Downloads or utility is open, no Quick Window or Peek shows, no risky
-    /// download waits for an answer, setup is not over the window, and the
-    /// Space it shows is not locked. Search the person asks for goes by none
-    /// of this.
+    /// itself: no palette, page menu or address edit is under way, no
+    /// Settings, History, Downloads or utility is open, no Quick Window or
+    /// Peek shows, no risky download waits for an answer, setup is not over
+    /// the window, and the Space it shows is not locked. Search the person
+    /// asks for goes by none of this.
     var leavesWindowToAutomaticSearch: Bool {
         let utilities = navigation.utilityPresentation
         let downloadQuestion = pages.downloadRiskConfirmation.request
-        return commandPaletteMode == nil && !isAddressEditing
+        return commandPaletteMode == nil && !isAddressEditing && !isPageMenuPresented
             && !model.showsSettings && browser.shownTab?.nativeTabContent != .settings
             && presentedListSheet == nil && downloadsAssignment == nil
             && utilities.surface == nil && !utilities.isSidebarInteractionActive

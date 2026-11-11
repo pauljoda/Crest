@@ -5289,6 +5289,10 @@
     "mobile-toolbar-new-tab-button": {
       "category": "improved",
       "message": "On iPhone, when Crest opens to search, a New Tab button beside the Tabs button brings search up over the page you’re on, ready for where to go next."
+    },
+    "mobile-search-mode-page-menu": {
+      "category": "improved",
+      "message": "On iPhone in search mode, the toolbar becomes a search field with New Tab inside it, Tabs on its left and a page menu on its right. The menu holds the page’s address, Back, Forward and actions without bringing up the keyboard, and the toolbar shrinks to the site’s name as you scroll."
     }
   }
 }

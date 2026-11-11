@@ -18,9 +18,9 @@ struct MobileBrowserDetailView: View {
     let handleWebContentInteraction: () -> Void
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
-    /// The compact toolbar's New Tab, which puts search up; nil leaves the
-    /// toolbar without the button.
-    var newTabSearch: (() -> Void)?
+    /// Search mode's controls, which put a search field and the page menu in
+    /// the compact toolbar's address; nil keeps the address bar.
+    var searchMode: MobileSearchModeControls?
     let showTabViewer: () -> Void
     let hideCompactToolbar: () -> Void
     let showCompactToolbar: () -> Void
@@ -58,6 +58,9 @@ struct MobileBrowserDetailView: View {
     @State private var tabSwipe = MobileTabSwipe()
     /// Whether the software keyboard is on screen.
     @State private var keyboardIsShown = false
+    /// What the page menu asked for as it closed, run once it is gone, such
+    /// as Find, which needs the keyboard, or Downloads, a sheet of its own.
+    @State private var afterPageMenu: (() -> Void)?
     /// The namespace in which the command palette grows out of the compact
     /// address bar.
     @Namespace private var compactPaletteNamespace
@@ -129,8 +132,10 @@ struct MobileBrowserDetailView: View {
                                 showToolbar: showCompactToolbar
                             )
                             .safeAreaPadding(.bottom, 0)
+                            .transition(compactCollapse.chip)
                         } else {
                             compactPageToolbar(pageActions: pageActions)
+                                .transition(compactCollapse.bar)
                         }
                     }
                     // The page has the keyboard, so the bar slides down out
@@ -243,6 +248,28 @@ struct MobileBrowserDetailView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardIsShown = false
         }
+        .sheet(isPresented: searchMode?.isPageMenuPresented ?? .constant(false), onDismiss: runAfterPageMenu) {
+            if let searchMode,
+                let pageActions = MobileSelectedPageActionPort(
+                    browser: browser, pages: pages, spaceAccess: spaceAccess)
+            {
+                MobilePageActionsSheet(
+                    browser: browser,
+                    pages: pageActions,
+                    downloadsAccess: compactDownloadsAccess,
+                    editAddress: paletteMode == nil ? nil : openLocation,
+                    toggleShownTabPinned: searchMode.toggleShownTabPinned,
+                    dismissThen: { action in
+                        afterPageMenu = action
+                        searchMode.isPageMenuPresented.wrappedValue = false
+                    }
+                )
+                // Half the screen, leaving the page in view; the menu scrolls
+                // within it. Editing the address happens in the bar, not here.
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+        }
         .sheet(item: downloadsAssignment) { assignment in
             MobileDownloadsView(
                 browser: browser,
@@ -268,6 +295,7 @@ struct MobileBrowserDetailView: View {
                     viewport: viewport,
                     isActive: slot.place == 0 && pages.activePage === slotPage,
                     handleInteraction: slot.place == 0 ? handleWebContentInteraction : nil,
+                    collapseChrome: slot.place == 0 ? collapseCompactBarOnScroll : nil,
                     hidesFromAccessibility: slot.place != 0
                 )
             } else if slot.place != 0 {
@@ -455,8 +483,8 @@ struct MobileBrowserDetailView: View {
             MobileHistoryToolbarControl(direction: .forward, port: port)
         }
         ToolbarItemGroup(placement: .bottomBar) {
-            if let newTabSearch {
-                Button("New Tab", systemImage: "plus", action: newTabSearch)
+            if let searchMode {
+                Button("New Tab", systemImage: "plus", action: searchMode.search)
                     .accessibilityIdentifier("new-tab-button")
             }
             Button("Tabs", systemImage: "square.on.square", action: showTabViewer)
@@ -558,6 +586,34 @@ struct MobileBrowserDetailView: View {
             .accessibilityHidden(true)
     }
 
+    /// How the compact bar and the domain chip trade places as the page
+    /// scrolls. In search mode the bar shrinks down into the chip and grows
+    /// back out of it; otherwise, and with Reduce Motion, they cross-fade.
+    private var compactCollapse: (bar: AnyTransition, chip: AnyTransition) {
+        guard searchMode != nil, !reduceMotion else { return (.opacity, .opacity) }
+        return (
+            .scale(scale: 0.4, anchor: .bottom).combined(with: .opacity),
+            .scale(scale: 2.4, anchor: .bottom).combined(with: .opacity)
+        )
+    }
+
+    /// In search mode the bar gives way to the domain chip as the page
+    /// scrolls down and comes back as it scrolls up, unless the palette grown
+    /// out of it shows. Elsewhere the bar stays until it is hidden by hand.
+    private var collapseCompactBarOnScroll: ((Bool) -> Void)? {
+        guard searchMode != nil, isCompact, showsCompactToolbar else { return nil }
+        return { collapses in
+            guard collapses != compactToolbarIsHidden, !isCompactPaletteShown else { return }
+            if collapses { hideCompactToolbar() } else { showCompactToolbar() }
+        }
+    }
+
+    private func runAfterPageMenu() {
+        let action = afterPageMenu
+        afterPageMenu = nil
+        action?()
+    }
+
     /// The compact page's address bar, with the page's controls around it.
     private func compactPageToolbar(pageActions: MobileSelectedPageActionPort?) -> some View {
         MobileCompactPageToolbar(
@@ -568,7 +624,7 @@ struct MobileBrowserDetailView: View {
             isAddressEditing: $isAddressEditing,
             submitAddress: submitAddress,
             beginNewTab: beginNewTab,
-            newTabSearch: newTabSearch,
+            searchMode: searchMode,
             showTabViewer: showTabViewer,
             showHistory: showHistory,
             hideToolbar: hideCompactToolbar,

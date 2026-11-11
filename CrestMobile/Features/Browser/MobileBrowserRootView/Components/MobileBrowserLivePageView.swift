@@ -23,6 +23,9 @@ struct MobileBrowserLivePageView: View {
     /// An unfocused card's request to become the focused one. `nil` wherever
     /// the page on screen is already the focused one.
     var requestFocus: (() -> Void)?
+    /// Collapses the window's bar as the page scrolls down, or brings it back
+    /// as it scrolls up; nil where the bar does not follow the page.
+    var collapseChrome: ((Bool) -> Void)?
     /// Keeps the page out of VoiceOver's reach while it waits out of sight.
     var hidesFromAccessibility = false
 
@@ -32,6 +35,7 @@ struct MobileBrowserLivePageView: View {
             viewport: viewport,
             handleInteraction: handleInteraction,
             requestFocus: requestFocus,
+            collapseChrome: collapseChrome,
             hidesFromAccessibility: hidesFromAccessibility
         )
         // Keep the document color behind WebKit; docked bars own their native

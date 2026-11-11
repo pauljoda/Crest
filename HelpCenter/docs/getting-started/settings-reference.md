@@ -15,7 +15,7 @@ On Mac, the Settings sidebar lists General, Tabs, Search, Appearance, Links, Eng
 
 ## General
 
-Make Crest your default browser, choose what happens when Crest opens, and pick the default Space. General also holds automatic page translation and spell checking. On Mac, it includes **Picture in Picture when switching tabs** and **Developer toolbar on local pages**. On iPhone and iPad, **When Crest opens** shows the Start Page, opens a new tab in the default Space, or with **Open Search** puts search over your last tab, and brings it back when you return after a few minutes away. **Allow floating sidebar** lets the sidebar float over the page instead of filling the screen.
+Make Crest your default browser, choose what happens when Crest opens, and pick the default Space. General also holds automatic page translation and spell checking. On Mac, it includes **Picture in Picture when switching tabs** and **Developer toolbar on local pages**. On iPhone and iPad, **When Crest opens** shows the Start Page, opens a new tab in the default Space, or with **Open Search** puts search over your last tab, and brings it back when you return after a few minutes away. With **Open Search** on iPhone, the toolbar is a search field that opens a new tab, with Tabs on its left and the page menu, which holds the address, Back and Forward, on its right. **Allow floating sidebar** lets the sidebar float over the page instead of filling the screen.
 
 ## Tabs
 

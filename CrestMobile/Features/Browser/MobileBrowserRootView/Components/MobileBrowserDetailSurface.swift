@@ -16,7 +16,7 @@ struct MobileBrowserDetailSurface: View {
     let handleWebContentInteraction: () -> Void
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
-    var newTabSearch: (() -> Void)?
+    var searchMode: MobileSearchModeControls?
     let showTabViewer: () -> Void
     let hideCompactToolbar: () -> Void
     let showCompactToolbar: () -> Void
@@ -51,7 +51,7 @@ struct MobileBrowserDetailSurface: View {
             handleWebContentInteraction: handleWebContentInteraction,
             submitAddress: submitAddress,
             beginNewTab: beginNewTab,
-            newTabSearch: newTabSearch,
+            searchMode: searchMode,
             showTabViewer: showTabViewer,
             hideCompactToolbar: hideCompactToolbar,
             showCompactToolbar: showCompactToolbar,
