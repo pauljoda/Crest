@@ -5297,6 +5297,10 @@
     "extension-opens-own-popup": {
       "category": "fixed",
       "message": "Extensions that open their own popup, such as 1Password when you click its button in a sign-in field while it's locked, now show it on Mac instead of doing nothing."
+    },
+    "peek-loads-when-page-updates-address": {
+      "category": "fixed",
+      "message": "On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing."
     }
   }
 }
