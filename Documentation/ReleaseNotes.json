@@ -5277,6 +5277,10 @@
     "crest-0-9-sub-spaces-ad-blocking-chromium": {
       "category": "new",
       "message": "Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance."
+    },
+    "chromium-upstream-157-0-8103-51": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws."
     }
   }
 }

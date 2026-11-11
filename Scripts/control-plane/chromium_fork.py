@@ -233,15 +233,20 @@ def smoke_engine(source, workspace, version):
         raise ValueError(f"Built engine reports an unexpected version: {actual}")
     scratch = workspace / "scratch"
     scratch.mkdir(exist_ok=True)
+    check_renders_page(browser, scratch)
+
+
+def check_renders_page(browser, scratch, timeout=30):
+    """Require `browser`, run headless in a throwaway profile, to run a page's JavaScript."""
     with tempfile.TemporaryDirectory(prefix="smoke-", dir=scratch) as profile:
         page = "data:text/html,<script>document.title='crest-'+(6*7)</script>"
         process = subprocess.Popen([str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
-            "--no-first-run", "--no-default-browser-check", "--timeout=10000",
+            "--no-first-run", "--no-default-browser-check", "--use-mock-keychain", "--timeout=10000",
             f"--user-data-dir={profile}", "--dump-dom", page], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True)
         output, errors = bytearray(), bytearray()
         try:
-            deadline = time.monotonic() + 30
+            deadline = time.monotonic() + timeout
             with selectors.DefaultSelector() as selector:
                 selector.register(process.stdout, selectors.EVENT_READ, output)
                 selector.register(process.stderr, selectors.EVENT_READ, errors)
@@ -262,7 +267,7 @@ def smoke_engine(source, workspace, version):
             # This checks rendering, then explicitly closes only its own process group.
             try:
                 os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):  # The group has already exited.
                 pass
             if process.poll() is None:
                 try:

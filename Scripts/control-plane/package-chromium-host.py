@@ -8,8 +8,13 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from chromium_engine import ENGINE_HELPER_KINDS, ENGINE_HELPER_NAME, unknown_engine_helpers  # noqa: E402
+import chromium_fork  # noqa: E402
 
 
 # Chromium's browser-process device access (chrome/app/app-entitlements.plist);
@@ -23,16 +28,11 @@ ENGINE_APP_ENTITLEMENTS = {
     "com.apple.security.personal-information.location": True,
     "com.apple.security.personal-information.photos-library": True,
 }
-# V8 in the renderer and GPU helpers maps executable memory
-# (chrome/app/helper-*-entitlements.plist). Chromium ships each helper kind in
-# more than one flavor, such as "(Renderer)" and "(Aperitif Renderer)", and
-# signs every flavor of a kind alike (chrome/installer/mac/signing/parts.py).
-JIT_HELPER_SUFFIXES = ("Renderer).app", "GPU).app")
+JIT_ENTITLEMENT = "com.apple.security.cs.allow-jit"
 BUNDLE_SUFFIXES = {".app", ".framework", ".xpc", ".appex", ".plugin", ".docktileplugin", ".bundle"}
 MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
-# The engine is built as Chromium and finds its helpers by these built names
+# The engine is built as Chromium and finds its helpers by their built names
 # (chrome/BUILD.gn, chrome/common/chrome_constants.cc).
-ENGINE_HELPER_NAME = "Chromium Helper"
 ENGINE_ALERTS_HELPER_SUFFIX = "Alerts).app"
 # How the engine's localized InfoPlist.strings spell its product name.
 ENGINE_PRODUCT_NAMES = ("Chromium", "क्रोमियम")
@@ -48,6 +48,57 @@ def engine_helpers(frameworks):
     return sorted(
         path for path in frameworks.glob("*.framework/Versions/*/Helpers/*.app")
         if not path.parent.parent.is_symlink())
+
+
+def needs_jit(path):
+    """Whether `path` is one of the engine's helpers whose V8 maps executable memory."""
+    return path.stem.startswith(ENGINE_HELPER_NAME) and ENGINE_HELPER_KINDS.get(
+        path.stem.removeprefix(ENGINE_HELPER_NAME), False)
+
+
+def require_known_engine_helpers(frameworks):
+    if unknown := unknown_engine_helpers(engine_helpers(frameworks)):
+        raise SystemExit(f"Unknown engine helpers {unknown}: add each to ENGINE_HELPER_KINDS in chromium_engine.py "
+                         "with the entitlements chrome/installer/mac/signing/parts.py gives it")
+
+
+def require_helper_entitlements(frameworks):
+    """A signed helper missing the JIT entitlement crashes as soon as V8 starts."""
+    for helper in engine_helpers(frameworks):
+        signed = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(helper)],
+                                capture_output=True, check=True).stdout
+        has_jit = bool(signed.strip()) and plistlib.loads(signed).get(JIT_ENTITLEMENT, False)
+        if has_jit != needs_jit(helper):
+            raise SystemExit(f"{helper.name} is signed {'with' if has_jit else 'without'} the JIT entitlement")
+
+
+def require_package_renders_pages(output, identity):
+    """Run the signed package's own helpers and require a page's JavaScript to run.
+
+    Unsigned builds pass everything a hardened signature can break, so this is
+    the check that a release can load pages at all. It runs a clone of the
+    package with its host markers removed, which makes it plain headless
+    Chromium; only the outer app is re-sealed, so the helpers are exactly the
+    ones that ship."""
+    with tempfile.TemporaryDirectory(prefix="crest-package-probe-") as temporary:
+        # Resolved, because the temporary directory is reached through the /var
+        # symlink and Chromium's sandbox refuses extensions for symlinked paths.
+        root = Path(temporary).resolve()
+        probe = root / "Probe.app"
+        subprocess.run(["ditto", str(output), str(probe)], check=True)
+        for marker in ("Crest-App-Owned-Host", "Crest-Native-Host", "Crest-Isolated-Experiment"):
+            (probe / "Contents/Resources" / marker).unlink(missing_ok=True)
+        (probe / "Contents/embedded.provisionprofile").unlink(missing_ok=True)
+        info_path = probe / "Contents/Info.plist"
+        with info_path.open("rb") as stream:
+            info = plistlib.load(stream)
+        # Its own identity, so it never reads the installed Crest's preferences.
+        info["CFBundleIdentifier"] += ".package-probe"
+        with info_path.open("wb") as stream:
+            plistlib.dump(info, stream)
+        subprocess.run(["codesign", "--force", "--options", "runtime", "--sign", identity, str(probe)], check=True)
+        chromium_fork.check_renders_page(probe / "Contents/MacOS/Chromium", root, timeout=180)
+    print("The signed package loaded a page.")
 
 
 def remove_engine_alerts_helper(frameworks):
@@ -129,8 +180,7 @@ def sign_for_distribution(output, identity, app_entitlements):
     for path in sorted(loose, key=depth, reverse=True):
         codesign(path)
     for path in sorted(bundles, key=depth, reverse=True):
-        jit = path.stem.startswith(ENGINE_HELPER_NAME) and path.name.endswith(JIT_HELPER_SUFFIXES)
-        codesign(path, {"com.apple.security.cs.allow-jit": True} if jit else None)
+        codesign(path, {JIT_ENTITLEMENT: True} if needs_jit(path) else None)
     codesign(output, app_entitlements)
 
 
@@ -366,6 +416,7 @@ def main():
     if not args.baseline:
         # The system names a host package after its own identity, never the
         # engine's: in Notifications, privacy prompts and process lists.
+        require_known_engine_helpers(frameworks)
         remove_engine_alerts_helper(frameworks)
         name_engine_helpers(frameworks, info["CFBundleDisplayName"])
         name_product_in_localized_info(resources, info["CFBundleDisplayName"])
@@ -396,6 +447,9 @@ def main():
             continue
         subprocess.run(["codesign", "--force", "--sign", args.signing_identity, "--preserve-metadata=entitlements,flags,runtime", str(target)], check=True)
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(output)], check=True)
+    if args.distribution and not args.baseline:
+        require_helper_entitlements(frameworks)
+        require_package_renders_pages(output, args.signing_identity)
     if args.product:
         print(f"Packaged {output} with Crest's product identity. It launches without switches and registers "
               "for HTTP, HTTPS and HTML documents once it is installed and its signature is accepted. "

@@ -7,6 +7,15 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-10
+
+Crest 0.9.1 updates Chromium to fix a security flaw that is being exploited in
+the wild. Mac users should update as soon as it arrives.
+
+### Security
+
+- Chromium 157.0.8103.51 fixes CVE-2026-125350, which Google reports is being exploited in the wild, along with eight other security flaws. Pages in WebKit, and Crest on iPhone and iPad, don't use Chromium, so this flaw doesn't affect them.
+
 ## [0.9.0] - 2026-11-10
 
 Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of
