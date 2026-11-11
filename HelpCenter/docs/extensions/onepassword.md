@@ -40,6 +40,8 @@ The 1Password Chrome Web Store extension runs on Chromium pages in Crest for Mac
 
 ## If it does not connect
 
+Touch ID unlock comes from the 1Password app, so the extension offers it only after you authorize Crest there. Until then, the extension unlocks with your account password.
+
 Reinstalling the extension does not change the signature 1Password checks. Confirm that you added the Crest app in `/Applications`, then see [Native companions](./native-companion-limits.md) and [Troubleshoot an extension](./troubleshoot-partial-compatibility.md).
 
 ## Official references

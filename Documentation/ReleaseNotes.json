@@ -5285,6 +5285,10 @@
     "private-browsing-space-never-locks": {
       "category": "fixed",
       "message": "The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it."
+    },
+    "extension-opens-own-popup": {
+      "category": "fixed",
+      "message": "Extensions that open their own popup, such as 1Password when you click its button in a sign-in field while it's locked, now show it on Mac instead of doing nothing."
     }
   }
 }

@@ -81,6 +81,7 @@
 #include "chrome/browser/extensions/extension_view.h"
 #include "chrome/browser/extensions/extension_view_host.h"
 #include "chrome/browser/extensions/extension_view_host_factory.h"
+#include "chrome/browser/ui/extensions/extension_popup_types.h"
 #include "extensions/browser/extension_action.h"
 #include "extensions/browser/extension_action_manager.h"
 #include "extensions/browser/extension_host_observer.h"
@@ -202,11 +203,14 @@ bool PassToMenuBar(const input::NativeWebKeyboardEvent& event, NSWindow* window)
 
 // AppKit hosting follows Mori's native ExtensionView bridge (MIT; see
 // ThirdParty/Mori-LICENSE). Each instance belongs to one Crest page/profile.
+// `shown`, for a popup an extension opened itself, hears the popup's host once
+// the popup is on screen, or null when it closes first.
 class ExtensionPopup final : public extensions::ExtensionView,
                              public extensions::ExtensionHostObserver {
  public:
-  ExtensionPopup(std::unique_ptr<extensions::ExtensionViewHost> host, NSView* anchor_view, NSRect anchor_rect)
-      : host_(std::move(host)), anchor_view_(anchor_view), anchor_rect_(anchor_rect) {
+  ExtensionPopup(std::unique_ptr<extensions::ExtensionViewHost> host, NSView* anchor_view, NSRect anchor_rect,
+                 ShowPopupCallback shown = ShowPopupCallback())
+      : host_(std::move(host)), anchor_view_(anchor_view), anchor_rect_(anchor_rect), shown_(std::move(shown)) {
     host_->set_view(this);
     host_->AddObserver(this);
     auto weak = weak_factory_.GetWeakPtr();
@@ -245,7 +249,9 @@ class ExtensionPopup final : public extensions::ExtensionView,
     host_->CreateRendererSoon();
   }
   ~ExtensionPopup() override { Close(); }
+  bool IsOpen() const { return host_ != nullptr; }
   void Close() {
+    if (shown_) std::move(shown_).Run(nullptr);
     weak_factory_.InvalidateWeakPtrs();
     for (id monitor in monitors_) [NSEvent removeMonitor:monitor];
     monitors_ = nil;
@@ -281,6 +287,7 @@ class ExtensionPopup final : public extensions::ExtensionView,
     [window_ makeKeyAndOrderFront:nil];
     Observe(parent);
     if (host_) host_->host_contents()->Focus();
+    if (shown_ && host_) std::move(shown_).Run(host_.get());
   }
   void OnExtensionHostDestroyed(extensions::ExtensionHost* host) override {
     if (host_.get() == host) host_.release();
@@ -370,6 +377,7 @@ class ExtensionPopup final : public extensions::ExtensionView,
   NSArray* __strong observations_ = nil;
   NSSize content_size_ = NSMakeSize(kDefaultWidth, kDefaultHeight);
   bool presented_ = false;
+  ShowPopupCallback shown_;
   base::WeakPtrFactory<ExtensionPopup> weak_factory_{this};
 };
 
@@ -1031,6 +1039,38 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
   // rows by their model indices, so rows inserted ahead of them change only
   // their native positions.
   [UI() addPageMenuItems:menu page:UUIDFor(page->key()) link:link selection:selected.length ? selected : nil];
+}
+
+// `chrome.action.openPopup()`. Chrome shows the popup from the extension's
+// button in its own toolbar, which a Crest window does not have, so Crest
+// opens it over the page `browser` shows, from the control Crest's UI names.
+// As in Chrome, a popup an extension opens itself grants no access to the page
+// and runs no click, and it does not replace a popup the page already shows.
+bool OpenExtensionActionPopup(BrowserWindowInterface& browser_window, const extensions::Extension& extension,
+                              ShowPopupCallback shown) {
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
+  // Browser is the only desktop BrowserWindowInterface.
+  Browser* browser = static_cast<Browser*>(&browser_window);
+  content::WebContents* contents = browser->tab_strip_model()->GetActiveWebContents();
+  auto& binding = crest::EngineBinding::Get();
+  crest::EnginePage* page = contents ? binding.PageFor(contents) : nullptr;
+  if (!page) return false;
+  if (PageViews* views = FindViews(page->key());
+      views && views->web_contents() == contents && views->extension_popup && views->extension_popup->IsOpen())
+    return false;
+  Profile* profile = browser->GetProfile();
+  auto* action = extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(extension);
+  if (!action || !binding.Extensions().For(profile, page->profile()).IsAvailable(extension, action)) return false;
+  const GURL popup_url = action->GetPopupUrl(sessions::SessionTabHelper::IdForTab(contents).id());
+  if (!popup_url.is_valid()) return false;
+  id<CrestExtensionPopupAnchor> anchor = [UI() extensionPopupAnchor:base::SysUTF8ToNSString(extension.id())
+                                                               page:UUIDFor(page->key())];
+  if (!anchor || !anchor.view.window) return false;
+  auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(extension, popup_url, browser);
+  if (!popup) return false;
+  ViewsFor(page->key(), contents).extension_popup =
+      std::make_unique<ExtensionPopup>(std::move(popup), anchor.view, anchor.rect, std::move(shown));
+  return true;
 }
 
 // A page the core asked whether it may close answers the core.
