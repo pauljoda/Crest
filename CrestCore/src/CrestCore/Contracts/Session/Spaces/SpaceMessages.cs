@@ -63,6 +63,17 @@ public sealed record PrivateSpaceCannotShare(Guid WorkspaceId) : Rejection {
     #endregion
 }
 
+/// A private window's Space keeps nothing to guard, so it never locks.
+public sealed record PrivateSpaceCannotLock(Guid WorkspaceId) : Rejection {
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "Private windows can't be locked.";
+
+    #endregion
+}
+
 /// The workspace already holds a Space with this identity.
 public sealed record SpaceAlreadyExists(Guid SpaceId) : Rejection {
     #region Variables

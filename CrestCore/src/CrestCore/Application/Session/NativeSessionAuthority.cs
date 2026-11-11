@@ -38,13 +38,14 @@ public sealed partial class NativeSessionAuthority {
     #region Constructors
 
     /// A memory-only session of `kind` that starts as `initial` and keeps
-    /// nothing: it is never saved or synced.
+    /// nothing: it is never saved or synced. When the kind never locks its
+    /// Spaces, they open freely whatever policy `initial` gave them.
     internal NativeSessionAuthority(WorkspaceKind kind, SessionState initial) {
         ArgumentNullException.ThrowIfNull(kind);
         ArgumentNullException.ThrowIfNull(initial);
         workspaceKind = kind;
         privateBrowsing = kind.IsPrivate;
-        session = initial;
+        session = kind.LocksSpaces ? initial : initial.OpeningFreely();
         Index(session);
     }
 
