@@ -6,29 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.8.216</title>
-            <pubDate>Mon, 09 Nov 2026 21:13:03 +0000</pubDate>
+            <title>0.9.0</title>
+            <pubDate>Wed, 11 Nov 2026 00:32:06 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1576</sparkle:version>
-            <sparkle:shortVersionString>0.8.216</sparkle:shortVersionString>
+            <sparkle:version>1578</sparkle:version>
+            <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### New
 
-- On Mac, pages in Chromium load again instead of stopping with "This page stopped responding" after updating to 0.8.215.
+- Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance.
+
+### Improved
+
+- On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/ede843084ee8f89f6aba4f90fb51b1fc64cc4f69...74b3c75d050a90ffdb5c08bc4d2ba7fce734d62e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.8.216-2026-11-09-1576-r576.1/Installer-Crest-0.8.216-development-2026-11-09-74b3c75-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/74b3c75d050a90ffdb5c08bc4d2ba7fce734d62e...f3c50759172f8650a0eaf55057c20067034d08be) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.0-2026-11-10-1578-r578.1/Installer-Crest-0.9.0-development-2026-11-10-f3c5075-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.8.216-2026-11-09-1576-r576.1/Installer-Crest-0.8.216-development-2026-11-09-74b3c75-arm64.dmg" length="219710597" type="application/octet-stream" sparkle:edSignature="2rhOZS67qacVjKhJzSoamel7RLPFeGtrztqTVZwQU1xZ2vdwPHNpajJ12PcRnigTiXhHNWKQ4Cqku7YFSxXyBA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.0-2026-11-10-1578-r578.1/Installer-Crest-0.9.0-development-2026-11-10-f3c5075-arm64.dmg" length="219737731" type="application/octet-stream" sparkle:edSignature="GJJDbKyl7CEu68FKbBdlydHEZDKAZIl4mWwLrEYAVubjZ+eZ2UHnvQjrM2EG8wy3twntN2t5QRbZIdimRzOGAw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +64,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: z7GKa1Vi5DRtH386jSVcnkCDePd3aS965ynTxumiiT6wMtr/kSKtn2n5QfT5/urPFEZvfdXYEtTBj5EPLVF9Aw==
-length: 4018
+edSignature: ZoTv9CgbtildfJ0K3OiYzN38hlg/bY/df0T+FYfHxC6NO25aOeicImJ9vHEab8NqE/Uyq1pBDSpUTPFJfJx3Dg==
+length: 4373
 -->

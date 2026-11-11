@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-8-50-chromium-security-setup-translation",
-    "development": "chromium-pages-load-after-157",
+    "development": "crest-0-9-sub-spaces-ad-blocking-chromium",
     "nightly": "floating-sidebar-hide-arrow-removed"
   }
 }
