@@ -36,7 +36,7 @@ public sealed partial class BrowserContractsTests {
             app.Send(new SetFilterList(FilterList.EasyListCookie, IsOn: true));
             var added = Assert.Single(app.Send(new AddCustomFilterList(listId, "https://lists.example/mine.txt")).OfType<FilterListsChanged>());
             Assert.Equal("https://lists.example/mine.txt", Assert.Single(added.Lists.CustomLists).List.Url);
-            Assert.Empty(app.Send(new AddCustomFilterList(Guid.NewGuid(), "https://lists.example/mine.txt")));
+            Assert.Empty(app.Send(new AddCustomFilterList(Guid.NewGuid(), "https://lists.example/mine.txt")).OfType<FilterListsChanged>());
             Assert.IsType<FilterListAddressInvalid>(Refusal(app, new AddCustomFilterList(Guid.NewGuid(), "file:///etc/hosts")));
             Assert.IsType<FilterListAddressInvalid>(Refusal(app, new AddCustomFilterList(Guid.NewGuid(), "http://lists.example/plain.txt")));
             app.Send(new SetCustomFilters("||own-ads.example^"));
@@ -55,7 +55,7 @@ public sealed partial class BrowserContractsTests {
             // Block Element adds a site's rule once; showing the site's elements
             // again removes that site's rules alone.
             app.Send(new BlockElement("https://news.example/story", "div.promo"));
-            Assert.Empty(app.Send(new BlockElement("https://news.example/other", " div.promo ")));
+            Assert.Empty(app.Send(new BlockElement("https://news.example/other", " div.promo ")).OfType<FilterListsChanged>());
             app.Send(new BlockElement("https://shop.example/", ".banner"));
             Assert.IsType<ElementSelectorInvalid>(Refusal(app, new BlockElement("about:blank", "div")));
             Assert.IsType<ElementSelectorInvalid>(Refusal(app, new BlockElement("https://news.example/", "a##b")));
@@ -97,7 +97,7 @@ public sealed partial class BrowserContractsTests {
             Assert.True(IsOn(strict, FilterList.AdGuardBase) && IsOn(strict, FilterList.EasyListCookie)
                 && IsOn(strict, FilterList.AdGuardAnnoyances) && IsOn(strict, FilterList.EasyList));
             Assert.False(strict.IsCustomized);
-            Assert.Empty(app.Send(new SetContentBlockingLevel(ContentBlockingLevel.Strict)));
+            Assert.Empty(app.Send(new SetContentBlockingLevel(ContentBlockingLevel.Strict)).OfType<FilterListsChanged>());
 
             // Turning a list against the level customizes it; choosing the
             // level again restores its lists.
