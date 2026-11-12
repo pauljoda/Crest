@@ -9,7 +9,7 @@ struct TabFaviconContent: View {
     var body: some View {
         Group {
             if subject.isStartPage {
-                CrestStartPageMark()
+                BrowserPlatformCurrentAppIcon()
             } else if let emoji = subject.emoji {
                 Text(emoji)
                     .font(.system(size: size * TabFaviconMetrics.emojiSizeRatio))

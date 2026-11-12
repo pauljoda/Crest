@@ -5345,6 +5345,10 @@
     "folder-delete-everything-inside": {
       "category": "improved",
       "message": "Deleting a folder now deletes everything inside it, after asking first, and its tabs go to the Archive."
+    },
+    "start-page-chosen-app-icon": {
+      "category": "fixed",
+      "message": "The Start Page and its tab now show the app icon you chose instead of the default one."
     }
   }
 }
