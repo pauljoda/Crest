@@ -16,14 +16,15 @@ internal readonly record struct LinkRoutingDecision(bool OpensQuickWindow, Guid 
 /// refuses it.
 public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? DestinationSpaceId, bool FocusesNewTabs,
     bool FollowsMovedTabs, bool OpensPeekAutomatically, LinkPeekModifier PeekModifier, bool DragsLinksToPeek, bool DimsPageBehindPeek,
-    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, IReadOnlyList<LinkRoute> Routes,
-    IReadOnlyList<RememberedSite> RememberedSites) {
+    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, bool OpensQuickWindowsOverFullScreenApps,
+    IReadOnlyList<LinkRoute> Routes, IReadOnlyList<RememberedSite> RememberedSites) {
     #region Static Variables
 
     /// The preferences of a device that never chose any.
     internal static readonly LinkPreferences Default = new(ExternalLinkDestination.QuickWindow, DestinationSpaceId: null,
         FocusesNewTabs: false, FollowsMovedTabs: true, OpensPeekAutomatically: true, LinkPeekModifier.Option,
-        DragsLinksToPeek: true, DimsPageBehindPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true, [], []);
+        DragsLinksToPeek: true, DimsPageBehindPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true,
+        OpensQuickWindowsOverFullScreenApps: false, [], []);
 
     #endregion
 
@@ -144,13 +145,16 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
 
     #region Actions - Equality
 
+    /// Compares the routes and remembered sites item by item, where a record
+    /// would compare the lists by reference.
     public bool Equals(LinkPreferences? other) => other is not null
         && Destination == other.Destination && DestinationSpaceId == other.DestinationSpaceId
         && FocusesNewTabs == other.FocusesNewTabs && FollowsMovedTabs == other.FollowsMovedTabs
         && OpensPeekAutomatically == other.OpensPeekAutomatically && PeekModifier == other.PeekModifier
         && DragsLinksToPeek == other.DragsLinksToPeek && DimsPageBehindPeek == other.DimsPageBehindPeek
         && ArchivePolicy == other.ArchivePolicy
-        && RemembersSpaceBySite == other.RemembersSpaceBySite && Routes.SequenceEqual(other.Routes)
+        && RemembersSpaceBySite == other.RemembersSpaceBySite
+        && OpensQuickWindowsOverFullScreenApps == other.OpensQuickWindowsOverFullScreenApps && Routes.SequenceEqual(other.Routes)
         && RememberedSites.SequenceEqual(other.RememberedSites);
 
     public override int GetHashCode() => HashCode.Combine(Destination, DestinationSpaceId, Routes.Count, RememberedSites.Count);
