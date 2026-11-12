@@ -6,6 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.9.8</title>
+            <pubDate>Thu, 12 Nov 2026 17:54:05 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1591</sparkle:version>
+            <sparkle:shortVersionString>0.9.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### New
+
+- Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance.
+- Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read.
+
+### Fixed
+
+- Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws.
+- The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it.
+- On Mac, importing from Arc no longer quits Crest when Spaces that share an Arc profile aren't next to each other in Arc; they come in together, each with its own tabs.
+- On Mac, when Crest can't unlock another browser's passwords during an import, as when Keychain access is denied, the import still brings that browser's Spaces and tabs and leaves only the passwords behind.
+- Extensions that open their own popup, such as 1Password when you click its button in a sign-in field while it's locked, now show it on Mac instead of doing nothing.
+- On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing.
+- On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them.
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/22ed6327520ca0fe8d1d46d28246b9aadb27aa40...058322cffdd04bd586aec2b063a248e62499a45c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.8-2026-11-12-1591-r591.1/Installer-Crest-0.9.8-nightly-2026-11-12-058322c-arm64.dmg)
+
+[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.8-2026-11-12-1591-r591.1/Installer-Crest-0.9.8-nightly-2026-11-12-058322c-arm64.dmg" length="220114044" type="application/octet-stream" sparkle:edSignature="G8SYsnaY2VmhpxE23WMZbyZKusfaRCfTeNv2ddJk/kamimrJE4XqonO+llW6rSfEwdiIXkKqVg9t9OQoH2ZaAg=="/>
+        </item>
+        <item>
             <title>0.9.1</title>
             <pubDate>Wed, 11 Nov 2026 06:33:40 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -28,123 +64,6 @@ Stable releases are signed, notarized, and ready for everyday use.
 [Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.9.1/Installer-Crest-0.9.1-arm64.dmg" length="219741252" type="application/octet-stream" sparkle:edSignature="CGguGRBhMwzZn2+NBD63MwsQoCqejyQbflVRU1Tu22ilK6ZxGFEsU1wJNCH3eWqvpKwGi19HUhxAppqd4lYNCA=="/>
-        </item>
-        <item>
-            <title>0.9.0</title>
-            <pubDate>Wed, 11 Nov 2026 01:16:59 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1579</sparkle:version>
-            <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 201 user-facing changes.
-
-### New
-
-- On iPhone and iPad, a floating sidebar has an arrow at its bottom corner that slides it back off the screen.
-- Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance.
-
-### Improved
-
-- On iPhone and iPad, scrolling or zooming the page puts a floating sidebar away, as tapping the page already did.
-- On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes.
-- Ad blocking has its own page in Settings and applies to every Space alike. Choose Off, Balanced or Strict, which also hides cookie notices and other annoyances, then turn single lists on or off, update them all at once, subscribe to more lists by address, write your own rules, and see the sites where blocking is off.
-- On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away.
-
-### Fixed
-
-- On iPhone and iPad, History, Archive and Downloads from a keyboard shortcut, the menu bar or the command palette slide a hidden floating sidebar in with that list. A docked iPad sidebar stays docked, and an iPhone showing its tabs full screen opens the list as a sheet instead of doing nothing.
-- On iPhone and iPad, a tap at the edge of the screen no longer brings out a hidden sidebar; swipe in from the edge instead.
-- On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away.
-- Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes.
-- On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium.
-- On Mac, pages in Chromium load again instead of stopping with "This page stopped responding" after updating to 0.8.215.
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/e16a309b8e8893a88a64816cbad5610285e67138...f3c50759172f8650a0eaf55057c20067034d08be) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.9.0/Installer-Crest-0.9.0-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.9.0/Installer-Crest-0.9.0-arm64.dmg" length="219768389" type="application/octet-stream" sparkle:edSignature="UqQG/34hCApoN9VLreyai9o125fNAswmLAZbDqn9rUZDbqz4vYpKOsVEdNLX87zh5B8L4DM6CW1oTwQFtudmCQ=="/>
-        </item>
-        <item>
-            <title>0.8.217</title>
-            <pubDate>Tue, 10 Nov 2026 16:57:51 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1577</sparkle:version>
-            <sparkle:shortVersionString>0.8.217</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### Improved
-
-- On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away.
-
-### Fixed
-
-- Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes.
-- On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium.
-- On Mac, pages in Chromium load again instead of stopping with "This page stopped responding" after updating to 0.8.215.
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/cacc868ad039477f29347afad50cb539357a24e5...22ed6327520ca0fe8d1d46d28246b9aadb27aa40) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.8.217-2026-11-10-1577-r577.1/Installer-Crest-0.8.217-nightly-2026-11-10-22ed632-arm64.dmg)
-
-[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.8.217-2026-11-10-1577-r577.1/Installer-Crest-0.8.217-nightly-2026-11-10-22ed632-arm64.dmg" length="219744893" type="application/octet-stream" sparkle:edSignature="hS/F0/3kDZsPE+5ZIQemn8UhoJ8odYkyMQ2kHNqIecCQNP6VXtm6tzbwhxUUIj5hOinWTelndeM2CzFlz7g9DA=="/>
-        </item>
-        <item>
-            <title>0.8.50</title>
-            <pubDate>Fri, 23 Oct 2026 00:07:47 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1305</sparkle:version>
-            <sparkle:shortVersionString>0.8.50</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 57 user-facing changes.
-
-### New
-
-- On iPhone and iPad, a swipe to go back or forward can also start on the frame around the page, where a finger reaching for the edge of the screen lands.
-- On iPhone, swiping left or right on the address bar moves through the tabs of your Space in sidebar order, and the page slides along with your finger. In a Split View, the other cards sit beside the address bar, and the swipe moves card by card before carrying on to the next tab.
-- Crest 0.8.50 updates Chromium with its latest security fixes and stops trusting the compromised eMudhra certificate authorities, rebuilds setup on the Mac, translates whole pages in Chromium, and fixes several crashes and problems quitting.
-
-### Improved
-
-- On iPad and iPhone Duo, the sidebar starts narrower, leaving more of the window to the page.
-
-### Fixed
-
-- On iPhone and iPad, Crest no longer leaves an empty band at the bottom of the window for a keyboard that isn't on screen.
-- On iPhone Duo, opening or closing the phone keeps the sidebar and its colors on the Space you're in instead of showing your first Space.
-- On iPhone Duo, a Split View made on the outer display shows both of its pages when you open the phone, instead of one staying blank until you tap it.
-- On iPhone and iPad, a Quick Window no longer leaves an empty band above it, and on iPad a Quick Window or Peek beside the sidebar stays on screen instead of running off its edge.
-- On iPhone and in a Mac Quick Window, leaving the address bar without going anywhere, by tapping or clicking away or pressing Escape, puts the page's address back instead of what you typed.
-- On iPad and iPhone Duo, the sidebar's tabs scroll on to the bottom of the screen and into its corner instead of stopping short above it.
-- Chromium is updated to 155.0.8059.84 with upstream security and compatibility fixes.
-- Pages that run in Chromium no longer trust certificates from the compromised eMudhra certificate authorities, matching Chrome.
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/36b7a5830e7bd5d949ebf55724087a119eaeffa6...39fe5cd1684db793a296f07a2f4a873c0583bc56) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.8.50/Installer-Crest-0.8.50-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.8.50/Installer-Crest-0.8.50-arm64.dmg" length="219425370" type="application/octet-stream" sparkle:edSignature="HkULqnD1KEEDiJrPevDbvY51EnH4E7uRCm8HzJnMCdYxdDJ63gYYsWWbhtLZ2/UlcJlT+4s8IMMliI8azQ6KBw=="/>
         </item>
         <item>
             <title>0.6.481</title>
@@ -187,6 +106,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: d/UABzccQTmlgIwF+m6TdYxtMpEvhI3DtVtL7cISwS20yrxqHXd8hxqSQ0dTea98vBXK8GL0IA2CVERN0P5KAQ==
-length: 13614
+edSignature: KXGyimEgQe9qvrNdqLSp7i9GhIPsZ0bKVcF5k8txf69eyvQpSIIwBwy5l1YsbuVMSnQW9ztd1QuS1MNhEn55Cw==
+length: 8334
 -->

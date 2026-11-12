@@ -3,6 +3,6 @@
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
     "development": "cold-launch-link-opens-in-front",
-    "nightly": "floating-sidebar-hide-arrow-removed"
+    "nightly": "customization-styles"
   }
 }
