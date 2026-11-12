@@ -109,4 +109,58 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new ExternalLinkPlacement(null, false, false, null, false), Route("https://example.com/a"));
     }
 
+    [Fact]
+    public void ACopiedLinkLeavesOutWhatCrestAndTheMaintainedListCallTrackingUntilTheDeviceTurnsThatOff() {
+        using var directory = new StorageDirectory();
+        const string article = "https://example.com/article?id=7&utm_source=news&UTM_Medium=email&fbclid=IwAR0&page=2#top";
+        const string story = "https://news.example/story?pk_campaign=spring&cmp=ab&cmp=abc1&src=feed&p=1";
+        const string cleanedStory = "https://news.example/story?cmp=abc1&src=feed&p=1";
+        // A maintained list as its maintainers publish it: filters for every
+        // site and for one, an exception that keeps a parameter Crest's own
+        // filters remove, a filter only for other loads than a page's, and a
+        // line that is not a parameter filter.
+        const string list = """
+            [Adblock Plus 2.0]
+            ! Title: Sample URL tracking filter
+            $removeparam=pk_campaign
+            $removeparam=/^cmp=[a-z]{2\,}$/
+            $removeparam=src,domain=shop.example
+            @@||keeps.example^$removeparam=utm_source
+            ||news.example^$removeparam=p,xhr
+            news.example##.banner
+            """;
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            string Copied(string url) => app.Query(new LinkToCopy(url));
+            Assert.Equal("https://example.com/article?id=7&page=2#top", Copied(article));
+            Assert.Equal("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42", Copied("https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=abc&t=42"));
+            Assert.Equal("https://www.amazon.co.uk/dp/B08N5WRWNW",
+                Copied("https://www.amazon.co.uk/Echo-Dot/dp/B08N5WRWNW/ref=sr_1_3?crid=2XQ&keywords=echo&qid=1&sr=8-3#reviews"));
+            // A redirect wrapper copies as its destination, cleaned in turn.
+            Assert.Equal("https://example.org/a?b=1#c",
+                Copied("https://www.google.com/url?sa=t&q=https%3A%2F%2Fexample.org%2Fa%3Fb%3D1%26utm_source%3Dx%23c&ved=2a"));
+            Assert.Equal("mailto:someone@example.com?utm_source=news", Copied("mailto:someone@example.com?utm_source=news"));
+
+            // What only the maintained list names stays until a copy of it arrives.
+            Assert.Equal(story, Copied(story));
+            app.Send(new FilterDownloadFetched(FilterLibrary.LinkTrackingId, list, null, null));
+            Assert.Equal(cleanedStory, Copied(story));
+            Assert.Equal("https://shop.example/item?id=1", Copied("https://shop.example/item?id=1&src=feed"));
+            Assert.Equal("https://keeps.example/?utm_source=news", Copied("https://keeps.example/?utm_source=news&fbclid=IwAR0"));
+
+            Assert.False(Links(app.Send(new SetLinkBehavior(LinkBehavior.CleansCopiedLinks, false))).CleansCopiedLinks);
+            Assert.Equal(article, Copied(article));
+        }
+
+        var (relaunched, _, _) = DeviceApp(directory);
+        using var relaunchedDisposal = relaunched;
+        Assert.Equal(article, relaunched.Query(new LinkToCopy(article)));
+        relaunched.Send(new SetLinkBehavior(LinkBehavior.CleansCopiedLinks, true));
+        Assert.Equal(cleanedStory, relaunched.Query(new LinkToCopy(story)));
+        using var freshDirectory = new StorageDirectory();
+        var (fresh, _, _) = DeviceApp(freshDirectory);
+        using var freshDisposal = fresh;
+        Assert.Equal("https://example.com/article?id=7&page=2#top", fresh.Query(new LinkToCopy(article)));
+    }
 }

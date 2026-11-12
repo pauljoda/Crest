@@ -55,8 +55,8 @@ struct MobilePageActionsContent: View {
         }
 
         ControlGroup {
-            if let url = pages.activeURL {
-                ShareLink(item: url) {
+            if let link = pages.activePage?.linkToCopy {
+                ShareLink(item: link.url) {
                     Label(ShortcutCommand.sharePage)
                 }
             }
@@ -176,8 +176,8 @@ struct MobilePageActionsContent: View {
 
             Menu("Share & Export…", systemImage: "square.and.arrow.up") {
                 Group {
-                    if let url = pages.activeURL {
-                        ShareLink(item: url) {
+                    if let link = pages.activePage?.linkToCopy {
+                        ShareLink(item: link.url) {
                             Label(ShortcutCommand.sharePage)
                         }
                     }

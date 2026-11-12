@@ -31,9 +31,10 @@ struct BrowserTabOrganizationAction {
         return browser.tabLinkProvider?.liveLinkURL(for: assignment) ?? tab.address
     }
 
+    /// Copies the tab's address, without its trackers while Super Copy is on.
     @discardableResult
     func copyLinkURL(for assignment: BrowserTabRuntimeAssignment) -> Bool {
-        BrowserPageLinkClipboard.copy(linkURL(for: assignment))
+        BrowserPageLinkClipboard.copy(linkURL(for: assignment).map(browser.core.linkToCopy))
     }
 
     @discardableResult

@@ -41,6 +41,15 @@ final class BrowserTabAppearance {
 /// choice as ``BrowserTabAppearance`` is.
 @MainActor @Observable
 final class BrowserAddressAppearance {
+    /// What the field shows of a page's address while it is not being edited.
+    enum Display: String, Codable, CaseIterable {
+        /// The site over its path, on two lines.
+        case twoLines
+        /// The site and its path on one line, cut short after the site.
+        case oneLine
+        /// The site alone.
+        case siteOnly
+    }
     var fill: Double = 0 { didSet { changed() } }
     var border: Double = 0 { didSet { changed() } }
     var usesAccentWhenEditing = false { didSet { changed() } }
@@ -50,6 +59,7 @@ final class BrowserAddressAppearance {
     /// Whether a live site's address field offers a button that copies its
     /// URL, beside Site Controls. Only the Mac's sidebar field draws it.
     var showsCopyURLButton = false { didSet { changed() } }
+    var display: Display = .twoLines { didSet { changed() } }
     var color: BrandColor? { didSet { changed() } }
     /// Called after any choice changes, so its owner can save it.
     @ObservationIgnored var changed: () -> Void = {}
@@ -95,7 +105,7 @@ extension BrowserTabAppearance: @MainActor Codable {
 
 extension BrowserAddressAppearance: @MainActor Codable {
     private enum CodingKeys: String, CodingKey {
-        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, showsCopyURLButton, color
+        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, showsCopyURLButton, display, color
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -107,6 +117,7 @@ extension BrowserAddressAppearance: @MainActor Codable {
         animatesIntoCommandPalette =
             (try? values.decode(Bool.self, forKey: .animatesIntoCommandPalette)) ?? true
         showsCopyURLButton = (try? values.decode(Bool.self, forKey: .showsCopyURLButton)) ?? false
+        display = (try? values.decode(Display.self, forKey: .display)) ?? .twoLines
         color = try? values.decode(BrandColor.self, forKey: .color)
     }
 
@@ -117,6 +128,7 @@ extension BrowserAddressAppearance: @MainActor Codable {
         try values.encode(usesAccentWhenEditing, forKey: .usesAccentWhenEditing)
         try values.encode(animatesIntoCommandPalette, forKey: .animatesIntoCommandPalette)
         try values.encode(showsCopyURLButton, forKey: .showsCopyURLButton)
+        try values.encode(display, forKey: .display)
         try values.encodeIfPresent(color, forKey: .color)
     }
 }

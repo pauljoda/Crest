@@ -59,8 +59,8 @@ final class BrowserFilterListUpdater {
 
     // MARK: - Actions - Scheduling
 
-    /// Checks now, then every hour and whenever the lists change, until the
-    /// updater goes away.
+    /// Checks now, then every hour and whenever the lists or Super Copy
+    /// change, until the updater goes away.
     func start() {
         guard schedule == nil else { return }
         schedule = Task { [weak self] in
@@ -72,12 +72,14 @@ final class BrowserFilterListUpdater {
         checkWhenListsChange()
     }
 
-    /// Checks again once the core's lists change, watching again first so a
-    /// change during the check is not missed. The core answers only what is
-    /// due, so a change a download made asks for nothing more.
+    /// Checks again once the core's lists change, or Super Copy, which keeps
+    /// a list of its own, watching again first so a change during the check
+    /// is not missed. The core answers only what is due, so a change a
+    /// download made asks for nothing more.
     private func checkWhenListsChange() {
         withObservationTracking {
             _ = core.state.filterLists
+            _ = core.state.linkPreferences?.cleansCopiedLinks
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, self.schedule?.isCancelled == false else { return }

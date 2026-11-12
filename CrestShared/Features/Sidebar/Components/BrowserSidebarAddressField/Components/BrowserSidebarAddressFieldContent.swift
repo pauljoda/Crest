@@ -44,6 +44,7 @@ struct BrowserSidebarAddressFieldContent<
                     .addressDisplayAccessibilityIdentifier,
                 prompt: configuration.prompt,
                 swapID: configuration.swapID,
+                display: BrowserDeviceAppearanceStore.shared.address.display,
                 submit: configuration.submit
             )
 
@@ -55,7 +56,11 @@ struct BrowserSidebarAddressFieldContent<
             }
 
             if configuration.showsTrailingAccessory {
-                BrowserAddressSwap(swapID: configuration.swapID) { trailingAccessory }
+                // A row of its own: the swap stacks what it holds in one
+                // place, which would draw two controls over each other.
+                BrowserAddressSwap(swapID: configuration.swapID) {
+                    HStack(spacing: configuration.metrics.accessorySpacing) { trailingAccessory }
+                }
             }
         }
         // The site's controls can follow the Space a moment later, once its

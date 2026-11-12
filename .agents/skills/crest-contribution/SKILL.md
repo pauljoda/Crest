@@ -79,6 +79,16 @@ type you touch. The rules that matter most:
   APIs; it talks to the engine abstraction. A page opened by another page runs
   in the opener's engine. Per-site and default engine rules apply only to
   navigations a person starts.
+- **Addresses leave Crest clean.** Any path that hands a page's or tab's
+  address to another app (the pasteboard, a share sheet, Markdown, a drag)
+  takes a `BrowserCopiedLink`, which only `CrestCore.linkToCopy(_:)` makes.
+  Never copy or share `documentURL`, `displayURL` or a tab's address directly.
+  The core decides what Super Copy removes: it unwraps redirect links, applies
+  Crest's built-in `$removeparam` rules, and applies AdGuard's URL Tracking
+  filter, which it downloads. Add a missing tracker as a `$removeparam` rule in
+  `LinkTracking.BaselineFilters`, scoped to its site unless the name means
+  nothing else anywhere. Never add one as Swift code. Text a person selects in the
+  address field and copies themselves stays as it is.
 
 ## Windows and UI
 
@@ -203,6 +213,7 @@ type you touch. The rules that matter most:
 - [ ] Touched types follow the section layout and typed-value rules.
 - [ ] Formatter, linter and affected builds ran clean.
 - [ ] Shared state changes go through core intents; no direct engine calls in shared code.
+- [ ] Every address handed to another app is a `BrowserCopiedLink`.
 - [ ] No new windows, ad-hoc fills or modal notices; every menu item has an icon.
 - [ ] Tests only for silent-breaking contracts; probes removed.
 - [ ] Patch bump, release-note entry and `check-version.sh --fix-commit` pass.

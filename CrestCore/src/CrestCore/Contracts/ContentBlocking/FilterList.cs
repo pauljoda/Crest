@@ -12,7 +12,7 @@ public sealed class FilterList {
 
     private const string UBlock = "https://ublockorigin.github.io/uAssets/filters/";
     private const string EasyListDownloads = "https://easylist-downloads.adblockplus.org/";
-    private const string AdGuard = "https://filters.adtidy.org/extension/ublock/filters/";
+    internal const string AdGuard = "https://filters.adtidy.org/extension/ublock/filters/";
 
     public static readonly FilterList EasyList = new(name: "easylist", title: "EasyList", FilterListGroup.Ads,
         source: "https://easylist.to/easylist/easylist.txt", isDefault: true);

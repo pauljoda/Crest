@@ -40,6 +40,7 @@ struct BrowserQuickWindowAddressControl: View {
                 summaryAccessibilityIdentifier: "quick-window-address-display",
                 prompt: "Search or enter a website",
                 centeringField: Self.field,
+                display: BrowserDeviceAppearanceStore.shared.address.display,
                 submit: openAddress
             )
             .padding(.vertical, BrowserQuickWindowLayout.addressVerticalPadding)

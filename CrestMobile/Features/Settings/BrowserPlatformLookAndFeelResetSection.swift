@@ -7,7 +7,8 @@ struct BrowserPlatformLookAndFeelResetSection: View {
         BrowserLookAndFeelResetFooter {
             guard UIApplication.shared.alternateIconName != nil else { return }
             Task { @MainActor in
-                try? await UIApplication.shared.setAlternateIconName(nil)
+                guard (try? await UIApplication.shared.setAlternateIconName(nil)) != nil else { return }
+                NotificationCenter.default.post(name: BrowserPlatformCurrentAppIcon.didChange, object: nil)
             }
         }
     }

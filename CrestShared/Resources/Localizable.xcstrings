@@ -9283,6 +9283,9 @@
         }
       }
     },
+    "One line" : {
+
+    },
     "One or two letters" : {
 
     },
@@ -12875,6 +12878,9 @@
     "site data storage local session indexeddb service workers sign out delete remove" : {
 
     },
+    "Site only" : {
+
+    },
     "Site permissions" : {
 
     },
@@ -13660,6 +13666,9 @@
       }
     },
     "Sunset Red" : {
+
+    },
+    "Super Copy" : {
 
     },
     "Suspend" : {
@@ -15073,6 +15082,9 @@
         }
       }
     },
+    "Two lines" : {
+
+    },
     "Two records share one identity." : {
 
     },
@@ -15963,6 +15975,9 @@
 
     },
     "With a Sub-Space" : {
+
+    },
+    "With Super Copy, copying or sharing a link leaves out its trackers, using AdGuard's URL Tracking filter. Copying the selected address keeps everything." : {
 
     },
     "Wolf Grey" : {

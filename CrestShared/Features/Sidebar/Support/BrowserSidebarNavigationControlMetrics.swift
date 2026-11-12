@@ -48,6 +48,11 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
     /// accessibility text size.
     let accessibilityVerticalPadding: CGFloat
 
+    /// The strip width below which Forward folds away, so back and reload
+    /// keep clear of the window's own controls in a narrow sidebar, or nil
+    /// for a strip that always shows it. ⌘] and a swipe still go forward.
+    let forwardFoldWidth: CGFloat?
+
     /// A pointer shell: compact targets in a titlebar-height strip, held off
     /// the sidebar's trailing edge.
     static let pointer = BrowserSidebarNavigationControlMetrics(
@@ -71,7 +76,8 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         trailingInset: BrowserChromeLayout.sidebarNavigationTrailingInset,
         barHeight: BrowserChromeLayout.sidebarTitlebarHeight,
         growsWithContent: false,
-        accessibilityVerticalPadding: 0
+        accessibilityVerticalPadding: 0,
+        forwardFoldWidth: 196
     )
 
     /// A Quick Window's toolbar: the pointer shell's controls drawn narrower and
@@ -88,7 +94,8 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         trailingInset: 0,
         barHeight: pointer.barHeight,
         growsWithContent: false,
-        accessibilityVerticalPadding: 0
+        accessibilityVerticalPadding: 0,
+        forwardFoldWidth: nil
     )
 
     /// A touch shell: full 44pt targets, a symmetric gutter, and a strip that
@@ -109,6 +116,7 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         trailingInset: 14,
         barHeight: 48,
         growsWithContent: true,
-        accessibilityVerticalPadding: 8
+        accessibilityVerticalPadding: 8,
+        forwardFoldWidth: nil
     )
 }

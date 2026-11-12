@@ -5345,6 +5345,26 @@
     "folder-delete-everything-inside": {
       "category": "improved",
       "message": "Deleting a folder now deletes everything inside it, after asking first, and its tabs go to the Archive."
+    },
+    "start-page-chosen-app-icon": {
+      "category": "fixed",
+      "message": "The Start Page and its tab now show the app icon you chose instead of the default one."
+    },
+    "address-buttons-side-by-side": {
+      "category": "fixed",
+      "message": "Copy URL and Site Controls sit side by side in the address field instead of on top of each other."
+    },
+    "narrower-sidebar": {
+      "category": "improved",
+      "message": "The sidebar narrows to 164 points, about as narrow as Arc's. In a narrow sidebar, Forward folds away to keep clear of the window's buttons, and Copy URL makes room for the address."
+    },
+    "address-display-choice": {
+      "category": "new",
+      "message": "Choose how the address field shows a page's address in Appearance: on two lines, on one line, or just the site."
+    },
+    "super-copy": {
+      "category": "new",
+      "message": "Super Copy, on by default, copies and shares links without known trackers. It follows supported redirect links to their destination, applies AdGuard's URL Tracking filter and Crest's own rules, and shortens Amazon product links. Selecting the address and copying it keeps everything."
     }
   }
 }
