@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "browser-import-keeps-spaces-without-passwords",
+    "development": "cold-launch-link-opens-in-front",
     "nightly": "floating-sidebar-hide-arrow-removed"
   }
 }
