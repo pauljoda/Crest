@@ -23,7 +23,7 @@ struct BrowserFolderHeaderControl: View {
     var body: some View {
         Group {
             if isEditing {
-                HStack(spacing: 7) {
+                HStack(spacing: BrowserFolderLayout.headerSpacing) {
                     BrowserFolderIcon(
                         folder: folder,
                         isExpanded: interaction.isExpanded.wrappedValue,
@@ -57,7 +57,7 @@ struct BrowserFolderHeaderControl: View {
                     }
                     interaction.toggleExpansion()
                 } label: {
-                    HStack(spacing: 7) {
+                    HStack(spacing: BrowserFolderLayout.headerSpacing) {
                         BrowserFolderIcon(
                             folder: folder,
                             isExpanded: interaction.isExpanded.wrappedValue,
@@ -81,7 +81,7 @@ struct BrowserFolderHeaderControl: View {
                     .contentShape(
                         Rectangle().inset(by: capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
                 }
-                .buttonStyle(BrowserFolderHeaderButtonStyle())
+                .buttonStyle(.crestDisclosure)
             }
         }
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
@@ -110,7 +110,6 @@ private struct BrowserFolderHeaderTitle: View, @MainActor Equatable {
             )
             .fontWeight(tintsTitle || holdsShownTab ? .semibold : .regular)
             .lineLimit(1)
-            .modifier(BrowserFolderTitlePressFeedback())
     }
 
     private var holdsShownTab: Bool {
@@ -134,30 +133,9 @@ private struct BrowserFolderTabCount: View, Equatable {
         Text(space.tabIDs(inFolder: folder.id).count, format: .number)
             .font(.caption)
             .foregroundStyle(.secondary)
-            .modifier(BrowserFolderTitlePressFeedback())
     }
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.folder === rhs.folder && lhs.space === rhs.space
-    }
-}
-
-extension EnvironmentValues {
-    @Entry fileprivate var folderHeaderIsPressed = false
-}
-
-/// PlainButtonStyle fades its entire label. Only the title and count acknowledge
-/// a press here, keeping the animated artwork's color steady.
-private struct BrowserFolderHeaderButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label.environment(\.folderHeaderIsPressed, configuration.isPressed)
-    }
-}
-
-private struct BrowserFolderTitlePressFeedback: ViewModifier {
-    @Environment(\.folderHeaderIsPressed) private var isPressed
-
-    func body(content: Content) -> some View {
-        content.opacity(isPressed ? 0.55 : 1)
     }
 }

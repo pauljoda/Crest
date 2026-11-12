@@ -138,4 +138,56 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([f.Resident, f.Left, f.Last], core.Current.Spaces[1].Tabs.Where(tab => tab.Placement == TabPlacement.Current)
             .Select(tab => tab.Id));
     }
+
+    [Fact]
+    public void AFolderMovesToAnotherSpaceWholeWithItsSplitsUnderNewFolderIdentities() {
+        var f = new BatchSpace();
+        var inner = f.Nest();
+        using var device = new TestDevice(f.Session);
+        var (core, sync) = (device.Authority, Syncing(device.Authority));
+        var window = device.Open(f.Space, (f.Space, f.Open));
+        device.Send(new ShowTab(window, f.Space, inner.Right));
+        device.Send(new SetLinkBehavior(LinkBehavior.FollowsMovedTabs, IsOn: true));
+        MoveFolderToSpace Moving(Guid folder, Guid destination) => new(device.Workspace, window, f.Space, folder, destination);
+        var unknown = Guid.NewGuid();
+        var before = core.Current;
+
+        Assert.Equal(f.Space, Assert.IsType<AlreadyInSpace>(Assert.Throws<Rejected>(() =>
+            device.Send(Moving(f.OpenFolder, f.Space))).Rejection).SpaceId);
+        Assert.Equal(unknown, Assert.IsType<UnknownFolder>(device.Query(new CanSend(Moving(unknown, f.Other))).Refusal).FolderId);
+        Assert.Same(before, core.Current);
+
+        device.Send(Moving(f.OpenFolder, f.Other));
+        var (source, destination) = (core.Current.Spaces[0], core.Current.Spaces[1]);
+        // Nothing of the folder is left behind, its split's metadata included.
+        Assert.Equal([f.SavedFolder], source.Folders.Select(folder => folder.Id));
+        Assert.Equal([f.Pinned, f.Saved, f.Open, f.Left, f.Right, f.Last], Tabs(core));
+        Assert.Equal([f.Split], source.SplitGroups.Select(group => group.Id));
+        // The folders keep their tree, titles and disclosure under new
+        // identities, after what the open tabs held there.
+        var (outer, nested) = (destination.Folders[0], destination.Folders[1]);
+        Assert.DoesNotContain(outer.Id, new[] { f.OpenFolder, inner.Folder });
+        Assert.DoesNotContain(nested.Id, new[] { f.OpenFolder, inner.Folder });
+        Assert.Equal((TabPlacement.Current, (Guid?)null, false), (outer.Location, outer.ParentId, outer.IsCollapsed));
+        Assert.Equal((TabPlacement.Current, (Guid?)outer.Id, "Inner", true), (nested.Location, nested.ParentId, nested.Title, nested.IsCollapsed));
+        Assert.Equal([f.Resident, f.Filed, inner.Left, inner.Right], Tabs(core, 1));
+        Assert.Equal(new Guid?[] { null, outer.Id, nested.Id, nested.Id }, destination.Tabs.Select(tab => tab.FolderId));
+        // The split moves whole with what was chosen for it, and its tabs keep
+        // their state.
+        Assert.Equal(new Guid?[] { inner.Split, inner.Split }, destination.Tabs.Skip(2).Select(tab => tab.SplitGroupId));
+        var split = Assert.Single(destination.SplitGroups);
+        Assert.Equal((inner.Split, "Reading", true), (split.Id, split.CustomTitle, split.IsCollapsed));
+        Assert.All(destination.Tabs.Skip(1), tab => Assert.Equal(before.Spaces[0].Tabs.Single(old => old.Id == tab.Id).Url, tab.Url));
+        // The window follows the tab it showed, and shows the one it showed
+        // before in the Space the folder left.
+        Assert.Equal((f.Other, (Guid?)inner.Right), (device.Space(window), device.Tab(window, f.Other)));
+        Assert.Equal(f.Open, device.Tab(window, f.Space));
+        // Other devices delete the folders it left and receive the tabs in
+        // their new Space.
+        foreach (var folder in new[] { f.OpenFolder, inner.Folder })
+            Assert.Equal("explicitDelete", Journaled(sync, "folder", folder)["tombstone"]!["reason"]!.GetValue<string>());
+        foreach (var folder in new[] { outer.Id, nested.Id }) Assert.NotNull(Journaled(sync, "folder", folder)["payload"]);
+        foreach (var tab in new[] { f.Filed, inner.Left, inner.Right })
+            Assert.Equal(f.Other, Guid.Parse(Journaled(sync, "tab", tab)["spaceID"]!["rawValue"]!.GetValue<string>()));
+    }
 }

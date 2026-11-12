@@ -15,7 +15,7 @@ enum BrowserSpaceBrandingPreviewFixture {
         look.readabilityFade = 0.2
         look.themeMode = .gradient
         look.gradientAngle = 127
-        look.showsTexture = true
+        look.textureStrength = 1
         look.iconStyle = .simpleSymbol
         return look
     }()

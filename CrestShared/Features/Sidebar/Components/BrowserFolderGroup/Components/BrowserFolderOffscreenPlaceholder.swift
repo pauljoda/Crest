@@ -31,8 +31,10 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
     struct Shape: Equatable {
         enum Element: Equatable {
             case tab(depth: Int)
+            /// A Split View with the members it shows: all of them, or only
+            /// the one the window shows while it is collapsed.
             case split(depth: Int, members: Int)
-            case folder(depth: Int, isOpen: Bool, keptTabID: UUID?)
+            case folder(depth: Int, isOpen: Bool, keptTabIDs: Set<UUID>)
         }
 
         let elements: [Element]
@@ -100,15 +102,17 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
         let space = context.space
         let appearance = BrowserDeviceAppearanceStore.shared
         var elements: [Shape.Element] = [
-            .folder(depth: 0, isOpen: !folder.isCollapsed, keptTabID: keptTabID(of: folder))
+            .folder(depth: 0, isOpen: !folder.isCollapsed, keptTabIDs: keptTabIDs(of: folder))
         ]
         func walk(_ list: SidebarListModel, depth: Int) {
             for item in BrowserSidebarListItem.items(of: list, in: space) {
                 switch item.content {
                 case .tab: elements.append(.tab(depth: depth))
-                case .split(_, let members): elements.append(.split(depth: depth, members: members.count))
+                case .split(let groupID, let members):
+                    elements.append(.split(depth: depth, members: shownMemberCount(of: groupID, members: members)))
                 case .folder(let inner):
-                    elements.append(.folder(depth: depth, isOpen: !inner.isCollapsed, keptTabID: keptTabID(of: inner)))
+                    elements.append(
+                        .folder(depth: depth, isOpen: !inner.isCollapsed, keptTabIDs: keptTabIDs(of: inner)))
                     if !inner.isCollapsed { walk(space.sidebar.inside(inner.id), depth: depth + 1) }
                 }
             }
@@ -118,22 +122,25 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
             elements: elements, tabScale: appearance.tabScale, hasBorders: appearance.tabs.borders == .all)
     }
 
-    /// The tab a closed folder keeps on screen in place of its contents.
-    private func keptTabID(of folder: FolderStateModel) -> UUID? {
-        guard folder.isCollapsed else { return nil }
+    /// How many of a Split View's members it shows: all of them while it is
+    /// open, and only the one the window shows while it is collapsed.
+    private func shownMemberCount(of groupID: UUID, members: [TabStateModel]) -> Int {
+        let isCollapsed = context.space.splitGroups.first { $0.id == groupID }?.isCollapsed ?? false
+        guard isCollapsed else { return members.count }
+        return members.contains { context.window.shownTabIDs.contains($0.id) } ? 1 : 0
+    }
+
+    /// The tabs a closed folder keeps on screen in place of its contents, of
+    /// those it still holds, as the folder itself draws them.
+    private func keptTabIDs(of folder: FolderStateModel) -> Set<UUID> {
+        guard folder.isCollapsed else { return [] }
         #if os(macOS)
-            let state = sidebarInteraction.collapsedFolderVisibility(
+            return sidebarInteraction.collapsedFolderVisibility(
                 for: BrowserFolderRuntimeAssignment(
                     folderID: folder.id, spaceID: context.space.id, profileID: context.space.profileID)
-            ).state
-            // Residency is invisible to Observation unless its revision is read.
-            _ = context.pageAccess.residencyRevision()
-            guard let keptTabID = state.keptTabID, context.pageAccess.containsResidentPage(keptTabID) else {
-                return nil
-            }
-            return keptTabID
+            ).state.keptTabIDs.intersection(context.space.tabIDs(inFolder: folder.id))
         #else
-            return nil
+            return []
         #endif
     }
 }

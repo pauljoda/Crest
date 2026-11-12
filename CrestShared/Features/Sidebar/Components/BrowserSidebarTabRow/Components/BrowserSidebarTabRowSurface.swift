@@ -191,6 +191,7 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
                                 .tab(configuration.tab.id), in: configuration.context))
                 )
             )
+            .modifier(BrowserSelectedTabRowAppearance(isSelected: configuration.isSelected))
     }
 
     private var accent: Color {
@@ -200,5 +201,26 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
     private var branding: SpaceBranding? {
         configuration.spacePresentation?.branding
             ?? configuration.context.space.settings.look
+    }
+}
+
+/// A selected row stands in the window's own glass with the window's own text
+/// color, as the address field and the pins do, so it reads the same on every
+/// Space. Any other row keeps the Space's ink.
+///
+/// Both states set the same modifiers, so selecting a row changes values
+/// rather than the row's structure.
+private struct BrowserSelectedTabRowAppearance: ViewModifier {
+    let isSelected: Bool
+
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.spaceChromeForeground) private var spaceForeground
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(isSelected ? AnyShapeStyle(Color.primary) : AnyShapeStyle(.primary))
+            .environment(\.spaceChromeForeground, isSelected ? nil : spaceForeground)
+            .environment(\.colorScheme, isSelected ? deviceColorScheme ?? colorScheme : colorScheme)
     }
 }

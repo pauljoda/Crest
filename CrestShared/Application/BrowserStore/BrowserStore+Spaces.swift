@@ -469,6 +469,50 @@ extension BrowserStore {
         )
     }
 
+    /// Whether the core would move the folder to `destination`.
+    func canMoveFolder(
+        _ folderID: UUID,
+        matching source: BrowserSpaceRuntimeAssignment,
+        toSpace destination: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard !isDeleting(source.spaceID), !isDeleting(destination.spaceID),
+            let space = spaceModel(matching: source), space.folders.contains(folderID),
+            spaceModel(matching: destination) != nil
+        else { return false }
+        return family.canSend(movingFolder(folderID, from: source, toSpace: destination), from: self)
+    }
+
+    /// Moves a folder, with everything inside it, to the Space `destination`.
+    @discardableResult
+    func moveFolder(
+        _ folderID: UUID,
+        matching source: BrowserSpaceRuntimeAssignment,
+        toSpace destination: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard !isDeleting(source.spaceID), !isDeleting(destination.spaceID),
+            let space = spaceModel(matching: source), space.folders.contains(folderID),
+            spaceModel(matching: destination) != nil,
+            family.send(movingFolder(folderID, from: source, toSpace: destination), from: self)
+        else { return false }
+        // The core has the window follow the folder's tabs when the person's
+        // link preferences say so, and this window then shows one there.
+        if selectedSpaceID == destination.spaceID, let tabID = selectedTabID(in: destination.spaceID) {
+            pendingMovedTabActivation = BrowserTabRuntimeAssignment(
+                tabID: tabID, spaceID: destination.spaceID, profileID: destination.profileID)
+        }
+        return true
+    }
+
+    private func movingFolder(
+        _ folderID: UUID,
+        from source: BrowserSpaceRuntimeAssignment,
+        toSpace destination: BrowserSpaceRuntimeAssignment
+    ) -> MoveFolderToSpace {
+        MoveFolderToSpace(
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: source.spaceID, folderID: folderID,
+            destinationSpaceID: destination.spaceID)
+    }
+
     @discardableResult
     func deleteFolder(_ folderID: UUID, in spaceID: UUID) -> Bool {
         guard deleteSessionFolder(folderID, in: spaceID) else { return false }
@@ -483,6 +527,31 @@ extension BrowserStore {
         guard let space = spaceModel(matching: assignment), space.folders.contains(folderID)
         else { return false }
         return deleteFolder(folderID, in: assignment.spaceID)
+    }
+
+    /// Deletes a folder and everything inside it, its tabs into the archive.
+    @discardableResult
+    func deleteFolderAndContents(_ folderID: UUID, matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
+        guard !isDeleting(assignment.spaceID), let space = spaceModel(matching: assignment),
+            space.folders.contains(folderID)
+        else { return false }
+        // Each page of the folder's tabs is asked whether it may go before the core deletes them.
+        let tabIDs = space.tabIDs(inFolder: folderID)
+        let tabs = tabIDs.map {
+            BrowserTabRuntimeAssignment(tabID: $0, spaceID: assignment.spaceID, profileID: assignment.profileID)
+        }
+        return performPageDismissal(of: tabs) { [weak self] in
+            // A tab that joined or left the folder while its pages were asked
+            // was not asked itself, so the folder stays as it is.
+            guard let self, let current = self.spaceModel(matching: assignment),
+                Set(current.tabIDs(inFolder: folderID)) == Set(tabIDs)
+            else { return false }
+            return self.family.send(
+                DeleteFolderAndContents(
+                    workspaceID: self.family.workspaceID, windowID: self.windowID, spaceID: assignment.spaceID,
+                    folderID: folderID),
+                from: self)
+        }
     }
 
 }

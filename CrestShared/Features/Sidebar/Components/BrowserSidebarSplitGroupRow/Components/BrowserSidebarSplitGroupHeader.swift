@@ -1,95 +1,79 @@
 import SwiftUI
 
-/// The group's own identity and action strip.
+/// The group's own row, standing as a folder's header does: the stacked
+/// icons in the folder symbol's column, a chevron in their place while the
+/// split is collapsed, the title in a folder title's font, and the same
+/// height. A click opens or closes the split's tabs under it, and a double
+/// click renames it.
 ///
-/// It earns its place twice over now that members are ordinary tab rows. It is
-/// the only thing that says "these rows are one split" before you notice the
-/// container behind them — full-height rows otherwise read as neighbours that
-/// happen to share a tint. And every member row carries a context menu of its
-/// own, together covering all but a thin frame of the container, so without a
-/// strip that belongs to the group there would be nowhere left to press for
-/// "Separate All Tabs".
+/// It is also the only part of the split that belongs to the group rather
+/// than to one of its tabs, so it carries the group's drag and its menu,
+/// which holds "Separate All Tabs", behind the trailing ellipsis too.
 struct BrowserSidebarSplitGroupHeader: View {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
     @Environment(\.sidebarRowContentIndent) private var folderIndent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
-        HStack(spacing: configuration.metrics.headerSpacing) {
-            BrowserSidebarSplitGroupIcon(configuration: configuration)
-                .browserIconCustomizationPopover(
-                    BrowserIconCustomizationPresentation(
-                        isPresented: interaction.isChoosingIcon,
-                        title: "Split View Icon",
-                        currentEmoji: configuration.emojiIcon,
-                        showsReset: configuration.emojiIcon != nil,
-                        resetTitle: "Use Stacked Icons",
-                        setEmoji: interaction.setEmojiIcon,
-                        reset: interaction.resetIcon
-                    )
-                )
-
+        HStack(spacing: BrowserFolderLayout.headerSpacing) {
             if interaction.isRenaming {
-                TextField("Split View Name", text: interaction.draftTitle)
-                    .textFieldStyle(.plain)
-                    .focused(interaction.isTitleFocused)
-                    .submitLabel(.done)
-                    .onSubmit(interaction.commitTitle)
-                    .onKeyPress(.escape) {
-                        interaction.cancelTitleEditing()
-                        return .handled
-                    }
-                    .accessibilityIdentifier("split-group-rename-field")
-            } else {
-                Button(action: interaction.activate) {
-                    Text(configuration.shownTitle)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(.rect)
+                HStack(spacing: BrowserFolderLayout.headerSpacing) {
+                    icon
+                    TextField("Split View Name", text: interaction.draftTitle)
+                        .textFieldStyle(.plain)
+                        .focused(interaction.isTitleFocused)
+                        .submitLabel(.done)
+                        .onSubmit(interaction.commitTitle)
+                        .onKeyPress(.escape) {
+                            interaction.cancelTitleEditing()
+                            return .handled
+                        }
+                        .accessibilityIdentifier("split-group-rename-field")
+                    Spacer(minLength: CrestSpacing.small)
                 }
-                .buttonStyle(.plain)
+            } else {
+                Button(action: toggleCollapse) {
+                    HStack(spacing: BrowserFolderLayout.headerSpacing) {
+                        icon
+                        BrowserSidebarSplitGroupTitle(configuration: configuration)
+                        Spacer(minLength: CrestSpacing.small)
+                    }
+                    .frame(maxHeight: .infinity)
+                    // A finger gets the split's padding too, as a folder's
+                    // header does.
+                    .contentShape(
+                        Rectangle().inset(
+                            by: configuration.capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
+                }
+                .buttonStyle(.crestDisclosure)
+                #if os(macOS)
+                    .simultaneousGesture(TapGesture(count: 2).onEnded(interaction.beginRenaming))
+                #endif
                 .modifier(
                     BrowserPlatformRowAuxiliaryClickModifier(
                         perform: configuration.canClose ? interaction.closeSplit : nil
                     )
                 )
                 .accessibilityLabel(configuration.shownTitle)
-                .accessibilityValue(
-                    "Split View with \(configuration.members.count) tabs"
-                )
-                .accessibilityAddTraits(
-                    configuration.isPresented ? .isSelected : []
-                )
+                .accessibilityValue(BrowserChromeAccessibility.folderValue(isExpanded: !configuration.isCollapsed))
+                .accessibilityHint(configuration.isCollapsed ? "Expands this Split View" : "Collapses this Split View")
+                .accessibilityAddTraits(configuration.isPresented ? .isSelected : [])
             }
-
-            Spacer(minLength: 0)
-
-            Menu {
-                BrowserSidebarSplitGroupContextMenu(
-                    configuration: configuration,
-                    interaction: interaction
-                )
-            } label: {
-                Image(systemName: "ellipsis")
-                    .frame(
-                        width: configuration.metrics.headerHeight,
-                        height: configuration.metrics.headerHeight
-                    )
-                    .contentShape(.rect)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .crestMenuActionLabelStyle()
-            .tint(.primary)
-            .accessibilityLabel("Split View actions")
-            .disabled(!configuration.isAvailableForDisplay)
+            actionsMenu
         }
-        .frame(height: configuration.metrics.headerHeight)
-        .padding(.leading, configuration.headerLeadingInset + folderIndent)
-        .padding(.trailing, configuration.headerLeadingInset)
+        .browserFolderHeaderLayout(metrics: headerMetrics, leadingInset: leadingInset)
+        .modifier(
+            BrowserSidebarDensityFont(scale: tabScale, supportsTouch: configuration.capabilities.supportsTouch)
+        )
+        // The separation a tab row keeps, as a folder's header does.
+        .padding(
+            .vertical,
+            BrowserSidebarDensity(tabScale).rowSeparation(
+                hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
+        )
         .contentShape(.rect)
         .browserSplitGroupDraggable(
             item: configuration.dragItem,
@@ -117,25 +101,118 @@ struct BrowserSidebarSplitGroupHeader: View {
             }
         }
     }
+
+    private var headerMetrics: BrowserFolderHeaderMetrics {
+        configuration.capabilities.savedFolderHeaderMetrics
+    }
+
+    /// The icons' column: the member favicons' own, past any folders around
+    /// the split.
+    private var leadingInset: CGFloat {
+        configuration.headerLeadingInset + folderIndent
+    }
+
+    /// The symbol column: the stacked icons, or a chevron while the split is
+    /// collapsed, turning as the Space header's does.
+    private var icon: some View {
+        CrestDisclosureIcon(isCollapsed: configuration.isCollapsed, glyphSize: chevronSize) {
+            BrowserSidebarSplitGroupIcon(configuration: configuration)
+        }
+        .frame(width: (headerMetrics.iconWidth + 6) * BrowserSidebarDensity(tabScale).scale)
+        .browserIconCustomizationPopover(
+            BrowserIconCustomizationPresentation(
+                isPresented: interaction.isChoosingIcon,
+                title: "Split View Icon",
+                currentEmoji: configuration.emojiIcon,
+                showsReset: configuration.emojiIcon != nil,
+                resetTitle: "Use Stacked Icons",
+                setEmoji: interaction.setEmojiIcon,
+                reset: interaction.resetIcon
+            )
+        )
+    }
+
+    /// A collapsed split's chevron, sized to sit in the column the stacked
+    /// icons fill.
+    private var chevronSize: CGFloat {
+        configuration.metrics.headerGlyphSize * 0.75 * BrowserSidebarDensity(tabScale).scale
+    }
+
+    /// The group's actions, the same ones its context menu holds.
+    private var actionsMenu: some View {
+        Menu {
+            BrowserSidebarSplitGroupContextMenu(configuration: configuration, interaction: interaction)
+        } label: {
+            Image(systemName: "ellipsis")
+                .frame(width: headerMetrics.iconWidth, height: headerMetrics.iconWidth)
+                .contentShape(.rect)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .crestMenuActionLabelStyle()
+        .tint(.primary)
+        .fixedSize()
+        .accessibilityLabel("Split View actions")
+        .disabled(!configuration.isAvailableForDisplay)
+    }
+
+    /// Opens or closes the split's tabs with a folder's own motion, unless
+    /// the click ended a drag.
+    private func toggleCollapse() {
+        guard !configuration.sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
+        withAnimation(CrestMotion.disclosure.unlessReducingMotion(reduceMotion)) {
+            interaction.toggleCollapse()
+        }
+    }
+}
+
+/// The split's title as a folder's reads: in the split's color where the
+/// person tints folder titles, and bold while the split holds the shown tab
+/// where every folder stays visible.
+private struct BrowserSidebarSplitGroupTitle: View {
+    let configuration: BrowserSidebarSplitGroupRowConfiguration
+
+    @Environment(\.colorScheme) private var colorScheme
+    private var tintsTitle: Bool { BrowserDeviceAppearanceStore.shared.foldersTintTitle }
+    private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
+
+    var body: some View {
+        Text(configuration.shownTitle)
+            .foregroundStyle(
+                tintsTitle
+                    ? (configuration.tint ?? .folderDefault).folderTitleColor(onDarkBackground: colorScheme == .dark)
+                        .color
+                    : .primary
+            )
+            .fontWeight(tintsTitle || (alwaysVisible && configuration.isPresented) ? .semibold : .regular)
+            .lineLimit(1)
+    }
 }
 
 private struct BrowserSidebarSplitGroupIcon: View {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
+
+    /// How large each card of the stack draws: a member favicon's size, at
+    /// the sidebar's density.
+    private var glyphSize: CGFloat {
+        configuration.metrics.headerGlyphSize * BrowserSidebarDensity(tabScale).scale
+    }
 
     var body: some View {
         Group {
             if let emoji = configuration.emojiIcon {
                 Text(emoji)
-                    .font(.system(size: configuration.metrics.headerGlyphSize))
+                    .font(.system(size: glyphSize))
             } else {
                 faviconStack
             }
         }
         .frame(
-            width: configuration.metrics.headerGlyphSize * 1.45,
-            height: configuration.metrics.headerGlyphSize
+            width: glyphSize * 1.45,
+            height: glyphSize
         )
         .accessibilityHidden(true)
     }
@@ -153,7 +230,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
                     tab: member,
                     favicons: configuration.context.favicons,
                     profileID: configuration.profileID,
-                    size: configuration.metrics.headerGlyphSize * 0.78
+                    size: glyphSize
                 )
                 .padding(1)
                 .background { CrestSurfaceLayer(shape: Circle()) }
@@ -185,7 +262,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
                     )
                 } keyframes: { _ in
                     CubicKeyframe(
-                        -configuration.metrics.headerGlyphSize * 0.18,
+                        -glyphSize * 0.18,
                         duration: CrestMotion.collectionTransition / 2
                     )
                     CubicKeyframe(
@@ -217,11 +294,11 @@ private struct BrowserSidebarSplitGroupIcon: View {
     }
 
     private func deckHorizontalOffset(at index: Int) -> CGFloat {
-        CGFloat(index) * configuration.metrics.headerGlyphSize * 0.28
+        CGFloat(index) * glyphSize * 0.28
     }
 
     private func deckVerticalOffset(at index: Int) -> CGFloat {
-        CGFloat(frontIndex - index) * configuration.metrics.headerGlyphSize * 0.045
+        CGFloat(frontIndex - index) * glyphSize * 0.045
     }
 
     private var deckAnimation: Animation? {

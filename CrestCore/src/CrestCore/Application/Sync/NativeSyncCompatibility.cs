@@ -35,7 +35,7 @@ internal static class NativeSyncCompatibility {
         new() { ["palette"] = List(Color), ["charge"] = Charge });
 
     private static readonly Shape Branding = new(
-        "colors bannerPattern bannerStrength readabilityFade keepsControlsReadable themeMode gradientAngle showsTexture iconStyle symbolColor crest renderingVersion folderColorIntensity textColorMode hasCustomAppearance",
+        "colors bannerPattern bannerStrength readabilityFade keepsControlsReadable themeMode gradientAngle showsTexture textureStrength iconStyle symbolColor crest renderingVersion folderColorIntensity textColorMode hasCustomAppearance",
         new() { ["colors"] = List(Color), ["symbolColor"] = Color, ["crest"] = Crest });
 
     private static readonly Shape SearchProvider = new("id name searchURLTemplate suggestionURLTemplate");

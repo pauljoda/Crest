@@ -279,25 +279,29 @@ extension SidebarBodies {
             })
     }
 
-    /// The rows view of one list the core publishes, handed the list itself.
+    /// The rows view of one list the core publishes, handed the list itself,
+    /// and for a collapsed folder the tabs it keeps, whose rows alone show.
     private static func rows(
         _ list: SidebarListModel, key: String, context: BrowserSidebarListContext,
-        interaction: BrowserSidebarInteractionState
+        interaction: BrowserSidebarInteractionState, keptTabIDs: Set<UUID>? = nil
     ) -> Child {
         Child(
-            key: key, input: AnyEquatable(ObjectIdentifier(list)),
+            key: key, input: AnyEquatable([AnyEquatable(ObjectIdentifier(list)), AnyEquatable(keptTabIDs)]),
             node: Node(kind: .section) {
-                BrowserSidebarListItem.items(of: list, in: context.space).map {
+                BrowserSidebarListItem.items(of: list, in: context.space).filter { item in
+                    keptTabIDs.map { kept in kept.contains { item.content.contains(tabID: $0, in: context.space) } }
+                        ?? true
+                }.map {
                     Child(
-                        key: "\(key)-\($0.id)", input: AnyEquatable($0),
-                        node: node(for: $0, context: context, interaction: interaction))
+                        key: "\(key)-\($0.id)", input: AnyEquatable([AnyEquatable($0), AnyEquatable(keptTabIDs)]),
+                        node: node(for: $0, context: context, interaction: interaction, keptTabIDs: keptTabIDs))
                 }
             })
     }
 
     private static func node(
         for item: BrowserSidebarListItem, context: BrowserSidebarListContext,
-        interaction: BrowserSidebarInteractionState, keptTabID: UUID? = nil
+        interaction: BrowserSidebarInteractionState, keptTabIDs: Set<UUID>? = nil
     ) -> Node {
         switch item.content {
         case .tab(let tab):
@@ -320,7 +324,7 @@ extension SidebarBodies {
         case .folder(let folder):
             Node(kind: .row) {
                 let configuration = SidebarReads.folderRow(
-                    folder, depth: item.depth, in: context, interaction: interaction, inheritedKeptTabID: keptTabID)
+                    folder, depth: item.depth, in: context, interaction: interaction, inheritedKeptTabIDs: keptTabIDs)
                 var children = [
                     Child(
                         key: "count-\(folder.id)", input: AnyEquatable(ObjectIdentifier(folder)),
@@ -330,16 +334,13 @@ extension SidebarBodies {
                         })
                 ]
                 let state = interaction.collapsedFolderVisibility(for: configuration.folderRuntimeAssignment).state
-                if configuration.showsContents {
-                    let key = "folder-\(folder.id)"
-                    children.append(rows(configuration.inside, key: key, context: context, interaction: interaction))
-                } else if let kept = configuration.keptItem(for: state) {
-                    let keptTabID = configuration.keptTabID(for: state)
+                let keptTabIDs = configuration.keptTabIDs(for: state)
+                if configuration.showsAllContents || !keptTabIDs.isEmpty {
+                    let shown = configuration.showsAllContents ? nil : keptTabIDs
                     children.append(
-                        Child(
-                            key: "kept-\(folder.id)",
-                            input: AnyEquatable([AnyEquatable(kept), AnyEquatable(keptTabID)]),
-                            node: node(for: kept, context: context, interaction: interaction, keptTabID: keptTabID)))
+                        rows(
+                            configuration.inside, key: "folder-\(folder.id)", context: context,
+                            interaction: interaction, keptTabIDs: shown))
                 }
                 return children
             }
@@ -436,11 +437,11 @@ enum SidebarReads {
     /// kept row's bookkeeping, and whether it may act.
     static func folderRow(
         _ folder: FolderStateModel, depth: Int, in context: BrowserSidebarListContext,
-        interaction: BrowserSidebarInteractionState, inheritedKeptTabID: UUID? = nil
+        interaction: BrowserSidebarInteractionState, inheritedKeptTabIDs: Set<UUID>? = nil
     ) -> BrowserFolderGroupConfiguration {
         let configuration = BrowserFolderGroupConfiguration(
             sidebarInteraction: interaction, folder: folder, depth: depth, context: context, spacePresentation: nil,
-            inheritedKeptTabID: inheritedKeptTabID)
+            inheritedKeptTabIDs: inheritedKeptTabIDs)
         _ = (folder.title, folder.displaySymbol, folder.displayColor, folder.isCollapsed, folder.location)
         _ = (configuration.displayBranding, configuration.isAvailableForDisplay)
         _ = BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context)

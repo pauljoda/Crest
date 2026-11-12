@@ -46,7 +46,10 @@ the live status for each issue.
 - [ ] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
-- [ ] [Choose a Heraldic, Modern or Simple style for customizing Crest, and show Spaces as dots](https://github.com/pauljoda/Crest/issues/1102)
+
+#### Completed
+
+- [x] [Choose a Heraldic, Modern or Simple style for customizing Crest, and show Spaces as dots](https://github.com/pauljoda/Crest/issues/1102)
 
 <!-- crest-roadmap-sync:end -->
 

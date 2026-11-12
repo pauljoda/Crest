@@ -72,7 +72,7 @@ struct BrowserSpaceHeader: View {
             )
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.crestDisclosure)
         .accessibilityLabel("\(space.name) saved tabs")
         .accessibilityValue(isSavedTabsExpanded ? "Expanded" : "Collapsed")
         .accessibilityHint(
@@ -82,25 +82,12 @@ struct BrowserSpaceHeader: View {
         )
     }
 
-    /// The Space's crest, swapped for a chevron while the saved tabs are
-    /// closed — the two share one slot so the title never shifts sideways as
-    /// the section opens.
+    /// The Space's crest, swapped for a chevron that turns as the saved tabs
+    /// close and open — the two share one slot so the title never shifts
+    /// sideways as the section opens.
     private var identity: some View {
-        Group {
-            if !isSavedTabsExpanded {
-                Image(systemName: "chevron.right")
-                    .font(
-                        .system(
-                            size: metrics.disclosureGlyphSize,
-                            weight: .bold
-                        )
-                    )
-                    .foregroundStyle(.secondary)
-                    .transition(.opacity)
-            } else {
-                BrowserSpaceIdentityIcon(identity: space, size: metrics.iconSize)
-                    .transition(.opacity)
-            }
+        CrestDisclosureIcon(isCollapsed: !isSavedTabsExpanded, glyphSize: metrics.disclosureGlyphSize) {
+            BrowserSpaceIdentityIcon(identity: space, size: metrics.iconSize)
         }
         .frame(width: metrics.iconSize, height: metrics.iconSize)
     }

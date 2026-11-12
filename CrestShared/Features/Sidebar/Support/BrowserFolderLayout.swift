@@ -4,6 +4,11 @@ extension EnvironmentValues {
     /// How far a row inside folders moves its icon and title in past where its
     /// surface puts them: see `BrowserFolderLayout.rowContentIndent(depth:)`.
     @Entry var sidebarRowContentIndent: CGFloat = 0
+
+    /// How a row inside a folder comes and goes, in place of sliding in from
+    /// above, as a folder's rows do while it closes around the tabs it keeps
+    /// and opens again. Nil slides.
+    @Entry var sidebarFolderRowTransition: AnyTransition? = nil
 }
 
 /// How far a saved folder and everything inside it step in per nesting level.
@@ -19,6 +24,10 @@ enum BrowserFolderLayout {
 
     /// How far a folder's contents put their icons past the folder's own icon.
     static let contentIndent = CrestSpacing.large
+
+    /// The gap between a folder header's symbol and its title, which a Split
+    /// View's header keeps too.
+    static let headerSpacing: CGFloat = 7
 
     /// How far a folder's surface sits from the sidebar's leading edge: the
     /// layer inset every top-level layer keeps, plus one step per folder that

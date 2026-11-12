@@ -247,7 +247,7 @@ internal static class ArcSidebar {
     /// A diagonal gradient banner of several colors, or a solid banner of one.
     private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors) => colors.Count == 0 ? null : SpaceBranding.Painted(colors,
         colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1, SpaceBranding.LegacyReadabilityFade,
-        colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45, showsTexture: false);
+        colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45, textureStrength: 0);
 
     #endregion
 }

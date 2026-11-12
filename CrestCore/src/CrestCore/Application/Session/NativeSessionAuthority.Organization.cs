@@ -49,8 +49,8 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Split identity
 
-    /// A split's name, icon or tint, which only a split of two or more tabs
-    /// has. `choose` sets the field; `stamp` records when, so each field merges
+    /// A split's name, icon, tint or collapse, which only a split of two or
+    /// more tabs has. `choose` sets the field; `stamp` records when, so each field merges
     /// on its own. A choice that is already the split's changes nothing.
     internal SessionEdit Identifying(SessionState basis, Guid spaceId, Guid groupId, DateTimeOffset now,
         Func<SplitGroupState, SplitGroupState> choose, Func<SplitGroupState, DateTimeOffset, SplitGroupState> stamp) {

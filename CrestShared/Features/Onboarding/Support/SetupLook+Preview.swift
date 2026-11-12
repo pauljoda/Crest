@@ -21,9 +21,9 @@ extension SetupLook {
     // MARK: - Actions - Looks
 
     /// `branding` in this look: the sidebar mode, gradient angle and icon
-    /// style the core gives the look, keeping its colors and crest. A tinted
-    /// look keeps only the accent color, at the look's strength, which the
-    /// icon wears too.
+    /// style the core gives the look, keeping its colors, crest and texture.
+    /// A tinted look keeps only the accent color, at the look's strength,
+    /// which the icon wears too.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
         var look = branding
         look.themeMode = themeMode
@@ -38,7 +38,6 @@ extension SetupLook {
             look.bannerStrength = tint
             look.readabilityFade = 0
             look.keepsControlsReadable = false
-            look.showsTexture = false
             look.symbolColor = accent.contrasting
             look.textColorMode = .automatic
         }

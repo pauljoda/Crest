@@ -28,4 +28,25 @@ public sealed class StoredLookTests {
         Assert.Null(answers.Query(new RestoreLook("not a look")).Look);
         Assert.Null(answers.Query(new RestoreLook("""{"keepsControlsReadable":"yes"}""")).Look);
     }
+
+    [Fact]
+    public void ATextureReadsAlikeInBuildsWithAndWithoutItsStrength() {
+        var answers = new StandaloneAnswers();
+        var look = SpaceBranding.Normalized(SpaceHouse.Lion.Look with { TextureStrength = 0.4 });
+        var stored = (JsonObject)JsonNode.Parse(answers.Query(new StoreLook(look)).Text)!;
+        double? Texture(Action<JsonObject> change) {
+            var copy = (JsonObject)stored.DeepClone();
+            change(copy);
+            return answers.Query(new RestoreLook(copy.ToJsonString())).Look?.TextureStrength;
+        }
+
+        // A build that keeps only the switch reads it beside the strength.
+        Assert.True(stored["showsTexture"]!.GetValue<bool>());
+        Assert.Equal(0.4, Texture(_ => { }));
+        // Such a build stores the switch alone, which shows a full texture,
+        // and can turn it off, or on over a strength of none.
+        Assert.Equal(1, Texture(copy => copy.Remove("textureStrength")));
+        Assert.Equal(0, Texture(copy => copy["showsTexture"] = false));
+        Assert.Equal(1, Texture(copy => copy["textureStrength"] = 0));
+    }
 }

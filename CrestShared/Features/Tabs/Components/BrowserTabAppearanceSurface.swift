@@ -10,6 +10,7 @@ struct BrowserTabAppearanceSurface: ViewModifier {
     var selectionEmphasis = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.sidebarLayerDepth) private var depth
+    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         let radius = BrowserSidebarMetrics.layerCornerRadius(depth: depth)
@@ -25,9 +26,10 @@ struct BrowserTabAppearanceSurface: ViewModifier {
                     isSelected: isSelected, selectionEmphasis: selectionEmphasis,
                     isHovering: isHovering, cornerRadius: radius, isPressed: false,
                     showsRestingSurface: isPinned,
-                    selectedBorderColor: selectedAccent ? accent : CrestColor.selectedBorder,
+                    selectedBorderColor: selectedAccent ? accent : selectedBorder,
                     selectedBorderWidth: isPinned ? CrestLayout.pinnedAccentBorderWidth : 1,
-                    customSelectedFill: isPinned && fill > 0 && !reduceTransparency ? accent.opacity(fill * 0.5) : nil,
+                    customSelectedFill: isPinned
+                        ? (fill > 0 && !reduceTransparency ? accent.opacity(fill * 0.5) : nil) : selectionLift,
                     // Hover keeps its standard weight; the setting only decides how much of
                     // the accent is in it, from the neutral hover to the accent itself.
                     customHoverFill: hover > 0 && !reduceTransparency
@@ -43,5 +45,18 @@ struct BrowserTabAppearanceSurface: ViewModifier {
                     )
                 }
             }
+    }
+
+    /// The lift a selected row's dark glass takes, which a pin's own plate
+    /// and light glass need none of.
+    private var selectionLift: Color? {
+        colorScheme == .dark ? Color.white.opacity(CrestOpacity.darkSelectionLift) : nil
+    }
+
+    /// A selected row's edge: brighter over dark glass, where the standard
+    /// hairline disappears into a dark sidebar.
+    private var selectedBorder: Color {
+        guard !isPinned, colorScheme == .dark else { return CrestColor.selectedBorder }
+        return Color.white.opacity(CrestOpacity.darkSelectionBorder)
     }
 }

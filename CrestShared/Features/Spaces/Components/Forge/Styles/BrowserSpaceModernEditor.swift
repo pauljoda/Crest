@@ -1,36 +1,33 @@
 import SwiftUI
 
 /// A Space's look in the Modern style: a set of colors, whether they run as a
-/// gradient or stand solid, how strongly the sidebar wears them, which way a
-/// gradient runs, and a plain icon.
-/// Choosing colors gives a Space in a banner the modern gradient.
+/// gradient or stand solid, how strongly the sidebar wears them, how much
+/// grain lies over them, which way a gradient runs, and a plain icon.
+/// Choosing colors gives a Space in a banner the modern gradient. The last
+/// choice is a gradient of the person's own, whose two ends show under the
+/// color sets while it is chosen.
 struct BrowserSpaceModernEditor: View {
-    // MARK: - Types
-
-    /// Which way a gradient runs down the sidebar, by its angle.
-    private struct Direction: Hashable {
-        static let all = [
-            Direction(title: "Down", angle: 90), Direction(title: "Diagonal", angle: 45),
-            Direction(title: "Across", angle: 0),
-        ]
-
-        let title: LocalizedStringResource
-        let angle: Double
-
-        static func == (lhs: Direction, rhs: Direction) -> Bool { lhs.angle == rhs.angle }
-        func hash(into hasher: inout Hasher) { hasher.combine(angle) }
-    }
-
     // MARK: - Variables
 
     @Binding var branding: SpaceBranding
     @Binding var symbol: String
+    /// Whether the person chose the custom gradient, which shows its ends
+    /// before either one changes.
+    @State private var choosesCustom = false
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The color sets a modern Space may wear: the accents' own, each
     /// scheme's, then each template's sidebar colors.
     private var presets: [[BrandColor]] {
         SpaceAccent.all.map(\.legacyColors) + SpaceScheme.all.map { Array($0.look.colors.colors) }
             + SpaceHouse.all.map { Array($0.look.colors.colors) }
+    }
+
+    /// Whether the custom gradient is the choice: chosen, or already worn
+    /// in place of a color set.
+    private var showsCustom: Bool {
+        choosesCustom || (branding.themeMode == .gradient && !presets.contains(branding.colors.colors))
     }
 
     // MARK: - Actions - Drawing
@@ -43,12 +40,13 @@ struct BrowserSpaceModernEditor: View {
                 ForEach(Array(presets.enumerated()), id: \.offset) { _, preset in
                     swatch(preset)
                 }
-                BrowserSpaceCustomGradient(
-                    branding: $branding,
-                    isCustom: branding.themeMode == .gradient && !presets.contains(branding.colors.colors))
+                customSwatch
             }
             .padding(.vertical, CrestSpacing.extraSmall)
             .accessibilityIdentifier("space-modern-colors")
+            if showsCustom {
+                BrowserSpaceCustomGradientEnds(branding: $branding)
+            }
         } header: {
             CrestSettingsSectionHeading(title: "Colors")
         }
@@ -66,17 +64,9 @@ struct BrowserSpaceModernEditor: View {
                 .accessibilityIdentifier("space-modern-fill")
             }
             BrowserSpaceIntensityRow(branding: $branding)
+            BrowserSpaceTextureRow(branding: $branding)
             if branding.themeMode == .gradient {
-                CrestSettingRow("Direction", setting: direction.resettable("Direction")) {
-                    Picker("Direction", selection: direction.binding) {
-                        ForEach(Direction.all, id: \.self) { Text($0.title).tag(Optional($0)) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    #if os(macOS)
-                        .fixedSize()
-                    #endif
-                }
+                BrowserSpaceGradientAngleRow(angle: angle, color: branding.secondaryColor.color)
             }
         }
         BrowserSpaceIconSection(branding: $branding, symbol: $symbol)
@@ -84,10 +74,11 @@ struct BrowserSpaceModernEditor: View {
 
     private func swatch(_ preset: [BrandColor]) -> some View {
         CrestSelectableCard(
-            isSelected: branding.colors.colors == preset,
+            isSelected: !showsCustom && branding.colors.colors == preset,
             accessibilityLabel: Text(preset.map { String(localized: $0.title) }.joined(separator: ", ")),
             density: .swatch
         ) {
+            revealsCustom(false)
             $branding.editorUpdate { look in
                 look.colors = ColorPalette(colors: preset)
                 if look.themeMode == .banner && look.bannerPattern != .solid {
@@ -103,10 +94,40 @@ struct BrowserSpaceModernEditor: View {
         }
     }
 
+    /// The last choice after the color sets: the Space's own gradient once
+    /// it is chosen, and a plus before.
+    private var customSwatch: some View {
+        CrestSelectableCard(isSelected: showsCustom, accessibilityLabel: Text("Custom gradient"), density: .swatch) {
+            revealsCustom(true)
+        } content: {
+            Circle()
+                .fill(
+                    showsCustom
+                        ? AnyShapeStyle(
+                            LinearGradient(
+                                colors: branding.colors.colors.map(\.color), startPoint: .top, endPoint: .bottom))
+                        : AnyShapeStyle(CrestColor.chromeSurface)
+                )
+                .frame(width: 28, height: 28)
+                .overlay {
+                    Image(systemName: "plus")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .opacity(showsCustom ? 0 : 1)
+                }
+                .overlay { Circle().strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
+        }
+        .help(Text("Custom gradient"))
+        .accessibilityIdentifier("space-modern-custom-gradient")
+    }
+
     // MARK: - Actions - Settings
 
-    /// Whether the sidebar runs its colors as a gradient; otherwise it stands
-    /// solid in its background color.
+    /// Shows the custom gradient's ends under the color sets, or hides them.
+    private func revealsCustom(_ reveals: Bool) {
+        withAnimation(CrestMotion.disclosure.unlessReducingMotion(reduceMotion)) { choosesCustom = reveals }
+    }
+
     /// Whether the sidebar runs its colors as a gradient or stands solid,
     /// or neither while it wears a patterned banner.
     private var fill: CrestSettingValue<Bool?> {
@@ -126,75 +147,50 @@ struct BrowserSpaceModernEditor: View {
             default: true)
     }
 
-    private var direction: CrestSettingValue<Direction?> {
+    /// Which way the gradient runs, from the angle Modern starts it at.
+    private var angle: CrestSettingValue<Double> {
         CrestSettingValue(
             Binding(
-                get: { Direction.all.first { $0.angle == branding.gradientAngle } },
-                set: { chosen in
-                    guard let chosen else { return }
+                get: { branding.gradientAngle },
+                set: { angle in
                     $branding.editorUpdate {
-                        $0.gradientAngle = chosen.angle
+                        $0.gradientAngle = angle
                         $0.hasCustomAppearance = true
                     }
                 }),
-            default: Direction.all.first)
+            default: SetupLook.modern.gradientAngle ?? 0)
     }
 }
 
-/// The last choice after the color sets: a gradient of the person's own,
-/// from one color to another, each chosen with the system color picker.
-private struct BrowserSpaceCustomGradient: View {
+/// The two ends of a Space's own gradient, each chosen with the system color
+/// picker, in a row under the color sets. They sit on the page rather than
+/// in a popover, which the system picker would close as it took focus.
+private struct BrowserSpaceCustomGradientEnds: View {
     // MARK: - Variables
 
     @Binding var branding: SpaceBranding
-    let isCustom: Bool
-    @State private var isChoosing = false
 
     // MARK: - Actions - Drawing
 
     var body: some View {
-        CrestSelectableCard(isSelected: isCustom, accessibilityLabel: Text("Custom gradient"), density: .swatch) {
-            isChoosing = true
-        } content: {
-            Circle()
-                .fill(isCustom ? AnyShapeStyle(gradient) : AnyShapeStyle(CrestColor.chromeSurface))
-                .frame(width: 28, height: 28)
-                .overlay {
-                    Image(systemName: "plus")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .opacity(isCustom ? 0 : 1)
-                }
-                .overlay { Circle().strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
-        }
-        .help(Text("Custom gradient"))
-        .accessibilityIdentifier("space-modern-custom-gradient")
-        .crestPopover(isPresented: $isChoosing) {
-            VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-                Text("Custom gradient").font(.headline)
-                HStack(spacing: CrestSpacing.large) {
-                    end("From", 0)
-                    end("To", 1)
-                }
+        CrestSettingRow("Custom gradient") {
+            HStack(spacing: CrestSpacing.large) {
+                end("From", 0)
+                end("To", 1)
             }
-            .padding(14)
-            .fixedSize()
         }
+        .accessibilityIdentifier("space-modern-custom-gradient-ends")
     }
-
-    private var gradient: LinearGradient {
-        LinearGradient(colors: branding.colors.colors.map(\.color), startPoint: .top, endPoint: .bottom)
-    }
-
-    // MARK: - Actions - Settings
 
     /// One end of the gradient as a round swatch, named under it.
     private func end(_ title: LocalizedStringResource, _ index: Int) -> some View {
         VStack(spacing: CrestSpacing.extraSmall) {
-            CrestCustomColorSwatch(title: title, color: color(at: index), isSelected: isCustom)
+            CrestCustomColorSwatch(title: title, color: color(at: index), isSelected: true, tint: CrestBrandTheme.line)
             Text(title).font(.caption).foregroundStyle(.secondary)
         }
     }
+
+    // MARK: - Actions - Settings
 
     /// One end of the gradient: its first color, or its last.
     private func color(at index: Int) -> Binding<Color> {

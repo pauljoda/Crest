@@ -12,8 +12,8 @@ enum BrowserSidebarSelection {
     /// a folder, or the members of a split. It follows the core's outline:
     /// pinned tabs, the saved section while it is open, then the open tabs;
     /// the inside of an open folder after its row, and the rows a collapsed
-    /// folder keeps on screen: the folders on the way to its kept tab, then
-    /// the tab's row. A locked Space offers none.
+    /// folder keeps on screen: the rows of its kept tabs, and the folders on
+    /// the way to them. A locked Space offers none.
     static func itemUnits(in browser: BrowserStore) -> [[BrowserSelectionItemID]] {
         guard let space = browser.spaceModel(browser.selectedSpaceID) else { return [] }
         let interaction = browser.interactionObserver as? BrowserSidebarInteractionState
@@ -24,18 +24,17 @@ enum BrowserSidebarSelection {
         func unit(of row: SidebarRow) -> [BrowserSelectionItemID] {
             row.kind.groupsTabs ? row.members.map(BrowserSelectionItemID.tab) : [.tab(row.id)]
         }
-        func walk(_ list: SidebarListModel, keeping kept: UUID) {
-            guard
-                let row = list.rows.first(where: { row in
-                    row.kind.opensList ? space.tabIDs(inFolder: row.id).contains(kept) : row.members.contains(kept)
-                })
-            else { return }
-            guard row.kind.opensList else {
-                units.append(unit(of: row))
-                return
+        func walk(_ list: SidebarListModel, keeping kept: Set<UUID>) {
+            for row in list.rows {
+                let tabIDs = row.kind.opensList ? space.tabIDs(inFolder: row.id) : row.members
+                guard !kept.isDisjoint(with: tabIDs) else { continue }
+                guard row.kind.opensList else {
+                    units.append(unit(of: row))
+                    continue
+                }
+                units.append([.folder(row.id)])
+                walk(space.sidebar.inside(row.id), keeping: kept)
             }
-            units.append([.folder(row.id)])
-            walk(space.sidebar.inside(row.id), keeping: kept)
         }
         func walk(_ list: SidebarListModel) {
             for row in list.rows {
@@ -49,10 +48,12 @@ enum BrowserSidebarSelection {
                     walk(inside)
                     continue
                 }
-                let kept = interaction?.collapsedFolderVisibility(
-                    for: BrowserFolderRuntimeAssignment(folderID: row.id, spaceID: space.id, profileID: space.profileID)
-                ).state.keptTabID
-                if let kept { walk(inside, keeping: kept) }
+                let kept =
+                    interaction?.collapsedFolderVisibility(
+                        for: BrowserFolderRuntimeAssignment(
+                            folderID: row.id, spaceID: space.id, profileID: space.profileID)
+                    ).state.keptTabIDs ?? []
+                if !kept.isEmpty { walk(inside, keeping: kept) }
             }
         }
         walk(space.pinSource.sidebar.section(.pinned))
