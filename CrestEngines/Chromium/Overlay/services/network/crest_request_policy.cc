@@ -101,6 +101,9 @@ constexpr Service kServices[] = {
     {"crest_web_store_download", "clients2.google.com"},
     {"crest_web_store_download", "clients2.googleusercontent.com"},
     {"crest_web_store_download", "gvt1.com"},
+    // The service redirects a private or trusted-tester item's download to
+    // the store, which serves it to an account in the Space that can see it.
+    {"crest_web_store_download", "chrome.google.com"},
 };
 
 // Registrable names Google operates, under any public suffix: google.com
