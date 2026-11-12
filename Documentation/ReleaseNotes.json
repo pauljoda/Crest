@@ -5305,6 +5305,10 @@
     "cold-launch-link-opens-in-front": {
       "category": "fixed",
       "message": "On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them."
+    },
+    "chromium-private-web-store-redirect": {
+      "category": "fixed",
+      "message": "On Chromium, a private or trusted-tester Chrome Web Store extension now downloads in a Space signed in to an account that can see it, instead of failing with \"Couldn't download this extension.\""
     }
   }
 }
