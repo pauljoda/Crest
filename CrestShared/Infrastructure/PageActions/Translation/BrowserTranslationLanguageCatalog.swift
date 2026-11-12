@@ -67,17 +67,13 @@ final class BrowserTranslationLanguageCatalog {
             for worker in 0..<workerCount {
                 group.addTask {
                     guard !Task.isCancelled else { return [] }
-                    // Reuse setup while keeping the non-Sendable checkers within one task.
-                    let lowLatency = BrowserTranslationPreference.languageAvailability(lowLatency: true)
-                    let standard = BrowserTranslationPreference.languageAvailability(lowLatency: false)
                     var installed: Set<Pair> = []
                     for index in stride(from: worker, to: pairs.count, by: workerCount) {
                         guard !Task.isCancelled else { return installed }
                         let pair = pairs[index]
-                        let availability =
-                            languages.usesLowLatency(from: pair.source, to: pair.target) ? lowLatency : standard
-                        let status = await availability.status(
-                            from: .init(identifier: pair.source), to: .init(identifier: pair.target))
+                        let status = await BrowserTranslationPreference.status(
+                            from: .init(identifier: pair.source), to: .init(identifier: pair.target),
+                            lowLatency: languages.usesLowLatency(from: pair.source, to: pair.target))
                         if status == .installed { installed.insert(pair) }
                     }
                     return installed
