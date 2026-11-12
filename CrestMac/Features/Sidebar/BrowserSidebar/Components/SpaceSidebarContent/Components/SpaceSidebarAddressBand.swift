@@ -63,6 +63,7 @@ struct SpaceSidebarAddressBand: View {
             submit: submitAddress,
             morphNamespace: commandSurfaceNamespace,
             spaceID: space.id,
+            spaceHasAddress: selectedTab?.url?.isEmpty == false,
             commandPaletteHandoff: commandPaletteHandoff,
             branding: space.settings.look
         )

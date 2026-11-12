@@ -3,7 +3,8 @@ import SwiftUI
 /// A Space as the Crest window shows it: its field across the whole window,
 /// its sidebar on the left with the Space's name among its tabs, and the page
 /// card inset beside it, measured as the real window is. The name is edited
-/// in place where the preview is given it.
+/// in place where the preview is given it. Given how the switcher shows
+/// Spaces, its bottom bar shows the Space among three others in that look.
 struct BrowserOnboardingWindowPreview<Page: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     let branding: SpaceBranding
@@ -11,6 +12,10 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
     let name: String
     var editableName: Binding<String>? = nil
     var showsNameHint = false
+    /// How the switcher shows the Spaces, or nil to show this Space alone.
+    var spaceIcons: BrowserSpaceIconDisplay? = nil
+    /// The look the other Spaces in the switcher wear, or nil for their own.
+    var companionLook: SetupLook? = nil
     @ViewBuilder let page: Page
 
     @State private var favicons = FaviconAssets()
@@ -148,10 +153,14 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
         HStack {
             Image(systemName: "arrow.down.circle")
             Spacer()
-            BrowserSpaceIdentityIcon(space: space, size: 22)
-                .frame(width: 22, height: 22)
-                .padding(5)
-                .background(.primary.opacity(0.12), in: .rect(cornerRadius: 8, style: .continuous))
+            if let spaceIcons {
+                switcher(space, icons: spaceIcons)
+            } else {
+                BrowserSpaceIdentityIcon(space: space, size: 22)
+                    .frame(width: 22, height: 22)
+                    .padding(5)
+                    .background(.primary.opacity(0.12), in: .rect(cornerRadius: 8, style: .continuous))
+            }
             Spacer()
             Image(systemName: "archivebox")
         }
@@ -160,6 +169,46 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
         .padding(.horizontal, 14)
         .frame(height: 44)
         .accessibilityHidden(true)
+    }
+}
+
+extension BrowserOnboardingWindowPreview {
+    // MARK: - Actions - Switcher
+
+    /// The switcher with this Space shown, two Spaces in its group beside it
+    /// and one on its own.
+    fileprivate func switcher(_ space: SpaceModel, icons: BrowserSpaceIconDisplay) -> some View {
+        let shades: [BrowserSpaceDot.Shade] = [.shown, .grouped, .grouped, .other]
+        let members = [space] + companions
+        return HStack(spacing: 0) {
+            ForEach(Array(members.enumerated()), id: \.offset) { index, member in
+                Group {
+                    if icons.showsDots {
+                        BrowserSpaceDot(shade: shades[min(index, shades.count - 1)], isLocked: false, scale: 1.2)
+                    } else {
+                        BrowserSpaceIdentityIcon(space: member, size: 20)
+                            .frame(width: 20, height: 20)
+                    }
+                }
+                .frame(width: 30, height: 30)
+                .background(
+                    .primary.opacity(index == 0 && !icons.showsDots ? 0.14 : 0),
+                    in: .rect(cornerRadius: 7, style: .continuous))
+            }
+        }
+        .padding(3)
+        .background(.primary.opacity(icons.showsDots ? 0 : 0.07), in: .rect(cornerRadius: 9, style: .continuous))
+    }
+
+    /// Three more Spaces, each wearing another template in the companion
+    /// look.
+    private var companions: [SpaceModel] {
+        let seed = SessionState.Seed.showcase.spaces[0]
+        let symbols = ["briefcase.fill", "book.fill", "leaf.fill"]
+        return zip(SpaceHouse.all.dropFirst(), symbols).map { house, symbol in
+            let look = companionLook?.applying(to: house.look) ?? house.look
+            return SpaceModel.detached(seed.wearing(look, symbol: symbol, name: String(localized: house.title)))
+        }
     }
 }
 

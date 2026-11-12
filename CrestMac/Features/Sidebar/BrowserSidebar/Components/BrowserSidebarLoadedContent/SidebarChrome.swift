@@ -13,8 +13,6 @@ struct SidebarChrome: View {
     let commandSurfaceNamespace: Namespace.ID
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
         if let space = selectedSpace {
             let isLocked = context.spaceAccess.isLocked(space)
@@ -25,19 +23,11 @@ struct SidebarChrome: View {
                         pages: pages, browser: context.browser, showHistory: context.chromeActions.presentHistory),
                     capabilities: context.capabilities
                 )
-                .contentTransition(.opacity)
                 .background {
                     // Only the empty navigation-strip background acts as the
                     // title bar. Controls and tab gestures keep their input.
                     BrowserWindowTitleBarSurface()
                 }
-                // Another tab's history shows at once, as every browser switches
-                // tabs; a fade on each switch redraws the strip every frame.
-                .animation(nil, value: pages.activeTabID)
-                .animation(
-                    SpacePagerSettlement.standardAnimation.unlessReducingMotion(reduceMotion),
-                    value: [pages.canGoBack, pages.canGoForward, pages.activePage?.live.isLoading == true]
-                )
 
                 if context.utilityPresentation.surface == nil {
                     SpaceSidebarAddressBand(
@@ -60,6 +50,7 @@ struct SidebarChrome: View {
                             context.utilityPresentation.setSiteControlContextMenuPresented($0)
                         }
                     )
+                    .modifier(DeviceSurfaceAppearance())
                 }
             }
             .modifier(SpaceColorScheme(branding: space.settings.look))

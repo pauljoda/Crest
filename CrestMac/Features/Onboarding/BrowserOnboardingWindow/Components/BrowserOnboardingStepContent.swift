@@ -43,7 +43,12 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
                 withAnimation(motion(CrestMotion.onboardingProgress)) { flow.chooseLook(look) }
             },
             back: back,
-            continueSetup: continueSetup
+            continueSetup: {
+                // The look chosen here is the style Crest's customization
+                // shows from now on.
+                flow.browser.adoptCustomizationStyle(.matching(flow.look))
+                continueSetup()
+            }
         )
     }
 

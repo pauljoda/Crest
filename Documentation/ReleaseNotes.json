@@ -5305,6 +5305,10 @@
     "cold-launch-link-opens-in-front": {
       "category": "fixed",
       "message": "On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them."
+    },
+    "customization-styles": {
+      "category": "new",
+      "message": "Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read."
     }
   }
 }

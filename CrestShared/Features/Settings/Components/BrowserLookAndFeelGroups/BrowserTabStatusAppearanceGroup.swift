@@ -4,8 +4,16 @@ import SwiftUI
 /// shared, on every Space on this device.
 struct BrowserTabStatusAppearanceGroup: View {
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
+    @Environment(\.browserAppearanceSettingFilter) private var filter
 
     var body: some View {
+        let settings = filter.settings(rows)
+        if !settings.isEmpty {
+            group(settings: settings)
+        }
+    }
+
+    private func group(settings: [CrestResettableSetting]) -> some View {
         CrestSettingsGroup("Tab status", settings: settings) {
             CrestSettingRow("Status", setting: style.resettable("Status")) {
                 Picker("Status", selection: style.binding) {
@@ -17,10 +25,12 @@ struct BrowserTabStatusAppearanceGroup: View {
                 .fixedSize()
                 .accessibilityLabel("Status")
             }
+            .browserAppearanceSetting(.tabStatus)
             CrestSettingRow("Audio visualizer", setting: visualizer.resettable("Audio visualizer")) {
                 Toggle("Audio visualizer", isOn: visualizer.binding)
                     .labelsHidden()
             }
+            .browserAppearanceSetting(.audioVisualizer)
         }
     }
 
@@ -34,7 +44,7 @@ struct BrowserTabStatusAppearanceGroup: View {
             default: BrowserLookAndFeelDefaults.tabs.showsAudioVisualizer)
     }
 
-    private var settings: [CrestResettableSetting] {
-        [style.resettable("Status"), visualizer.resettable("Audio visualizer")]
+    private var rows: [(BrowserAppearanceSetting, CrestResettableSetting)] {
+        [(.tabStatus, style.resettable("Status")), (.audioVisualizer, visualizer.resettable("Audio visualizer"))]
     }
 }

@@ -13,7 +13,15 @@ struct BrowserDefaultPageZoomSettingsSection: View {
     var space: BrowserSpaceAppearance? = nil
     var showsPreview = false
 
+    @Environment(\.browserAppearanceSettingFilter) private var filter
+
     var body: some View {
+        if filter.shows(.defaultPageZoom) {
+            group
+        }
+    }
+
+    private var group: some View {
         CrestSettingsGroup(
             "Page",
             settings: [zoom.resettable("Default page zoom")]

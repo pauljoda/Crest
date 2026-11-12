@@ -36,6 +36,9 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
         trackFillOpacity: CrestSpaceIconPickerMetrics.trackFillOpacity,
         trackBorderOpacity: CrestSpaceIconPickerMetrics.trackBorderOpacity, tintsSelection: true,
         selectionFillOpacity: CrestSpaceIconPickerMetrics.selectionFillOpacity)
+    /// How wide a dot's segment is under a pointer, and under a finger.
+    private static let pointerDotSegmentWidth: CGFloat = 16
+    private static let touchDotSegmentWidth: CGFloat = 26
     static let touch = CrestSpaceIconPickerStyle(
         name: "touch", height: 48, trackPadding: CrestSpaceIconPickerMetrics.trackPadding, fixedCornerRadius: nil,
         minimumSegmentWidth: 52, smallestSegment: CGSize(width: 44, height: 42), overflowButtonWidth: 44,
@@ -59,12 +62,12 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
     /// The smallest a segment gets however small its crest is drawn. Touch
     /// keeps its full height and the width a finger needs; a pointer's
     /// segments shrink with their crests.
-    let smallestSegment: CGSize
+    private(set) var smallestSegment: CGSize
 
     let overflowButtonWidth: CGFloat
 
     /// Whether the segments widen to share the whole width the picker has.
-    let fillsSegments: Bool
+    private(set) var fillsSegments: Bool
 
     let trackFillOpacity: Double
     let trackBorderOpacity: Double
@@ -128,6 +131,17 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
         style.height = segmentHeight + 2 * style.trackPadding
         style.fixedCornerRadius = fixedCornerRadius.map { $0 * shape }
         style.minimumSegmentWidth = max(smallestSegment.width, Self.evenPoints(minimumSegmentWidth * scale))
+        return style
+    }
+
+    /// This style for dots: narrow segments packed together in the middle,
+    /// a pointer's as wide as a dot's room and a finger's a little wider.
+    func dotted() -> CrestSpaceIconPickerStyle {
+        var style = self
+        let width = smallestSegment.width > 0 ? Self.touchDotSegmentWidth : Self.pointerDotSegmentWidth
+        style.minimumSegmentWidth = width
+        style.smallestSegment.width = min(smallestSegment.width, width)
+        style.fillsSegments = false
         return style
     }
 

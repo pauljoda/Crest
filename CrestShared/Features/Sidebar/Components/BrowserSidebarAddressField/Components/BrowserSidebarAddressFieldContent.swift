@@ -10,6 +10,8 @@ struct BrowserSidebarAddressFieldContent<
     private let leadingAccessory: LeadingAccessory
     private let trailingAccessory: TrailingAccessory
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     init(
         configuration: BrowserSidebarAddressFieldConfiguration,
         @ViewBuilder leadingAccessory: () -> LeadingAccessory,
@@ -21,8 +23,13 @@ struct BrowserSidebarAddressFieldContent<
     }
 
     var body: some View {
+        // The field stays put as it shows another Space: the address and
+        // the site's controls pop out and the new Space's pop in, unless
+        // both Spaces show only the prompt.
         HStack(spacing: configuration.metrics.contentSpacing) {
-            leadingControl
+            if configuration.showsLeadingAccessory || configuration.showsPlaceholderGlyph {
+                BrowserAddressSwap(swapID: configuration.swapID) { leadingControl }
+            }
 
             BrowserAddressContent(
                 text: configuration.text,
@@ -36,6 +43,7 @@ struct BrowserSidebarAddressFieldContent<
                 summaryAccessibilityIdentifier: configuration
                     .addressDisplayAccessibilityIdentifier,
                 prompt: configuration.prompt,
+                swapID: configuration.swapID,
                 submit: configuration.submit
             )
 
@@ -47,9 +55,21 @@ struct BrowserSidebarAddressFieldContent<
             }
 
             if configuration.showsTrailingAccessory {
-                trailingAccessory
+                BrowserAddressSwap(swapID: configuration.swapID) { trailingAccessory }
             }
         }
+        // The site's controls can follow the Space a moment later, once its
+        // page is ready. They pop with the address's timing, and it moves
+        // aside for them as smoothly.
+        .animation(siteControlsAnimation, value: configuration.hasActiveSite)
+        .animation(CrestMotion.addressSwap.unlessReducingMotion(reduceMotion), value: configuration.swapID)
+    }
+
+    /// The site's controls popping in as the address does, or out as the
+    /// old address does.
+    private var siteControlsAnimation: Animation? {
+        let animation = configuration.hasActiveSite ? CrestMotion.addressSwapIn : CrestMotion.addressSwapOut
+        return animation.unlessReducingMotion(reduceMotion)
     }
 
     @ViewBuilder
