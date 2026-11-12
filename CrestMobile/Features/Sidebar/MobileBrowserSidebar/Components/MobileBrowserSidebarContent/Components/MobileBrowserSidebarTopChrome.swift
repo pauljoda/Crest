@@ -52,6 +52,7 @@ struct MobileBrowserSidebarTopChrome: View {
                         }
                     }
                 )
+                .modifier(DeviceSurfaceAppearance())
                 .padding(.horizontal, BrowserSidebarMetrics.layerInset)
                 .padding(.bottom, 4)
             }
@@ -165,6 +166,7 @@ struct MobileBrowserSidebarTopChrome: View {
             submit: configuration.submitAddress,
             morphNamespace: configuration.compactChromeNamespace,
             spaceID: selectedSpaceID,
+            spaceHasAddress: spaceHasAddress,
             commandPaletteHandoff: configuration.commandPaletteHandoff,
             branding: configuration.context.browser.shownSpace.map(\.settings.look)
         )
@@ -176,6 +178,14 @@ struct MobileBrowserSidebarTopChrome: View {
             pages: configuration.pages,
             spaceAccess: configuration.context.spaceAccess
         )
+    }
+
+    /// Whether the selected Space's shown tab has an address of its own,
+    /// rather than the prompt.
+    private var spaceHasAddress: Bool {
+        let browser = configuration.context.browser
+        guard let tabID = browser.selectedTabID(in: selectedSpaceID) else { return false }
+        return browser.spaceModel(selectedSpaceID)?.shownTab(tabID)?.url?.isEmpty == false
     }
 
     private var displayedURL: URL? {

@@ -27,9 +27,15 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     }
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         strip
+            // Each control fades between enabled and disabled rather than
+            // flipping, on another tab or Space too. Reload fades to stop on
+            // its own.
+            .contentTransition(.opacity)
+            .animation(CrestMotion.controlState.unlessReducingMotion(reduceMotion), value: state)
             .labelStyle(.iconOnly)
             .buttonStyle(
                 CrestChromeButtonStyle(controlSize: metrics.controlSize)
@@ -76,6 +82,12 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
             trailingAccessory
         }
+    }
+
+    /// Which controls are enabled: where history goes, and whether there is
+    /// a page to reload.
+    private var state: [Bool] {
+        [port.canGoBack(), port.canGoForward(), port.hasActivePage()]
     }
 
     private var verticalPadding: CGFloat {

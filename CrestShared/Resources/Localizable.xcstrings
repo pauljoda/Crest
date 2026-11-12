@@ -1734,6 +1734,9 @@
     "Accounts" : {
 
     },
+    "Across" : {
+
+    },
     "Action" : {
 
     },
@@ -3881,6 +3884,9 @@
         }
       }
     },
+    "Colors" : {
+
+    },
     "Combine in Split View" : {
 
     },
@@ -4959,6 +4965,9 @@
     "Custom accent" : {
 
     },
+    "Custom color" : {
+
+    },
     "Custom Color" : {
       "localizations" : {
         "ar" : {
@@ -4968,6 +4977,9 @@
           }
         }
       }
+    },
+    "Custom gradient" : {
+
     },
     "Customize" : {
       "localizations" : {
@@ -5379,6 +5391,9 @@
     "Dim the page behind Peek" : {
 
     },
+    "Direction" : {
+
+    },
     "Direwolf" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5467,6 +5482,9 @@
     "Done Customizing" : {
 
     },
+    "Dots" : {
+
+    },
     "Double Line" : {
       "extractionState" : "manual"
     },
@@ -5490,6 +5508,9 @@
           }
         }
       }
+    },
+    "Down" : {
+
     },
     "down arrow" : {
       "localizations" : {
@@ -6297,6 +6318,9 @@
     "Files & Folders" : {
 
     },
+    "Fill" : {
+
+    },
     "Fills the address without opening it. Press Tab or Right Arrow to accept." : {
 
     },
@@ -6840,6 +6864,9 @@
     "Help" : {
 
     },
+    "Heraldic (Full)" : {
+
+    },
     "Heraldry" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7146,6 +7173,9 @@
 
     },
     "Icon Type" : {
+
+    },
+    "Icons" : {
 
     },
     "Identity" : {
@@ -12815,6 +12845,9 @@
     "Silver" : {
 
     },
+    "Simple" : {
+
+    },
     "Simple Symbol" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13049,6 +13082,9 @@
       }
     },
     "Space icon size" : {
+
+    },
+    "Space icons" : {
 
     },
     "Space in review" : {
@@ -13572,6 +13608,9 @@
           }
         }
       }
+    },
+    "Style" : {
+
     },
     "Sub-Space of %@" : {
       "localizations" : {

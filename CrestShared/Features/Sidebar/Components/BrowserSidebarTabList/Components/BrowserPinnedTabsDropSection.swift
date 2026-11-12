@@ -55,6 +55,7 @@ private struct BrowserPinnedTabsGrid: View {
             promotionNamespace: context.promotionNamespace(for: .pinned),
             capabilities: context.capabilities
         )
+        .modifier(DeviceSurfaceAppearance())
     }
 }
 

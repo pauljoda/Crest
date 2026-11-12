@@ -25,6 +25,9 @@ struct BrowserReloadControl: View {
     @State private var reloadPulse = 0
     @State private var isPlayingReloadFeedback = false
     @State private var isClearingSiteData = false
+    /// Whether the control shows stop, once a load has run long enough to
+    /// be seen.
+    @State private var showsStop = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -89,11 +92,27 @@ struct BrowserReloadControl: View {
                 : Color.secondary.opacity(CrestOpacity.controlDisabledForeground)
         )
         .disabled(!isEnabled)
+        .task(id: isLoading) {
+            await showStop(isLoading)
+        }
     }
 
     /// Stop while a load runs, unless the reload feedback is still turning.
     private var symbolName: String {
-        isLoading && !isPlayingReloadFeedback ? "xmark" : "arrow.clockwise"
+        showsStop && !isPlayingReloadFeedback ? "xmark" : "arrow.clockwise"
+    }
+
+    /// Fades to stop once a load has run for `CrestMotion.stopSymbolDelay`,
+    /// and back to reload as soon as it ends.
+    private func showStop(_ loading: Bool) async {
+        if loading {
+            try? await Task.sleep(for: CrestMotion.stopSymbolDelay)
+            guard !Task.isCancelled else { return }
+        }
+        guard showsStop != loading else { return }
+        withAnimation(CrestMotion.controlState.unlessReducingMotion(reduceMotion)) {
+            showsStop = loading
+        }
     }
 
     private func performPrimaryAction() {

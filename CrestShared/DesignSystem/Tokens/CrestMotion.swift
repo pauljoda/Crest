@@ -29,6 +29,7 @@ enum CrestMotion {
     static let developerPressFeedback: TimeInterval = 0.16
     /// Hover and selection changes on compact interactive surfaces.
     static let surfaceTransition: TimeInterval = 0.12
+    static let styleChangeTransition: TimeInterval = 0.35
     /// Inserting, removing, or reordering items in a collection.
     static let collectionTransition: TimeInterval = 0.22
     /// Morphing the content represented by an active drag preview.
@@ -79,6 +80,18 @@ enum CrestMotion {
     static let contentNavigationTransition: TimeInterval = 0.42
     /// Settling an interactive horizontal Space swipe.
     static let spaceSwipeTransition: TimeInterval = 0.32
+    /// An address field's contents popping out as the field shows another
+    /// Space.
+    static let addressSwapOutTransition: TimeInterval = 0.14
+    /// The next Space's contents popping into the field.
+    static let addressSwapInTransition: TimeInterval = 0.36
+    /// A control fading between enabled and disabled, or between two of its
+    /// symbols, such as reload and stop.
+    static let controlStateTransition: TimeInterval = 0.25
+    /// How long a load runs before reload turns into stop, so a load that is
+    /// over at once, such as one a change of Space starts, never flashes
+    /// stop.
+    static let stopSymbolDelay: Duration = .milliseconds(200)
     /// Shaking a control to show a swipe has nowhere further to go.
     static let boundaryShakeTransition: TimeInterval = 0.36
     /// Fading a page in where Reduce Motion stills a slide.
@@ -157,6 +170,9 @@ enum CrestMotion {
         .smooth(duration: loadingProgressTransition)
     }
     static var selection: Animation { .easeInOut(duration: selectionTransition) }
+    /// A change of customization style or Space icons, cross-fading the
+    /// looks and marks it changes.
+    static var styleChange: Animation { .easeInOut(duration: styleChangeTransition) }
     static var dragSource: Animation { .snappy(duration: dragSourceTransition) }
     static var scrollAlignment: Animation {
         .snappy(duration: scrollAlignmentTransition, extraBounce: 0)
@@ -167,6 +183,17 @@ enum CrestMotion {
     static var spaceSwipe: Animation {
         .snappy(duration: spaceSwipeTransition, extraBounce: 0)
     }
+    /// The change of Space that swaps an address field's contents, moving
+    /// what stays, such as the address as the controls beside it come and
+    /// go.
+    static var addressSwap: Animation { .snappy(duration: addressSwapInTransition) }
+    /// The old Space's address and site controls popping out of the field.
+    static var addressSwapOut: Animation { .easeIn(duration: addressSwapOutTransition) }
+    /// The new Space's popping in, starting as the old ones finish.
+    static var addressSwapIn: Animation {
+        .spring(duration: addressSwapInTransition, bounce: 0.25).delay(addressSwapOutTransition * 0.7)
+    }
+    static var controlState: Animation { .easeInOut(duration: controlStateTransition) }
     /// The fade Reduce Motion keeps in place of a slide. Unlike the other
     /// roles it is meant for Reduce Motion, so it is used as it is.
     static var reducedMotionFade: Animation {

@@ -22,6 +22,10 @@ struct BrowserAddressContent: View {
     /// of the address outweigh those on the other. Without it the text centers
     /// between the controls beside it.
     var centeringField: NamedCoordinateSpace?
+    /// What the shown address swaps on, such as the Space it belongs to.
+    /// Another value pops the shown address out and the new one in; an
+    /// address being edited stays.
+    var swapID: UUID?
     let submit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -37,7 +41,7 @@ struct BrowserAddressContent: View {
             if isEditing || isFocused {
                 addressEditor
             } else {
-                addressSummary
+                BrowserAddressSwap(swapID: swapID) { addressSummary }
             }
         }
         .frame(maxWidth: .infinity)

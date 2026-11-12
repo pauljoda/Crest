@@ -41,7 +41,7 @@ struct BrowserSpaceSwitcherCompactStrip: View {
                     trailingUtilityWidth: utilityWidth(at: .trailing)
                 )
             )
-            let style = CrestSpaceIconPickerStyle.compact.scaled(by: scale)
+            let style = baseStyle.scaled(by: scale)
             let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
                 availableWidth: geometry.size.width,
                 spaceCount: spaces.count,
@@ -94,7 +94,12 @@ struct BrowserSpaceSwitcherCompactStrip: View {
 
     /// The scale these Spaces are drawn at in a picker `width` wide.
     private func fittedScale(in width: CGFloat) -> CGFloat {
-        iconSizing.scale(chosen: chosenIconScale, spaceCount: spaces.count, style: .compact, width: width)
+        iconSizing.scale(chosen: chosenIconScale, spaceCount: spaces.count, style: baseStyle, width: width)
+    }
+
+    /// The pointer's picker style, packed together when Space icons are dots.
+    private var baseStyle: CrestSpaceIconPickerStyle {
+        BrowserDeviceAppearanceStore.shared.spaceIcons.showsDots ? .compact.dotted() : .compact
     }
 
     // MARK: - Actions - Accessories

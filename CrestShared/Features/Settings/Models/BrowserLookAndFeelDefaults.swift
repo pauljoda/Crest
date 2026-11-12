@@ -7,6 +7,7 @@ import Foundation
 /// seeds a control and the migration code that seeds the store.
 enum BrowserLookAndFeelDefaults {
     static let appearanceMode = BrowserAppearanceMode.standard
+    static let customizationStyle = BrowserCustomizationStyle.standard
     static let darkSpaceDimming = 0.0
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
     static let sidebarOnRight = false
@@ -28,13 +29,15 @@ enum BrowserLookAndFeelDefaults {
     static let foldersIconOnly = false
     static let foldersTintTitle = false
 
-    /// Puts every device-wide appearance choice this pane owns back.
+    /// Puts every device-wide appearance choice this pane owns back, but the
+    /// customization style, which restyles Spaces and keeps its own Reset.
     ///
     /// Platform-only choices — window transparency, Space page motion, and the
     /// app icon — belong to the shell that offers them and are reset alongside
     /// this from ``BrowserLookAndFeelResetFooter``.
     @MainActor
     static func resetAll(appearance: BrowserDeviceAppearanceStore = .shared) {
+        appearance.chosenSpaceIcons = nil
         appearance.mode = appearanceMode
         appearance.darkSpaceDimming = darkSpaceDimming
         appearance.cornerRadius = cornerRadius

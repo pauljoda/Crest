@@ -94,11 +94,14 @@ struct MobileBrowserOnboardingView: View {
             featureCloseAction: featureCloseAction,
             setup: setup,
             selectedSpaceID: $selectedSpaceID,
+            look: flow?.look ?? .heraldic,
             errorMessage: errorMessage,
             opensGettingStarted: flow?.opensGuide == true,
             welcomePrimaryAction: handleWelcomeAction,
             welcomeSetupWithoutCloudAction: setUpWithoutCloud,
             advance: advance,
+            chooseLook: chooseLook,
+            adoptStyle: { browser.adoptCustomizationStyle($0) },
             setupSecondaryAction: back,
             finish: completeSetup,
             close: close,
@@ -145,6 +148,13 @@ struct MobileBrowserOnboardingView: View {
     private func setUpWithoutCloud() {
         cloudWait.setUpWithoutCloud()
         advance()
+    }
+
+    /// Gives the Spaces setup makes `look`.
+    private func chooseLook(_ look: SetupLook) {
+        withAnimation(CrestMotion.selection.unlessReducingMotion(reduceMotion)) {
+            _ = try? browser.core.send(ChooseSetupLook(look: look))
+        }
     }
 
     /// Goes on to the step the core says follows this one.

@@ -11,6 +11,9 @@ struct PlatformSpacePickerPresentation: NSViewRepresentable {
     let selectedSpaceID: UUID?
     let frames: [UUID: CGRect]
     let selectionTint: Color?
+    /// Whether the selection and a group's outline are drawn. Dots show both
+    /// by their shade instead, while the lane still follows the pager.
+    var drawsHighlight = true
 
     func makeNSView(context: Context) -> SpacePickerPresentationView {
         SpacePickerPresentationView()
@@ -19,7 +22,8 @@ struct PlatformSpacePickerPresentation: NSViewRepresentable {
     func updateNSView(_ view: SpacePickerPresentationView, context: Context) {
         view.update(
             presentation: presentation, style: style, spaces: spaces,
-            selectedSpaceID: selectedSpaceID, frames: frames, selectionTint: selectionTint)
+            selectedSpaceID: selectedSpaceID, frames: frames, selectionTint: selectionTint,
+            drawsHighlight: drawsHighlight)
     }
 
     static func dismantleNSView(_ view: SpacePickerPresentationView, coordinator: ()) {
@@ -87,13 +91,16 @@ final class SpacePickerPresentationView: NSView {
 
     func update(
         presentation: SpacePagerPresentation, style: CrestSpaceIconPickerStyle, spaces: [BrowserSpaceIdentity],
-        selectedSpaceID: UUID?, frames: [UUID: CGRect], selectionTint: Color?
+        selectedSpaceID: UUID?, frames: [UUID: CGRect], selectionTint: Color?, drawsHighlight: Bool
     ) {
         if self.presentation !== presentation {
             disconnect()
             self.presentation = presentation
         }
         self.style = style
+        // The layers keep their places as the pager moves; only whether
+        // they show changes.
+        layer?.opacity = drawsHighlight ? 1 : 0
         let ids = spaces.map(\.id)
         if spaceIDs != ids {
             lastSnapshot = nil

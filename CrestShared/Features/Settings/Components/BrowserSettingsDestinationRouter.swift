@@ -56,7 +56,8 @@ struct BrowserSettingsDestinationRouter: View {
                 BrowserEngineSettingsPane(core: browser.core)
             #endif
         case .lookAndFeel:
-            BrowserLookAndFeelSettingsPane(space: browser.shownSpace.map(BrowserSpaceAppearance.init(space:)))
+            BrowserLookAndFeelSettingsPane(
+                browser: browser, space: browser.shownSpace.map(BrowserSpaceAppearance.init(space:)))
         case .links:
             BrowserLinkSettingsPane(
                 browser: browser,

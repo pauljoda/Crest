@@ -10,11 +10,16 @@ extension BrowserStore {
         controller.attach(self)
     }
 
-    /// Adds a Space and shows it in this window. Throws the rule that refused
-    /// it, such as the Space limit.
-    func addSpace() throws(Rejection) {
+    /// Adds a Space and shows it in this window, in the shared customization
+    /// style's look. Throws the rule that refused it, such as the Space limit.
+    func addSpace(appearance: BrowserDeviceAppearanceStore = .shared) throws(Rejection) {
+        let spaceID = UUID()
         try family.commit(
-            CreateSpace(workspaceID: family.workspaceID, windowID: windowID, spaceID: UUID()), from: self)
+            CreateSpace(workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID), from: self)
+        // The core dresses a new Space in a template's heraldic look.
+        if let space = availableSpaces.first(where: { $0.id == spaceID }) {
+            restyle(space, from: .heraldic, to: appearance.customizationStyle, appearance: appearance)
+        }
     }
 
     /// Deletes a Space in two steps the core saves before each returns: the

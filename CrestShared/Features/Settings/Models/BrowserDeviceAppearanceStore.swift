@@ -145,6 +145,10 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
     static let peekSizeKey = "crest.appearance.peek-size"
+    static let customizationStyleKey = "crest.appearance.customization-style"
+    static let spaceIconsKey = "crest.appearance.space-icons"
+    static let spaceCustomizationStylesKey = "crest.appearance.space-customization-styles"
+    static let rememberedLooksKey = "crest.appearance.space-style-looks"
     static let maximumCornerRadius: Double = 40
     /// How long the choices stay still before the store writes them out.
     static let settleDelay = Duration.milliseconds(300)
@@ -230,6 +234,29 @@ final class BrowserDeviceAppearanceStore {
     /// The size the Space switcher draws its icons at when it does not fit
     /// them, as a fraction of their usual size.
     var spaceIconScale: Double {
+        didSet { saveSoon() }
+    }
+    /// How much of the customization every Space shows, stored by name.
+    var customizationStyle: BrowserCustomizationStyle {
+        didSet { saveSoon() }
+    }
+    /// How the Space switcher shows Spaces as the person chose it, or nil
+    /// while it follows ``customizationStyle``.
+    var chosenSpaceIcons: BrowserSpaceIconDisplay? {
+        didSet { saveSoon() }
+    }
+    /// How the Space switcher shows Spaces.
+    var spaceIcons: BrowserSpaceIconDisplay { chosenSpaceIcons ?? customizationStyle.spaceIcons }
+    /// The style each Space shows its own customization in where it differs
+    /// from ``customizationStyle``, by Space.
+    private(set) var spaceCustomizationStyles: [UUID: BrowserCustomizationStyle] {
+        didSet { saveSoon() }
+    }
+    /// The look each Space last wore in each style, by Space and then by the
+    /// style's name, so choosing a style again gives a Space back its look in
+    /// it. Kept in the form the stored session keeps branding in, which every
+    /// later build reads.
+    @ObservationIgnored private var rememberedLooks: [UUID: [String: SpaceBranding]] {
         didSet { saveSoon() }
     }
     /// The size tabs, pins and folders are drawn at, as a fraction of their
@@ -340,6 +367,18 @@ final class BrowserDeviceAppearanceStore {
             (defaults.object(forKey: Self.spaceIconScaleKey) as? Double).map {
                 Double(BrowserSpaceIconSizing.clamped($0))
             } ?? BrowserLookAndFeelDefaults.spaceIconScale
+        customizationStyle =
+            BrowserCustomizationStyle.named(defaults.string(forKey: Self.customizationStyleKey))
+            ?? BrowserLookAndFeelDefaults.customizationStyle
+        chosenSpaceIcons = BrowserSpaceIconDisplay.named(defaults.string(forKey: Self.spaceIconsKey))
+        spaceCustomizationStyles =
+            (defaults.dictionary(forKey: Self.spaceCustomizationStylesKey) as? [String: String] ?? [:])
+            .reduce(into: [:]) { styles, entry in
+                guard let space = UUID(uuidString: entry.key), let style = BrowserCustomizationStyle.named(entry.value)
+                else { return }
+                styles[space] = style
+            }
+        rememberedLooks = Self.rememberedLooks(in: defaults)
         tabScale =
             (defaults.object(forKey: BrowserSidebarDensityPreference.scaleKey) as? Double).flatMap {
                 $0.isFinite ? $0 : nil
@@ -377,6 +416,57 @@ final class BrowserDeviceAppearanceStore {
         }
     }
 
+    // MARK: - Actions - Customization Styles
+
+    /// The style `spaceID` shows its customization in: its own, or else
+    /// ``customizationStyle``.
+    func customizationStyle(for spaceID: UUID) -> BrowserCustomizationStyle {
+        spaceCustomizationStyles[spaceID] ?? customizationStyle
+    }
+
+    /// Whether `spaceID` shows its customization in a style of its own.
+    func hasOwnCustomizationStyle(_ spaceID: UUID) -> Bool {
+        spaceCustomizationStyles[spaceID] != nil
+    }
+
+    /// Gives `spaceID` `style` for its customization, or has it follow
+    /// ``customizationStyle`` again when `style` is nil or that same style.
+    func setCustomizationStyle(_ style: BrowserCustomizationStyle?, for spaceID: UUID) {
+        spaceCustomizationStyles[spaceID] = style == customizationStyle ? nil : style
+    }
+
+    /// The look `spaceID`, wearing `branding`, takes on moving from
+    /// `previous` to `style`: the look it wore in `style` before, or else that
+    /// style's look made from its own. The look it leaves is kept for when it
+    /// comes back, when it is a look of `previous` at all.
+    func look(
+        of spaceID: UUID, wearing branding: SpaceBranding, movingFrom previous: BrowserCustomizationStyle,
+        to style: BrowserCustomizationStyle
+    ) -> SpaceBranding {
+        guard previous != style else { return branding }
+        if previous.keeps(branding) { remember(branding, of: spaceID, in: previous) }
+        return style.look(for: branding, remembered: rememberedLook(of: spaceID, in: style))
+    }
+
+    /// The look `spaceID` wore when it was last in `style`, if it has been.
+    private func rememberedLook(of spaceID: UUID, in style: BrowserCustomizationStyle) -> SpaceBranding? {
+        rememberedLooks[spaceID]?[style.name]
+    }
+
+    /// Keeps `branding` as the look `spaceID` wears in `style`.
+    private func remember(_ branding: SpaceBranding, of spaceID: UUID, in style: BrowserCustomizationStyle) {
+        rememberedLooks[spaceID, default: [:]][style.name] = branding
+    }
+
+    /// The looks `defaults` keeps, each read back by the core.
+    private static func rememberedLooks(in defaults: UserDefaults) -> [UUID: [String: SpaceBranding]] {
+        let stored = defaults.dictionary(forKey: rememberedLooksKey) as? [String: [String: String]] ?? [:]
+        return stored.reduce(into: [:]) { looks, entry in
+            guard let space = UUID(uuidString: entry.key) else { return }
+            looks[space] = entry.value.compactMapValues { (try? CrestCore.answer(RestoreLook(text: $0)))?.look }
+        }
+    }
+
     // MARK: - Actions - Space Colors
 
     /// Whether a window in `colorScheme` dims Space colors `dimming` of the way.
@@ -398,6 +488,22 @@ final class BrowserDeviceAppearanceStore {
         write(darkSpaceDimming, forKey: Self.darkSpaceDimmingKey, in: defaults)
         write(spaceIconSizing.name, forKey: Self.spaceIconSizingKey, in: defaults)
         write(spaceIconScale, forKey: Self.spaceIconScaleKey, in: defaults)
+        write(customizationStyle.name, forKey: Self.customizationStyleKey, in: defaults)
+        if let chosenSpaceIcons {
+            write(chosenSpaceIcons.name, forKey: Self.spaceIconsKey, in: defaults)
+        } else if defaults.object(forKey: Self.spaceIconsKey) != nil {
+            defaults.removeObject(forKey: Self.spaceIconsKey)
+        }
+        let spaceStyles = spaceCustomizationStyles.reduce(into: [String: String]()) {
+            $0[$1.key.uuidString] = $1.value.name
+        }
+        write(spaceStyles as NSDictionary, forKey: Self.spaceCustomizationStylesKey, in: defaults)
+        let looks = rememberedLooks.reduce(into: [String: [String: String]]()) { looks, entry in
+            looks[entry.key.uuidString] = entry.value.compactMapValues {
+                (try? CrestCore.answer(StoreLook(look: $0)))?.text
+            }
+        }
+        write(looks as NSDictionary, forKey: Self.rememberedLooksKey, in: defaults)
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
         write(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey, in: defaults)

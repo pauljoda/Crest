@@ -29,11 +29,11 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             space: space,
             showsPreview: showsPreview,
             extraSettings: [
-                mode.resettable("Appearance"),
-                dimming.resettable("Dim Space colors in dark"),
-                motion.resettable("Animate pages when switching Spaces"),
-                revealWidth.resettable("Sidebar hover area"),
-                fullscreenReveal.resettable("Show sidebar on hover in full screen"),
+                (.appearanceMode, mode.resettable("Appearance")),
+                (.darkSpaceDimming, dimming.resettable("Dim Space colors in dark")),
+                (.spacePageMotion, motion.resettable("Animate pages when switching Spaces")),
+                (.sidebarRevealWidth, revealWidth.resettable("Sidebar hover area")),
+                (.fullScreenSidebarReveal, fullscreenReveal.resettable("Show sidebar on hover in full screen")),
             ]
         ) {
             CrestSettingRow("Appearance", setting: mode.resettable("Appearance")) {
@@ -47,6 +47,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 .fixedSize()
                 .accessibilityIdentifier("appearance-mode")
             }
+            .browserAppearanceSetting(.appearanceMode)
 
             CrestSettingSlider(
                 "Dim Space colors in dark",
@@ -54,6 +55,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 readout: .percent(zero: "Off", full: "Full"),
                 identifier: "dark-space-dimming"
             )
+            .browserAppearanceSetting(.darkSpaceDimming)
 
             CrestSettingRow(
                 "Animate pages when switching Spaces",
@@ -63,6 +65,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                     .labelsHidden()
                     .accessibilityIdentifier("animate-space-pages")
             }
+            .browserAppearanceSetting(.spacePageMotion)
 
             CrestSettingSlider(
                 "Sidebar hover area",
@@ -73,6 +76,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 onEditingChanged: { _ in SidebarRevealWidthPreview.shared.adjusted() }
             )
             .onChange(of: appearance.sidebarRevealWidth) { SidebarRevealWidthPreview.shared.adjusted() }
+            .browserAppearanceSetting(.sidebarRevealWidth)
 
             CrestSettingRow(
                 "Show sidebar on hover in full screen",
@@ -82,6 +86,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-fullscreen-reveal")
             }
+            .browserAppearanceSetting(.fullScreenSidebarReveal)
         }
     }
 }
