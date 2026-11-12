@@ -15,16 +15,10 @@ struct BrowserFolderGroupSurface: View {
     private var dragItem: BrowserFolderDragItem { configuration.dragItem }
 
     var body: some View {
-        VStack(spacing: 0) {
-            BrowserFolderHeader(
-                configuration: configuration,
-                interaction: interaction
-            )
-
-            if !configuration.showsContents {
-                BrowserFolderKeptRow(configuration: configuration, interaction: interaction)
-            }
-        }
+        BrowserFolderHeader(
+            configuration: configuration,
+            interaction: interaction
+        )
         .contextMenu {
             if configuration.capabilities.supportsOrganization {
                 BrowserFolderOrganizationMenu(
@@ -95,7 +89,7 @@ struct BrowserFolderGroupSurface: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Its tabs stay in this section, and any nested folders move up one level.")
+            BrowserFolderDeletionMessage(folder: folder, space: configuration.context.space)
         }
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),
@@ -142,7 +136,8 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                     interaction.collapsedTabVisibility.wrappedValue.expansionDidChange(
                         isExpanded: isExpanded,
                         selectedTabID: configuration.shownFolderTabID,
-                        folderTabIDs: configuration.folderTabIDs
+                        folderTabIDs: configuration.folderTabIDs,
+                        residentFolderTabIDs: configuration.residentFolderTabIDs
                     )
                 }
                 .onChange(of: configuration.shownFolderTabID) { _, selectedTabID in
@@ -155,7 +150,6 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
                     interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
                         isExpanded: interaction.isExpanded.wrappedValue,
-                        selectedTabID: configuration.shownFolderTabID,
                         residentFolderTabIDs: configuration.residentFolderTabIDs
                     )
                 }
@@ -173,4 +167,28 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 residentFolderTabIDs: configuration.residentFolderTabIDs)
         }
     #endif
+}
+
+/// What deleting a folder takes with it: every tab and folder inside it,
+/// however deep, with the tabs kept in the Archive.
+private struct BrowserFolderDeletionMessage: View {
+    let folder: FolderStateModel
+    let space: SpaceModel
+
+    var body: some View {
+        let tabs = space.tabIDs(inFolder: folder.id).count
+        let folders = space.folderChoices(inside: folder.id).count
+        switch (tabs, folders) {
+        case (0, 0):
+            Text("The folder is empty.")
+        case (_, 0):
+            Text("This also deletes the ^[\(tabs) tab](inflect: true) inside it. Deleted tabs go to the Archive.")
+        case (0, _):
+            Text("This also deletes the ^[\(folders) empty folder](inflect: true) inside it.")
+        default:
+            Text(
+                "This also deletes everything inside it: ^[\(tabs) tab](inflect: true) and ^[\(folders) folder](inflect: true). Deleted tabs go to the Archive."
+            )
+        }
+    }
 }

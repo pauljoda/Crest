@@ -26,7 +26,8 @@ internal static partial class StoredSessionCodec {
             SpaceBannerPattern.Named(Text(value[Key.BannerPattern])) ?? SpaceBannerPattern.Solid,
             OptionalNumber(value[Key.BannerStrength]) ?? 1, fade.Value, keepsReadable ?? fade > 0,
             SpaceThemeMode.Named(Text(value[Key.ThemeMode])) ?? SpaceThemeMode.Banner,
-            OptionalNumber(value[Key.GradientAngle]) ?? 0, Flag(value[Key.ShowsTexture]) ?? false,
+            OptionalNumber(value[Key.GradientAngle]) ?? 0,
+            Texture(Flag(value[Key.ShowsTexture]), OptionalNumber(value[Key.TextureStrength])),
             SpaceIconStyle.Named(Text(value[Key.IconStyle])) ?? SpaceIconStyle.SimpleSymbol,
             value[Key.SymbolColor] is JsonObject symbolColor ? DecodeColor(symbolColor) : null,
             DecodeCrest(value[Key.Crest] as JsonObject ?? []),
@@ -36,6 +37,20 @@ internal static partial class StoredSessionCodec {
             Flag(value[Key.HasCustomAppearance]));
     }
 
+    /// The texture strength a branding stored by any build lies under. A build
+    /// that keeps only whether a texture shows writes the switch alone, and
+    /// can turn it on over a strength of none: the switch decides, and a texture
+    /// it shows with no strength of its own is full.
+    internal static double Texture(bool? shows, double? strength) => shows switch {
+        false => 0,
+        true => strength is > 0 and var stored ? stored : 1,
+        null => strength ?? 0
+    };
+
+    /// A branding as the stored session and sync keep it. Whether a texture
+    /// shows is the switch builds before texture strength read, and the
+    /// strength is written only where the switch alone can't say it, between
+    /// none and full.
     internal static JsonObject Encode(SpaceBranding branding) {
         var value = new JsonObject {
             [Key.Colors] = Encode(branding.Colors),
@@ -45,9 +60,10 @@ internal static partial class StoredSessionCodec {
             [Key.KeepsControlsReadable] = branding.KeepsControlsReadable,
             [Key.ThemeMode] = branding.ThemeMode.Name,
             [Key.GradientAngle] = branding.GradientAngle,
-            [Key.ShowsTexture] = branding.ShowsTexture,
+            [Key.ShowsTexture] = branding.TextureStrength > 0,
             [Key.IconStyle] = branding.IconStyle.Name
         };
+        if (branding.TextureStrength is > 0 and < 1) value[Key.TextureStrength] = branding.TextureStrength;
         if (branding.SymbolColor is { } symbolColor) value[Key.SymbolColor] = Encode(symbolColor);
         value[Key.Crest] = Encode(branding.Crest);
         value[Key.RenderingVersion] = branding.RenderingVersion;

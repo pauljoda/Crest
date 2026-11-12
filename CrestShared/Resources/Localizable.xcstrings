@@ -1734,9 +1734,6 @@
     "Accounts" : {
 
     },
-    "Across" : {
-
-    },
     "Action" : {
 
     },
@@ -3847,6 +3844,9 @@
         }
       }
     },
+    "Collapses this Split View" : {
+
+    },
     "Color" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5509,9 +5509,6 @@
         }
       }
     },
-    "Down" : {
-
-    },
     "down arrow" : {
       "localizations" : {
         "ar" : {
@@ -6096,6 +6093,9 @@
           }
         }
       }
+    },
+    "Expands this Split View" : {
+
     },
     "Experimental" : {
 
@@ -14145,6 +14145,9 @@
     "The file couldn’t be saved in its folder." : {
 
     },
+    "The folder is empty." : {
+
+    },
     "The original filename used invisible or direction-changing characters that can disguise its real extension." : {
       "localizations" : {
         "ar" : {
@@ -14285,6 +14288,15 @@
 
     },
     "This agent is no longer connected to Crest." : {
+
+    },
+    "This also deletes everything inside it: ^[%lld tab](inflect: true) and ^[%lld folder](inflect: true). Deleted tabs go to the Archive." : {
+
+    },
+    "This also deletes the ^[%lld empty folder](inflect: true) inside it." : {
+
+    },
+    "This also deletes the ^[%lld tab](inflect: true) inside it. Deleted tabs go to the Archive." : {
 
     },
     "This bookmark file exceeds Crest’s folder, depth, tab, or Space limits." : {

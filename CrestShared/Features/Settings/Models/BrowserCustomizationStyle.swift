@@ -71,9 +71,9 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
 
     /// The look a Space wearing `branding` takes in this style: `remembered`,
     /// the look it wore when it was last in this style, or else this style's
-    /// look made from its own, keeping its crest. A look leaving a tinted
-    /// sidebar takes its colors back from the template it started from, or
-    /// else wears its one color at full strength.
+    /// look made from its own, keeping its crest and texture. A look leaving a
+    /// tinted sidebar takes its colors back from the template it started
+    /// from, or else wears its one color at full strength.
     func look(for branding: SpaceBranding, remembered: SpaceBranding?) -> SpaceBranding {
         if let remembered { return remembered }
         var base = branding
@@ -81,6 +81,7 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
             if let house = SpaceHouse.startingPoint(of: branding) {
                 base = house.look
                 base.crest = branding.crest
+                base.textureStrength = branding.textureStrength
             } else {
                 base.bannerStrength = 1
                 base.readabilityFade = SpaceBranding.legacyReadabilityFade

@@ -125,7 +125,8 @@ public static class NativeSyncMaterializer {
     }
 
     private static SplitGroupState Group(SplitGroupPayload group) => new(group.Id, group.CustomTitle, group.TitleModifiedAt?.Moment,
-        group.CustomIconSymbol, group.IconModifiedAt?.Moment, group.Tint, group.TintModifiedAt?.Moment);
+        group.CustomIconSymbol, group.IconModifiedAt?.Moment, group.Tint, group.TintModifiedAt?.Moment, group.IsCollapsed,
+        group.CollapseModifiedAt?.Moment);
 
     #endregion
 

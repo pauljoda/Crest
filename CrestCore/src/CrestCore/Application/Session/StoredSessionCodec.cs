@@ -162,6 +162,7 @@ internal static partial class StoredSessionCodec {
         public const string Tabs = "tabs";
         public const string TargetId = "targetID";
         public const string TextColorMode = "textColorMode";
+        public const string TextureStrength = "textureStrength";
         public const string ThemeMode = "themeMode";
         public const string Tint = "tint";
         public const string TintModifiedAt = "tintModifiedAt";

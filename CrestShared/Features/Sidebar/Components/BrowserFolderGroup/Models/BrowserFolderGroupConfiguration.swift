@@ -21,9 +21,10 @@ struct BrowserFolderGroupConfiguration {
     /// replaced can never act for the replacement.
     let assignment: BrowserSpaceRuntimeAssignment
     var spacePresentation: SidebarSpacePresentation? = nil
-    /// The tab a collapsed folder around this one keeps on screen, which this
-    /// folder shows in place of its contents, or nil when it draws as itself.
-    let inheritedKeptTabID: UUID?
+    /// The tabs a collapsed folder around this one keeps on screen, which
+    /// this folder shows the way to in place of its contents, or nil when it
+    /// draws as itself.
+    let inheritedKeptTabIDs: Set<UUID>?
 
     var spaceID: UUID { assignment.spaceID }
     var profileID: UUID { assignment.profileID }
@@ -36,8 +37,8 @@ struct BrowserFolderGroupConfiguration {
     var inside: SidebarListModel { context.space.sidebar.inside(folder.id) }
 
     /// Whether the folder draws everything it holds: it is open, and no
-    /// collapsed folder around it is showing only the way to its kept tab.
-    var showsContents: Bool { !folder.isCollapsed && inheritedKeptTabID == nil }
+    /// collapsed folder around it is showing only the way to its kept tabs.
+    var showsAllContents: Bool { !folder.isCollapsed && inheritedKeptTabIDs == nil }
 
     var displayBranding: SpaceBranding? {
         guard let spacePresentation else { return context.space.settings.look }
@@ -90,7 +91,7 @@ struct BrowserFolderGroupConfiguration {
     init(
         sidebarInteraction: BrowserSidebarInteractionState, folder: FolderStateModel, depth: Int,
         context: BrowserSidebarListContext, spacePresentation: SidebarSpacePresentation?,
-        inheritedKeptTabID: UUID? = nil
+        inheritedKeptTabIDs: Set<UUID>? = nil
     ) {
         self.sidebarInteraction = sidebarInteraction
         self.folder = folder
@@ -98,7 +99,7 @@ struct BrowserFolderGroupConfiguration {
         self.context = context
         assignment = context.assignment
         self.spacePresentation = spacePresentation
-        self.inheritedKeptTabID = inheritedKeptTabID
+        self.inheritedKeptTabIDs = inheritedKeptTabIDs
     }
 
     // MARK: - Actions - Contents
@@ -125,26 +126,15 @@ struct BrowserFolderGroupConfiguration {
         pageAccess.residencyRevision()
     }
 
-    /// The tab the folder keeps on screen in place of its contents, while that
-    /// tab still holds a page: the one a collapsed folder around it keeps, or
-    /// the one it kept itself when it collapsed. A folder that collapses over
-    /// the shown tab does not evict it, so the tab stays reachable rather than
-    /// disappearing under the header. Nil while the folder draws its contents.
-    func keptTabID(for state: BrowserCollapsedFolderTabVisibilityState) -> UUID? {
-        guard let keptTabID = inheritedKeptTabID ?? (folder.isCollapsed ? state.keptTabID : nil),
-            pageAccess.containsResidentPage(keptTabID)
-        else { return nil }
-        return keptTabID
-    }
-
-    /// The one row of the folder's own list a collapsed folder keeps on
-    /// screen: the row on the way to its kept tab. That is the tab's own row,
-    /// the split the sidebar shows it in, or the folder inside this one that
-    /// holds it, however deep, which in turn shows only the way to the tab.
-    func keptItem(for state: BrowserCollapsedFolderTabVisibilityState) -> BrowserSidebarListItem? {
-        guard let keptTabID = keptTabID(for: state) else { return nil }
-        return BrowserSidebarListItem.items(of: inside, in: context.space).first { item in
-            item.content.contains(tabID: keptTabID, in: context.space)
+    /// The tabs the folder keeps on screen in place of its contents, of those
+    /// it still holds: the ones a collapsed folder around it keeps, or the
+    /// ones it kept itself when it closed. They stay whether or not they hold
+    /// a page, until the folder opens. Empty while the folder draws its
+    /// contents, or keeps none.
+    func keptTabIDs(for state: BrowserCollapsedFolderTabVisibilityState) -> Set<UUID> {
+        guard let kept = inheritedKeptTabIDs ?? (folder.isCollapsed ? state.keptTabIDs : nil), !kept.isEmpty else {
+            return []
         }
+        return kept.intersection(folderTabIDs)
     }
 }

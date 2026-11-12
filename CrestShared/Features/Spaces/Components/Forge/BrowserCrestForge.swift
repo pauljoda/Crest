@@ -340,21 +340,14 @@ struct BrowserCrestForge: View {
         Section {
             BrowserCrestStudioSlider(title: "Intensity", value: context.setting(\.bannerStrength))
             if branding.themeMode == .gradient {
-                let angle = context.setting(\.gradientAngle)
-                CrestSettingRow("Gradient angle", setting: angle.resettable("Gradient angle")) {
-                    HStack(spacing: 12) {
-                        Text("\(Int(angle.wrappedValue.rounded()))°").monospacedDigit().foregroundStyle(.secondary)
-                        BrowserSpaceGradientAngleDial(angle: angle.binding, color: branding.secondaryColor.color)
-                            .frame(width: 44, height: 44)
-                    }
-                }
+                BrowserSpaceGradientAngleRow(
+                    angle: context.setting(\.gradientAngle), color: branding.secondaryColor.color)
             }
             BrowserCrestStudioSlider(title: "Readability fade", value: context.setting(\.readabilityFade))
             BrowserCrestStudioSlider(title: "Folder colors", value: context.setting(\.folderColorIntensity))
-            let texture = context.setting(\.showsTexture)
-            CrestSettingRow("Texture", setting: texture.resettable("Texture")) {
-                Toggle("Texture", isOn: texture.binding).labelsHidden()
-            }
+            BrowserCrestStudioSlider(
+                title: "Texture", value: context.setting(\.textureStrength),
+                readout: .percent(zero: "None", full: "Full"))
             segmentedText
         }
     }

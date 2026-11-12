@@ -63,8 +63,8 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         prune(keeping: [])
     }
 
-    /// A folder's kept resident row belongs to the window, not a disposable
-    /// SwiftUI row. Separate boxes keep updates local to the affected folder.
+    /// The tabs a collapsed folder keeps on screen belong to the window, not a
+    /// disposable SwiftUI row. Separate boxes keep updates local to the affected folder.
     func collapsedFolderVisibility(for assignment: BrowserFolderRuntimeAssignment) -> BrowserSidebarFolderVisibility {
         if let existing = collapsedFolders[assignment] { return existing }
         let visibility = BrowserSidebarFolderVisibility()
@@ -80,10 +80,11 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         var next = visibility.state
         if visibility.wasExpanded != isExpanded {
             next.expansionDidChange(
-                isExpanded: isExpanded, selectedTabID: selectedTabID, folderTabIDs: folderTabIDs)
+                isExpanded: isExpanded, selectedTabID: selectedTabID, folderTabIDs: folderTabIDs,
+                residentFolderTabIDs: residentFolderTabIDs)
         }
-        next.residencyDidChange(
-            isExpanded: isExpanded, selectedTabID: selectedTabID, residentFolderTabIDs: residentFolderTabIDs)
+        next.selectionDidChange(isExpanded: isExpanded, selectedTabID: selectedTabID, folderTabIDs: folderTabIDs)
+        next.residencyDidChange(isExpanded: isExpanded, residentFolderTabIDs: residentFolderTabIDs)
         visibility.wasExpanded = isExpanded
         if next != visibility.state { visibility.state = next }
     }

@@ -5,6 +5,9 @@ import SwiftUI
 /// Pointer-only shells reveal Clear on hover. Touch shells center its hit target
 /// on the line, using the saved drop band as the space above it.
 struct BrowserCurrentTabsDivider: View {
+    /// The side of the clear control's hit target on a touch shell.
+    private static var touchTarget: CGFloat { 44 }
+
     let capabilities: BrowserInteractionCapabilities
     var hasSavedTabsEndBand = false
     /// Whether the shell is currently in the state that reveals the control —
@@ -13,6 +16,9 @@ struct BrowserCurrentTabsDivider: View {
     /// Whether there is anything left to clear.
     let canClear: Bool
     let clear: () -> Void
+    /// How wide the clear control's label draws, which the line stops short
+    /// of.
+    @State private var clearLabelWidth: CGFloat = 0
     @Environment(\.displayScale) private var displayScale
 
     private var metrics: BrowserSidebarTabListMetrics {
@@ -43,7 +49,7 @@ struct BrowserCurrentTabsDivider: View {
     private var line: some View {
         Divider()
             .frame(height: 1 / displayScale)
-            .padding(.trailing, showsClearButton ? metrics.clearActionOcclusionWidth : 0)
+            .padding(.trailing, showsClearButton ? clearActionOcclusion : 0)
     }
 
     private var clearButton: some View {
@@ -53,7 +59,15 @@ struct BrowserCurrentTabsDivider: View {
                 Image(systemName: "archivebox")
                 Image(systemName: "arrow.down")
             }
-            .frame(minWidth: revealsOnHoverOnly ? nil : 44, minHeight: revealsOnHoverOnly ? nil : 44)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                clearLabelWidth = width
+            }
+            .frame(
+                minWidth: revealsOnHoverOnly ? nil : Self.touchTarget,
+                minHeight: revealsOnHoverOnly ? nil : Self.touchTarget
+            )
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -65,6 +79,13 @@ struct BrowserCurrentTabsDivider: View {
         .accessibilityHidden(!showsClearButton)
         .accessibilityLabel("Clear Open Tabs")
         .accessibilityHint("Moves all current tabs to Archive")
+    }
+
+    /// How much of the line's trailing end the clear control takes: its
+    /// label, centered in its hit target, and the gap before it.
+    private var clearActionOcclusion: CGFloat {
+        let target = revealsOnHoverOnly ? clearLabelWidth : max(Self.touchTarget, clearLabelWidth)
+        return (target + clearLabelWidth) / 2 + metrics.clearActionGap
     }
 
     private var touchSpacing: CGFloat {

@@ -147,6 +147,7 @@ internal abstract class SyncPayloadType {
                 LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.TitleModifiedAt, StoredSessionCodec.Key.CustomTitle);
                 LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.IconModifiedAt, StoredSessionCodec.Key.CustomIconSymbol);
                 LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.TintModifiedAt, StoredSessionCodec.Key.Tint);
+                LatestFields(group, n.AsObject(), older, StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.IsCollapsed);
             }
             return (JsonNode)group;
         }).ToArray());

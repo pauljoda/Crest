@@ -25,9 +25,15 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// journal before the intent returns.
     public static SyncStaging Batch { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
 
-    /// A person deleted the tabs they selected together: saved with its
-    /// journal, as deletions, before the intent returns.
+    /// A person deleted tabs together, the ones they selected or a folder's:
+    /// saved with its journal, as deletions, before the intent returns.
     public static SyncStaging BatchDeletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.WithSave);
+
+    /// A person moved a folder to another Space, where its folders are made
+    /// anew and its tabs keep their records: saved with its journal before the
+    /// intent returns, the folders it left deleted, since only an explicit
+    /// removal deletes a folder on other devices.
+    public static SyncStaging FolderMove { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.WithSave);
 
     /// The person deleted records: history, or a folder.
     public static SyncStaging Deletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.Immediate);

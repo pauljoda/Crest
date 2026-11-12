@@ -5309,6 +5309,42 @@
     "customization-styles": {
       "category": "new",
       "message": "Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read."
+    },
+    "sidebar-clear-divider-reaches-clear": {
+      "category": "improved",
+      "message": "The line between saved and open tabs now runs up to Clear, instead of stopping well short of it."
+    },
+    "space-texture-strength": {
+      "category": "improved",
+      "message": "Texture is now its own setting for every Space, from none to full, in every customization style, and it shows over banner and solid sidebars as well as gradients. Modern's gradient direction is set on a dial again."
+    },
+    "modern-custom-gradient-inline": {
+      "category": "fixed",
+      "message": "Choosing Modern's custom gradient now shows its two colors under the color sets, and picking them works, instead of a popover the color picker closed."
+    },
+    "selected-tab-window-glass": {
+      "category": "improved",
+      "message": "The selected tab now wears the same glass as the address field and pins, and stands out more over dark sidebars."
+    },
+    "split-view-folder-style": {
+      "category": "improved",
+      "message": "Split Views in the sidebar now look and work like folders: their tabs are indented, a click collapses or expands them, and a double click renames them. The chevron of a collapsed Split View, folder or Space turns as it opens and closes, and their titles no longer flash."
+    },
+    "folder-shown-tab-stays-put": {
+      "category": "fixed",
+      "message": "Opening or closing a folder that holds the tab you're on no longer makes that tab jump through the folder's title."
+    },
+    "closed-folder-keeps-loaded-tabs": {
+      "category": "improved",
+      "message": "A closed folder keeps every loaded tab listed under it, and they stay, even once they unload, until you open and close the folder again."
+    },
+    "folder-move-to-space": {
+      "category": "new",
+      "message": "Move a whole folder, with everything in it, to another Space from its menu."
+    },
+    "folder-delete-everything-inside": {
+      "category": "improved",
+      "message": "Deleting a folder now deletes everything inside it, after asking first, and its tabs go to the Archive."
     }
   }
 }

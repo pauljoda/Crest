@@ -43,10 +43,10 @@ struct BrowserSpaceBannerBackground: View {
                     Color.black.opacity(readabilityOpacity)
                 }
 
-                if branding.themeMode == .gradient, branding.showsTexture {
+                if branding.textureStrength > 0 {
                     BrowserSpaceThemeTexture()
                         .blendMode(.softLight)
-                        .opacity(effectiveReduceTransparency ? 0.24 : 0.38)
+                        .opacity(textureOpacity)
                 }
             }
             .clipped()
@@ -62,6 +62,13 @@ struct BrowserSpaceBannerBackground: View {
     private var fieldOpacity: Double {
         effectiveReduceTransparency
             ? max(branding.bannerStrength, 0.85) : branding.bannerStrength
+    }
+
+    /// How strongly the grain lies over the sidebar, whatever its mode: the
+    /// look's texture strength of a full grain, which is fainter while the
+    /// system reduces transparency.
+    private var textureOpacity: Double {
+        branding.textureStrength * (effectiveReduceTransparency ? 0.24 : 0.38)
     }
 
     private var readabilityOpacity: Double {

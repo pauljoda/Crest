@@ -92,6 +92,20 @@ struct BrowserFolderOrganizationMenuContent: View {
             .crestMenuActionLabelStyle()
         }
 
+        let otherSpaces = destinationSpaces
+        if !otherSpaces.isEmpty {
+            Menu("Move to Space", systemImage: "square.grid.2x2") {
+                ForEach(Array(browser.grouped(otherSpaces).enumerated()), id: \.offset) { index, group in
+                    if index > 0 { Divider() }
+                    ForEach(group) { space in
+                        moveButton(to: space)
+                    }
+                }
+                .crestMenuActionLabelStyle()
+            }
+            .tint(.primary)
+        }
+
         Divider()
         Button("Delete Folder", systemImage: "trash", role: .destructive) {
             performIfCurrent(deleteFolder)
@@ -105,6 +119,29 @@ struct BrowserFolderOrganizationMenuContent: View {
     private var canCreateNestedFolder: Bool {
         guard isCurrentAndUnlocked else { return false }
         return browser.canAddFolder(inside: folder.id, matching: assignment.spaceAssignment)
+    }
+
+    /// The other Spaces the folder may move to, as a tab's menu offers them.
+    private var destinationSpaces: [SpaceModel] {
+        guard isCurrentAndUnlocked else { return [] }
+        return browser.availableTabMoveDestinationSpaces(
+            from: assignment.spaceAssignment, accessController: context.spaceAccess)
+    }
+
+    /// Moves the folder, with everything inside it, to `space`, once that
+    /// Space is unlocked.
+    private func moveButton(to space: SpaceModel) -> some View {
+        let destination = BrowserSpaceRuntimeAssignment(space: space)
+        return Button {
+            performIfCurrent {
+                guard browser.unlockedSpace(matching: destination, accessController: context.spaceAccess) != nil
+                else { return }
+                browser.moveFolder(folder.id, matching: assignment.spaceAssignment, toSpace: destination)
+            }
+        } label: {
+            BrowserSpaceIdentityLabel(space: space)
+        }
+        .disabled(!browser.canMoveFolder(folder.id, matching: assignment.spaceAssignment, toSpace: destination))
     }
 
     /// Every other folder the core would take this one into, saved folders

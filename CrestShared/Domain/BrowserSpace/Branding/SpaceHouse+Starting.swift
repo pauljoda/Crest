@@ -18,7 +18,7 @@ extension SpaceHouse {
         if SpaceScheme.startingPoint(of: branding) != nil {
             updated.bannerStrength = look.bannerStrength
             updated.readabilityFade = look.readabilityFade
-            updated.showsTexture = look.showsTexture
+            updated.textureStrength = look.textureStrength
             updated.textColorMode = look.textColorMode
             updated.symbolColor = look.symbolColor
         }

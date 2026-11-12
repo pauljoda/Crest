@@ -20,7 +20,7 @@ public sealed class SpaceTemplate {
     /// The one purple a private Space wears, with a plain key for its symbol.
     private static readonly SpaceBranding PrivateLook = new(new([new(0.58, 0.30, 0.76)]), SpaceBannerPattern.Solid,
         BannerStrength: 1, ReadabilityFade: 1, KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0,
-        ShowsTexture: false, SpaceIconStyle.SimpleSymbol, SymbolColor: null,
+        TextureStrength: 0, SpaceIconStyle.SimpleSymbol, SymbolColor: null,
         SpaceCrest.PlainField(CrestBackplate.None, CrestSymbol.Key, CrestTrim.None, layers: [0, 0, 0, 0, 0, 0], trimWeight: 1,
             chargeScale: 1),
         RenderingVersion: 2, FolderColorIntensity: 0, SpaceTextColorMode.Automatic, HasCustomAppearance: null);

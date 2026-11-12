@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// A Space's look in the Simple style: the one color its sidebar and icon
-/// wear, how strongly the sidebar wears it, and its icon.
+/// wear, how strongly the sidebar wears it, how much grain lies over it, and
+/// its icon.
 struct BrowserSpaceSimpleEditor: View {
     // MARK: - Variables
 
@@ -27,6 +28,7 @@ struct BrowserSpaceSimpleEditor: View {
             .padding(.vertical, CrestSpacing.extraSmall)
             .accessibilityIdentifier("space-simple-colors")
             BrowserSpaceIntensityRow(branding: $branding)
+            BrowserSpaceTextureRow(branding: $branding)
         } header: {
             CrestSettingsSectionHeading(title: "Color")
         }

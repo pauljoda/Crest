@@ -17,6 +17,9 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     /// container padding and rounds it one padding tighter, concentric with
     /// the folder around it.
     var depth = 0
+    /// Whether the surface steps itself in from the sidebar's edges by its
+    /// depth, or fills content that already stands in place.
+    var insetsSurface = true
     var isSelected = false
     var emphasisOpacity: Double = 0
 
@@ -65,8 +68,8 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                                 shape.strokeBorder(color.color.opacity(0.5), lineWidth: 1)
                             }
                         }
-                        .padding(.leading, BrowserFolderLayout.surfaceLeadingInset(depth: depth))
-                        .padding(.trailing, BrowserSidebarMetrics.layerInset)
+                        .padding(.leading, insetsSurface ? BrowserFolderLayout.surfaceLeadingInset(depth: depth) : 0)
+                        .padding(.trailing, insetsSurface ? BrowserSidebarMetrics.layerInset : 0)
                         .allowsHitTesting(false)
                 }
             }

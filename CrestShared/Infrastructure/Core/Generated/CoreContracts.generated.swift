@@ -1878,6 +1878,13 @@ struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let collapsed: Bool
 }
 
+struct CollapseSplit: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let isCollapsed: Bool
+}
+
 struct ColorPalette: Equatable, Sendable {
     var colors: [BrandColor]
 }
@@ -2272,6 +2279,13 @@ struct DeleteBrowsingData: Intent, DataDeletionIntent, Equatable, Sendable {
 
 struct DeleteFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
+struct DeleteFolderAndContents: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
     let spaceID: UUID
     let folderID: UUID
 }
@@ -4131,6 +4145,14 @@ struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let parentID: UUID?
     let beforeFolderID: UUID?
     let beforeTabID: UUID?
+}
+
+struct MoveFolderToSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let destinationSpaceID: UUID
 }
 
 struct MoveLinkRoute: Intent, LinkIntent, Equatable, Sendable {
@@ -6598,7 +6620,7 @@ struct SpaceBranding: Equatable, Sendable {
         keepsControlsReadable: true,
         themeMode: SpaceThemeMode.banner,
         gradientAngle: 0,
-        showsTexture: false,
+        textureStrength: 0,
         iconStyle: SpaceIconStyle.simpleSymbol,
         symbolColor: nil,
         crest: SpaceCrest(
@@ -6645,7 +6667,7 @@ struct SpaceBranding: Equatable, Sendable {
     var keepsControlsReadable: Bool
     var themeMode: SpaceThemeMode
     var gradientAngle: Double
-    var showsTexture: Bool
+    var textureStrength: Double
     var iconStyle: SpaceIconStyle
     var symbolColor: BrandColor?
     var crest: SpaceCrest
@@ -6936,6 +6958,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
     let iconModifiedAt: Date?
     let tint: BrandColor?
     let tintModifiedAt: Date?
+    let isCollapsed: Bool
+    let collapseModifiedAt: Date?
     let displayTitle: String?
     let displayEmojiIcon: String?
 
@@ -6953,6 +6977,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
         var iconModifiedAt: Date?
         var tint: BrandColor?
         var tintModifiedAt: Date?
+        var isCollapsed: Bool
+        var collapseModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6964,7 +6990,9 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
             customIconSymbol: customIconSymbol,
             iconModifiedAt: iconModifiedAt,
             tint: tint,
-            tintModifiedAt: tintModifiedAt
+            tintModifiedAt: tintModifiedAt,
+            isCollapsed: isCollapsed,
+            collapseModifiedAt: collapseModifiedAt
         )
     }
 }
@@ -22297,7 +22325,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22370,7 +22398,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 160,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22443,7 +22471,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22516,7 +22544,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22759,7 +22787,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22827,7 +22855,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22895,7 +22923,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22963,7 +22991,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23031,7 +23059,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23099,7 +23127,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23167,7 +23195,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23235,7 +23263,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 160,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23303,7 +23331,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23466,7 +23494,7 @@ struct SpaceScheme: Hashable, Sendable {
             keepsControlsReadable: false,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 0,
-            showsTexture: true,
+            textureStrength: 1,
             iconStyle: SpaceIconStyle.simpleSymbol,
             symbolColor: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1),
             crest: SpaceCrest(

@@ -406,6 +406,21 @@ extension BrowserStore {
             from: self)
     }
 
+    /// Collapses or expands a split's tabs under its header.
+    @discardableResult
+    func setSplitGroupCollapsed(
+        _ isCollapsed: Bool,
+        groupID: UUID,
+        matching assignment: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard spaceModel(matching: assignment) != nil else { return false }
+        return family.send(
+            CollapseSplit(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID,
+                isCollapsed: isCollapsed),
+            from: self)
+    }
+
     /// Whether the core would join `tabID` to the split of `targetTabID`: no
     /// Start Page on either side, not already one group, and room for another
     /// card. Asked without committing, so menus reflect the core's own rule.

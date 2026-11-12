@@ -87,7 +87,7 @@ struct BrowserSidebarSplitGroupRow: View {
             isChoosingIcon: iconPresentation,
             isChoosingTint: tintPresentation,
             tint: tintBinding,
-            activate: activate,
+            toggleCollapse: toggleCollapse,
             closeSplit: closeSplit,
             beginRenaming: beginRenaming,
             beginChangingIcon: beginChangingIcon,
@@ -105,12 +105,10 @@ struct BrowserSidebarSplitGroupRow: View {
             && configuration.isAvailableForDisplay
     }
 
-    private func activate() {
-        guard configuration.isCurrentAndUnlocked,
-            let memberID = configuration.focusedMemberID
-                ?? configuration.members.first?.id
-        else { return }
-        context.select(memberID)
+    private func toggleCollapse() {
+        guard configuration.isCurrentAndUnlocked else { return }
+        configuration.browser.setSplitGroupCollapsed(
+            !configuration.isCollapsed, groupID: groupID, matching: configuration.assignment)
     }
 
     private func closeSplit() {

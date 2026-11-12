@@ -11,6 +11,11 @@ enum CrestOpacity {
     static let selectedSurface = selection
     static let border = 0.12
     static let selectedBorder = interactionSelectionBorder
+    /// How far a selected row lifts dark glass toward white, so it stands off
+    /// a dark sidebar as light glass does off any.
+    static let darkSelectionLift = 0.10
+    /// The edge a selected row's dark glass wears over a dark sidebar.
+    static let darkSelectionBorder = 0.18
     static let disabled = 0.5
     /// Disabled chrome glyphs remain visible against both page and sidebar glass.
     static let controlDisabledForeground = 0.48

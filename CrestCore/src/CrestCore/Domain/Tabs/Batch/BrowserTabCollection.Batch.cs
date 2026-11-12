@@ -24,11 +24,7 @@ public sealed partial class BrowserTabCollection {
     /// or none.
     public Guid? DeleteSelected(ResolvedSelection selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
         RequireSelectedTabs(selection);
-        var next = DismissTabs(selection.MemberIds, shown, fallback, now, deleting: true, ensureSelection: true,
-            resetArchivePlacement: true);
-        return shown is { } removed && selection.Holds(removed)
-            ? fallback is { } other && tabs.Any(tab => tab.Id == other) ? other : null
-            : next;
+        return DeleteIntoArchive(selection.MemberIds, shown, fallback, now);
     }
 
     #endregion

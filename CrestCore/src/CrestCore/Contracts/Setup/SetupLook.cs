@@ -24,7 +24,7 @@ public sealed class SetupLook {
     public static readonly SetupLook Modern = new(Kinds.Modern, name: "modern", title: "Modern", SpaceThemeMode.Gradient,
         SpaceIconStyle.SimpleSymbol, ModernGradientAngle, tint: null,
         newSpaceLook: accent => SpaceBranding.Painted(accent.LegacyColors, SpaceBannerPattern.Diagonal, strength: 1,
-            SpaceBranding.LegacyReadabilityFade, SpaceThemeMode.Gradient, ModernGradientAngle, showsTexture: false));
+            SpaceBranding.LegacyReadabilityFade, SpaceThemeMode.Gradient, ModernGradientAngle, textureStrength: 0));
 
     /// A Space wears a plain sidebar in its accent color, and a plain icon in
     /// a shade of it that stands out from the sidebar.
@@ -105,9 +105,9 @@ public sealed class SetupLook {
     }
 
     /// `branding` in this look: its sidebar mode, gradient angle and icon
-    /// style, keeping its colors and crest, within the ranges every device
-    /// draws. A tinted look keeps only the Space's accent color, which its
-    /// icon wears too.
+    /// style, keeping its colors, crest and texture, within the ranges every
+    /// device draws. A tinted look keeps only the Space's accent color, which
+    /// its icon wears too.
     public SpaceBranding Applying(SpaceBranding branding) {
         ArgumentNullException.ThrowIfNull(branding);
         var look = branding with {
@@ -131,7 +131,6 @@ public sealed class SetupLook {
             BannerStrength = tint,
             ReadabilityFade = 0,
             KeepsControlsReadable = false,
-            ShowsTexture = false,
             SymbolColor = Contrasting(accent),
             TextColorMode = SpaceTextColorMode.Automatic
         };

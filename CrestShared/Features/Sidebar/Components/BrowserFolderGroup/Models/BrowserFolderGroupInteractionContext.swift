@@ -21,5 +21,4 @@ struct BrowserFolderGroupInteractionContext {
     let commitTitle: () -> Void
     let cancelTitleEditing: () -> Void
     let deleteFolder: () -> Void
-    let unloadKeptCollapsedTab: (UUID) -> Void
 }
