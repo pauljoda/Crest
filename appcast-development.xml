@@ -6,31 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.7</title>
-            <pubDate>Thu, 12 Nov 2026 00:08:17 +0000</pubDate>
+            <title>0.9.8</title>
+            <pubDate>Thu, 12 Nov 2026 18:13:06 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1589</sparkle:version>
-            <sparkle:shortVersionString>0.9.7</sparkle:shortVersionString>
+            <sparkle:version>1590</sparkle:version>
+            <sparkle:shortVersionString>0.9.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### New
 
-- Extensions that open their own popup, such as 1Password when you click its button in a sign-in field while it's locked, now show it on Mac instead of doing nothing.
-- On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing.
-- On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them.
+- Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/558819c4837a82d884a7ab0fd407ae93702740d1...da71c467704f4808d3a7de8debc25319533abc52) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.7-2026-11-11-1589-r589.1/Installer-Crest-0.9.7-development-2026-11-11-da71c46-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/da71c467704f4808d3a7de8debc25319533abc52...058322cffdd04bd586aec2b063a248e62499a45c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.8-2026-11-12-1590-r590.1/Installer-Crest-0.9.8-development-2026-11-12-058322c-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.7-2026-11-11-1589-r589.1/Installer-Crest-0.9.7-development-2026-11-11-da71c46-arm64.dmg" length="219741828" type="application/octet-stream" sparkle:edSignature="u+hO68BOmxYQl5pXdcmSoGSgKScU84HqSYQ3mv/Dj1lkA7v3MzcPOdm2qcDNkI7KsBvJ85Vzl2a/zvZMig9RCg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.8-2026-11-12-1590-r590.1/Installer-Crest-0.9.8-development-2026-11-12-058322c-arm64.dmg" length="220079236" type="application/octet-stream" sparkle:edSignature="CfwvGp71pRdto2dA7qd8AjgkZa6sFx7m/qYowRv8Grjeq7JgKvy0CVBg+9uaGiNp5ighD5jX/CTksvbej3r3Bg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -62,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 2pi94FevMuSurAe0mZ392i+L4He26p+J2Wn6Er1w+ovRzPCMnzMC5uCJ3H3avq7NngA5kvffSuF4zfbvFopvAw==
-length: 4444
+edSignature: /CtMJObRxuO9tW9e3yom9LBsSO1Wg7AD1P/L1DY/olrmLV5i8FADA8RNzY02CIqiYUDNPS8zAuodXkFke6w6Bg==
+length: 4295
 -->

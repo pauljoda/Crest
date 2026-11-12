@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "cold-launch-link-opens-in-front",
+    "development": "customization-styles",
     "nightly": "customization-styles"
   }
 }
