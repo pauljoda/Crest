@@ -109,8 +109,10 @@ final class BrowserPageTranslation {
         supportedLanguages.usesLowLatency(from: source, to: target)
     }
 
-    private func availability(from source: String, to target: String) -> LanguageAvailability {
-        BrowserTranslationPreference.languageAvailability(lowLatency: usesLowLatency(from: source, to: target))
+    private func availabilityStatus(from source: String, to target: String) async -> LanguageAvailability.Status {
+        await BrowserTranslationPreference.status(
+            from: .init(identifier: source), to: .init(identifier: target),
+            lowLatency: usesLowLatency(from: source, to: target))
     }
 
     private func unsupportedNotice(for identifier: String) -> String {
@@ -172,8 +174,7 @@ final class BrowserPageTranslation {
                 if let target = languageRules.decision(for: sourceID)?.target, automaticallyTranslates {
                     targetID = target
                 }
-                let availability = await availability(from: sourceID, to: targetID).status(
-                    from: .init(identifier: sourceID), to: .init(identifier: targetID))
+                let availability = await availabilityStatus(from: sourceID, to: targetID)
                 guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
                 isOffered = availability != .unsupported
                 detectedInstalledPair = availability == .installed ? "\(sourceID)|\(targetID)" : nil
@@ -246,8 +247,8 @@ final class BrowserPageTranslation {
                 group.addTask {
                     guard !Task.isCancelled, !pair[0].isEmpty, !pair[1].isEmpty else { return [] }
                     let lowLatency = supported.usesLowLatency(from: pair[0], to: pair[1])
-                    let status = await BrowserTranslationPreference.languageAvailability(lowLatency: lowLatency).status(
-                        from: .init(identifier: pair[0]), to: .init(identifier: pair[1]))
+                    let status = await BrowserTranslationPreference.status(
+                        from: .init(identifier: pair[0]), to: .init(identifier: pair[1]), lowLatency: lowLatency)
                     return status == .installed ? pair : []
                 }
             }
@@ -282,8 +283,8 @@ final class BrowserPageTranslation {
         if confirmedPair {
             availability = .installed
         } else {
-            availability = await self.availability(from: sourceID, to: target.minimalIdentifier).status(
-                from: source, to: target)
+            availability = await BrowserTranslationPreference.status(
+                from: source, to: target, lowLatency: usesLowLatency(from: sourceID, to: target.minimalIdentifier))
         }
         guard !Task.isCancelled, isActive, revision == documentRevision,
             source == Locale.Language(identifier: sourceID),

@@ -1,9 +1,25 @@
 import Foundation
-import Translation
+@preconcurrency import Translation
 
 /// Translation language availability. The translation choices themselves are
 /// core preferences; see `BrowserAppPreferenceStore`.
 enum BrowserTranslationPreference {
+    // MARK: - Static Variables
+
+    /// Apple's checkers, made once and kept while Crest runs. Each checker
+    /// opens a language-status stream to Apple's translation service and
+    /// closes it when released. Crest crashed in Translation's stream
+    /// bookkeeping while checkers were being made and released in parallel, so
+    /// every check shares these. `LanguageAvailability` isn't marked
+    /// `Sendable`; parallel checks on one checker rely on Apple guarding its
+    /// own state, which is why Translation is imported `@preconcurrency`.
+    @MainActor private static let standardAvailability = LanguageAvailability()
+    /// Apple's low-latency models, or its default model where they don't exist.
+    @MainActor private static let lowLatencyAvailability: LanguageAvailability = {
+        guard #available(iOS 26.4, macOS 26.4, *) else { return standardAvailability }
+        return LanguageAvailability(preferredStrategy: .lowLatency)
+    }()
+
     // MARK: - Types
 
     /// Every language Apple translates, and the ones its low-latency models
@@ -28,10 +44,10 @@ enum BrowserTranslationPreference {
 
     // MARK: - Actions - Languages
 
-    nonisolated static func languages() async -> Languages {
-        let general = await LanguageAvailability().supportedLanguages
+    @MainActor static func languages() async -> Languages {
+        let general = await standardAvailability.supportedLanguages
         guard #available(iOS 26.4, macOS 26.4, *) else { return Languages(all: general, lowLatencyIDs: []) }
-        let lowLatency = await LanguageAvailability(preferredStrategy: .lowLatency).supportedLanguages
+        let lowLatency = await lowLatencyAvailability.supportedLanguages
         let lowLatencyIDs = Set(lowLatency.map(\.minimalIdentifier))
         let generalIDs = Set(general.map(\.minimalIdentifier))
         return Languages(
@@ -39,11 +55,12 @@ enum BrowserTranslationPreference {
             lowLatencyIDs: lowLatencyIDs)
     }
 
-    nonisolated static func languageAvailability(lowLatency: Bool) -> LanguageAvailability {
-        if lowLatency, #available(iOS 26.4, macOS 26.4, *) {
-            return LanguageAvailability(preferredStrategy: .lowLatency)
-        }
-        return LanguageAvailability()
+    /// Apple's status for translating `source` to `target`, from the
+    /// low-latency models when `lowLatency` and Apple's default model otherwise.
+    @MainActor static func status(
+        from source: Locale.Language, to target: Locale.Language, lowLatency: Bool
+    ) async -> LanguageAvailability.Status {
+        await (lowLatency ? lowLatencyAvailability : standardAvailability).status(from: source, to: target)
     }
 
     nonisolated static func preferredTarget(

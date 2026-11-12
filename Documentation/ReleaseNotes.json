@@ -5309,6 +5309,10 @@
     "customization-styles": {
       "category": "new",
       "message": "Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read."
+    },
+    "translation-language-check-crash": {
+      "category": "fixed",
+      "message": "Crest no longer crashes while it checks which languages it can translate a page into."
     }
   }
 }
