@@ -13,20 +13,17 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
             .background {
-                CrestSurfaceLayer(
-                    shape: containerShape,
-                    hoverTint: configuration.isPresented ? CrestColor.hover : nil
-                )
-                .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
-                .overlay {
-                    if let tint = configuration.tint {
-                        containerShape.fill(
-                            tint.color.opacity(
-                                configuration.isPresented ? 0.16 : 0.10
+                surface
+                    .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
+                    .overlay {
+                        if let tint = configuration.tint {
+                            containerShape.fill(
+                                tint.color.opacity(
+                                    configuration.isPresented ? 0.16 : 0.10
+                                )
                             )
-                        )
+                        }
                     }
-                }
             }
             .animation(surfaceAnimation, value: configuration.isPresented)
             .animation(surfaceAnimation, value: isMultiSelected)
@@ -53,6 +50,17 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
             .accessibilityLabel(
                 "Split View with \(configuration.members.count) tabs"
             )
+    }
+
+    /// The selected-tab material only while the split is on screen; at rest
+    /// the group keeps a faint fill, so it never reads as a second active tab.
+    @ViewBuilder
+    private var surface: some View {
+        if configuration.isPresented {
+            CrestSurfaceLayer(shape: containerShape, hoverTint: CrestColor.hover)
+        } else {
+            containerShape.fill(CrestColor.chromeSurface)
+        }
     }
 
     private var isMultiSelected: Bool {
