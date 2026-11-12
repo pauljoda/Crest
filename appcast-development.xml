@@ -6,29 +6,43 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.8</title>
-            <pubDate>Thu, 12 Nov 2026 18:13:06 +0000</pubDate>
+            <title>0.9.17</title>
+            <pubDate>Thu, 12 Nov 2026 20:37:35 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1590</sparkle:version>
-            <sparkle:shortVersionString>0.9.8</sparkle:shortVersionString>
+            <sparkle:version>1592</sparkle:version>
+            <sparkle:shortVersionString>0.9.17</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read.
+- Move a whole folder, with everything in it, to another Space from its menu.
+
+### Improved
+
+- The line between saved and open tabs now runs up to Clear, instead of stopping well short of it.
+- Texture is now its own setting for every Space, from none to full, in every customization style, and it shows over banner and solid sidebars as well as gradients. Modern's gradient direction is set on a dial again.
+- The selected tab now wears the same glass as the address field and pins, and stands out more over dark sidebars.
+- Split Views in the sidebar now look and work like folders: their tabs are indented, a click collapses or expands them, and a double click renames them. The chevron of a collapsed Split View, folder or Space turns as it opens and closes, and their titles no longer flash.
+- A closed folder keeps every loaded tab listed under it, and they stay, even once they unload, until you open and close the folder again.
+- Deleting a folder now deletes everything inside it, after asking first, and its tabs go to the Archive.
+
+### Fixed
+
+- Choosing Modern's custom gradient now shows its two colors under the color sets, and picking them works, instead of a popover the color picker closed.
+- Opening or closing a folder that holds the tab you're on no longer makes that tab jump through the folder's title.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/da71c467704f4808d3a7de8debc25319533abc52...058322cffdd04bd586aec2b063a248e62499a45c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.8-2026-11-12-1590-r590.1/Installer-Crest-0.9.8-development-2026-11-12-058322c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/058322cffdd04bd586aec2b063a248e62499a45c...f1d3738ece743fd2db0430ededc0a05ab4b00577) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.17-2026-11-12-1592-r592.1/Installer-Crest-0.9.17-development-2026-11-12-f1d3738-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.8-2026-11-12-1590-r590.1/Installer-Crest-0.9.8-development-2026-11-12-058322c-arm64.dmg" length="220079236" type="application/octet-stream" sparkle:edSignature="CfwvGp71pRdto2dA7qd8AjgkZa6sFx7m/qYowRv8Grjeq7JgKvy0CVBg+9uaGiNp5ighD5jX/CTksvbej3r3Bg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.17-2026-11-12-1592-r592.1/Installer-Crest-0.9.17-development-2026-11-12-f1d3738-arm64.dmg" length="220181636" type="application/octet-stream" sparkle:edSignature="3IqhbK70BiazyehI0MbPuNI8/t4SgH5Aos2mEVAjuoVQRfaOE7qC3QvAyweOPivmuh1fYibmXh9u+y7QZj0GCw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +74,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: /CtMJObRxuO9tW9e3yom9LBsSO1Wg7AD1P/L1DY/olrmLV5i8FADA8RNzY02CIqiYUDNPS8zAuodXkFke6w6Bg==
-length: 4295
+edSignature: BdW4YXz+rNKLsnhxCV0JU7kyAv5qai/e+nqO+D7rN7D3lFJXCrHliggkmDOcug3twH3SYq7wODv106Y53V8nCg==
+length: 5212
 -->
