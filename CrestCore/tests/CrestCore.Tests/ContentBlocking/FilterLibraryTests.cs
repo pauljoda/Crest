@@ -27,7 +27,7 @@ public sealed partial class FilterLibraryTests {
         public readonly FilterLibrary Filters;
 
         public Library(IReadOnlyList<string>? languages = null, DevicePlatform? platform = null, string? resourcesDigest = null) {
-            Filters = new(null, platform ?? DevicePlatform.Desktop, languages ?? ["en-US"], () => new Device.FilterPreferences(Level, Choices, CustomLists, CustomFilters), change => {
+            Filters = new(null, platform ?? DevicePlatform.Desktop, languages ?? ["en-US"], () => new Device.FilterPreferences(Level, Choices, CustomLists, CustomFilters, CleansCopiedLinks: false), change => {
                 if (change is ContentRuleListsChanged changed) Announced.Add(changed.Lists);
             }, Clock, resourcesDigest: resourcesDigest);
         }

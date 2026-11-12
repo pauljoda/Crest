@@ -32,7 +32,9 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case addressBorder
     case addressEditingOutline
     case commandPaletteMotion
+    case addressDisplay
     case copyURLButton
+    case superCopy
     case folderIconOnly
     case folderTintTitle
     case folderHighlights

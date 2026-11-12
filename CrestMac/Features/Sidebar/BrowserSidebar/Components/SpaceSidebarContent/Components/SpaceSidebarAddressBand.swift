@@ -22,6 +22,9 @@ struct SpaceSidebarAddressBand: View {
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The field's width, which decides whether Copy URL fits beside Site
+    /// Controls.
+    @State private var fieldWidth: CGFloat = .infinity
 
     var body: some View {
         BrowserSidebarAddressField(configuration: addressConfiguration) {
@@ -44,6 +47,7 @@ struct SpaceSidebarAddressBand: View {
             SpacePagerSettlement.standardAnimation.unlessReducingMotion(reduceMotion),
             value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
         )
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { fieldWidth = $0 }
         .padding(.horizontal, BrowserSidebarMetrics.layerInset)
 
     }
@@ -87,9 +91,11 @@ struct SpaceSidebarAddressBand: View {
     }
 
     /// The page the Copy URL button copies, while the person turned the
-    /// button on and the page has an address to copy.
+    /// button on, the field has room for it, and the page has an address to
+    /// copy.
     private var copyURLPage: BrowserPage? {
         guard BrowserDeviceAppearanceStore.shared.address.showsCopyURLButton,
+            fieldWidth >= BrowserSidebarAddressFieldMetrics.copyURLButtonMinimumWidth,
             let page = displayedPage, page.live.documentURL != nil
         else { return nil }
         return page

@@ -15,13 +15,13 @@ extension MobileBrowserTransientOverlayModel {
                 promote(to: request.spaceAssignment)
             },
             BrowserPeekLinkMenuItem(title: String(localized: "Copy Link"), systemImage: "link") { [weak self] in
-                BrowserPageLinkClipboard.copy(self?.linkURL)
+                BrowserPageLinkClipboard.copy(self?.linkToCopy)
             },
             BrowserPeekLinkMenuItem(title: String(localized: "Share…"), systemImage: "square.and.arrow.up") {
                 [weak self] in
-                guard let url = self?.linkURL else { return }
+                guard let link = self?.linkToCopy else { return }
                 MobileBrowserDialogPresenter.present(
-                    UIActivityViewController(activityItems: [url], applicationActivities: nil), fallback: {})
+                    UIActivityViewController(activityItems: [link.url], applicationActivities: nil), fallback: {})
             },
             BrowserPeekLinkMenuItem(
                 title: String(localized: "Download Linked File"), systemImage: "arrow.down.circle"
@@ -36,5 +36,10 @@ extension MobileBrowserTransientOverlayModel {
     /// The address the card shows: its page's once it has one.
     private var linkURL: URL? {
         page?.live.displayURL ?? request.url
+    }
+
+    /// The card's address as copying or sharing it hands it out.
+    private var linkToCopy: BrowserCopiedLink? {
+        linkURL.map(browser.core.linkToCopy)
     }
 }

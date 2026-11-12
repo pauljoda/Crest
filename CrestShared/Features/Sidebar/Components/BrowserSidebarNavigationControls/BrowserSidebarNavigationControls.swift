@@ -28,6 +28,8 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The strip's width, which decides whether Forward fits.
+    @State private var width: CGFloat = .infinity
 
     var body: some View {
         strip
@@ -49,6 +51,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                     growsWithContent: metrics.growsWithContent
                 )
             )
+            .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
     }
 
     private var strip: some View {
@@ -61,15 +64,17 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                 metrics: metrics
             )
 
-            BrowserSidebarNavigationHistoryControl(
-                direction: .forward,
-                port: port,
-                metrics: metrics
-            )
+            if showsForward {
+                BrowserSidebarNavigationHistoryControl(
+                    direction: .forward,
+                    port: port,
+                    metrics: metrics
+                )
+            }
 
             BrowserReloadControl(
                 isLoading: port.isLoading(),
-                isDeveloperMode: port.activeURL()?.isLocalDevelopmentAddress == true,
+                isDeveloperMode: isDeveloperMode,
                 reloadOrStop: port.reloadOrStop,
                 reload: port.reload,
                 reloadFromOrigin: port.reloadFromOrigin,
@@ -82,6 +87,18 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
             trailingAccessory
         }
+    }
+
+    /// Whether Forward fits beside the window's own controls. The developer
+    /// reload menu beside reload asks for its room too.
+    private var showsForward: Bool {
+        guard let fold = metrics.forwardFoldWidth else { return true }
+        let developerMenu = isDeveloperMode ? metrics.reloadMenuControlSize.width + metrics.controlSpacing : 0
+        return width >= fold + developerMenu
+    }
+
+    private var isDeveloperMode: Bool {
+        port.activeURL()?.isLocalDevelopmentAddress == true
     }
 
     /// Which controls are enabled: where history goes, and whether there is

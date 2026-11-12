@@ -19,7 +19,7 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
         settings: [
             .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .fullScreenSidebarReveal,
             .defaultPageZoom, .cornerRadius, .tabScale, .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus,
-            .copyURLButton, .folderIconOnly, .folderTabCounts, .appIcon,
+            .addressDisplay, .copyURLButton, .superCopy, .folderIconOnly, .folderTabCounts, .appIcon,
         ])
 
     /// The few choices most people make, with Space icons as dots.

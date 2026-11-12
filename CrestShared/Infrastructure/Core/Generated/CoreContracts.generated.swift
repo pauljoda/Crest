@@ -3977,6 +3977,7 @@ struct LinkPreferences: Equatable, Sendable {
     let dimsPageBehindPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
+    let cleansCopiedLinks: Bool
     let routes: [LinkRoute]
     let rememberedSites: [RememberedSite]
 }
@@ -3999,6 +4000,12 @@ struct LinkRouteExists: Equatable, Sendable {
 
 struct LinkRoutesFull: Equatable, Sendable {
     let maximum: Int
+}
+
+struct LinkToCopy: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let url: String
 }
 
 struct ListDropTarget: Equatable, Sendable {
@@ -15004,6 +15011,7 @@ struct LinkBehavior: Hashable, Sendable {
     static let dragsLinksToPeek = LinkBehavior(tag: 3, name: "dragsLinksToPeek")
     static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
     static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
+    static let cleansCopiedLinks = LinkBehavior(tag: 6, name: "cleansCopiedLinks")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
@@ -15011,7 +15019,8 @@ struct LinkBehavior: Hashable, Sendable {
         opensPeekAutomatically,
         dragsLinksToPeek,
         dimsPageBehindPeek,
-        remembersSpaceBySite
+        remembersSpaceBySite,
+        cleansCopiedLinks
     ]
 
     static func named(_ name: String?) -> LinkBehavior? {

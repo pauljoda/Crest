@@ -30,8 +30,14 @@ public sealed class LinkBehavior {
         isOn: preferences => preferences.RemembersSpaceBySite,
         setting: (preferences, on) => preferences with { RemembersSpaceBySite = on });
 
+    /// A page's address copied from Crest leaves out the parameters and path
+    /// segments that only track who followed it. Off copies it as it is.
+    public static readonly LinkBehavior CleansCopiedLinks = new(name: "cleansCopiedLinks",
+        isOn: preferences => preferences.CleansCopiedLinks, setting: (preferences, on) => preferences with { CleansCopiedLinks = on });
+
     public static IReadOnlyList<LinkBehavior> All { get; } =
-        [FocusesNewTabs, FollowsMovedTabs, OpensPeekAutomatically, DragsLinksToPeek, DimsPageBehindPeek, RemembersSpaceBySite];
+        [FocusesNewTabs, FollowsMovedTabs, OpensPeekAutomatically, DragsLinksToPeek, DimsPageBehindPeek, RemembersSpaceBySite,
+            CleansCopiedLinks];
 
     #endregion
 

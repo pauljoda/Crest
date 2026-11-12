@@ -26,6 +26,8 @@ struct BrowserAddressContent: View {
     /// Another value pops the shown address out and the new one in; an
     /// address being edited stays.
     var swapID: UUID?
+    /// How much of the address shows while it is not being edited.
+    var display = BrowserAddressAppearance.Display.twoLines
     let submit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -169,24 +171,55 @@ struct BrowserAddressContent: View {
         }
     }
 
+    @ViewBuilder
     private func addressSummaryLabel(
         _ presentation: BrowserAddressPresentation
     ) -> some View {
-        VStack(spacing: -1) {
-            Text(presentation.domain)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(text.isEmpty ? .secondary : .primary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-
-            if let route = presentation.route {
-                Text(route)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        switch display {
+        case .twoLines:
+            VStack(spacing: -1) {
+                domainLabel(presentation)
                     .truncationMode(.middle)
+
+                if let route = presentation.route {
+                    Text(route)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
+        case .oneLine:
+            // The site keeps its room and the path gives way first; a site
+            // too long for the field is cut short in its middle.
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                domainLabel(presentation)
+                    .truncationMode(.middle)
+                    .layoutPriority(1)
+                if let route = presentation.route {
+                    Text(route)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+        case .siteOnly:
+            domainLabel(presentation)
+                .truncationMode(.middle)
         }
+    }
+
+    private func domainLabel(_ presentation: BrowserAddressPresentation) -> some View {
+        domainText(presentation)
+            .font(.callout)
+            .lineLimit(1)
+    }
+
+    private func domainText(_ presentation: BrowserAddressPresentation) -> Text {
+        Text(presentation.domain)
+            .fontWeight(.semibold)
+            .foregroundStyle(text.isEmpty ? .secondary : .primary)
     }
 
     // MARK: - Actions - Centering

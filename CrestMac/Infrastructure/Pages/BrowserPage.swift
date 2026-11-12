@@ -884,9 +884,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     // MARK: - Actions - Sharing and export
 
+    /// Copies the page's address, without its trackers while Super Copy is
+    /// on.
     @discardableResult
     func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(live.documentURL)
+        BrowserPageLinkClipboard.copy(linkToCopy)
     }
 
     func copyDeveloperPageLink() {
@@ -895,19 +897,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// The page's address as copying or sharing it hands it out.
+    var linkToCopy: BrowserCopiedLink? {
+        live.documentURL.map(downloadCenter.core.linkToCopy)
+    }
+
     @discardableResult
     func copyPageLinkAsMarkdown() -> Bool {
-        guard let url = live.documentURL else { return false }
-        let label = live.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedLabel = label.isEmpty ? (url.host() ?? url.absoluteString) : label
-        let escapedLabel =
-            resolvedLabel
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "]", with: "\\]")
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString("[\(escapedLabel)](\(url.absoluteString))", forType: .string)
-        return true
+        BrowserPageLinkClipboard.copyMarkdown(linkToCopy, title: live.title)
     }
 
     /// The whole page as an image `snapshotWidth` points wide, or as wide in
@@ -1000,8 +997,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func sharePage() {
-        guard let url = live.documentURL else { return }
-        let picker = NSSharingServicePicker(items: [url])
+        guard let link = linkToCopy else { return }
+        let picker = NSSharingServicePicker(items: [link.url])
         picker.delegate = self
         sharingPicker = picker
         Task { @MainActor [weak self] in
