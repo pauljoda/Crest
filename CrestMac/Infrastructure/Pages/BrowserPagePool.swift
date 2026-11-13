@@ -78,6 +78,11 @@ final class BrowserPagePool:
     @ObservationIgnored private(set) weak var presentationWindow: NSWindow?
     private(set) var isWindowFocused = true
     var publishesPageMetadataCentrally: Bool { runtimeStore.publishesPageMetadataCentrally }
+    /// Small pictures of the tabs this pool's pages showed, which a tab's
+    /// preview and the recent tabs draw.
+    @ObservationIgnored private(set) lazy var tabPictures = BrowserTabPictures(pages: self) {
+        BrowserAppPreferenceStore.shared.showsRecentTabs || BrowserDeviceAppearanceStore.shared.previewsTabsOnHover
+    }
     let downloadCenter: BrowserDownloadCenter
     /// Mirrors the runtime's console capture: web pages then report their
     /// calls into an installed extension to the diagnostics log.
@@ -602,6 +607,7 @@ final class BrowserPagePool:
     /// Spaces `spaces` names, as its last window closes.
     func closePrivateBrowsingSession(_ spaces: [BrowserSpaceRuntimeAssignment]) {
         guard browsingMode.isPrivate else { return }
+        tabPictures.removeAll()
         releasePrivateBrowsingData(in: spaces)
     }
 

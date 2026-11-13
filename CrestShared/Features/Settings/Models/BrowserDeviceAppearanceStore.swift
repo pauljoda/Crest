@@ -158,6 +158,8 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
     static let peekSizeKey = "crest.appearance.peek-size"
+    static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
+    static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
     static let customizationStyleKey = "crest.appearance.customization-style"
     static let spaceIconsKey = "crest.appearance.space-icons"
     static let spaceCustomizationStylesKey = "crest.appearance.space-customization-styles"
@@ -203,6 +205,15 @@ final class BrowserDeviceAppearanceStore {
     /// ``BrowserTransientCardArrangement/pointerCardShares``. Only the Mac's
     /// Peek floats in that room.
     var peekSize: Double {
+        didSet { saveSoon() }
+    }
+    /// Whether a sidebar tab or pin the pointer rests on shows its preview
+    /// card, where the window draws one.
+    var previewsTabsOnHover: Bool {
+        didSet { saveSoon() }
+    }
+    /// Whether a sidebar folder the pointer rests on shows a card of its tabs.
+    var previewsFoldersOnHover: Bool {
         didSet { saveSoon() }
     }
     /// How tabs look. Replaced only to reset it; otherwise its choices change
@@ -340,6 +351,11 @@ final class BrowserDeviceAppearanceStore {
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
+        previewsTabsOnHover =
+            defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover
+        previewsFoldersOnHover =
+            defaults.object(forKey: Self.folderHoverPreviewKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.previewsFoldersOnHover
         let shares = BrowserTransientCardArrangement.pointerCardShares
         peekSize =
             (defaults.object(forKey: Self.peekSizeKey) as? Double).flatMap {
@@ -528,6 +544,8 @@ final class BrowserDeviceAppearanceStore {
         write(looks as NSDictionary, forKey: Self.rememberedLooksKey, in: defaults)
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
+        write(previewsTabsOnHover, forKey: Self.tabHoverPreviewKey, in: defaults)
+        write(previewsFoldersOnHover, forKey: Self.folderHoverPreviewKey, in: defaults)
         write(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey, in: defaults)
         write(pinsFillRow, forKey: BrowserSidebarDensityPreference.pinsFillRowKey, in: defaults)
         write(foldersAlwaysVisible, forKey: BrowserFolderAppearancePreference.alwaysVisibleKey, in: defaults)

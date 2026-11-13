@@ -32,6 +32,13 @@ final class BrowserUtilityPresentationState {
         }
     }
     @ObservationIgnored private var isSiteControlContextMenuPresentedStorage = false
+    /// Whether the pointer is in a sidebar tab's preview card, which holds a
+    /// floating sidebar open as the switcher and Site Controls do.
+    private(set) var isTabPreviewHeld: Bool {
+        get { observed(\.isTabPreviewHeldStorage, as: \.isTabPreviewHeld) }
+        set { publish(newValue, into: \.isTabPreviewHeldStorage, as: \.isTabPreviewHeld) }
+    }
+    @ObservationIgnored private var isTabPreviewHeldStorage = false
     private(set) var triggerFrameInGlobal: CGRect?
     private(set) var searchFocusRequest = 0
     @ObservationIgnored private var consumedSearchFocusRequest = 0
@@ -61,7 +68,7 @@ final class BrowserUtilityPresentationState {
     }
 
     var isSidebarInteractionActive: Bool {
-        isSwitcherExpanded || isSiteControlInteractionActive
+        isSwitcherExpanded || isSiteControlInteractionActive || isTabPreviewHeld
     }
 
     func recordTriggerFrame(_ frame: CGRect) {
@@ -72,6 +79,11 @@ final class BrowserUtilityPresentationState {
     func setSiteControlPresented(_ isPresented: Bool) {
         guard isPresented != isSiteControlPresented else { return }
         isSiteControlPresented = isPresented
+    }
+
+    func setTabPreviewHeld(_ isHeld: Bool) {
+        guard isHeld != isTabPreviewHeld else { return }
+        isTabPreviewHeld = isHeld
     }
 
     func setSiteControlContextMenuPresented(_ isPresented: Bool) {

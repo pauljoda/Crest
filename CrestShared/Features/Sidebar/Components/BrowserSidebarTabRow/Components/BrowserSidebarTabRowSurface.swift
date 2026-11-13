@@ -30,6 +30,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     let interaction: BrowserSidebarTabRowInteractionContext
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.browserSidebarRowJoinsReorder) private var joinsReorder
     private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     func body(content: Content) -> some View {
@@ -83,11 +84,12 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 profileID: configuration.profileID,
                 spaceID: configuration.spaceID,
                 dragState: sidebarInteraction.tabDragState,
-                reorder: BrowserSidebarReorderContext(
-                    browser: configuration.browser,
-                    spaceAccess: configuration.spaceAccess,
-                    state: sidebarInteraction.sidebarReorderState
-                ),
+                reorder: joinsReorder
+                    ? BrowserSidebarReorderContext(
+                        browser: configuration.browser,
+                        spaceAccess: configuration.spaceAccess,
+                        state: sidebarInteraction.sidebarReorderState
+                    ) : nil,
                 parentSplitGroupID: configuration.isSplitGroupMember ? configuration.tab.splitGroupID : nil,
                 isEnabled: !interaction.isRenaming
                     && configuration.isAvailableForDisplay
@@ -100,7 +102,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 isActive: configuration.tab.splitGroupID == nil
                     && !configuration.tab.placement.isDurable
                     && configuration.tab.folderID == nil
-                    && configuration.isAvailableForDisplay,
+                    && configuration.isAvailableForDisplay && joinsReorder,
                 requiresSelectedSpace: true
             )
             .overlay {
@@ -109,9 +111,13 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             }
             .crestCollectionItemTransition()
             .accessibilityElement(children: .contain)
-            .contextMenu {
-                if configuration.capabilities.supportsOrganization { organizationMenu }
-            }
+            .modifier(
+                BrowserTabContextMenu(
+                    tab: configuration.tab, context: configuration.context,
+                    capabilities: configuration.capabilities,
+                    isEnabled: configuration.capabilities.supportsOrganization
+                ) { organizationMenu }
+            )
             .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
                 if !focused, interaction.isRenaming {
                     interaction.commitTitle()
@@ -151,9 +157,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     }
 
     private var minHeight: CGFloat {
-        let base = configuration.capabilities.rowMinHeight(dynamicTypeSize: dynamicTypeSize)
-        return BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
-            base: base, touch: configuration.capabilities.supportsTouch)
+        configuration.capabilities.tabRowHeight(tabScale: tabScale, dynamicTypeSize: dynamicTypeSize)
     }
 
     private var usesMatchedGeometryPromotion: Bool {
@@ -225,4 +229,12 @@ private struct BrowserSelectedTabRowAppearance: ViewModifier {
                 \.colorScheme,
                 isSelected ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme)
     }
+}
+
+extension EnvironmentValues {
+    /// Whether a tab row takes its place in the sidebar's reorder layout,
+    /// measured as the tab's row and dragged as it. A row drawn outside the
+    /// sidebar, as a folder's card draws its tabs, joins it only while the
+    /// sidebar shows no row of the same tab, which would otherwise share it.
+    @Entry var browserSidebarRowJoinsReorder = true
 }

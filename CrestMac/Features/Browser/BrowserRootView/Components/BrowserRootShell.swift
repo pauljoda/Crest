@@ -69,6 +69,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // window, fullscreen page or not.
             BrowserRecentTabsLayer(chrome: model.chrome)
 
+            // The card of the tab the sidebar is rested on shows beside the
+            // sidebar and over the page, a floating sidebar's too.
+            BrowserMacTabPreviewLayer(model: model)
+
             // Notices show over a fullscreen page too, so one posted there
             // is never lost.
             BrowserNoticeLayer(notices: model.chrome.notices)

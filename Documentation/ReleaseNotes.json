@@ -5401,6 +5401,18 @@
     "quick-window-opens-in-place": {
       "category": "fixed",
       "message": "On Mac, a Quick Window opens once where it stays and pops in, instead of flashing in the middle of the screen at a larger size and jumping into place. Crest's other windows no longer flash over the app a link came from."
+    },
+    "tab-hover-preview": {
+      "category": "new",
+      "message": "On Mac, resting the pointer on a tab or pin in the sidebar shows a card beside it with the tab's title, its site and how its page last looked. Turn it off in Settings › Appearance › Preview hover."
+    },
+    "folder-hover-preview": {
+      "category": "new",
+      "message": "On Mac, resting the pointer on a folder in the sidebar lists its tabs, including those in folders inside it, with a search field ready for typing. Open, unload or close a tab there, or drag it out of the folder, without opening the folder. Turn it off in Settings › Appearance › Preview hover."
+    },
+    "touch-sidebar-previews": {
+      "category": "new",
+      "message": "On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind \"…\". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews."
     }
   }
 }
