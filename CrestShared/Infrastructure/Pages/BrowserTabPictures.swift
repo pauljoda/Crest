@@ -37,11 +37,10 @@ final class BrowserTabPictures {
     /// pictured at most this often. A change inside it is pictured once it
     /// passes.
     private static let minimumGap: TimeInterval = 10
-    /// Pictures of one tab showing one page, its host and path, are never
-    /// taken closer together than this unless the page finished loading
-    /// since, so going back and forth between tabs costs one picture each,
-    /// not one per switch; the tab the recent tabs open over is pictured
-    /// again as they open.
+    /// Pictures of one tab at one address are never taken closer together
+    /// than this unless its page finished loading since, so going back and
+    /// forth between tabs costs one picture each, not one per switch; the
+    /// tab the recent tabs open over is pictured again as they open.
     private static let minimumInterval: TimeInterval = 30
     /// The tallest a picture is kept, as height over width. A taller page
     /// keeps its top, which is as much as a card draws.
@@ -61,9 +60,8 @@ final class BrowserTabPictures {
     /// Whether something the window has draws pictures.
     @ObservationIgnored private let wanted: @MainActor () -> Bool
     @ObservationIgnored private var isLocked: (@MainActor (SpaceModel) -> Bool)?
-    /// When each tab was last pictured, and at which page, its address's
-    /// host and path.
-    @ObservationIgnored private var lastCaptures: [UUID: (date: Date, page: String?)] = [:]
+    /// When each tab was last pictured, and at which address.
+    @ObservationIgnored private var lastCaptures: [UUID: (date: Date, url: String?)] = [:]
     @ObservationIgnored private var settling: Task<Void, Never>?
 
     /// Whether a feature that draws pictures is on.
@@ -162,8 +160,9 @@ final class BrowserTabPictures {
 
     /// Pictures `tabIDs` of the Space the window shows, when their pages are
     /// resident and on screen, as a web view draws only there. A tab pictured
-    /// at the same page moments ago is skipped unless `refreshing`, and one
-    /// pictured within `minimumGap` waits until the gap passes.
+    /// at the same address moments ago is skipped unless `refreshing`, and a
+    /// change within `minimumGap` of its last picture waits until the gap
+    /// passes.
     func capture(_ tabIDs: [UUID], refreshing: Bool = false) {
         guard isWanted, let pages, let isLocked, let space = pages.browser.shownSpace, !isLocked(space) else {
             return
@@ -172,18 +171,18 @@ final class BrowserTabPictures {
         let presented = pages.presentedTabIDsAcrossWindows
         var wait: TimeInterval?
         for tabID in tabIDs where presented.contains(tabID) && pages.host.residentTabIDs.contains(tabID) {
-            let shownPage = space.tabs.model(tabID)?.url.flatMap(Self.page(of:))
+            let url = space.tabs.model(tabID)?.url
             if let last = lastCaptures[tabID] {
                 let elapsed = now.timeIntervalSince(last.date)
                 guard elapsed >= Self.minimumGap else {
-                    if refreshing || last.page != shownPage { wait = min(wait ?? .infinity, Self.minimumGap - elapsed) }
+                    if refreshing || last.url != url { wait = min(wait ?? .infinity, Self.minimumGap - elapsed) }
                     continue
                 }
-                if !refreshing, last.page == shownPage, elapsed < Self.minimumInterval { continue }
+                if !refreshing, last.url == url, elapsed < Self.minimumInterval { continue }
             }
             let assignment = BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID)
             guard let page = pages.host.page(matching: assignment) else { continue }
-            lastCaptures[tabID] = (now, shownPage)
+            lastCaptures[tabID] = (now, url)
             page.enginePage.capture(width: Self.width) { [weak self] png in
                 guard let png else { return }
                 Task { @MainActor [weak self] in
@@ -196,12 +195,6 @@ final class BrowserTabPictures {
         if let wait { settle(after: .seconds(wait), refreshing: refreshing) }
     }
 
-    /// The page `address` names, its host and path, which a page rewriting
-    /// its query or fragment as it is used keeps.
-    private static func page(of address: String) -> String? {
-        guard let components = URLComponents(string: address) else { return address }
-        return (components.host ?? "") + components.path
-    }
 
     /// `png` as a compressed picture, made off the main thread.
     private nonisolated static func compressed(_ png: Data, takenAt: Date) async -> BrowserTabPicture? {

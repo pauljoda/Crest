@@ -218,8 +218,7 @@ private struct BrowserMacTabPreviewDismissal: NSViewRepresentable {
         }
         if let content = window.contentView {
             let point = CGPoint(x: location.x, y: content.bounds.height - location.y)
-            let cards = [preview.cardFrame, preview.inner.cardFrame].compactMap(\.self)
-            if cards.contains(where: { $0.contains(point) }) { return false }
+            if preview.shownCardFrames.contains(where: { $0.contains(point) }) { return false }
         }
         preview.dismiss()
         return false

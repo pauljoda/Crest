@@ -76,6 +76,12 @@ final class BrowserTabPreviewState {
     /// the window takes down.
     var isEngaged: Bool { shown != nil || resting != nil }
 
+    /// Where the cards that show are in the window: this one's, and the card
+    /// of a tab a folder's card lists. A card that went keeps no frame.
+    var shownCardFrames: [CGRect] {
+        [shown == nil ? nil : cardFrame, inner.shown == nil ? nil : inner.cardFrame].compactMap(\.self)
+    }
+
     /// Whether the person typed in the window a moment ago, so a card's
     /// search leaves the keyboard with what they were typing in.
     var isTyping: Bool {

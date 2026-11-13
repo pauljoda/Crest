@@ -102,8 +102,7 @@ final class MobileTabPreviewDismissalView: UIView {
 
     private func touched(at location: CGPoint) {
         guard let preview, preview.isEngaged, preview.shown?.isHeldByTouch != true else { return }
-        let cards = [preview.cardFrame, preview.inner.cardFrame].compactMap(\.self)
-        guard !cards.contains(where: { $0.contains(location) }) else { return }
+        guard !preview.shownCardFrames.contains(where: { $0.contains(location) }) else { return }
         preview.dismiss()
     }
 }
