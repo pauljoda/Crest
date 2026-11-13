@@ -6,29 +6,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.23</title>
-            <pubDate>Fri, 13 Nov 2026 04:32:19 +0000</pubDate>
+            <title>0.9.26</title>
+            <pubDate>Fri, 13 Nov 2026 05:13:24 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1595</sparkle:version>
-            <sparkle:shortVersionString>0.9.23</sparkle:shortVersionString>
+            <sparkle:version>1597</sparkle:version>
+            <sparkle:shortVersionString>0.9.26</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Choose how the address field, pins, extensions, selected tab and other glass surfaces read in Appearance: Automatic follows each Space, dark over dark Spaces and light over very light ones, or keep them Light, Dark, or as your Mac's appearance (System).
+
 ### Fixed
 
-- A folder inside a closed folder opens when you click it, showing everything in it while the folder around it stays closed.
+- The Start Page title on the Mac reads in its Space's light or dark look, so it no longer draws black over a dark Space.
+- In a narrow sidebar, Copy URL appears in the address field while the pointer is over it, so you can still copy the address with a click.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/dab55a09e2771945bb0d3dc9f0c5864e5617ee93...47e9e67315b162613415cbd736f49d1241af915c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.23-2026-11-13-1595-r595.1/Installer-Crest-0.9.23-development-2026-11-13-47e9e67-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/47e9e67315b162613415cbd736f49d1241af915c...4110ef03ed71cf2480a613faf43290839e712703) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.26-2026-11-13-1597-r597.1/Installer-Crest-0.9.26-development-2026-11-13-4110ef0-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.23-2026-11-13-1595-r595.1/Installer-Crest-0.9.23-development-2026-11-13-47e9e67-arm64.dmg" length="220652677" type="application/octet-stream" sparkle:edSignature="n0Zj38nbiAAM8ihGkDWF2QVl6EloHmnZvloDqvuiWzruHNmyqEaSoZ+9aQawbqWJQS2fr5FcQhKrJ0ijzMOHBQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.26-2026-11-13-1597-r597.1/Installer-Crest-0.9.26-development-2026-11-13-4110ef0-arm64.dmg" length="220601989" type="application/octet-stream" sparkle:edSignature="Y0HYCYnSEFsDi3niEVLLRidv+bGMQ0SZZCaZRKXra2NfuPUn72zqmzVzPzzxVr4BQmWpRIm+I0eW+x3QAkQoDg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +65,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: jUW2l4los0F4X3kkU28jKJy9+yZEQK7C9yWY28ZkQCwKuCG9mQ0b0gJTUnATvX09+bXJKuA8yGTYC3VFdgmHBg==
-length: 4015
+edSignature: W/tJPyY+Wthc/DLnhEu6VInj+xx5HZc+Q1OJL+gwQZ29LJ4oMLjZRZYeUDTYCLlK1inWVuuoL+gkzQ6flFxiBw==
+length: 4417
 -->
