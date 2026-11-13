@@ -5,6 +5,11 @@ import SwiftUI
 /// notices. A card holds what it shows the sidebar's inset from its sides,
 /// and its corners run parallel to the corners of the sidebar's layers
 /// inside it.
+///
+/// What the card shows reads in the label colors of the scheme its glass
+/// draws in, the window's, whichever the Space's text or the device's
+/// material color would choose, so its text never draws light on light
+/// glass or dark on dark.
 struct BrowserTabPreviewSurface: ViewModifier {
     // MARK: - Static Variables
 
@@ -22,6 +27,10 @@ struct BrowserTabPreviewSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            // The label color itself, not the Space ink a hierarchical style
+            // would take its levels from.
+            .foregroundStyle(Color.primary)
+            .environment(\.spaceChromeForeground, nil)
             .frame(width: width, alignment: .leading)
             .glassEffect(
                 .regular, in: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius() + Self.padding)

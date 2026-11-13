@@ -84,7 +84,6 @@ struct BrowserFolderPreviewCard: View {
         }
         .padding(.top, BrowserSidebarMetrics.layerInset)
         .padding(.bottom, BrowserSidebarMetrics.layerInset - separation / 2)
-        .modifier(SurfaceToneAppearance())
         .browserTabPreviewSurface()
         .environment(\.browserTabPreviewState, preview.inner)
         .onChange(of: query) { _, query in preview.isHeld = !query.isEmpty }
