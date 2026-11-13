@@ -1001,6 +1001,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        zoomSession.prepareForNavigation(to: url)
         // The site it goes to may have content blocking turned off, or on.
         if let url {
             contentRuleSession.navigating(to: url, in: webView)

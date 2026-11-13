@@ -5389,6 +5389,10 @@
     "retain-site-zoom-through-space-changes": {
       "category": "fixed",
       "message": "Saved website zoom survives unfinished Space deletions, joining and separating Sub-Spaces, and handing a shared session to another Space."
+    },
+    "mobile-zoom-before-first-page-load": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, zoom chosen while a website first loads is remembered for that site."
     }
   }
 }

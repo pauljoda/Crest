@@ -8,6 +8,37 @@ import XCTest
 @MainActor
 final class MobileBrowserNavigationTests: XCTestCase {
 
+    func testZoomBeforeTheFirstCommitBelongsToItsHostAndProvisionalNavigationKeepsIt() async throws {
+        let browser = BrowserStore.privateBrowsing(core: .hostingPages())
+        let pages = MobileBrowserPageStore(
+            browser: browser, browsingMode: .privateBrowsing, usesEphemeralWebsiteDataStores: true,
+            pageZoomPreferences: BrowserDefaultPageZoomStore(
+                persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1))
+        )
+        pages.select()
+        let page = try XCTUnwrap(pages.activePage)
+        defer {
+            pages.closePrivateBrowsingSession(browser.spaceModels.map(BrowserSpaceRuntimeAssignment.init(space:)))
+        }
+        XCTAssertNil(page.webView.url)
+        let first = try XCTUnwrap(URL(string: "https://zoom.crest.test/"))
+        let second = try XCTUnwrap(URL(string: "https://other.crest.test/"))
+        page.prepareToLoad(first)
+        XCTAssertTrue(page.zoomIn())
+        XCTAssertEqual(page.corePage.siteZoom(for: first)?.factor, 1.1)
+        page.webView.loadSimulatedRequest(URLRequest(url: first), responseHTML: "<p>First</p>")
+        try await waitUntil(timeout: .seconds(5)) { page.committedNavigationCount == 1 }
+        XCTAssertEqual(page.pageZoom, 1.1)
+
+        page.prepareToLoad(second)
+        XCTAssertTrue(page.zoomIn())
+        XCTAssertEqual(page.corePage.siteZoom(for: first)?.factor, 1.25)
+        XCTAssertNil(page.corePage.siteZoom(for: second)?.factor)
+        page.webView.loadSimulatedRequest(URLRequest(url: second), responseHTML: "<p>Second</p>")
+        try await waitUntil(timeout: .seconds(5)) { page.committedNavigationCount == 2 }
+        XCTAssertEqual(page.pageZoom, 1)
+    }
+
     func testLockedCompactDetailNeverAutomaticallyRestoresItsPage() throws {
         var locked = makeSpace(index: 195)
         let tab = TabState.Seed(title: "Protected", url: URL(string: "about:blank"), placement: .current)
