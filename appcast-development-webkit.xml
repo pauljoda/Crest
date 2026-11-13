@@ -6,34 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.26</title>
-            <pubDate>Fri, 13 Nov 2026 05:13:28 +0000</pubDate>
+            <title>0.9.28</title>
+            <pubDate>Fri, 13 Nov 2026 14:49:26 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1597</sparkle:version>
-            <sparkle:shortVersionString>0.9.26</sparkle:shortVersionString>
+            <sparkle:version>1598</sparkle:version>
+            <sparkle:shortVersionString>0.9.28</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- Choose how the address field, pins, extensions, selected tab and other glass surfaces read in Appearance: Automatic follows each Space, dark over dark Spaces and light over very light ones, or keep them Light, Dark, or as your Mac's appearance (System).
+- On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open.
 
 ### Fixed
 
-- The Start Page title on the Mac reads in its Space's light or dark look, so it no longer draws black over a dark Space.
-- In a narrow sidebar, Copy URL appears in the address field while the pointer is over it, so you can still copy the address with a click.
+- On Mac, a Quick Window that a link from another app or the New Quick Window shortcut opens appears over the app you're using, on the display you're using it on, instead of over another app's window. Links in Crest's own Settings open over Crest.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/47e9e67315b162613415cbd736f49d1241af915c...4110ef03ed71cf2480a613faf43290839e712703) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.26-2026-11-13-1597-r597.1/Installer-Crest-0.9.26-development-2026-11-13-4110ef0-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/4110ef03ed71cf2480a613faf43290839e712703...814e21eb243c98184a40db77efd3da7456448a74) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.28-2026-11-13-1598-r598.1/Installer-Crest-0.9.28-development-2026-11-13-814e21e-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.26-2026-11-13-1597-r597.1/Installer-Crest-0.9.26-development-2026-11-13-4110ef0-arm64.dmg" length="220601989" type="application/octet-stream" sparkle:edSignature="Y0HYCYnSEFsDi3niEVLLRidv+bGMQ0SZZCaZRKXra2NfuPUn72zqmzVzPzzxVr4BQmWpRIm+I0eW+x3QAkQoDg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.28-2026-11-13-1598-r598.1/Installer-Crest-0.9.28-development-2026-11-13-814e21e-arm64.dmg" length="220657285" type="application/octet-stream" sparkle:edSignature="ZWn62YfFRGMHs02Q4mcC/ZyJ69hvaYepLpW5WviztryTuVeMUmovwS2RaYGEqcE+1sj2VUssOAS02SFGu7LgDw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -65,6 +64,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 97qspOVs+cvgWS9UZ2ySf6xTzKEwOrn2ciRCZAE3+KEIDFhTV1+nSETC6eUh+2rAXmi5Aym5e7OLOHrksrCLCw==
-length: 4417
+edSignature: onm/5IxBtto19OKgOIK7FuMcMh6dTqY0egRmIZla4Wbf1XX5iyDgyQnDIdCiqPzw0QqgrKCYkOX10UagZgeRCA==
+length: 4370
 -->
