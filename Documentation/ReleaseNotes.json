@@ -5389,6 +5389,10 @@
     "quick-window-returns-to-app": {
       "category": "new",
       "message": "On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open."
+    },
+    "settings-scroll-anywhere": {
+      "category": "improved",
+      "message": "On macOS 27, Settings pages scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle."
     }
   }
 }
