@@ -4,7 +4,7 @@ struct BrowserRootView: View {
     private let transientBrowsing: BrowserTransientBrowsingCoordinator
     private let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     private let shortcuts: BrowserShortcutStore?
-    private let persistSidebarWidth: (Double) -> Void
+    private let persistSidebarWidth: @MainActor (Double) -> Void
 
     @State private var model: BrowserRootModel
     @State private var storedSidebarWidth: Double
@@ -23,7 +23,7 @@ struct BrowserRootView: View {
         startupBehavior: StartupBehavior = .showStartPage,
         shortcuts: BrowserShortcutStore? = nil,
         initialSidebarWidth: Double? = nil,
-        persistSidebarWidth: @escaping (Double) -> Void =
+        persistSidebarWidth: @escaping @MainActor (Double) -> Void =
             BrowserRootSidebarWidthPersistence.write
     ) {
         self.transientBrowsing = transientBrowsing
