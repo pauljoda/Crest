@@ -25,6 +25,9 @@ struct SpaceSidebarAddressBand: View {
     /// The field's width, which decides whether Copy URL fits beside Site
     /// Controls.
     @State private var fieldWidth: CGFloat = .infinity
+    /// Whether the pointer is over the field, which brings Copy URL back in a
+    /// field too narrow to keep it, in the address's room.
+    @State private var isHovering = false
 
     var body: some View {
         BrowserSidebarAddressField(configuration: addressConfiguration) {
@@ -48,6 +51,9 @@ struct SpaceSidebarAddressBand: View {
             value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
         )
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { fieldWidth = $0 }
+        .onHover { hovering in
+            withAnimation(CrestMotion.controlState.unlessReducingMotion(reduceMotion)) { isHovering = hovering }
+        }
         .padding(.horizontal, BrowserSidebarMetrics.layerInset)
 
     }
@@ -91,11 +97,11 @@ struct SpaceSidebarAddressBand: View {
     }
 
     /// The page the Copy URL button copies, while the person turned the
-    /// button on, the field has room for it, and the page has an address to
-    /// copy.
+    /// button on, the field has room for it or the pointer is over it, and
+    /// the page has an address to copy.
     private var copyURLPage: BrowserPage? {
         guard BrowserDeviceAppearanceStore.shared.address.showsCopyURLButton,
-            fieldWidth >= BrowserSidebarAddressFieldMetrics.copyURLButtonMinimumWidth,
+            isHovering || fieldWidth >= BrowserSidebarAddressFieldMetrics.copyURLButtonMinimumWidth,
             let page = displayedPage, page.live.documentURL != nil
         else { return nil }
         return page

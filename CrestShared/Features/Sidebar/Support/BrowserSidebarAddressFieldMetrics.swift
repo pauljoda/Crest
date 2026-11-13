@@ -68,10 +68,10 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// hit target as a row's trailing control.
     static let securityControlSize = BrowserTabTrailingControlMetrics.pointer.controlSize.height
 
-    /// The narrowest field that draws Copy URL beside Site Controls, which
-    /// leaves the address about the width of a short domain. A narrower field
-    /// gives that room back to the address; Site Controls and the shortcut
-    /// still copy it.
+    /// The narrowest field that always draws Copy URL beside Site Controls,
+    /// which leaves the address about the width of a short domain. A narrower
+    /// field gives that room back to the address, and draws Copy URL in it
+    /// only while the pointer is over the field.
     static let copyURLButtonMinimumWidth: CGFloat = 200
 
     /// A pointer shell: one exact 36pt band with the glyph column reserved.
