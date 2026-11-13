@@ -5392,7 +5392,7 @@
     },
     "settings-scroll-anywhere": {
       "category": "improved",
-      "message": "On macOS 27, Settings pages scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle."
+      "message": "On macOS 27, Settings pages other than Shortcuts and Feature Flags scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle."
     }
   }
 }
