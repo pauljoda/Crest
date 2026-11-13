@@ -5421,6 +5421,14 @@
     "address-field-click-anywhere": {
       "category": "fixed",
       "message": "On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below \"Search or enter website\", or an address shown on one line, used to do nothing."
+    },
+    "sidebar-hover-delay": {
+      "category": "new",
+      "message": "On Mac, choose how long the pointer rests on the window's edge before a hidden sidebar comes out, from Instant to a second, in Settings › Appearance › Sidebar hover delay. It applies in a window and in full screen, and moving off the edge before then still keeps the sidebar hidden."
+    },
+    "sidebar-slide-time": {
+      "category": "new",
+      "message": "On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time."
     }
   }
 }

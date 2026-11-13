@@ -719,6 +719,9 @@
     "%lld left out" : {
       "comment" : "How many of a browser's profiles or Spaces an import cannot bring, shown in the import review."
     },
+    "%lld ms" : {
+
+    },
     "%lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -7845,6 +7848,9 @@
     "Installing Update" : {
 
     },
+    "Instant" : {
+
+    },
     "Intensity" : {
 
     },
@@ -12842,10 +12848,16 @@
     "Sidebar hover area" : {
 
     },
+    "Sidebar hover delay" : {
+
+    },
     "Sidebar on left" : {
 
     },
     "Sidebar on right" : {
+
+    },
+    "Sidebar slide time" : {
 
     },
     "Sidebar widgets" : {
@@ -12963,6 +12975,9 @@
 
     },
     "Smooth webpage performance" : {
+
+    },
+    "Snap" : {
 
     },
     "Snowflake" : {

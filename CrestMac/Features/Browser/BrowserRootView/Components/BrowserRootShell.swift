@@ -98,25 +98,27 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
         .animation(
-            chromeAnimation(
+            model.sidebarAnimation(
                 model.isSidebarApproachingDock
                     ? CrestMotion.sidebarDockAttachment
-                    : CrestMotion.sidebarMorph
+                    : CrestMotion.sidebarMorph,
+                reduceMotion: reduceMotion
             ),
             value: model.chrome.columnVisibility
         )
         .animation(
-            chromeAnimation(
+            model.sidebarAnimation(
                 model.isSidebarApproachingDock
                     ? CrestMotion.sidebarDockAttachment
                     : model.isSidebarMorphing
                         ? CrestMotion.sidebarMorph
-                        : CrestMotion.floatingPane
+                        : CrestMotion.floatingPane,
+                reduceMotion: reduceMotion
             ),
             value: model.isFloatingSidebarPresented
         )
         .animation(
-            chromeAnimation(CrestMotion.sidebarDockApproach),
+            model.sidebarAnimation(CrestMotion.sidebarDockApproach, reduceMotion: reduceMotion),
             value: model.isSidebarApproachingDock
         )
         .animation(
