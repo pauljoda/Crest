@@ -6,29 +6,31 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.31</title>
-            <pubDate>Fri, 13 Nov 2026 18:30:22 +0000</pubDate>
+            <title>0.9.34</title>
+            <pubDate>Fri, 13 Nov 2026 21:06:39 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1602</sparkle:version>
-            <sparkle:shortVersionString>0.9.31</sparkle:shortVersionString>
+            <sparkle:version>1603</sparkle:version>
+            <sparkle:shortVersionString>0.9.34</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### New
 
-- On Mac, a Quick Window opens once where it stays and pops in, instead of flashing in the middle of the screen at a larger size and jumping into place. Crest's other windows no longer flash over the app a link came from.
+- On Mac, resting the pointer on a tab or pin in the sidebar shows a card beside it with the tab's title, its site and how its page last looked. Turn it off in Settings › Appearance › Preview hover.
+- On Mac, resting the pointer on a folder in the sidebar lists its tabs, including those in folders inside it, with a search field ready for typing. Open, unload or close a tab there, or drag it out of the folder, without opening the folder. Turn it off in Settings › Appearance › Preview hover.
+- On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind "…". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/7fffbc8c49e43b2fb00af3f5db2fb303c3456b59...1e71278684fa25dd4aacf1d8e3a1624375db2b39) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.31-2026-11-13-1602-r602.1/Installer-Crest-0.9.31-development-2026-11-13-1e71278-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/1e71278684fa25dd4aacf1d8e3a1624375db2b39...4ef85e61dd15d86c878b9dfab40530906417e04c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.34-2026-11-13-1603-r603.1/Installer-Crest-0.9.34-development-2026-11-13-4ef85e6-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.31-2026-11-13-1602-r602.1/Installer-Crest-0.9.31-development-2026-11-13-1e71278-arm64.dmg" length="220605573" type="application/octet-stream" sparkle:edSignature="dsLUY5BSmT2d44lf6OuObXnHnaReWIKhpmGOEikGOL5m6pBXJnLVJzNID61WaLfJk93lgTB+915UqwkM1qU7DQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.34-2026-11-13-1603-r603.1/Installer-Crest-0.9.34-development-2026-11-13-4ef85e6-arm64.dmg" length="220821125" type="application/octet-stream" sparkle:edSignature="3y6MpouE9kv+IXfla5h6tgThw+Nvy8T17T5SuXKqCu8PxAm8oLXhyrBHk/xJCMHAWWSlietlELLShW1kPg8pDg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +62,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: yXjyElCp3jgfeHhUWM8r+FKrQHCkLvTWwz+dApny7FYQNhI1MNWd0UUGOmvNwnZ2JLyyG9IIu7By9Z4FNayHDw==
-length: 4112
+edSignature: /2xexMqd+M9TJLaoRdRE8M+ybx+ivc8cTAc4aLE/y2flu6EJWVGlLC+/spJE1hgyPAqumuy61oL9hS3zdSamDA==
+length: 4843
 -->
