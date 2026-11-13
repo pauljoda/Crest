@@ -5365,6 +5365,14 @@
     "super-copy": {
       "category": "new",
       "message": "Super Copy, on by default, copies and shares links without known trackers. It follows supported redirect links to their destination, applies AdGuard's URL Tracking filter and Crest's own rules, and shortens Amazon product links. Selecting the address and copying it keeps everything."
+    },
+    "material-color": {
+      "category": "new",
+      "message": "Choose how the address field, pins, extensions, selected tab and other glass surfaces read in Appearance: Automatic follows each Space, dark over dark Spaces and light over very light ones, or keep them Light, Dark, or as your Mac's appearance (System)."
+    },
+    "start-page-title-follows-space": {
+      "category": "fixed",
+      "message": "The Start Page title on the Mac reads in its Space's light or dark look, so it no longer draws black over a dark Space."
     }
   }
 }

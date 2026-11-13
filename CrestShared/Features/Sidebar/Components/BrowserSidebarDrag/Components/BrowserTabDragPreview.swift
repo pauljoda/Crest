@@ -69,6 +69,7 @@ struct BrowserTabDragPreview: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.shownTitle)
+        .modifier(SurfaceToneAppearance())
     }
 
     private var rowIconCenter: CGFloat {

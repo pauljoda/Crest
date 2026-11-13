@@ -151,6 +151,7 @@ final class BrowserDeviceAppearanceStore {
     static let addressKey = "crest.appearance.address"
     static let cornerRadiusKey = "crest.appearance.cornerRadius"
     static let surfaceMaterialKey = "crest.appearance.surfaceMaterial"
+    static let surfaceToneKey = "crest.appearance.surfaceTone"
     static let modeKey = "crest.appearance.mode"
     static let darkSpaceDimmingKey = "crest.appearance.darkSpaceDimming"
     static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
@@ -224,6 +225,11 @@ final class BrowserDeviceAppearanceStore {
     }
     /// The material the sidebar's layers are drawn with, stored by name.
     var surfaceMaterial: CrestSurfaceMaterial {
+        didSet { saveSoon() }
+    }
+    /// Whether that material, and the text on it, reads light or dark,
+    /// stored by name.
+    var surfaceTone: CrestSurfaceTone {
         didSet { saveSoon() }
     }
     /// Whether windows draw light, dark, or as the system does, stored by name.
@@ -365,6 +371,9 @@ final class BrowserDeviceAppearanceStore {
         surfaceMaterial =
             CrestSurfaceMaterial.named(defaults.string(forKey: Self.surfaceMaterialKey))
             ?? BrowserLookAndFeelDefaults.surfaceMaterial
+        surfaceTone =
+            CrestSurfaceTone.named(defaults.string(forKey: Self.surfaceToneKey))
+            ?? BrowserLookAndFeelDefaults.surfaceTone
         mode =
             BrowserAppearanceMode.named(defaults.string(forKey: Self.modeKey))
             ?? BrowserLookAndFeelDefaults.appearanceMode
@@ -496,6 +505,7 @@ final class BrowserDeviceAppearanceStore {
         write(try? JSONEncoder().encode(tabs), forKey: Self.tabsKey, in: defaults)
         write(try? JSONEncoder().encode(address), forKey: Self.addressKey, in: defaults)
         write(surfaceMaterial.name, forKey: Self.surfaceMaterialKey, in: defaults)
+        write(surfaceTone.name, forKey: Self.surfaceToneKey, in: defaults)
         write(mode.name, forKey: Self.modeKey, in: defaults)
         write(darkSpaceDimming, forKey: Self.darkSpaceDimmingKey, in: defaults)
         write(spaceIconSizing.name, forKey: Self.spaceIconSizingKey, in: defaults)

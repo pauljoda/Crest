@@ -1,13 +1,16 @@
 import SwiftUI
 
 /// One layer above the sidebar's base UI: the device's surface material in
-/// `shape`, with an accent tint and a hover tint laid over it.
+/// `shape`, in the scheme its material color gives it, with an accent tint
+/// and a hover tint laid over it.
 struct CrestSurfaceLayer<LayerShape: Shape>: View {
     let shape: LayerShape
     var tint: Color? = nil
     var hoverTint: Color? = nil
 
     @Environment(\.crestSurfaceMaterial) private var materialOverride
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
 
     var body: some View {
         shape
@@ -18,6 +21,7 @@ struct CrestSurfaceLayer<LayerShape: Shape>: View {
             .overlay {
                 if let hoverTint { shape.fill(hoverTint) }
             }
+            .environment(\.colorScheme, CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme))
     }
 }
 

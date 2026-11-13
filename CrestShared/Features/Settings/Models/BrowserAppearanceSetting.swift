@@ -5,6 +5,7 @@ import Foundation
 enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case windowBorder
     case material
+    case materialColor
     case sidebarOnRight
     /// Fitting Space icons to the sidebar, and their size when they are not.
     case spaceIconSize
