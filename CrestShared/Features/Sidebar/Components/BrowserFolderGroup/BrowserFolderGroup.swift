@@ -53,14 +53,19 @@ struct BrowserFolderGroup: View {
     private var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
             sidebarInteraction: sidebarInteraction, folder: folder, depth: depth, context: context,
-            spacePresentation: spacePresentation, inheritedKeptTabIDs: inheritedKeptTabIDs)
+            spacePresentation: spacePresentation, inheritedKeptTabIDs: inheritedKeptTabIDs,
+            isOpenInClosedFolder: collapsedTabVisibility.isOpenInClosedFolder)
     }
 
+    /// Whether the folder shows as open. Inside a closed folder that draws it
+    /// as the way to its kept tabs, opening it also shows everything it holds
+    /// there, and the folder stays open once the folder around it opens.
     private var isExpanded: Binding<Bool> {
         Binding {
-            !folder.isCollapsed
+            configuration.isShownOpen
         } set: { isExpanded in
             guard configuration.isCurrentAndUnlocked else { return }
+            if inheritedKeptTabIDs != nil { collapsedTabVisibility.openInClosedFolder(isExpanded) }
             context.browser.setFolderCollapsed(
                 folder.id, matching: configuration.assignment, isCollapsed: !isExpanded)
         }
@@ -149,6 +154,12 @@ struct BrowserFolderGroup: View {
             )
         )
         .keepsSidebarFolderDrawn(hasPendingActions)
+        // Opened inside a closed folder only lasts while that folder stays
+        // closed around it, including when the folder draws itself again
+        // after leaving the screen.
+        .onChange(of: inheritedKeptTabIDs == nil, initial: true) { _, drawsItself in
+            if drawsItself { collapsedTabVisibility.closedFolderAroundOpened() }
+        }
         .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
     }
 
@@ -228,7 +239,7 @@ struct BrowserFolderGroup: View {
         withAnimation(
             CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
         ) {
-            let nextExpansion = folder.isCollapsed
+            let nextExpansion = !configuration.isShownOpen
             collapsedTabVisibility.expansionDidChange(
                 isExpanded: nextExpansion,
                 selectedTabID: configuration.shownFolderTabID,

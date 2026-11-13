@@ -25,6 +25,10 @@ struct BrowserFolderGroupConfiguration {
     /// this folder shows the way to in place of its contents, or nil when it
     /// draws as itself.
     let inheritedKeptTabIDs: Set<UUID>?
+    /// Whether the person opened this folder inside the closed folder around
+    /// it, so it draws everything it holds rather than the way to the kept
+    /// tabs.
+    let isOpenInClosedFolder: Bool
 
     var spaceID: UUID { assignment.spaceID }
     var profileID: UUID { assignment.profileID }
@@ -36,9 +40,17 @@ struct BrowserFolderGroupConfiguration {
     /// The list of what the folder holds, as the core publishes it.
     var inside: SidebarListModel { context.space.sidebar.inside(folder.id) }
 
-    /// Whether the folder draws everything it holds: it is open, and no
-    /// collapsed folder around it is showing only the way to its kept tabs.
-    var showsAllContents: Bool { !folder.isCollapsed && inheritedKeptTabIDs == nil }
+    /// Whether the folder draws everything it holds: it is open, and either
+    /// no collapsed folder around it is showing only the way to its kept tabs,
+    /// or the person opened it there.
+    var showsAllContents: Bool { isShownOpen }
+
+    /// Whether the folder shows as open: as it is stored, or, inside a closed
+    /// folder that draws it as the way to its kept tabs, only once the person
+    /// opened it there.
+    var isShownOpen: Bool {
+        !folder.isCollapsed && (inheritedKeptTabIDs == nil || isOpenInClosedFolder)
+    }
 
     var displayBranding: SpaceBranding? {
         guard let spacePresentation else { return context.space.settings.look }
@@ -91,7 +103,7 @@ struct BrowserFolderGroupConfiguration {
     init(
         sidebarInteraction: BrowserSidebarInteractionState, folder: FolderStateModel, depth: Int,
         context: BrowserSidebarListContext, spacePresentation: SidebarSpacePresentation?,
-        inheritedKeptTabIDs: Set<UUID>? = nil
+        inheritedKeptTabIDs: Set<UUID>? = nil, isOpenInClosedFolder: Bool = false
     ) {
         self.sidebarInteraction = sidebarInteraction
         self.folder = folder
@@ -100,6 +112,7 @@ struct BrowserFolderGroupConfiguration {
         assignment = context.assignment
         self.spacePresentation = spacePresentation
         self.inheritedKeptTabIDs = inheritedKeptTabIDs
+        self.isOpenInClosedFolder = isOpenInClosedFolder
     }
 
     // MARK: - Actions - Contents

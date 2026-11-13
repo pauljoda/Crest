@@ -5365,6 +5365,10 @@
     "super-copy": {
       "category": "new",
       "message": "Super Copy, on by default, copies and shares links without known trackers. It follows supported redirect links to their destination, applies AdGuard's URL Tracking filter and Crest's own rules, and shortens Amazon product links. Selecting the address and copying it keeps everything."
+    },
+    "open-subfolder-in-closed-folder": {
+      "category": "fixed",
+      "message": "A folder inside a closed folder opens when you click it, showing everything in it while the folder around it stays closed."
     }
   }
 }

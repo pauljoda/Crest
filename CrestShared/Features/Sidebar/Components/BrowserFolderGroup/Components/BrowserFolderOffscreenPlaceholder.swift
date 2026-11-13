@@ -117,7 +117,31 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
                 }
             }
         }
-        if !folder.isCollapsed { walk(space.sidebar.inside(folder.id), depth: 1) }
+        // A closed folder draws the way to the tabs it keeps, and everything
+        // inside a folder on that way the person opened there.
+        func walkKept(_ list: SidebarListModel, depth: Int, kept: Set<UUID>) {
+            for item in BrowserSidebarListItem.items(of: list, in: space)
+            where kept.contains(where: { item.content.contains(tabID: $0, in: space) }) {
+                switch item.content {
+                case .tab: elements.append(.tab(depth: depth))
+                case .split(let groupID, let members):
+                    elements.append(.split(depth: depth, members: shownMemberCount(of: groupID, members: members)))
+                case .folder(let inner):
+                    let isOpen = !inner.isCollapsed && isOpenInClosedFolder(inner)
+                    elements.append(.folder(depth: depth, isOpen: isOpen, keptTabIDs: []))
+                    if isOpen {
+                        walk(space.sidebar.inside(inner.id), depth: depth + 1)
+                    } else {
+                        walkKept(space.sidebar.inside(inner.id), depth: depth + 1, kept: kept)
+                    }
+                }
+            }
+        }
+        if !folder.isCollapsed {
+            walk(space.sidebar.inside(folder.id), depth: 1)
+        } else {
+            walkKept(space.sidebar.inside(folder.id), depth: 1, kept: keptTabIDs(of: folder))
+        }
         return Shape(
             elements: elements, tabScale: appearance.tabScale, hasBorders: appearance.tabs.borders == .all)
     }
@@ -128,6 +152,18 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
         let isCollapsed = context.space.splitGroups.first { $0.id == groupID }?.isCollapsed ?? false
         guard isCollapsed else { return members.count }
         return members.contains { context.window.shownTabIDs.contains($0.id) } ? 1 : 0
+    }
+
+    /// Whether the person opened `inner` inside the closed folder around it.
+    private func isOpenInClosedFolder(_ inner: FolderStateModel) -> Bool {
+        #if os(macOS)
+            return sidebarInteraction.collapsedFolderVisibility(
+                for: BrowserFolderRuntimeAssignment(
+                    folderID: inner.id, spaceID: context.space.id, profileID: context.space.profileID)
+            ).state.isOpenInClosedFolder
+        #else
+            return false
+        #endif
     }
 
     /// The tabs a closed folder keeps on screen in place of its contents, of
