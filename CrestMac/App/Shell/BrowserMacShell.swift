@@ -21,10 +21,18 @@ final class BrowserMacShell {
         let agents: BrowserMacAgents
     }
 
+    /// Links and documents that arrived before the launch finished, and the
+    /// app they came from.
+    private struct PendingOpen {
+        let urls: [URL]
+        let source: BrowserQuickWindowSourceApp?
+    }
+
     /// A system sign-in that arrived before the launch finished.
     private struct PendingSignIn {
         let url: URL
         let windowID: UUID
+        let source: BrowserQuickWindowSourceApp?
         let declined: @MainActor () -> Void
     }
 
@@ -36,8 +44,11 @@ final class BrowserMacShell {
     private var running: Running?
     /// Links and documents other apps handed over before the launch finished,
     /// which can be while recovery is on screen; they open once it has.
-    private var pendingOpens: [URL] = []
+    private var pendingOpens: [PendingOpen] = []
     private var pendingSignIns: [PendingSignIn] = []
+    /// Which app the person is in, from launch on, which what other apps hand
+    /// Crest opens over.
+    private let appInUse = BrowserMacAppInUse()
     /// Offers every key down to `handleShortcut` before any view sees it.
     /// Both engines' page views take key equivalents before the menu bar
     /// does, so this is where Crest's shortcuts go ahead of a page when their
@@ -126,9 +137,14 @@ final class BrowserMacShell {
         let signIns = pendingSignIns
         pendingOpens = []
         pendingSignIns = []
-        if !opens.isEmpty { _ = openExternal(opens) }
+        if let running, !opens.isEmpty {
+            Task { @MainActor in
+                for open in opens { await running.externalOpening.open(open.urls, from: open.source) }
+            }
+        }
         for signIn in signIns {
-            _ = openAuthenticationSession(signIn.url, window: signIn.windowID, declined: signIn.declined)
+            openAuthenticationSession(
+                signIn.url, window: signIn.windowID, from: signIn.source, declined: signIn.declined)
         }
     }
 
@@ -181,7 +197,7 @@ final class BrowserMacShell {
     /// person is in.
     private func quickWindowShortcutPressed() {
         guard let running, !running.quit.isQuitting else { return }
-        running.dockMenu.openQuickWindowWherePersonIs()
+        running.dockMenu.openQuickWindow(over: appInUse.appPressedIn())
     }
 
     // MARK: - Actions - External opens
@@ -194,11 +210,14 @@ final class BrowserMacShell {
             $0.isFileURL ? ExternalLocalDocument.accepts($0) : ExternalWebLink.accepts($0)
         }
         guard !accepted.isEmpty else { return true }
+        // The Apple Event that hands them over says who sent it only while it
+        // is handled.
+        let source = appInUse.appOutsideCrest()
         guard let running else {
-            pendingOpens.append(contentsOf: accepted)
+            pendingOpens.append(PendingOpen(urls: accepted, source: source))
             return true
         }
-        Task { @MainActor in await running.externalOpening.open(accepted) }
+        Task { @MainActor in await running.externalOpening.open(accepted, from: source) }
         return true
     }
 
@@ -214,10 +233,22 @@ final class BrowserMacShell {
         _ url: URL, window windowID: UUID, declined: @escaping @MainActor () -> Void
     ) -> Bool {
         guard ExternalWebLink.accepts(url) else { return false }
-        guard let running else {
-            pendingSignIns.append(PendingSignIn(url: url, windowID: windowID, declined: declined))
+        let source = appInUse.appOutsideCrest()
+        guard running != nil else {
+            pendingSignIns.append(PendingSignIn(url: url, windowID: windowID, source: source, declined: declined))
             return true
         }
+        openAuthenticationSession(url, window: windowID, from: source, declined: declined)
+        return true
+    }
+
+    /// Opens the sign-in over the window the person is in in `source`, the
+    /// app that asked for it, once the launch finished.
+    private func openAuthenticationSession(
+        _ url: URL, window windowID: UUID, from source: BrowserQuickWindowSourceApp?,
+        declined: @escaping @MainActor () -> Void
+    ) {
+        guard let running else { return }
         Task { @MainActor in
             guard let destination = await running.externalOpening.destination(for: url) else {
                 declined()
@@ -226,7 +257,8 @@ final class BrowserMacShell {
             running.windows.openQuickWindow(
                 BrowserQuickWindowRequest(
                     id: windowID, url: url, spaceAssignment: destination.assignment,
-                    targetWindowID: destination.quickWindowTarget, opensWherePersonIs: true))
+                    targetWindowID: destination.quickWindowTarget),
+                over: source)
             guard let window = running.windows.quickWindow(windowID) else {
                 declined()
                 return
@@ -234,7 +266,6 @@ final class BrowserMacShell {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
-        return true
     }
 
     /// The sign-in in the Quick Window `windowID` is over; a before-unload

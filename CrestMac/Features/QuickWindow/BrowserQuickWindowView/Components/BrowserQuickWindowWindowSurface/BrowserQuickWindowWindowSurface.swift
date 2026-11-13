@@ -9,6 +9,9 @@ struct BrowserQuickWindowWindowSurface: View {
     /// or went to the archive.
     let dismiss: () -> Void
     let openBrowserWindow: () -> Void
+    /// The app the window opens over: the one another app's link, or the
+    /// Quick Window keys pressed there, came from.
+    var source: BrowserQuickWindowSourceApp?
 
     var body: some View {
         BrowserQuickWindowContent(
@@ -30,7 +33,7 @@ struct BrowserQuickWindowWindowSurface: View {
             BrowserQuickWindowGeometryBridge(
                 pagePoolRegistry: pagePoolRegistry,
                 targetWindowID: model.presentedRequest.targetWindowID,
-                opensWherePersonIs: model.presentedRequest.opensWherePersonIs
+                source: source
             )
         }
         .background {
