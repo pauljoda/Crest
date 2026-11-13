@@ -50,7 +50,7 @@ struct SidebarChrome: View {
                             context.utilityPresentation.setSiteControlContextMenuPresented($0)
                         }
                     )
-                    .modifier(DeviceSurfaceAppearance())
+                    .modifier(SurfaceToneAppearance())
                 }
             }
             .modifier(SpaceColorScheme(branding: space.settings.look))

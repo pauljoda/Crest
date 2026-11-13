@@ -25,6 +25,7 @@ struct BrowserFolderHighlightSurface: ViewModifier {
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.folderBackgroundColor) private var parentBackgroundColor
 
     private var foregroundScheme: ColorScheme {
@@ -36,7 +37,9 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     }
 
     private var compositedColor: BrandColor {
-        let channel = colorScheme == .dark ? 0.0 : 1.0
+        // The tint lies over the material, which reads in its material color.
+        let surfaceScheme = CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
+        let channel = surfaceScheme == .dark ? 0.0 : 1.0
         return color.composited(
             opacity: fillOpacity,
             over: parentBackgroundColor ?? BrandColor(red: channel, green: channel, blue: channel))

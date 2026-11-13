@@ -30,9 +30,10 @@ struct SpaceColorScheme: ViewModifier {
 }
 
 /// Glass controls over a Space's sidebar, such as the address field, the
-/// pins and the site controls they open, in the window's own light or dark
-/// with its own text color, the same on every Space whatever its colors.
-struct DeviceSurfaceAppearance: ViewModifier {
+/// pins, the extension strip and the site controls they open, with their text,
+/// in the scheme the device's material color gives them: as the Space reads,
+/// light, dark, or as the window reads.
+struct SurfaceToneAppearance: ViewModifier {
     @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.colorScheme) private var colorScheme
 
@@ -42,6 +43,6 @@ struct DeviceSurfaceAppearance: ViewModifier {
             // would take its levels from.
             .foregroundStyle(Color.primary)
             .environment(\.spaceChromeForeground, nil)
-            .environment(\.colorScheme, deviceColorScheme ?? colorScheme)
+            .environment(\.colorScheme, CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme))
     }
 }

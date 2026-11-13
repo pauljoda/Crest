@@ -21,6 +21,7 @@ struct BrowserStartPageContent: View {
     let commands: BrowserCommandPaletteCommandRegistry
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if let space {
@@ -43,6 +44,9 @@ struct BrowserStartPageContent: View {
                         id: BrowserTabPromotionID.value(for: tab.id)
                     )
                 },
+                // The page shows the Space's backdrop, so its title reads in
+                // the Space's scheme, as the sidebar's text does.
+                headerColorScheme: space.settings.look.shown.colorScheme(over: colorScheme),
                 commands: commands
             )
         } else {

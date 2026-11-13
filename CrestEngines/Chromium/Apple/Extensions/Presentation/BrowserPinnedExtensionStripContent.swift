@@ -28,6 +28,8 @@ struct BrowserPinnedExtensionStripContent: View {
             CrestSurfaceLayer(
                 shape: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous))
         }
+        // The same scheme as the address field and the pins around it.
+        .modifier(SurfaceToneAppearance())
         .padding(.horizontal, BrowserSidebarMetrics.layerInset)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Pinned Extensions")
