@@ -195,7 +195,6 @@ final class BrowserTabPictures {
         if let wait { settle(after: .seconds(wait), refreshing: refreshing) }
     }
 
-
     /// `png` as a compressed picture, made off the main thread.
     private nonisolated static func compressed(_ png: Data, takenAt: Date) async -> BrowserTabPicture? {
         await Task.detached(priority: .utility) {
