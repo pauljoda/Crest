@@ -15,6 +15,7 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case spacePageMotion
     case sidebarRevealWidth
     case fullScreenSidebarReveal
+    case spaceShortcutSidebarReveal
     case defaultPageZoom
     case cornerRadius
     case tabScale

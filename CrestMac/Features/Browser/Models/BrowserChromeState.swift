@@ -37,6 +37,9 @@ final class BrowserChromeState {
     @ObservationIgnored private var commandPaletteModeStorage: BrowserCommandPaletteMode?
     private(set) var addressFocusRequest = 0
     private(set) var startPageFocusRequest = 0
+    /// Counts the Space changes a shortcut made, so the window can show its
+    /// hidden sidebar for a moment after each one.
+    private(set) var spaceShortcutSidebarRequest = 0
     /// The recent tabs a held Most Recent Tab shortcut shows over the window,
     /// or nil while none shows.
     var recentTabs: RecentTabSwitcherModel? {
@@ -108,6 +111,12 @@ final class BrowserChromeState {
             }
             presentUtility(surface)
         }
+    }
+
+    /// Asks the window to show its hidden sidebar for a moment, after a
+    /// shortcut moved it to another Space.
+    func requestSpaceShortcutSidebar() {
+        spaceShortcutSidebarRequest &+= 1
     }
 
     func handleWebContentInteraction() {
