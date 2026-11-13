@@ -6,40 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.8</title>
-            <pubDate>Thu, 12 Nov 2026 17:54:05 +0000</pubDate>
+            <title>0.9.30</title>
+            <pubDate>Fri, 13 Nov 2026 17:47:22 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1591</sparkle:version>
-            <sparkle:shortVersionString>0.9.8</sparkle:shortVersionString>
+            <sparkle:version>1601</sparkle:version>
+            <sparkle:shortVersionString>0.9.30</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 22 user-facing changes.
+
 ### New
 
-- Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance.
-- Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read.
+- Choose how the address field shows a page's address in Appearance: on two lines, on one line, or just the site.
+- Super Copy, on by default, copies and shares links without known trackers. It follows supported redirect links to their destination, applies AdGuard's URL Tracking filter and Crest's own rules, and shortens Amazon product links. Selecting the address and copying it keeps everything.
+- Choose how the address field, pins, extensions, selected tab and other glass surfaces read in Appearance: Automatic follows each Space, dark over dark Spaces and light over very light ones, or keep them Light, Dark, or as your Mac's appearance (System).
+- On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open.
+
+### Improved
+
+- The sidebar narrows to 164 points, about as narrow as Arc's. In a narrow sidebar, Forward folds away to keep clear of the window's buttons, and Copy URL makes room for the address.
+- On macOS 27, Settings pages other than Shortcuts and Feature Flags scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle.
 
 ### Fixed
 
-- Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws.
-- The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it.
-- On Mac, importing from Arc no longer quits Crest when Spaces that share an Arc profile aren't next to each other in Arc; they come in together, each with its own tabs.
-- On Mac, when Crest can't unlock another browser's passwords during an import, as when Keychain access is denied, the import still brings that browser's Spaces and tabs and leaves only the passwords behind.
-- Extensions that open their own popup, such as 1Password when you click its button in a sign-in field while it's locked, now show it on Mac instead of doing nothing.
-- On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing.
-- On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them.
+- Copy URL and Site Controls sit side by side in the address field instead of on top of each other.
+- A folder inside a closed folder opens when you click it, showing everything in it while the folder around it stays closed.
+- The Start Page title on the Mac reads in its Space's light or dark look, so it no longer draws black over a dark Space.
+- In a narrow sidebar, Copy URL appears in the address field while the pointer is over it, so you can still copy the address with a click.
+- On Mac, a Quick Window that a link from another app or the New Quick Window shortcut opens appears over the app you're using, on the display you're using it on, instead of over another app's window. Links in Crest's own Settings open over Crest.
+- An isolated test copy of Crest on Mac keeps its own sidebar width, opening at the default and never changing the installed app's.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/22ed6327520ca0fe8d1d46d28246b9aadb27aa40...058322cffdd04bd586aec2b063a248e62499a45c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.8-2026-11-12-1591-r591.1/Installer-Crest-0.9.8-nightly-2026-11-12-058322c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/058322cffdd04bd586aec2b063a248e62499a45c...7fffbc8c49e43b2fb00af3f5db2fb303c3456b59) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.30-2026-11-13-1601-r601.1/Installer-Crest-0.9.30-nightly-2026-11-13-7fffbc8-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.8-2026-11-12-1591-r591.1/Installer-Crest-0.9.8-nightly-2026-11-12-058322c-arm64.dmg" length="220114044" type="application/octet-stream" sparkle:edSignature="G8SYsnaY2VmhpxE23WMZbyZKusfaRCfTeNv2ddJk/kamimrJE4XqonO+llW6rSfEwdiIXkKqVg9t9OQoH2ZaAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.30-2026-11-13-1601-r601.1/Installer-Crest-0.9.30-nightly-2026-11-13-7fffbc8-arm64.dmg" length="220633212" type="application/octet-stream" sparkle:edSignature="xFvrUffME3S4qOkZkjkDVLGXs9gftzRlkrP8GwP1uh6gPA9AOPWV2PL/ncaqwigpZNJJGKDPbcF6uviSoRBAAg=="/>
         </item>
         <item>
             <title>0.9.1</title>
@@ -106,6 +114,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: KXGyimEgQe9qvrNdqLSp7i9GhIPsZ0bKVcF5k8txf69eyvQpSIIwBwy5l1YsbuVMSnQW9ztd1QuS1MNhEn55Cw==
-length: 8334
+edSignature: R2s1C3cXLga5GfYe91MRHPYZosD6gHIj540Tw6dCSKymm9MhBer3N6drPVwvfxmCeKF26kOy2ybcTKYwSny8Bg==
+length: 8529
 -->

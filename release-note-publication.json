@@ -3,6 +3,6 @@
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
     "development": "settings-scroll-anywhere",
-    "nightly": "customization-styles"
+    "nightly": "settings-scroll-anywhere"
   }
 }
