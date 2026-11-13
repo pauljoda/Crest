@@ -5417,6 +5417,10 @@
     "folder-preview-readable-text": {
       "category": "fixed",
       "message": "The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark."
+    },
+    "address-field-click-anywhere": {
+      "category": "fixed",
+      "message": "On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below \"Search or enter website\", or an address shown on one line, used to do nothing."
     }
   }
 }

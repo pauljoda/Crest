@@ -29,7 +29,6 @@ the live status for each issue.
 - [ ] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
 - [ ] [feature: Double-click a tab to rename](https://github.com/pauljoda/Crest/issues/264)
 - [ ] [Keep find in page in step with what you type](https://github.com/pauljoda/Crest/issues/278)
-- [ ] [Preview tabs and folders from the sidebar on hover and hold](https://github.com/pauljoda/Crest/issues/294)
 - [ ] [Pointer reappears during playback and the sidebar opens on its own](https://github.com/pauljoda/Crest/issues/304)
 - [ ] [Sidebar toggle and download animation don't follow a right-side sidebar or right-to-left layout](https://github.com/pauljoda/Crest/issues/329)
 - [ ] [feature: Reorder Spaces in the drawer and rearrange the extension bar below the address bar](https://github.com/pauljoda/Crest/issues/339)
@@ -50,6 +49,7 @@ the live status for each issue.
 
 #### Completed
 
+- [x] [Preview tabs and folders from the sidebar on hover and hold](https://github.com/pauljoda/Crest/issues/294)
 - [x] [Return to the previous app when a Quick Window from another app closes](https://github.com/pauljoda/Crest/issues/428)
 - [x] [Choose a Heraldic, Modern or Simple style for customizing Crest, and show Spaces as dots](https://github.com/pauljoda/Crest/issues/1102)
 
