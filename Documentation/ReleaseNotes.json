@@ -5389,6 +5389,10 @@
     "quick-window-returns-to-app": {
       "category": "new",
       "message": "On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open."
+    },
+    "isolated-sidebar-width": {
+      "category": "fixed",
+      "message": "An isolated test copy of Crest on Mac keeps its own sidebar width, opening at the default and never changing the installed app's."
     }
   }
 }
