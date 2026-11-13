@@ -68,6 +68,9 @@ final class BrowserRootModel {
     /// Injectable phase timing for sidebar transitions.
     @ObservationIgnored
     var sidebarMorphWait: SidebarMorphWait = { try await Task.sleep(for: $0) }
+    /// Puts away the sidebar a Space shortcut brought out, once it has shown
+    /// long enough; nil when no shortcut is showing it.
+    @ObservationIgnored private var spaceShortcutSidebarTask: Task<Void, Never>?
     var isWindowFocused: Bool {
         get { observed(\.isWindowFocusedStorage, as: \.isWindowFocused) }
         set { publish(newValue, into: \.isWindowFocusedStorage, as: \.isWindowFocused) }
@@ -469,6 +472,26 @@ extension BrowserRootModel {
         isFloatingSidebarRevealedByPointer = true
     }
 
+    /// Floats a hidden sidebar over the page for a moment after a shortcut
+    /// moved the window to another Space, when the person asked for that.
+    /// Another shortcut while it shows keeps it out longer; a sidebar that is
+    /// docked, or that something else brought out, is left as it is.
+    func revealSidebarForSpaceShortcut(reduceMotion: Bool) {
+        guard SidebarSpaceShortcutRevealPreference.isEnabled,
+            sidebarPresentation == .collapsed || spaceShortcutSidebarTask != nil
+        else { return }
+        presentFloatingSidebar(reduceMotion: reduceMotion)
+        spaceShortcutSidebarTask?.cancel()
+        spaceShortcutSidebarTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await self.sidebarMorphWait(CrestMotion.spaceShortcutSidebarHold)
+            guard !Task.isCancelled else { return }
+            self.spaceShortcutSidebarTask = nil
+            guard self.sidebarPresentation == .floating else { return }
+            self.dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
+        }
+    }
+
     func dismissFloatingSidebar(reduceMotion: Bool) {
         cancelSidebarMorph()
         isFloatingSidebarRevealedByPointer = false
@@ -519,6 +542,8 @@ extension BrowserRootModel {
     func floatingSidebarPresentationChanged() {
         guard !isFloatingSidebarPresented else { return }
         isFloatingSidebarRevealedByPointer = false
+        spaceShortcutSidebarTask?.cancel()
+        spaceShortcutSidebarTask = nil
     }
 
     func columnVisibilityChanged(reduceMotion: Bool) {

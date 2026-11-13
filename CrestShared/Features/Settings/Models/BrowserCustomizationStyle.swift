@@ -18,7 +18,8 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
         look: .modern, spaceIcons: .icons,
         settings: [
             .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .fullScreenSidebarReveal,
-            .defaultPageZoom, .cornerRadius, .tabScale, .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus,
+            .spaceShortcutSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale, .pinLayout, .websitePinColors,
+            .dimUnloadedTabs, .tabStatus,
             .addressDisplay, .copyURLButton, .superCopy, .folderIconOnly, .folderTabCounts, .appIcon,
         ])
 

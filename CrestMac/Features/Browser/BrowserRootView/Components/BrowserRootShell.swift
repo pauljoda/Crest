@@ -128,6 +128,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             )
         }
         .modifier(BrowserRootPermissionObserver(model: model, reduceMotion: reduceMotion))
+        .onChange(of: model.chrome.spaceShortcutSidebarRequest) {
+            model.revealSidebarForSpaceShortcut(reduceMotion: reduceMotion)
+        }
         .transaction { transaction in
             if reduceMotion {
                 transaction.disablesAnimations = true

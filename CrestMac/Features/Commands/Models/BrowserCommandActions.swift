@@ -122,7 +122,11 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Shows the stop or Space a numbered selection leads to.
     func select(_ selection: NumberedSelection) {
+        let spaceID = browser.selectedSpaceID
         selection.select(on: self)
+        if browser.selectedSpaceID != spaceID {
+            chrome.requestSpaceShortcutSidebar()
+        }
     }
 
     /// The page the page commands act on: a Quick Window's in front, or else
@@ -614,6 +618,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) {
         guard browser.selectAdjacentSpace(direction) != nil else { return }
         pages.selectSpace(in: browser)
+        chrome.requestSpaceShortcutSidebar()
     }
 
     func selectSpace(_ spaceID: UUID) {
