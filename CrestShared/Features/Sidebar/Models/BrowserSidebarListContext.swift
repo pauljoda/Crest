@@ -20,7 +20,9 @@ struct BrowserSidebarListContext {
     let spaceAccess: BrowserSpaceAccessController
     let pageAccess: BrowserSidebarPageAccess
     let tabActions: BrowserSidebarTabActions
-    let capabilities: BrowserInteractionCapabilities
+    /// What the rows answer; a copy drawn elsewhere, as in a folder's preview
+    /// card, can answer less.
+    var capabilities: BrowserInteractionCapabilities
     /// The namespace each section's rows anchor the page they open in, where
     /// the shell anchors that section's rows at all.
     var promotionNamespaces: [TabPlacement: Namespace.ID] = [:]

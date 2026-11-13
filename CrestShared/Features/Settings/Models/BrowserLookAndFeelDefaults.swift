@@ -26,6 +26,8 @@ enum BrowserLookAndFeelDefaults {
     @MainActor static var address: BrowserAddressAppearance { BrowserAddressAppearance() }
     static let foldersAlwaysVisible = false
     static let foldersShowTabCounts = true
+    static let previewsTabsOnHover = true
+    static let previewsFoldersOnHover = true
     static let foldersShowBorders = true
     static let foldersIconOnly = false
     static let foldersTintTitle = false
@@ -58,6 +60,8 @@ enum BrowserLookAndFeelDefaults {
         appearance.foldersShowBorders = foldersShowBorders
         appearance.foldersIconOnly = foldersIconOnly
         appearance.foldersTintTitle = foldersTintTitle
+        appearance.previewsTabsOnHover = previewsTabsOnHover
+        appearance.previewsFoldersOnHover = previewsFoldersOnHover
         appearance.saveNow()
     }
 }

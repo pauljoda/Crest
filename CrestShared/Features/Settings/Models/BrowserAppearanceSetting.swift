@@ -42,4 +42,6 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case folderTabCounts
     case folderBorders
     case appIcon
+    case tabHoverPreview
+    case folderHoverPreview
 }

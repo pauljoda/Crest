@@ -109,9 +109,13 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             }
             .crestCollectionItemTransition()
             .accessibilityElement(children: .contain)
-            .contextMenu {
-                if configuration.capabilities.supportsOrganization { organizationMenu }
-            }
+            .modifier(
+                BrowserTabContextMenu(
+                    tab: configuration.tab, context: configuration.context,
+                    capabilities: configuration.capabilities,
+                    isEnabled: configuration.capabilities.supportsOrganization
+                ) { organizationMenu }
+            )
             .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
                 if !focused, interaction.isRenaming {
                     interaction.commitTitle()
@@ -151,9 +155,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     }
 
     private var minHeight: CGFloat {
-        let base = configuration.capabilities.rowMinHeight(dynamicTypeSize: dynamicTypeSize)
-        return BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
-            base: base, touch: configuration.capabilities.supportsTouch)
+        configuration.capabilities.tabRowHeight(tabScale: tabScale, dynamicTypeSize: dynamicTypeSize)
     }
 
     private var usesMatchedGeometryPromotion: Bool {

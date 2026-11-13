@@ -82,6 +82,8 @@ struct BrowserFolderHeaderControl: View {
                         Rectangle().inset(by: capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
                 }
                 .buttonStyle(.crestDisclosure)
+                // A folder being renamed shows no card.
+                .browserTabPreviewSource(.folder(folder), in: configuration.context)
             }
         }
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))

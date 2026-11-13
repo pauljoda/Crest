@@ -8061,6 +8061,9 @@
         }
       }
     },
+    "Last viewed" : {
+
+    },
     "Latest First" : {
 
     },
@@ -9109,6 +9112,9 @@
 
     },
     "No supported page text was found. Editable fields, embedded pages, and images are excluded." : {
+
+    },
+    "No Tabs" : {
 
     },
     "No username" : {
@@ -10368,6 +10374,9 @@
     "Press Tab, enter your query, then press Return." : {
 
     },
+    "Preview hover" : {
+
+    },
     "Preview open" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10391,6 +10400,9 @@
       }
     },
     "Preview Unavailable" : {
+
+    },
+    "Previews" : {
 
     },
     "Previous" : {
@@ -12186,6 +12198,9 @@
     "Search symbols" : {
 
     },
+    "Search Tabs" : {
+
+    },
     "Search the Web" : {
 
     },
@@ -12864,6 +12879,9 @@
           }
         }
       }
+    },
+    "Site" : {
+
     },
     "Site access and data" : {
       "localizations" : {

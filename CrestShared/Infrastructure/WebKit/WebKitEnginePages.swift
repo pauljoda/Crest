@@ -2,6 +2,14 @@ import ImageIO
 import UniformTypeIdentifiers
 import WebKit
 
+#if os(macOS)
+    /// The image a web view's snapshot comes back as.
+    private typealias WebKitSnapshotImage = NSImage
+#else
+    /// The image a web view's snapshot comes back as.
+    private typealias WebKitSnapshotImage = UIImage
+#endif
+
 /// WebKit's direct path from the platform to the pages its binding built: it
 /// answers each page request against the page's web view, and presents what
 /// finishes later, such as a find's count or a capture, to the page that
@@ -49,27 +57,29 @@ final class WebKitEnginePages: EnginePages {
     // MARK: - Actions - Documents
 
     /// Snapshots what the page's web view shows, and presents it as a PNG
-    /// once WebKit has it.
+    /// once WebKit has it. A web view off screen shows nothing to snapshot.
     func capture(_ capturing: CapturePage) -> Bool {
+        guard let page = page(capturing.pageID) else { return false }
+        let configuration = WKSnapshotConfiguration()
+        // An iPhone's or iPad's web view draws its snapshot blank unless it
+        // waits for the screen to update.
         #if os(macOS)
-            guard let page = page(capturing.pageID) else { return false }
-            let configuration = WKSnapshotConfiguration()
             configuration.afterScreenUpdates = false
-            if let area = capturing.area {
-                configuration.rect = CGRect(x: area.x, y: area.y, width: area.width, height: area.height)
-            }
-            if capturing.width > 0 { configuration.snapshotWidth = NSNumber(value: capturing.width) }
-            page.webView.takeSnapshot(with: configuration) { [weak self] image, _ in
-                MainActor.assumeIsolated {
-                    self?.present(image) { png in
-                        .pageCaptured(PageCaptured(pageID: capturing.pageID, captureID: capturing.captureID, png: png))
-                    }
+        #else
+            configuration.afterScreenUpdates = true
+        #endif
+        if let area = capturing.area {
+            configuration.rect = CGRect(x: area.x, y: area.y, width: area.width, height: area.height)
+        }
+        if capturing.width > 0 { configuration.snapshotWidth = NSNumber(value: capturing.width) }
+        page.webView.takeSnapshot(with: configuration) { [weak self] image, _ in
+            MainActor.assumeIsolated {
+                self?.present(image) { png in
+                    .pageCaptured(PageCaptured(pageID: capturing.pageID, captureID: capturing.captureID, png: png))
                 }
             }
-            return true
-        #else
-            return false
-        #endif
+        }
+        return true
     }
 
     /// Makes the page's document as the export asks, and presents it once
@@ -123,22 +133,22 @@ final class WebKitEnginePages: EnginePages {
             .value
     }
 
-    #if os(macOS)
-        /// Presents `image` as a PNG once it is encoded away from the main
-        /// thread, which encoding a whole view's pixels would hold up.
-        private func present(_ image: NSImage?, as presentation: @escaping @MainActor (Data?) -> EnginePresentation) {
-            guard let image, let snapshot = BrowserPlatformWebKit.bitmap(of: image) else {
-                attached.present(presentation(nil))
-                return
-            }
-            Task { @MainActor [weak self] in
-                let png = await Task.detached(priority: .userInitiated) {
-                    Self.png(snapshot.image, scale: snapshot.scale)
-                }.value
-                self?.attached.present(presentation(png))
-            }
+    /// Presents `image` as a PNG once it is encoded away from the main
+    /// thread, which encoding a whole view's pixels would hold up.
+    private func present(
+        _ image: WebKitSnapshotImage?, as presentation: @escaping @MainActor (Data?) -> EnginePresentation
+    ) {
+        guard let image, let snapshot = BrowserPlatformWebKit.bitmap(of: image) else {
+            attached.present(presentation(nil))
+            return
         }
-    #endif
+        Task { @MainActor [weak self] in
+            let png = await Task.detached(priority: .userInitiated) {
+                Self.png(snapshot.image, scale: snapshot.scale)
+            }.value
+            self?.attached.present(presentation(png))
+        }
+    }
 
     /// Presents the document `make` makes for the export once it is made.
     private func export(_ exporting: ExportPage, making make: @escaping @MainActor () async -> Data?) -> Bool {

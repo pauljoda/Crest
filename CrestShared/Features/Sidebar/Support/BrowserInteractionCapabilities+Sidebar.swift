@@ -163,4 +163,12 @@ extension BrowserInteractionCapabilities {
         else { return CrestLayout.sidebarRowHeight }
         return Self.accessibilityTouchRowHeight
     }
+
+    /// The height of a tab row's surface at the sidebar's text size,
+    /// `tabScale`, and the person's own.
+    func tabRowHeight(tabScale: Double, dynamicTypeSize: DynamicTypeSize) -> CGFloat {
+        let scale = dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale
+        return BrowserSidebarDensity(scale).rowHeight(
+            base: rowMinHeight(dynamicTypeSize: dynamicTypeSize), touch: supportsTouch)
+    }
 }

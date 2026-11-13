@@ -8,6 +8,8 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     let tabDragState = BrowserTabDragState()
     let folderDragState = BrowserFolderDragState()
     let sidebarReorderState = BrowserSidebarReorderState()
+    /// The card of the tab the window's sidebar is rested on.
+    let tabPreview = BrowserTabPreviewState()
     /// The folder whose title the window's sidebar is editing, such as one it
     /// just made. The folder's row starts editing when it appears.
     var editingFolderRequest: BrowserFolderRuntimeAssignment?
@@ -56,6 +58,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         tabDragState.end()
         folderDragState.end()
         sidebarReorderState.cancel()
+        tabPreview.dismiss()
     }
 
     func browserWillResetSession() {
