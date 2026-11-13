@@ -399,6 +399,14 @@ final class BrowserMacWindows {
         }
         show(
             .quick, id: request.id, closeGate: model.closeGate,
+            // Over the page it came from, or where the person is in the app
+            // `source`, before it shows: a Quick Window placed once it showed
+            // appeared at the screen's centre and jumped there.
+            placing: { [application] window in
+                BrowserQuickWindowGeometryHostView.place(
+                    window, from: request.targetWindowID, over: source,
+                    pagePoolRegistry: application.pagePoolRegistry)
+            },
             content: { window in
                 BrowserQuickWindowWindowSurface(
                     model: model, spaceAccess: application.spaceAccess, pagePoolRegistry: application.pagePoolRegistry,
@@ -483,10 +491,19 @@ final class BrowserMacWindows {
         engineHost.windowClosed(controller.windowID, releasingProfiles: [])
     }
 
+    /// Keeps the shell's windows behind the window the person is in in
+    /// `source`, before a Quick Window for that app's link is made: bringing
+    /// Crest forward for the link brought every Crest window over that app,
+    /// and only the Quick Window shows there. Waiting for the Quick Window
+    /// left them showing over the app while it was made.
+    func keepWindowsBehind(_ source: BrowserQuickWindowSourceApp) {
+        source.keepBehind(shellWindows(apartFrom: nil))
+    }
+
     /// The shell's other windows on screen, front to back, which a Quick
     /// Window that opens over another app keeps behind that app's window. A
     /// window in full screen keeps its own Space.
-    private func shellWindows(apartFrom quickWindow: NSWindow) -> [NSWindow] {
+    private func shellWindows(apartFrom quickWindow: NSWindow?) -> [NSWindow] {
         NSApp.orderedWindows.filter { window in
             window !== quickWindow && window.isVisible && !window.styleMask.contains(.fullScreen)
                 && controllers.contains { $0.window === window }
@@ -546,11 +563,14 @@ final class BrowserMacWindows {
     // MARK: - Actions - Presenting
 
     /// Opens a window of `kind` under `id` showing `content`, which opens
-    /// other windows through these, places it cascading from `source` and
-    /// brings it forward as `activation` says. `closed` says what goes with it.
+    /// other windows through these, places it cascading from `source`, or
+    /// where `place` puts it, and brings it forward as `activation` says.
+    /// `closed` says what goes with it. A window is placed before it shows,
+    /// so it appears once, where it stays.
     private func show<Content: View>(
         _ kind: BrowserMacWindowKind, id: UUID = UUID(), closeGate: BrowserWindowCloseGate? = nil,
-        cascadingFrom source: NSWindow? = nil, activation: BrowserMacWindowActivation = .key,
+        cascadingFrom source: NSWindow? = nil, placing place: ((BrowserMacWindow) -> Void)? = nil,
+        activation: BrowserMacWindowActivation = .key,
         content: (BrowserMacWindow) -> Content, closed: @escaping @MainActor (BrowserMacWindowController) -> Void
     ) {
         let controller = BrowserMacWindowController(
@@ -558,6 +578,7 @@ final class BrowserMacWindows {
             content: { window in content(window).environment(\.browserMacWindows, self) }, closed: closed)
         controllers.append(controller)
         controller.place(cascadingFrom: source)
+        place?(controller.window)
         controller.present(activation)
     }
 
