@@ -8448,6 +8448,9 @@
     "Material" : {
 
     },
+    "Material color" : {
+
+    },
     "Meadow" : {
       "extractionState" : "stale",
       "localizations" : {

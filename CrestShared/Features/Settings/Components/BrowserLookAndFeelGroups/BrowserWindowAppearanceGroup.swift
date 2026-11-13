@@ -55,6 +55,14 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
                 identifier: "surface-material"
             )
             .browserAppearanceSetting(.material)
+            CrestSettingRow("Material color", setting: materialColor.resettable("Material color")) {
+                Picker("Material color", selection: materialColor.binding) {
+                    ForEach(CrestSurfaceTone.all, id: \.self) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .accessibilityIdentifier("surface-material-color")
+            }
+            .browserAppearanceSetting(.materialColor)
             CrestSettingRow("Sidebar on right", setting: sidebar.resettable("Sidebar on right")) {
                 Toggle("Sidebar on right", isOn: sidebar.binding)
                     .labelsHidden()
@@ -88,6 +96,11 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
         )
     }
 
+    /// Whether the material and the text on it read light or dark.
+    private var materialColor: CrestSettingValue<CrestSurfaceTone> {
+        CrestSettingValue($appearance.surfaceTone, default: BrowserLookAndFeelDefaults.surfaceTone)
+    }
+
     private var sidebar: CrestSettingValue<Bool> {
         CrestSettingValue($appearance.sidebarOnRight, default: BrowserLookAndFeelDefaults.sidebarOnRight)
     }
@@ -109,6 +122,7 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     private var rows: [(BrowserAppearanceSetting, CrestResettableSetting)] {
         [
             (.windowBorder, border.resettable("Window border")), (.material, material.resettable("Material")),
+            (.materialColor, materialColor.resettable("Material color")),
             (.sidebarOnRight, sidebar.resettable("Sidebar on right")),
             (.followSpaceAccent, accent.resettable("Follow Space accent")),
         ] + extraSettings

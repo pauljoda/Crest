@@ -52,7 +52,7 @@ struct MobileBrowserSidebarTopChrome: View {
                         }
                     }
                 )
-                .modifier(DeviceSurfaceAppearance())
+                .modifier(SurfaceToneAppearance())
                 .padding(.horizontal, BrowserSidebarMetrics.layerInset)
                 .padding(.bottom, 4)
             }

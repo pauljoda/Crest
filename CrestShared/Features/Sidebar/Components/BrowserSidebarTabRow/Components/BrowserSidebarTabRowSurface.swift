@@ -204,9 +204,9 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
     }
 }
 
-/// A selected row stands in the window's own glass with the window's own text
-/// color, as the address field and the pins do, so it reads the same on every
-/// Space. Any other row keeps the Space's ink.
+/// A selected row stands in the device's material with text in the scheme
+/// its material color gives it, as the address field and the pins do. Any
+/// other row keeps the Space's ink.
 ///
 /// Both states set the same modifiers, so selecting a row changes values
 /// rather than the row's structure.
@@ -221,6 +221,8 @@ private struct BrowserSelectedTabRowAppearance: ViewModifier {
         content
             .foregroundStyle(isSelected ? AnyShapeStyle(Color.primary) : AnyShapeStyle(.primary))
             .environment(\.spaceChromeForeground, isSelected ? nil : spaceForeground)
-            .environment(\.colorScheme, isSelected ? deviceColorScheme ?? colorScheme : colorScheme)
+            .environment(
+                \.colorScheme,
+                isSelected ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme)
     }
 }
