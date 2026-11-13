@@ -23,6 +23,16 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     /// The Quick Windows already placed, which a new one opens clear of.
     private static let placedWindows = NSHashTable<NSWindow>.weakObjects()
 
+    /// The last size the person gave a Quick Window, if it is a usable one.
+    private static var rememberedSize: CGSize? {
+        let defaults = BrowserChromeAppearancePreference.defaults
+        guard let data = defaults.data(forKey: rememberedSizeKey),
+            let size = try? JSONDecoder().decode(CGSize.self, from: data),
+            size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0
+        else { return nil }
+        return size
+    }
+
     // MARK: - Variables
 
     private weak var pagePoolRegistry: BrowserPagePoolRegistry?
@@ -146,15 +156,27 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         return CGRect(x: x, y: y, width: size.width, height: size.height)
     }
 
-    /// Places the window once, then remembers the sizes the person gives it.
-    /// The placement itself is never remembered, so opening a Quick Window
-    /// keeps the size another was last given.
+    /// Places the window once, unless the shell placed it before it showed,
+    /// then remembers the sizes the person gives it. The placement itself is
+    /// never remembered, so opening a Quick Window keeps the size another was
+    /// last given.
     func updateWindowGeometry() {
-        guard let window,
-            positionedWindow !== window,
-            let windowScreen = window.screen ?? NSScreen.main
-        else { return }
+        guard let window, positionedWindow !== window else { return }
         positionedWindow = window
+        Self.place(window, from: targetWindowID, over: source, pagePoolRegistry: pagePoolRegistry)
+        observeSize(of: window)
+    }
+
+    /// Places `window`, a Quick Window, once: over the page it came from, in
+    /// the window `targetWindowID` names, or with `source`, over the window
+    /// the person is in in that app. The shell places a Quick Window before it
+    /// shows, so it appears once, where it stays and at the size it keeps,
+    /// and the system's opening animation plays there.
+    static func place(
+        _ window: NSWindow, from targetWindowID: UUID?, over source: BrowserQuickWindowSourceApp?,
+        pagePoolRegistry: BrowserPagePoolRegistry?
+    ) {
+        guard !placedWindows.contains(window), let windowScreen = window.screen ?? NSScreen.main else { return }
         // A window another app asked for opens where the person is, over the
         // window they are in there, not over the Crest window it would move
         // into, which may be on another display.
@@ -181,19 +203,18 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             ?? sourceWindowFrame.flatMap { frame in
                 NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
             } ?? windowScreen
-        let placed = Self.targetFrame(
+        let placed = targetFrame(
             sourceWebContentFrame: sourceWebContentFrame,
             sourceWindowFrame: sourceWindowFrame,
             visibleFrame: screen.visibleFrame,
             rememberedSize: rememberedSize
         )
-        let others = Self.placedWindows.allObjects.filter { $0 !== window && $0.isVisible }.map(\.frame)
-        let frame = Self.cascaded(placed, clearOf: others, in: screen.visibleFrame)
-        Self.placedWindows.add(window)
+        let others = placedWindows.allObjects.filter { $0 !== window && $0.isVisible }.map(\.frame)
+        let frame = cascaded(placed, clearOf: others, in: screen.visibleFrame)
+        placedWindows.add(window)
         if !framesApproximatelyEqual(window.frame, frame) {
-            window.setFrame(frame, display: true, animate: false)
+            window.setFrame(frame, display: window.isVisible, animate: false)
         }
-        observeSize(of: window)
     }
 
     /// Moves `window`, a Quick Window already open that the app `source`
@@ -247,7 +268,7 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         }
     }
 
-    private func framesApproximatelyEqual(
+    private static func framesApproximatelyEqual(
         _ first: CGRect,
         _ second: CGRect
     ) -> Bool {
@@ -258,16 +279,6 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     }
 
     // MARK: - Actions - Remembered size
-
-    /// The last size the person gave a Quick Window, if it is a usable one.
-    private var rememberedSize: CGSize? {
-        let defaults = BrowserChromeAppearancePreference.defaults
-        guard let data = defaults.data(forKey: Self.rememberedSizeKey),
-            let size = try? JSONDecoder().decode(CGSize.self, from: data),
-            size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0
-        else { return nil }
-        return size
-    }
 
     private func observeSize(of window: NSWindow) {
         guard observedWindow !== window else { return }

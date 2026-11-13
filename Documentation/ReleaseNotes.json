@@ -5397,6 +5397,10 @@
     "settings-scroll-anywhere": {
       "category": "improved",
       "message": "On macOS 27, Settings pages other than Shortcuts and Feature Flags scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle."
+    },
+    "quick-window-opens-in-place": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window opens once where it stays and pops in, instead of flashing in the middle of the screen at a larger size and jumping into place. Crest's other windows no longer flash over the app a link came from."
     }
   }
 }

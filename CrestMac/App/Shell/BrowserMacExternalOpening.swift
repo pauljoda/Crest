@@ -51,6 +51,11 @@ final class BrowserMacExternalOpening {
     func openLink(_ url: URL, from source: BrowserQuickWindowSourceApp?) async -> Bool {
         guard let destination = await destination(for: url) else { return false }
         if destination.placement.opensQuickWindow {
+            // Crest came forward with every window for the link, over the app
+            // it came from. They go back behind it before the Quick Window is
+            // made, which takes long enough to see them. A link that opens as
+            // a tab brings its window forward instead.
+            if let source { windows.keepWindowsBehind(source) }
             windows.openQuickWindow(
                 BrowserQuickWindowRequest(
                     url: url, spaceAssignment: destination.assignment, targetWindowID: destination.quickWindowTarget),
