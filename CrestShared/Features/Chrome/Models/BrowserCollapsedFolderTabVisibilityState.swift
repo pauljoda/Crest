@@ -10,6 +10,10 @@ import Foundation
 /// the folder no longer holds is read past rather than removed.
 struct BrowserCollapsedFolderTabVisibilityState: Equatable {
     private(set) var keptTabIDs: Set<UUID> = []
+    /// Whether the person opened this folder while a closed folder around it
+    /// draws it only as the way to the tabs it keeps. It then shows everything
+    /// it holds, until a folder around it opens.
+    private(set) var isOpenInClosedFolder = false
 
     mutating func expansionDidChange(
         isExpanded: Bool,
@@ -36,6 +40,17 @@ struct BrowserCollapsedFolderTabVisibilityState: Equatable {
             folderTabIDs.contains(selectedTabID)
         else { return }
         keptTabIDs.insert(selectedTabID)
+    }
+
+    /// Opens or closes the folder inside a closed folder around it.
+    mutating func openInClosedFolder(_ isOpen: Bool) {
+        isOpenInClosedFolder = isOpen
+    }
+
+    /// Forgets the folder was opened inside a closed one, once no closed
+    /// folder around it draws it as the way to its tabs.
+    mutating func closedFolderAroundOpened() {
+        isOpenInClosedFolder = false
     }
 
     mutating func residencyDidChange(
