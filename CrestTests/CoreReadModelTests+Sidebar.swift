@@ -439,9 +439,12 @@ enum SidebarReads {
         _ folder: FolderStateModel, depth: Int, in context: BrowserSidebarListContext,
         interaction: BrowserSidebarInteractionState, inheritedKeptTabIDs: Set<UUID>? = nil
     ) -> BrowserFolderGroupConfiguration {
+        let visibility = interaction.collapsedFolderVisibility(
+            for: BrowserFolderRuntimeAssignment(
+                folderID: folder.id, spaceID: context.space.id, profileID: context.space.profileID))
         let configuration = BrowserFolderGroupConfiguration(
             sidebarInteraction: interaction, folder: folder, depth: depth, context: context, spacePresentation: nil,
-            inheritedKeptTabIDs: inheritedKeptTabIDs)
+            inheritedKeptTabIDs: inheritedKeptTabIDs, isOpenInClosedFolder: visibility.state.isOpenInClosedFolder)
         _ = (folder.title, folder.displaySymbol, folder.displayColor, folder.isCollapsed, folder.location)
         _ = (configuration.displayBranding, configuration.isAvailableForDisplay)
         _ = BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context)
