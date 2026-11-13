@@ -38,7 +38,7 @@ struct MobileBrowserSettingsView: View {
             searchText: $state.searchText,
             path: $state.path
         )
-        .environment(\.browserHostsTabPreviews, true)
+        .environment(\.browserTabPreviewHosting, .hoverAndHold)
         .onAppear {
             if isInTab { state.prepareForEmbeddedPresentation() }
         }

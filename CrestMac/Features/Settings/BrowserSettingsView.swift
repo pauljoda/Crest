@@ -63,7 +63,7 @@ struct BrowserSettingsView: View {
         .environment(\.browserSettingsUsesLiveSidebar, usesLiveSidebar)
         .environment(\.browserSettingsOpenSpace, openSpaceAction)
         // Every Mac browser window draws tab previews beside its sidebar.
-        .environment(\.browserHostsTabPreviews, true)
+        .environment(\.browserTabPreviewHosting, .hover)
         .onChange(of: scenePhase) { previousPhase, phase in
             lockPrivateSettings(previousPhase, phase)
         }

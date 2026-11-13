@@ -5412,7 +5412,7 @@
     },
     "touch-sidebar-previews": {
       "category": "new",
-      "message": "On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder opens a card with its tabs, a search field and the folder's menu behind \"…\". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews."
+      "message": "On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind \"…\". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews."
     }
   }
 }

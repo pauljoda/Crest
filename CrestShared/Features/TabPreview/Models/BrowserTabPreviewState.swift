@@ -30,6 +30,9 @@ final class BrowserTabPreviewState {
     static let aimDelay: Duration = .milliseconds(350)
     /// How long a card stays after the pointer leaves its tab and the card.
     static let leaveDelay: Duration = .milliseconds(150)
+    /// How long after the person last typed in the window a card's search
+    /// leaves the keyboard where it is.
+    static let typingPause: TimeInterval = 1
 
     // MARK: - Variables
 
@@ -56,6 +59,9 @@ final class BrowserTabPreviewState {
     /// Where the pointer is in the window, where the shell can tell. Without
     /// it, every tab moves the card after `moveDelay`.
     @ObservationIgnored var pointerLocation: (@MainActor () -> CGPoint?)?
+    /// When the person last pressed a key in the window, where the shell can
+    /// tell.
+    @ObservationIgnored private var lastKeyPress: Date?
     /// The preview of the tabs a folder's card lists, drawn beside that card.
     @ObservationIgnored private(set) lazy var inner = BrowserTabPreviewState(parent: self)
     /// The preview whose folder card lists this one's tabs.
@@ -65,6 +71,16 @@ final class BrowserTabPreviewState {
     /// Where the pointer was as it left the card's tab, or as it entered the
     /// last tab it crossed heading for the card.
     @ObservationIgnored private var aimOrigin: CGPoint?
+
+    /// Whether a card shows or one is on its way, which a click or a key in
+    /// the window takes down.
+    var isEngaged: Bool { shown != nil || resting != nil }
+
+    /// Whether the person typed in the window a moment ago, so a card's
+    /// search leaves the keyboard with what they were typing in.
+    var isTyping: Bool {
+        lastKeyPress.map { Date().timeIntervalSince($0) < Self.typingPause } ?? false
+    }
 
     // MARK: - Initializers
 
@@ -140,6 +156,11 @@ final class BrowserTabPreviewState {
         guard resting?.key == key else { return }
         resting = nil
         waitToLeave()
+    }
+
+    /// The person pressed a key in the window.
+    func keyPressed() {
+        lastKeyPress = Date()
     }
 
     /// The pointer went into the card or out of it.

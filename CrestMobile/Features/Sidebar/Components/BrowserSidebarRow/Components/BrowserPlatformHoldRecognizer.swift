@@ -1,14 +1,16 @@
 import SwiftUI
 import UIKit
 
-/// Calls `hold` when a finger holds the row still, the way the system's menu
-/// would open, in place of that menu. The row's drag lifts as it would beside
-/// a menu, so a hold that moves drags the row. Once the hold begins, the row's
-/// own buttons forget the touch, as they would for a menu.
+/// Calls `hold` when a finger holds the row still, or a pointer's secondary
+/// click lands on it, the ways the system's menu would open, in place of that
+/// menu. The row's drag lifts as it would beside a menu, so a hold that moves
+/// drags the row. Once the hold begins, the row's own buttons forget the
+/// touch, as they would for a menu.
 ///
 /// A clear anchor in the row's place hangs the recognizer on the view that
 /// hosts the row, where the row's drag interaction hangs too, and answers
-/// only the touches that begin inside the row.
+/// only the touches that begin inside the row, in the window's part that
+/// draws the row, so a page presented over the sidebar keeps its own holds.
 struct BrowserPlatformHoldRecognizer: ViewModifier {
     let hold: () -> Void
 
@@ -55,6 +57,12 @@ final class MobileHoldAnchorView: UIView {
         recognizer.delegate = self
         return recognizer
     }()
+    private lazy var secondaryClick: UITapGestureRecognizer = {
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(clicked(_:)))
+        recognizer.buttonMaskRequired = .secondary
+        recognizer.delegate = self
+        return recognizer
+    }()
 
     // MARK: - Initializers
 
@@ -70,25 +78,37 @@ final class MobileHoldAnchorView: UIView {
     override func didMoveToWindow() {
         super.didMoveToWindow()
         recognizer.view?.removeGestureRecognizer(recognizer)
+        secondaryClick.view?.removeGestureRecognizer(secondaryClick)
         guard let window else { return }
         // The view whose menu and drag interactions serve the row.
         var ancestor = superview
         while let view = ancestor, !view.interactions.contains(where: { $0 is UIContextMenuInteraction }) {
             ancestor = view.superview
         }
-        (ancestor ?? window).addGestureRecognizer(recognizer)
+        let host = ancestor ?? window
+        host.addGestureRecognizer(recognizer)
+        host.addGestureRecognizer(secondaryClick)
     }
 
     @objc private func held(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began else { return }
         hold()
     }
+
+    @objc private func clicked(_ recognizer: UITapGestureRecognizer) {
+        guard recognizer.state == .ended else { return }
+        hold()
+    }
 }
 
 extension MobileHoldAnchorView: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        guard window != nil, !isHidden, alpha > 0 else { return false }
-        return bounds.contains(touch.location(in: self))
+        guard let window, !isHidden, alpha > 0, bounds.contains(touch.location(in: self)) else { return false }
+        // The window's subtree that draws this row: a page presented over
+        // the sidebar is drawn in another, so its touches fall outside.
+        var drawingRow: UIView = self
+        while let parent = drawingRow.superview, parent !== window { drawingRow = parent }
+        return touch.view?.isDescendant(of: drawingRow) == true
     }
 
     func gestureRecognizer(

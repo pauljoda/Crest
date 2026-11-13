@@ -28,16 +28,27 @@ struct BrowserTabContextMenu<MenuItems: View>: ViewModifier {
             let pictures, let context
         {
             content.contextMenu(menuItems: menuItems) {
-                BrowserTabPreviewCard(
-                    tab: tab, context: context, picture: pictures.previewPicture(of: tab.id), floats: false
-                )
-                .environment(\.browserTabPreviewCardWidth, Self.previewWidth)
+                BrowserTabMenuPreview(tab: tab, context: context, pictures: pictures)
+                    .environment(\.browserTabPreviewCardWidth, Self.previewWidth)
             }
         } else {
             content.contextMenu {
                 if isEnabled { menuItems() }
             }
         }
+    }
+}
+
+/// The card above a held tab's menu. It reads the tab's picture in its own
+/// body, where only a menu that shows draws it, so a new picture redraws that
+/// menu's card rather than every row that offers one.
+private struct BrowserTabMenuPreview: View {
+    let tab: TabStateModel
+    let context: BrowserSidebarListContext
+    let pictures: BrowserTabPictures
+
+    var body: some View {
+        BrowserTabPreviewCard(tab: tab, context: context, picture: pictures.previewPicture(of: tab.id), floats: false)
     }
 }
 

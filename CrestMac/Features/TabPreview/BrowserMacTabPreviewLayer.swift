@@ -3,10 +3,11 @@ import SwiftUI
 
 /// A browser window's tab preview on the Mac: the shared layer, drawing the
 /// pictures the window's pages keep, which it starts them keeping, and told
-/// where the sidebar's edge and the pointer are. A key, a click or a scroll in the window
-/// takes the card down, as does the window losing focus, the command palette
-/// opening or the window showing another Space. While the pointer is in the
-/// card, a floating sidebar stays out.
+/// where the sidebar's edge and the pointer are. A key, a click or a scroll
+/// in the window takes the card down, or the card on its way, as does the
+/// window losing focus, the command palette opening, the window showing
+/// another Space or its Space locking. While the pointer is in the card, a
+/// floating sidebar stays out.
 struct BrowserMacTabPreviewLayer: View {
     // MARK: - Variables
 
@@ -39,7 +40,7 @@ struct BrowserMacTabPreviewLayer: View {
             .onChange(of: preview.isPointerInCard || preview.inner.isPointerInCard) { _, isInside in
                 model.chrome.utilityPresentation.setTabPreviewHeld(isInside)
             }
-            .onChange(of: model.sidebarInteraction.tabDragState.item != nil) { _, isDragging in
+            .onChange(of: isDragging) { _, isDragging in
                 holdForInteraction(isDragging)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)) { _ in
@@ -55,6 +56,9 @@ struct BrowserMacTabPreviewLayer: View {
                 if isPresented { preview.dismiss() }
             }
             .onChange(of: model.browser.shownSpace?.id) { preview.dismiss() }
+            .onChange(of: model.browser.shownSpace.map(model.spaceAccess.isLocked) ?? false) { _, isLocked in
+                if isLocked { preview.dismiss() }
+            }
             .onAppear {
                 let spaceAccess = model.spaceAccess
                 pictures.follow { spaceAccess.isLocked($0) }
@@ -65,6 +69,13 @@ struct BrowserMacTabPreviewLayer: View {
 
 extension BrowserMacTabPreviewLayer {
     // MARK: - Actions - Holding
+
+    /// Whether a sidebar drag is under way, by the pointer's lift or a
+    /// system drag.
+    private var isDragging: Bool {
+        let interaction = model.sidebarInteraction
+        return interaction.sidebarReorderState.isDragging || interaction.tabDragState.item != nil
+    }
 
     /// Keeps the card up through a drag or a menu that begins in it, such as
     /// a tab dragged out of a folder's card or a row's menu, and lets it go
@@ -97,16 +108,16 @@ private struct BrowserMacTabPreviewPointer: NSViewRepresentable {
     }
 }
 
-/// Takes the card down when the person presses a key, clicks or scrolls in
-/// the window, while a card shows, and gives the keyboard back to whatever
-/// held it once the card goes.
+/// Takes the card down, or the card on its way, when the person presses a
+/// key, clicks or scrolls in the window, tells the preview when they type,
+/// and gives the keyboard back to whatever held it once a card goes.
 ///
-/// Escape goes no further than the card. A click or a scroll inside the card
-/// is the card's own, and a card that takes the keyboard, a folder's, keeps
-/// the keys typed into it; one typed before its search has the keyboard goes
-/// nowhere, rather than to the page behind it. The arrow keys leave the card
-/// up, since they move the sidebar's keyboard focus and the card follows it.
-/// Anything else takes the card down and goes on to where it was going.
+/// Escape goes no further than a card that shows. A click or a scroll inside
+/// the card is the card's own, and a folder's card stays up for keys, which
+/// go wherever they were going, into its search once that has the keyboard.
+/// The arrow keys leave the card up, since they move the sidebar's keyboard
+/// focus and the card follows it. Anything else takes the card down and goes
+/// on to where it was going.
 private struct BrowserMacTabPreviewDismissal: NSViewRepresentable {
     // MARK: - Types
 
@@ -150,8 +161,7 @@ private struct BrowserMacTabPreviewDismissal: NSViewRepresentable {
     func updateNSView(_ view: NSView, context: Context) {
         let coordinator = context.coordinator
         coordinator.preview = preview
-        if isActive, coordinator.monitor == nil {
-            coordinator.previousResponder = view.window?.firstResponder
+        if coordinator.monitor == nil {
             coordinator.monitor = NSEvent.addLocalMonitorForEvents(matching: Self.events) { [weak coordinator] event in
                 guard let coordinator, let window = coordinator.view?.window, event.window === window else {
                     return event
@@ -170,11 +180,12 @@ private struct BrowserMacTabPreviewDismissal: NSViewRepresentable {
                 }
                 return consumed ? nil : event
             }
-        } else if !isActive, let monitor = coordinator.monitor {
-            NSEvent.removeMonitor(monitor)
-            coordinator.monitor = nil
-            Self.restoreKeyboard(in: view.window, to: coordinator.previousResponder)
+        }
+        if isActive, coordinator.previousResponder == nil {
+            coordinator.previousResponder = view.window?.firstResponder
+        } else if !isActive, let responder = coordinator.previousResponder {
             coordinator.previousResponder = nil
+            Self.restoreKeyboard(in: view.window, to: responder)
         }
     }
 
@@ -193,36 +204,25 @@ private struct BrowserMacTabPreviewDismissal: NSViewRepresentable {
         in window: NSWindow, coordinator: Coordinator
     ) -> Bool {
         guard let preview = coordinator.preview else { return false }
+        if type == .keyDown { preview.keyPressed() }
+        guard preview.isEngaged else { return false }
         if type == .keyDown {
             if keyCode == escapeKeyCode, modifiers.intersection([.command, .control, .option]).isEmpty {
+                let showsCard = preview.shown != nil
                 preview.dismiss()
-                return true
+                return showsCard
             }
-            if arrowKeyCodes.contains(keyCode) { return false }
-            guard preview.shown?.subject.capturesKeys == true else {
-                preview.dismiss()
-                return false
-            }
-            return modifiers.intersection([.command, .control]).isEmpty && !cardHoldsKeyboard(in: window, preview)
-        }
-        if let card = preview.cardFrame, let content = window.contentView,
-            card.contains(CGPoint(x: location.x, y: content.bounds.height - location.y))
-        {
+            if arrowKeyCodes.contains(keyCode) || preview.shown?.subject.capturesKeys == true { return false }
+            preview.dismiss()
             return false
+        }
+        if let content = window.contentView {
+            let point = CGPoint(x: location.x, y: content.bounds.height - location.y)
+            let cards = [preview.cardFrame, preview.inner.cardFrame].compactMap(\.self)
+            if cards.contains(where: { $0.contains(point) }) { return false }
         }
         preview.dismiss()
         return false
-    }
-
-    /// Whether what holds the window's keyboard sits in the card, as its
-    /// search's editor does once it has taken it.
-    @MainActor
-    private static func cardHoldsKeyboard(in window: NSWindow, _ preview: BrowserTabPreviewState) -> Bool {
-        guard let card = preview.cardFrame, let view = window.firstResponder as? NSView,
-            let content = window.contentView
-        else { return false }
-        let frame = view.convert(view.bounds, to: nil)
-        return card.contains(CGPoint(x: frame.midX, y: content.bounds.height - frame.midY))
     }
 
     /// Puts the keyboard back on `responder` when a card that took it left the

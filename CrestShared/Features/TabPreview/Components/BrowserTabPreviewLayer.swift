@@ -1,11 +1,5 @@
 import SwiftUI
 
-extension EnvironmentValues {
-    /// Whether the app's windows draw a tab's preview card when the pointer
-    /// rests on it, so its settings offer to turn previews off.
-    @Entry var browserHostsTabPreviews = false
-}
-
 // MARK: - Types
 
 /// Where a card sits beside its tab's row, in the layer.
@@ -117,9 +111,13 @@ private struct BrowserTabPreviewCardSlot: View {
                 card(for: target)
                     .environment(\.browserTabPreviewOpeningTime, openingTime)
                     .environment(\.browserTabPreviewCardWidth, width(of: target))
-                    // A held card leaves the keyboard down until its search
-                    // is tapped, where the keyboard would cover it.
-                    .environment(\.browserTabPreviewTakesKeyboard, !target.isHeldByTouch)
+                    // A card on a touch shell leaves the keyboard down until
+                    // its search is tapped, as the keyboard that would come
+                    // up covers the card.
+                    .environment(
+                        \.browserTabPreviewTakesKeyboard,
+                        !target.isHeldByTouch && !target.context.capabilities.supportsTouch
+                    )
                     .onGeometryChange(for: CGSize.self) {
                         $0.size
                     } action: {
@@ -230,7 +228,8 @@ extension EnvironmentValues {
 extension EnvironmentValues {
     /// How wide a preview card is drawn.
     @Entry var browserTabPreviewCardWidth: CGFloat = BrowserTabPreviewSurface.width
-    /// Whether a preview card's search takes the keyboard once the card has
-    /// grown, as it does where the pointer or the keyboard brought the card.
+    /// Whether a preview card's search takes the keyboard by itself, as it
+    /// does where a pointer or the keyboard brought the card on a shell
+    /// without touch.
     @Entry var browserTabPreviewTakesKeyboard = true
 }

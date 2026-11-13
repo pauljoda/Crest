@@ -105,3 +105,15 @@ private struct BrowserTabPreviewCardSurface: ViewModifier {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Tab card") {
+        if let tab = BrowserTabPreviewFixture.tab, let context = BrowserTabPreviewFixture.context {
+            VStack(spacing: 16) {
+                BrowserTabPreviewCard(tab: tab, context: context, picture: BrowserTabPreviewFixture.picture)
+                BrowserTabPreviewCard(tab: tab, context: context, picture: nil)
+            }
+            .padding()
+        }
+    }
+#endif

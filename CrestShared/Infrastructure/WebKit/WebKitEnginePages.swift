@@ -58,6 +58,8 @@ final class WebKitEnginePages: EnginePages {
 
     /// Snapshots what the page's web view shows, and presents it as a PNG
     /// once WebKit has it. A web view off screen shows nothing to snapshot.
+    /// An iPhone or iPad offers no Capture Page, so there it pictures a tab
+    /// for its preview alone, and lists no viewport capture.
     func capture(_ capturing: CapturePage) -> Bool {
         guard let page = page(capturing.pageID) else { return false }
         let configuration = WKSnapshotConfiguration()

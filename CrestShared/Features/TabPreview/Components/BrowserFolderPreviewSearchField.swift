@@ -2,20 +2,18 @@ import SwiftUI
 
 /// A folder card's search, drawn as one of the sidebar's tab rows: a row's
 /// height and corners, with the magnifier in the favicon's column and the
-/// typing where a title sits, in the sidebar's text size. It takes the
-/// keyboard once its card has grown, unless a finger held the card open,
-/// and Return does what `submit` says.
+/// typing where a title sits, in the sidebar's text size. Its card decides
+/// when it takes the keyboard, and Return does what `submit` says.
 struct BrowserFolderPreviewSearchField: View {
     // MARK: - Variables
 
     @Binding var text: String
+    /// Whether the field has the keyboard, which its card sets.
+    let isFocused: FocusState<Bool>.Binding
     let submit: () -> Void
 
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.browserTabPreviewOpeningTime) private var openingTime
-    @Environment(\.browserTabPreviewTakesKeyboard) private var takesKeyboard
-    @FocusState private var isFocused: Bool
 
     private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
@@ -28,7 +26,7 @@ struct BrowserFolderPreviewSearchField: View {
                 TextField("Search Tabs", text: $text, prompt: Text("Search Tabs"))
                     .labelsHidden()
                     .textFieldStyle(.plain)
-                    .focused($isFocused)
+                    .focused(isFocused)
                     .onSubmit(submit)
             } icon: {
                 Image(systemName: "magnifyingglass")
@@ -53,11 +51,6 @@ struct BrowserFolderPreviewSearchField: View {
         )
         .background(.quaternary, in: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius()))
         .accessibilityIdentifier("folder-preview-search")
-        .task {
-            guard takesKeyboard else { return }
-            do { try await Task.sleep(for: openingTime) } catch { return }
-            isFocused = true
-        }
     }
 
     /// The column a pointer row's favicon takes at the sidebar's text size.
@@ -65,3 +58,13 @@ struct BrowserFolderPreviewSearchField: View {
         TabFaviconMetrics.defaultSize * BrowserSidebarDensity(tabScale).scale
     }
 }
+
+#if DEBUG
+    #Preview("Folder card search") {
+        @Previewable @State var query = ""
+        @Previewable @FocusState var isFocused: Bool
+        BrowserFolderPreviewSearchField(text: $query, isFocused: $isFocused) {}
+            .frame(width: 264)
+            .padding()
+    }
+#endif

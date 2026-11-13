@@ -411,8 +411,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: allowsFloatingSidebar, initial: true) { _, allows in
             navigation.allowsCompactFloatingSidebar = allows
         }
+        // A card a sidebar shows keeps that sidebar up while it is read.
         .onChange(
-            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging,
+            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging
+                || sidebarInteraction.tabPreview.shown != nil || floatingSidebarPreview.shown != nil,
             initial: true
         ) { _, keepsSidebarVisible in
             navigation.setTransientSidebarDismissalPaused(keepsSidebarVisible)
