@@ -35,24 +35,26 @@ final class BrowserMacExternalOpening {
 
     // MARK: - Actions - Opening
 
-    /// Opens `urls`: the documents together, then each link in turn.
-    func open(_ urls: [URL]) async {
+    /// Opens `urls`, which came from the app `source`, or from Crest when it
+    /// is nil: the documents together, then each link in turn.
+    func open(_ urls: [URL], from source: BrowserQuickWindowSourceApp?) async {
         let documents = urls.filter(\.isFileURL)
         if !documents.isEmpty { await openDocuments(documents) }
-        for url in urls where !url.isFileURL { await openLink(url) }
+        for url in urls where !url.isFileURL { await openLink(url, from: source) }
     }
 
     /// Opens a link from another app where the core routes it: in a Quick
-    /// Window, or as a new tab in the window it names. Answers whether it
+    /// Window, over the window the person is in in `source`, the app it came
+    /// from, or as a new tab in the window the core names. Answers whether it
     /// opened.
     @discardableResult
-    func openLink(_ url: URL) async -> Bool {
+    func openLink(_ url: URL, from source: BrowserQuickWindowSourceApp?) async -> Bool {
         guard let destination = await destination(for: url) else { return false }
         if destination.placement.opensQuickWindow {
             windows.openQuickWindow(
                 BrowserQuickWindowRequest(
-                    url: url, spaceAssignment: destination.assignment, targetWindowID: destination.quickWindowTarget,
-                    opensWherePersonIs: true))
+                    url: url, spaceAssignment: destination.assignment, targetWindowID: destination.quickWindowTarget),
+                over: source)
             return true
         }
         guard

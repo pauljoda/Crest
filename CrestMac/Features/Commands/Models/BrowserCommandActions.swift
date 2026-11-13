@@ -211,14 +211,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     /// Opens a blank Quick Window in the Space this window shows, over the
-    /// window, or with `wherePersonIs`, over the window the person is in in
-    /// another app.
-    func openQuickWindow(wherePersonIs: Bool = false) {
+    /// window, or with `source`, over the window the person is in in that
+    /// app.
+    func openQuickWindow(over source: BrowserQuickWindowSourceApp? = nil) {
         guard let space = browser.shownSpace else { return }
         windows?.openQuickWindow(
-            .empty(
-                spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID,
-                opensWherePersonIs: wherePersonIs))
+            .empty(spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID),
+            over: source)
     }
 
     func closeKeyWindow() {

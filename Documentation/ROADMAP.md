@@ -40,6 +40,7 @@ the live status for each issue.
 - [ ] [feature: Connect an agent from Settings without a terminal](https://github.com/pauljoda/Crest/issues/404)
 - [ ] [bug: Command palette treats custom URL schemes as web search queries instead of opening them](https://github.com/pauljoda/Crest/issues/408)
 - [ ] [Tab switches Spaces instead of moving between form fields on iPad](https://github.com/pauljoda/Crest/issues/425)
+- [ ] [Return to the previous app when a Quick Window from another app closes](https://github.com/pauljoda/Crest/issues/428)
 - [ ] [bug: Preserve sidebar state and page state when moving a tab to another window/display](https://github.com/pauljoda/Crest/issues/477)
 - [ ] [feature: Support multiple Private Browsing windows](https://github.com/pauljoda/Crest/issues/481)
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/pauljoda/Crest/issues/527)
