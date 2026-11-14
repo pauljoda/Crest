@@ -126,22 +126,7 @@ struct BrowserFolderGroupSurface: View {
 
     /// The folder's menu, in the system's menu or behind its card's "…".
     private var organizationMenu: BrowserFolderOrganizationMenu {
-        BrowserFolderOrganizationMenu(
-            folder: folder,
-            context: configuration.context,
-            assignment: configuration.folderRuntimeAssignment,
-            createNestedFolder: interaction.beginCreatingChild,
-            renameFolder: interaction.beginRenaming,
-            changeColor: {
-                interaction.isChoosingColor.wrappedValue = true
-            },
-            changeIcon: {
-                interaction.isChoosingIcon.wrappedValue = true
-            },
-            deleteFolder: {
-                interaction.isConfirmingDeletion.wrappedValue = true
-            }
-        )
+        BrowserFolderOrganizationMenu(configuration: configuration, interaction: interaction)
     }
 
     /// Whether the header shows one of the presentations its menu raises,

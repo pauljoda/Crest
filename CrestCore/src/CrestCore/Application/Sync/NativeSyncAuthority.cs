@@ -132,17 +132,18 @@ public sealed class NativeSyncAuthority {
         stager.Queue(previous, next, staging);
 
     /// Stages `session`, a revision about to be saved in place of `previous`,
-    /// for `reason`, replacing whatever is queued; a record a queued edit
+    /// as `staging` says, replacing whatever is queued; a record a queued edit
     /// removed keeps that edit's reason. Answers the sealed transaction the
     /// revision's reservation saves and publishes; disposing it uncommitted
     /// queues the replaced stage again. Throws `Rejected` naming why it cannot
     /// stage.
-    internal NativeSyncTransaction StageWithSave(SessionState previous, SessionState session, SyncDeletionReason reason) {
+    internal NativeSyncTransaction StageWithSave(SessionState previous, SessionState session, SyncStaging staging) {
+        var reason = staging.Reason;
         var replaced = stager.Supersede();
         var value = Begin(sequence: null);
         value.Superseded = replaced;
         try {
-            var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason));
+            var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason, staging.Deleted));
             value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow));
             _ = value.Seal();
             return value;

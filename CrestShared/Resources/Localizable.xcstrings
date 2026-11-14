@@ -4,6 +4,69 @@
     "" : {
 
     },
+    "%@ group" : {
+
+    },
+    "Add to Group" : {
+
+    },
+    "Always show group highlights" : {
+
+    },
+    "Archive Tabs" : {
+
+    },
+    "Collapses this group" : {
+
+    },
+    "Convert to Folder" : {
+
+    },
+    "Convert to Group" : {
+
+    },
+    "Expands this group" : {
+
+    },
+    "Folder actions" : {
+
+    },
+    "Group actions" : {
+
+    },
+    "Group Color…" : {
+
+    },
+    "Groups" : {
+
+    },
+    "Move to Group" : {
+
+    },
+    "Move to Saved Tabs as Folder" : {
+
+    },
+    "New Group" : {
+
+    },
+    "Remove from Group" : {
+
+    },
+    "Rename Group" : {
+
+    },
+    "Show group color borders" : {
+
+    },
+    "Show group tab counts" : {
+
+    },
+    "Tint Group Name" : {
+
+    },
+    "Ungroup" : {
+
+    },
     "·" : {
       "localizations" : {
         "ar" : {

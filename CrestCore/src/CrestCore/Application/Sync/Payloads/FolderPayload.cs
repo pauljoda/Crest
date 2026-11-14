@@ -5,7 +5,8 @@ using CrestCore.Contracts;
 namespace CrestCore.Application;
 
 /// A folder's synced value: where it lives, its title and look, its parent,
-/// its disclosure with the clock of its last change, and its position.
+/// its disclosure with the clock of its last change, its position, and
+/// whether it is a group, which older clients keep and show as a folder.
 internal sealed record FolderPayload(
     Guid Id,
     Guid SpaceId,
@@ -17,7 +18,8 @@ internal sealed record FolderPayload(
     bool IsCollapsed,
     SyncTime? CollapseModifiedAt,
     Guid? OrderAnchorTabId,
-    string OrderToken) : SyncPayload {
+    string OrderToken,
+    bool IsGroup = false) : SyncPayload {
     #region Static Variables
 
     /// The members a folder's value carries; a record keeps what a newer build
@@ -25,7 +27,8 @@ internal sealed record FolderPayload(
     public static IReadOnlyList<string> Members { get; } = [
         StoredSessionCodec.Key.Id, StoredSessionCodec.Key.SpaceId, StoredSessionCodec.Key.Title, StoredSessionCodec.Key.Location,
         StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.Color, StoredSessionCodec.Key.ParentId, StoredSessionCodec.Key.IsCollapsed,
-        StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.OrderAnchorTabId, SyncPayload.Key.OrderToken
+        StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.OrderAnchorTabId, SyncPayload.Key.OrderToken,
+        StoredSessionCodec.Key.IsGroup
     ];
 
     #endregion
@@ -48,7 +51,7 @@ internal sealed record FolderPayload(
     /// The folder `value` holds. One without a location is saved, without a
     /// symbol keeps none of its own and is drawn with the folder symbol,
     /// without a color takes the folder color, and without a disclosure is
-    /// expanded.
+    /// expanded, and without a group mark is a folder.
     public static FolderPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity(StoredSessionCodec.Key.Id),
         value.WrappedIdentity(StoredSessionCodec.Key.SpaceId),
         value.OptionalText(StoredSessionCodec.Key.Location) is { } location ? Placement(location) : TabPlacement.Saved,
@@ -56,7 +59,7 @@ internal sealed record FolderPayload(
         value.Value[StoredSessionCodec.Key.Color] is { } color ? SpacePayload.Color(color) : FolderState.DefaultColor,
         value.OptionalWrappedIdentity(StoredSessionCodec.Key.ParentId), value.OptionalFlag(StoredSessionCodec.Key.IsCollapsed) ?? false,
         value.OptionalTime(StoredSessionCodec.Key.CollapseModifiedAt), value.OptionalWrappedIdentity(StoredSessionCodec.Key.OrderAnchorTabId),
-        value.Text(Key.OrderToken));
+        value.Text(Key.OrderToken), value.OptionalFlag(StoredSessionCodec.Key.IsGroup) ?? false);
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
         var value = new JsonObject {
@@ -72,6 +75,7 @@ internal sealed record FolderPayload(
         Put(value, StoredSessionCodec.Key.CollapseModifiedAt, CollapseModifiedAt, form);
         PutWrapped(value, StoredSessionCodec.Key.OrderAnchorTabId, OrderAnchorTabId);
         value[Key.OrderToken] = OrderToken;
+        if (IsGroup) value[StoredSessionCodec.Key.IsGroup] = true;
         return value;
     }
 

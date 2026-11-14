@@ -168,7 +168,8 @@ private struct BrowserSidebarTabDeleteButton: View {
     }
 }
 
-private struct BrowserSidebarTabTrailingControlLabel: View {
+/// A trailing control's glyph in its hit target, for a tab row or a folder header.
+struct BrowserSidebarTabTrailingControlLabel: View {
     let systemName: String
     let metrics: BrowserTabTrailingControlMetrics
 
@@ -185,7 +186,7 @@ private struct BrowserSidebarTabTrailingControlLabel: View {
 
 /// The chrome's hover-and-press treatment where a pointer can earn it, and a
 /// plain button where nothing can.
-private struct BrowserSidebarTabTrailingControlStyle: ViewModifier {
+struct BrowserSidebarTabTrailingControlStyle: ViewModifier {
     let metrics: BrowserTabTrailingControlMetrics
 
     @ViewBuilder

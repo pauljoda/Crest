@@ -21,7 +21,8 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
             .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale,
             .sidebarSpacing, .pinLayout,
             .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .copyURLButton, .superCopy,
-            .folderIconOnly, .folderTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview, .unloadedSavedTabs,
+            .folderIconOnly, .folderTabCounts, .groupTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview,
+            .unloadedSavedTabs,
         ])
 
     /// The few choices most people make, with Space icons as dots.

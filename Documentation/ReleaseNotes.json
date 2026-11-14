@@ -5469,6 +5469,18 @@
     "sidebar-reveal-overshoot": {
       "category": "fixed",
       "message": "On Mac, the hidden sidebar also comes out when the pointer overshoots the window's edge, as it easily does when the window doesn't touch the edge of the screen."
+    },
+    "tab-groups": {
+      "category": "new",
+      "message": "Groups gather open tabs under a simple header that syncs to every device. Make one from a tab's menu or from selected tabs and name it as you make it, close it to its header, and turn a group into a folder and back. A group goes away when its last tab leaves."
+    },
+    "folder-header-actions": {
+      "category": "improved",
+      "message": "Folders and groups show a … button on their header for their actions, including Archive Tabs and turning a folder of open tabs into a group. A folder's tab count sits where the button appears."
+    },
+    "import-tab-folder-section": {
+      "category": "internal",
+      "message": "A browser-data import refuses a tab filed in a folder of another section."
     }
   }
 }

@@ -94,8 +94,16 @@ public sealed record NativeSyncSessionTransition {
             }
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
-        if (!replacing || removed)
-            next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds);
+        // A group whose last tab another device closed or moved out goes here
+        // too, for every device. One that held no tab here stays, since its
+        // tabs may not have arrived yet.
+        var settled = repaired.ClearingEmptiedGroups(local);
+        var emptied = settled.GroupsRemovedSince(repaired).Select(SyncRecordKind.Folder.RecordName)
+            .ToDictionary(name => name, _ => SyncDeletionReason.ExplicitDelete, StringComparer.Ordinal);
+        repaired = settled;
+        if (!replacing || removed || emptied.Count > 0)
+            next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds,
+                emptied);
         return new(next, repaired, origins);
     }
 

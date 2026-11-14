@@ -86,7 +86,7 @@ internal sealed class SyncStager {
         lock (NativeSessionAuthority.Gate) {
             if (stopped) return;
             requested++;
-            var removals = Pending.Adding(new(previous, next, edit.Reason));
+            var removals = Pending.Adding(new(previous, next, edit.Reason, edit.Deleted));
             var now = DateTimeOffset.UtcNow;
             var waiting = queued ?? staging;
             var delay = waiting is { } earlier && earlier.Delay < edit.Urgency.Delay ? earlier.Delay : edit.Urgency.Delay;
