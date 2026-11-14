@@ -61,9 +61,10 @@ public sealed partial class BrowserContractsTests {
         Assert.True(folders[1]!["isCollapsed"]!.GetValue<bool>());
     }
 
-    /// A Group arrives as a Group, and one whose tabs have not arrived stays
-    /// one. A Group a client that knows no Groups left nested, holding a folder
-    /// or outside the open tabs arrives as a folder on every device.
+    /// A Group arrives as a Group, and one whose tabs have not arrived waits
+    /// out of sight until one does. A Group a client that knows no Groups left
+    /// nested, holding a folder or outside the open tabs arrives as a folder
+    /// on every device.
     [Fact]
     public void GroupsArriveAsGroupsAndMisshapenOnesAsFolders() {
         var session = OneSpaceSession();
@@ -84,10 +85,15 @@ public sealed partial class BrowserContractsTests {
         var folders = StoredSessionCodec.DecodeSpace(FirstSpace(journal.Materialize(session))).Folders.ToDictionary(folder => folder.Id);
 
         Assert.True(folders[group].IsGroup);
-        Assert.True(folders[waiting].IsGroup);
+        Assert.DoesNotContain(waiting, folders.Keys);
         Assert.False(folders[nested].IsGroup);
         Assert.False(folders[holding].IsGroup);
         Assert.False(folders[saved].IsGroup);
+
+        FirstSpace(session)["tabs"]!.AsArray().Add(TabOf(Fixed(258), "Arrived", "https://example.com/arrived", folder: waiting));
+        journal.Stage(session);
+        var arrived = StoredSessionCodec.DecodeSpace(FirstSpace(journal.Materialize(session))).Folders.Single(folder => folder.Id == waiting);
+        Assert.True(arrived.IsGroup);
     }
 
     [Fact]

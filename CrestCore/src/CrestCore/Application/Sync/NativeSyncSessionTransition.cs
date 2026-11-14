@@ -39,9 +39,9 @@ public sealed record NativeSyncSessionTransition {
 
     internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, JsonObject local, JsonArray incoming,
         bool replacing, double now, JsonObject? emptySpace, SpaceAccessAuthority? access, IIdSource? ids,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var prepared = Prepare(journal, StoredSessionCodec.DecodeSession(local), incoming, replacing, StoredSessionCodec.Date(now),
-            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), access, ids ?? new SystemIdSource(), removals);
+            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), access, ids ?? new SystemIdSource(), removals, emptied);
         return new(prepared.Journal, prepared.Session, prepared.Origins, local.DeepClone().AsObject());
     }
 
@@ -49,11 +49,11 @@ public sealed record NativeSyncSessionTransition {
     /// session, retaining local deletion work and device preferences throughout.
     internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, SessionState local, JsonArray incoming,
         bool replacing, DateTimeOffset now, SpaceState? emptySpace, SpaceAccessAuthority? access, IIdSource ids,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var seconds = StoredSessionCodec.Seconds(now);
         var next = journal;
         if (!replacing && local.DisposableSeedMarker is null)
-            next = next.Stage(StoredSessionCodec.Encode(local), SyncDeletionReason.Superseded, seconds, removals);
+            next = next.Stage(StoredSessionCodec.Encode(local), SyncDeletionReason.Superseded, seconds, removals, emptied);
         next = replacing ? next.Replace(incoming) : next.Merge(incoming);
         var records = NativeSyncEvaluator.Reconcile(next.Records).Select(record => SyncSessionRecord.Read(record!.AsObject())).ToArray();
         // Only accepted explicit Space tombstones authorize erasing a local

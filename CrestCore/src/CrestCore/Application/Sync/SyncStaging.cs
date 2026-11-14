@@ -71,9 +71,15 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     #region Variables
 
     /// The records the edit deleted on the person's behalf whatever its
-    /// reason, by record name: the folders of the open tabs that went with
-    /// their last tab.
+    /// reason, by record name: the folders of the open tabs the person removed.
+    /// A group or a folder marked emptied goes only when an edit names it,
+    /// since a device leaves one out of its session while it holds nothing.
     public IReadOnlySet<string> Deleted { get; init; } = NoRecords;
+
+    /// The folders of the open tabs that went because the edit left them
+    /// holding nothing, by record name. Their records are marked emptied rather
+    /// than deleted, so a device that still holds a tab in one keeps it.
+    public IReadOnlySet<string> Emptied { get; init; } = NoRecords;
 
     #endregion
 
@@ -82,6 +88,10 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// This staging, deleting the folders `folders` names explicitly as well.
     public SyncStaging Deleting(IReadOnlyCollection<Guid> folders) => folders.Count == 0 ? this
         : this with { Deleted = new HashSet<string>(Deleted.Concat(folders.Select(SyncRecordKind.Folder.RecordName)), StringComparer.Ordinal) };
+
+    /// This staging, marking the folders `folders` names emptied as well.
+    public SyncStaging Emptying(IReadOnlyCollection<Guid> folders) => folders.Count == 0 ? this
+        : this with { Emptied = new HashSet<string>(Emptied.Concat(folders.Select(SyncRecordKind.Folder.RecordName)), StringComparer.Ordinal) };
 
     #endregion
 }

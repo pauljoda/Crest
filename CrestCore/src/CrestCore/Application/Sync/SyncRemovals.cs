@@ -10,9 +10,10 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
     #region Types
 
     /// One accepted edit: the state it replaced, the state it made, the
-    /// reason the records it removed are deleted for, and the records it
-    /// deleted explicitly whatever that reason.
-    internal sealed record Edit(SessionState Previous, SessionState Next, SyncDeletionReason Reason, IReadOnlySet<string>? Deleted = null);
+    /// reason the records it removed are deleted for, the records it deleted
+    /// explicitly whatever that reason, and the folders it emptied.
+    internal sealed record Edit(SessionState Previous, SessionState Next, SyncDeletionReason Reason, IReadOnlySet<string>? Deleted = null,
+        IReadOnlySet<string>? Emptied = null);
 
     #endregion
 
@@ -22,6 +23,17 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
 
     private static readonly IReadOnlyDictionary<string, SyncDeletionReason> Unnamed =
         new Dictionary<string, SyncDeletionReason>(StringComparer.Ordinal);
+
+    private static readonly IReadOnlySet<string> NoFolders = new HashSet<string>(StringComparer.Ordinal);
+
+    #endregion
+
+    #region Variables
+
+    /// The folders any of the edits emptied, by record name, which the stage
+    /// marks emptied rather than deletes.
+    public IReadOnlySet<string> Emptied => Edits.Any(edit => edit.Emptied is { Count: > 0 })
+        ? Edits.SelectMany(edit => edit.Emptied ?? NoFolders).ToHashSet(StringComparer.Ordinal) : NoFolders;
 
     #endregion
 

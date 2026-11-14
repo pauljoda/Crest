@@ -96,6 +96,15 @@ internal abstract class SyncPayloadType {
     public virtual SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
         SyncDeletionReason removal) => removal;
 
+    /// `payload`, a record's, marked as gone for holding nothing at `now` in
+    /// seconds since 2001, or null for a kind no edit empties.
+    public virtual JsonObject? Emptied(JsonObject payload, double now) => null;
+
+    /// Whether a device leaves the record `value` out of its session while it
+    /// holds nothing there, so that a session lacking it is no evidence it
+    /// went: a group, or a folder marked emptied, of the open tabs.
+    public virtual bool HidesWhenEmpty(JsonObject value) => false;
+
     /// The value of this type that holds `tab`, the tab a record of the
     /// counterpart type holds.
     public virtual JsonObject Holding(JsonNode tab) => throw new InvalidOperationException($"A {Kind.Name} holds no tab.");
@@ -200,6 +209,19 @@ internal abstract class SyncPayloadType {
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
             SyncDeletionReason removal) => removal.ForStructure;
+
+        /// A folder keeps its record when an edit empties it: the record is
+        /// marked, and every device shows the folder again once a tab sits in
+        /// it. A record marked already stays as it is.
+        public override JsonObject? Emptied(JsonObject payload, double now) {
+            var folder = (FolderPayload)SyncPayload.Decode(payload, SyncPayloadForm.Journal);
+            return folder.EmptiedAt is not null ? payload
+                : NativeSyncCompatibility.Preserve((folder with { EmptiedAt = new(now) }).Encode(SyncPayloadForm.Journal), payload);
+        }
+
+        public override bool HidesWhenEmpty(JsonObject value) =>
+            value[StoredSessionCodec.Key.Location]?.GetValue<string>() == TabPlacement.Current.Name
+            && (value[SyncPayload.Key.EmptiedAt] is not null || value[StoredSessionCodec.Key.IsGroup]?.GetValue<bool>() == true);
     }
 
     private sealed class TabType() : SyncPayloadType(SyncRecordKind.Tab, TabPayload.Read) {

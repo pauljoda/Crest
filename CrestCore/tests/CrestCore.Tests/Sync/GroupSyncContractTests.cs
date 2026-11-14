@@ -31,29 +31,82 @@ public sealed partial class BrowserContractsTests {
         Assert.True(stored[group]["isGroup"]!.GetValue<bool>());
     }
 
-    /// One device moves a Group's last tab out, which deletes the Group, while
-    /// another files a second tab into it. Both end without the Group and with
-    /// both tabs loose.
+    /// One device moves a Group's last tab out, which marks the Group emptied,
+    /// while another files a second tab into it. The Group stays on both with
+    /// that tab, and the device holding the tab clears the mark.
     [Fact]
-    public void AGroupEmptiedOnOneDeviceWhileAnotherFiledATabInItGoesAndKeepsThatTab() {
+    public void AGroupEmptiedOnOneDeviceWhileAnotherFiledATabInItStaysWithThatTab() {
         var (space, group, held, filed) = (Fixed(1_310), Fixed(1_311), Fixed(1_312), Fixed(1_313));
-        var (cloud, emptying, filing) = TripDevices(space, group, held, filed, 1_314);
-        emptying.Stage(TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: false, keepsGroup: false),
-            SyncDeletionReason.ExplicitDelete, at: 600);
+        var (_, emptying, filing) = TripDevices(space, group, held, filed, 1_314);
+        var emptied = TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: false, keepsGroup: false);
+        emptying.Stage(emptied, SyncDeletionReason.ExplicitDelete, at: 600, group);
+        Assert.NotNull(emptying.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
         using var device = new SyncingDevice(
             TripSession(space, group, held, filed, heldInGroup: true, filedInGroup: true, keepsGroup: true), filing);
         Assert.Contains(Name(SyncRecordKind.Tab, filed), device.Journal.Pending);
 
         var here = SpaceIn(device.Merge(Pending(emptying)), space)!;
+        Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+        Assert.Contains(Name(SyncRecordKind.Folder, group), device.Journal.Pending);
         emptying.Merge(Pending(device.Journal));
-        var there = SpaceIn(emptying.Materialize(cloud), space)!;
+        var there = SpaceIn(emptying.Materialize(emptied), space)!;
 
         foreach (var side in new[] { here, there }) {
-            Assert.Empty(side["folders"]!.AsArray());
-            Assert.Equal([held, filed], Ids(side["tabs"]).Order());
-            Assert.All(side["tabs"]!.AsArray(), tab => Assert.Null(tab!["folderID"]));
+            var kept = StoredSessionCodec.DecodeFolder(Assert.Single(side["folders"]!.AsArray())!);
+            Assert.Equal((group, true), (kept.Id, kept.IsGroup));
+            var tabs = side["tabs"]!.AsArray().ToDictionary(tab => StoredSessionCodec.Identity(tab!["id"]), tab => tab!);
+            Assert.Null(tabs[held]["folderID"]);
+            Assert.Equal(group, StoredSessionCodec.Identity(tabs[filed]["folderID"]));
         }
-        Assert.Equal("explicitDelete", device.Journal.Record(SyncRecordKind.Folder, group)!["tombstone"]!["reason"]!.GetValue<string>());
+    }
+
+    /// A device that hears of a Group's mark before the tab another device
+    /// filed in it leaves the Group out until the tab arrives, then shows it
+    /// with the tab and clears the mark.
+    [Fact]
+    public void AGroupMarkedEmptiedShowsAgainOnceATabFiledInItArrives() {
+        var (space, group, held, filed) = (Fixed(1_370), Fixed(1_371), Fixed(1_372), Fixed(1_373));
+        var (cloud, emptying, filing) = TripDevices(space, group, held, filed, 1_374);
+        emptying.Stage(TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: false, keepsGroup: false),
+            SyncDeletionReason.ExplicitDelete, at: 600, group);
+        filing.Stage(TripSession(space, group, held, filed, heldInGroup: true, filedInGroup: true, keepsGroup: true), at: 610);
+        using var device = new SyncingDevice(cloud, Fixed(1_377));
+
+        Assert.Empty(SpaceIn(device.Merge(Pending(emptying)), space)!["folders"]!.AsArray());
+        Assert.NotNull(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+        var arrived = SpaceIn(device.Merge(Pending(filing)), space)!;
+
+        Assert.Equal(group, StoredSessionCodec.DecodeFolder(Assert.Single(arrived["folders"]!.AsArray())!).Id);
+        Assert.Contains(arrived["tabs"]!.AsArray(), tab => StoredSessionCodec.Identity(tab!["id"]) == filed
+            && StoredSessionCodec.Identity(tab["folderID"]) == group);
+        Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+    }
+
+    /// A device that knows no emptied mark keeps it on a Group's record when
+    /// it writes the Group, as it keeps any member it does not know. Its rename
+    /// arrives here with the mark, so the Group stays out of sight while it
+    /// holds nothing, and shows renamed once a tab sits in it.
+    [Fact]
+    public void AnOlderDevicesWriteOfAMarkedGroupKeepsItOutOfSight() {
+        var (space, group, held, filed) = (Fixed(1_380), Fixed(1_381), Fixed(1_382), Fixed(1_383));
+        var (_, emptying, older) = TripDevices(space, group, held, filed, 1_384);
+        var emptied = TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: false, keepsGroup: false);
+        emptying.Stage(emptied, SyncDeletionReason.ExplicitDelete, at: 600, group);
+        older.Merge(Pending(emptying));
+        var renamed = older.Record(SyncRecordKind.Folder, group)!.DeepClone().AsObject();
+        renamed["payload"]!["value"]!["title"] = "Lisbon";
+        renamed["version"] = new JsonObject { ["logicalClock"] = older.Clock + 1, ["deviceID"] = Fixed(1_386).ToString("D").ToUpperInvariant() };
+        Assert.NotNull(renamed["payload"]!["value"]!["emptiedAt"]);
+
+        emptying.Merge(renamed);
+        Assert.Empty(SpaceIn(emptying.Materialize(emptied), space)!["folders"]!.AsArray());
+
+        var filedThere = TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: true, keepsGroup: true);
+        FirstSpace(filedThere)["folders"]![0]!["title"] = "Lisbon";
+        older.Stage(filedThere, at: 700);
+        emptying.Merge(Pending(older).Where(record => RecordName(record["id"]!) == Name(SyncRecordKind.Tab, filed)));
+        var shown = StoredSessionCodec.DecodeFolder(Assert.Single(SpaceIn(emptying.Materialize(emptied), space)!["folders"]!.AsArray())!);
+        Assert.Equal((group, "Lisbon", true), (shown.Id, shown.Title, shown.IsGroup));
     }
 
     /// A device that knows no Groups moves a Group's last tab out and keeps the

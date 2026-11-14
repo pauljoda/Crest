@@ -7,36 +7,54 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// Groups, and every folder of the open tabs, go with their last tab, and
-/// their going syncs as a deletion so another device never brings them back.
+/// Groups, and every folder of the open tabs, go with their last tab. Their
+/// records stay, marked emptied, so a device that still holds a tab in one
+/// keeps it, and every other device leaves it out while it holds nothing.
 public sealed partial class BrowserContractsTests {
     /// The sync record of the folder `folder` names, or null when the journal holds none.
     private static JsonNode? FolderRecord(NativeSyncAuthority sync, Guid folder) => FolderRecord(sync.Snapshot, folder);
+
+    /// The value of the live record of the folder `folder` names, which must
+    /// be live.
+    private static JsonNode FolderValue(NativeSyncAuthority sync, Guid folder) {
+        var record = FolderRecord(sync, folder)!;
+        Assert.Null(record["tombstone"]);
+        return record["payload"]!["value"]!;
+    }
 
     private static JsonNode? FolderRecord(NativeSyncJournal journal, Guid folder) =>
         JsonNode.Parse(journal.Read())!["records"]!.AsArray().SingleOrDefault(record =>
             record!["id"]!["kind"]!.GetValue<string>() == "folder" && Guid.Parse(record["id"]!["value"]!.GetValue<string>()) == folder);
 
+    /// Closing a Group's last tab takes the Group off this device and keeps
+    /// its record, marked emptied, though the close stages as a deletion. A
+    /// later deletion the person makes elsewhere in the Space leaves that
+    /// record as it is, since a session lacking it is no evidence it went.
     [Fact]
-    public void AGroupThatLosesItsLastTabIsDeletedForEveryDevice() {
+    public void AGroupThatLosesItsLastTabGoesButKeepsItsRecordMarkedEmptied() {
         var f = new BatchSpace();
         using var device = new TestDevice(f.Session);
         var (core, sync) = (device.Authority, Syncing(device.Authority));
         var window = device.Open(f.Space, (f.Space, f.Open));
         device.Send(new SetFolderGroup(device.Workspace, f.Space, f.OpenFolder, IsGroup: true));
         sync.Flush();
-        Assert.True(FolderRecord(sync, f.OpenFolder)!["payload"]!["value"]!["isGroup"]!.GetValue<bool>());
+        Assert.True(FolderValue(sync, f.OpenFolder)["isGroup"]!.GetValue<bool>());
+        Assert.Null(FolderValue(sync, f.OpenFolder)["emptiedAt"]);
 
-        // Closing its last tab stages with the other closed tabs, whose records
-        // only go as superseded, yet the group goes as an explicit deletion.
         device.Send(new CloseTabs(device.Workspace, window, f.Space, Picking(f.Filed, f.Last)));
 
         Assert.DoesNotContain(core.Current.Spaces[0].Folders, folder => folder.Id == f.OpenFolder);
-        Assert.Equal("explicitDelete", FolderRecord(sync, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
+        var marked = FolderValue(sync, f.OpenFolder);
+        Assert.True(marked["isGroup"]!.GetValue<bool>());
+        Assert.NotNull(marked["emptiedAt"]);
+
+        device.Send(new CloseTabs(device.Workspace, window, f.Space, Picking(f.Left, f.Right)));
+        sync.Flush();
+        Assert.True(JsonNode.DeepEquals(marked, FolderValue(sync, f.OpenFolder)));
     }
 
     /// A folder of the open tabs goes with its last tab, taking the empty
-    /// folders inside it, and its going syncs as a deletion; a saved folder
+    /// folders inside it, and keeps its record, marked emptied; a saved folder
     /// stays when it empties.
     [Fact]
     public void AnOpenFolderGoesWhenItsLastTabMovesOutButASavedFolderStays() {
@@ -56,8 +74,9 @@ public sealed partial class BrowserContractsTests {
         var folders = core.Current.Spaces[0].Folders;
         Assert.DoesNotContain(folders, held => held.Id == f.OpenFolder || held.Id == inner);
         Assert.Contains(folders, held => held.Id == f.SavedFolder);
-        Assert.Equal("explicitDelete", FolderRecord(sync, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
-        Assert.NotNull(FolderRecord(sync, f.SavedFolder)!["payload"]);
+        Assert.NotNull(FolderValue(sync, f.OpenFolder)["emptiedAt"]);
+        Assert.NotNull(FolderValue(sync, inner)["emptiedAt"]);
+        Assert.Null(FolderValue(sync, f.SavedFolder)["emptiedAt"]);
     }
 
     /// A new tab the person opens from a tab in a folder joins that folder at
@@ -105,12 +124,12 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(launched).Placement, Held(launched).FolderId));
     }
 
-    /// A Group another device emptied stays here while only its tabs' moves
-    /// have arrived, since records come over several batches and the tab that
-    /// keeps it may still be on its way; it goes with the deletion the device
-    /// that emptied it stages.
+    /// A Group another device emptied waits out of sight here once its tabs'
+    /// moves arrive, and stays out of sight once that device's mark arrives,
+    /// with its record kept throughout, since records come over several
+    /// batches and the tab that keeps it may still be on its way.
     [Fact]
-    public void AGroupAnotherDeviceEmptiedGoesOnlyWithThatDevicesDeletion() {
+    public void AGroupAnotherDeviceEmptiedWaitsOutOfSightWithItsRecordKept() {
         const double now = 811679532;
         var f = new BatchSpace();
         var grouped = NativeSessionMaintenance.Repair(f.Session.DeepClone().AsObject(), now)["session"]!;
@@ -120,26 +139,29 @@ public sealed partial class BrowserContractsTests {
         var moved = emptied["spaces"]![0]!["tabs"]!.AsArray().Single(tab => JsonNode.DeepEquals(tab!["folderID"], SwiftId(f.OpenFolder)))!;
         moved["folderID"] = null;
         moved["positionModifiedAt"] = now;
-        var deleted = emptied.DeepClone();
-        deleted["spaces"]![0]!["folders"]!.AsArray().Remove(deleted["spaces"]![0]!["folders"]!.AsArray()
+        var gone = emptied.DeepClone();
+        gone["spaces"]![0]!["folders"]!.AsArray().Remove(gone["spaces"]![0]!["folders"]!.AsArray()
             .Single(folder => JsonNode.DeepEquals(folder!["id"], SwiftId(f.OpenFolder))));
-        NativeSyncJournal Staged(NativeSyncJournal journal, JsonNode session, SyncDeletionReason reason) =>
-            journal.Stage(session.DeepClone().AsObject(), reason, now);
+        NativeSyncJournal Staged(NativeSyncJournal journal, JsonNode session, SyncDeletionReason reason, params Guid[] emptying) =>
+            journal.Stage(session.DeepClone().AsObject(), reason, now,
+                emptied: emptying.Select(SyncRecordKind.Folder.RecordName).ToHashSet(StringComparer.Ordinal));
         JsonNode Records(NativeSyncJournal journal) => JsonNode.Parse(journal.Read())!["records"]!;
         var sender = Staged(NativeSyncJournal.Fresh(Guid.NewGuid()), grouped, SyncDeletionReason.Superseded);
         var tabMoved = Staged(sender, emptied, SyncDeletionReason.Superseded);
-        var groupDeleted = Staged(tabMoved, deleted, SyncDeletionReason.ExplicitDelete);
+        var groupEmptied = Staged(tabMoved, gone, SyncDeletionReason.ExplicitDelete, f.OpenFolder);
         NativeSyncSessionTransition Received(NativeSyncSessionTransition seen, NativeSyncJournal from) =>
             NativeSyncSessionTransition.Prepare(seen.Journal, seen.Session, Records(from).AsArray(), replacing: false,
                 StoredSessionCodec.Date(now), emptySpace: null, access: null, new TestIds());
 
         var seen = Transition(NativeSyncJournal.Fresh(Guid.NewGuid()), grouped, Records(sender), replacing: true, now);
         var afterMove = Received(seen, tabMoved);
-        Assert.Contains(afterMove.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder && folder.IsGroup);
-        Assert.NotNull(FolderRecord(afterMove.Journal, f.OpenFolder)!["payload"]);
+        Assert.DoesNotContain(afterMove.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder);
+        Assert.Null(FolderRecord(afterMove.Journal, f.OpenFolder)!["payload"]!["value"]!["emptiedAt"]);
 
-        var afterDeletion = Received(afterMove, groupDeleted);
-        Assert.DoesNotContain(afterDeletion.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder);
-        Assert.Equal("explicitDelete", FolderRecord(afterDeletion.Journal, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
+        var afterMark = Received(afterMove, groupEmptied);
+        Assert.DoesNotContain(afterMark.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder);
+        var record = FolderRecord(afterMark.Journal, f.OpenFolder)!;
+        Assert.Null(record["tombstone"]);
+        Assert.NotNull(record["payload"]!["value"]!["emptiedAt"]);
     }
 }

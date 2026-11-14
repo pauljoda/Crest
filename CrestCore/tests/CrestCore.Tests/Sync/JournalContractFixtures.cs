@@ -71,9 +71,11 @@ public sealed partial class BrowserContractsTests {
 
         /// Stages `session` as the core writes it, `at` seconds after 1970,
         /// deleting what it no longer holds, where that authorizes a deletion,
-        /// for `reason`, an explicit deletion unless named.
-        public void Stage(JsonObject session, SyncDeletionReason? reason = null, double at = 100) =>
-            Journal = Journal.Stage(Canonical(session), reason ?? SyncDeletionReason.ExplicitDelete, At(at));
+        /// for `reason`, an explicit deletion unless named, and marking the
+        /// folders `emptied` names emptied instead.
+        public void Stage(JsonObject session, SyncDeletionReason? reason = null, double at = 100, params Guid[] emptied) =>
+            Journal = Journal.Stage(Canonical(session), reason ?? SyncDeletionReason.ExplicitDelete, At(at),
+                emptied: emptied.Select(SyncRecordKind.Folder.RecordName).ToHashSet(StringComparer.Ordinal));
 
         /// Merges `records`, in the journal's form, as they arrived from the cloud.
         public void Merge(IEnumerable<JsonObject> records) =>

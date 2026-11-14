@@ -101,7 +101,7 @@ public sealed partial class NativeSessionAuthority {
         NativeSyncTransaction? staged = null;
         try {
             if (keeper is { Workspace: var owner, Previous: var previous, Reserved: var kept }) {
-                staged = owner.StageWithSave(previous, kept.Session, SyncStaging.Transfer.Deleting(kept.Session.FoldersGoneSince(previous)));
+                staged = owner.StageWithSave(previous, kept.Session, SyncStaging.Transfer.Emptying(kept.Session.FoldersGoneSince(previous)));
                 if (staged is not null) kept.BindSync(staged);
                 owner.storage?.Save(kept.Session, kept.Revision, kept.SyncTransaction?.Journal, kept.Checkpoint);
             }

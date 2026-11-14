@@ -156,14 +156,40 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     /// The folders that hold one of `tabs` anywhere inside them.
     public HashSet<Guid> Holding(IEnumerable<TabState> tabs) {
         ArgumentNullException.ThrowIfNull(tabs);
+        return Holding(tabs.Select(tab => tab.FolderId));
+    }
+
+    /// The folders that hold, anywhere inside them, a tab sitting in one of
+    /// `places`, the folders tabs sit in.
+    public HashSet<Guid> Holding(IEnumerable<Guid?> places) {
+        ArgumentNullException.ThrowIfNull(places);
         HashSet<Guid> holding = [];
-        foreach (var tab in tabs) {
+        foreach (var place in places) {
             HashSet<Guid> seen = [];
-            for (var next = tab.FolderId; next is { } id && seen.Add(id) && byId.TryGetValue(id, out var folder);
+            for (var next = place; next is { } id && seen.Add(id) && byId.TryGetValue(id, out var folder);
                 next = folder.ParentId)
                 if (!holding.Add(id)) break;
         }
         return holding;
+    }
+
+    /// The folders `leaves` names that hold nothing: none of `holding`, the
+    /// folders that hold a tab, and no folder but one that leaves as well.
+    public HashSet<Guid> Empty(IReadOnlySet<Guid> holding, Func<FolderState, bool> leaves) {
+        ArgumentNullException.ThrowIfNull(holding);
+        ArgumentNullException.ThrowIfNull(leaves);
+        var children = byId.Values.Where(folder => folder.ParentId is not null)
+            .GroupBy(folder => folder.ParentId!.Value).ToDictionary(group => group.Key, group => group.Select(folder => folder.Id).ToArray());
+        HashSet<Guid> empty = [];
+        bool grew;
+        do {
+            grew = false;
+            foreach (var folder in byId.Values)
+                if (!empty.Contains(folder.Id) && !holding.Contains(folder.Id) && leaves(folder)
+                    && children.GetValueOrDefault(folder.Id, []).All(empty.Contains))
+                    grew |= empty.Add(folder.Id);
+        } while (grew);
+        return empty;
     }
 
     /// The titles from the outermost folder down to `id`, joined as a path, as

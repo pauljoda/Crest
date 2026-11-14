@@ -106,23 +106,30 @@ public sealed class NativeSyncJournal {
     /// format that nothing else holds, under this journal's preferences.
     /// Records it no longer holds are deleted, where their absence authorizes a
     /// deletion, for the reason `removals` names for them by record name, else
-    /// for `reason`; `now` in seconds since 2001 dates the tombstones.
+    /// for `reason`, but a folder `emptied` names is marked emptied instead;
+    /// `now` in seconds since 2001 dates the tombstones and the marks.
     internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var archiveReasons = NativeSyncProjection.Items(session, StoredSessionCodec.Key.Spaces)
             .SelectMany(space => NativeSyncProjection.Items(space!, StoredSessionCodec.Key.ArchivedTabs))
             .ToDictionary(archived => Id(archived![StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]),
                 archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
         return Stage(NativeSyncProjection.Project(session, Preferences, records.Values), archiveReasons, Cleaning(session), reason, now,
-            removals);
+            removals, emptied);
     }
 
     /// The journal after staging `payloads`, everything a session holds that
     /// syncs, as `Stage(session:)` does: `archiveReasons` says why each archived
     /// tab was archived, and a record of a Space in `cleaning`, whose deletion
     /// is under way on this device, is left as it is.
+    ///
+    /// A folder an edit emptied keeps its record, marked emptied, so a device
+    /// that still holds a tab in it keeps it. Since a device leaves a group or
+    /// a marked folder out of its session while it holds nothing, absence alone
+    /// never deletes one: only an edit that removed it does.
     internal NativeSyncJournal Stage(JsonArray payloads, IReadOnlyDictionary<Guid, ArchiveReason> archiveReasons,
-        IReadOnlySet<Guid> cleaning, SyncDeletionReason reason, double now, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlySet<Guid> cleaning, SyncDeletionReason reason, double now, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null,
+        IReadOnlySet<string>? emptied = null) {
         var draft = new Draft(this);
         var desired = draft.Desired(payloads, cleaning);
         // Parent evidence is from the accepted journal before staging.
@@ -146,8 +153,16 @@ public sealed class NativeSyncJournal {
             if (!type.IsPortable(value)) deletion = SyncDeletionReason.Superseded;
             else {
                 if (!spaces.Contains(record.SpaceId) || !AncestryArrived(type.ParentFolder(value), folders)) continue;
-                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id),
-                    desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId)), removals?.GetValueOrDefault(name) ?? reason);
+                var spaceStays = desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId));
+                var removal = removals?.GetValueOrDefault(name);
+                if (spaceStays && emptied?.Contains(name) == true && type.Emptied(payload, now) is { } marked) {
+                    if (NativeSyncEvaluator.Equivalent(payload, marked)) continue;
+                    draft.Records[name] = draft.Save(marked);
+                    draft.Pending.Add(name);
+                    continue;
+                }
+                if (spaceStays && removal is null && type.HidesWhenEmpty(value)) continue;
+                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id), spaceStays, removal ?? reason);
             }
             if (deletion is null) continue;
             draft.Records[name] = draft.Delete(json, deletion, now);

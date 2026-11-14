@@ -143,8 +143,8 @@ public sealed class NativeSyncAuthority {
         var value = Begin(sequence: null);
         value.Superseded = replaced;
         try {
-            var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason, staging.Deleted));
-            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow));
+            var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason, staging.Deleted, staging.Emptied));
+            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow), removals.Emptied);
             _ = value.Seal();
             return value;
         } catch (Exception error) {
@@ -165,7 +165,7 @@ public sealed class NativeSyncAuthority {
         }
         try {
             value.Stage(request.Session, request.Reason, request.Removals.Reasons(request.Reason),
-                StoredSessionCodec.Seconds(DateTimeOffset.UtcNow));
+                StoredSessionCodec.Seconds(DateTimeOffset.UtcNow), request.Removals.Emptied);
             if (!value.Seal()) {
                 value.Dispose();
                 return false;

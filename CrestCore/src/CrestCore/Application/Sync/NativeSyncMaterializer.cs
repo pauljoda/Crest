@@ -18,6 +18,7 @@ public static class NativeSyncMaterializer {
     internal static SessionState Materialize(SessionState session, SyncPreferences policy, IReadOnlyList<SyncSessionRecord> records,
         DateTimeOffset now, SpaceAccessAuthority? access) {
         var owners = records.Where(record => record.Kind == SyncRecordKind.Folder).ToDictionary(record => record.Id, record => record.SpaceId);
+        var emptied = records.Where(record => record.Payload is FolderPayload { EmptiedAt: not null }).Select(record => record.Id).ToHashSet();
         var deleted = records.Where(record => record.Kind == SyncRecordKind.Folder && record.Tombstone is not null).Select(record => record.Id).ToHashSet();
         var locals = session.Spaces.ToDictionary(space => space.Id);
         var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
@@ -30,8 +31,9 @@ public static class NativeSyncMaterializer {
             locals.TryGetValue(remote.Id, out var local);
             if (local is not null && local.OwnProfileId != remote.ProfileId) throw Error(SyncRecordFlaw.ProfileChanged, remote.Id);
             if (pending.Contains(remote.Id) && local is not null) { spaces.Add(local); continue; }
-            var folders = Folders(remote.Id, records, policy, local, owners, deleted);
+            var folders = Folders(remote.Id, records, policy, local, owners, deleted, emptied);
             var tabs = Tabs(remote.Id, records, policy, local, folders, owners, deleted);
+            folders = Shown(folders, new FolderTree(folders).Holding(tabs), emptied);
             var archive = Archive(remote.Id, records, policy, local, tabs);
             var history = History(remote.Id, records, policy, local);
             var localSplitIds = (local?.Tabs ?? []).Where(tab => !Portable(tab) && tab.SplitGroupId is not null)
@@ -132,17 +134,32 @@ public static class NativeSyncMaterializer {
 
     #region Actions - Folders and tabs
 
+    /// The folders of `space` the records and this device hold, leaving out a
+    /// hidden one that no tab could sit in, so hidden folders never count
+    /// toward the most a Space keeps.
     private static List<FolderState> Folders(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local,
-        IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
+        IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted, IReadOnlySet<Guid> emptied) {
         var colorIds = records.Where(record => record.Kind == SyncRecordKind.Folder && record.SuppliesFolderColor).Select(record => record.Id).ToHashSet();
-        var synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
+        IReadOnlyList<FolderState> synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
             .OrderBy(folder => folder.OrderToken, StringComparer.Ordinal).ThenBy(folder => folder.Id.ToString("D"), StringComparer.Ordinal)
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
                 folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, folder.IsGroup)).ToArray();
+        var places = Payloads<TabPayload>(records, space).Select(tab => tab.FolderId).Concat((local?.Tabs ?? []).Select(tab => tab.FolderId));
+        synced = Shown(synced, new FolderTree(synced).Holding(places), emptied);
         IReadOnlyList<FolderState> resolved;
         try { resolved = FolderTree.SettledGroups(FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted)); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
         var included = resolved.Select(folder => folder.Id).ToHashSet();
         return [.. resolved, .. (local?.Folders ?? []).Where(folder => !included.Contains(folder.Id) && !policy.Includes(folder.Location))];
+    }
+
+    /// `folders` without the hidden ones that hold none of `holding`, the
+    /// folders that hold a tab, nor a folder that stays: a group, or a folder
+    /// `emptied` names, of the open tabs. Such a folder shows again as soon as
+    /// a tab sits in it, and its record stays meanwhile.
+    private static List<FolderState> Shown(IReadOnlyList<FolderState> folders, IReadOnlySet<Guid> holding, IReadOnlySet<Guid> emptied) {
+        var hidden = new FolderTree(folders).Empty(holding,
+            folder => folder.Location == TabPlacement.Current && ((folder.IsGroup && folder.ParentId is null) || emptied.Contains(folder.Id)));
+        return [.. folders.Where(folder => !hidden.Contains(folder.Id))];
     }
 
     private static TabState Tab(TabPayload remote, TabState? local, bool archived = false) => new(remote.Id, remote.Title,

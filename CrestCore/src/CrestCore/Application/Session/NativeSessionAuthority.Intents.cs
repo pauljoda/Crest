@@ -93,8 +93,10 @@ public sealed partial class NativeSessionAuthority {
         var basis = IntentBasis();
         var edit = intent.Edit(this, new SessionTurn(basis, now, ids, pages, previewed));
         if (edit is null) return null;
-        edit = edit with { Next = edit.Next.ClearingEmptiedFolders(basis) };
-        if (edit.Staging is { } staging) edit = edit with { Staging = staging.Deleting(edit.Next.FoldersGoneSince(basis)) };
+        var cleared = edit.Next.ClearingEmptiedFolders(basis);
+        if (edit.Staging is { } staging)
+            edit = edit with { Staging = staging.Deleting(edit.Next.FoldersGoneSince(basis)).Emptying(cleared.FoldersGoneSince(edit.Next)) };
+        edit = edit with { Next = cleared };
         if (intent.ValidatesWholeSession) Validate(edit.Next);
         else Validate(basis, edit.Next);
         ValidateBorrowedSession(edit.Next);
