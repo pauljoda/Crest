@@ -114,6 +114,36 @@ public sealed partial class BrowserContractsTests {
             Assert.Empty(SpaceIn(device.Session, space)!["folders"]!.AsArray());
     }
 
+    /// One device deletes the folder inside a folder of the open tabs, which
+    /// empties and marks the outer one, while another files a tab into the
+    /// inner one. A device holding both shows the outer folder with that tab
+    /// moved up into it, as the inner one's deletion moves it.
+    [Fact]
+    public void ATabInADeletedFolderKeepsTheMarkedFolderAroundIt() {
+        var (space, outer, inner, tab) = (Fixed(1_440), Fixed(1_441), Fixed(1_442), Fixed(1_443));
+        JsonObject Session(bool keepsFolders, Guid? tabIn) {
+            List<JsonObject> folders = keepsFolders
+                ? [FolderOf(outer, "Outer", location: "current"), FolderOf(inner, "Inner", parent: outer, location: "current")] : [];
+            List<JsonObject> tabs = [TabOf(Fixed(1_397), "Pinned", "https://example.com/pinned", placement: "pinned", activated: 500)];
+            if (tabIn is { } folder) tabs.Add(TabOf(tab, "Filed", "https://example.com/filed", folder: folder, activated: 500, positioned: 610));
+            return SessionOf(SpaceOf(space, Fixed(1_398), "Trip", "airplane", folders: folders, tabs: tabs));
+        }
+        var start = Session(keepsFolders: true, tabIn: null);
+        var merged = CloudHolding(start, 1_444);
+        var (deleting, filing, holding) = (merged(1_445), merged(1_446), merged(1_447));
+        deleting.Stage(Session(keepsFolders: false, tabIn: null), SyncDeletionReason.ExplicitDelete, at: 600, outer);
+        filing.Stage(Session(keepsFolders: true, tabIn: inner), at: 610);
+        holding.Merge(Pending(deleting));
+        holding.Merge(Pending(filing));
+        Assert.NotNull(holding.Value(SyncRecordKind.Folder, outer)!["emptiedAt"]);
+        Assert.NotNull(holding.Record(SyncRecordKind.Folder, inner)!["tombstone"]);
+
+        var shown = SpaceIn(holding.Materialize(start), space)!;
+        Assert.Contains(shown["folders"]!.AsArray(), folder => StoredSessionCodec.Identity(folder!["id"]) == outer);
+        Assert.Contains(shown["tabs"]!.AsArray(),
+            item => StoredSessionCodec.Identity(item!["id"]) == tab && StoredSessionCodec.Identity(item["folderID"]) == outer);
+    }
+
     /// A device that knows no emptied mark keeps it on a Group's record when
     /// it writes the Group, as it keeps any member it does not know. Its rename
     /// arrives here with the mark, so the Group stays out of sight while it

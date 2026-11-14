@@ -138,7 +138,8 @@ public static class NativeSyncMaterializer {
 
     /// The folders of `space` the records and this device hold, leaving out a
     /// hidden one that no tab could sit in, so hidden folders never count
-    /// toward the most a Space keeps.
+    /// toward the most a Space keeps. A tab or folder in a deleted folder this
+    /// device holds counts toward the folders above it, which it moves up to.
     private static List<FolderState> Folders(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local,
         IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted, IReadOnlySet<Guid> emptied) {
         var colorIds = records.Where(record => record.Kind == SyncRecordKind.Folder && record.SuppliesFolderColor).Select(record => record.Id).ToHashSet();
@@ -147,7 +148,8 @@ public static class NativeSyncMaterializer {
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
                 folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, folder.IsGroup)).ToArray();
         var places = Payloads<TabPayload>(records, space).Select(tab => tab.FolderId).Concat((local?.Tabs ?? []).Select(tab => tab.FolderId));
-        synced = Shown(synced, new FolderTree(synced).Holding(places), emptied);
+        var bridges = (local?.Folders ?? []).Where(folder => deleted.Contains(folder.Id));
+        synced = Shown(synced, new FolderTree([.. synced, .. bridges]).Holding(places), emptied);
         IReadOnlyList<FolderState> resolved;
         try { resolved = FolderTree.SettledGroups(FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted)); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
         var included = resolved.Select(folder => folder.Id).ToHashSet();
