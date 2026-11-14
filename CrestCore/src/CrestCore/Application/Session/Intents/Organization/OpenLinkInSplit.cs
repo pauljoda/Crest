@@ -27,7 +27,8 @@ public sealed record OpenLinkInSplit(Guid WorkspaceId, Guid WindowId, Guid Space
         var edited = BrowserTabCollection.Restore(space);
         var opened = workspace.NewTab(TabId, new TabContent(Address, View: null, Title: null), TabPlacement.Current, turn.Now);
         edited.InsertTab(BrowserTab.Restore(opened), null);
-        return workspace.Joining(turn.Basis, space, edited, WindowId, TabId, TargetTabId, null, turn.Pages, turn.Now, turn.Ids);
+        var joined = workspace.Joining(turn.Basis, space, edited, WindowId, TabId, TargetTabId, null, turn.Pages, turn.Now, turn.Ids);
+        return joined with { Events = (joined.Events ?? SessionTabEvents.None).Opening(WindowId, space.Id, TabId) };
     }
 
     #endregion

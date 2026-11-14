@@ -184,6 +184,7 @@ enum Change: Equatable, Sendable {
     case tabSavedImageChanged(TabSavedImageChanged)
     case tabsChanged(TabsChanged)
     case tabsImported(TabsImported)
+    case tabsOpened(TabsOpened)
     case transientPageClosed(TransientPageClosed)
     case transientPagePromoted(TransientPagePromoted)
     case websiteDataRead(WebsiteDataRead)
@@ -646,6 +647,7 @@ extension Change {
         case .tabSavedImageChanged(let change): change.apply(to: state)
         case .tabsChanged(let change): change.apply(to: state)
         case .tabsImported(let change): change.apply(to: state)
+        case .tabsOpened(let change): change.apply(to: state)
         case .transientPageClosed(let change): change.apply(to: state)
         case .transientPagePromoted(let change): change.apply(to: state)
         case .websiteDataRead(let change): change.apply(to: state)
@@ -725,6 +727,7 @@ extension Change {
         case .tabSavedImageChanged(let change): change.apply(to: core, in: &batch)
         case .tabsChanged(let change): change.apply(to: core, in: &batch)
         case .tabsImported(let change): change.apply(to: core, in: &batch)
+        case .tabsOpened(let change): change.apply(to: core, in: &batch)
         case .transientPageClosed(let change): change.apply(to: core, in: &batch)
         case .transientPagePromoted(let change): change.apply(to: core, in: &batch)
         case .websiteDataRead(let change): change.apply(to: core, in: &batch)
@@ -804,6 +807,7 @@ extension Change {
         case .tabSavedImageChanged(let change): change.note(in: &receipts)
         case .tabsChanged(let change): change.note(in: &receipts)
         case .tabsImported(let change): change.note(in: &receipts)
+        case .tabsOpened(let change): change.note(in: &receipts)
         case .transientPageClosed(let change): change.note(in: &receipts)
         case .transientPagePromoted(let change): change.note(in: &receipts)
         case .websiteDataRead(let change): change.note(in: &receipts)
@@ -4519,6 +4523,11 @@ struct OpenWorkspace: Intent, WorkspaceIntent, Equatable, Sendable {
     let seed: SessionState.Seed?
 }
 
+struct OpenedTab: Equatable, Sendable {
+    let spaceID: UUID
+    let tabID: UUID
+}
+
 struct OpenedWindowSelected: Equatable, Sendable {
     let selects: Bool
 }
@@ -7448,6 +7457,12 @@ struct TabsChanged: CoreChange, Equatable, Sendable {
 struct TabsImported: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let tabs: [ImportedTab]
+}
+
+struct TabsOpened: CoreChange, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let tabs: [OpenedTab]
 }
 
 struct TearOffPermission: Equatable, Sendable {

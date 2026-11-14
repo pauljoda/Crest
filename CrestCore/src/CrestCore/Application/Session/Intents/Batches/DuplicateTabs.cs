@@ -14,7 +14,8 @@ public sealed record DuplicateTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var batch = workspace.Selecting(turn.Basis, WindowId, SpaceId, Selection);
         var copies = batch.Edited.DuplicateSelected(batch.Selected, turn.Ids, turn.Now);
-        return batch.Result(turn.Basis, SyncStaging.Batch, workspace.StartingCopies(batch, copies, WindowId, turn.Pages));
+        return batch.Result(turn.Basis, SyncStaging.Batch, workspace.StartingCopies(batch, copies, WindowId, turn.Pages)
+            .Opening(WindowId, batch.Space.Id, copies.Select(pair => pair.Copy)));
     }
 
     #endregion

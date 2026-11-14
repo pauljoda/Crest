@@ -26,6 +26,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
     let browser: BrowserStore
+    let space: SpaceModel
     @ViewBuilder let background: () -> Background
     @ViewBuilder let content: () -> Content
 
@@ -69,7 +70,22 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
             .onChange(of: sidebarInteraction.sidebarReorderState.hasLiftInFlight, initial: true) { _, isLifting in
                 visibleBand.hold(isLifting)
             }
-            .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
+            .modifier(
+                SidebarScrollAffordance(
+                    isDragging: sidebarInteraction.sidebarReorderState.isDragging,
+                    revealing: sidebarInteraction.revealRequest?.reveal(in: space),
+                    didTakeReveal: { sidebarInteraction.revealRequest = nil },
+                    holdsStill: sidebarInteraction.tabDragState.item != nil
+                        || sidebarInteraction.folderDragState.item != nil
+                        || sidebarInteraction.editingFolderRequest != nil)
+            )
+            // A tab with no row to reveal, pinned or under a collapsed
+            // section, drops its request, so opening the section later does
+            // not scroll to it.
+            .onChange(of: sidebarInteraction.revealRequest, initial: true) { _, request in
+                guard let request, request.spaceID == space.id, request.reveal(in: space) == nil else { return }
+                sidebarInteraction.revealRequest = nil
+            }
             .scrollClipDisabled(
                 !BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle
             )

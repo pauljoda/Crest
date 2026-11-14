@@ -13,6 +13,10 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     /// The folder whose title the window's sidebar is editing, such as one it
     /// just made. The folder's row starts editing when it appears.
     var editingFolderRequest: BrowserFolderRuntimeAssignment?
+    /// The tab the window last opened, until its Space's list takes it; only
+    /// the windowed shell asks. A newer one replaces it, so a burst of opened
+    /// tabs reveals the last.
+    var revealRequest: BrowserSidebarRevealRequest?
     @ObservationIgnored weak var sidebarSpaceAccess: BrowserSpaceAccessController?
     @ObservationIgnored private var collapsedFolders: [BrowserFolderRuntimeAssignment: BrowserSidebarFolderVisibility] =
         [:]
@@ -66,6 +70,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     }
 
     func browserWillResetSession() {
+        revealRequest = nil
         cancel()
         prune(keeping: [])
     }
