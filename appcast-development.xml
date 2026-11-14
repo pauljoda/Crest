@@ -6,31 +6,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.34</title>
-            <pubDate>Fri, 13 Nov 2026 21:06:34 +0000</pubDate>
+            <title>0.9.38</title>
+            <pubDate>Sat, 14 Nov 2026 00:51:16 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1603</sparkle:version>
-            <sparkle:shortVersionString>0.9.34</sparkle:shortVersionString>
+            <sparkle:version>1604</sparkle:version>
+            <sparkle:shortVersionString>0.9.38</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- On Mac, resting the pointer on a tab or pin in the sidebar shows a card beside it with the tab's title, its site and how its page last looked. Turn it off in Settings › Appearance › Preview hover.
-- On Mac, resting the pointer on a folder in the sidebar lists its tabs, including those in folders inside it, with a search field ready for typing. Open, unload or close a tab there, or drag it out of the folder, without opening the folder. Turn it off in Settings › Appearance › Preview hover.
-- On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind "…". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews.
+- On Mac, choose how long the pointer rests on the window's edge before a hidden sidebar comes out, from Instant to a second, in Settings › Appearance › Sidebar hover delay. It applies in a window and in full screen, and moving off the edge before then still keeps the sidebar hidden.
+- On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time.
+
+### Fixed
+
+- The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark.
+- On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below "Search or enter website", or an address shown on one line, used to do nothing.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/1e71278684fa25dd4aacf1d8e3a1624375db2b39...4ef85e61dd15d86c878b9dfab40530906417e04c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.34-2026-11-13-1603-r603.1/Installer-Crest-0.9.34-development-2026-11-13-4ef85e6-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/4ef85e61dd15d86c878b9dfab40530906417e04c...3ea5e53dccd99b221b5d818c3c684b2f73723233) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.38-2026-11-14-1604-r604.1/Installer-Crest-0.9.38-development-2026-11-14-3ea5e53-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.34-2026-11-13-1603-r603.1/Installer-Crest-0.9.34-development-2026-11-13-4ef85e6-arm64.dmg" length="220821125" type="application/octet-stream" sparkle:edSignature="3y6MpouE9kv+IXfla5h6tgThw+Nvy8T17T5SuXKqCu8PxAm8oLXhyrBHk/xJCMHAWWSlietlELLShW1kPg8pDg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.38-2026-11-14-1604-r604.1/Installer-Crest-0.9.38-development-2026-11-14-3ea5e53-arm64.dmg" length="220851332" type="application/octet-stream" sparkle:edSignature="3B2UMFi9w8wAM90q63RL9xcsD+I9k/52bpbw+lAXtnHbRCOcqgHdrwdc7jr3fQeVT6OXCEq0XMIgXK7Q0JQABQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -62,6 +66,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: +sj+RjqcbQ+IrUz24iQnkjV49mK1iYNFRyTW4j7ekDK77gnNGFqLxrU5JUFe7tTkdsapdWbfqVFy9cx0CyCLAw==
-length: 4843
+edSignature: U/SlIFmZx3Z6QHbffmoBhi+Zu4nV/J+1mgQz3gqjXrYx5+6w36F8kriSgcksDoyH6RtbeGaVFmq5oT+YzB4iCA==
+length: 4745
 -->
