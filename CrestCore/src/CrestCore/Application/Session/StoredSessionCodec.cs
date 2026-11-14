@@ -171,6 +171,7 @@ internal static partial class StoredSessionCodec {
         public const string TranslationRules = "translationRules";
         public const string Trim = "trim";
         public const string TrimColorIndex = "trimColorIndex";
+        public const string UnloadedSavedTabsStay = "unloadedSavedTabsStay";
         public const string Url = "url";
         public const string Value = "value";
         public const string VisitCount = "visitCount";

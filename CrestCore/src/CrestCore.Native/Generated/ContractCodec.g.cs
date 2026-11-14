@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xa0, 0x0e, 0x25, 0xb0, 0x1f, 0x40, 0xbd, 0xbb, 0x1f, 0xdc, 0x18, 0xdd, 0xed, 0x51, 0x6e, 0xcd, 0xc8, 0x70, 0x65, 0xda, 0x44, 0x25, 0xc5, 0x35, 0xee, 0x6d, 0x53, 0xd3, 0x55, 0x4c, 0x8d, 0x04
+        0x78, 0xec, 0xa7, 0xb8, 0xb8, 0xbb, 0xb4, 0x44, 0x43, 0xcf, 0xd4, 0x5a, 0x99, 0xc6, 0x27, 0x85, 0x5b, 0xae, 0x25, 0xd9, 0xef, 0xdd, 0x16, 0x85, 0xa9, 0x2d, 0x72, 0x4b, 0x68, 0x0a, 0xb2, 0xfb
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -4873,6 +4873,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
+            reader.ReadBool(),
             ReadPalettePreferences(reader));
     }
 
@@ -4890,6 +4891,7 @@ public static class ContractCodec {
         writer.WriteBool(value.AutomaticallyEntersPictureInPicture);
         WriteSavedTabClosePolicy(writer, value.SavedTabClose);
         writer.WriteBool(value.SavedTabFaviconReturnsToSavedUrl);
+        writer.WriteBool(value.UnloadedSavedTabsStay);
         writer.WriteBool(value.SplitFocusFollowsMouse);
         writer.WriteBool(value.AutomaticallyShowsDeveloperToolbar);
         writer.WriteBool(value.ShowsRecentTabs);

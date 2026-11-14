@@ -1133,6 +1133,7 @@ struct AppPreferences: Equatable, Sendable {
         automaticallyEntersPictureInPicture: true,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
+        unloadedSavedTabsStay: true,
         splitFocusFollowsMouse: false,
         automaticallyShowsDeveloperToolbar: true,
         showsRecentTabs: true,
@@ -1170,6 +1171,7 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyEntersPictureInPicture: Bool
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
+    var unloadedSavedTabsStay: Bool
     var splitFocusFollowsMouse: Bool
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool

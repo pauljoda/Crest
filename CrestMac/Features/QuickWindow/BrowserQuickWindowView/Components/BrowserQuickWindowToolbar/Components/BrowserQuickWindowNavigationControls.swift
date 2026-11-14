@@ -2,6 +2,10 @@ import SwiftUI
 
 /// Back and forward for the Quick Window's page: the same controls, history
 /// menus and shortcuts the sidebar's strip shows for a tab.
+///
+/// They stand on the Space's colors, as the sidebar's strip does, so they
+/// draw in the scheme the Space's text reads in rather than the window's: a
+/// dark Space in a light window would otherwise hide them.
 struct BrowserQuickWindowNavigationControls: View {
     // MARK: - Static Variables
 
@@ -20,6 +24,7 @@ struct BrowserQuickWindowNavigationControls: View {
         }
         .labelStyle(.iconOnly)
         .buttonStyle(CrestChromeButtonStyle(controlSize: Self.metrics.controlSize))
+        .modifier(SpaceColorScheme(branding: model.spaceModel?.settings.look))
     }
 
     private var port: BrowserSidebarNavigationPort {
