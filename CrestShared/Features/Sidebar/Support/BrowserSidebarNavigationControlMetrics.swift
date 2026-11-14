@@ -7,6 +7,23 @@ import SwiftUI
 /// reload — and what changes between shells is only how big they are, how far
 /// apart, and how far the row is held off the sidebar's edges.
 struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
+    // MARK: - Types
+
+    /// The narrower strip a pointer shell draws where its full one does not
+    /// fit beside the window's own controls.
+    struct Narrowing: Equatable, Sendable {
+        /// The hit target's width for back, forward and reload.
+        let controlWidth: CGFloat
+        /// The developer reload menu's width beside reload.
+        let reloadMenuWidth: CGFloat
+        /// How far the window's own controls, and the gap kept beside them,
+        /// reach into the strip.
+        let windowControlsClearance: CGFloat
+        let trailingInset: CGFloat
+    }
+
+    // MARK: - Variables
+
     /// The gap between adjacent controls.
     let controlSpacing: CGFloat
 
@@ -48,10 +65,14 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
     /// accessibility text size.
     let accessibilityVerticalPadding: CGFloat
 
-    /// The strip width below which Forward folds away, so back and reload
-    /// keep clear of the window's own controls in a narrow sidebar, or nil
-    /// for a strip that always shows it. ⌘] and a swipe still go forward.
-    let forwardFoldWidth: CGFloat?
+    /// How far the window's own controls, and the gap kept beside them,
+    /// reach into the strip from its leading edge, or nil where nothing
+    /// shares the strip.
+    let windowControlsClearance: CGFloat?
+
+    /// The narrower controls the strip takes where these do not fit beside
+    /// the window's own, or nil for a strip that never narrows.
+    let narrowing: Narrowing?
 
     /// A pointer shell: compact targets in a titlebar-height strip, held off
     /// the sidebar's trailing edge.
@@ -77,7 +98,10 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         barHeight: BrowserChromeLayout.sidebarTitlebarHeight,
         growsWithContent: false,
         accessibilityVerticalPadding: 0,
-        forwardFoldWidth: 196
+        // The window's zoom button ends 80 pt in; the strip keeps 12 pt
+        // clear of it, or 6 pt once it narrows.
+        windowControlsClearance: 92,
+        narrowing: Narrowing(controlWidth: 24, reloadMenuWidth: 14, windowControlsClearance: 86, trailingInset: 6)
     )
 
     /// A Quick Window's toolbar: the pointer shell's controls drawn narrower and
@@ -95,7 +119,8 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         barHeight: pointer.barHeight,
         growsWithContent: false,
         accessibilityVerticalPadding: 0,
-        forwardFoldWidth: nil
+        windowControlsClearance: nil,
+        narrowing: nil
     )
 
     /// A touch shell: full 44pt targets, a symmetric gutter, and a strip that
@@ -117,6 +142,70 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         barHeight: 48,
         growsWithContent: true,
         accessibilityVerticalPadding: 8,
-        forwardFoldWidth: nil
+        windowControlsClearance: nil,
+        narrowing: nil
     )
+
+    // MARK: - Actions - Fitting
+
+    /// The strip that fits `width`: back and forward always, at these sizes
+    /// where reload and, on a local page, the developer reload menu fit
+    /// beside them, or else narrower. The developer menu folds away before
+    /// reload does, and reload only where even the narrow strip cannot hold
+    /// it; ⌘R still reloads. `besideWindowControls` is false where the
+    /// window's own controls sit elsewhere, as they do with the sidebar on
+    /// the right.
+    func fitting(
+        width: CGFloat, includesDeveloperMenu: Bool, besideWindowControls: Bool
+    ) -> BrowserSidebarNavigationStripFit {
+        let clearance = besideWindowControls ? windowControlsClearance : nil
+        if required(clearance, developerMenu: includesDeveloperMenu) <= width || narrowing == nil {
+            return BrowserSidebarNavigationStripFit(
+                metrics: self, showsReload: true, showsDeveloperMenu: includesDeveloperMenu)
+        }
+        // Narrower controls keep everything the strip shows a while longer,
+        // so widening the sidebar only ever adds or enlarges a control.
+        let narrow = narrowed()
+        let narrowClearance = besideWindowControls ? narrow.windowControlsClearance : nil
+        return BrowserSidebarNavigationStripFit(
+            metrics: narrow,
+            showsReload: narrow.required(narrowClearance, developerMenu: false) <= width,
+            showsDeveloperMenu: includesDeveloperMenu && narrow.required(narrowClearance, developerMenu: true) <= width)
+    }
+
+    /// The width the strip needs beside `clearance` for back, forward and
+    /// reload, and the developer menu where asked for.
+    private func required(_ clearance: CGFloat?, developerMenu: Bool) -> CGFloat {
+        let menu = developerMenu ? reloadMenuControlSize.width : 0
+        return (clearance ?? leadingInset + leadingSpacerMinimum) + controlSize.width * 3 + controlSpacing * 2
+            + menu + trailingInset
+    }
+
+    /// These metrics with the narrowing's controls and insets, or these
+    /// themselves where the strip never narrows.
+    private func narrowed() -> BrowserSidebarNavigationControlMetrics {
+        guard let narrowing else { return self }
+        return BrowserSidebarNavigationControlMetrics(
+            controlSpacing: 0,
+            leadingSpacerMinimum: 0,
+            controlSize: CGSize(width: narrowing.controlWidth, height: controlSize.height),
+            reloadMenuControlSize: CGSize(width: narrowing.reloadMenuWidth, height: reloadMenuControlSize.height),
+            historySymbolFont: historySymbolFont,
+            reloadSymbolPointSize: reloadSymbolPointSize,
+            leadingInset: leadingInset,
+            trailingInset: narrowing.trailingInset,
+            barHeight: barHeight,
+            growsWithContent: growsWithContent,
+            accessibilityVerticalPadding: accessibilityVerticalPadding,
+            windowControlsClearance: narrowing.windowControlsClearance,
+            narrowing: nil)
+    }
+}
+
+/// The navigation strip as a width lets it be drawn: its metrics, and which
+/// of the controls after back and forward it keeps.
+struct BrowserSidebarNavigationStripFit: Equatable, Sendable {
+    let metrics: BrowserSidebarNavigationControlMetrics
+    let showsReload: Bool
+    let showsDeveloperMenu: Bool
 }
