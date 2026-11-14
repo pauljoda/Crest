@@ -19,7 +19,9 @@ public static class NativeSyncMaterializer {
         DateTimeOffset now, SpaceAccessAuthority? access) {
         var owners = records.Where(record => record.Kind == SyncRecordKind.Folder).ToDictionary(record => record.Id, record => record.SpaceId);
         var emptied = records.Where(record => record.Payload is FolderPayload { EmptiedAt: not null }).Select(record => record.Id).ToHashSet();
-        var deleted = records.Where(record => record.Kind == SyncRecordKind.Folder && record.Tombstone is not null).Select(record => record.Id).ToHashSet();
+        var deletedAt = records.Where(record => record.Kind == SyncRecordKind.Folder && record.Tombstone is not null)
+            .ToDictionary(record => record.Id, record => record.Tombstone!.DeletedAt.Moment);
+        var deleted = deletedAt.Keys.ToHashSet();
         var locals = session.Spaces.ToDictionary(space => space.Id);
         var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
         var brandingIds = records.Where(record => record.Kind == SyncRecordKind.Space && record.SuppliesBranding).Select(record => record.Id).ToHashSet();
@@ -32,7 +34,7 @@ public static class NativeSyncMaterializer {
             if (local is not null && local.OwnProfileId != remote.ProfileId) throw Error(SyncRecordFlaw.ProfileChanged, remote.Id);
             if (pending.Contains(remote.Id) && local is not null) { spaces.Add(local); continue; }
             var folders = Folders(remote.Id, records, policy, local, owners, deleted, emptied);
-            var tabs = Tabs(remote.Id, records, policy, local, folders, owners, deleted, now);
+            var tabs = Tabs(remote.Id, records, policy, local, folders, owners, deletedAt);
             folders = Shown(folders, new FolderTree(folders).Holding(tabs), emptied);
             var archive = Archive(remote.Id, records, policy, local, tabs);
             var history = History(remote.Id, records, policy, local);
@@ -170,11 +172,14 @@ public static class NativeSyncMaterializer {
         remote.CustomTitle, remote.TitleModifiedAt?.Moment, remote.KeepsPageLoaded);
 
     /// The tabs of `space` the records and this device hold. A tab whose
-    /// folder was deleted moves to that folder's nearest ancestor still here,
-    /// and is moved `now`, so its move wins over a copy that still names the
-    /// folder and the tab never comes to name a folder no device holds.
+    /// folder was deleted, at the time `deletedAt` gives, moves to that
+    /// folder's nearest ancestor still here, dated a moment after the copy it
+    /// came from was placed, or at the deletion for a copy never moved: its
+    /// move wins over that copy, so the tab never comes to name a folder no
+    /// device holds, and over no move made since.
     private static List<TabState> Tabs(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local,
-        IReadOnlyList<FolderState> folders, IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted, DateTimeOffset now) {
+        IReadOnlyList<FolderState> folders, IReadOnlyDictionary<Guid, Guid> owners, IReadOnlyDictionary<Guid, DateTimeOffset> deletedAt) {
+        var deleted = deletedAt.Keys.ToHashSet();
         var locals = local?.Tabs ?? [];
         var localOnly = locals.Select((tab, index) => (tab, index)).Where(item => !Portable(item.tab)).ToArray();
         var localOnlyIds = localOnly.Select(item => item.tab.Id).Concat((local?.ArchivedTabs ?? [])
@@ -193,7 +198,7 @@ public static class NativeSyncMaterializer {
             if (remote.Placement.HoldsFolders && folder is { } missing && !folderIds.Contains(missing)) {
                 if (owners.TryGetValue(missing, out var owner) && owner != space) throw Error(SyncRecordFlaw.DanglingFolder, remote.Id);
                 if (!FolderTree.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
-                moved = now;
+                moved = moved is { } placed ? placed.AddMilliseconds(1) : deletedAt[missing];
             }
             var tab = Tab(remote, byId.GetValueOrDefault(remote.Id));
             result.Add(tab with { FolderId = remote.Placement.HoldsFolders ? folder : null, PositionModifiedAt = moved });
