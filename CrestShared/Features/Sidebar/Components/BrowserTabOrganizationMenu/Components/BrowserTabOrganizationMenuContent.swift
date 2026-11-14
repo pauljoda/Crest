@@ -168,9 +168,7 @@ struct BrowserTabOrganizationMenuContent: View {
                         ? LocalizedStringKey("Remove from Group") : LocalizedStringKey("Remove from Folder"),
                     systemImage: "folder.badge.minus"
                 ) {
-                    performIfCurrent {
-                        browser.fileTabs([tab.id], matching: sourceAssignment, into: nil, location: .current)
-                    }
+                    performIfCurrent { removeFromFolder(folderID) }
                 }
             }
         }
@@ -418,6 +416,18 @@ struct BrowserTabOrganizationMenuContent: View {
     /// Runs a menu action only while the window shows the tab's Space,
     /// unlocked, with the profile the menu was built for, and the Space still
     /// holds the tab.
+    /// Takes the tab out of its folder to sit just after the folder, or the
+    /// folder that holds it, at the top level of the open tabs.
+    private func removeFromFolder(_ folderID: UUID) {
+        var outer = folderID
+        var seen: Set<UUID> = [folderID]
+        while let parent = context.space.folders.model(outer)?.parentID, seen.insert(parent).inserted { outer = parent }
+        let place = context.space.sidebar.section(.current).placement(after: outer)
+        browser.fileTabs(
+            [tab.id], matching: sourceAssignment, into: nil, location: .current, before: place.beforeTab,
+            beforeFolderID: place.beforeFolder)
+    }
+
     private func performIfCurrent(_ action: () -> Void) {
         guard context.isCurrent(sourceAssignment), context.space.shownTab(tab.id) != nil else { return }
         action()
