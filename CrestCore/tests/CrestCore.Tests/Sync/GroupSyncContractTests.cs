@@ -406,6 +406,7 @@ public sealed partial class BrowserContractsTests {
             if (fromFirst.Length > 0) second.Merge(fromFirst);
         }
         var (left, right) = (first.Journal.Pending, second.Journal.Pending);
+        if (left.Count == 0 && right.Count == 0) return;
         Assert.Fail($"The devices still write after four rounds: [{string.Join(", ", left)}] and [{string.Join(", ", right)}].");
     }
 
