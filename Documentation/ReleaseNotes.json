@@ -5493,6 +5493,10 @@
     "removed-tab-stays-near": {
       "category": "improved",
       "message": "Remove from Folder and Remove from Group put the tab just below its folder or group instead of at the end of your open tabs."
+    },
+    "deleted-folder-keeps-filed-tab": {
+      "category": "fixed",
+      "message": "A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs."
     }
   }
 }

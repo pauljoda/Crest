@@ -218,7 +218,8 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     /// Promotes a folder whose parent `missing` a partial delivery left out to
     /// the nearest ancestor still delivered, through parents this device holds
     /// and knows deleted, without confusing an unknown parent with a deleted
-    /// one.
+    /// one. A deleted parent this device never held, or no longer holds, has
+    /// no ancestors it knows, so what sat in it moves to the top level.
     public static bool TryPromote(Guid missing, HashSet<Guid> active,
         IReadOnlyDictionary<Guid, FolderState> local, HashSet<Guid> deleted,
         out Guid? parent) {
@@ -226,8 +227,8 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         HashSet<Guid> seen = [];
         while (parent is { } candidate) {
             if (active.Contains(candidate)) return true;
-            if (!deleted.Contains(candidate) || !seen.Add(candidate) || !local.TryGetValue(candidate, out var folder)) return false;
-            parent = folder.ParentId;
+            if (!deleted.Contains(candidate) || !seen.Add(candidate)) return false;
+            parent = local.TryGetValue(candidate, out var folder) ? folder.ParentId : null;
         }
         return true;
     }
