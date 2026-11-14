@@ -109,8 +109,8 @@ public sealed partial class BrowserContractsTests {
     /// a copy stays beside its source. From a saved folder's tab, a Start Page
     /// or a typed address is saved there and belongs to the first page it
     /// shows, while a link and a copy open among the open tabs. A tab opened
-    /// for anyone else, and the Start Page a window shows on launch, stay
-    /// outside.
+    /// for anyone else stays outside, and the Start Page a window shows on
+    /// launch is the Space's open one, wherever it sits.
     [Fact]
     public void ANewTabFromATabInAFolderJoinsThatFolderAtItsEnd() {
         var f = new BatchSpace();
@@ -146,9 +146,9 @@ public sealed partial class BrowserContractsTests {
         device.Send(new OpenAddress(device.Workspace, saved, f.Space, typed, "https://example.com/typed", JoinsFolder: true));
         Assert.Equal([f.Saved, savedPage, typed], Inside(f.SavedFolder));
 
-        var launched = Guid.NewGuid();
-        device.Send(new ShowStartPage(device.Workspace, saved, f.Space, launched, OutsideSplits: false));
-        Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(launched).Placement, Held(launched).FolderId));
+        var launched = device.Open(f.Space, (f.Space, f.Last));
+        device.Send(new ShowStartPage(device.Workspace, launched, f.Space, Guid.NewGuid(), OutsideSplits: false));
+        Assert.Equal(page, device.Tab(launched, f.Space));
     }
 
     /// A Group another device emptied waits out of sight here once its tabs'
