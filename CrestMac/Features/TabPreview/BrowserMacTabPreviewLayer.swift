@@ -6,12 +6,14 @@ import SwiftUI
 /// where the sidebar's edge and the pointer are. A key, a click or a scroll
 /// in the window takes the card down, or the card on its way, as does the
 /// window losing focus, the command palette opening, the window showing
-/// another Space or its Space locking. While the pointer is in the card, a
-/// floating sidebar stays out.
+/// another Space, its Space locking or the sidebar hiding. While the pointer
+/// is in the card, a floating sidebar stays out.
 struct BrowserMacTabPreviewLayer: View {
     // MARK: - Variables
 
     let model: BrowserRootModel
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var preview: BrowserTabPreviewState { model.sidebarInteraction.tabPreview }
 
@@ -40,6 +42,13 @@ struct BrowserMacTabPreviewLayer: View {
             .onChange(of: preview.isPointerInCard || preview.inner.isPointerInCard) { _, isInside in
                 model.chrome.utilityPresentation.setTabPreviewHeld(isInside)
             }
+            // A floating sidebar a card kept out, as for a pointer that went
+            // into the card before the card reported it, goes with the card
+            // unless the pointer is back on the sidebar.
+            .onChange(of: preview.shown == nil) { _, isGone in
+                guard isGone, model.sidebarPresentation == .floating else { return }
+                model.sidebarInteractionChanged(false, reduceMotion: reduceMotion)
+            }
             .onChange(of: isDragging) { _, isDragging in
                 holdForInteraction(isDragging)
             }
@@ -56,6 +65,9 @@ struct BrowserMacTabPreviewLayer: View {
                 if isPresented { preview.dismiss() }
             }
             .onChange(of: model.browser.shownSpace?.id) { preview.dismiss() }
+            .onChange(of: model.sidebarPresentation.showsSidebar, initial: true) { _, isShown in
+                preview.sidebarShownChanged(isShown)
+            }
             .onChange(of: model.browser.shownSpace.map(model.spaceAccess.isLocked) ?? false) { _, isLocked in
                 if isLocked { preview.dismiss() }
             }

@@ -28,8 +28,8 @@ struct BrowserTabPreviewSource: ViewModifier {
     /// Whether the pointer or the keyboard rests on the row while it may be
     /// previewed.
     private var isRested: Bool {
-        guard let preview, preview.isHosted, let context, context.capabilities.supportsHover, subject.isTurnedOn,
-            !isDragging
+        guard let preview, preview.isHosted, preview.isSidebarShown, let context, context.capabilities.supportsHover,
+            subject.isTurnedOn, !isDragging
         else { return false }
         return isPointerOver || isKeyboardFocused(in: context)
     }
@@ -70,9 +70,13 @@ struct BrowserTabPreviewSource: ViewModifier {
 
     // MARK: - Actions - Reporting
 
+    /// Tells the preview the row sits at `frame`. The frame can change once
+    /// more after the pointer has left, as a sliding sidebar carries the row
+    /// out from under it, and that change reports nothing.
     private func report(_ frame: CGRect) {
-        guard let preview, let context, !frame.isEmpty else { return }
-        let target = BrowserTabPreviewTarget(subject: subject, context: context, frame: frame)
+        guard isRested, let preview, let context, !frame.isEmpty else { return }
+        var target = BrowserTabPreviewTarget(subject: subject, context: context, frame: frame)
+        target.isRestedByPointer = !isKeyboardFocused(in: context)
         if entered == target.key {
             preview.move(target)
         } else {
