@@ -13,6 +13,13 @@ import Observation
 /// pointer leaves both the tab and the card, or at once when dismissed. A
 /// dismissed card stays away until a tab is entered again.
 ///
+/// Where the shell can tell where the pointer is, a tab the pointer rests on
+/// counts only while the pointer is on its row. A row can come under a pointer
+/// that never moved onto it, as the sidebar slides in under one parked at the
+/// window's edge, and a row the pointer left can miss saying so as the sidebar
+/// slides away; neither brings up or keeps a card. A card goes with the
+/// sidebar it came from.
+///
 /// A card a finger held a row for shows at once and stays, whatever the
 /// pointer does, until it is dismissed.
 @MainActor
@@ -30,6 +37,13 @@ final class BrowserTabPreviewState {
     static let aimDelay: Duration = .milliseconds(350)
     /// How long a card stays after the pointer leaves its tab and the card.
     static let leaveDelay: Duration = .milliseconds(150)
+    /// How often a tab whose row the pointer isn't on yet looks again for the
+    /// pointer coming onto it, at first.
+    static let pointerCheckInterval: Duration = .milliseconds(100)
+    /// How often it looks once it has waited `pointerCheckEasing`.
+    static let easedPointerCheckInterval: Duration = .milliseconds(500)
+    /// How long a tab looks often before it looks less often.
+    static let pointerCheckEasing: Duration = .seconds(2)
     /// How long after the person last typed in the window a card's search
     /// leaves the keyboard where it is.
     static let typingPause: TimeInterval = 1
@@ -43,6 +57,9 @@ final class BrowserTabPreviewState {
     /// Whether the window draws cards. Rows and tiles report nothing to a
     /// window that doesn't.
     var isHosted: Bool { hosts > 0 }
+    /// Whether the sidebar whose rows report here shows. A hidden sidebar's
+    /// rows report nothing, and its card goes as it hides.
+    private(set) var isSidebarShown = true
     /// How many of the window's layers draw this preview's cards, as an
     /// iPad's does while the layout it leaves goes and the one it takes
     /// comes.
@@ -71,6 +88,9 @@ final class BrowserTabPreviewState {
     /// Where the pointer was as it left the card's tab, or as it entered the
     /// last tab it crossed heading for the card.
     @ObservationIgnored private var aimOrigin: CGPoint?
+    /// Where the pointer was as the sidebar showed, until it moves. A row the
+    /// sidebar brought under it hasn't been rested on.
+    @ObservationIgnored private var parkedPointer: CGPoint?
 
     /// Whether a card shows or one is on its way, which a click or a key in
     /// the window takes down.
@@ -80,6 +100,14 @@ final class BrowserTabPreviewState {
     /// of a tab a folder's card lists. A card that went keeps no frame.
     var shownCardFrames: [CGRect] {
         [shown == nil ? nil : cardFrame, inner.shown == nil ? nil : inner.cardFrame].compactMap(\.self)
+    }
+
+    /// Whether the pointer is on a card that shows, where the shell can tell.
+    /// A pointer that jumps from a row straight into its card is there before
+    /// the card reports it.
+    var isPointerOnShownCard: Bool {
+        guard let location = pointerLocation?() else { return false }
+        return shownCardFrames.contains { $0.contains(location) }
     }
 
     /// Whether the person typed in the window a moment ago, so a card's
@@ -105,6 +133,15 @@ final class BrowserTabPreviewState {
         if hosts == 0 { dismiss() }
     }
 
+    /// The sidebar showed or hid. Its card, or the card on its way, goes as
+    /// it hides.
+    func sidebarShownChanged(_ isShown: Bool) {
+        guard isSidebarShown != isShown else { return }
+        isSidebarShown = isShown
+        parkedPointer = isShown ? pointerLocation?() : nil
+        if !isShown { dismiss() }
+    }
+
     // MARK: - Actions - Resting
 
     /// A finger held `target`'s row: its card shows at once, in place of any
@@ -120,7 +157,7 @@ final class BrowserTabPreviewState {
 
     /// The pointer or the keyboard came to rest on `target`.
     func enter(_ target: BrowserTabPreviewTarget) {
-        guard shown?.isHeldByTouch != true else { return }
+        guard isSidebarShown, shown?.isHeldByTouch != true else { return }
         resting = target
         waiting?.cancel()
         if let shown, shown.key == target.key {
@@ -136,13 +173,7 @@ final class BrowserTabPreviewState {
         } else {
             delay = Self.moveDelay
         }
-        waiting = Task { [weak self] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled, let self, !isPointerInCard, let resting, resting.key == target.key else {
-                return
-            }
-            shown = resting
-        }
+        waitToShow(target.key, after: delay)
     }
 
     /// The tab rested on moved, as when the sidebar scrolls under it.
@@ -221,19 +252,62 @@ final class BrowserTabPreviewState {
         return !(sides.contains { $0 < 0 } && sides.contains { $0 > 0 })
     }
 
+    /// Whether the pointer rests on `target` by the row's account but is
+    /// somewhere else, where the shell can tell, or hasn't moved since the
+    /// sidebar brought the row under it.
+    private func isPointerOff(_ target: BrowserTabPreviewTarget) -> Bool {
+        guard target.isRestedByPointer, let location = pointerLocation?() else { return false }
+        if let parkedPointer {
+            guard location != parkedPointer else { return true }
+            self.parkedPointer = nil
+        }
+        return !target.frame.contains(location)
+    }
+
+    /// Shows the card of the tab `key` names once it has been rested on for
+    /// `delay` with the pointer on its row. A row the pointer isn't on yet
+    /// waits for it to come on, looking less often after a while, then waits
+    /// for `delay` again.
+    private func waitToShow(_ key: BrowserTabPreviewKey, after delay: Duration) {
+        waiting?.cancel()
+        waiting = Task { [weak self] in
+            var wait = delay
+            var awaitingPointerSince: ContinuousClock.Instant?
+            while true {
+                try? await Task.sleep(for: wait)
+                guard !Task.isCancelled, let self, !isPointerInCard, let resting, resting.key == key else { return }
+                if isPointerOff(resting) {
+                    let since = awaitingPointerSince ?? .now
+                    awaitingPointerSince = since
+                    wait =
+                        since.duration(to: .now) < Self.pointerCheckEasing
+                        ? Self.pointerCheckInterval : Self.easedPointerCheckInterval
+                } else if awaitingPointerSince != nil {
+                    awaitingPointerSince = nil
+                    wait = delay
+                } else {
+                    shown = resting
+                    return
+                }
+            }
+        }
+    }
+
     /// Takes the card down after `leaveDelay` unless the pointer is back on
-    /// its tab, in it, or in the card of a tab it lists.
+    /// its tab, in it, or in the card of a tab it lists. A tab whose row the
+    /// pointer left without its saying so still counts as rested on, and its
+    /// card comes back once the pointer is on it again.
     private func waitToLeave() {
         waiting?.cancel()
         guard shown != nil, shown?.isHeldByTouch != true else { return }
         waiting = Task { [weak self] in
             try? await Task.sleep(for: Self.leaveDelay)
-            guard !Task.isCancelled, let self, resting == nil, !isPointerInCard, !isHeld, !isInteracting else {
-                return
-            }
+            guard !Task.isCancelled, let self, !isPointerInCard, !isHeld, !isInteracting else { return }
+            if let resting, !isPointerOff(resting) { return }
             if parent == nil, inner.isPointerInCard { return }
             shown = nil
             if parent == nil { inner.dismiss() }
+            if let resting { waitToShow(resting.key, after: Self.restDelay) }
         }
     }
 }

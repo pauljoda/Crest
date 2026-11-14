@@ -18,6 +18,10 @@ struct BrowserTabPreviewTarget {
     let context: BrowserSidebarListContext
     /// The row's or tile's frame in the window, in points.
     let frame: CGRect
+    /// Whether the pointer rests on the row, rather than the keyboard's focus.
+    /// Its card shows only while the pointer is on the row, which a row that
+    /// slid in under a pointer parked at the window's edge never had.
+    var isRestedByPointer = false
     /// Whether a finger held the row for this card, rather than the pointer
     /// or the keyboard resting on it. Its card shows over a scrim, above or
     /// below the row, and stays until the person dismisses it.
