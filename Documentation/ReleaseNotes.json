@@ -5449,6 +5449,10 @@
     "sidebar-spacing": {
       "category": "new",
       "message": "Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style."
+    },
+    "snappier-sidebar-slide": {
+      "category": "improved",
+      "message": "On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time."
     }
   }
 }

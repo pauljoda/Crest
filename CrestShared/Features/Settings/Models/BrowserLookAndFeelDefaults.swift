@@ -23,8 +23,9 @@ enum BrowserLookAndFeelDefaults {
     /// How long, in milliseconds, the pointer rests on the window's edge
     /// before a hidden sidebar shows.
     static let sidebarRevealDelay: Double = 200
-    /// How long, in milliseconds, the sidebar slides out over the page.
-    static let sidebarSlideDuration = CrestMotion.floatingPaneTransition * 1000
+    /// How long, in milliseconds, the sidebar slides out over the page: a
+    /// third quicker than the motion it is measured against.
+    static let sidebarSlideDuration: Double = 160
     /// A new device's tab appearance, made fresh each time so a reset never
     /// shares the one instance it puts back.
     @MainActor static var tabs: BrowserTabAppearance { BrowserTabAppearance() }

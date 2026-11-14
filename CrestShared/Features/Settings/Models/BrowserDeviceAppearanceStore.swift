@@ -158,7 +158,12 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
     static let sidebarRevealDelayKey = "crest.appearance.sidebar-reveal-delay"
-    static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
+    static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-length"
+    /// Where Sidebar slide time was kept while every appearance save also
+    /// wrote its 240 ms default, so a stored 240 there says nothing about what
+    /// the person chose.
+    static let legacySidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
+    static let legacySidebarSlideDefault: Double = 240
     static let peekSizeKey = "crest.appearance.peek-size"
     static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
     static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
@@ -374,6 +379,9 @@ final class BrowserDeviceAppearanceStore {
             ?? BrowserLookAndFeelDefaults.sidebarRevealDelay
         sidebarSlideDuration =
             chrome.object(forKey: Self.sidebarSlideDurationKey) as? Double
+            ?? (chrome.object(forKey: Self.legacySidebarSlideDurationKey) as? Double).flatMap {
+                $0 == Self.legacySidebarSlideDefault ? nil : $0
+            }
             ?? BrowserLookAndFeelDefaults.sidebarSlideDuration
         previewsTabsOnHover =
             defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover

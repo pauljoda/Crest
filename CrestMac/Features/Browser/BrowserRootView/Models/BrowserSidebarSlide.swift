@@ -14,6 +14,10 @@ struct BrowserSidebarSlide: Equatable, Sendable {
     /// The lengths the slide out over the page can take, in milliseconds.
     static let range: ClosedRange<Double> = 0...480
     static let defaultValue = BrowserLookAndFeelDefaults.sidebarSlideDuration
+    /// The length, in milliseconds, of the slide out over the page that the
+    /// sidebar's motions are drawn at, and that every chosen length is
+    /// measured against.
+    static let standardLength = CrestMotion.floatingPaneTransition * 1000
 
     /// The slide the person chose.
     @MainActor static var chosen: BrowserSidebarSlide {
@@ -37,7 +41,7 @@ struct BrowserSidebarSlide: Equatable, Sendable {
         let length =
             milliseconds.isFinite
             ? min(max(milliseconds, Self.range.lowerBound), Self.range.upperBound) : Self.defaultValue
-        scale = (length / 10).rounded() * 10 / Self.defaultValue
+        scale = (length / 10).rounded() * 10 / Self.standardLength
     }
 
     // MARK: - Actions - Motion
