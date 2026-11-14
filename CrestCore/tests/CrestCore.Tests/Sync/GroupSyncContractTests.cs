@@ -156,25 +156,57 @@ public sealed partial class BrowserContractsTests {
     }
 
 
-    /// A device opened after a long gap sweeps its stale open tabs, which
-    /// empties a Group another device has shown since. The sweep is
-    /// maintenance, not the person's deletion, so the Group stays on both
-    /// devices with the tabs that are still in use.
+    /// A device opened after a long gap sweeps its stale open tabs out of a
+    /// Group another device showed them in ten minutes earlier. A tab shown
+    /// before a sweep and the sweep's removal are decided by version, as on
+    /// main, and here the stale device's removal is the newer, so the tabs go
+    /// to the archive on both devices. The Group goes with them, out of sight
+    /// on both, and its record stays, marked emptied, never deleted.
     [Fact]
-    public void AStaleDevicesSweepLeavesAGroupAnotherDeviceStillUses() {
+    public void AStaleDevicesSweepArchivesTabsShownBeforeItAndTheGroupGoesWithThem() {
         var (space, group, first, second) = (Fixed(1_340), Fixed(1_341), Fixed(1_342), Fixed(1_343));
         var stale = GroupedSession(space, group, [first, second], [], activated: 500);
         var merged = CloudHolding(stale, 1_344);
-        var shownSince = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3_600;
-        using var inUse = new SyncingDevice(GroupedSession(space, group, [first, second], [], activated: shownSince), merged(1_345));
-        using var sweeping = new SyncingDevice(stale, merged(1_346));
+        var shownBefore = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 600;
+        using var inUse = new SyncingDevice(GroupedSession(space, group, [first, second], [], activated: shownBefore), merged(1_345));
+        using var sweeping = new SyncingDevice(stale, ClockAhead(merged(1_346), by: 100));
+
+        sweeping.Edit(workspace => new CleanUpCurrentTabs(workspace, space));
+        Settle(inUse, sweeping);
+
+        foreach (var device in new[] { inUse, sweeping }) {
+            var kept = SpaceIn(device.Session, space)!;
+            Assert.Empty(kept["folders"]!.AsArray());
+            Assert.DoesNotContain(kept["tabs"]!.AsArray(), tab => StoredSessionCodec.Identity(tab!["id"]) is var id && (id == first || id == second));
+            var archived = kept["archivedTabs"]!.AsArray().Select(item => StoredSessionCodec.Identity(item!["tab"]!["id"])).ToHashSet();
+            Assert.Contains(first, archived);
+            Assert.Contains(second, archived);
+            Assert.NotNull(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+        }
+    }
+
+    /// A device opened after a long gap sweeps its stale open tabs out of a
+    /// Group another device shows them in a minute later, before the sweep
+    /// arrives there. A tab shown after a removal stays, so the Group stays on
+    /// both devices with its tabs, and the device that kept them clears the
+    /// mark.
+    [Fact]
+    public void AStaleDevicesSweepLeavesAGroupWhoseTabsWereShownAfterIt() {
+        var (space, group, first, second) = (Fixed(1_345), Fixed(1_346), Fixed(1_347), Fixed(1_348));
+        var stale = GroupedSession(space, group, [first, second], [], activated: 500);
+        var merged = CloudHolding(stale, 1_349);
+        var shownAfter = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 60;
+        using var inUse = new SyncingDevice(GroupedSession(space, group, [first, second], [], activated: shownAfter), merged(1_400));
+        using var sweeping = new SyncingDevice(stale, ClockAhead(merged(1_401), by: 100));
 
         sweeping.Edit(workspace => new CleanUpCurrentTabs(workspace, space));
         Assert.Empty(SpaceIn(sweeping.Session, space)!["folders"]!.AsArray());
         Settle(inUse, sweeping);
 
-        foreach (var (side, session) in new[] { ("in use", inUse.Session), ("swept", sweeping.Session) })
-            AssertGroupHolds(side, SpaceIn(session, space)!, group, [first, second]);
+        foreach (var (side, device) in new[] { ("in use", inUse), ("swept", sweeping) }) {
+            AssertGroupHolds(side, SpaceIn(device.Session, space)!, group, [first, second]);
+            Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+        }
     }
 
     /// One device closes the last tab it knows of in a Group while another has
@@ -266,6 +298,18 @@ public sealed partial class BrowserContractsTests {
             if (fromSecond.Length > 0) first.Merge(fromSecond);
             if (fromFirst.Length > 0) second.Merge(fromFirst);
         }
+        var (left, right) = (first.Journal.Pending, second.Journal.Pending);
+        Assert.Fail($"The devices still write after four rounds: [{string.Join(", ", left)}] and [{string.Join(", ", right)}].");
+    }
+
+    /// `journal` with its clock moved `by` past the cloud's, as a device's
+    /// own edits move it, so what it stages next is newer than anything the
+    /// cloud holds. The record it learns this from is one it already holds.
+    private static JournalUnderTest ClockAhead(JournalUnderTest journal, int by) {
+        var newer = journal.Records[0].DeepClone().AsObject();
+        newer["version"] = new JsonObject { ["logicalClock"] = journal.Clock + (ulong)by, ["deviceID"] = Fixed(1_399).ToString("D").ToUpperInvariant() };
+        journal.Merge(newer);
+        return journal;
     }
 
     /// Asserts that `space`, a stored-format Space the device `side` holds,
