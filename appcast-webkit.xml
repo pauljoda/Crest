@@ -6,48 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.30</title>
-            <pubDate>Fri, 13 Nov 2026 17:47:29 +0000</pubDate>
+            <title>0.9.44</title>
+            <pubDate>Sat, 14 Nov 2026 15:48:25 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1601</sparkle:version>
-            <sparkle:shortVersionString>0.9.30</sparkle:shortVersionString>
+            <sparkle:version>1608</sparkle:version>
+            <sparkle:shortVersionString>0.9.44</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 22 user-facing changes.
+Showing the 12 most recent highlights from 14 user-facing changes.
 
 ### New
 
-- Choose how the address field shows a page's address in Appearance: on two lines, on one line, or just the site.
-- Super Copy, on by default, copies and shares links without known trackers. It follows supported redirect links to their destination, applies AdGuard's URL Tracking filter and Crest's own rules, and shortens Amazon product links. Selecting the address and copying it keeps everything.
-- Choose how the address field, pins, extensions, selected tab and other glass surfaces read in Appearance: Automatic follows each Space, dark over dark Spaces and light over very light ones, or keep them Light, Dark, or as your Mac's appearance (System).
-- On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open.
+- On Mac, resting the pointer on a folder in the sidebar lists its tabs, including those in folders inside it, with a search field ready for typing. Open, unload or close a tab there, or drag it out of the folder, without opening the folder. Turn it off in Settings › Appearance › Preview hover.
+- On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind "…". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews.
+- On Mac, choose how long the pointer rests on the window's edge before a hidden sidebar comes out, from Instant to a second, in Settings › Appearance › Sidebar hover delay. It applies in a window and in full screen, and moving off the edge before then still keeps the sidebar hidden.
+- On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time.
+- Turn off Keep saved tabs after unloading in Settings › Tabs and a saved tab you unload shows an X that deletes it. The X waits a moment after you unload the tab, and on iPhone and iPad it always shows rather than on hover. The setting appears in the Heraldic and Modern styles.
+- Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style.
 
 ### Improved
 
-- The sidebar narrows to 164 points, about as narrow as Arc's. In a narrow sidebar, Forward folds away to keep clear of the window's buttons, and Copy URL makes room for the address.
-- On macOS 27, Settings pages other than Shortcuts and Feature Flags scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle.
+- Tab size in Settings › Appearance is now a slider with nine steps, from Thin to Large, and a thin tab keeps its title readable while losing the room around it. The Space header grows and shrinks with your tabs.
+- On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time.
 
 ### Fixed
 
-- Copy URL and Site Controls sit side by side in the address field instead of on top of each other.
-- A folder inside a closed folder opens when you click it, showing everything in it while the folder around it stays closed.
-- The Start Page title on the Mac reads in its Space's light or dark look, so it no longer draws black over a dark Space.
-- In a narrow sidebar, Copy URL appears in the address field while the pointer is over it, so you can still copy the address with a click.
-- On Mac, a Quick Window that a link from another app or the New Quick Window shortcut opens appears over the app you're using, on the display you're using it on, instead of over another app's window. Links in Crest's own Settings open over Crest.
-- An isolated test copy of Crest on Mac keeps its own sidebar width, opening at the default and never changing the installed app's.
+- The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark.
+- On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below "Search or enter website", or an address shown on one line, used to do nothing.
+- A click anywhere in a Quick Window's address field opens it, including above and below the address or "Search or enter website" and on the lock before it, where clicks used to do nothing.
+- On Mac, a Quick Window's back and forward buttons draw in the Space's text color, so they stay visible over a dark Space in a light window, or a light Space in a dark one.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/058322cffdd04bd586aec2b063a248e62499a45c...7fffbc8c49e43b2fb00af3f5db2fb303c3456b59) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.30-2026-11-13-1601-r601.1/Installer-Crest-0.9.30-nightly-2026-11-13-7fffbc8-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/7fffbc8c49e43b2fb00af3f5db2fb303c3456b59...049dc612e601a44ecb59e35f7d29d385f87fb04a) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.44-2026-11-14-1608-r608.1/Installer-Crest-0.9.44-nightly-2026-11-14-049dc61-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.30-2026-11-13-1601-r601.1/Installer-Crest-0.9.30-nightly-2026-11-13-7fffbc8-arm64.dmg" length="220633212" type="application/octet-stream" sparkle:edSignature="xFvrUffME3S4qOkZkjkDVLGXs9gftzRlkrP8GwP1uh6gPA9AOPWV2PL/ncaqwigpZNJJGKDPbcF6uviSoRBAAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.44-2026-11-14-1608-r608.1/Installer-Crest-0.9.44-nightly-2026-11-14-049dc61-arm64.dmg" length="220922493" type="application/octet-stream" sparkle:edSignature="z9oGU82ISXX/TgW4zg2zez73dpc9bu7LbACEQ8Fqrgajjl2n8u4ig9HGBi8xuOz80ZuSIrZJuUlkoh2vho5cDg=="/>
         </item>
         <item>
             <title>0.9.1</title>
@@ -114,6 +114,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ELl9rITMXjROV+Tg/vrp9Yoercct3tT0mzmQSbNMf6Xrx92UXtLvehcYBSaVp5k1Bo4UjB+ISt04QZJ+Qw/FCA==
-length: 8529
+edSignature: T5YoLACLTduD2w7qur2c6VE1waQy43/hjIfKOmd0ENGLl4lOQ9KdyBYbMP7e+kQpjhR4+cnTY709PdQMPVljDg==
+length: 9208
 -->

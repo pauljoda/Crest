@@ -3,6 +3,6 @@
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
     "development": "snappier-sidebar-slide",
-    "nightly": "settings-scroll-anywhere"
+    "nightly": "snappier-sidebar-slide"
   }
 }
