@@ -231,9 +231,12 @@ internal abstract class SyncPayloadType {
             return marked;
         }
 
+        /// Read leniently, since a record an earlier build stored may spell
+        /// what it holds otherwise.
         public override bool HidesWhenEmpty(JsonObject value) =>
-            value[StoredSessionCodec.Key.Location]?.GetValue<string>() == TabPlacement.Current.Name
-            && (value[SyncPayload.Key.EmptiedAt] is not null || value[StoredSessionCodec.Key.IsGroup]?.GetValue<bool>() == true);
+            value[StoredSessionCodec.Key.Location] is JsonValue location && location.TryGetValue<string>(out var placed)
+            && placed == TabPlacement.Current.Name && (value[SyncPayload.Key.EmptiedAt] is not null
+                || value[StoredSessionCodec.Key.IsGroup] is JsonValue group && group.TryGetValue<bool>(out var isGroup) && isGroup);
     }
 
     private sealed class TabType() : SyncPayloadType(SyncRecordKind.Tab, TabPayload.Read) {
