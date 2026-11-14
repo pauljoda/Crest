@@ -22,5 +22,17 @@
             guard let host = ChromiumComposition.engineHost else { return false }
             return ChromiumShellHost(host: host).handleUnclaimedShortcut(event, page: page)
         }
+
+        // MARK: - Actions - Extensions
+
+        func opensExtensions(in space: SpaceModel, page: BrowserPage?) -> Bool {
+            guard let host = ChromiumComposition.engineHost else { return false }
+            return ChromiumShellHost(host: host).opensExtensions(in: space, page: page)
+        }
+
+        func openNextExtension(in space: SpaceModel, page: BrowserPage?, window: NSWindow?) {
+            guard let host = ChromiumComposition.engineHost else { return }
+            ChromiumShellHost(host: host).openNextExtension(in: space, page: page, window: window)
+        }
     }
 #endif

@@ -156,6 +156,9 @@ struct BrowserMacCommand {
             guard let page = actions.pages.activePage else { return }
             page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
         })
+    static let openNextExtension = BrowserMacCommand(
+        .openNextExtension, actsOnPage: true, isAvailable: { $0.canOpenNextExtension },
+        withoutWindow: .opensNextExtensionOverKeyPopup, run: { $0.openNextExtension() })
     /// ⌘1–⌘9 and ⌃1–⌃9: the stop or Space the core says the number leads to now.
     static let selectNumbered = BrowserMacCommand(
         .selectNumbered, isAvailable: { actions, command in actions.numberedSelections[command] != nil },
@@ -183,7 +186,7 @@ struct BrowserMacCommand {
         sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
         toggleSidebar, showHistory, showArchive, showDownloads,
         showWebInspector,
-        toggleTranslationToolbar, toggleDeveloperToolbar, selectNumbered,
+        toggleTranslationToolbar, toggleDeveloperToolbar, openNextExtension, selectNumbered,
     ]
 
     // MARK: - Variables
@@ -294,6 +297,11 @@ struct BrowserMacWindowlessCommand {
     /// Opens an empty Quick Window beside the key one, in its Space.
     static let opensQuickWindowBesideKeyQuickWindow = BrowserMacWindowlessCommand(
         isAvailable: { $0.isQuickWindowKey }, run: { $0.openQuickWindowBesideKeyQuickWindow() })
+    /// Opens the next extension's popup over the window the key popup hangs
+    /// from: the popup hands Crest the keys its document leaves.
+    static let opensNextExtensionOverKeyPopup = BrowserMacWindowlessCommand(
+        isAvailable: { $0.keyChildParentPageActions?.canOpenNextExtension == true },
+        run: { $0.keyChildParentPageActions?.openNextExtension() })
     /// Opens the key Quick Window's palette from its address field, as Open
     /// Location does over a page, when the Quick Window has none yet.
     static let opensLocationInKeyQuickWindow = BrowserMacWindowlessCommand(

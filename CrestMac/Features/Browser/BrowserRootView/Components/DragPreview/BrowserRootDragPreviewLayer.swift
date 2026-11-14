@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Resolves lifted items for the inert preview window above browser content.
-/// A carried split card takes precedence over a sidebar lift.
+/// A carried split card takes precedence over a sidebar lift, and a sidebar
+/// lift over a carried extension tile.
 struct BrowserRootDragPreviewLayer: View {
     let model: BrowserRootModel
     let reduceMotion: Bool
@@ -27,6 +28,9 @@ struct BrowserRootDragPreviewLayer: View {
         }
         if let sidebar = sidebarLiftContent {
             return .sidebarLift(sidebar)
+        }
+        if let lift = model.extensionTileLift.lift {
+            return .extensionTileLift(.init(lift: lift, reduceMotion: reduceMotion))
         }
         return nil
     }

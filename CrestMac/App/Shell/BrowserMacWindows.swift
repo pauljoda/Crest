@@ -67,7 +67,9 @@ final class BrowserMacWindows {
     // MARK: - Variables
 
     private unowned let application: BrowserMacApplication
-    private unowned let engineHost: any BrowserMacEngineHost
+    /// The engine that owns the process, which the commands only it can run
+    /// ask.
+    unowned let engineHost: any BrowserMacEngineHost
 
     /// The engine and version the build runs pages in, where it names one,
     /// as About Crest credits it.
@@ -92,39 +94,31 @@ final class BrowserMacWindows {
     /// The model of the key window, when it is a browser window over the
     /// person's own Spaces.
     var activeWindowModel: BrowserMacWindowModel? {
-        guard let key = controller(showing: NSApp.keyWindow), key.kind.hasWindowModel else { return nil }
-        return application.windowCoordinator.existingModel(for: key.windowID)
+        windowModel(showing: NSApp.keyWindow)
     }
 
     /// The stores of the key window, when it is a browser or the private window.
     var activeContext: BrowserMacWindowContext? {
-        if controller(showing: NSApp.keyWindow)?.kind == .private {
-            return BrowserMacWindowContext(
-                browser: application.privateBrowser, pages: application.privatePages,
-                chrome: application.privateChrome, windowID: application.privatePages.windowID)
-        }
-        return activeWindowModel.map(Self.context(of:))
+        context(showing: NSApp.keyWindow)
     }
 
     /// The menu bar's commands as they run in the key browser window.
     var activeActions: BrowserCommandActions? {
-        guard let context = activeContext else { return nil }
-        return BrowserCommandActions(
-            browser: context.browser, pages: context.pages, chrome: context.chrome, windows: self,
-            spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
+        actions(showing: NSApp.keyWindow)
     }
 
     /// The page commands as they run in the key Quick Window, on the page it
     /// shows; nil while no Quick Window with a page is key.
     var activeQuickWindowActions: BrowserCommandActions? {
-        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
-            let quickWindow = quickWindows[key.windowID], let pages = quickWindow.model.pages,
-            let page = quickWindow.model.page
-        else { return nil }
-        return BrowserCommandActions(
-            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
-            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
-            quickWindowPage: page)
+        quickWindowActions(showing: NSApp.keyWindow)
+    }
+
+    /// The page commands as they run in the shell window the key window hangs
+    /// from, as an extension's popup hangs from the window it opened in: the
+    /// popup's own keys reach Crest from inside it.
+    var keyChildParentPageActions: BrowserCommandActions? {
+        guard let parent = NSApp.keyWindow?.parent else { return nil }
+        return quickWindowActions(showing: parent) ?? actions(showing: parent)
     }
 
     /// Whether the key window is a Quick Window.
@@ -212,6 +206,44 @@ final class BrowserMacWindows {
     private func controller(showing window: NSWindow?) -> BrowserMacWindowController? {
         guard let window else { return nil }
         return controllers.first { $0.window === window }
+    }
+
+    /// The model of `window`, when it is a browser window over the person's
+    /// own Spaces.
+    private func windowModel(showing window: NSWindow?) -> BrowserMacWindowModel? {
+        guard let controller = controller(showing: window), controller.kind.hasWindowModel else { return nil }
+        return application.windowCoordinator.existingModel(for: controller.windowID)
+    }
+
+    /// The stores of `window`, when it is a browser or the private window.
+    private func context(showing window: NSWindow?) -> BrowserMacWindowContext? {
+        if controller(showing: window)?.kind == .private {
+            return BrowserMacWindowContext(
+                browser: application.privateBrowser, pages: application.privatePages,
+                chrome: application.privateChrome, windowID: application.privatePages.windowID)
+        }
+        return windowModel(showing: window).map(Self.context(of:))
+    }
+
+    /// The menu bar's commands as they run in `window`, a browser window.
+    private func actions(showing window: NSWindow?) -> BrowserCommandActions? {
+        guard let context = context(showing: window) else { return nil }
+        return BrowserCommandActions(
+            browser: context.browser, pages: context.pages, chrome: context.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
+    }
+
+    /// The page commands as they run in `window`, a Quick Window, on the page
+    /// it shows.
+    private func quickWindowActions(showing window: NSWindow?) -> BrowserCommandActions? {
+        guard let controller = controller(showing: window), controller.kind == .quick,
+            let quickWindow = quickWindows[controller.windowID], let pages = quickWindow.model.pages,
+            let page = quickWindow.model.page
+        else { return nil }
+        return BrowserCommandActions(
+            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
+            quickWindowPage: page)
     }
 
     private func controller(_ kind: BrowserMacWindowKind, id: UUID? = nil) -> BrowserMacWindowController? {

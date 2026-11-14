@@ -13,13 +13,16 @@ struct BrowserPinnedExtensionStripContent: View {
     var presentMenu:
         (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) ->
             Void = { _, _ in }
+    /// How the tiles move, or nil for a strip that keeps its order.
+    var reordering: BrowserPinnedExtensionActionList.Reordering?
 
     var body: some View {
         BrowserPinnedExtensionActionList(
             actions: actions,
             perform: perform,
             prepare: prepare,
-            presentMenu: presentMenu
+            presentMenu: presentMenu,
+            reordering: reordering
         )
         .frame(
             height: actions.count > 0 ? Self.sectionHeight : 0

@@ -203,7 +203,8 @@ final class ChromiumExtensionStore {
         observeChanges(of: page.profileID)
         return page.extensions
     }
-    /// The pinned actions of a Space's own toolbar row.
+    /// The pinned actions of a Space's own toolbar row, in the order the
+    /// person left them.
     ///
     /// The row belongs to the Space, so the pinned list comes from the Space's
     /// profile and is present whether or not a page is open. Where a page is
@@ -224,11 +225,18 @@ final class ChromiumExtensionStore {
                 if let tab = live[action.id] {
                     return BrowserExtensionActionPresentation(
                         id: tab.id, displayName: tab.displayName,
-                        badgeText: tab.badgeText, icon: tab.icon, isPinned: true)
+                        badgeText: tab.badgeText, icon: tab.icon, isPinned: true, hasPopup: tab.hasPopup)
                 }
                 return BrowserExtensionActionPresentation(action)
             }
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+    /// Moves the pinned action `extensionID` to just before the pinned action
+    /// `beforeID`, or to the end with none, in every Space of `space`'s
+    /// profile.
+    func movePin(_ extensionID: String, before beforeID: String?, space: BrowserSpaceIdentity) {
+        send(
+            MovePinnedExtension(
+                spaceID: space.id, engine: .chromium, extensionID: extensionID, beforeExtensionID: beforeID))
     }
     /// Runs a pinned action from a Space with no page open. Only an action with
     /// its own popup can run without one, so anything else states itself as
@@ -254,6 +262,55 @@ final class ChromiumExtensionStore {
                 String(localized: "This extension action needs an open page."),
                 icon: "puzzlepiece.extension")
             return
+        }
+    }
+
+    // MARK: - Actions - Popup Cycle
+
+    /// The actions Open Next Extension steps through in `space` with `page`
+    /// in front: the pinned ones from left to right, then the others the page
+    /// offers, each only while running it opens its popup.
+    func popupCycle(
+        for space: BrowserSpaceIdentity, page: ChromiumNativePage?
+    ) -> [BrowserExtensionActionPresentation] {
+        let others = page.map { actions(for: $0).filter { !$0.isPinned } } ?? []
+        return (pinnedActions(for: space, page: page) + others).filter {
+            $0.isEnabled && $0.hasPopup && !$0.isLoading
+        }
+    }
+
+    /// Opens the popup of the action after the one whose popup shows in
+    /// `window`, or of the first when none shows, from its pinned tile or the
+    /// control that lists the window's extensions. After the last, it closes
+    /// the popup.
+    ///
+    /// It runs a turn later: a key the popup's document left reaches Crest
+    /// from inside the popup, which must not go while it hands the key on.
+    func openNextPopup(in space: BrowserSpaceIdentity, page: ChromiumNativePage?, window: NSWindow) {
+        DispatchQueue.main.async { [weak self, weak window] in
+            MainActor.assumeIsolated {
+                guard let self, let window, let host = ChromiumComposition.engineHost,
+                    let windowID = window.identifier.flatMap({ UUID(uuidString: $0.rawValue) })
+                else { return }
+                let cycle = self.popupCycle(for: space, page: page)
+                let shown = host.extensionPopup(inWindow: windowID)
+                let next =
+                    if let shown, let index = cycle.firstIndex(where: { $0.id == shown }) {
+                        cycle.indices.contains(index + 1) ? cycle[index + 1] : nil
+                    } else {
+                        cycle.first
+                    }
+                guard let next else {
+                    host.closeExtensionPopup(inWindow: windowID)
+                    return
+                }
+                let anchor = BrowserExtensionToolbarAnchorRegistry.anchor(for: next.id, in: window)
+                if let page {
+                    page.runExtension(next.id, anchor: anchor)
+                } else {
+                    self.runPinned(next, space: space, anchor: anchor)
+                }
+            }
         }
     }
 

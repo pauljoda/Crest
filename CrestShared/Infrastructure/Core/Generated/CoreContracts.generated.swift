@@ -476,6 +476,7 @@ enum EngineCommand: Equatable, Sendable {
     case installExtensionPackage(InstallExtensionPackage)
     case listEngineExtensions(ListEngineExtensions)
     case loadPage(LoadPage)
+    case moveEngineExtensionPin(MoveEngineExtensionPin)
     case pauseEngineDownload(PauseEngineDownload)
     case readSiteData(ReadSiteData)
     case recoverPage(RecoverPage)
@@ -2897,6 +2898,7 @@ struct ExtensionAction: Equatable, Sendable, Identifiable {
     let icon: Data?
     let pinned: Bool
     let enabled: Bool
+    let hasPopup: Bool
 }
 
 struct ExtensionActionList: Equatable, Sendable {
@@ -4164,6 +4166,12 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
+struct MoveEngineExtensionPin: Equatable, Sendable {
+    let profileID: UUID
+    let extensionID: String
+    let beforeExtensionID: String?
+}
+
 struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -4200,6 +4208,13 @@ struct MovePageToWindow: PageRequest, Equatable, Sendable {
 
     let pageID: UUID
     let windowID: UUID
+}
+
+struct MovePinnedExtension: Intent, ExtensionIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let engine: EngineKind
+    let extensionID: String
+    let beforeExtensionID: String?
 }
 
 struct MoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
@@ -18951,6 +18966,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case toggleSelectedTabSaved
         case blockElement
         case showBlockedElements
+        case openNextExtension
     }
 
     let tag: Int
@@ -19501,8 +19517,8 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [
             ShortcutDefault(
                 platform: DevicePlatform.desktop,
-                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
-                yieldsToOverrides: false
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: true
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
@@ -21057,6 +21073,30 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
+    static let openNextExtension = ShortcutCommand(
+        tag: 77,
+        kind: .openNextExtension,
+        name: "openNextExtension",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Open Next Extension"),
+        searchTerms: LocalizedStringResource("extensions popup menu cycle pinned toolbar"),
+        menuTitle: nil,
+        symbol: "puzzlepiece.extension",
+        requiredCapability: EngineCapability.extensions,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: true
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -21135,7 +21175,8 @@ struct ShortcutCommand: Hashable, Sendable {
         mostRecentTabBackward,
         clearSiteCookies,
         clearSiteCache,
-        toggleSelectedTabSaved
+        toggleSelectedTabSaved,
+        openNextExtension
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -21328,6 +21369,7 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.blockElement,
                 ShortcutCommand.showBlockedElements
             ],
+            [ShortcutCommand.openNextExtension],
             [ShortcutCommand.findInPage, ShortcutCommand.findNext, ShortcutCommand.findPrevious],
             [ShortcutCommand.zoomIn, ShortcutCommand.zoomOut, ShortcutCommand.actualSize],
             [

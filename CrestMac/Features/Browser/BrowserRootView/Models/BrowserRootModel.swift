@@ -96,6 +96,8 @@ final class BrowserRootModel {
     )
     /// The window owns the lift so its preview can outlive the source surface.
     let splitCardLift = BrowserSplitCardLiftState()
+    /// The window owns a carried extension tile for the same reason.
+    let extensionTileLift = BrowserExtensionTileLiftState()
     /// This window's extension side panel, if one is open. Transient by
     /// construction: nothing about it reaches the session, disk or sync.
     let extensionSidePanel = BrowserExtensionSidePanelHost()

@@ -11,8 +11,8 @@ extension EngineCommand {
         case .approveEngineDownload, .cancelEngineDownload, .changeEngineExtension, .checkBeforeUnload,
             .downloadExtension, .dropStagedLink, .endExtensionInstall, .eraseBrowsingData, .eraseProfileData,
             .eraseSiteData, .exitPictureInPicture, .goToHistoryEntry, .groupPages, .installExtensionPackage,
-            .listEngineExtensions, .loadPage, .pauseEngineDownload, .readSiteData, .recoverPage, .rejectOfferedPage,
-            .removeEngineDownload, .resumeEngineDownload, .settleAuthentication,
+            .listEngineExtensions, .loadPage, .moveEngineExtensionPin, .pauseEngineDownload, .readSiteData,
+            .recoverPage, .rejectOfferedPage, .removeEngineDownload, .resumeEngineDownload, .settleAuthentication,
             .settleDownloadDestination, .settleExtensionInstall, .settlePermission, .settleScriptDialog,
             .stageNavigation:
             // These act on a page the engine already hosts, or on none.

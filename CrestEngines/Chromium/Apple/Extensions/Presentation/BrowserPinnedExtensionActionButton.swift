@@ -16,6 +16,7 @@ struct BrowserPinnedExtensionActionButton: View {
     /// from, as when a Quick Window moves it out of its overflow to run it.
     var performsOnceAnchored = false
 
+    @Environment(BrowserExtensionTileLiftState.self) private var tileLift: BrowserExtensionTileLiftState?
     @State private var isHovering = false
     @State private var popupAnchor: BrowserExtensionPopupAnchor?
 
@@ -77,13 +78,17 @@ struct BrowserPinnedExtensionActionButton: View {
         .help(Text(verbatim: action.displayName))
     }
 
+    /// A tile a carried tile slides under is not one the person pointed at,
+    /// so it neither lights up nor gets ready to run.
     private func hoverChanged(_ isHovering: Bool) {
-        self.isHovering = isHovering
-        guard isHovering, action.isEnabled, !action.isLoading else { return }
+        self.isHovering = isHovering && tileLift?.isCarrying != true
+        guard self.isHovering, action.isEnabled, !action.isLoading else { return }
         prepare()
     }
 
+    /// Runs the action, unless the click ends a drag that carried a tile.
     private func performAction() {
+        guard tileLift?.suppressesActivation != true else { return }
         perform(popupAnchor)
     }
 }

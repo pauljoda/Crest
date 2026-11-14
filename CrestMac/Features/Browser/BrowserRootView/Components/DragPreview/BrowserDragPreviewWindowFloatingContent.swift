@@ -34,6 +34,8 @@ struct BrowserDragPreviewWindowFloatingContent: View {
             )
         case .splitCardLift(let card):
             BrowserSplitCardLiftFloatingPreview(content: card)
+        case .extensionTileLift(let tile):
+            BrowserExtensionTileLiftFloatingPreview(content: tile)
         }
     }
 }

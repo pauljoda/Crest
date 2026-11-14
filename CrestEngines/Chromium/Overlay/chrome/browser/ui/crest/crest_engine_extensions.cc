@@ -1,5 +1,7 @@
 #include "chrome/browser/ui/crest/crest_engine_extensions.h"
 
+#include <algorithm>
+#include <set>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -296,7 +298,8 @@ engine::ExtensionActionList EngineExtensions::PageActions(content::WebContents* 
                                                    .badge = action->GetDisplayBadgeText(tab),
                                                    .icon = IconPNG(state.IconFor(*extension, action, tab)),
                                                    .pinned = model && model->IsActionPinned(extension->id()),
-                                                   .enabled = true});
+                                                   .enabled = true,
+                                                   .has_popup = action->HasPopup(tab)});
   }
   return list;
 }
@@ -314,22 +317,21 @@ engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std
   if (!registry || !actions) {
     return list;
   }
-  // The pins are read from the preference the toolbar model persists rather
-  // than from the model: a profile only just loaded, as every Space on its
-  // Start Page is, has no model yet.
-  std::set<std::string> pinned;
-  for (const base::Value& entry : owner->GetPrefs()->GetList(extensions::pref_names::kPinnedExtensions)) {
-    if (const std::string* id = entry.GetIfString()) {
-      pinned.insert(*id);
-    }
-  }
+  // The pins are read, in the order the person left them, from the
+  // preference the toolbar model persists rather than from the model: a
+  // profile only just loaded, as every Space on its Start Page is, has no
+  // model yet.
+  const auto& pinned = owner->GetPrefs()->GetList(extensions::pref_names::kPinnedExtensions);
   if (pinned.empty()) {
     return list;
   }
   auto& state = For(profile, profile_id);
   const int tab = extensions::ExtensionAction::kDefaultTabId;
-  for (const auto& extension : registry->enabled_extensions()) {
-    if (!Listed(*extension) || !pinned.contains(extension->id()) || !RunsIn(profile, *extension)) {
+  std::set<std::string> listed;
+  for (const base::Value& entry : pinned) {
+    const std::string* id = entry.GetIfString();
+    const extensions::Extension* extension = id ? registry->enabled_extensions().GetByID(*id) : nullptr;
+    if (!extension || !listed.insert(*id).second || !Listed(*extension) || !RunsIn(profile, *extension)) {
       continue;
     }
     auto* action = actions->GetExtensionAction(*extension);
@@ -344,7 +346,8 @@ engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std
                                 .badge = action->GetDisplayBadgeText(tab),
                                 .icon = IconPNG(state.IconFor(*extension, action, tab)),
                                 .pinned = true,
-                                .enabled = action->action_type() != extensions::ActionInfo::Type::kPage});
+                                .enabled = action->action_type() != extensions::ActionInfo::Type::kPage,
+                                .has_popup = action->HasPopup(tab)});
   }
   return list;
 }
@@ -449,6 +452,36 @@ void EngineExtensions::Change(Profile* profile, const std::string& extension_id,
       return;
     }
   }
+}
+
+// Chromium keeps force-pinned actions after the others and never moves
+// them, and a pin a policy keeps is not in the preference to reorder.
+void EngineExtensions::MovePin(Profile* profile, const std::string& extension_id,
+                               const std::optional<std::string>& before) {
+  if (profile->IsOffTheRecord()) {
+    return;
+  }
+  auto* model = ToolbarActionsModel::Get(profile);
+  if (!model || !model->IsActionPinned(extension_id) || model->IsActionForcePinned(extension_id)) {
+    return;
+  }
+  const auto& pinned = model->pinned_action_ids();
+  const auto current = std::ranges::find(pinned, extension_id);
+  if (current == pinned.end()) {
+    return;
+  }
+  const size_t from = static_cast<size_t>(current - pinned.begin());
+  size_t to = pinned.size() - 1;
+  if (before) {
+    const auto target = std::ranges::find(pinned, *before);
+    if (target == pinned.end()) {
+      return;
+    }
+    // The index the moved action ends at: it leaves its own place first.
+    const size_t index = static_cast<size_t>(target - pinned.begin());
+    to = index > from ? index - 1 : index;
+  }
+  model->MovePinnedAction(extension_id, to);
 }
 
 // static

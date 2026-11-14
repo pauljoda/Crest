@@ -138,6 +138,9 @@ class EngineExtensions final {
   // Makes a change the core found the person may make. The engine's own
   // management policy still decides, and a change it refuses changes nothing.
   void Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change);
+  // Moves a pinned action to just before the pinned action `before`, or to
+  // the end with none, in the order every Space of the profile shows.
+  void MovePin(Profile* profile, const std::string& extension_id, const std::optional<std::string>& before);
   // Whether `extension` runs in `profile`: a private profile runs only the
   // extensions the person allowed in private browsing.
   static bool RunsIn(Profile* profile, const extensions::Extension& extension);
