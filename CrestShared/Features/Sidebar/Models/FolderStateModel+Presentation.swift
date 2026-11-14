@@ -7,4 +7,9 @@ extension FolderStateModel {
     var shownTitle: String {
         title.isEmpty ? String(localized: "Folder") : title
     }
+
+    /// Whether closing the folder keeps its loaded tabs on screen under its
+    /// header. A group's tabs are open tabs and nearly always loaded, so a
+    /// group closes to its header and the tab the window shows.
+    var keepsLoadedTabsWhenClosed: Bool { !isGroup }
 }

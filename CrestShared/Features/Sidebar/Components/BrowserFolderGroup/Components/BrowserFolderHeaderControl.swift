@@ -175,26 +175,6 @@ private struct BrowserFolderMenuButton: View {
     private var title: LocalizedStringKey { configuration.folder.isGroup ? "Group actions" : "Folder actions" }
 }
 
-/// A group's name: small, semibold and secondary, or in the group's color
-/// where the person asked for it.
-private struct BrowserGroupHeaderTitle: View {
-    let folder: FolderStateModel
-    let tintsTitle: Bool
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Text(folder.shownTitle)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(
-                tintsTitle
-                    ? folder.displayColor.folderTitleColor(onDarkBackground: colorScheme == .dark).color
-                    : .secondary
-            )
-            .lineLimit(1)
-    }
-}
-
 /// The folder's title, in its color where the person asked for it, and bold
 /// while the folder holds the shown tab where every folder stays visible. It
 /// reads the folder's tabs only for that emphasis, so the rest of the header

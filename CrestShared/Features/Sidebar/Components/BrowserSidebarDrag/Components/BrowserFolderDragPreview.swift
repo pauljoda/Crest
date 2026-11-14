@@ -31,17 +31,23 @@ struct BrowserFolderDragPreview: View {
         .clipShape(shape)
         .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(folder.title) folder")
+        .accessibilityLabel(folder.isGroup ? "\(folder.shownTitle) group" : "\(folder.title) folder")
         .modifier(SurfaceToneAppearance())
     }
 
+    /// A folder's header as the sidebar draws it: its artwork and title, or a
+    /// group's name alone.
     private func folderHeader(_ folder: FolderStateModel, depth: Int = 0) -> some View {
         HStack(spacing: CrestSpacing.small) {
-            let color = folder.displayColor
-            BrowserFolderArtwork(symbol: folder.displaySymbol, color: color, isExpanded: !folder.isCollapsed)
-                .foregroundStyle(color.color.opacity(0.86))
-                .frame(width: 20)
-            Text(folder.title).lineLimit(1)
+            if folder.isGroup {
+                BrowserGroupHeaderTitle(folder: folder, tintsTitle: BrowserDeviceAppearanceStore.shared.groupsTintTitle)
+            } else {
+                let color = folder.displayColor
+                BrowserFolderArtwork(symbol: folder.displaySymbol, color: color, isExpanded: !folder.isCollapsed)
+                    .foregroundStyle(color.color.opacity(0.86))
+                    .frame(width: 20)
+                Text(folder.title).lineLimit(1)
+            }
             Spacer(minLength: CrestSpacing.small)
         }
         .padding(.leading, CrestSpacing.medium + CGFloat(depth) * BrowserFolderLayout.nestingIndent)
