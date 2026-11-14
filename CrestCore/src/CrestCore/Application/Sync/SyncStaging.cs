@@ -71,7 +71,8 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     #region Variables
 
     /// The records the edit deleted on the person's behalf whatever its
-    /// reason, by record name: the groups that went with their last tab.
+    /// reason, by record name: the folders of the open tabs that went with
+    /// their last tab.
     public IReadOnlySet<string> Deleted { get; init; } = NoRecords;
 
     #endregion

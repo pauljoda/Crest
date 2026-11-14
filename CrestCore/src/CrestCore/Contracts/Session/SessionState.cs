@@ -188,34 +188,38 @@ public sealed record SessionState(
 
     #endregion
 
-    #region Actions - Groups
+    #region Actions - Folders
 
-    /// This session without the groups `previous` showed holding tabs that
-    /// hold none here: a group goes with its last tab, whether it closed, was
-    /// archived or moved out. A group that held no tabs before stays, since
-    /// its tabs may not have arrived from another device yet.
-    internal SessionState ClearingEmptiedGroups(SessionState previous) {
+    /// This session without the folders of the open tabs that `previous`
+    /// showed holding tabs and that hold none here, each with the empty
+    /// folders inside it: a folder of the open tabs, a group among them, goes
+    /// with its last tab, whether it closed, was archived or moved out. A saved
+    /// folder stays empty. A folder that held no tabs before stays, since its
+    /// tabs may not have arrived from another device yet.
+    internal SessionState ClearingEmptiedFolders(SessionState previous) {
         var cleared = false;
         var spaces = Spaces.Select(space => {
             if (previous.Space(space.Id) is not { } before || ReferenceEquals(space.Tabs, before.Tabs)
-                || !space.Folders.Any(folder => folder.IsGroup)) return space;
-            var held = before.Tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
-            var holding = space.Tabs.Select(tab => tab.FolderId).OfType<Guid>().ToHashSet();
-            var emptied = space.Folders.Where(folder => folder.IsGroup && held.Contains(folder.Id) && !holding.Contains(folder.Id))
-                .Select(folder => folder.Id).ToHashSet();
-            if (emptied.Count == 0) return space;
+                || !space.Folders.Any(folder => folder.GoesWhenEmptied)) return space;
+            var held = new FolderTree(before.Folders).Holding(before.Tabs);
+            var tree = new FolderTree(space.Folders);
+            var holding = tree.Holding(space.Tabs);
+            var removed = space.Folders.Where(folder => folder.GoesWhenEmptied && held.Contains(folder.Id) && !holding.Contains(folder.Id))
+                .SelectMany(folder => tree.Subtree(folder.Id)).ToHashSet();
+            if (removed.Count == 0) return space;
             cleared = true;
-            return space with { Folders = [.. space.Folders.Where(folder => !emptied.Contains(folder.Id))] };
+            return space with { Folders = [.. space.Folders.Where(folder => !removed.Contains(folder.Id))] };
         }).ToArray();
         return cleared ? this with { Spaces = spaces } : this;
     }
 
-    /// The groups `previous` held that this session holds no more, from Spaces
-    /// it still holds: emptied, deleted or ungrouped on the person's behalf. A
-    /// group that left with its Space keeps the reason the Space went for.
-    internal IReadOnlyList<Guid> GroupsRemovedSince(SessionState previous) {
+    /// The folders of the open tabs `previous` held that this session holds
+    /// no more, from Spaces it still holds: emptied, deleted or ungrouped on
+    /// the person's behalf. A folder that left with its Space keeps the reason
+    /// the Space went for.
+    internal IReadOnlyList<Guid> FoldersGoneSince(SessionState previous) {
         var gone = previous.Spaces.Where(before => Space(before.Id) is { } space && !ReferenceEquals(space.Folders, before.Folders))
-            .SelectMany(before => before.Folders.Where(folder => folder.IsGroup)).Select(folder => folder.Id).ToList();
+            .SelectMany(before => before.Folders.Where(folder => folder.GoesWhenEmptied)).Select(folder => folder.Id).ToList();
         if (gone.Count == 0) return [];
         var kept = Spaces.SelectMany(space => space.Folders).Select(folder => folder.Id).ToHashSet();
         return [.. gone.Where(id => !kept.Contains(id))];

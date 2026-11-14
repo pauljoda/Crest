@@ -5481,6 +5481,10 @@
     "import-tab-folder-section": {
       "category": "internal",
       "message": "A browser-data import refuses a tab filed in a folder of another section."
+    },
+    "open-folders-go-when-empty": {
+      "category": "improved",
+      "message": "A folder of open tabs now goes away when its last tab closes or moves out, as a group does. Saved folders stay when they empty."
     }
   }
 }

@@ -94,11 +94,11 @@ public sealed record NativeSyncSessionTransition {
             }
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
-        // A group whose last tab another device closed or moved out goes here
-        // too, for every device. One that held no tab here stays, since its
-        // tabs may not have arrived yet.
-        var settled = repaired.ClearingEmptiedGroups(local);
-        var emptied = settled.GroupsRemovedSince(repaired).Select(SyncRecordKind.Folder.RecordName)
+        // A folder of the open tabs whose last tab another device closed or
+        // moved out goes here too, for every device. One that held no tab here
+        // stays, since its tabs may not have arrived yet.
+        var settled = repaired.ClearingEmptiedFolders(local);
+        var emptied = settled.FoldersGoneSince(repaired).Select(SyncRecordKind.Folder.RecordName)
             .ToDictionary(name => name, _ => SyncDeletionReason.ExplicitDelete, StringComparer.Ordinal);
         repaired = settled;
         if (!replacing || removed || emptied.Count > 0)

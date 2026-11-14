@@ -7,8 +7,8 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// Groups: folders of open tabs that go with their last tab, and whose going
-/// syncs as a deletion so another device never brings them back.
+/// Groups, and every folder of the open tabs, go with their last tab, and
+/// their going syncs as a deletion so another device never brings them back.
 public sealed partial class BrowserContractsTests {
     /// The sync record of the folder `folder` names, or null when the journal holds none.
     private static JsonNode? FolderRecord(NativeSyncAuthority sync, Guid folder) => FolderRecord(sync.Snapshot, folder);
@@ -35,27 +35,29 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("explicitDelete", FolderRecord(sync, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
     }
 
+    /// A folder of the open tabs goes with its last tab, taking the empty
+    /// folders inside it, and its going syncs as a deletion; a saved folder
+    /// stays when it empties.
     [Fact]
-    public void AGroupGoesWhenItsLastTabMovesOutButAFolderStays() {
+    public void AnOpenFolderGoesWhenItsLastTabMovesOutButASavedFolderStays() {
         var f = new BatchSpace();
         using var device = new TestDevice(f.Session);
         var (core, sync) = (device.Authority, Syncing(device.Authority));
-        var folder = Guid.NewGuid();
-        device.Send(new CreateFolder(device.Workspace, f.Space, folder, TabPlacement.Current, null, "Plain",
-            FolderState.DefaultColor, "folder", [f.Last], LeavesSplits: false));
-        device.Send(new SetFolderGroup(device.Workspace, f.Space, f.OpenFolder, IsGroup: true));
+        var inner = Guid.NewGuid();
+        device.Send(new CreateFolder(device.Workspace, f.Space, inner, TabPlacement.Current, f.OpenFolder, "Inner",
+            FolderState.DefaultColor, "folder", [], LeavesSplits: false));
         sync.Flush();
 
         // A single move stages once edits pause, not with its save.
         device.Send(new MoveTab(device.Workspace, f.Space, f.Filed, TabPlacement.Pinned, null, null, LeavesSplit: false));
-        device.Send(new MoveTab(device.Workspace, f.Space, f.Last, TabPlacement.Current, null, null, LeavesSplit: false));
+        device.Send(new MoveTab(device.Workspace, f.Space, f.Saved, TabPlacement.Current, null, null, LeavesSplit: false));
         sync.Flush();
 
         var folders = core.Current.Spaces[0].Folders;
-        Assert.DoesNotContain(folders, held => held.Id == f.OpenFolder);
-        Assert.Contains(folders, held => held.Id == folder);
+        Assert.DoesNotContain(folders, held => held.Id == f.OpenFolder || held.Id == inner);
+        Assert.Contains(folders, held => held.Id == f.SavedFolder);
         Assert.Equal("explicitDelete", FolderRecord(sync, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
-        Assert.NotNull(FolderRecord(sync, folder)!["payload"]);
+        Assert.NotNull(FolderRecord(sync, f.SavedFolder)!["payload"]);
     }
 
     [Fact]

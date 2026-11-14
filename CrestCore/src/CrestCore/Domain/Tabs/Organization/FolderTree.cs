@@ -153,6 +153,19 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         return depth;
     }
 
+    /// The folders that hold one of `tabs` anywhere inside them.
+    public HashSet<Guid> Holding(IEnumerable<TabState> tabs) {
+        ArgumentNullException.ThrowIfNull(tabs);
+        HashSet<Guid> holding = [];
+        foreach (var tab in tabs) {
+            HashSet<Guid> seen = [];
+            for (var next = tab.FolderId; next is { } id && seen.Add(id) && byId.TryGetValue(id, out var folder);
+                next = folder.ParentId)
+                if (!holding.Add(id)) break;
+        }
+        return holding;
+    }
+
     /// The titles from the outermost folder down to `id`, joined as a path, as
     /// the palette names where a saved tab lives.
     public string PathTitle(Guid id) {

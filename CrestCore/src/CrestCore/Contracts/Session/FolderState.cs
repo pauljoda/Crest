@@ -8,7 +8,8 @@ namespace CrestCore.Contracts;
 /// <see cref="Symbol"/> and <see cref="Color"/> are null until someone chooses them.
 /// <see cref="OrderAnchorTabId"/> is the tab an empty folder keeps its place before.
 /// <see cref="IsGroup"/> marks a group: a single-level folder of open tabs that
-/// holds no folders, sits in no folder, and goes when its last tab leaves it.
+/// holds no folders and sits in no folder. A folder of the open tabs, a group
+/// among them, goes when its last tab leaves it; a saved folder stays empty.
 /// </summary>
 [Observed]
 public sealed record FolderState(
@@ -45,6 +46,10 @@ public sealed record FolderState(
     /// The color the folder is drawn in: the one chosen, or <see cref="DefaultColor"/>.
     [Resolved]
     public BrandColor DisplayColor => Color ?? DefaultColor;
+
+    /// Whether the folder goes when its last tab leaves it: a folder of the
+    /// open tabs does, and a saved folder stays empty.
+    internal bool GoesWhenEmptied => Location == TabPlacement.Current;
 
     #endregion
 
