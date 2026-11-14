@@ -8,14 +8,7 @@ extension FolderStateModel {
         title.isEmpty ? String(localized: "Folder") : title
     }
 
-    /// The prompt of the field that renames the folder.
-    var namePrompt: LocalizedStringKey { isGroup ? "Group Name" : "Folder Name" }
-
-    /// The title of the popover that chooses the folder's color.
-    var colorTitle: LocalizedStringKey { isGroup ? "Group Color" : "Folder Color" }
-
-    /// Whether closing the folder keeps its loaded tabs on screen under its
-    /// header. A group's tabs are open tabs and nearly always loaded, so a
-    /// group closes to its header and the tab the window shows.
-    var keepsLoadedTabsWhenClosed: Bool { !isGroup }
+    /// What the folder is, a folder or a group, which decides what the sidebar
+    /// draws and does differently for it.
+    var kind: BrowserFolderKind { isGroup ? .group : .folder }
 }

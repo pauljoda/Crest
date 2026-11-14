@@ -40,14 +40,14 @@ struct BrowserFolderOrganizationMenu: View {
             renameFolder: interaction.beginRenaming,
             changeColor: { interaction.isChoosingColor.wrappedValue = true },
             changeIcon: { interaction.isChoosingIcon.wrappedValue = true },
-            // A group's tabs stay where they are when it goes, so it needs no
-            // confirmation and is deleted at once.
+            // A folder that takes what it holds along asks first; a group's
+            // tabs stay where they are, so it goes at once.
             deleteFolder: {
-                if configuration.folder.isGroup {
+                if configuration.folder.kind.asksBeforeDeleting {
+                    interaction.isConfirmingDeletion.wrappedValue = true
+                } else {
                     configuration.browser.deleteFolder(
                         configuration.folder.id, matching: configuration.folderRuntimeAssignment.spaceAssignment)
-                } else {
-                    interaction.isConfirmingDeletion.wrappedValue = true
                 }
             })
     }

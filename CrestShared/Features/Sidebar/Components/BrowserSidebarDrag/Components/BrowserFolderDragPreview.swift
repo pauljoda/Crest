@@ -31,7 +31,7 @@ struct BrowserFolderDragPreview: View {
         .clipShape(shape)
         .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(folder.isGroup ? "\(folder.shownTitle) group" : "\(folder.title) folder")
+        .accessibilityLabel(folder.kind.spokenName(folder.shownTitle))
         .modifier(SurfaceToneAppearance())
     }
 
@@ -39,14 +39,15 @@ struct BrowserFolderDragPreview: View {
     /// group's name alone.
     private func folderHeader(_ folder: FolderStateModel, depth: Int = 0) -> some View {
         HStack(spacing: CrestSpacing.small) {
-            if folder.isGroup {
-                BrowserGroupHeaderTitle(folder: folder, tintsTitle: BrowserDeviceAppearanceStore.shared.groupsTintTitle)
-            } else {
+            if folder.kind.showsArtwork {
                 let color = folder.displayColor
                 BrowserFolderArtwork(symbol: folder.displaySymbol, color: color, isExpanded: !folder.isCollapsed)
                     .foregroundStyle(color.color.opacity(0.86))
                     .frame(width: 20)
                 Text(folder.title).lineLimit(1)
+            } else {
+                BrowserGroupHeaderTitle(
+                    folder: folder, tintsTitle: BrowserDeviceAppearanceStore.shared[keyPath: folder.kind.tintsTitle])
             }
             Spacer(minLength: CrestSpacing.small)
         }

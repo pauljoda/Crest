@@ -164,8 +164,7 @@ struct BrowserTabOrganizationMenuContent: View {
             }
             if let folderID = tab.folderID {
                 Button(
-                    context.space.folders.model(folderID)?.isGroup == true
-                        ? LocalizedStringKey("Remove from Group") : LocalizedStringKey("Remove from Folder"),
+                    (context.space.folders.model(folderID)?.kind ?? .folder).removeTitle,
                     systemImage: "folder.badge.minus"
                 ) {
                     performIfCurrent { removeFromFolder(folderID) }

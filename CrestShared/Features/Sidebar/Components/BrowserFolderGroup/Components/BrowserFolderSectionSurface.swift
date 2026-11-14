@@ -2,11 +2,11 @@ import SwiftUI
 
 /// One hover boundary for a folder's header and all of its visible contents,
 /// held the container padding in from every edge of the folder's surface. A
-/// Split View wears it too, with no folder of its own to be dropped into. A
-/// group follows the group appearance choices in place of the folder ones.
+/// Split View wears it too, with no folder of its own to be dropped into. It
+/// follows the appearance choices of the folder's kind.
 struct BrowserFolderSectionSurface: ViewModifier {
     let color: BrandColor
-    var isGroup = false
+    var kind = BrowserFolderKind.folder
     var intensity: Double = 0
     var textColorMode: SpaceTextColorMode = .automatic
     /// How many folders hold this one.
@@ -25,8 +25,8 @@ struct BrowserFolderSectionSurface: ViewModifier {
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
-    private var alwaysVisible: Bool { isGroup ? appearance.groupsAlwaysVisible : appearance.foldersAlwaysVisible }
-    private var showsBorders: Bool { isGroup ? appearance.groupsShowBorders : appearance.foldersShowBorders }
+    private var alwaysVisible: Bool { appearance[keyPath: kind.showsHighlights] }
+    private var showsBorders: Bool { appearance[keyPath: kind.showsBorders] }
 
     func body(content: Content) -> some View {
         content

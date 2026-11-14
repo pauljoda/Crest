@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// A folder's actions, and a group's: a group holds no folders and sits in
-/// none, so it offers neither, and moving it to the saved tabs makes it a
-/// folder there, which its menu item says.
+/// A folder's actions, and a group's, as the folder's kind words and offers
+/// them: a group holds no folders and sits in none, so it offers neither, and
+/// moving it to the saved tabs makes it a folder there, which its menu item
+/// says.
 struct BrowserFolderOrganizationMenuContent: View {
     let folder: FolderStateModel
     let context: BrowserSidebarListContext
@@ -27,10 +28,48 @@ struct BrowserFolderOrganizationMenuContent: View {
     private var browser: BrowserStore { context.browser }
 
     var body: some View {
-        if folder.isGroup {
-            groupActions
-        } else {
-            folderActions
+        let kind = folder.kind
+        if kind.holdsFolders {
+            Button("New Nested Folder", systemImage: "folder.badge.plus") {
+                performIfCurrent(createNestedFolder)
+            }
+            .disabled(!canCreateNestedFolder)
+        }
+        Button(kind.renameTitle, systemImage: "pencil") {
+            performIfCurrent(renameFolder)
+        }
+        if kind.showsArtwork {
+            Button("Folder Icon…", systemImage: "face.smiling") {
+                performIfCurrent(changeIcon)
+            }
+        }
+        Button(kind.colorMenuTitle, systemImage: "paintpalette") {
+            performIfCurrent(changeColor)
+        }
+        if folder.location == .current {
+            Button(kind.convertTitle, systemImage: kind.convertSymbol) {
+                performIfCurrent {
+                    browser.setSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: !folder.isGroup)
+                }
+            }
+            .disabled(
+                !isCurrentAndUnlocked
+                    || !browser.canSetSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: !folder.isGroup))
+        }
+
+        Button(
+            folder.location == .current ? kind.saveTitle : "Move to Current Tabs",
+            systemImage: folder.location == .current ? "bookmark" : "rectangle.stack"
+        ) {
+            performIfCurrent {
+                browser.moveFolder(
+                    folder.id, matching: assignment.spaceAssignment,
+                    to: folder.location == .current ? .saved : .current)
+            }
+        }
+
+        if kind.holdsFolders {
+            folderMoves
         }
         spaceActions
         if folder.location == .current {
@@ -42,70 +81,13 @@ struct BrowserFolderOrganizationMenuContent: View {
         }
 
         Divider()
-        if folder.isGroup {
-            Button("Ungroup", systemImage: "rectangle.stack.badge.minus") {
-                performIfCurrent(deleteFolder)
-            }
-        } else {
-            Button("Delete Folder", systemImage: "trash", role: .destructive) {
-                performIfCurrent(deleteFolder)
-            }
+        Button(kind.deleteTitle, systemImage: kind.deleteSymbol, role: kind.deleteRole) {
+            performIfCurrent(deleteFolder)
         }
     }
 
-    @ViewBuilder
-    private var groupActions: some View {
-        Button("Rename Group", systemImage: "pencil") {
-            performIfCurrent(renameFolder)
-        }
-        Button("Group Color…", systemImage: "paintpalette") {
-            performIfCurrent(changeColor)
-        }
-        Button("Convert to Folder", systemImage: "folder") {
-            performIfCurrent { browser.setSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: false) }
-        }
-        Button("Move to Saved Tabs as Folder", systemImage: "bookmark") {
-            performIfCurrent {
-                browser.moveFolder(folder.id, matching: assignment.spaceAssignment, to: .saved)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var folderActions: some View {
-        Button("New Nested Folder", systemImage: "folder.badge.plus") {
-            performIfCurrent(createNestedFolder)
-        }
-        .disabled(!canCreateNestedFolder)
-        Button("Rename Folder", systemImage: "pencil") {
-            performIfCurrent(renameFolder)
-        }
-        Button("Folder Icon…", systemImage: "face.smiling") {
-            performIfCurrent(changeIcon)
-        }
-        Button("Folder Color…", systemImage: "paintpalette") {
-            performIfCurrent(changeColor)
-        }
-        if folder.location == .current {
-            Button("Convert to Group", systemImage: "rectangle.stack") {
-                performIfCurrent { browser.setSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: true) }
-            }
-            .disabled(
-                !isCurrentAndUnlocked
-                    || !browser.canSetSessionFolderGroup(folder.id, in: assignment.spaceID, isGroup: true))
-        }
-
-        Button(
-            folder.location == .current ? "Move to Saved Tabs" : "Move to Current Tabs",
-            systemImage: folder.location == .current ? "bookmark" : "rectangle.stack"
-        ) {
-            performIfCurrent {
-                browser.moveFolder(
-                    folder.id, matching: assignment.spaceAssignment,
-                    to: folder.location == .current ? .saved : .current)
-            }
-        }
-
+    /// Moving the folder into another folder, or to the top level.
+    private var folderMoves: some View {
         Menu("Move to Folder", systemImage: "folder.badge.gearshape") {
             Group {
                 Button(

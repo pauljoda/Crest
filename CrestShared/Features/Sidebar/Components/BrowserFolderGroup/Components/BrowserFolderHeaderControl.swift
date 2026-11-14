@@ -15,13 +15,9 @@ struct BrowserFolderHeaderControl: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
     private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
-    private var showsTabCounts: Bool {
-        folder.isGroup ? appearance.groupsShowTabCounts : appearance.foldersShowTabCounts
-    }
-    private var alwaysVisible: Bool {
-        folder.isGroup ? appearance.groupsAlwaysVisible : appearance.foldersAlwaysVisible
-    }
-    private var tintsTitle: Bool { folder.isGroup ? appearance.groupsTintTitle : appearance.foldersTintTitle }
+    private var showsTabCounts: Bool { appearance[keyPath: folder.kind.showsTabCounts] }
+    private var alwaysVisible: Bool { appearance[keyPath: folder.kind.showsHighlights] }
+    private var tintsTitle: Bool { appearance[keyPath: folder.kind.tintsTitle] }
     private var textScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     private var isEditing: Bool {
@@ -33,7 +29,7 @@ struct BrowserFolderHeaderControl: View {
         Group {
             if isEditing {
                 HStack(spacing: BrowserFolderLayout.headerSpacing) {
-                    if !folder.isGroup {
+                    if folder.kind.showsArtwork {
                         BrowserFolderIcon(
                             folder: folder,
                             isExpanded: interaction.isExpanded.wrappedValue,
@@ -41,9 +37,9 @@ struct BrowserFolderHeaderControl: View {
                         )
                     }
 
-                    TextField(folder.namePrompt, text: interaction.draftTitle)
+                    TextField(folder.kind.namePrompt, text: interaction.draftTitle)
                         .textFieldStyle(.plain)
-                        .modifier(BrowserFolderNameFieldFont(isGroup: folder.isGroup))
+                        .modifier(BrowserFolderNameFieldFont(kind: folder.kind))
                         .focused(interaction.isTitleFocused)
                         .submitLabel(.done)
                         .onSubmit(interaction.commitTitle)
@@ -70,9 +66,7 @@ struct BrowserFolderHeaderControl: View {
                     interaction.toggleExpansion()
                 } label: {
                     HStack(spacing: BrowserFolderLayout.headerSpacing) {
-                        if folder.isGroup {
-                            BrowserGroupHeaderTitle(folder: folder, tintsTitle: tintsTitle)
-                        } else {
+                        if folder.kind.showsArtwork {
                             BrowserFolderIcon(
                                 folder: folder,
                                 isExpanded: interaction.isExpanded.wrappedValue,
@@ -84,6 +78,8 @@ struct BrowserFolderHeaderControl: View {
                                 emphasizesShownTab: alwaysVisible
                             )
                             .equatable()
+                        } else {
+                            BrowserGroupHeaderTitle(folder: folder, tintsTitle: tintsTitle)
                         }
 
                         Spacer(minLength: 8)
@@ -131,17 +127,10 @@ struct BrowserFolderHeaderControl: View {
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
     }
 
-    private var accessibilityLabel: LocalizedStringKey {
-        folder.isGroup ? "\(folder.shownTitle) group" : "\(folder.shownTitle) folder"
-    }
+    private var accessibilityLabel: LocalizedStringKey { folder.kind.spokenName(folder.shownTitle) }
 
     private var accessibilityHint: LocalizedStringKey {
-        switch (folder.isGroup, interaction.isExpanded.wrappedValue) {
-        case (true, true): "Collapses this group"
-        case (true, false): "Expands this group"
-        case (false, true): "Collapses this folder"
-        case (false, false): "Expands this folder"
-        }
+        folder.kind.disclosureHint(isExpanded: interaction.isExpanded.wrappedValue)
     }
 
     /// Whether the header offers its menu as a button: wherever the shell
@@ -186,7 +175,7 @@ private struct BrowserFolderMenuButton: View {
         .help(title)
     }
 
-    private var title: LocalizedStringKey { configuration.folder.isGroup ? "Group actions" : "Folder actions" }
+    private var title: LocalizedStringKey { configuration.folder.kind.actionsTitle }
 }
 
 /// The folder's title, in its color where the person asked for it, and bold
@@ -243,13 +232,13 @@ private struct BrowserFolderTabCount: View, Equatable {
 /// A group's name keeps its own size while it is renamed; a folder's takes the
 /// sidebar's.
 private struct BrowserFolderNameFieldFont: ViewModifier {
-    let isGroup: Bool
+    let kind: BrowserFolderKind
 
     func body(content: Content) -> some View {
-        if isGroup {
-            content.modifier(BrowserGroupNameFont())
-        } else {
+        if kind.showsArtwork {
             content
+        } else {
+            content.modifier(BrowserGroupNameFont())
         }
     }
 }
