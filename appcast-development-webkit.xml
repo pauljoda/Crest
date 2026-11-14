@@ -6,33 +6,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.41</title>
-            <pubDate>Sat, 14 Nov 2026 02:17:37 +0000</pubDate>
+            <title>0.9.44</title>
+            <pubDate>Sat, 14 Nov 2026 04:25:42 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1606</sparkle:version>
-            <sparkle:shortVersionString>0.9.41</sparkle:shortVersionString>
+            <sparkle:version>1607</sparkle:version>
+            <sparkle:shortVersionString>0.9.44</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- Turn off Keep saved tabs after unloading in Settings › Tabs and a saved tab you unload shows an X that deletes it. The X waits a moment after you unload the tab, and on iPhone and iPad it always shows rather than on hover. The setting appears in the Heraldic and Modern styles.
+- Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style.
 
-### Fixed
+### Improved
 
-- On Mac, a Quick Window's back and forward buttons draw in the Space's text color, so they stay visible over a dark Space in a light window, or a light Space in a dark one.
+- Tab size in Settings › Appearance is now a slider with nine steps, from Thin to Large, and a thin tab keeps its title readable while losing the room around it. The Space header grows and shrinks with your tabs.
+- On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/16ce607234935f1ec9289c656ec5c222574adf68...51e42cc735dd7a4a0307df6a9772516ffdb702e7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.41-2026-11-14-1606-r606.1/Installer-Crest-0.9.41-development-2026-11-14-51e42cc-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/51e42cc735dd7a4a0307df6a9772516ffdb702e7...049dc612e601a44ecb59e35f7d29d385f87fb04a) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.44-2026-11-14-1607-r607.1/Installer-Crest-0.9.44-development-2026-11-14-049dc61-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.41-2026-11-14-1606-r606.1/Installer-Crest-0.9.41-development-2026-11-14-51e42cc-arm64.dmg" length="220880517" type="application/octet-stream" sparkle:edSignature="kN+PpIgpvhrJe+MJsH9gPVqQnYMzbjTf8to1B+vk1nTPvrrUUGBjOQyHgZzs/eUi5+f1BKfrBtn92uOnrV9SDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.44-2026-11-14-1607-r607.1/Installer-Crest-0.9.44-development-2026-11-14-049dc61-arm64.dmg" length="220887173" type="application/octet-stream" sparkle:edSignature="M+Z5TpvspbZnbBjbAyZqPVkY3eIddBbSHv4Gj+D+P84hvEkVvNDkjqf9nexlSrtZe2wFa98mx9WI1sP0CX40Cg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +65,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: dNm667tMaz0AYuIYYT41jTrT+l88a3wGDmEGlcrL3yUdliagqAg1bkgWoLg1uxSzogb2mUaWmL5GTt7uf8rcAg==
-length: 4356
+edSignature: DT8rId/2zHO9bIiiwKwKDCj5P540uEVFsUOg5cRKSU0tfm6l+KLsjShN8b3SWLP2/Vg8bjQmGIlLOI2VWaAXDg==
+length: 4467
 -->
