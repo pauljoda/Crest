@@ -119,10 +119,14 @@ public sealed partial class BrowserTabCollection {
 
     /// Files `tabId`, a tab just opened from `origin`, at the end of the folder
     /// `origin` sits in, when it sits in one: among the open tabs for a folder
-    /// of the open tabs or a group, and saved with a saved folder.
-    public void JoinFolderOf(Guid origin, Guid tabId, DateTimeOffset now) {
+    /// of the open tabs or a group, and, when `savesInSavedFolder`, as for a
+    /// new tab the person asked for, saved with a saved folder. A tab opened
+    /// from a saved folder's tab otherwise stays among the open tabs.
+    public void JoinFolderOf(Guid origin, Guid tabId, DateTimeOffset now, bool savesInSavedFolder = false) {
         if (tabs.FirstOrDefault(tab => tab.Id == origin)?.FolderId is not { } folder || folders.All(f => f.Id != folder)) return;
-        FileTabs([tabId], KnownFolder(folder).Location, folder, now);
+        var location = KnownFolder(folder).Location;
+        if (location.IsDurable && !savesInSavedFolder) return;
+        FileTabs([tabId], location, folder, now);
     }
 
     public void FileTabs(IReadOnlyCollection<Guid> requested, TabPlacement location, Guid? folder,

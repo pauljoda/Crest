@@ -4,8 +4,8 @@ using CrestCore.Domain;
 namespace CrestCore.Contracts;
 
 /// Copies a tab into `Placement`'s section, or when null beside its source:
-/// at the end of the folder the source sits in, saved with a saved folder, or
-/// among the open tabs. Its identity is one the core gives it, published as
+/// at the end of the folder of the open tabs the source sits in, or among the
+/// open tabs. Its identity is one the core gives it, published as
 /// `TabCopied`. A copy of a web page starts from where the source's page is
 /// now. When `Shows`, the window that asked shows the copy and its Space.
 public sealed record DuplicateTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, TabPlacement? Placement, bool Shows)

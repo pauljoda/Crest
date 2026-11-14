@@ -5488,7 +5488,7 @@
     },
     "new-tabs-join-folder": {
       "category": "new",
-      "message": "A new tab opens in the group or folder of the tab you're on, at its end, whether you open it with New Tab, from a link or with Duplicate Tab. From a saved folder, the new tab is saved there."
+      "message": "A new tab opens in the group or folder of the tab you're on, at its end, whether you open it with New Tab, from a link or with Duplicate Tab. From a saved folder, New Tab is saved there, while links and copies open with your open tabs."
     },
     "removed-tab-stays-near": {
       "category": "improved",

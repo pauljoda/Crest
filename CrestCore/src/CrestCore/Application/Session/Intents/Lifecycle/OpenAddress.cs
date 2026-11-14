@@ -6,8 +6,9 @@ namespace CrestCore.Contracts;
 /// the window shows there takes the address, as `NavigateTab` gives one, and
 /// otherwise a new tab, `TabId`, opens it after the tab the window shows, or
 /// when `JoinsFolder`, as for a new tab the person opened from the palette, at
-/// the end of the folder that tab sits in. The window shows the tab either
-/// way. Refused as `NavigateTab` and `OpenTab` refuse.
+/// the end of the folder that tab sits in, saved with a saved folder. The
+/// window shows the tab either way. Refused as `NavigateTab` and `OpenTab`
+/// refuse.
 public sealed record OpenAddress(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, string Address, bool JoinsFolder = false)
     : SessionIntent(WorkspaceId) {
     #region Actions - Session
@@ -22,7 +23,7 @@ public sealed record OpenAddress(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
         if (shown is not { IsStartPage: true })
             return new OpenTab(WorkspaceId, WindowId, space.Id, TabId,
                 new TabContent(Address, View: null, Title: null), TabPlacement.Current, AfterTabId: shown?.Id,
-                Shows: true, JoinsFolder).Edit(workspace, turn);
+                Shows: true, JoinsFolder) { SavesInSavedFolder = true }.Edit(workspace, turn);
         // Navigating a tab always edits the session.
         var navigated = new NavigateTab(WorkspaceId, space.Id, shown.Id, Address).Edit(workspace, turn)!;
         followUp.ShowTab(space.Id, shown.Id).ShowSpace(space.Id);
