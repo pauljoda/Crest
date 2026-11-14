@@ -158,7 +158,12 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
     static let sidebarRevealDelayKey = "crest.appearance.sidebar-reveal-delay"
-    static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
+    static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-length"
+    /// Where Sidebar slide time was kept while every appearance save also
+    /// wrote its 240 ms default, so a stored 240 there says nothing about what
+    /// the person chose.
+    static let legacySidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
+    static let legacySidebarSlideDefault: Double = 240
     static let peekSizeKey = "crest.appearance.peek-size"
     static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
     static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
@@ -306,6 +311,11 @@ final class BrowserDeviceAppearanceStore {
     var tabScale: Double {
         didSet { saveSoon() }
     }
+    /// How much room the sidebar keeps between its rows, bars and sections,
+    /// stored by name.
+    var sidebarSpacing: BrowserSidebarSpacing {
+        didSet { saveSoon() }
+    }
     /// How many pins a row holds at most; zero balances the rows.
     var pinColumns: Int {
         didSet { saveSoon() }
@@ -369,6 +379,9 @@ final class BrowserDeviceAppearanceStore {
             ?? BrowserLookAndFeelDefaults.sidebarRevealDelay
         sidebarSlideDuration =
             chrome.object(forKey: Self.sidebarSlideDurationKey) as? Double
+            ?? (chrome.object(forKey: Self.legacySidebarSlideDurationKey) as? Double).flatMap {
+                $0 == Self.legacySidebarSlideDefault ? nil : $0
+            }
             ?? BrowserLookAndFeelDefaults.sidebarSlideDuration
         previewsTabsOnHover =
             defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover
@@ -437,8 +450,11 @@ final class BrowserDeviceAppearanceStore {
         rememberedLooks = Self.rememberedLooks(in: defaults)
         tabScale =
             (defaults.object(forKey: BrowserSidebarDensityPreference.scaleKey) as? Double).flatMap {
-                $0.isFinite ? $0 : nil
+                $0.isFinite ? BrowserSidebarDensity.stepped($0) : nil
             } ?? BrowserLookAndFeelDefaults.tabScale
+        sidebarSpacing =
+            BrowserSidebarSpacing.named(defaults.string(forKey: BrowserSidebarDensityPreference.spacingKey))
+            ?? BrowserLookAndFeelDefaults.sidebarSpacing
         pinColumns =
             defaults.object(forKey: BrowserSidebarDensityPreference.pinColumnsKey) as? Int
             ?? BrowserLookAndFeelDefaults.pinColumns
@@ -562,6 +578,7 @@ final class BrowserDeviceAppearanceStore {
         }
         write(looks as NSDictionary, forKey: Self.rememberedLooksKey, in: defaults)
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
+        write(sidebarSpacing.name, forKey: BrowserSidebarDensityPreference.spacingKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
         write(previewsTabsOnHover, forKey: Self.tabHoverPreviewKey, in: defaults)
         write(previewsFoldersOnHover, forKey: Self.folderHoverPreviewKey, in: defaults)

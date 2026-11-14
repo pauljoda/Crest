@@ -20,7 +20,6 @@ struct BrowserFolderSectionSurface: ViewModifier {
     private var isTargeted: Bool { folderID.map(reorder.isTargetedFolder) ?? false }
 
     @Environment(\.folderPreviewShowsHighlight) private var previewShowsHighlight
-    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
@@ -29,7 +28,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.top, BrowserSidebarMetrics.containerPadding)
-            .padding(.bottom, BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale))
+            .padding(.bottom, BrowserSidebarMetrics.containerBottomPadding)
             .contentShape(.rect)
             .modifier(
                 BrowserFolderHighlightSurface(

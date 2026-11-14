@@ -15,6 +15,7 @@ enum BrowserLookAndFeelDefaults {
     static let surfaceTone = CrestSurfaceTone.standard
     static let cornerRadius: Double = 10
     static let tabScale: Double = 1
+    static let sidebarSpacing = BrowserSidebarSpacing.standard
     static let pinColumns = 0
     static let pinsFillRow = false
     static let spaceIconSizing = BrowserSpaceIconSizing.standard
@@ -22,8 +23,9 @@ enum BrowserLookAndFeelDefaults {
     /// How long, in milliseconds, the pointer rests on the window's edge
     /// before a hidden sidebar shows.
     static let sidebarRevealDelay: Double = 200
-    /// How long, in milliseconds, the sidebar slides out over the page.
-    static let sidebarSlideDuration = CrestMotion.floatingPaneTransition * 1000
+    /// How long, in milliseconds, the sidebar slides out over the page: a
+    /// third quicker than the motion it is measured against.
+    static let sidebarSlideDuration: Double = 160
     /// A new device's tab appearance, made fresh each time so a reset never
     /// shares the one instance it puts back.
     @MainActor static var tabs: BrowserTabAppearance { BrowserTabAppearance() }
@@ -58,6 +60,7 @@ enum BrowserLookAndFeelDefaults {
         appearance.windowBorderWidth = windowBorderWidth
         appearance.sidebarOnRight = sidebarOnRight
         appearance.tabScale = tabScale
+        appearance.sidebarSpacing = sidebarSpacing
         appearance.pinColumns = pinColumns
         appearance.pinsFillRow = pinsFillRow
         appearance.foldersAlwaysVisible = foldersAlwaysVisible

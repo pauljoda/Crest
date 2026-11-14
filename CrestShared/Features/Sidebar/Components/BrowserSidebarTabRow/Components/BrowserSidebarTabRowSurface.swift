@@ -46,7 +46,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             )
             .padding(
                 .vertical,
-                BrowserSidebarDensity(tabScale).rowSeparation(
+                BrowserSidebarDensity.current.rowSeparation(
                     hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
             )
             .browserTabPromotionDestination(

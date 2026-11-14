@@ -85,7 +85,7 @@ struct BrowserPinnedTabReorderLayout: Equatable {
         let scale = appearance.tabScale
         value.tabScale = scale
         value.tileHeight = BrowserSidebarDensity(scale).pinHeight(touch: touch)
-        value.tileSpacing = BrowserSidebarDensity(scale).pinSpacing
+        value.tileSpacing = BrowserSidebarDensity(scale, spacing: appearance.sidebarSpacing).pinSpacing
         value.minimumTileWidth = BrowserSidebarDensity(scale).pinMinimumWidth(touch: touch)
         return value
     }

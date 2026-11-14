@@ -25,8 +25,7 @@ private struct BrowserFolderHeaderDensityLayout: ViewModifier {
     func body(content: Content) -> some View {
         let rowHeight = BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale)
             .rowHeight(base: CrestLayout.sidebarRowHeight, touch: !metrics.usesFixedRowHeight)
-        let height = BrowserFolderLayout.headerHeight(
-            rowHeight: rowHeight, tabScale: tabScale, minimum: metrics.iconWidth)
+        let height = BrowserFolderLayout.headerHeight(rowHeight: rowHeight, minimum: metrics.iconWidth)
         content.frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, leadingInset)
             .padding(.trailing, metrics.contentTrailingInset)

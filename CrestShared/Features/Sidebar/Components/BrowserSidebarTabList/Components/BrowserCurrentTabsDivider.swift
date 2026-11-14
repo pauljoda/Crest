@@ -32,7 +32,9 @@ struct BrowserCurrentTabsDivider: View {
                     line
                     clearButton
                 }
-                .padding(.vertical, metrics.dividerVerticalInset)
+                .padding(
+                    .vertical,
+                    BrowserDeviceAppearanceStore.shared.sidebarSpacing.gap(metrics.dividerVerticalInset))
             } else {
                 line
                     .overlay(alignment: .trailing) { clearButton }

@@ -18,7 +18,8 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
         look: .modern, spaceIcons: .icons,
         settings: [
             .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .sidebarRevealDelay,
-            .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale, .pinLayout,
+            .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale,
+            .sidebarSpacing, .pinLayout,
             .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .copyURLButton, .superCopy,
             .folderIconOnly, .folderTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview, .unloadedSavedTabs,
         ])
@@ -26,7 +27,7 @@ struct BrowserCustomizationStyle: Hashable, Sendable, Identifiable {
     /// The few choices most people make, with Space icons as dots.
     static let simple = BrowserCustomizationStyle(
         look: .simple, spaceIcons: .dots,
-        settings: [.sidebarOnRight, .appearanceMode, .defaultPageZoom, .tabScale, .appIcon])
+        settings: [.sidebarOnRight, .appearanceMode, .defaultPageZoom, .tabScale, .sidebarSpacing, .appIcon])
 
     static let all = [heraldic, modern, simple]
     static let standard = heraldic

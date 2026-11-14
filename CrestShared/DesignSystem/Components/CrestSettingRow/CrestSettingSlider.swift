@@ -23,6 +23,18 @@ struct CrestSettingSliderReadout: Sendable {
         }
     }
 
+    /// A percentage where some stops have names of their own, as the tab
+    /// size's Thin and Large do. A value within half a percent of a named
+    /// stop reads as its name.
+    static func percent(naming names: [Double: LocalizedStringResource]) -> Self {
+        CrestSettingSliderReadout { value in
+            if let name = names.first(where: { abs($0.key - value) < 0.005 })?.value {
+                return String(localized: name)
+            }
+            return value.formatted(.percent.precision(.fractionLength(0)))
+        }
+    }
+
     /// A point measurement.
     static let points = CrestSettingSliderReadout { String(localized: "\(Int($0.rounded())) pt") }
 

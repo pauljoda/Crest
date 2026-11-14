@@ -21,6 +21,8 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case defaultPageZoom
     case cornerRadius
     case tabScale
+    /// The room the sidebar keeps between its rows, bars and sections.
+    case sidebarSpacing
     case pinLayout
     case pinsFillRow
     case colorBorders

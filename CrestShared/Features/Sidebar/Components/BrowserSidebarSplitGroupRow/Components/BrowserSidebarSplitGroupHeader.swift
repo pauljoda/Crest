@@ -71,7 +71,7 @@ struct BrowserSidebarSplitGroupHeader: View {
         // The separation a tab row keeps, as a folder's header does.
         .padding(
             .vertical,
-            BrowserSidebarDensity(tabScale).rowSeparation(
+            BrowserSidebarDensity.current.rowSeparation(
                 hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
         )
         .contentShape(.rect)
@@ -118,7 +118,7 @@ struct BrowserSidebarSplitGroupHeader: View {
         CrestDisclosureIcon(isCollapsed: configuration.isCollapsed, glyphSize: chevronSize) {
             BrowserSidebarSplitGroupIcon(configuration: configuration)
         }
-        .frame(width: (headerMetrics.iconWidth + 6) * BrowserSidebarDensity(tabScale).scale)
+        .frame(width: (headerMetrics.iconWidth + 6) * BrowserSidebarDensity(tabScale).contentScale)
         .browserIconCustomizationPopover(
             BrowserIconCustomizationPresentation(
                 isPresented: interaction.isChoosingIcon,
@@ -135,7 +135,7 @@ struct BrowserSidebarSplitGroupHeader: View {
     /// A collapsed split's chevron, sized to sit in the column the stacked
     /// icons fill.
     private var chevronSize: CGFloat {
-        configuration.metrics.headerGlyphSize * 0.75 * BrowserSidebarDensity(tabScale).scale
+        configuration.metrics.headerGlyphSize * 0.75 * BrowserSidebarDensity(tabScale).contentScale
     }
 
     /// The group's actions, the same ones its context menu holds.
@@ -198,7 +198,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
     /// How large each card of the stack draws: a member favicon's size, at
     /// the sidebar's density.
     private var glyphSize: CGFloat {
-        configuration.metrics.headerGlyphSize * BrowserSidebarDensity(tabScale).scale
+        configuration.metrics.headerGlyphSize * BrowserSidebarDensity(tabScale).contentScale
     }
 
     var body: some View {
