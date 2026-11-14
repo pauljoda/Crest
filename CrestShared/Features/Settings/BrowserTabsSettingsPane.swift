@@ -31,10 +31,10 @@ struct BrowserNewTabSettingsSection: View {
 
     var body: some View {
         Section {
-            Toggle(
-                "Switch to tabs opened from links",
-                isOn: preferences.binding(.focusesNewTabs, reading: \.focusesNewTabs)
-            )
+            Toggle(isOn: preferences.binding(.focusesNewTabs, reading: \.focusesNewTabs)) {
+                Text("Switch to tabs opened from links")
+                Text("Hold Shift as you open a link to do the opposite.")
+            }
             .accessibilityIdentifier(Self.controlIdentifier)
 
             Toggle(
@@ -44,8 +44,6 @@ struct BrowserNewTabSettingsSection: View {
             .accessibilityIdentifier("follow-tabs-moved-to-another-space-toggle")
         } header: {
             Text("New tabs")
-        } footer: {
-            CrestFormFootnote("Hold Shift as you open a link to do the opposite.")
         }
     }
 }
