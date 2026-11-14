@@ -30,8 +30,9 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
         if (type == SyncPayloadType.Tab) prepared = ReadTab(value);
         else if (type == SyncPayloadType.Folder) {
             prepared = Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeFolder(value)), value);
-            // The stored folder keeps no emptied mark, which only the journal holds.
-            if (value[SyncPayload.Key.EmptiedAt] is { } emptied) prepared[SyncPayload.Key.EmptiedAt] = emptied.DeepClone();
+            // The stored folder keeps no emptied or held date, which only the journal holds.
+            foreach (var key in new[] { SyncPayload.Key.EmptiedAt, SyncPayload.Key.HeldAt })
+                if (value[key] is { } date) prepared[key] = date.DeepClone();
         } else if (type == SyncPayloadType.Archive) {
             prepared[StoredSessionCodec.Key.Tab] = ReadTab(value[StoredSessionCodec.Key.Tab]!.AsObject());
             prepared[StoredSessionCodec.Key.Reason] =

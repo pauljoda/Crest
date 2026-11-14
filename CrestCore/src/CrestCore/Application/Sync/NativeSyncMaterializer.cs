@@ -18,7 +18,7 @@ public static class NativeSyncMaterializer {
     internal static SessionState Materialize(SessionState session, SyncPreferences policy, IReadOnlyList<SyncSessionRecord> records,
         DateTimeOffset now, SpaceAccessAuthority? access) {
         var owners = records.Where(record => record.Kind == SyncRecordKind.Folder).ToDictionary(record => record.Id, record => record.SpaceId);
-        var emptied = records.Where(record => record.Payload is FolderPayload { EmptiedAt: not null }).Select(record => record.Id).ToHashSet();
+        var emptied = records.Where(record => record.Payload is FolderPayload { IsEmptied: true }).Select(record => record.Id).ToHashSet();
         var deletedAt = records.Where(record => record.Kind == SyncRecordKind.Folder && record.Tombstone is not null)
             .ToDictionary(record => record.Id, record => record.Tombstone!.DeletedAt.Moment);
         var deleted = deletedAt.Keys.ToHashSet();

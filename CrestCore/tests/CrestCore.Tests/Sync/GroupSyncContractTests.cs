@@ -46,7 +46,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(Name(SyncRecordKind.Tab, filed), device.Journal.Pending);
 
         var here = SpaceIn(device.Merge(Pending(emptying)), space)!;
-        Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+        Assert.False(Marked(device.Journal.Value(SyncRecordKind.Folder, group)));
         Assert.Contains(Name(SyncRecordKind.Folder, group), device.Journal.Pending);
         emptying.Merge(Pending(device.Journal));
         var there = SpaceIn(emptying.Materialize(emptied), space)!;
@@ -81,7 +81,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(group, StoredSessionCodec.DecodeFolder(Assert.Single(arrived["folders"]!.AsArray())!).Id);
         Assert.Contains(arrived["tabs"]!.AsArray(), tab => StoredSessionCodec.Identity(tab!["id"]) == filed
             && StoredSessionCodec.Identity(tab["folderID"]) == group);
-        Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+        Assert.False(Marked(device.Journal.Value(SyncRecordKind.Folder, group)));
     }
 
     /// A plain folder of the open tabs that one device empties stays out of
@@ -272,7 +272,7 @@ public sealed partial class BrowserContractsTests {
 
         foreach (var (side, device) in new[] { ("in use", inUse), ("swept", sweeping) }) {
             AssertGroupHolds(side, SpaceIn(device.Session, space)!, group, [first, second]);
-            Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
+            Assert.False(Marked(device.Journal.Value(SyncRecordKind.Folder, group)));
         }
     }
 
@@ -327,6 +327,80 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(SpaceIn(showing.Session, space)!["tabs"]!.AsArray(),
             tab => StoredSessionCodec.Identity(tab!["id"]) == page && StoredSessionCodec.Identity(tab["folderID"]) == folder);
         Assert.NotNull(showing.Journal.Value(SyncRecordKind.Folder, folder)!["emptiedAt"]);
+    }
+
+    /// One device empties a plain folder while another collapses it, and the
+    /// collapse wins the folder's record. The folder stays out of sight on
+    /// both, whichever arrives first, since when it emptied merges on its own,
+    /// and the collapse is kept too.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AFolderEmptiedWhileAnotherDeviceCollapsesItStaysOutOfSight(bool emptyingArrivesFirst) {
+        var (space, folder, held, loose) = (Fixed(1_460), Fixed(1_461), Fixed(1_462), Fixed(1_463));
+        var start = PlainSession(space, folder, held, loose);
+        var merged = CloudHolding(start, 1_464);
+        using var emptying = new SyncingDevice(start, merged(1_465));
+        using var collapsing = new SyncingDevice(start, ClockAhead(merged(1_466), by: 100));
+
+        emptying.Edit(workspace => new MoveTab(workspace, space, held, TabPlacement.Current, null, null, LeavesSplit: false));
+        collapsing.Edit(workspace => new CollapseFolder(workspace, space, folder, Collapsed: true));
+        var (fromEmptying, fromCollapsing) = (Pending(emptying.Journal).ToArray(), Pending(collapsing.Journal).ToArray());
+        emptying.MarkUploaded();
+        collapsing.MarkUploaded();
+        if (emptyingArrivesFirst) {
+            collapsing.Merge(fromEmptying);
+            emptying.Merge(fromCollapsing);
+        } else {
+            emptying.Merge(fromCollapsing);
+            collapsing.Merge(fromEmptying);
+        }
+        Settle(emptying, collapsing);
+
+        foreach (var device in new[] { emptying, collapsing }) {
+            Assert.Empty(SpaceIn(device.Session, space)!["folders"]!.AsArray());
+            var record = device.Journal.Value(SyncRecordKind.Folder, folder)!;
+            Assert.True(Marked(record));
+            Assert.True(record["isCollapsed"]!.GetValue<bool>());
+        }
+    }
+
+    /// One device empties a plain folder while another renames it, and the
+    /// rename wins the folder's record. The folder stays out of sight on both,
+    /// named as renamed, until a device that still showed it files a tab in
+    /// it, which brings it back on both.
+    [Fact]
+    public void AFolderEmptiedWhileAnotherDeviceRenamesItComesBackWithAFiledTab() {
+        var (space, folder, held, loose) = (Fixed(1_470), Fixed(1_471), Fixed(1_472), Fixed(1_473));
+        var start = PlainSession(space, folder, held, loose);
+        var merged = CloudHolding(start, 1_474);
+        using var emptying = new SyncingDevice(start, merged(1_475));
+        using var renaming = new SyncingDevice(start, ClockAhead(merged(1_476), by: 100));
+        using var filing = new SyncingDevice(start, merged(1_477));
+
+        emptying.Edit(workspace => new MoveTab(workspace, space, held, TabPlacement.Current, null, null, LeavesSplit: false));
+        renaming.Edit(workspace => new RenameFolder(workspace, space, folder, "Lisbon"));
+        Settle(emptying, renaming);
+        foreach (var device in new[] { emptying, renaming }) {
+            Assert.Empty(SpaceIn(device.Session, space)!["folders"]!.AsArray());
+            var record = device.Journal.Value(SyncRecordKind.Folder, folder)!;
+            Assert.True(Marked(record));
+            Assert.Equal("Lisbon", record["title"]!.GetValue<string>());
+        }
+
+        filing.Edit(workspace => new MoveTab(workspace, space, loose, TabPlacement.Current, folder, null, LeavesSplit: false));
+        var filed = Pending(filing.Journal).Where(record => RecordName(record["id"]!) == Name(SyncRecordKind.Tab, loose)).ToArray();
+        emptying.Merge(filed);
+        renaming.Merge(filed);
+        Settle(emptying, renaming);
+
+        foreach (var device in new[] { emptying, renaming }) {
+            var shown = SpaceIn(device.Session, space)!;
+            Assert.Equal("Lisbon", StoredSessionCodec.DecodeFolder(Assert.Single(shown["folders"]!.AsArray())!).Title);
+            Assert.Contains(shown["tabs"]!.AsArray(),
+                tab => StoredSessionCodec.Identity(tab!["id"]) == loose && StoredSessionCodec.Identity(tab["folderID"]) == folder);
+            Assert.False(Marked(device.Journal.Value(SyncRecordKind.Folder, folder)));
+        }
     }
 
     /// One device closes the last tab it knows of in a Group while another has
@@ -447,6 +521,20 @@ public sealed partial class BrowserContractsTests {
         Assert.True(folders.Any(folder => folder.Id == group && folder.IsGroup), "The Group is gone. " + Seen());
         Assert.True(tabs.All(tab => held.Contains((tab, group))), "A tab is missing from the Group. " + Seen());
     }
+
+    /// A Space holding the plain folder of the open tabs `folder` with `held`
+    /// in it, `loose` beside it and a pinned tab.
+    private static JsonObject PlainSession(Guid space, Guid folder, Guid held, Guid loose) =>
+        SessionOf(SpaceOf(space, Fixed(1_398), "Trip", "airplane", folders: [FolderOf(folder, "Trip", location: "current")], tabs: [
+            TabOf(Fixed(1_397), "Pinned", "https://example.com/pinned", placement: "pinned", activated: 500),
+            TabOf(held, "Inside", "https://example.com/inside", folder: folder, activated: 500),
+            TabOf(loose, "Loose", "https://example.com/loose", activated: 500)
+        ]));
+
+    /// Whether a folder's record `value` stands emptied: dated emptied later
+    /// than any device last held a tab in it.
+    private static bool Marked(JsonNode? value) => value?["emptiedAt"] is { } emptied
+        && (value["heldAt"] is not { } held || emptied.GetValue<double>() > held.GetValue<double>());
 
     /// The records `journal` waits to upload.
     private static IEnumerable<JsonObject> Pending(JournalUnderTest journal) {

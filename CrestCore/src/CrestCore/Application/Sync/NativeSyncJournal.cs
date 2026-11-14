@@ -132,7 +132,7 @@ public sealed class NativeSyncJournal {
         IReadOnlySet<string>? emptied = null) {
         var draft = new Draft(this);
         var desired = draft.Desired(payloads, cleaning);
-        KeepMarks(desired, draft.Records);
+        CarryMarks(desired, draft.Records, now);
         // Parent evidence is from the accepted journal before staging.
         var accepted = records.Values.Select(r => new SyncJournalRecord(r)).ToArray();
         var spaces = accepted.Where(r => r.KindName == SyncRecordKind.Space.Name).Select(r => r.SpaceId).ToHashSet();
@@ -226,16 +226,20 @@ public sealed class NativeSyncJournal {
         return draft.Finish();
     }
 
-    /// Keeps the emptied mark on each folder `desired` writes that holds no tab
-    /// that syncs, though this device shows it for a tab of its own, such as a
-    /// Start Page, so every other device goes on leaving it out. `held` are
-    /// the records the journal holds.
-    private void KeepMarks(Dictionary<string, JsonObject> desired, IReadOnlyDictionary<string, JsonObject> held) {
-        static JsonNode? Mark(JsonObject? record) =>
-            record is null || new SyncJournalRecord(record).Payload is not { } payload ? null : SyncPayload.ValueOf(payload)[SyncPayload.Key.EmptiedAt];
-        var marked = desired.Where(item => SyncPayloadType.Of(item.Value) == SyncPayloadType.Folder && Mark(held.GetValueOrDefault(item.Key)) is not null)
-            .Select(item => item.Key).ToArray();
-        if (marked.Length == 0) return;
+    /// Carries each folder's emptied and held dates from the record it
+    /// replaces into the copy `desired` writes, since the session keeps
+    /// neither. A folder that stands emptied while it holds a tab that syncs is
+    /// held again as of `now`, so it shows on every device. One this device
+    /// shows only for a tab of its own that never syncs, such as a Start Page,
+    /// stays emptied, so every other device goes on leaving it out. `held` are
+    /// the records the journal holds; `now` is in seconds since 2001.
+    private void CarryMarks(Dictionary<string, JsonObject> desired, IReadOnlyDictionary<string, JsonObject> held, double now) {
+        static FolderPayload? Recorded(JsonObject? record) => record is not null && new SyncJournalRecord(record).Payload is { } payload
+            && SyncPayloadType.Of(payload) == SyncPayloadType.Folder ? (FolderPayload)SyncPayload.Decode(payload, SyncPayloadForm.Journal) : null;
+        var dated = desired.Where(item => SyncPayloadType.Of(item.Value) == SyncPayloadType.Folder)
+            .Select(item => (Name: item.Key, Recorded: Recorded(held.GetValueOrDefault(item.Key))))
+            .Where(item => item.Recorded is { EmptiedAt: not null } or { HeldAt: not null }).ToArray();
+        if (dated.Length == 0) return;
         var parents = desired.Values.Where(payload => SyncPayloadType.Of(payload) == SyncPayloadType.Folder).Select(SyncPayload.ValueOf)
             .ToDictionary(value => Id(value[StoredSessionCodec.Key.Id]), value => SyncPayloadType.Folder.ParentFolder(value) is { } parent ? Id(parent) : (Guid?)null);
         HashSet<Guid> holding = [];
@@ -245,11 +249,15 @@ public sealed class NativeSyncJournal {
             for (var next = type.ParentFolder(value) is { } folder ? Id(folder) : (Guid?)null; next is { } id && holding.Add(id);
                 next = parents.GetValueOrDefault(id)) { }
         }
-        foreach (var name in marked) {
-            if (holding.Contains(Id(SyncPayload.ValueOf(desired[name])[StoredSessionCodec.Key.Id]))) continue;
-            var kept = desired[name].DeepClone().AsObject();
-            SyncPayload.ValueOf(kept)[SyncPayload.Key.EmptiedAt] = Mark(held[name])!.DeepClone();
-            desired[name] = kept;
+        foreach (var (name, recorded) in dated) {
+            var heldAt = recorded!.HeldAt;
+            if (recorded.IsEmptied && holding.Contains(recorded.Id))
+                heldAt = new(Math.Max(now, recorded.EmptiedAt!.Value.ReferenceSeconds + 0.001));
+            var carried = desired[name].DeepClone().AsObject();
+            var value = SyncPayload.ValueOf(carried);
+            if (recorded.EmptiedAt is { } emptied) value[SyncPayload.Key.EmptiedAt] = SyncPayloadForm.Journal.Seconds(emptied);
+            if (heldAt is { } heldTime) value[SyncPayload.Key.HeldAt] = SyncPayloadForm.Journal.Seconds(heldTime);
+            desired[name] = carried;
         }
     }
 

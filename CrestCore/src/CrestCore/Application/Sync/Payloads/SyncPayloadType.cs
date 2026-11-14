@@ -204,19 +204,28 @@ internal abstract class SyncPayloadType {
 
         public override JsonNode? ParentFolder(JsonObject value) => value[StoredSessionCodec.Key.ParentId];
 
-        public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) =>
+        /// A folder merges its disclosure field by field, and when it emptied
+        /// and when a device last held a tab in it each to the later side,
+        /// whichever copy wins, so a rename or a collapse made elsewhere at the
+        /// same time never drops either.
+        public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
             LatestFields(result, first, second, StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.IsCollapsed);
+            LatestFields(result, first, second, SyncPayload.Key.EmptiedAt);
+            LatestFields(result, first, second, SyncPayload.Key.HeldAt);
+        }
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
             SyncDeletionReason removal) => removal.ForStructure;
 
         /// A folder keeps its record when an edit empties it: the record is
-        /// marked, and every device shows the folder again once a tab sits in
-        /// it. A record marked already stays as it is.
+        /// dated emptied, after any time a device held a tab in it, and every
+        /// device shows the folder again once a tab sits in it. A record that
+        /// stands emptied already stays as it is.
         public override JsonObject? Emptied(JsonObject payload, double now) {
             var folder = (FolderPayload)SyncPayload.Decode(payload, SyncPayloadForm.Journal);
-            return folder.EmptiedAt is not null ? payload
-                : NativeSyncCompatibility.Preserve((folder with { EmptiedAt = new(now) }).Encode(SyncPayloadForm.Journal), payload);
+            if (folder.IsEmptied) return payload;
+            var emptied = Math.Max(now, (folder.HeldAt?.ReferenceSeconds ?? double.MinValue) + 0.001);
+            return NativeSyncCompatibility.Preserve((folder with { EmptiedAt = new(emptied) }).Encode(SyncPayloadForm.Journal), payload);
         }
 
         public override bool HidesWhenEmpty(JsonObject value) =>
