@@ -35,6 +35,19 @@ struct BrowserTabBatchActions {
         return browser.performPageDismissal(of: assignments) { send(batch, for: request) }
     }
 
+    /// Performs an action that makes a folder, and answers the folder the core
+    /// made, so the sidebar can open its name for editing. A folder action
+    /// leaves every page where it is, so it asks nobody to leave one; a
+    /// refusal is shown in the selection's message, as `perform` shows it.
+    func performCreatingFolder(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) -> UUID? {
+        do {
+            return try browser.send(batch, for: request)
+        } catch {
+            browser.tabMultiSelection.message = error.placementExplanation
+            return nil
+        }
+    }
+
     private func send(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) -> Bool {
         do {
             try browser.send(batch, for: request)
