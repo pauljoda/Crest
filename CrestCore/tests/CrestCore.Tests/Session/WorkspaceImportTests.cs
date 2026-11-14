@@ -145,6 +145,43 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(TabPlacement.Pinned, alone.Tabs[0].Placement);
     }
 
+    /// Spaces that shared a session but were not side by side where they came
+    /// from, as Arc lists them, come in gathered behind the first of them, and
+    /// every tab still says which imported Space and tab it came from, in the
+    /// preview and the import alike.
+    [Fact]
+    public void SpacesThatSharedASessionApartComeInGatheredWithEachTabsOwnOrigin() {
+        var session = SavedSession().Document["session"]!;
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var work = ImportedSpace("Work", ImportedTab("https://work.example/"));
+        var client = ImportedSpace("Client", ImportedTab("https://client.example/"));
+        var personal = ImportedSpace("Personal", ImportedTab("https://personal.example/one"),
+            ImportedTab("https://personal.example/two"), ImportedTab("https://personal.example/three"));
+        var school = ImportedSpace("School", ImportedTab("https://school.example/"));
+        foreach (var joined in new[] { client, school }) {
+            joined["primarySpaceID"] = work["id"]!.DeepClone();
+            joined["sharedProfileID"] = work["profile"]!["id"]!.DeepClone();
+            joined["membershipModifiedAt"] = 800000000.0;
+        }
+        JsonObject[] brought = [work, client, personal, school];
+        Reviewing(device, brought);
+        device.Send(new BeginImportCommit());
+        var intent = new ImportReviewedSpaces(device.Workspace, window);
+
+        var preview = device.Query(new ImportPreview(intent));
+        var changes = device.Send(intent);
+
+        var current = device.Authority.Current;
+        Assert.Equal(["Work", "Client", "School", "Personal"], current.Spaces.Select(space => space.Settings.Name));
+        Assert.Equal(current.Spaces.Select(space => space.Settings.Name), preview.Session.Spaces.Select(space => space.Settings.Name));
+        var origins = brought.SelectMany((space, index) => space["tabs"]!.AsArray().Select(tab => new ImportedTab(TabId(tab!), index, TabId(tab!))))
+            .ToHashSet();
+        Assert.Equal(origins, changes.OfType<TabsImported>().Single().Tabs.ToHashSet());
+        Assert.Equal(origins, preview.Imported.ToHashSet());
+        Assert.Equal((SpaceId(work), (Guid?)TabId(personal["tabs"]![0]!)), (device.Space(window), device.Tab(window, SpaceId(personal))));
+    }
+
     /// When the review brings one of the Spaces that shared a session where
     /// they came from into an existing Space, the others join that Space's
     /// group, which stays as it was: they browse with its session, take its

@@ -59,16 +59,15 @@ final class BrowserCredentialSpaceStore {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            let loadedDescriptors = try await browser.savedCredentialDescriptors(in: spaceID)
-            let loadedUnreadableCount = try await browser.unreadableCredentialCount(in: spaceID)
+            let inventory = try await browser.savedCredentialInventory(in: spaceID)
             guard !Task.isCancelled,
                 unlockedSpace(spaceID, accessController: accessController) != nil
             else {
                 clearSensitiveData()
                 return
             }
-            descriptors = loadedDescriptors
-            unreadableCount = loadedUnreadableCount
+            descriptors = inventory.descriptors
+            unreadableCount = inventory.unreadableCount
         } catch {
             guard !Task.isCancelled,
                 unlockedSpace(spaceID, accessController: accessController) != nil

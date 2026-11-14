@@ -1,19 +1,22 @@
 import SwiftUI
 
-/// The look the Spaces setup makes wear: Crest's own banners and crests, or
-/// a modern gradient and icon, each shown as a sidebar. Choosing one restyles
-/// the stage and every preview from here on.
+/// The look the Spaces setup makes wear: Crest's own banners and crests, a
+/// modern gradient and icon, or a simple tinted sidebar with dots for Spaces,
+/// each shown as a window. Choosing one restyles the stage and every preview
+/// from here on, and gives Crest's customization that style.
 struct BrowserOnboardingLookPage: View {
     let look: SetupLook
     let choose: (SetupLook) -> Void
     let back: BrowserOnboardingBackAction
     let continueSetup: () -> Void
 
-    /// The size each window takes: half the stage less the gap, no taller
-    /// than the stage leaves under the name.
+    /// The size each window takes: an equal share of the stage less the gaps,
+    /// no taller than the stage leaves under the name.
     private func cardSize(in stage: CGSize) -> CGSize {
+        let count = CGFloat(SetupLook.all.count)
         let width = min(
-            (stage.width - BrowserOnboardingLookMetrics.spacing) / 2, BrowserOnboardingLookMetrics.maximumWidth)
+            (stage.width - BrowserOnboardingLookMetrics.spacing * (count - 1)) / count,
+            BrowserOnboardingLookMetrics.maximumWidth)
         let height = min(width * 0.82, stage.height - 70)
         return CGSize(width: min(width, height / 0.82), height: height)
     }
@@ -50,23 +53,36 @@ private struct BrowserOnboardingLookCard: View {
     let size: CGSize
     let select: () -> Void
 
+    /// How far the window is drawn down from the size it is measured at, so
+    /// a narrow card shows the whole window rather than a cut of it.
+    private var scale: CGFloat {
+        min(1, size.width / BrowserOnboardingLookMetrics.windowWidth)
+    }
+
     var body: some View {
         VStack(spacing: 18) {
             Button(action: select) {
-                BrowserOnboardingWindowPreview(
-                    branding: look.previewBranding, symbol: look.previewSymbol, name: String(localized: "Personal")
-                ) {
-                    EmptyView()
-                }
-                .frame(width: size.width, height: size.height)
-                .overlay {
-                    RoundedRectangle(
-                        cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous
-                    )
-                    .strokeBorder(isSelected ? CrestBrandPalette.butter : .clear, lineWidth: 4)
-                }
-                .contentShape(
-                    .rect(cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous))
+                Color.clear
+                    .frame(width: size.width, height: size.height)
+                    .overlay {
+                        BrowserOnboardingWindowPreview(
+                            branding: look.previewBranding, symbol: look.previewSymbol,
+                            name: String(localized: "Personal"),
+                            spaceIcons: BrowserCustomizationStyle.matching(look).spaceIcons, companionLook: look
+                        ) {
+                            EmptyView()
+                        }
+                        .frame(width: size.width / scale, height: size.height / scale)
+                        .scaleEffect(scale)
+                    }
+                    .overlay {
+                        RoundedRectangle(
+                            cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous
+                        )
+                        .strokeBorder(isSelected ? CrestBrandPalette.butter : .clear, lineWidth: 4)
+                    }
+                    .contentShape(
+                        .rect(cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(look.title))
@@ -92,6 +108,8 @@ private struct BrowserOnboardingLookCard: View {
 #endif
 
 enum BrowserOnboardingLookMetrics {
-    static let spacing: CGFloat = 60
+    static let spacing: CGFloat = 44
     static let maximumWidth: CGFloat = 720
+    /// The width a look's window is measured at before it is drawn down.
+    static let windowWidth: CGFloat = 620
 }

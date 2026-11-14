@@ -4,14 +4,17 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// What a person chose for a split, as a Crest browser-data file keeps it.
+/// What a person chose for a split, as a Crest browser-data file keeps it. A
+/// file from before splits collapsed reads as an expanded split.
 internal sealed record BrowserDataSplit(Guid Id, string? CustomTitle, DateTimeOffset? TitleModifiedAt, string? CustomIconSymbol,
-    DateTimeOffset? IconModifiedAt, BrandColor? Tint, DateTimeOffset? TintModifiedAt) {
+    DateTimeOffset? IconModifiedAt, BrandColor? Tint, DateTimeOffset? TintModifiedAt, bool IsCollapsed,
+    DateTimeOffset? CollapseModifiedAt) {
     #region Actions - Reading
 
     public static BrowserDataSplit Read(BrowserDataValue value) => new(value.Identity("id"), value.OptionalText("customTitle"),
         value.OptionalDate("titleModifiedAt"), value.OptionalText("customIconSymbol"), value.OptionalDate("iconModifiedAt"),
-        value.OptionalColor("tint"), value.OptionalDate("tintModifiedAt"));
+        value.OptionalColor("tint"), value.OptionalDate("tintModifiedAt"), value.OptionalFlag("isCollapsed") ?? false,
+        value.OptionalDate("collapseModifiedAt"));
 
     /// The split a Space keeps, with its new identity: a blank title is none,
     /// the icon is spelled as an emoji icon, and each edit time is whole
@@ -26,7 +29,7 @@ internal sealed record BrowserDataSplit(Guid Id, string? CustomTitle, DateTimeOf
         }
         string? title = string.IsNullOrWhiteSpace(CustomTitle) ? null : CustomTitle.Trim();
         return new(id, title, WholeMilliseconds(TitleModifiedAt), icon, WholeMilliseconds(IconModifiedAt), Tint,
-            WholeMilliseconds(TintModifiedAt));
+            WholeMilliseconds(TintModifiedAt), IsCollapsed, WholeMilliseconds(CollapseModifiedAt));
     }
 
     private static DateTimeOffset? WholeMilliseconds(DateTimeOffset? date) =>
@@ -40,7 +43,7 @@ internal sealed record BrowserDataSplit(Guid Id, string? CustomTitle, DateTimeOf
     public static BrowserDataSplit From(SplitGroupState split) {
         ArgumentNullException.ThrowIfNull(split);
         return new(split.Id, split.CustomTitle, split.TitleModifiedAt, split.CustomIconSymbol, split.IconModifiedAt, split.Tint,
-            split.TintModifiedAt);
+            split.TintModifiedAt, split.IsCollapsed, split.CollapseModifiedAt);
     }
 
     public JsonObject Write() {
@@ -51,6 +54,8 @@ internal sealed record BrowserDataSplit(Guid Id, string? CustomTitle, DateTimeOf
         if (IconModifiedAt is { } icon) value["iconModifiedAt"] = ImportDate.UnixMilliseconds(icon);
         if (Tint is { } tint) value["tint"] = BrowserDataFile.Color(tint);
         if (TintModifiedAt is { } tinted) value["tintModifiedAt"] = ImportDate.UnixMilliseconds(tinted);
+        if (IsCollapsed) value["isCollapsed"] = true;
+        if (CollapseModifiedAt is { } collapsed) value["collapseModifiedAt"] = ImportDate.UnixMilliseconds(collapsed);
         return value;
     }
 

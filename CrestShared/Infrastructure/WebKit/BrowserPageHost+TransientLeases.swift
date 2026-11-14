@@ -6,11 +6,13 @@ import WebKit
 extension BrowserPageHost {
     /// A lease on a page the core opens in `space` for a transient request
     /// presenting as `presentation`, which loads `url` and rebuilds its page
-    /// from `makePage` after memory pressure. Only the first page replays
-    /// `engineNavigation`. Nil when the core refuses the page.
+    /// from `makePage` after memory pressure, blocking as `contentBlockingPolicy`
+    /// says. Only the first page replays `engineNavigation`. Nil when the core
+    /// refuses the page.
     func makeTransientPageLease(
         url: URL, in space: SpaceModel, presentation: TransientPresentation,
-        engineNavigation: BrowserEngineNavigation?, balancedContentRuleLists: [WKContentRuleList],
+        engineNavigation: BrowserEngineNavigation?, contentBlockingPolicy: ContentBlockingPolicy,
+        balancedContentRuleLists: [WKContentRuleList],
         onUserActivity: @escaping () -> Void, onDownloadOnlyNavigation: (() -> Void)?,
         makePage: @escaping @MainActor () -> BrowserPlatformPage?
     ) -> BrowserPlatformTransientPageLease? {
@@ -22,7 +24,7 @@ extension BrowserPageHost {
             return nil
         }
         let lease = BrowserPlatformTransientPageLease(
-            page: initialPage, url: url, contentBlockingPolicy: space.settings.browsingPreferences.contentBlocking,
+            page: initialPage, url: url, contentBlockingPolicy: contentBlockingPolicy,
             balancedContentRuleLists: balancedContentRuleLists, rebuild: makePage, userActivity: onUserActivity,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation)
         keep(lease)

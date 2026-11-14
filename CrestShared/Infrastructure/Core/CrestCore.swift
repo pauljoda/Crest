@@ -150,6 +150,8 @@ final class CrestCore {
         guard installed == CREST_OK else { Self.buildBug(installed, "set its wake callback") }
         state.enginePreferences = try query(GetEnginePreferences())
         state.agentPreferences = try query(GetAgentPreferences())
+        state.filterLists = try query(GetFilterLists())
+        state.blockingSites = try query(GetSiteContentBlocking())
     }
 
     deinit {

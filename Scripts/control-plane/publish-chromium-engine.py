@@ -61,7 +61,8 @@ def publish(args):
     for path in overlay.rglob("*"):
         if path.is_file() and (source / path.relative_to(overlay)).read_bytes() != path.read_bytes():
             raise SystemExit(f"The checkout's overlay differs from the branch: {path.relative_to(overlay)}")
-    headers = [repo / "CrestEngines/Chromium/Apple/CrestChromiumHost.h"]
+    headers = [repo / "CrestEngines/Chromium/Apple/CrestChromiumHost.h",
+               repo / "CrestCore/native/ContentFilter/include/crest_content_filter.h"]
     headers += [repo / "CrestContracts/include" / name for name in
                 ("crest_core.h", "crest_app.h", "crest_engine.h", "crest_engine_contract.h")]
     for header in headers:
@@ -74,6 +75,9 @@ def publish(args):
         raise SystemExit("The engine build is not current; run build-chromium-baseline.py first")
 
     browser = source / args.output / "Chromium.app"
+    helpers = browser.glob("Contents/Frameworks/*.framework/Versions/*/Helpers/*.app")
+    if unknown := chromium_engine.unknown_engine_helpers(helpers):
+        raise SystemExit(f"Unknown engine helpers {unknown}: add each to ENGINE_HELPER_KINDS in chromium_engine.py")
     existing = subprocess.run(["gh", "release", "view", tag, "--repo", args.repository, "--json", "assets,isDraft,body"],
                               capture_output=True, text=True)
     release = json.loads(existing.stdout) if existing.returncode == 0 else None

@@ -86,6 +86,24 @@ extension BrowserPage {
         credentialSession.receive(scriptMessage, in: webView)
     }
 
+    /// Answers the cosmetic bridge of this page's web view, or hands a
+    /// popup's message, which arrives through its opener's controller, to the
+    /// popup's own page.
+    func receiveCosmeticFilterMessage(_ scriptMessage: WKScriptMessage) {
+        guard let webView = webKitView else { return }
+        if let source = scriptMessage.webView, source !== webView {
+            webKitEnginePage?.binding?.page(showing: source)?.host?
+                .receiveCosmeticFilterMessage(scriptMessage)
+            return
+        }
+        let session =
+            cosmeticFilters
+            ?? BrowserCosmeticFilterSession(
+                webView: webView, core: downloadCenter.core, spaceID: spaceID, picker: elementPicker)
+        cosmeticFilters = session
+        session.receive(scriptMessage)
+    }
+
     /// Records the link the person just right-clicked, moments before WebKit
     /// hands AppKit the menu that right-click opens.
     func receiveLinkContextMessage(_ scriptMessage: WKScriptMessage) {

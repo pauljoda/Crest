@@ -11,6 +11,10 @@ struct BrowserEngineSettingsPane: View {
     @State private var failure: String?
 
     private var preferences: EnginePreferences { core.state.enginePreferences }
+    /// The website rules by site name.
+    private var rules: [SiteEngineRule] {
+        preferences.rules.sorted { $0.origin.displayName < $1.origin.displayName }
+    }
     private var availableEngines: [EngineKind] { core.state.engines?.engines.map(\.kind) ?? [] }
     private var defaultEngine: EngineKind {
         core.state.engines?.engines.first(where: \.isDefault)?.kind ?? BrowserEngineRegistration.current.kind
@@ -44,8 +48,7 @@ struct BrowserEngineSettingsPane: View {
                     Text("No website rules")
                         .foregroundStyle(.secondary)
                 }
-                ForEach(preferences.rules.sorted { $0.origin.displayName < $1.origin.displayName }, id: \.origin) {
-                    rule in
+                CrestFormRows(rules, id: \.origin) { rule in
                     HStack {
                         Button {
                             editing = BrowserEngineRuleDraft(rule: rule)

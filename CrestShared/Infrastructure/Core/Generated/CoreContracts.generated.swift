@@ -131,6 +131,7 @@ enum Change: Equatable, Sendable {
     case cloudMergeBegan(CloudMergeBegan)
     case cloudSyncAdvanced(CloudSyncAdvanced)
     case cloudTransportChanged(CloudTransportChanged)
+    case contentRuleListsChanged(ContentRuleListsChanged)
     case dataDeleted(DataDeleted)
     case downloadApprovalAsked(DownloadApprovalAsked)
     case downloadDestinationAsked(DownloadDestinationAsked)
@@ -141,6 +142,7 @@ enum Change: Equatable, Sendable {
     case enginesChanged(EnginesChanged)
     case extensionInstallAsked(ExtensionInstallAsked)
     case extensionInstallChanged(ExtensionInstallChanged)
+    case filterListsChanged(FilterListsChanged)
     case foldersChanged(FoldersChanged)
     case historyChanged(HistoryChanged)
     case installedExtensionsChanged(InstalledExtensionsChanged)
@@ -166,6 +168,7 @@ enum Change: Equatable, Sendable {
     case setupFlowChanged(SetupFlowChanged)
     case shortcutsChanged(ShortcutsChanged)
     case sidebarChanged(SidebarChanged)
+    case siteContentBlockingChanged(SiteContentBlockingChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
@@ -217,8 +220,11 @@ enum Rejection: Equatable, Error, Sendable {
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
     case closePreparationUnderway(ClosePreparationUnderway)
+    case contentRuleListUnavailable(ContentRuleListUnavailable)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
     case currentTabsOnly(CurrentTabsOnly)
+    case customFilterListLimitReached(CustomFilterListLimitReached)
+    case customFiltersTooLarge(CustomFiltersTooLarge)
     case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
     case downloadLimitReached(DownloadLimitReached)
     case duplicateCredential(DuplicateCredential)
@@ -227,11 +233,13 @@ enum Rejection: Equatable, Error, Sendable {
     case duplicatePage(DuplicatePage)
     case duplicateSearchEngineName(DuplicateSearchEngineName)
     case duplicateSearchShortcut(DuplicateSearchShortcut)
+    case elementSelectorInvalid(ElementSelectorInvalid)
     case engineAlreadyRegistered(EngineAlreadyRegistered)
     case engineLacksCapability(EngineLacksCapability)
     case engineNotRegistered(EngineNotRegistered)
     case extensionNotChangeable(ExtensionNotChangeable)
     case fileUnreadable(FileUnreadable)
+    case filterListAddressInvalid(FilterListAddressInvalid)
     case folderAlreadyExists(FolderAlreadyExists)
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
@@ -299,6 +307,7 @@ enum Rejection: Equatable, Error, Sendable {
     case pinsOneTabAtATime(PinsOneTabAtATime)
     case primaryCannotJoin(PrimaryCannotJoin)
     case primaryCannotSeparate(PrimaryCannotSeparate)
+    case privateSpaceCannotLock(PrivateSpaceCannotLock)
     case privateSpaceCannotShare(PrivateSpaceCannotShare)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case profileInUse(ProfileInUse)
@@ -408,6 +417,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .pinsOneTabAtATime(let value): value.message
         case .primaryCannotJoin(let value): value.message
         case .primaryCannotSeparate(let value): value.message
+        case .privateSpaceCannotLock(let value): value.message
         case .privateSpaceCannotShare(let value): value.message
         case .profileInUse(let value): value.message
         case .saveFailed(let value): value.message
@@ -577,6 +587,7 @@ extension Change {
         case .cloudMergeBegan(let change): change.apply(to: state)
         case .cloudSyncAdvanced(let change): change.apply(to: state)
         case .cloudTransportChanged(let change): change.apply(to: state)
+        case .contentRuleListsChanged(let change): change.apply(to: state)
         case .dataDeleted(let change): change.apply(to: state)
         case .downloadApprovalAsked(let change): change.apply(to: state)
         case .downloadDestinationAsked(let change): change.apply(to: state)
@@ -587,6 +598,7 @@ extension Change {
         case .enginesChanged(let change): change.apply(to: state)
         case .extensionInstallAsked(let change): change.apply(to: state)
         case .extensionInstallChanged(let change): change.apply(to: state)
+        case .filterListsChanged(let change): change.apply(to: state)
         case .foldersChanged(let change): change.apply(to: state)
         case .historyChanged(let change): change.apply(to: state)
         case .installedExtensionsChanged(let change): change.apply(to: state)
@@ -612,6 +624,7 @@ extension Change {
         case .setupFlowChanged(let change): change.apply(to: state)
         case .shortcutsChanged(let change): change.apply(to: state)
         case .sidebarChanged(let change): change.apply(to: state)
+        case .siteContentBlockingChanged(let change): change.apply(to: state)
         case .sitePermissionsChanged(let change): change.apply(to: state)
         case .spaceLockChanged(let change): change.apply(to: state)
         case .spaceSettingsChanged(let change): change.apply(to: state)
@@ -652,6 +665,7 @@ extension Change {
         case .cloudMergeBegan(let change): change.apply(to: core, in: &batch)
         case .cloudSyncAdvanced(let change): change.apply(to: core, in: &batch)
         case .cloudTransportChanged(let change): change.apply(to: core, in: &batch)
+        case .contentRuleListsChanged(let change): change.apply(to: core, in: &batch)
         case .dataDeleted(let change): change.apply(to: core, in: &batch)
         case .downloadApprovalAsked(let change): change.apply(to: core, in: &batch)
         case .downloadDestinationAsked(let change): change.apply(to: core, in: &batch)
@@ -662,6 +676,7 @@ extension Change {
         case .enginesChanged(let change): change.apply(to: core, in: &batch)
         case .extensionInstallAsked(let change): change.apply(to: core, in: &batch)
         case .extensionInstallChanged(let change): change.apply(to: core, in: &batch)
+        case .filterListsChanged(let change): change.apply(to: core, in: &batch)
         case .foldersChanged(let change): change.apply(to: core, in: &batch)
         case .historyChanged(let change): change.apply(to: core, in: &batch)
         case .installedExtensionsChanged(let change): change.apply(to: core, in: &batch)
@@ -687,6 +702,7 @@ extension Change {
         case .setupFlowChanged(let change): change.apply(to: core, in: &batch)
         case .shortcutsChanged(let change): change.apply(to: core, in: &batch)
         case .sidebarChanged(let change): change.apply(to: core, in: &batch)
+        case .siteContentBlockingChanged(let change): change.apply(to: core, in: &batch)
         case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
         case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
         case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
@@ -727,6 +743,7 @@ extension Change {
         case .cloudMergeBegan(let change): change.note(in: &receipts)
         case .cloudSyncAdvanced(let change): change.note(in: &receipts)
         case .cloudTransportChanged(let change): change.note(in: &receipts)
+        case .contentRuleListsChanged(let change): change.note(in: &receipts)
         case .dataDeleted(let change): change.note(in: &receipts)
         case .downloadApprovalAsked(let change): change.note(in: &receipts)
         case .downloadDestinationAsked(let change): change.note(in: &receipts)
@@ -737,6 +754,7 @@ extension Change {
         case .enginesChanged(let change): change.note(in: &receipts)
         case .extensionInstallAsked(let change): change.note(in: &receipts)
         case .extensionInstallChanged(let change): change.note(in: &receipts)
+        case .filterListsChanged(let change): change.note(in: &receipts)
         case .foldersChanged(let change): change.note(in: &receipts)
         case .historyChanged(let change): change.note(in: &receipts)
         case .installedExtensionsChanged(let change): change.note(in: &receipts)
@@ -762,6 +780,7 @@ extension Change {
         case .setupFlowChanged(let change): change.note(in: &receipts)
         case .shortcutsChanged(let change): change.note(in: &receipts)
         case .sidebarChanged(let change): change.note(in: &receipts)
+        case .siteContentBlockingChanged(let change): change.note(in: &receipts)
         case .sitePermissionsChanged(let change): change.note(in: &receipts)
         case .spaceLockChanged(let change): change.note(in: &receipts)
         case .spaceSettingsChanged(let change): change.note(in: &receipts)
@@ -813,6 +832,11 @@ struct AddContentScript: PageRequest, Equatable, Sendable {
     let pageID: UUID
     let source: String
     let mainFrameOnly: Bool
+}
+
+struct AddCustomFilterList: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
+    let url: String
 }
 
 struct AddLinkRoute: Intent, LinkIntent, Equatable, Sendable {
@@ -1095,6 +1119,8 @@ struct AppConfiguration: Equatable, Sendable {
     let storageDirectory: String?
     let platform: DevicePlatform
     let importNames: [ImportSpaceNames]?
+    let languages: [String]?
+    let filterResourcesURL: String?
 }
 
 struct AppPreferences: Equatable, Sendable {
@@ -1107,6 +1133,7 @@ struct AppPreferences: Equatable, Sendable {
         automaticallyEntersPictureInPicture: true,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
+        unloadedSavedTabsStay: true,
         splitFocusFollowsMouse: false,
         automaticallyShowsDeveloperToolbar: true,
         showsRecentTabs: true,
@@ -1144,6 +1171,7 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyEntersPictureInPicture: Bool
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
+    var unloadedSavedTabsStay: Bool
     var splitFocusFollowsMouse: Bool
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
@@ -1301,11 +1329,6 @@ struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
 
-struct BalancedProtectionRules: Query, Equatable, Sendable {
-    typealias Answer = ContentRuleList
-
-}
-
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let proceeds: Bool
@@ -1350,6 +1373,11 @@ struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
 
 struct BlockAutomaticDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
+}
+
+struct BlockElement: Intent, Equatable, Sendable {
+    let pageURL: String
+    let selector: String
 }
 
 struct BlockedPopupPageState: Equatable, Sendable {
@@ -1852,6 +1880,13 @@ struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let collapsed: Bool
 }
 
+struct CollapseSplit: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let isCollapsed: Bool
+}
+
 struct ColorPalette: Equatable, Sendable {
     var colors: [BrandColor]
 }
@@ -1859,6 +1894,13 @@ struct ColorPalette: Equatable, Sendable {
 struct ConfigureCloudSync: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let isEnabled: Bool
     let canReachCloud: Bool
+}
+
+struct ContentBlockingApplies: Query, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let spaceID: UUID
+    let origin: SiteOrigin?
 }
 
 struct ContentFrame: Equatable, Sendable, Identifiable {
@@ -1886,6 +1928,29 @@ struct ContentRuleList: Equatable, Sendable {
     let source: String
 }
 
+struct ContentRuleListSet: Equatable, Sendable {
+    let identifiers: [String]
+}
+
+struct ContentRuleListSource: Query, Equatable, Sendable {
+    typealias Answer = ContentRuleList
+
+    let identifier: String
+}
+
+struct ContentRuleListUnavailable: Equatable, Sendable {
+    let identifier: String
+}
+
+struct ContentRuleLists: Query, Equatable, Sendable {
+    typealias Answer = ContentRuleListSet
+
+}
+
+struct ContentRuleListsChanged: CoreChange, Equatable, Sendable {
+    let lists: ContentRuleListSet
+}
+
 struct ContentScriptEvaluated: Equatable, Sendable {
     let pageID: UUID
     let evaluationID: UUID
@@ -1893,6 +1958,15 @@ struct ContentScriptEvaluated: Equatable, Sendable {
 }
 
 struct ContinueImport: Intent, SetupFlowIntent, Equatable, Sendable {
+}
+
+struct CosmeticFilters: Equatable, Sendable {
+    static let none = CosmeticFilters(blocks: false, style: "", procedural: [], collapse: [])
+
+    let blocks: Bool
+    let style: String
+    let procedural: [String]
+    let collapse: [String]
 }
 
 struct CreateFolder: Intent, SessionIntent, Equatable, Sendable {
@@ -2124,6 +2198,28 @@ struct CurrentTabsOnly: Equatable, Sendable {
     }
 }
 
+struct CustomFilterList: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let url: String
+    let isOn: Bool
+}
+
+struct CustomFilterListLimitReached: Equatable, Sendable {
+    let limit: Int
+}
+
+struct CustomFilterListState: Equatable, Sendable {
+    let list: CustomFilterList
+    let title: String
+    let updatedAt: Date?
+    let isFailing: Bool
+    let isTooLarge: Bool
+}
+
+struct CustomFiltersTooLarge: Equatable, Sendable {
+    let limitBytes: Int
+}
+
 struct CustomSearchProvider: Equatable, Sendable, Identifiable {
     static let maximumNameLength: Int = 64
     static let maximumShortcutLength: Int = 32
@@ -2185,6 +2281,13 @@ struct DeleteBrowsingData: Intent, DataDeletionIntent, Equatable, Sendable {
 
 struct DeleteFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
+struct DeleteFolderAndContents: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
     let spaceID: UUID
     let folderID: UUID
 }
@@ -2261,6 +2364,18 @@ struct DockMenuSpace: Equatable, Sendable {
     let look: SpaceBranding
     let isShown: Bool
     let isLocked: Bool
+}
+
+struct DocumentCosmetics: Query, Equatable, Sendable {
+    typealias Answer = CosmeticFilters
+
+    let spaceID: UUID
+    let siteURL: String
+    let documentURL: String
+    let first: Bool
+    let classes: [String]
+    let ids: [String]
+    let resources: [PageResource]
 }
 
 struct DownloadApprovalAsked: CoreChange, Equatable, Sendable {
@@ -2463,6 +2578,11 @@ struct DropTargets: Query, Equatable, Sendable {
     let selection: TabSelection
 }
 
+struct DueFilterDownloads: Query, Equatable, Sendable {
+    typealias Answer = [FilterDownload]
+
+}
+
 struct DuplicateCredential: Equatable, Sendable {
 }
 
@@ -2519,6 +2639,10 @@ struct EditLinkRoute: Intent, LinkIntent, Equatable, Sendable {
     let match: LinkRouteMatch?
     let pattern: String?
     let destinationSpaceID: UUID?
+}
+
+struct ElementSelectorInvalid: Equatable, Sendable {
+    let selector: String
 }
 
 struct EndAgentSession: Intent, AgentIntent, Equatable, Sendable {
@@ -2937,6 +3061,55 @@ struct FileUnreadable: Equatable, Sendable {
     }
 }
 
+struct FilterDownload: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let url: String
+    let entityTag: String?
+    let lastModified: String?
+}
+
+struct FilterDownloadFailed: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
+}
+
+struct FilterDownloadFetched: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
+    let text: String
+    let entityTag: String?
+    let lastModified: String?
+}
+
+struct FilterDownloadNotModified: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
+}
+
+struct FilterDownloadTooLarge: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
+}
+
+struct FilterListAddressInvalid: Equatable, Sendable {
+    let url: String
+}
+
+struct FilterListState: Equatable, Sendable {
+    let list: FilterList
+    let isOn: Bool
+    let updatedAt: Date?
+    let isFailing: Bool
+}
+
+struct FilterLists: Equatable, Sendable {
+    let level: ContentBlockingLevel
+    let isCustomized: Bool
+    let lists: [FilterListState]
+    let customLists: [CustomFilterListState]
+    let customFilters: String
+}
+
+struct FilterListsChanged: CoreChange, Equatable, Sendable {
+    let lists: FilterLists
+}
+
 struct FindChromiumBrowsers: Query, Equatable, Sendable {
     typealias Answer = [ImportFoundBrowser]
 
@@ -3121,6 +3294,16 @@ struct GetAgentPreferences: Query, Equatable, Sendable {
 
 struct GetEnginePreferences: Query, Equatable, Sendable {
     typealias Answer = EnginePreferences
+
+}
+
+struct GetFilterLists: Query, Equatable, Sendable {
+    typealias Answer = FilterLists
+
+}
+
+struct GetSiteContentBlocking: Query, Equatable, Sendable {
+    typealias Answer = [SiteContentBlocking]
 
 }
 
@@ -3796,6 +3979,7 @@ struct LinkPreferences: Equatable, Sendable {
     let dimsPageBehindPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
+    let cleansCopiedLinks: Bool
     let routes: [LinkRoute]
     let rememberedSites: [RememberedSite]
 }
@@ -3818,6 +4002,12 @@ struct LinkRouteExists: Equatable, Sendable {
 
 struct LinkRoutesFull: Equatable, Sendable {
     let maximum: Int
+}
+
+struct LinkToCopy: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let url: String
 }
 
 struct ListDropTarget: Equatable, Sendable {
@@ -3964,6 +4154,14 @@ struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let parentID: UUID?
     let beforeFolderID: UUID?
     let beforeTabID: UUID?
+}
+
+struct MoveFolderToSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let destinationSpaceID: UUID
 }
 
 struct MoveLinkRoute: Intent, LinkIntent, Equatable, Sendable {
@@ -4337,6 +4535,19 @@ struct PageArea: Equatable, Sendable {
     var height: Double
 }
 
+struct PageBlocksContent: EngineQuestion, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let url: String
+}
+
+struct PageBlocksElements: Query, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageURL: String
+}
+
 struct PageCaptured: Equatable, Sendable {
     let pageID: UUID
     let captureID: UUID
@@ -4466,6 +4677,13 @@ struct PageIconChanged: EngineEvent, PageEvent, Equatable, Sendable {
 
 struct PageIconImage: Equatable, Sendable {
     let image: Data?
+}
+
+struct PageInjectedScript: EngineQuestion, Equatable, Sendable {
+    typealias Answer = String
+
+    let pageID: UUID
+    let url: String
 }
 
 struct PageInputDelivered: Equatable, Sendable {
@@ -4620,6 +4838,11 @@ struct PageRendererGone: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct PageResource: Equatable, Sendable {
+    var kind: PageResourceKind
+    var url: String
+}
+
 struct PageRestoreState: Equatable, Sendable {
     var url: String
     var state: Data
@@ -4630,6 +4853,13 @@ struct PageScriptEvaluated: Equatable, Sendable {
     let evaluationID: UUID
     let json: String?
     let error: String?
+}
+
+struct PageScriptlets: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let spaceID: UUID
+    let url: String
 }
 
 struct PageSecurityFacts: Equatable, Sendable {
@@ -5041,6 +5271,14 @@ struct PrimaryCannotSeparate: Equatable, Sendable {
     }
 }
 
+struct PrivateSpaceCannotLock: Equatable, Sendable {
+    let workspaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Private windows can't be locked.")
+    }
+}
+
 struct PrivateSpaceCannotShare: Equatable, Sendable {
     let workspaceID: UUID
 
@@ -5211,6 +5449,9 @@ struct RecoveryCheckpointUnusable: Equatable, Sendable {
     let reason: StorageFailure
 }
 
+struct RefreshFilterLists: Intent, Equatable, Sendable {
+}
+
 struct RefreshPageIcon: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -5257,6 +5498,10 @@ struct RememberWindowsForLaunch: Intent, WindowIntent, Equatable, Sendable {
 struct RememberedSite: Equatable, Sendable {
     let site: String
     let spaceID: UUID
+}
+
+struct RemoveCustomFilterList: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
 }
 
 struct RemoveDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -5412,6 +5657,12 @@ struct RestoreInteractionState: PageRequest, Equatable, Sendable {
     let expectedURL: String
 }
 
+struct RestoreLook: Query, Equatable, Sendable {
+    typealias Answer = RestoredLook
+
+    let text: String
+}
+
 struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
     let language: String?
     let region: String?
@@ -5422,6 +5673,10 @@ struct RestoreTabHistory: Intent, PageIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let archive: Data
+}
+
+struct RestoredLook: Equatable, Sendable {
+    let look: SpaceBranding?
 }
 
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -5825,10 +6080,23 @@ struct SetCloudSyncEnabled: Intent, CloudSyncControlIntent, Equatable, Sendable 
     let isEnabled: Bool
 }
 
+struct SetContentBlockingLevel: Intent, Equatable, Sendable {
+    let level: ContentBlockingLevel
+}
+
 struct SetCredentialPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let preferences: CredentialPreferences
+}
+
+struct SetCustomFilterList: Intent, Equatable, Sendable, Identifiable {
+    let id: UUID
+    let isOn: Bool
+}
+
+struct SetCustomFilters: Intent, Equatable, Sendable {
+    let text: String
 }
 
 struct SetDefaultSearch: Intent, SearchCatalogIntent, Equatable, Sendable {
@@ -5844,6 +6112,11 @@ struct SetDownloadDestination: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let destination: String
     let filename: String
+}
+
+struct SetFilterList: Intent, Equatable, Sendable {
+    let list: FilterList
+    let isOn: Bool
 }
 
 struct SetFolderColor: Intent, SessionIntent, Equatable, Sendable {
@@ -5893,6 +6166,12 @@ struct SetSeparatePinnedTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let separates: Bool
+}
+
+struct SetSiteContentBlocking: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let blocks: Bool
 }
 
 struct SetSitePermission: PageRequest, Equatable, Sendable {
@@ -6242,6 +6521,15 @@ struct SidebarRow: Equatable, Sendable, Identifiable {
     let members: [UUID]
 }
 
+struct SiteContentBlocking: Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+}
+
+struct SiteContentBlockingChanged: CoreChange, Equatable, Sendable {
+    let sites: [SiteContentBlocking]
+}
+
 struct SiteDataRead: EngineEvent, Equatable, Sendable {
     let readingID: UUID
     let sites: [StoredSite]
@@ -6341,7 +6629,7 @@ struct SpaceBranding: Equatable, Sendable {
         keepsControlsReadable: true,
         themeMode: SpaceThemeMode.banner,
         gradientAngle: 0,
-        showsTexture: false,
+        textureStrength: 0,
         iconStyle: SpaceIconStyle.simpleSymbol,
         symbolColor: nil,
         crest: SpaceCrest(
@@ -6388,7 +6676,7 @@ struct SpaceBranding: Equatable, Sendable {
     var keepsControlsReadable: Bool
     var themeMode: SpaceThemeMode
     var gradientAngle: Double
-    var showsTexture: Bool
+    var textureStrength: Double
     var iconStyle: SpaceIconStyle
     var symbolColor: BrandColor?
     var crest: SpaceCrest
@@ -6679,6 +6967,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
     let iconModifiedAt: Date?
     let tint: BrandColor?
     let tintModifiedAt: Date?
+    let isCollapsed: Bool
+    let collapseModifiedAt: Date?
     let displayTitle: String?
     let displayEmojiIcon: String?
 
@@ -6696,6 +6986,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
         var iconModifiedAt: Date?
         var tint: BrandColor?
         var tintModifiedAt: Date?
+        var isCollapsed: Bool
+        var collapseModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6707,7 +6999,9 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
             customIconSymbol: customIconSymbol,
             iconModifiedAt: iconModifiedAt,
             tint: tint,
-            tintModifiedAt: tintModifiedAt
+            tintModifiedAt: tintModifiedAt,
+            isCollapsed: isCollapsed,
+            collapseModifiedAt: collapseModifiedAt
         )
     }
 }
@@ -6851,9 +7145,19 @@ struct StoreInstallRequested: Equatable, Sendable {
     let extensionID: String
 }
 
+struct StoreLook: Query, Equatable, Sendable {
+    typealias Answer = StoredLook
+
+    let look: SpaceBranding
+}
+
 struct StoreRemovalRequested: Equatable, Sendable {
     let pageID: UUID
     let extensionID: String
+}
+
+struct StoredLook: Equatable, Sendable {
+    let text: String
 }
 
 struct StoredSessionClosed: Equatable, Sendable {
@@ -7177,6 +7481,10 @@ struct TypeInPage: PageRequest, Equatable, Sendable {
 
 struct UnassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
     let command: ShortcutCommand
+}
+
+struct UnblockElements: Intent, Equatable, Sendable {
+    let pageURL: String
 }
 
 struct UnknownAgentSession: Equatable, Sendable {
@@ -7684,6 +7992,12 @@ struct PageMixedContent: OptionSet, Sendable {
     static let ran = PageMixedContent(rawValue: 1)
     static let displayed = PageMixedContent(rawValue: 2)
     static let form = PageMixedContent(rawValue: 4)
+}
+
+enum PageResourceKind: Int, CaseIterable, Sendable {
+    case frame = 0
+    case image = 1
+    case object = 2
 }
 
 enum PageScriptWorld: Int, CaseIterable, Sendable {
@@ -9669,73 +9983,119 @@ struct CloudZoneLoss: Hashable, Sendable {
     }
 }
 
-/// The members of the core's `ContentBlockingPolicy`. A member's wire tag is its index in `all`.
-struct ContentBlockingPolicy: Hashable, Sendable {
+/// The members of the core's `ContentBlockingLevel`. A member's wire tag is its index in `all`.
+struct ContentBlockingLevel: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
-    var switchTitle: LocalizedStringResource { facts.switchTitle }
-    var identifier: String? { facts.identifier }
-    var blockedHostSuffixes: [String] { facts.blockedHostSuffixes }
+    var summary: LocalizedStringResource { facts.summary }
     var blocksContent: Bool { facts.blocksContent }
+    var includesStrictLists: Bool { facts.includesStrictLists }
     private let facts: Facts
 
     private init(
         tag: Int,
         name: String,
         title: LocalizedStringResource,
-        switchTitle: LocalizedStringResource,
-        identifier: String?,
-        blockedHostSuffixes: [String],
-        blocksContent: Bool
+        summary: LocalizedStringResource,
+        blocksContent: Bool,
+        includesStrictLists: Bool
     ) {
         self.tag = tag
         facts = Facts(
             name: name,
             title: title,
-            switchTitle: switchTitle,
-            identifier: identifier,
-            blockedHostSuffixes: blockedHostSuffixes,
-            blocksContent: blocksContent
+            summary: summary,
+            blocksContent: blocksContent,
+            includesStrictLists: includesStrictLists
         )
+    }
+
+    static let off = ContentBlockingLevel(
+        tag: 0,
+        name: "off",
+        title: LocalizedStringResource("Off"),
+        summary: LocalizedStringResource("Crest doesn’t block ads or trackers."),
+        blocksContent: false,
+        includesStrictLists: false
+    )
+    static let balanced = ContentBlockingLevel(
+        tag: 1,
+        name: "balanced",
+        title: LocalizedStringResource("Balanced"),
+        summary: LocalizedStringResource("Blocks ads and trackers while keeping sites working."),
+        blocksContent: true,
+        includesStrictLists: false
+    )
+    static let strict = ContentBlockingLevel(
+        tag: 2,
+        name: "strict",
+        title: LocalizedStringResource("Strict"),
+        summary: LocalizedStringResource("Also hides cookie notices and other annoyances. A few sites may not work."),
+        blocksContent: true,
+        includesStrictLists: true
+    )
+
+    static let all: [ContentBlockingLevel] = [off, balanced, strict]
+
+    static func named(_ name: String?) -> ContentBlockingLevel? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ContentBlockingLevel, rhs: ContentBlockingLevel) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let summary: LocalizedStringResource
+        let blocksContent: Bool
+        let includesStrictLists: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            summary: LocalizedStringResource,
+            blocksContent: Bool,
+            includesStrictLists: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.summary = summary
+            self.blocksContent = blocksContent
+            self.includesStrictLists = includesStrictLists
+        }
+    }
+}
+
+/// The members of the core's `ContentBlockingPolicy`. A member's wire tag is its index in `all`.
+struct ContentBlockingPolicy: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var blocksContent: Bool { facts.blocksContent }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, blocksContent: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, blocksContent: blocksContent)
     }
 
     static let balanced = ContentBlockingPolicy(
         tag: 0,
         name: "balanced",
         title: LocalizedStringResource("Balanced"),
-        switchTitle: LocalizedStringResource("Turn Off Content Blocking in This Space"),
-        identifier: "com.pauldavis.crest.content-blocking.balanced.v2",
-        blockedHostSuffixes: [
-            "doubleclick.net",
-            "googleadservices.com",
-            "googlesyndication.com",
-            "google-analytics.com",
-            "googletagmanager.com",
-            "ads-twitter.com",
-            "analytics.twitter.com",
-            "scorecardresearch.com",
-            "quantserve.com",
-            "hotjar.com",
-            "segment.io",
-            "segment.com",
-            "mixpanel.com",
-            "amplitude.com",
-            "clarity.ms",
-            "nr-data.net",
-            "taboola.com",
-            "outbrain.com",
-            "snap.licdn.com"
-        ],
         blocksContent: true
     )
     static let off = ContentBlockingPolicy(
         tag: 1,
         name: "off",
         title: LocalizedStringResource("Off"),
-        switchTitle: LocalizedStringResource("Turn On Balanced Content Blocking in This Space"),
-        identifier: nil,
-        blockedHostSuffixes: [],
         blocksContent: false
     )
 
@@ -9756,24 +10116,11 @@ struct ContentBlockingPolicy: Hashable, Sendable {
     private final class Facts: Sendable {
         let name: String
         let title: LocalizedStringResource
-        let switchTitle: LocalizedStringResource
-        let identifier: String?
-        let blockedHostSuffixes: [String]
         let blocksContent: Bool
 
-        init(
-            name: String,
-            title: LocalizedStringResource,
-            switchTitle: LocalizedStringResource,
-            identifier: String?,
-            blockedHostSuffixes: [String],
-            blocksContent: Bool
-        ) {
+        init(name: String, title: LocalizedStringResource, blocksContent: Bool) {
             self.name = name
             self.title = title
-            self.switchTitle = switchTitle
-            self.identifier = identifier
-            self.blockedHostSuffixes = blockedHostSuffixes
             self.blocksContent = blocksContent
         }
     }
@@ -13670,6 +14017,346 @@ struct ExternalSchemeDisposition: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `FilterList`. A member's wire tag is its index in `all`.
+struct FilterList: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: String { facts.title }
+    var group: FilterListGroup { facts.group }
+    var source: String { facts.source }
+    var isDefault: Bool { facts.isDefault }
+    var isStrict: Bool { facts.isStrict }
+    var languages: [String] { facts.languages }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        title: String,
+        group: FilterListGroup,
+        source: String,
+        isDefault: Bool,
+        isStrict: Bool,
+        languages: [String]
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            title: title,
+            group: group,
+            source: source,
+            isDefault: isDefault,
+            isStrict: isStrict,
+            languages: languages
+        )
+    }
+
+    static let easyList = FilterList(
+        tag: 0,
+        name: "easylist",
+        title: "EasyList",
+        group: FilterListGroup.ads,
+        source: "https://easylist.to/easylist/easylist.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let easyPrivacy = FilterList(
+        tag: 1,
+        name: "easyprivacy",
+        title: "EasyPrivacy",
+        group: FilterListGroup.ads,
+        source: "https://easylist.to/easylist/easyprivacy.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let uBlockFilters = FilterList(
+        tag: 2,
+        name: "ublock-filters",
+        title: "uBlock filters",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let uBlockPrivacy = FilterList(
+        tag: 3,
+        name: "ublock-privacy",
+        title: "uBlock filters – Privacy",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let uBlockBadware = FilterList(
+        tag: 4,
+        name: "ublock-badware",
+        title: "uBlock filters – Badware risks",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let uBlockQuickFixes = FilterList(
+        tag: 5,
+        name: "ublock-quick-fixes",
+        title: "uBlock filters – Quick fixes",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let uBlockUnbreak = FilterList(
+        tag: 6,
+        name: "ublock-unbreak",
+        title: "uBlock filters – Unbreak",
+        group: FilterListGroup.ads,
+        source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt",
+        isDefault: true,
+        isStrict: false,
+        languages: []
+    )
+    static let adGuardBase = FilterList(
+        tag: 7,
+        name: "adguard-base",
+        title: "AdGuard Base",
+        group: FilterListGroup.ads,
+        source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt",
+        isDefault: false,
+        isStrict: true,
+        languages: []
+    )
+    static let easyListGermany = FilterList(
+        tag: 8,
+        name: "easylist-germany",
+        title: "EasyList Germany",
+        group: FilterListGroup.regional,
+        source: "https://easylist.to/easylistgermany/easylistgermany.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["de"]
+    )
+    static let listeFr = FilterList(
+        tag: 9,
+        name: "liste-fr",
+        title: "Liste FR",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/liste_fr.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["fr"]
+    )
+    static let easyListItaly = FilterList(
+        tag: 10,
+        name: "easylist-italy",
+        title: "EasyList Italy",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["it"]
+    )
+    static let easyListDutch = FilterList(
+        tag: 11,
+        name: "easylist-dutch",
+        title: "EasyList Dutch",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["nl"]
+    )
+    static let easyListSpanish = FilterList(
+        tag: 12,
+        name: "easylist-spanish",
+        title: "EasyList Spanish",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["es"]
+    )
+    static let easyListPolish = FilterList(
+        tag: 13,
+        name: "easylist-polish",
+        title: "EasyList Polish",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["pl"]
+    )
+    static let easyListChina = FilterList(
+        tag: 14,
+        name: "easylist-china",
+        title: "EasyList China",
+        group: FilterListGroup.regional,
+        source: "https://easylist-downloads.adblockplus.org/easylistchina.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["zh"]
+    )
+    static let adGuardJapanese = FilterList(
+        tag: 15,
+        name: "adguard-japanese",
+        title: "AdGuard Japanese",
+        group: FilterListGroup.regional,
+        source: "https://filters.adtidy.org/extension/ublock/filters/7.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["ja"]
+    )
+    static let adGuardRussian = FilterList(
+        tag: 16,
+        name: "adguard-russian",
+        title: "AdGuard Russian",
+        group: FilterListGroup.regional,
+        source: "https://filters.adtidy.org/extension/ublock/filters/1.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["ru", "uk", "be"]
+    )
+    static let adGuardTurkish = FilterList(
+        tag: 17,
+        name: "adguard-turkish",
+        title: "AdGuard Turkish",
+        group: FilterListGroup.regional,
+        source: "https://filters.adtidy.org/extension/ublock/filters/13.txt",
+        isDefault: false,
+        isStrict: false,
+        languages: ["tr"]
+    )
+    static let easyListCookie = FilterList(
+        tag: 18,
+        name: "easylist-cookie",
+        title: "EasyList Cookie List",
+        group: FilterListGroup.annoyances,
+        source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt",
+        isDefault: false,
+        isStrict: true,
+        languages: []
+    )
+    static let adGuardAnnoyances = FilterList(
+        tag: 19,
+        name: "adguard-annoyances",
+        title: "AdGuard Annoyances",
+        group: FilterListGroup.annoyances,
+        source: "https://filters.adtidy.org/extension/ublock/filters/14.txt",
+        isDefault: false,
+        isStrict: true,
+        languages: []
+    )
+
+    static let all: [FilterList] = [
+        easyList,
+        easyPrivacy,
+        uBlockFilters,
+        uBlockPrivacy,
+        uBlockBadware,
+        uBlockQuickFixes,
+        uBlockUnbreak,
+        adGuardBase,
+        easyListGermany,
+        listeFr,
+        easyListItaly,
+        easyListDutch,
+        easyListSpanish,
+        easyListPolish,
+        easyListChina,
+        adGuardJapanese,
+        adGuardRussian,
+        adGuardTurkish,
+        easyListCookie,
+        adGuardAnnoyances
+    ]
+
+    static func named(_ name: String?) -> FilterList? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FilterList, rhs: FilterList) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: String
+        let group: FilterListGroup
+        let source: String
+        let isDefault: Bool
+        let isStrict: Bool
+        let languages: [String]
+
+        init(
+            name: String,
+            title: String,
+            group: FilterListGroup,
+            source: String,
+            isDefault: Bool,
+            isStrict: Bool,
+            languages: [String]
+        ) {
+            self.name = name
+            self.title = title
+            self.group = group
+            self.source = source
+            self.isDefault = isDefault
+            self.isStrict = isStrict
+            self.languages = languages
+        }
+    }
+}
+
+/// The members of the core's `FilterListGroup`. A member's wire tag is its index in `all`.
+struct FilterListGroup: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let ads = FilterListGroup(tag: 0, name: "ads", title: LocalizedStringResource("Ads and Trackers"))
+    static let regional = FilterListGroup(tag: 1, name: "regional", title: LocalizedStringResource("Regional"))
+    static let annoyances = FilterListGroup(tag: 2, name: "annoyances", title: LocalizedStringResource("Annoyances"))
+
+    static let all: [FilterListGroup] = [ads, regional, annoyances]
+
+    static func named(_ name: String?) -> FilterListGroup? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FilterListGroup, rhs: FilterListGroup) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `HostedNotificationRequestAction`. A member's wire tag is its index in `all`.
 struct HostedNotificationRequestAction: Hashable, Sendable {
     enum Kinds: Sendable {
@@ -14326,6 +15013,7 @@ struct LinkBehavior: Hashable, Sendable {
     static let dragsLinksToPeek = LinkBehavior(tag: 3, name: "dragsLinksToPeek")
     static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
     static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
+    static let cleansCopiedLinks = LinkBehavior(tag: 6, name: "cleansCopiedLinks")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
@@ -14333,7 +15021,8 @@ struct LinkBehavior: Hashable, Sendable {
         opensPeekAutomatically,
         dragsLinksToPeek,
         dimsPageBehindPeek,
-        remembersSpaceBySite
+        remembersSpaceBySite,
+        cleansCopiedLinks
     ]
 
     static func named(_ name: String?) -> LinkBehavior? {
@@ -17935,6 +18624,7 @@ struct SetupLook: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
         case modern
+        case simple
     }
 
     let tag: Int
@@ -17944,6 +18634,7 @@ struct SetupLook: Hashable, Sendable {
     var themeMode: SpaceThemeMode { facts.themeMode }
     var iconStyle: SpaceIconStyle { facts.iconStyle }
     var gradientAngle: Double? { facts.gradientAngle }
+    var tint: Double? { facts.tint }
     private let facts: Facts
 
     private init(
@@ -17953,7 +18644,8 @@ struct SetupLook: Hashable, Sendable {
         title: LocalizedStringResource,
         themeMode: SpaceThemeMode,
         iconStyle: SpaceIconStyle,
-        gradientAngle: Double?
+        gradientAngle: Double?,
+        tint: Double?
     ) {
         self.tag = tag
         facts = Facts(
@@ -17962,7 +18654,8 @@ struct SetupLook: Hashable, Sendable {
             title: title,
             themeMode: themeMode,
             iconStyle: iconStyle,
-            gradientAngle: gradientAngle
+            gradientAngle: gradientAngle,
+            tint: tint
         )
     }
 
@@ -17970,10 +18663,11 @@ struct SetupLook: Hashable, Sendable {
         tag: 0,
         kind: .heraldic,
         name: "heraldic",
-        title: LocalizedStringResource("Heraldic"),
+        title: LocalizedStringResource("Heraldic (Full)"),
         themeMode: SpaceThemeMode.banner,
         iconStyle: SpaceIconStyle.layeredCrest,
-        gradientAngle: nil
+        gradientAngle: nil,
+        tint: nil
     )
     static let modern = SetupLook(
         tag: 1,
@@ -17982,10 +18676,21 @@ struct SetupLook: Hashable, Sendable {
         title: LocalizedStringResource("Modern"),
         themeMode: SpaceThemeMode.gradient,
         iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 90
+        gradientAngle: 90,
+        tint: nil
+    )
+    static let simple = SetupLook(
+        tag: 2,
+        kind: .simple,
+        name: "simple",
+        title: LocalizedStringResource("Simple"),
+        themeMode: SpaceThemeMode.gradient,
+        iconStyle: SpaceIconStyle.simpleSymbol,
+        gradientAngle: 0,
+        tint: 1
     )
 
-    static let all: [SetupLook] = [heraldic, modern]
+    static let all: [SetupLook] = [heraldic, modern, simple]
 
     static func named(_ name: String?) -> SetupLook? {
         all.first { $0.name == name }
@@ -18006,6 +18711,7 @@ struct SetupLook: Hashable, Sendable {
         let themeMode: SpaceThemeMode
         let iconStyle: SpaceIconStyle
         let gradientAngle: Double?
+        let tint: Double?
 
         init(
             kind: Kinds,
@@ -18013,7 +18719,8 @@ struct SetupLook: Hashable, Sendable {
             title: LocalizedStringResource,
             themeMode: SpaceThemeMode,
             iconStyle: SpaceIconStyle,
-            gradientAngle: Double?
+            gradientAngle: Double?,
+            tint: Double?
         ) {
             self.kind = kind
             self.name = name
@@ -18021,6 +18728,7 @@ struct SetupLook: Hashable, Sendable {
             self.themeMode = themeMode
             self.iconStyle = iconStyle
             self.gradientAngle = gradientAngle
+            self.tint = tint
         }
     }
 }
@@ -18204,6 +18912,8 @@ struct ShortcutCommand: Hashable, Sendable {
         case clearSiteCookies
         case clearSiteCache
         case toggleSelectedTabSaved
+        case blockElement
+        case showBlockedElements
     }
 
     let tag: Int
@@ -19471,8 +20181,44 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
-    static let findInPage = ShortcutCommand(
+    static let blockElement = ShortcutCommand(
         tag: 43,
+        kind: .blockElement,
+        name: "blockElement",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Block Element"),
+        searchTerms: LocalizedStringResource("hide remove ads annoyance picker filter"),
+        menuTitle: nil,
+        symbol: "eye.slash",
+        requiredCapability: EngineCapability.contentBlocking,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let showBlockedElements = ShortcutCommand(
+        tag: 44,
+        kind: .showBlockedElements,
+        name: "showBlockedElements",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Show Blocked Elements"),
+        searchTerms: LocalizedStringResource("unhide restore undo picker filter"),
+        menuTitle: nil,
+        symbol: "eye",
+        requiredCapability: EngineCapability.contentBlocking,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let findInPage = ShortcutCommand(
+        tag: 45,
         kind: .findInPage,
         name: "findInPage",
         section: ShortcutSection.page,
@@ -19501,7 +20247,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let zoomIn = ShortcutCommand(
-        tag: 44,
+        tag: 46,
         kind: .zoomIn,
         name: "zoomIn",
         section: ShortcutSection.page,
@@ -19530,7 +20276,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let zoomOut = ShortcutCommand(
-        tag: 45,
+        tag: 47,
         kind: .zoomOut,
         name: "zoomOut",
         section: ShortcutSection.page,
@@ -19559,7 +20305,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let actualSize = ShortcutCommand(
-        tag: 46,
+        tag: 48,
         kind: .actualSize,
         name: "actualSize",
         section: ShortcutSection.page,
@@ -19588,7 +20334,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let copyPageLink = ShortcutCommand(
-        tag: 47,
+        tag: 49,
         kind: .copyPageLink,
         name: "copyPageLink",
         section: ShortcutSection.page,
@@ -19617,7 +20363,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let copyPageLinkAsMarkdown = ShortcutCommand(
-        tag: 48,
+        tag: 50,
         kind: .copyPageLinkAsMarkdown,
         name: "copyPageLinkAsMarkdown",
         section: ShortcutSection.page,
@@ -19646,7 +20392,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let sharePage = ShortcutCommand(
-        tag: 49,
+        tag: 51,
         kind: .sharePage,
         name: "sharePage",
         section: ShortcutSection.page,
@@ -19664,7 +20410,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let exportPDF = ShortcutCommand(
-        tag: 50,
+        tag: 52,
         kind: .exportPDF,
         name: "exportPDF",
         section: ShortcutSection.page,
@@ -19682,7 +20428,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let saveWebArchive = ShortcutCommand(
-        tag: 51,
+        tag: 53,
         kind: .saveWebArchive,
         name: "saveWebArchive",
         section: ShortcutSection.page,
@@ -19700,7 +20446,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let printPage = ShortcutCommand(
-        tag: 52,
+        tag: 54,
         kind: .printPage,
         name: "printPage",
         section: ShortcutSection.page,
@@ -19729,7 +20475,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let toggleSidebar = ShortcutCommand(
-        tag: 53,
+        tag: 55,
         kind: .toggleSidebar,
         name: "toggleSidebar",
         section: ShortcutSection.view,
@@ -19758,7 +20504,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let showHistory = ShortcutCommand(
-        tag: 54,
+        tag: 56,
         kind: .showHistory,
         name: "showHistory",
         section: ShortcutSection.view,
@@ -19787,7 +20533,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let showArchive = ShortcutCommand(
-        tag: 55,
+        tag: 57,
         kind: .showArchive,
         name: "showArchive",
         section: ShortcutSection.view,
@@ -19805,7 +20551,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let showDownloads = ShortcutCommand(
-        tag: 56,
+        tag: 58,
         kind: .showDownloads,
         name: "showDownloads",
         section: ShortcutSection.view,
@@ -19834,7 +20580,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let showWebInspector = ShortcutCommand(
-        tag: 57,
+        tag: 59,
         kind: .showWebInspector,
         name: "webInspectorInstructions",
         section: ShortcutSection.view,
@@ -19863,7 +20609,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let splitWithNextTab = ShortcutCommand(
-        tag: 58,
+        tag: 60,
         kind: .splitWithNextTab,
         name: "splitWithNextTab",
         section: ShortcutSection.tabs,
@@ -19881,7 +20627,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let focusNextSplitCard = ShortcutCommand(
-        tag: 59,
+        tag: 61,
         kind: .focusNextSplitCard,
         name: "focusNextSplitCard",
         section: ShortcutSection.tabs,
@@ -19910,7 +20656,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let focusPreviousSplitCard = ShortcutCommand(
-        tag: 60,
+        tag: 62,
         kind: .focusPreviousSplitCard,
         name: "focusPreviousSplitCard",
         section: ShortcutSection.tabs,
@@ -19939,7 +20685,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let removeTabFromSplit = ShortcutCommand(
-        tag: 61,
+        tag: 63,
         kind: .removeTabFromSplit,
         name: "removeTabFromSplit",
         section: ShortcutSection.tabs,
@@ -19957,7 +20703,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let separateSplitTabs = ShortcutCommand(
-        tag: 62,
+        tag: 64,
         kind: .separateSplitTabs,
         name: "separateSplitTabs",
         section: ShortcutSection.tabs,
@@ -19986,7 +20732,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let moveSplitCardLeft = ShortcutCommand(
-        tag: 63,
+        tag: 65,
         kind: .moveSplitCardLeft,
         name: "moveSplitCardLeft",
         section: ShortcutSection.tabs,
@@ -20015,7 +20761,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let moveSplitCardRight = ShortcutCommand(
-        tag: 64,
+        tag: 66,
         kind: .moveSplitCardRight,
         name: "moveSplitCardRight",
         section: ShortcutSection.tabs,
@@ -20044,7 +20790,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let toggleDeveloperToolbar = ShortcutCommand(
-        tag: 65,
+        tag: 67,
         kind: .toggleDeveloperToolbar,
         name: "toggleDeveloperToolbar",
         section: ShortcutSection.view,
@@ -20073,7 +20819,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let toggleTranslationToolbar = ShortcutCommand(
-        tag: 66,
+        tag: 68,
         kind: .toggleTranslationToolbar,
         name: "toggleTranslationToolbar",
         section: ShortcutSection.view,
@@ -20102,7 +20848,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let openFile = ShortcutCommand(
-        tag: 67,
+        tag: 69,
         kind: .openFile,
         name: "openFile",
         section: ShortcutSection.everyday,
@@ -20120,7 +20866,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let findNext = ShortcutCommand(
-        tag: 68,
+        tag: 70,
         kind: .findNext,
         name: "findNext",
         section: ShortcutSection.page,
@@ -20144,7 +20890,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let findPrevious = ShortcutCommand(
-        tag: 69,
+        tag: 71,
         kind: .findPrevious,
         name: "findPrevious",
         section: ShortcutSection.page,
@@ -20168,7 +20914,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let capturePage = ShortcutCommand(
-        tag: 70,
+        tag: 72,
         kind: .capturePage,
         name: "capturePage",
         section: ShortcutSection.page,
@@ -20192,7 +20938,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.useBoth
     )
     static let mostRecentTabBackward = ShortcutCommand(
-        tag: 71,
+        tag: 73,
         kind: .mostRecentTabBackward,
         name: "mostRecentTabBackward",
         section: ShortcutSection.tabs,
@@ -20221,7 +20967,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferCrest
     )
     static let clearSiteCookies = ShortcutCommand(
-        tag: 72,
+        tag: 74,
         kind: .clearSiteCookies,
         name: "clearSiteCookies",
         section: ShortcutSection.page,
@@ -20239,7 +20985,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let clearSiteCache = ShortcutCommand(
-        tag: 73,
+        tag: 75,
         kind: .clearSiteCache,
         name: "clearSiteCache",
         section: ShortcutSection.page,
@@ -20257,7 +21003,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultPreference: ShortcutPreference.preferWebsite
     )
     static let toggleSelectedTabSaved = ShortcutCommand(
-        tag: 74,
+        tag: 76,
         kind: .toggleSelectedTabSaved,
         name: "toggleSelectedTabSaved",
         section: ShortcutSection.tabs,
@@ -20319,6 +21065,8 @@ struct ShortcutCommand: Hashable, Sendable {
         selectSpace9,
         toggleReaderMode,
         toggleContentBlocking,
+        blockElement,
+        showBlockedElements,
         findInPage,
         zoomIn,
         zoomOut,
@@ -20537,7 +21285,12 @@ struct ShortcutMenu: Hashable, Sendable {
         name: "page",
         title: LocalizedStringResource("Page"),
         groups: [
-            [ShortcutCommand.toggleReaderMode, ShortcutCommand.toggleContentBlocking],
+            [
+                ShortcutCommand.toggleReaderMode,
+                ShortcutCommand.toggleContentBlocking,
+                ShortcutCommand.blockElement,
+                ShortcutCommand.showBlockedElements
+            ],
             [ShortcutCommand.findInPage, ShortcutCommand.findNext, ShortcutCommand.findPrevious],
             [ShortcutCommand.zoomIn, ShortcutCommand.zoomOut, ShortcutCommand.actualSize],
             [
@@ -21583,7 +22336,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -21656,7 +22409,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 160,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -21729,7 +22482,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -21802,7 +22555,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22045,7 +22798,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22113,7 +22866,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22181,7 +22934,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22249,7 +23002,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22317,7 +23070,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22385,7 +23138,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22453,7 +23206,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22521,7 +23274,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 160,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22589,7 +23342,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22752,7 +23505,7 @@ struct SpaceScheme: Hashable, Sendable {
             keepsControlsReadable: false,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 0,
-            showsTexture: true,
+            textureStrength: 1,
             iconStyle: SpaceIconStyle.simpleSymbol,
             symbolColor: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1),
             crest: SpaceCrest(
@@ -24230,6 +24983,7 @@ struct WorkspaceKind: Hashable, Sendable {
     var ownsSpaces: Bool { facts.ownsSpaces }
     var keepsAppPreferences: Bool { facts.keepsAppPreferences }
     var isPractice: Bool { facts.isPractice }
+    var locksSpaces: Bool { facts.locksSpaces }
     private let facts: Facts
 
     private init(
@@ -24240,7 +24994,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: Bool,
         ownsSpaces: Bool,
         keepsAppPreferences: Bool,
-        isPractice: Bool
+        isPractice: Bool,
+        locksSpaces: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -24250,7 +25005,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: isPrivate,
             ownsSpaces: ownsSpaces,
             keepsAppPreferences: keepsAppPreferences,
-            isPractice: isPractice
+            isPractice: isPractice,
+            locksSpaces: locksSpaces
         )
     }
 
@@ -24262,7 +25018,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: true,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let `private` = WorkspaceKind(
         tag: 1,
@@ -24272,7 +25029,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: true,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: false
     )
     static let borrowed = WorkspaceKind(
         tag: 2,
@@ -24282,7 +25040,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: false,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let practice = WorkspaceKind(
         tag: 3,
@@ -24292,7 +25051,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: true
+        isPractice: true,
+        locksSpaces: true
     )
 
     static let all: [WorkspaceKind] = [persistent, `private`, borrowed, practice]
@@ -24317,6 +25077,7 @@ struct WorkspaceKind: Hashable, Sendable {
         let ownsSpaces: Bool
         let keepsAppPreferences: Bool
         let isPractice: Bool
+        let locksSpaces: Bool
 
         init(
             name: String,
@@ -24325,7 +25086,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: Bool,
             ownsSpaces: Bool,
             keepsAppPreferences: Bool,
-            isPractice: Bool
+            isPractice: Bool,
+            locksSpaces: Bool
         ) {
             self.name = name
             self.opensDirectly = opensDirectly
@@ -24334,6 +25096,7 @@ struct WorkspaceKind: Hashable, Sendable {
             self.ownsSpaces = ownsSpaces
             self.keepsAppPreferences = keepsAppPreferences
             self.isPractice = isPractice
+            self.locksSpaces = locksSpaces
         }
     }
 }

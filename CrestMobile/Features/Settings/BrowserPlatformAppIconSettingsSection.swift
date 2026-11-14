@@ -20,6 +20,10 @@ struct BrowserPlatformAppIconSettingsSection: View {
             .disabled(isChanging || !UIApplication.shared.supportsAlternateIcons)
         }
         .onAppear { selectedName = UIApplication.shared.alternateIconName }
+        // Reset All changes the icon too, without going through this picker.
+        .onReceive(NotificationCenter.default.publisher(for: BrowserPlatformCurrentAppIcon.didChange)) { _ in
+            selectedName = UIApplication.shared.alternateIconName
+        }
     }
 
     private var resettable: CrestResettableSetting {
@@ -34,6 +38,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
             do {
                 try await UIApplication.shared.setAlternateIconName(name)
                 selectedName = UIApplication.shared.alternateIconName
+                NotificationCenter.default.post(name: BrowserPlatformCurrentAppIcon.didChange, object: nil)
             } catch {
                 BrowserNoticeCenter.shared.post(.failure(String(localized: "Couldn’t change app icon")))
             }

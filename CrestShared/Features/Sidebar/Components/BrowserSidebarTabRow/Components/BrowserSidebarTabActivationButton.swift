@@ -53,6 +53,7 @@ struct BrowserSidebarTabActivationButton: View {
         }
         .accessibilityLabel(tab.shownTitle(in: isLoaded ? core?.state : nil))
         .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: isLoaded))
+        .browserTabPreviewAccessibility(tab)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier(BrowserTabAccessibilityID.row(tab.id))
     }

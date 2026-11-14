@@ -11,12 +11,16 @@
 #include <functional>
 #include <memory>
 
+#include "base/functional/callback_forward.h"
+
 class Browser;
+class BrowserWindowInterface;
 class DesktopMediaPicker;
 class MediaStreamUI;
 class GURL;
 class Profile;
 enum class ToastId;
+namespace extensions { class Extension; class ExtensionHost; }
 namespace content { class WebContents; class NavigationThrottleRegistry; class JavaScriptDialogManager; struct DesktopMediaID; struct DropData; struct MediaStreamRequest; struct OpenURLParams; }
 namespace net { class AuthChallengeInfo; }
 namespace views { class Widget; }
@@ -108,6 +112,14 @@ void UpdateTargetURL(content::WebContents* contents, const GURL& url);
 // leaves Chromium's own behavior in place.
 bool OpenExtensionSidePanel(content::WebContents* contents, const std::string& extension_id);
 bool CloseExtensionSidePanel(content::WebContents* contents, const std::string& extension_id);
+// `chrome.action.openPopup()`. This build never creates Chrome's toolbar, so
+// Crest opens the popup over the page `browser` shows, from the extension's
+// own control in Crest's toolbar. `shown` hears the popup's host once it is on
+// screen, or null when it closes first. False when no Crest page is
+// `browser`'s active tab, the page already shows a popup, or the action has no
+// usable popup there.
+bool OpenExtensionActionPopup(BrowserWindowInterface& browser, const extensions::Extension& extension,
+                              base::OnceCallback<void(extensions::ExtensionHost*)> shown);
 // DevTools. Crest is a single-window browser, so a docked inspector belongs
 // inside the page card it inspects rather than in a window of its own. This
 // build never creates Chrome's Views contents container, so its

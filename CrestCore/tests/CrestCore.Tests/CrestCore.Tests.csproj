@@ -13,4 +13,22 @@
     <None Include="Storage/Fixtures/*.sqlite" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Portability/Fixtures/**/*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- Without Native AOT the content filter is loaded as a dynamic library from
+       beside the tests: linked from the prebuilt static library on a Mac, and
+       compiled from source elsewhere. -->
+  <Target Name="CrestContentFilterTestLibrary" BeforeTargets="AssignTargetPaths">
+    <PropertyGroup>
+      <CrestContentFilterPathFile>$(IntermediateOutputPath)content-filter.path</CrestContentFilterPathFile>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)../../../Scripts/control-plane/fetch-content-filter.py&quot; --runtime host &gt; &quot;$(CrestContentFilterPathFile)&quot;"
+        IgnoreStandardErrorWarningFormat="true" />
+    <ReadLinesFromFile File="$(CrestContentFilterPathFile)">
+      <Output TaskParameter="Lines" PropertyName="CrestContentFilterLibraryPath" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <None Include="$(CrestContentFilterLibraryPath)" Link="$([System.IO.Path]::GetFileName('$(CrestContentFilterLibraryPath)'))"
+          CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>

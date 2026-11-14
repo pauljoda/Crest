@@ -277,7 +277,8 @@ internal static class ZenSessions {
     private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, JsonElement? theme) => colors.Count == 0 ? null
         : SpaceBranding.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Bands : SpaceBannerPattern.Solid,
             Math.Clamp(ImportJson.Number(ImportJson.Member(theme, "opacity")) ?? DefaultOpacity, 0, 1), SpaceBranding.LegacyReadabilityFade,
-            SpaceThemeMode.Gradient, gradientAngle: 45, showsTexture: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0);
+            SpaceThemeMode.Gradient, gradientAngle: 45,
+            textureStrength: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0 ? 1 : 0);
 
     #endregion
 }

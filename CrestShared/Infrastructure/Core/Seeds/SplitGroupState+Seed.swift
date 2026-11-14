@@ -11,6 +11,7 @@ extension SplitGroupState.Seed {
     ) {
         self.init(
             id: id, customTitle: customTitle, titleModifiedAt: titleModifiedAt, customIconSymbol: customIconSymbol,
-            iconModifiedAt: iconModifiedAt, tint: tint, tintModifiedAt: nil)
+            iconModifiedAt: iconModifiedAt, tint: tint, tintModifiedAt: nil, isCollapsed: false,
+            collapseModifiedAt: nil)
     }
 }

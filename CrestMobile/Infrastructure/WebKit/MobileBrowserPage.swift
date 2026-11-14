@@ -139,6 +139,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         credentialSession.state
     }
     @ObservationIgnored private var credentialMessageProxy: BrowserScriptMessageProxy?
+    @ObservationIgnored private var cosmeticFilterMessageProxy: BrowserScriptMessageProxy?
+    /// Answers the page's cosmetic bridge, once it first posts.
+    @ObservationIgnored private var cosmeticFilters: BrowserCosmeticFilterSession?
+    /// The element picker the page's bar shows while the person picks
+    /// something to block.
+    @ObservationIgnored let elementPicker = BrowserElementPicker()
+    /// Runs the content filter's scriptlets in the page's own world.
+    @ObservationIgnored private lazy var scriptlets = BrowserPageScriptletSession(
+        core: downloadCenter.core, spaceID: spaceID)
     @ObservationIgnored private var linkActivationMessageProxy: MobileLinkActivationScriptMessageProxy?
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
     @ObservationIgnored let linkPeekPressCoordinator = MobileLinkPeekPressCoordinator()
@@ -216,7 +225,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.cancelStagedPeek = cancelStagedPeek
         contentRuleSession = BrowserPageContentRuleSession(
             ruleLists: webKitPage.contentRuleLists,
-            additionalRuleList: contentRuleList
+            additionalRuleList: contentRuleList,
+            blocksSite: webKitPage.blocksSite
         )
         spaceName = space.settings.name
         navigationContext = BrowserPageNavigationContext(
@@ -368,6 +378,13 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 in: webView.configuration.userContentController
             ) { [weak self] message in
                 self?.receiveCredentialMessage(message)
+            }
+        }
+        if ownsUserContentController {
+            cosmeticFilterMessageProxy = BrowserCosmeticFilterContentBridge.install(
+                in: webView.configuration.userContentController
+            ) { [weak self] message in
+                self?.receiveCosmeticFilterMessage(message)
             }
         }
         pullToRefreshControl.addTarget(
@@ -570,6 +587,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             geolocationMessageProxy = nil
             blockedPopupMessageProxy = nil
             mediaSessionMessageProxy = nil
+            cosmeticFilterMessageProxy = nil
             mediaSessionCoordinator = nil
             geolocationCoordinator = nil
             userActivityHandler = nil
@@ -624,6 +642,14 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
         }
         mediaSessionMessageProxy = nil
+        if cosmeticFilterMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserCosmeticFilterContentBridge.messageHandlerName,
+                    contentWorld: BrowserCosmeticFilterContentBridge.contentWorld
+                )
+        }
+        cosmeticFilterMessageProxy = nil
         mediaSessionCoordinator = nil
         geolocationCoordinator = nil
         userActivityHandler = nil
@@ -703,22 +729,21 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         readerModeSession.toggle()
     }
 
+    /// Copies the page's address, without its trackers while Super Copy is
+    /// on.
     @discardableResult
     func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(live.documentURL)
+        BrowserPageLinkClipboard.copy(linkToCopy)
+    }
+
+    /// The page's address as copying or sharing it hands it out.
+    var linkToCopy: BrowserCopiedLink? {
+        live.documentURL.map(downloadCenter.core.linkToCopy)
     }
 
     @discardableResult
     func copyPageLinkAsMarkdown() -> Bool {
-        guard let url = live.documentURL else { return false }
-        let label = live.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedLabel = label.isEmpty ? (url.host() ?? url.absoluteString) : label
-        let escapedLabel =
-            resolvedLabel
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "]", with: "\\]")
-        UIPasteboard.general.string = "[\(escapedLabel)](\(url.absoluteString))"
-        return true
+        BrowserPageLinkClipboard.copyMarkdown(linkToCopy, title: live.title)
     }
 
     func printPage() {
@@ -744,6 +769,23 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 controller.present(animated: true, completionHandler: nil)
             }
         }
+    }
+
+    /// Whether Apple's Add to Home Screen can take the page: a web page, not a
+    /// blank, internal or file one.
+    var canAddToHomeScreen: Bool {
+        ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+    }
+
+    /// Opens Apple's Add to Home Screen for the page, where the person adds it
+    /// as a web app or as a bookmark that opens in their default browser. On
+    /// iPad its sheet points at `source`, the control that asked, a frame in
+    /// the window.
+    func addToHomeScreen(from source: CGRect?) {
+        guard canAddToHomeScreen else { return }
+        MobileBrowserDialogPresenter.present(
+            MobileBrowserHomeScreenActivityController(webView: webView, title: live.title, favicon: faviconData),
+            from: source, fallback: {})
     }
 
     func pdfData() async throws -> Data {
@@ -986,11 +1028,20 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        // The site it goes to may have content blocking turned off, or on.
+        if let url {
+            contentRuleSession.navigating(to: url, in: webView)
+            if ownsUserContentController {
+                scriptlets.navigating(to: url, in: webView.configuration.userContentController)
+            }
+        }
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         translation.reset()
         readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForNavigation()
+        // The picker belongs to the document the page leaves.
+        elementPicker.cancel()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
         faviconSession.invalidate()
@@ -1061,6 +1112,36 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             return
         }
         credentialSession.receive(scriptMessage, in: webView)
+    }
+
+    /// Answers the cosmetic bridge of this page's web view, or hands a popup's
+    /// message, which arrives through this page's controller, to the popup's
+    /// own page.
+    func receiveCosmeticFilterMessage(_ scriptMessage: WKScriptMessage) {
+        if let source = scriptMessage.webView, source !== webView {
+            webKitPage.binding?.page(showing: source)?.host?
+                .receiveCosmeticFilterMessage(scriptMessage)
+            return
+        }
+        let session =
+            cosmeticFilters
+            ?? BrowserCosmeticFilterSession(
+                webView: webView, core: downloadCenter.core, spaceID: spaceID, picker: elementPicker)
+        cosmeticFilters = session
+        session.receive(scriptMessage)
+    }
+
+    /// Whether the page's bridge can start the element picker: Crest blocks,
+    /// it shows a site on the web and its bridge has posted.
+    var canPickElementToBlock: Bool {
+        cosmeticFilters?.blocksContent == true && ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+    }
+
+    /// Lets the person point at an element of the page to block on its site
+    /// from now on. Answers whether the picker started.
+    @discardableResult
+    func pickElementToBlock() async -> Bool {
+        await cosmeticFilters?.pickElement(fromContextMenu: false) ?? false
     }
 
     /// Whether this page's own web view sent `scriptMessage`.

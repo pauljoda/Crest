@@ -4,11 +4,11 @@ import WebKit
 final class BrowserContentRuleListCompilerAdapter: BrowserContentRuleListCompiling {
     func compile(
         identifiers: [String],
-        sources: [String],
+        source: (String) throws -> String,
         store: WKContentRuleListStore
     ) async throws -> [WKContentRuleList] {
         var lists: [WKContentRuleList] = []
-        for (identifier, source) in zip(identifiers, sources) {
+        for identifier in identifiers {
             if let existing = try? await BrowserContentRuleListCompiler.lookUp(
                 identifier: identifier,
                 store: store
@@ -18,7 +18,7 @@ final class BrowserContentRuleListCompilerAdapter: BrowserContentRuleListCompili
                 lists.append(
                     try await BrowserContentRuleListCompiler.compile(
                         identifier: identifier,
-                        source: source,
+                        source: try source(identifier),
                         store: store
                     )
                 )

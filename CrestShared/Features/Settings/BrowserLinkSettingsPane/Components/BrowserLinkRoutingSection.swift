@@ -15,7 +15,9 @@ struct BrowserLinkRoutingSection: View {
                 Text("No routes yet.")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(Array(routes.enumerated()), id: \.element.id) { index, route in
+                // Each route is a card of fields and menus, slow enough to make
+                // that only the cards on screen are.
+                CrestFormRows(Array(routes.enumerated()), id: \.element.id, lazilyAbove: 0) { index, route in
                     BrowserPlatformLinkRouteEditor(
                         route: route,
                         spaces: spaces,

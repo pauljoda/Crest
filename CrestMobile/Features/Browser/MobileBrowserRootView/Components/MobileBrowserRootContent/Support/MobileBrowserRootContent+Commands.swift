@@ -23,17 +23,15 @@ extension MobileBrowserRootContent {
     }
 
     func presentArchiveFromCommand() {
-        model.revealSidebarForUtilityCommand(presentation: presentation)
-        navigation.utilityPresentation.present(.archive)
+        presentation.presentList(.archive, in: self)
     }
 
     func presentHistoryFromCommand() {
-        presentation.presentHistory(in: self)
+        presentation.presentList(.history, in: self)
     }
 
     func presentDownloadsFromCommand() {
-        model.revealSidebarForUtilityCommand(presentation: presentation)
-        navigation.utilityPresentation.present(.downloads)
+        presentation.presentList(.downloads, in: self)
     }
 
     func dismissCommandPalette() {

@@ -19,11 +19,14 @@ struct MobileBrowserPresentation: Equatable, Sendable {
         placesSidebarForTabViewer: { $0.dockRegularSidebar() },
         preparesForLockedSpace: { $0.keepLockedSpaceOverCompactPage() },
         adaptsNavigation: { _ in },
-        revealsSidebar: { $0.showTabViewer() },
         togglesSidebar: { $0.toggleCompactSidebar(reduceMotion: $1) },
-        presentsHistory: { content in
-            guard let space = content.browser.shownSpace, !content.spaceAccess.isLocked(space) else { return }
-            content.historyAssignment = BrowserSpaceRuntimeAssignment(space: space)
+        // The list comes up where this window keeps its sidebar: in the
+        // floating sidebar over the page, or as a sheet over the tab viewer.
+        presentsList: { content, surface in
+            MobileCompactSidebarRevealDestination.destination(
+                sidebarPresentation: content.navigation.regularSidebarPresentation
+            )
+            .presentList(surface, in: content)
         },
         beginsNewTab: { content in
             content.model.beginCompactNewTab()
@@ -59,11 +62,14 @@ struct MobileBrowserPresentation: Equatable, Sendable {
         placesSidebarForTabViewer: { _ in },
         preparesForLockedSpace: { $0.keepLockedSpaceBesidePage() },
         adaptsNavigation: { $0.leaveNarrowWidth() },
-        revealsSidebar: { $0.showRegularSidebar() },
         togglesSidebar: { $0.toggleRegularSidebar(reduceMotion: $1) },
-        presentsHistory: { content in
-            content.model.revealSidebarForUtilityCommand(presentation: .regular)
-            content.navigation.utilityPresentation.present(.history)
+        // A docked sidebar shows the list where it stands; a hidden one
+        // floats in with it.
+        presentsList: { content, surface in
+            if !content.navigation.regularSidebarIsDocked {
+                content.showRegularSidebar()
+            }
+            content.navigation.utilityPresentation.present(surface)
         },
         beginsNewTab: { content in
             // The Start Page searches in its own field; any other page opens
@@ -101,9 +107,8 @@ struct MobileBrowserPresentation: Equatable, Sendable {
     private let placesSidebarForTabViewer: @MainActor @Sendable (MobileBrowserNavigationState) -> Void
     private let preparesForLockedSpace: @MainActor @Sendable (MobileBrowserNavigationState) -> Void
     private let adaptsNavigation: @MainActor @Sendable (MobileBrowserNavigationState) -> Void
-    private let revealsSidebar: @MainActor @Sendable (MobileBrowserNavigationState) -> Void
     private let togglesSidebar: @MainActor @Sendable (MobileBrowserRootModel, Bool) -> Void
-    private let presentsHistory: @MainActor @Sendable (MobileBrowserRootContent) -> Void
+    private let presentsList: @MainActor @Sendable (MobileBrowserRootContent, BrowserUtilitySurface) -> Void
     private let beginsNewTab: @MainActor @Sendable (MobileBrowserRootContent) -> Void
     private let opensLocation: @MainActor @Sendable (MobileBrowserRootContent) -> Void
 
@@ -123,9 +128,8 @@ struct MobileBrowserPresentation: Equatable, Sendable {
         placesSidebarForTabViewer: @escaping @MainActor @Sendable (MobileBrowserNavigationState) -> Void,
         preparesForLockedSpace: @escaping @MainActor @Sendable (MobileBrowserNavigationState) -> Void,
         adaptsNavigation: @escaping @MainActor @Sendable (MobileBrowserNavigationState) -> Void,
-        revealsSidebar: @escaping @MainActor @Sendable (MobileBrowserNavigationState) -> Void,
         togglesSidebar: @escaping @MainActor @Sendable (MobileBrowserRootModel, Bool) -> Void,
-        presentsHistory: @escaping @MainActor @Sendable (MobileBrowserRootContent) -> Void,
+        presentsList: @escaping @MainActor @Sendable (MobileBrowserRootContent, BrowserUtilitySurface) -> Void,
         beginsNewTab: @escaping @MainActor @Sendable (MobileBrowserRootContent) -> Void,
         opensLocation: @escaping @MainActor @Sendable (MobileBrowserRootContent) -> Void
     ) {
@@ -136,9 +140,8 @@ struct MobileBrowserPresentation: Equatable, Sendable {
         self.placesSidebarForTabViewer = placesSidebarForTabViewer
         self.preparesForLockedSpace = preparesForLockedSpace
         self.adaptsNavigation = adaptsNavigation
-        self.revealsSidebar = revealsSidebar
         self.togglesSidebar = togglesSidebar
-        self.presentsHistory = presentsHistory
+        self.presentsList = presentsList
         self.beginsNewTab = beginsNewTab
         self.opensLocation = opensLocation
     }
@@ -213,12 +216,6 @@ struct MobileBrowserPresentation: Equatable, Sendable {
         presentsPageOverTabViewer && sidebarPresentation == .floating
     }
 
-    /// Brings the sidebar up for a list a command asked for.
-    @MainActor
-    func revealSidebar(on navigation: MobileBrowserNavigationState) {
-        revealsSidebar(navigation)
-    }
-
     @MainActor
     func toggleSidebar(on model: MobileBrowserRootModel, reduceMotion: Bool) {
         togglesSidebar(model, reduceMotion)
@@ -226,9 +223,11 @@ struct MobileBrowserPresentation: Equatable, Sendable {
 
     // MARK: - Actions - Commands
 
+    /// Brings one of the shown Space's lists up for a command: archive,
+    /// history or downloads.
     @MainActor
-    func presentHistory(in content: MobileBrowserRootContent) {
-        presentsHistory(content)
+    func presentList(_ surface: BrowserUtilitySurface, in content: MobileBrowserRootContent) {
+        presentsList(content, surface)
     }
 
     @MainActor

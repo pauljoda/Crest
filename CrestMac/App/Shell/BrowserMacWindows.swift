@@ -37,6 +37,9 @@ final class BrowserMacWindows {
         let request: QuickRequest
         /// The window's own notices, such as a copied link's.
         let chrome: BrowserChromeState
+        /// The app the window opened over, whose link it shows, which has
+        /// the focus again once the person closes it.
+        var source: BrowserQuickWindowSourceApp?
     }
 
     /// The request a Quick Window shows now, which its content can revise.
@@ -345,16 +348,21 @@ final class BrowserMacWindows {
 
     /// Opens a Quick Window for `request`, or brings forward the one already
     /// open for the same address in the same Space, and answers the window's
-    /// identity, or nil when none could open.
+    /// identity, or nil when none could open. With `source`, the app another
+    /// app's link came from, it opens over the window the person is in there.
     @discardableResult
-    func openQuickWindow(_ request: BrowserQuickWindowRequest) -> UUID? {
+    func openQuickWindow(_ request: BrowserQuickWindowRequest, over source: BrowserQuickWindowSourceApp? = nil)
+        -> UUID?
+    {
         if let existing = quickWindows.first(where: { $0.value.request.value == request }),
             let controller = controller(.quick, id: existing.key)
         {
             // A link another app hands Crest again opens where the person is
-            // now, which may be another display.
-            if request.opensWherePersonIs { BrowserQuickWindowGeometryHostView.moveWherePersonIs(controller.window) }
+            // now, which may be another display or another app.
+            if let source { BrowserQuickWindowGeometryHostView.move(controller.window, over: source) }
+            quickWindows[existing.key]?.source = source
             controller.present(.key)
+            source?.keepBehind(shellWindows(apartFrom: controller.window))
             return existing.key
         }
         guard
@@ -382,7 +390,7 @@ final class BrowserMacWindows {
                     return true
                 }))
         let quickWindow = QuickWindow(
-            model: model, request: current, chrome: BrowserChromeState(sidebarIsPresented: false))
+            model: model, request: current, chrome: BrowserChromeState(sidebarIsPresented: false), source: source)
         quickWindows[request.id] = quickWindow
         // Notices from the page's services reach the Quick Window while it is
         // key, as they reach a browser window.
@@ -391,6 +399,14 @@ final class BrowserMacWindows {
         }
         show(
             .quick, id: request.id, closeGate: model.closeGate,
+            // Over the page it came from, or where the person is in the app
+            // `source`, before it shows: a Quick Window placed once it showed
+            // appeared at the screen's centre and jumped there.
+            placing: { [application] window in
+                BrowserQuickWindowGeometryHostView.place(
+                    window, from: request.targetWindowID, over: source,
+                    pagePoolRegistry: application.pagePoolRegistry)
+            },
             content: { window in
                 BrowserQuickWindowWindowSurface(
                     model: model, spaceAccess: application.spaceAccess, pagePoolRegistry: application.pagePoolRegistry,
@@ -402,7 +418,8 @@ final class BrowserMacWindows {
                         guard let self, !application.windowCoordinator.activateExistingWindow(for: context.browser)
                         else { return }
                         open(.normal(sourceWindowID: request.targetWindowID), activation: .key)
-                    }
+                    },
+                    source: source
                 )
                 .overlay { BrowserNoticeLayer(notices: quickWindow.chrome.notices) }
                 .modifier(BrowserChromeAppearancePersistence())
@@ -414,6 +431,9 @@ final class BrowserMacWindows {
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))
             },
             closed: { [weak self] controller in self?.quickWindowClosed(controller) })
+        if let source, let window = controller(.quick, id: request.id)?.window {
+            source.keepBehind(shellWindows(apartFrom: window))
+        }
         return request.id
     }
 
@@ -455,10 +475,39 @@ final class BrowserMacWindows {
         for id in Array(quickWindows.keys) { closeQuickWindowWithoutAsking(id) }
     }
 
+    /// A Quick Window that another app's link opened, closed while the
+    /// person is still in it, gives that app the focus back. One whose page
+    /// moved into a Space, or closed once the person moved on to another
+    /// window or app, leaves them where they are.
     private func quickWindowClosed(_ controller: BrowserMacWindowController) {
         forget(controller)
-        quickWindows.removeValue(forKey: controller.windowID)?.model.releaseForDismissal()
+        let quickWindow = quickWindows.removeValue(forKey: controller.windowID)
+        if let quickWindow, let source = quickWindow.source, !quickWindow.model.wasPromoted, NSApp.isActive,
+            controller.window.isKeyWindow
+        {
+            source.takeFocusBack()
+        }
+        quickWindow?.model.releaseForDismissal()
         engineHost.windowClosed(controller.windowID, releasingProfiles: [])
+    }
+
+    /// Keeps the shell's windows behind the window the person is in in
+    /// `source`, before a Quick Window for that app's link is made: bringing
+    /// Crest forward for the link brought every Crest window over that app,
+    /// and only the Quick Window shows there. Waiting for the Quick Window
+    /// left them showing over the app while it was made.
+    func keepWindowsBehind(_ source: BrowserQuickWindowSourceApp) {
+        source.keepBehind(shellWindows(apartFrom: nil))
+    }
+
+    /// The shell's other windows on screen, front to back, which a Quick
+    /// Window that opens over another app keeps behind that app's window. A
+    /// window in full screen keeps its own Space.
+    private func shellWindows(apartFrom quickWindow: NSWindow?) -> [NSWindow] {
+        NSApp.orderedWindows.filter { window in
+            window !== quickWindow && window.isVisible && !window.styleMask.contains(.fullScreen)
+                && controllers.contains { $0.window === window }
+        }
     }
 
     // MARK: - Actions - Setup
@@ -514,11 +563,14 @@ final class BrowserMacWindows {
     // MARK: - Actions - Presenting
 
     /// Opens a window of `kind` under `id` showing `content`, which opens
-    /// other windows through these, places it cascading from `source` and
-    /// brings it forward as `activation` says. `closed` says what goes with it.
+    /// other windows through these, places it cascading from `source`, or
+    /// where `place` puts it, and brings it forward as `activation` says.
+    /// `closed` says what goes with it. A window is placed before it shows,
+    /// so it appears once, where it stays.
     private func show<Content: View>(
         _ kind: BrowserMacWindowKind, id: UUID = UUID(), closeGate: BrowserWindowCloseGate? = nil,
-        cascadingFrom source: NSWindow? = nil, activation: BrowserMacWindowActivation = .key,
+        cascadingFrom source: NSWindow? = nil, placing place: ((BrowserMacWindow) -> Void)? = nil,
+        activation: BrowserMacWindowActivation = .key,
         content: (BrowserMacWindow) -> Content, closed: @escaping @MainActor (BrowserMacWindowController) -> Void
     ) {
         let controller = BrowserMacWindowController(
@@ -526,6 +578,7 @@ final class BrowserMacWindows {
             content: { window in content(window).environment(\.browserMacWindows, self) }, closed: closed)
         controllers.append(controller)
         controller.place(cascadingFrom: source)
+        place?(controller.window)
         controller.present(activation)
     }
 

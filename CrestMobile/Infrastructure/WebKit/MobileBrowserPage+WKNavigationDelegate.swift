@@ -40,6 +40,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         // app-level load path. Retire the old document's session as soon as
         // WebKit starts any replacement navigation.
         mediaSessionCoordinator?.prepareForNavigation()
+        elementPicker.cancel()
         isAwaitingPopupNavigation = false
         beginBlockedPopupNavigation()
         beginGeolocationNavigation()

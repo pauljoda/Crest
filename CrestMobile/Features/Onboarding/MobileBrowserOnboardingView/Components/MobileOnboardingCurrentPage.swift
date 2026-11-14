@@ -54,8 +54,12 @@ struct MobileOnboardingCurrentPage: View, BrowserOnboardingPages {
         )
     }
 
-    /// A phone never reaches the look step; setup on it starts from Crest's own look.
-    func lookPage() -> some View { EmptyView() }
+    func lookPage() -> some View {
+        MobileOnboardingLookPage(
+            look: context.look, choose: context.chooseLook, adoptStyle: context.adoptStyle,
+            back: context.setupSecondaryAction,
+            continueSetup: context.advance)
+    }
 
     /// Touch setup has no page for reviewing an import.
     func reviewPage() -> some View { EmptyView() }

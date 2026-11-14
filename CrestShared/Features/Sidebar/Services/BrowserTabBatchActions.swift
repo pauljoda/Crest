@@ -53,7 +53,7 @@ struct BrowserTabBatchActions {
             return
         }
         let links = BrowserTabOrganizationAction(browser: browser, spaceAccess: spaceAccess)
-        var urls: [URL] = []
+        var copied: [BrowserCopiedLink] = []
         for id in request.ids {
             guard
                 let url = links.linkURL(
@@ -64,8 +64,8 @@ struct BrowserTabBatchActions {
                     Rejection.webPagesOnly(WebPagesOnly(tabID: id)).placementExplanation
                 return
             }
-            urls.append(url)
+            copied.append(browser.core.linkToCopy(url))
         }
-        BrowserPageLinkClipboard.copy(urls)
+        BrowserPageLinkClipboard.copy(copied)
     }
 }

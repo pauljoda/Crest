@@ -2,6 +2,10 @@ import Foundation
 
 /// An engine that reports its own navigations committed a new document at
 /// `url`, which finished too unless it still loads.
+///
+/// The page's full screen is left as it is: a navigation within the document,
+/// such as a slide's hash or a site's next video, keeps it, and the engine
+/// reports a page that leaves it with its document.
 struct BrowserPageNavigationCommitted: BrowserPageEngineEvent {
     // MARK: - Variables
 
@@ -12,7 +16,6 @@ struct BrowserPageNavigationCommitted: BrowserPageEngineEvent {
 
     func apply(to page: BrowserPage) {
         page.hasCommittedNavigationAwaitingCompletion = isLoading
-        page.isContentFullscreen = false
         page.webContentFailureMessage = nil
         page.linkHover?.didCommitNavigation()
         page.mediaSessionCoordinator?.didCommitNavigation()

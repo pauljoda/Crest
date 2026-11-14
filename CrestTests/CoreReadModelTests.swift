@@ -133,7 +133,8 @@ final class CoreReadModelTests: XCTestCase {
             })
         let split = SplitGroupState(
             id: UUID(), customTitle: "Stored", titleModifiedAt: nil, customIconSymbol: nil, iconModifiedAt: nil,
-            tint: nil, tintModifiedAt: nil, displayTitle: "Stored", displayEmojiIcon: nil)
+            tint: nil, tintModifiedAt: nil, isCollapsed: false, collapseModifiedAt: nil, displayTitle: "Stored",
+            displayEmojiIcon: nil)
         assertStoredFirst(
             "SpaceModel", reading: { detachedSpace.splitGroups },
             after: {

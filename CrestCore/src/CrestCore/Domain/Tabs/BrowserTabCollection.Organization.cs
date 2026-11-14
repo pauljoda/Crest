@@ -68,6 +68,22 @@ public sealed partial class BrowserTabCollection {
         folders.Clear(); folders.AddRange(ordered);
     }
 
+    /// Deletes the folder `id` with every folder inside it, and each tab they
+    /// hold, split members included, into the archive as open tabs. Answers
+    /// the tab the window shows next: `fallback` in place of `shown` when it
+    /// went, or none, and `shown` itself otherwise. Refused with
+    /// `UnknownFolder` for a folder the Space does not hold.
+    public Guid? DeleteFolderAndContents(Guid id, Guid? shown, Guid? fallback, DateTimeOffset now) {
+        var subtree = new FolderTree(folders).Subtree(id);
+        var deleting = TabsInFolder(id);
+        // Only a window that showed one of the folder's tabs moves; one on
+        // another tab, or on no tab at all, stays where it is.
+        var deletesShown = shown is { } active && deleting.Contains(active);
+        var next = DeleteIntoArchive(deleting, shown, fallback, now, ensureSelection: deletesShown);
+        folders.RemoveAll(folder => subtree.Contains(folder.Id));
+        return deletesShown ? next : shown;
+    }
+
     private static void ValidateInsertion(IReadOnlyList<BrowserTab> remaining, int insertion) {
         if (insertion > 0 && insertion < remaining.Count && remaining[insertion].SplitGroupId is { } split
             && remaining[insertion - 1].SplitGroupId == split) throw new Rejected(new SplitBoundary());
@@ -168,6 +184,13 @@ public sealed partial class BrowserTabCollection {
     #endregion
 
     #region Mutators
+
+    /// The tabs the folder holds, however deep, in the Space's order. Refused
+    /// with `UnknownFolder` for a folder the Space does not hold.
+    public IReadOnlyList<Guid> TabsInFolder(Guid id) {
+        var subtree = new FolderTree(folders).Subtree(id);
+        return [.. tabs.Where(tab => tab.FolderId is { } folder && subtree.Contains(folder)).Select(tab => tab.Id)];
+    }
 
     /// A folder's name: its trimmed title, or "Untitled Folder" for a blank one.
     private static string FolderName(string name) {

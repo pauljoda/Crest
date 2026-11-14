@@ -23,13 +23,23 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     /// The Quick Windows already placed, which a new one opens clear of.
     private static let placedWindows = NSHashTable<NSWindow>.weakObjects()
 
+    /// The last size the person gave a Quick Window, if it is a usable one.
+    private static var rememberedSize: CGSize? {
+        let defaults = BrowserChromeAppearancePreference.defaults
+        guard let data = defaults.data(forKey: rememberedSizeKey),
+            let size = try? JSONDecoder().decode(CGSize.self, from: data),
+            size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0
+        else { return nil }
+        return size
+    }
+
     // MARK: - Variables
 
     private weak var pagePoolRegistry: BrowserPagePoolRegistry?
     private var targetWindowID: UUID?
-    /// Whether the window opens where the person is, over the window they
-    /// are in in another app, instead of over the page it came from.
-    private let opensWherePersonIs: Bool
+    /// The app the window opens over, where the person is, instead of over
+    /// the page it came from: the one another app's link came from.
+    private let source: BrowserQuickWindowSourceApp?
     private weak var positionedWindow: NSWindow?
     /// The window whose resizes the view remembers.
     private weak var observedWindow: NSWindow?
@@ -42,11 +52,11 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     init(
         pagePoolRegistry: BrowserPagePoolRegistry?,
         targetWindowID: UUID?,
-        opensWherePersonIs: Bool = false
+        source: BrowserQuickWindowSourceApp? = nil
     ) {
         self.pagePoolRegistry = pagePoolRegistry
         self.targetWindowID = targetWindowID
-        self.opensWherePersonIs = opensWherePersonIs
+        self.source = source
         super.init(frame: .zero)
     }
 
@@ -146,27 +156,39 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         return CGRect(x: x, y: y, width: size.width, height: size.height)
     }
 
-    /// Places the window once, then remembers the sizes the person gives it.
-    /// The placement itself is never remembered, so opening a Quick Window
-    /// keeps the size another was last given.
+    /// Places the window once, unless the shell placed it before it showed,
+    /// then remembers the sizes the person gives it. The placement itself is
+    /// never remembered, so opening a Quick Window keeps the size another was
+    /// last given.
     func updateWindowGeometry() {
-        guard let window,
-            positionedWindow !== window,
-            let windowScreen = window.screen ?? NSScreen.main
-        else { return }
+        guard let window, positionedWindow !== window else { return }
         positionedWindow = window
+        Self.place(window, from: targetWindowID, over: source, pagePoolRegistry: pagePoolRegistry)
+        observeSize(of: window)
+    }
+
+    /// Places `window`, a Quick Window, once: over the page it came from, in
+    /// the window `targetWindowID` names, or with `source`, over the window
+    /// the person is in in that app. The shell places a Quick Window before it
+    /// shows, so it appears once, where it stays and at the size it keeps,
+    /// and the system's opening animation plays there.
+    static func place(
+        _ window: NSWindow, from targetWindowID: UUID?, over source: BrowserQuickWindowSourceApp?,
+        pagePoolRegistry: BrowserPagePoolRegistry?
+    ) {
+        guard !placedWindows.contains(window), let windowScreen = window.screen ?? NSScreen.main else { return }
         // A window another app asked for opens where the person is, over the
         // window they are in there, not over the Crest window it would move
         // into, which may be on another display.
-        let sourceTarget = opensWherePersonIs ? nil : targetWindowID
+        let sourceTarget = source == nil ? targetWindowID : nil
         let sourceWebContentFrame = sourceTarget.flatMap { targetWindowID in
             pagePoolRegistry?
                 .runtime(for: targetWindowID)?
                 .activeWebContentFrame
         }
-        let person = opensWherePersonIs ? Self.wherePersonIs() : nil
+        let person = source?.wherePersonIs()
         let sourceWindowFrame =
-            opensWherePersonIs
+            source != nil
             ? person?.window
             : sourceTarget.flatMap { targetWindowID in
                 NSApp.windows.first {
@@ -181,73 +203,30 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             ?? sourceWindowFrame.flatMap { frame in
                 NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
             } ?? windowScreen
-        let placed = Self.targetFrame(
+        let placed = targetFrame(
             sourceWebContentFrame: sourceWebContentFrame,
             sourceWindowFrame: sourceWindowFrame,
             visibleFrame: screen.visibleFrame,
             rememberedSize: rememberedSize
         )
-        let others = Self.placedWindows.allObjects.filter { $0 !== window && $0.isVisible }.map(\.frame)
-        let frame = Self.cascaded(placed, clearOf: others, in: screen.visibleFrame)
-        Self.placedWindows.add(window)
+        let others = placedWindows.allObjects.filter { $0 !== window && $0.isVisible }.map(\.frame)
+        let frame = cascaded(placed, clearOf: others, in: screen.visibleFrame)
+        placedWindows.add(window)
         if !framesApproximatelyEqual(window.frame, frame) {
-            window.setFrame(frame, display: true, animate: false)
+            window.setFrame(frame, display: window.isVisible, animate: false)
         }
-        observeSize(of: window)
     }
 
-    /// Moves `window`, a Quick Window already open that another app asks for
-    /// again, to where the person is now, at the size it has and clear of the
-    /// other Quick Windows, as a new one would open there.
-    static func moveWherePersonIs(_ window: NSWindow) {
-        let person = wherePersonIs()
+    /// Moves `window`, a Quick Window already open that the app `source`
+    /// asks for again, to where the person is in that app now, at the size it
+    /// has and clear of the other Quick Windows, as a new one would open
+    /// there.
+    static func move(_ window: NSWindow, over source: BrowserQuickWindowSourceApp) {
+        let person = source.wherePersonIs()
         guard let screen = person.screen ?? window.screen ?? NSScreen.main else { return }
         let moved = fitted(window.frame.size, centeredOn: person.window ?? screen.visibleFrame, in: screen.visibleFrame)
         let others = placedWindows.allObjects.filter { $0 !== window && $0.isVisible }.map(\.frame)
         window.setFrame(cascaded(moved, clearOf: others, in: screen.visibleFrame), display: true, animate: false)
-    }
-
-    /// Where the person is: the window they are in in another app, and the
-    /// screen they use it on, the one under the pointer while the pointer is
-    /// in that window, which can span two, else the one its centre is on. With
-    /// no such window, it is the screen under the pointer.
-    private static func wherePersonIs() -> (window: CGRect?, screen: NSScreen?) {
-        let window = frontWindowFrameOutsideCrest()
-        let pointer = NSEvent.mouseLocation
-        let pointerScreen = NSScreen.screens.first { NSMouseInRect(pointer, $0.frame, false) }
-        let screen =
-            window.flatMap { frame in
-                (frame.contains(pointer) ? pointerScreen : nil)
-                    ?? NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
-            } ?? pointerScreen
-        return (window, screen)
-    }
-
-    /// The frame, in screen coordinates, of the frontmost ordinary window
-    /// another app shows: the window the person is in, which only Crest's own
-    /// windows coming forward could hide. The window list gives each window's
-    /// bounds and owner without asking for any permission.
-    private static func frontWindowFrameOutsideCrest() -> CGRect? {
-        guard
-            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
-                as? [[String: Any]],
-            let primary = NSScreen.screens.first
-        else { return nil }
-        let crest = ProcessInfo.processInfo.processIdentifier
-        let minimum = BrowserQuickWindowLayout.minimumForeignWindowSize
-        for info in windows {
-            guard (info[kCGWindowLayer as String] as? Int) == 0,
-                (info[kCGWindowOwnerPID as String] as? pid_t) != crest,
-                (info[kCGWindowAlpha as String] as? Double).map({ $0 > 0 }) ?? true,
-                let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
-                let width = bounds["Width"], let height = bounds["Height"], let x = bounds["X"], let y = bounds["Y"],
-                width >= minimum, height >= minimum
-            else { continue }
-            // The window list measures from the top of the main display;
-            // AppKit measures from its bottom.
-            return CGRect(x: x, y: primary.frame.maxY - y - height, width: width, height: height)
-        }
-        return nil
     }
 
     /// `frame`, fitted inside `visibleFrame` and moved a step at a time while
@@ -289,7 +268,7 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         }
     }
 
-    private func framesApproximatelyEqual(
+    private static func framesApproximatelyEqual(
         _ first: CGRect,
         _ second: CGRect
     ) -> Bool {
@@ -300,16 +279,6 @@ final class BrowserQuickWindowGeometryHostView: NSView {
     }
 
     // MARK: - Actions - Remembered size
-
-    /// The last size the person gave a Quick Window, if it is a usable one.
-    private var rememberedSize: CGSize? {
-        let defaults = BrowserChromeAppearancePreference.defaults
-        guard let data = defaults.data(forKey: Self.rememberedSizeKey),
-            let size = try? JSONDecoder().decode(CGSize.self, from: data),
-            size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0
-        else { return nil }
-        return size
-    }
 
     private func observeSize(of window: NSWindow) {
         guard observedWindow !== window else { return }

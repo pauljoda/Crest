@@ -54,7 +54,7 @@ struct BrowserNewTabRowContent: View {
         .modifier(BrowserNewTabRowSurface(metrics: metrics))
         .padding(
             .vertical,
-            BrowserSidebarDensity(tabScale).rowSeparation(hasBorders: hasBorders) / 2
+            BrowserSidebarDensity.current.rowSeparation(hasBorders: hasBorders) / 2
         )
         // Outside the button on purpose: the margin the hover surface is drawn
         // within, which lines it up with every other layer, is not part of

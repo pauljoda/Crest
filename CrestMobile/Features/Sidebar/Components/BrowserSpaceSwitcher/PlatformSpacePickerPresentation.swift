@@ -10,13 +10,16 @@ struct PlatformSpacePickerPresentation: UIViewRepresentable {
     let selectedSpaceID: UUID?
     let frames: [UUID: CGRect]
     let selectionTint: Color?
+    /// Whether the selection and a group's outline are drawn. Dots show both
+    /// by their shade instead, while the lane still follows the pager.
+    var drawsHighlight = true
 
     func makeUIView(context: Context) -> SpacePickerPresentationView { SpacePickerPresentationView() }
 
     func updateUIView(_ view: SpacePickerPresentationView, context: Context) {
         view.update(
             presentation: presentation, style: style, spaces: spaces, selectedSpaceID: selectedSpaceID,
-            frames: frames, tint: selectionTint)
+            frames: frames, tint: selectionTint, drawsHighlight: drawsHighlight)
     }
 
     static func dismantleUIView(_ view: SpacePickerPresentationView, coordinator: ()) { view.disconnect() }
@@ -56,13 +59,16 @@ final class SpacePickerPresentationView: UIView {
 
     func update(
         presentation: SpacePagerPresentation, style: CrestSpaceIconPickerStyle, spaces: [BrowserSpaceIdentity],
-        selectedSpaceID: UUID?, frames: [UUID: CGRect], tint: Color?
+        selectedSpaceID: UUID?, frames: [UUID: CGRect], tint: Color?, drawsHighlight: Bool
     ) {
         if self.presentation !== presentation {
             disconnect()
             self.presentation = presentation
         }
         self.style = style
+        // The layers keep their places as the pager moves; only whether
+        // they show changes.
+        layer.opacity = drawsHighlight ? 1 : 0
         // Anchor resolution introduces subpixel rounding during native scrolling.
         // That is not a layout change and must not recenter manual overflow taps.
         let oldWidth = ids.first.flatMap { self.frames[$0]?.width } ?? 0

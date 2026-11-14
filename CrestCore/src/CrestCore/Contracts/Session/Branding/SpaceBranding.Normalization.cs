@@ -43,6 +43,7 @@ public sealed partial record SpaceBranding {
             BannerStrength = Unit(branding.BannerStrength),
             ReadabilityFade = Unit(branding.ReadabilityFade),
             GradientAngle = NormalizedAngle(branding.GradientAngle),
+            TextureStrength = Unit(branding.TextureStrength),
             FolderColorIntensity = Unit(branding.FolderColorIntensity),
             SymbolColor = branding.SymbolColor is { } symbol ? NormalizedColor(symbol) : null,
             Crest = crest with {

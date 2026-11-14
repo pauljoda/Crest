@@ -194,7 +194,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             tabs[index] = tabs[index] with { SplitGroupId = group };
             if (group is { } made && splits.All(split => split.Id != made))
                 splits.Add(new BrowserDataSplit(made, CustomTitle: null, TitleModifiedAt: null, CustomIconSymbol: null, IconModifiedAt: null,
-                    Tint: null, TintModifiedAt: null));
+                    Tint: null, TintModifiedAt: null, IsCollapsed: false, CollapseModifiedAt: null));
         }
         return splits;
     }

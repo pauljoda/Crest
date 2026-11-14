@@ -35,7 +35,7 @@ extension SpaceBranding {
     func foregroundTone(system: BrowserSpaceForegroundTone) -> BrowserSpaceForegroundTone {
         if let override = textColorMode.foregroundTone(system: system) { return override }
         return (colors.isEmpty ? [.indigo] : colors).foregroundTone(
-            strength: bannerStrength, readabilityFade: readabilityFade)
+            strength: bannerStrength, readabilityFade: readabilityFade, system: system)
     }
 
     // MARK: - Actions - Colors

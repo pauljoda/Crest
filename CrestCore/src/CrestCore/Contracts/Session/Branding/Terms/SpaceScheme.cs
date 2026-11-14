@@ -11,7 +11,7 @@ public sealed class SpaceScheme {
     /// settles it near #333 by night and #E5E5E5 by day, under a fine grain,
     /// with its icon in a mid gray. The values follow Arc's sidebar.
     public static readonly SpaceScheme Neutral = new("neutral", "Neutral", SchemeLook(
-        [Tincture.NeutralSmoke], Tincture.NeutralGray, strength: 0.15, showsTexture: true));
+        [Tincture.NeutralSmoke], Tincture.NeutralGray, strength: 0.15, textureStrength: 1));
 
     public static IReadOnlyList<SpaceScheme> All { get; } = [Neutral];
 
@@ -52,9 +52,9 @@ public sealed class SpaceScheme {
     /// window's own background, with no readability fade, its text and
     /// controls following the device's appearance, and the Space's icon in
     /// place of a crest, drawn in `symbol`.
-    private static SpaceBranding SchemeLook(Tincture[] colors, Tincture symbol, double strength, bool showsTexture) =>
+    private static SpaceBranding SchemeLook(Tincture[] colors, Tincture symbol, double strength, double textureStrength) =>
         new(new([.. colors.Select(tincture => tincture.Color)]), SpaceBannerPattern.Diagonal, strength, ReadabilityFade: 0,
-            KeepsControlsReadable: false, SpaceThemeMode.Gradient, GradientAngle: 0, showsTexture, SpaceIconStyle.SimpleSymbol,
+            KeepsControlsReadable: false, SpaceThemeMode.Gradient, GradientAngle: 0, textureStrength, SpaceIconStyle.SimpleSymbol,
             symbol.Color, SpaceBranding.Neutral.Crest, SpaceBranding.BaselineRenderingVersion, FolderColorIntensity: 0,
             SpaceTextColorMode.System, HasCustomAppearance: false);
 

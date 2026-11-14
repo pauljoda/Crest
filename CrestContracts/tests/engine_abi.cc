@@ -296,8 +296,9 @@ void EngineBoundary() {
   const uint8_t engine_fingerprint[CREST_ENGINE_CONTRACT_FINGERPRINT_LENGTH] = CREST_ENGINE_CONTRACT_FINGERPRINT;
   static_assert(sizeof(engine_fingerprint) == engine::kFingerprint.size());
   assert(std::memcmp(engine_fingerprint, engine::kFingerprint.data(), sizeof(engine_fingerprint)) == 0);
-  // AppConfiguration(StorageDirectory: null, Platform: Desktop, ImportNames: null).
-  const uint8_t memory_only[] = {0, 0, 0};
+  // AppConfiguration(StorageDirectory: null, Platform: Desktop, ImportNames: null,
+  // Languages: null, FilterResourcesUrl: null).
+  const uint8_t memory_only[] = {0, 0, 0, 0, 0};
   uint64_t app = 0;
   crest_buffer_t buffer = {nullptr, 0};
   assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);

@@ -21,6 +21,9 @@ enum BrowserSidebarMetrics {
     /// strip. The selected pin's glow slides under whichever layer is above.
     static let topSectionSpacing = CrestSpacing.small
     static let pinnedTabsBottomInset: CGFloat = 6
+    /// The least room the top of a Space keeps between its layers at any
+    /// spacing, so they never touch.
+    static let minimumSectionSpacing = CrestSpacing.extraExtraSmall
 
     /// How far every top-level layer sits from the sidebar's leading and
     /// trailing edges.
@@ -35,6 +38,21 @@ enum BrowserSidebarMetrics {
     /// beside it.
     static let containerSpacing = CrestSpacing.extraExtraSmall
 
+    // MARK: - Actions - Sections
+
+    /// ``topSectionSpacing`` at the person's spacing.
+    @MainActor
+    static var topSectionGap: CGFloat {
+        BrowserDeviceAppearanceStore.shared.sidebarSpacing.gap(topSectionSpacing, minimum: minimumSectionSpacing)
+    }
+
+    /// ``pinnedTabsBottomInset`` at the person's spacing: the room between
+    /// the pinned tabs and the Space's header.
+    @MainActor
+    static var pinnedTabsBottomGap: CGFloat {
+        BrowserDeviceAppearanceStore.shared.sidebarSpacing.gap(pinnedTabsBottomInset, minimum: minimumSectionSpacing)
+    }
+
     // MARK: - Actions - Containers
 
     /// The padding a container keeps under its last row. A row already keeps
@@ -42,8 +60,8 @@ enum BrowserSidebarMetrics {
     /// much less and the surface sits exactly ``containerPadding`` from the
     /// edge, as it does at the sides.
     @MainActor
-    static func containerBottomPadding(tabScale: Double) -> CGFloat {
-        let separation = BrowserSidebarDensity(tabScale).rowSeparation(
+    static var containerBottomPadding: CGFloat {
+        let separation = BrowserSidebarDensity.current.rowSeparation(
             hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all)
         return max(0, containerPadding - CGFloat(separation) / 2)
     }

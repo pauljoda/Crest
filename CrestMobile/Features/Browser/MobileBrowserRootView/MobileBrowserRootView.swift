@@ -63,6 +63,7 @@ struct MobileBrowserRootView: View {
         .modifier(MobileBrowserSideToolbarHost(browser: model.browser))
         .environment(model.sidebarInteraction)
         .environment(\.browserNativeTabs, model.pages.nativeTabs)
+        .environment(\.browserTabPictures, model.pages.tabPictures)
         .environment(
             \.browserSettingsTabContent,
             BrowserSettingsTabContent { runtime in

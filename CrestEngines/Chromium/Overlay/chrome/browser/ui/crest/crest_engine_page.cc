@@ -16,6 +16,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/uuid.h"
 #include "chrome/browser/ui/crest/crest_engine_agent.h"
+#include "chrome/browser/ui/crest/crest_engine_scriptlets.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_browsers.h"
 #include "chrome/browser/ui/crest/crest_engine_content.h"
@@ -543,7 +544,10 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   if (!navigation->IsInPrimaryMainFrame()) {
     return;
   }
-  if (navigation->HasCommitted()) {
+  // Only a new document counts. A page that updates its own address, as one
+  // does with pushState as it opens a link, still shows the document the link
+  // was followed in, so the link still applies.
+  if (navigation->HasCommitted() && !navigation->IsSameDocument()) {
     ++navigation_revision_;
   }
   // The core's load takes its identity with it, whether it commits, fails or
@@ -733,6 +737,19 @@ void EnginePage::DOMContentLoaded(content::RenderFrameHost* frame) {
   if (content_ && frame && !frame->IsInPrimaryMainFrame()) {
     content_->DocumentAvailable(frame);
   }
+}
+
+// The core decides, as each of the page's documents is about to commit,
+// whether the page blocks ads and trackers there, so its request filter
+// applies the answer to every request the document makes.
+void EnginePage::ReadyToCommitNavigation(content::NavigationHandle* navigation) {
+  if (!navigation->IsInPrimaryMainFrame() || navigation->IsSameDocument()) {
+    return;
+  }
+  request_filter_->SetBlocks(binding_->BlocksContent(id_, navigation->GetURL()));
+  // The document's scriptlets reach its frame ahead of the commit, for the
+  // address it commits after any redirect.
+  UseScriptlets(navigation, binding_->InjectedScript(id_, navigation->GetURL()));
 }
 
 // A frame of the page's own site asked for a key system this engine does not

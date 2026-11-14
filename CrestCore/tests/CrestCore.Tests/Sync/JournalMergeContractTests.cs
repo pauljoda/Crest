@@ -85,6 +85,34 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Preserved", kept["customTitle"]!.GetValue<string>());
     }
 
+    /// Collapsing a split is a choice with its own clock: the core keeps it on
+    /// the split, a device that syncs it shows the split collapsed, and another
+    /// device's expand merges against it by that clock, not by the record's
+    /// version.
+    [Fact]
+    public void ASplitCollapseMergesByTheLaterClock() {
+        var group = Fixed(1_210);
+        using var device = new TestDevice(SplitSession([group, group]));
+        device.Send(new CollapseSplit(device.Workspace, Fixed(1_100), group, IsCollapsed: true));
+        Assert.True(Assert.Single(device.Authority.Current.Spaces[0].SplitGroups).IsCollapsed);
+        var journal = new JournalUnderTest(Fixed(1_211));
+        journal.Stage(StoredSessionCodec.Encode(device.Authority.Current), at: 500);
+        var collapsed = journal.Record(SyncRecordKind.Space, Fixed(1_100))!;
+        double collapsedAt = collapsed["payload"]!["value"]!["splitGroups"]![0]!["collapseModifiedAt"]!.GetValue<double>();
+        JsonObject Expanded(double at) => Edited(collapsed, 100, Fixed(1_212), value => {
+            var split = value["splitGroups"]![0]!.AsObject();
+            split.Remove("isCollapsed");
+            split["collapseModifiedAt"] = at;
+        });
+
+        var shown = journal.Materialize(SplitSession([group, group]));
+        Assert.True(FirstSpace(shown)["splitGroups"]![0]!["isCollapsed"]!.GetValue<bool>());
+        var earlier = ConvergedValue(SyncRecordKind.Space, Fixed(1_100), collapsed, Expanded(collapsedAt - 100));
+        Assert.True(earlier["splitGroups"]![0]!["isCollapsed"]!.GetValue<bool>());
+        var later = ConvergedValue(SyncRecordKind.Space, Fixed(1_100), collapsed, Expanded(collapsedAt + 100));
+        Assert.Null(later["splitGroups"]![0]!["isCollapsed"]);
+    }
+
     /// A build before split view re-saves a tab it only activated: a higher
     /// clock and a later activation, but no split membership and no move.
     /// Membership rides the move's clock, so the aware copy keeps it.

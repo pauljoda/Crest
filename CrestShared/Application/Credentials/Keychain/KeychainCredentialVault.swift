@@ -65,6 +65,16 @@ actor KeychainCredentialVault: CredentialVault {
             .count { !reads($0, in: spaceID) }
     }
 
+    /// One read of the Space's service answers both, where settings asked the
+    /// Keychain for the whole service twice.
+    func inventory(in spaceID: UUID) async throws -> CredentialInventory {
+        let items = try await store.descriptorItems(in: service(for: spaceID))
+        let descriptors = items.compactMap { try? codec.descriptor(from: $0, expectedSpaceID: spaceID) }
+        return CredentialInventory(
+            descriptors: descriptors.sorted(by: Self.descriptorOrder),
+            unreadableCount: items.count - descriptors.count)
+    }
+
     func credential(
         id: UUID,
         in spaceID: UUID

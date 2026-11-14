@@ -104,7 +104,7 @@ private struct RecentTabSwitcherPage: View {
 
     @ViewBuilder
     private func thumbnail(favicon: BrowserTabFaviconSubject, profileID: UUID?) -> some View {
-        if let image = model.snapshots.images[tab.id] {
+        if let image = model.snapshots.image(of: tab.id) {
             Image(nsImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fill)

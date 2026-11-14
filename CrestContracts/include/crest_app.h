@@ -85,6 +85,13 @@ CREST_API crest_status_t CREST_CALL crest_app_set_wake(uint64_t app, crest_wake_
 /* OK: buffer = the pending changes, oldest first (a count, then each change).
  * Engine commands a cloud sync intent caused have run when it returns. */
 CREST_API crest_status_t CREST_CALL crest_app_drain(uint64_t app, crest_buffer_t* out);
+/* OK: out_slot = the address of the app's content filter slot, for an engine
+ * binding that checks each network request itself by passing it to
+ * crest_content_filter_slot_check (crest_content_filter.h), which the core's
+ * library exports beside this. The first call compiles the filter on a worker;
+ * until it is in force the slot allows every request. The slot lives as long
+ * as the app. */
+CREST_API crest_status_t CREST_CALL crest_app_content_filter_slot(uint64_t app, void** out_slot);
 /* The host finished a turn of its thread: the drain a wake asked for has run.
  * Work queued to follow the turn, such as sync staging, may start, so the
  * edits one turn makes stage once. A drain inside a turn does not end it. */

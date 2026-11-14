@@ -79,7 +79,9 @@ public sealed class ShortcutCommand {
         MostRecentTabBackward,
         ClearSiteCookies,
         ClearSiteCache,
-        ToggleSelectedTabSaved
+        ToggleSelectedTabSaved,
+        BlockElement,
+        ShowBlockedElements
     }
 
     #endregion
@@ -194,6 +196,14 @@ public sealed class ShortcutCommand {
         name: "toggleContentBlocking", ShortcutSection.Page, title: "Toggle Content Blocking", symbol: "shield",
         searchTerms: "ads trackers privacy protection", requiredCapability: EngineCapability.ContentBlocking,
         availableWhen: ShowingSpace);
+    public static readonly ShortcutCommand BlockElement = new(Kinds.BlockElement, name: "blockElement",
+        ShortcutSection.Page, title: "Block Element", symbol: "eye.slash",
+        searchTerms: "hide remove ads annoyance picker filter", requiredCapability: EngineCapability.ContentBlocking,
+        availableWhen: ShowingWebPage);
+    public static readonly ShortcutCommand ShowBlockedElements = new(Kinds.ShowBlockedElements,
+        name: "showBlockedElements", ShortcutSection.Page, title: "Show Blocked Elements", symbol: "eye",
+        searchTerms: "unhide restore undo picker filter", requiredCapability: EngineCapability.ContentBlocking,
+        availableWhen: ShowingWebPage);
     public static readonly ShortcutCommand FindInPage = new(Kinds.FindInPage, name: "findInPage", ShortcutSection.Page,
         title: "Find in Page", symbol: "text.magnifyingglass", shortcuts: Everywhere(Character("f", Command)), whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ZoomIn = new(Kinds.ZoomIn, name: "zoomIn", ShortcutSection.Page, title: "Zoom In",
@@ -315,7 +325,7 @@ public sealed class ShortcutCommand {
         ClearUnpinnedTabs, ArchiveTab, PreviousTab, NextTab, MostRecentTab, SelectTab1, SelectTab2, SelectTab3, SelectTab4,
         SelectTab5, SelectTab6, SelectTab7, SelectTab8, SelectTab9, PreviousSpace, NextSpace, SelectSpace1, SelectSpace2,
         SelectSpace3, SelectSpace4, SelectSpace5, SelectSpace6, SelectSpace7, SelectSpace8, SelectSpace9, ToggleReaderMode,
-        ToggleContentBlocking, FindInPage, ZoomIn, ZoomOut, ActualSize, CopyPageLink, CopyPageLinkAsMarkdown, SharePage,
+        ToggleContentBlocking, BlockElement, ShowBlockedElements, FindInPage, ZoomIn, ZoomOut, ActualSize, CopyPageLink, CopyPageLinkAsMarkdown, SharePage,
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,

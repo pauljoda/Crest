@@ -747,6 +747,7 @@
   "disposableSeedMarker" : "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
   "appPreferences" : {
     "savedTabFaviconReturnsToSavedURL" : true,
+    "unloadedSavedTabsStay" : false,
     "offersTranslation" : false,
     "automaticallyTranslates" : true,
     "splitFocusFollowsMouse" : true,

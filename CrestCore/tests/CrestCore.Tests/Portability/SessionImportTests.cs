@@ -88,8 +88,8 @@ public sealed partial class BrowserContractsTests {
         ], TabsOf(work));
         Assert.Equal([("Reading", null), ("Inner", "Reading")], FoldersOf(work));
         var theme = work.Settings.Branding!;
-        Assert.Equal((SpaceBannerPattern.Bands, SpaceThemeMode.Gradient, 3, 0.4, true),
-            (theme.BannerPattern, theme.ThemeMode, theme.Colors.Colors.Count, theme.BannerStrength, theme.ShowsTexture));
+        Assert.Equal((SpaceBannerPattern.Bands, SpaceThemeMode.Gradient, 3, 0.4, 1.0),
+            (theme.BannerPattern, theme.ThemeMode, theme.Colors.Colors.Count, theme.BannerStrength, theme.TextureStrength));
         Assert.Equal(["Shared Essential", "Play"], spaces[1].Tabs.Select(tab => tab.Title));
         Assert.Equal(SpaceAccent.Orange, spaces[1].Settings.Accent);
         // The workspaces of one profile share its session: the first leads.

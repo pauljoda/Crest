@@ -44,7 +44,7 @@ extension BrandColor {
 
     /// The tone that reads best over this one solid color.
     var foregroundTone: BrowserSpaceForegroundTone {
-        ColorPalette(colors: [self]).foregroundTone(strength: 1, readabilityFade: 0)
+        ColorPalette(colors: [self]).foregroundTone(strength: 1, readabilityFade: 0, system: .light)
     }
 
     // MARK: - Initializers

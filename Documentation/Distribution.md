@@ -14,8 +14,9 @@ behavior, and user confusion over which build supports extensions.
 The Homebrew cask fetches un-modified binaries from GitHub Releases, 
 thus it is still updated through Sparkle 2. 
 
-Crest 0.8 opens the release line with `MARKETING_VERSION = 0.8.0` and stable
-tag `v0.8.0`. User-facing release copy calls it Crest 0.8. Mac requires Apple
+Crest 0.9 opened the release line with `MARKETING_VERSION = 0.9.0` and stable
+tag `v0.9.0`; later releases on the line, such as security updates, follow as
+`0.9.x` with tags such as `v0.9.1`. User-facing release copy calls it Crest 0.9. Mac requires Apple
 silicon and macOS 26.1 or later; iPhone and iPad remain WebKit apps with 26.1
 deployment targets. The packaged Mac app and Sparkle feed take the higher
 minimum macOS version required by the engine and the native UI framework.
@@ -202,9 +203,13 @@ Before publishing a stable tag:
 5. confirm all seven release secrets are available to the production job;
 6. create and push the exact version tag;
 7. inspect the workflow's signature, notarization, Gatekeeper, checksum, and
-   attestation results;
-8. install the published disk image on a clean macOS account and exercise both
-   a manual update check and the normal relaunch path. For 0.7, cover an upgrade
+   attestation results. Distribution packaging stops the release if an engine
+   helper is an unknown kind or is signed with the wrong entitlements, or if the
+   signed package's engine can't load a page. That check runs the engine on its
+   own, so it covers signing and the engine helpers, not Crest's interface;
+8. install the published disk image on a clean macOS account, load real pages
+   in both engines, and exercise both a manual update check and the normal
+   relaunch path. For 0.7, cover an upgrade
    from the previous stable WebKit-only app and an existing Chromium build,
    preserving Space and tab identity, engine profiles, and unsaved-changes prompts.
 

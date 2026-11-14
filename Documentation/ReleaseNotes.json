@@ -5194,6 +5194,282 @@
       "category": "improved",
       "message": "On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn’t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window’s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge."
     },
+    "built-in-ad-blocking": {
+      "category": "new",
+      "message": "Crest blocks ads and trackers on every page, on Mac, iPhone and iPad, with EasyList, EasyPrivacy, uBlock Origin’s lists and a list for your language, which stay up to date on their own. Blocked ads leave no empty boxes, floating video players are hidden, and the lists’ fixes for sites that fight ad blockers run too. Add your own lists or filters in a Space’s privacy settings, choose Block Element to hide anything the lists miss, and turn blocking off for a site from the page’s actions."
+    },
+    "ad-hiding-out-of-sites-reach": {
+      "category": "improved",
+      "message": "On Chromium pages on Mac, sites can no longer see which of your blocking rules they match or bring back what Crest hides."
+    },
+    "add-to-home-screen": {
+      "category": "new",
+      "message": "On iPhone and iPad, Add to Home Screen in a page’s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser."
+    },
+    "full-screen-tab-close-crash": {
+      "category": "fixed",
+      "message": "On Mac, closing a tab while its Chromium page is full screen no longer makes Crest quit."
+    },
+    "full-screen-survives-page-moves": {
+      "category": "fixed",
+      "message": "On Chromium pages on Mac, a full-screen page stays full screen when it moves to its next slide or video, instead of dropping back inside the window’s border and sidebar."
+    },
+    "settings-smooth-with-lots-of-data": {
+      "category": "fixed",
+      "message": "On Mac, Settings stays smooth with hundreds of saved websites, passwords and site permissions: a Space’s Privacy and Passwords pages open quickly and scroll, search and remove without freezing."
+    },
+    "settings-search-field-takes-typing": {
+      "category": "fixed",
+      "message": "On Mac, clicking the search field above saved passwords or website data now lets you type in it."
+    },
+    "floating-sidebar-opens-lists": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, History, Archive and Downloads from a keyboard shortcut, the menu bar or the command palette slide a hidden floating sidebar in with that list. A docked iPad sidebar stays docked, and an iPhone showing its tabs full screen opens the list as a sheet instead of doing nothing."
+    },
+    "floating-sidebar-leaves-on-scroll": {
+      "category": "improved",
+      "message": "On iPhone and iPad, scrolling or zooming the page puts a floating sidebar away, as tapping the page already did."
+    },
+    "floating-sidebar-hide-button": {
+      "category": "new",
+      "message": "On iPhone and iPad, a floating sidebar has an arrow at its bottom corner that slides it back off the screen."
+    },
+    "sidebar-edge-swipe-only": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, a tap at the edge of the screen no longer brings out a hidden sidebar; swipe in from the edge instead."
+    },
+    "keyboard-hides-address-bar": {
+      "category": "improved",
+      "message": "On iPhone, the address bar slides out of the way while you type into a page, such as filling in a form, and comes back when the keyboard goes."
+    },
+    "ad-blocking-settings": {
+      "category": "improved",
+      "message": "Ad blocking has its own page in Settings and applies to every Space alike. Choose Off, Balanced or Strict, which also hides cookie notices and other annoyances, then turn single lists on or off, update them all at once, subscribe to more lists by address, write your own rules, and see the sites where blocking is off."
+    },
+    "ad-blocking-settings-review-fixes": {
+      "category": "internal",
+      "message": "Keep a site turned off from a persistent Space after a private window turned it off, and show the level a migrated device starts at as soon as its Spaces open"
+    },
+    "start-page-tap-puts-keyboard-away": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away."
+    },
+    "chromium-upstream-157-0-8103-39": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.39 with upstream security and compatibility fixes."
+    },
+    "chromium-protected-video-opens-in-webkit": {
+      "category": "fixed",
+      "message": "On Mac, a page in Chromium that asks for protected video, such as a streaming service's player, now switches to WebKit to play it with FairPlay instead of failing in Chromium."
+    },
+    "chromium-pages-load-after-157": {
+      "category": "fixed",
+      "message": "On Mac, pages in Chromium load again instead of stopping with \"This page stopped responding\" after updating to 0.8.215."
+    },
+    "content-filter-download-resumes": {
+      "category": "internal",
+      "message": "Resume the content filter download when the connection cuts it short, so Xcode Cloud archives no longer fail building the core"
+    },
+    "floating-sidebar-hide-arrow-removed": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away."
+    },
+    "crest-0-9-sub-spaces-ad-blocking-chromium": {
+      "category": "new",
+      "message": "Crest 0.9 brings Sub-Spaces, which let several Spaces share one set of sign-ins while each keeps its own tabs and look, built-in ad blocking on Mac, iPhone and iPad, and a Chromium engine built from Chromium itself, now at 157. Quick Windows and Peek do more, and Crest can follow the system's light or dark appearance."
+    },
+    "chromium-upstream-157-0-8103-51": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws."
+    },
+    "private-browsing-space-never-locks": {
+      "category": "fixed",
+      "message": "The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it."
+    },
+    "arc-import-shared-profile-spaces": {
+      "category": "fixed",
+      "message": "On Mac, importing from Arc no longer quits Crest when Spaces that share an Arc profile aren't next to each other in Arc; they come in together, each with its own tabs."
+    },
+    "browser-import-keeps-spaces-without-passwords": {
+      "category": "fixed",
+      "message": "On Mac, when Crest can't unlock another browser's passwords during an import, as when Keychain access is denied, the import still brings that browser's Spaces and tabs and leaves only the passwords behind."
+    },
+    "extension-opens-own-popup": {
+      "category": "fixed",
+      "message": "Extensions that open their own popup, such as 1Password when you click its button in a sign-in field while it's locked, now show it on Mac instead of doing nothing."
+    },
+    "peek-loads-when-page-updates-address": {
+      "category": "fixed",
+      "message": "On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing."
+    },
+    "cold-launch-link-opens-in-front": {
+      "category": "fixed",
+      "message": "On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them."
+    },
+    "customization-styles": {
+      "category": "new",
+      "message": "Choose how much customization Crest shows with three styles: Heraldic keeps every control, while Modern and Simple show fewer, simpler ones and keep the rest under Advanced. Pick one in Settings › Appearance or during setup, and give any Space its own. Space icons in the switcher can now be dots. The address field and pins now look the same on every Space, and text over a Space's colors is easier to read."
+    },
+    "sidebar-clear-divider-reaches-clear": {
+      "category": "improved",
+      "message": "The line between saved and open tabs now runs up to Clear, instead of stopping well short of it."
+    },
+    "space-texture-strength": {
+      "category": "improved",
+      "message": "Texture is now its own setting for every Space, from none to full, in every customization style, and it shows over banner and solid sidebars as well as gradients. Modern's gradient direction is set on a dial again."
+    },
+    "modern-custom-gradient-inline": {
+      "category": "fixed",
+      "message": "Choosing Modern's custom gradient now shows its two colors under the color sets, and picking them works, instead of a popover the color picker closed."
+    },
+    "selected-tab-window-glass": {
+      "category": "improved",
+      "message": "The selected tab now wears the same glass as the address field and pins, and stands out more over dark sidebars."
+    },
+    "split-view-folder-style": {
+      "category": "improved",
+      "message": "Split Views in the sidebar now look and work like folders: their tabs are indented, a click collapses or expands them, and a double click renames them. The chevron of a collapsed Split View, folder or Space turns as it opens and closes, and their titles no longer flash."
+    },
+    "folder-shown-tab-stays-put": {
+      "category": "fixed",
+      "message": "Opening or closing a folder that holds the tab you're on no longer makes that tab jump through the folder's title."
+    },
+    "closed-folder-keeps-loaded-tabs": {
+      "category": "improved",
+      "message": "A closed folder keeps every loaded tab listed under it, and they stay, even once they unload, until you open and close the folder again."
+    },
+    "folder-move-to-space": {
+      "category": "new",
+      "message": "Move a whole folder, with everything in it, to another Space from its menu."
+    },
+    "folder-delete-everything-inside": {
+      "category": "improved",
+      "message": "Deleting a folder now deletes everything inside it, after asking first, and its tabs go to the Archive."
+    },
+    "start-page-chosen-app-icon": {
+      "category": "fixed",
+      "message": "The Start Page and its tab now show the app icon you chose instead of the default one."
+    },
+    "address-buttons-side-by-side": {
+      "category": "fixed",
+      "message": "Copy URL and Site Controls sit side by side in the address field instead of on top of each other."
+    },
+    "narrower-sidebar": {
+      "category": "improved",
+      "message": "The sidebar narrows to 164 points, about as narrow as Arc's. In a narrow sidebar, Forward folds away to keep clear of the window's buttons, and Copy URL makes room for the address."
+    },
+    "address-display-choice": {
+      "category": "new",
+      "message": "Choose how the address field shows a page's address in Appearance: on two lines, on one line, or just the site."
+    },
+    "super-copy": {
+      "category": "new",
+      "message": "Super Copy, on by default, copies and shares links without known trackers. It follows supported redirect links to their destination, applies AdGuard's URL Tracking filter and Crest's own rules, and shortens Amazon product links. Selecting the address and copying it keeps everything."
+    },
+    "open-subfolder-in-closed-folder": {
+      "category": "fixed",
+      "message": "A folder inside a closed folder opens when you click it, showing everything in it while the folder around it stays closed."
+    },
+    "material-color": {
+      "category": "new",
+      "message": "Choose how the address field, pins, extensions, selected tab and other glass surfaces read in Appearance: Automatic follows each Space, dark over dark Spaces and light over very light ones, or keep them Light, Dark, or as your Mac's appearance (System)."
+    },
+    "start-page-title-follows-space": {
+      "category": "fixed",
+      "message": "The Start Page title on the Mac reads in its Space's light or dark look, so it no longer draws black over a dark Space."
+    },
+    "copy-url-on-hover": {
+      "category": "fixed",
+      "message": "In a narrow sidebar, Copy URL appears in the address field while the pointer is over it, so you can still copy the address with a click."
+    },
+    "quick-window-opens-over-app-in-use": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window that a link from another app or the New Quick Window shortcut opens appears over the app you're using, on the display you're using it on, instead of over another app's window. Links in Crest's own Settings open over Crest."
+    },
+    "quick-window-returns-to-app": {
+      "category": "new",
+      "message": "On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open."
+    },
+    "isolated-sidebar-width": {
+      "category": "fixed",
+      "message": "An isolated test copy of Crest on Mac keeps its own sidebar width, opening at the default and never changing the installed app's."
+    },
+    "settings-scroll-anywhere": {
+      "category": "improved",
+      "message": "On macOS 27, Settings pages other than Shortcuts and Feature Flags scroll wherever the pointer is, with the scroll bar at the edge of the page, while their settings stay in a column down the middle."
+    },
+    "quick-window-opens-in-place": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window opens once where it stays and pops in, instead of flashing in the middle of the screen at a larger size and jumping into place. Crest's other windows no longer flash over the app a link came from."
+    },
+    "tab-hover-preview": {
+      "category": "new",
+      "message": "On Mac, resting the pointer on a tab or pin in the sidebar shows a card beside it with the tab's title, its site and how its page last looked. Turn it off in Settings › Appearance › Preview hover."
+    },
+    "folder-hover-preview": {
+      "category": "new",
+      "message": "On Mac, resting the pointer on a folder in the sidebar lists its tabs, including those in folders inside it, with a search field ready for typing. Open, unload or close a tab there, or drag it out of the folder, without opening the folder. Turn it off in Settings › Appearance › Preview hover."
+    },
+    "touch-sidebar-previews": {
+      "category": "new",
+      "message": "On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind \"…\". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews."
+    },
+    "folder-preview-readable-text": {
+      "category": "fixed",
+      "message": "The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark."
+    },
+    "address-field-click-anywhere": {
+      "category": "fixed",
+      "message": "On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below \"Search or enter website\", or an address shown on one line, used to do nothing."
+    },
+    "sidebar-hover-delay": {
+      "category": "new",
+      "message": "On Mac, choose how long the pointer rests on the window's edge before a hidden sidebar comes out, from Instant to a second, in Settings › Appearance › Sidebar hover delay. It applies in a window and in full screen, and moving off the edge before then still keeps the sidebar hidden."
+    },
+    "sidebar-slide-time": {
+      "category": "new",
+      "message": "On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time."
+    },
+    "quick-window-address-click-anywhere": {
+      "category": "fixed",
+      "message": "A click anywhere in a Quick Window's address field opens it, including above and below the address or \"Search or enter website\" and on the lock before it, where clicks used to do nothing."
+    },
+    "quick-window-navigation-ink": {
+      "category": "fixed",
+      "message": "On Mac, a Quick Window's back and forward buttons draw in the Space's text color, so they stay visible over a dark Space in a light window, or a light Space in a dark one."
+    },
+    "delete-unloaded-saved-tabs": {
+      "category": "new",
+      "message": "Turn off Keep saved tabs after unloading in Settings › Tabs and a saved tab you unload shows an X that deletes it. The X waits a moment after you unload the tab, and on iPhone and iPad it always shows rather than on hover. The setting appears in the Heraldic and Modern styles."
+    },
+    "sidebar-tab-size-steps": {
+      "category": "improved",
+      "message": "Tab size in Settings › Appearance is now a slider with nine steps, from Thin to Large, and a thin tab keeps its title readable while losing the room around it. The Space header grows and shrinks with your tabs."
+    },
+    "sidebar-spacing": {
+      "category": "new",
+      "message": "Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style."
+    },
+    "snappier-sidebar-slide": {
+      "category": "improved",
+      "message": "On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time."
+    },
+    "narrow-sidebar-navigation": {
+      "category": "fixed",
+      "message": "On Mac, a narrow sidebar keeps back, forward and reload, drawing them closer together instead of hiding Forward."
+    },
+    "restored-tab-back-redraws": {
+      "category": "fixed",
+      "message": "In a tab Crest reopened after a relaunch, going back on sites such as Reddit shows the earlier page again, instead of leaving the page you left on screen until a refresh."
+    },
+    "floating-sidebar-previews": {
+      "category": "fixed",
+      "message": "On Mac, a sidebar tab's preview no longer pops up when the hidden sidebar slides out under the pointer, and it goes away with the sidebar instead of staying on the page."
+    },
+    "sidebar-reveal-overshoot": {
+      "category": "fixed",
+      "message": "On Mac, the hidden sidebar also comes out when the pointer overshoots the window's edge, as it easily does when the window doesn't touch the edge of the screen."
+    },
     "recent-tab-switcher-close-highlighted-tab": {
       "category": "new",
       "message": "Control-W closes the highlighted tab while the recent tab switcher is open, keeping saved and pinned tabs and respecting unsaved changes."

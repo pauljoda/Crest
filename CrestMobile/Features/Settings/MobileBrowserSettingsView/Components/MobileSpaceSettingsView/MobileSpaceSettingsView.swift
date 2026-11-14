@@ -101,7 +101,7 @@ struct MobileSpaceSettingsView: View {
                             BrowserCrestForge(
                                 branding: browser.spaceBrandingBinding(in: space),
                                 symbol: browser.spaceSymbolBinding(in: space), step: $forgeStep,
-                                name: browser.spaceNameBinding(in: space))
+                                name: browser.spaceNameBinding(in: space), spaceID: space.id)
                         case .settings:
                             Form {
                                 detailSections(for: space)
@@ -167,7 +167,8 @@ struct MobileSpaceSettingsView: View {
             BrowserCrestForge(
                 branding: browser.spaceBrandingBinding(in: currentSpace),
                 symbol: browser.spaceSymbolBinding(in: currentSpace), step: $forgeStep,
-                name: browser.spaceNameBinding(in: currentSpace), listsSteps: horizontalSizeClass == .compact)
+                name: browser.spaceNameBinding(in: currentSpace), listsSteps: horizontalSizeClass == .compact,
+                spaceID: currentSpace.id)
         }
     }
 

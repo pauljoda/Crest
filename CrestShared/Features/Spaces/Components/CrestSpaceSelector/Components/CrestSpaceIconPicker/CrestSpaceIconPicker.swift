@@ -17,6 +17,9 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
     var segmentSize = CGSize(
         width: CrestSpaceIconPickerMetrics.segmentWidth,
         height: CrestSpaceIconPickerMetrics.segmentHeight)
+    /// Whether the picker draws its track, the selection and the outline
+    /// around a group. Dots go without them and show both by their shade.
+    var drawsSurfaces = true
     @ViewBuilder let segmentContent: (Space) -> SegmentContent
 
     @State private var reorder = CrestSpacePickerReordering()
@@ -42,19 +45,20 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                         spaces: spaces.map(\.identity),
                         selectedSpaceID: selectedSpaceID,
                         frames: anchors.mapValues { geometry[$0] },
-                        selectionTint: selectionTint
+                        selectionTint: selectionTint,
+                        drawsHighlight: drawsSurfaces
                     )
                 }
             }
         }
         .background {
             CrestSpaceIconPickerShape(style: style)
-                .fill(.primary.opacity(style.trackFillOpacity))
+                .fill(.primary.opacity(drawsSurfaces ? style.trackFillOpacity : 0))
         }
         .overlay {
             CrestSpaceIconPickerShape(style: style)
                 .strokeBorder(
-                    .primary.opacity(style.trackBorderOpacity),
+                    .primary.opacity(drawsSurfaces ? style.trackBorderOpacity : 0),
                     lineWidth: CrestLayout.hairline / 2
                 )
         }
@@ -150,7 +154,7 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 )
                 .contentShape(.rect)
                 .background {
-                    if isSelected && selectionPresentation == nil {
+                    if isSelected && selectionPresentation == nil && drawsSurfaces {
                         CrestSpaceIconPickerShape(style: style)
                             .fill((style.tintsSelection ? tint : Color.primary).opacity(style.selectionFillOpacity))
                             .overlay {

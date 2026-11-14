@@ -10,7 +10,6 @@ struct BrowserFolderHeader: View {
     let interaction: BrowserFolderGroupInteractionContext
 
     private var folder: FolderStateModel { configuration.folder }
-    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         BrowserFolderHeaderControl(
@@ -34,7 +33,7 @@ struct BrowserFolderHeader: View {
         // The separation a tab row keeps, so the two stand alike.
         .padding(
             .vertical,
-            BrowserSidebarDensity(tabScale).rowSeparation(
+            BrowserSidebarDensity.current.rowSeparation(
                 hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
         )
         .modifier(

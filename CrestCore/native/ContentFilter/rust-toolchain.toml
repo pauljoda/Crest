@@ -1,0 +1,5 @@
+[toolchain]
+# The Apple targets are added by Scripts/control-plane/content-filter.py when it
+# builds them, so a Linux test run fetches only its own standard library.
+channel = "1.99.1"
+profile = "minimal"

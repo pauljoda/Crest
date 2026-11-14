@@ -1009,10 +1009,6 @@ void CrestBrowserWindow::ShowAvatarBubbleFromAvatarButton(bool is_source_acceler
   [crest::MacUI() showUnavailableFeature:CrestUnavailableFeatureProfiles];
 }
 
-void CrestBrowserWindow::MaybeShowProfileSwitchIPH() {}
-
-void CrestBrowserWindow::MaybeShowSupervisedUserProfileSignInIPH() {}
-
 void CrestBrowserWindow::ShowHatsDialog( const std::string& site_id, const std::optional<std::string>& hats_histogram_name, const std::optional<uint64_t> hats_survey_ukm_id, base::OnceClosure success_callback, base::OnceClosure failure_callback, const SurveyBitsData& product_specific_bits_data, const SurveyStringData& product_specific_string_data) {}
 
 ExclusiveAccessContext* CrestBrowserWindow::GetExclusiveAccessContext() {

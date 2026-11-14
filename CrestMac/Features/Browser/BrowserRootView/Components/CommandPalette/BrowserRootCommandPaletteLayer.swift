@@ -11,6 +11,8 @@ struct BrowserRootCommandPaletteLayer: View {
     @Environment(\.browserMacWindows) private var windows
     @Environment(\.layoutDirection) private var layoutDirection
 
+    @Environment(\.colorScheme) private var colorScheme
+
     @ViewBuilder
     var body: some View {
         if let mode = model.chrome.commandPaletteMode,
@@ -43,9 +45,17 @@ struct BrowserRootCommandPaletteLayer: View {
                     source: model.selectedTabAssignment
                 )
             )
+            // The same scheme as the address field it grows out of.
+            .environment(\.colorScheme, paletteColorScheme)
             .transition(.browserCommandPaletteOverlay)
             .zIndex(BrowserRootMetrics.commandPaletteZIndex)
         }
+    }
+
+    /// The palette's scheme: the material color's, over the Space it searches.
+    private var paletteColorScheme: ColorScheme {
+        let spaceScheme = paletteSpace?.settings.look.shown.colorScheme(over: colorScheme) ?? colorScheme
+        return CrestSurfaceTone.shownScheme(over: spaceScheme, window: colorScheme)
     }
 
     /// The Space the window shows, unless it is being deleted.

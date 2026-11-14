@@ -2,6 +2,10 @@ import SwiftUI
 
 /// A Space's Crest Studio: the crest on the Space's own sidebar field, and
 /// one step of its making at a time, beside the window's live sidebar.
+///
+/// Given its Space, the studio leads with the Space's customization style.
+/// Modern and Simple show their own simpler editors, with the whole studio
+/// in Advanced under them.
 struct BrowserCrestForge: View {
     @Binding var branding: SpaceBranding
     @Binding var symbol: String
@@ -13,6 +17,9 @@ struct BrowserCrestForge: View {
     var listsSteps = false
     /// Whether the stage carries the step bar; a step's own page has none.
     var showsStepBar = true
+    /// The Space whose customization style the studio shows, or nil for the
+    /// whole studio alone.
+    var spaceID: UUID? = nil
 
     @State private var initialAppearance: SpaceBranding?
     @State private var history: [SpaceBranding] = []
@@ -20,6 +27,7 @@ struct BrowserCrestForge: View {
     /// The look Undo put back, which is not itself a change to remember.
     @State private var restoredBranding: SpaceBranding?
     @State private var choosesEmoji = false
+    @State private var showsAdvanced = false
 
     private var context: BrowserCrestStudioContext {
         BrowserCrestStudioContext(
@@ -35,12 +43,25 @@ struct BrowserCrestForge: View {
         isIcon && step.isCrestOnly ? .emblem : step
     }
 
+    /// The style the studio shows the Space's look in.
+    private var style: BrowserCustomizationStyle {
+        spaceID.map { BrowserDeviceAppearanceStore.shared.customizationStyle(for: $0) } ?? .heraldic
+    }
+
     var body: some View {
         BrowserSettingsPane(.spaces) {
-            if listsSteps {
-                stepList
-            } else {
-                stepSections
+            if let spaceID {
+                BrowserSpaceStyleSection(spaceID: spaceID, branding: $branding)
+            }
+            switch style.look.kind {
+            case .heraldic:
+                studio
+            case .modern:
+                BrowserSpaceModernEditor(branding: $branding, symbol: $symbol)
+                advancedStudio
+            case .simple:
+                BrowserSpaceSimpleEditor(branding: $branding, symbol: $symbol)
+                advancedStudio
             }
         }
         #if os(iOS)
@@ -80,6 +101,23 @@ struct BrowserCrestForge: View {
     }
 
     // MARK: - Steps
+
+    /// Every step of the studio: listed, or the chosen one under the stage.
+    @ViewBuilder private var studio: some View {
+        if listsSteps {
+            stepList
+        } else {
+            stepSections
+        }
+    }
+
+    /// The whole studio, folded under Advanced beneath a simpler editor.
+    @ViewBuilder private var advancedStudio: some View {
+        BrowserAppearanceAdvancedHeader(isExpanded: $showsAdvanced)
+        if showsAdvanced {
+            studio
+        }
+    }
 
     /// The stage over every step, each showing what it has chosen.
     private var stepList: some View {
@@ -302,21 +340,14 @@ struct BrowserCrestForge: View {
         Section {
             BrowserCrestStudioSlider(title: "Intensity", value: context.setting(\.bannerStrength))
             if branding.themeMode == .gradient {
-                let angle = context.setting(\.gradientAngle)
-                CrestSettingRow("Gradient angle", setting: angle.resettable("Gradient angle")) {
-                    HStack(spacing: 12) {
-                        Text("\(Int(angle.wrappedValue.rounded()))°").monospacedDigit().foregroundStyle(.secondary)
-                        BrowserSpaceGradientAngleDial(angle: angle.binding, color: branding.secondaryColor.color)
-                            .frame(width: 44, height: 44)
-                    }
-                }
+                BrowserSpaceGradientAngleRow(
+                    angle: context.setting(\.gradientAngle), color: branding.secondaryColor.color)
             }
             BrowserCrestStudioSlider(title: "Readability fade", value: context.setting(\.readabilityFade))
             BrowserCrestStudioSlider(title: "Folder colors", value: context.setting(\.folderColorIntensity))
-            let texture = context.setting(\.showsTexture)
-            CrestSettingRow("Texture", setting: texture.resettable("Texture")) {
-                Toggle("Texture", isOn: texture.binding).labelsHidden()
-            }
+            BrowserCrestStudioSlider(
+                title: "Texture", value: context.setting(\.textureStrength),
+                readout: .percent(zero: "None", full: "Full"))
             segmentedText
         }
     }

@@ -14,9 +14,11 @@ struct BrowserSpacePickerSegment: View {
     /// The part of the picker's scroll lane on screen, in global coordinates,
     /// or nil before it is measured.
     var visibleRegion: CGRect? = nil
+    /// The Spaces the switcher shades its dots among, or nil to draw crests.
+    var dots: BrowserSpaceDot.Field? = nil
 
     var body: some View {
-        BrowserSpacePickerIcon(space: space, metrics: metrics)
+        BrowserSpacePickerIcon(space: space, metrics: metrics, dots: dots)
             .browserSidebarReorderZone(
                 .space(space.assignment),
                 state: reorderState,

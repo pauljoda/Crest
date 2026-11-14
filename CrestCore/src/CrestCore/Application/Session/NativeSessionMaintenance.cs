@@ -50,7 +50,12 @@ public static class NativeSessionMaintenance {
     /// Spaces' groups, keeps a Space that is being deleted exactly as it was,
     /// and adds a Space when none would remain.
     internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
-        out IReadOnlyList<TabOrigin> origins) {
+        out IReadOnlyList<TabOrigin> origins) => Repair(source, now, emptySpace, ids, out origins, out _);
+
+    /// `Repair`, with `places` saying where each of `source`'s Spaces stands
+    /// in the repaired session, since each group gathers where its primary is.
+    internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
+        out IReadOnlyList<TabOrigin> origins, out IReadOnlyList<int> places) {
         var pending = source.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
         var spaces = source.Spaces.ToList();
         if (spaces.Count == 0 || spaces.All(space => pending.Contains(space.Id))) spaces.Add(SessionRepair.Empty(emptySpace, ids, now));
@@ -59,12 +64,14 @@ public static class NativeSessionMaintenance {
         IReadOnlyList<SpaceState> repaired = [.. spaces.Select((space, spaceIndex) =>
             pending.Contains(space.Id) ? repair.Kept(space, spaceIndex) : repair.Repaired(space, spaceIndex))];
         origins = repair.Origins;
+        places = [.. Enumerable.Range(0, source.Spaces.Count)];
         // Each group gathers where its primary is, so the asset references
-        // follow the Spaces to their places.
+        // and places follow the Spaces there.
         var grouped = SpaceGroup.Regrouped(repaired, pending);
         if (!ReferenceEquals(grouped, repaired)) {
-            var places = grouped.Select((space, index) => (space.Id, index)).ToDictionary(pair => pair.Id, pair => pair.index);
-            origins = [.. origins.Select(origin => origin with { SpaceIndex = places[repaired[origin.SpaceIndex].Id] })];
+            var moved = grouped.Select((space, index) => (space.Id, index)).ToDictionary(pair => pair.Id, pair => pair.index);
+            origins = [.. origins.Select(origin => origin with { SpaceIndex = moved[repaired[origin.SpaceIndex].Id] })];
+            places = [.. places.Select(index => moved[repaired[index].Id])];
             repaired = grouped;
         }
         // A launch Space that is gone falls back to the first Space that stays.

@@ -51,7 +51,9 @@ def main():
             parser.error("V8 builtin optimization profile is missing")
         # Chromium declares SDK inputs as generated outputs, so its SDK alias
         # must live beneath root_build_dir, just like sdk_info.py's aliases.
-        sdk_link = output / "sdk/crest" / sdk.name
+        # V8's metagen queries GN from a copy of the build directory that
+        # carries only `xcode_links`, so the alias lives there too.
+        sdk_link = output / "xcode_links/crest" / sdk.name
         if sdk_link.exists() or sdk_link.is_symlink():
             if not sdk_link.is_symlink() or sdk_link.resolve() != sdk:
                 parser.error(f"SDK alias already belongs to another path: {sdk_link}")

@@ -120,6 +120,23 @@ public static unsafe partial class Exports {
         Call(app, query, length, output, ContractCodec.MaximumQueryBytes, (crest, reader, writer) =>
             ContractCodec.WriteAnswer(writer, crest, Finished(ContractCodec.ReadQuery(reader), reader)));
 
+    /// The address of the app's content filter slot, for an engine binding that
+    /// checks each request itself with `crest_content_filter_slot_check`, which
+    /// the core's library exports beside this. The first call compiles the
+    /// filter on a worker; until it is in force the slot allows every request.
+    [UnmanagedCallersOnly(EntryPoint = "crest_app_content_filter_slot", CallConvs = [typeof(CallConvCdecl)])]
+    public static int AppContentFilterSlot(ulong app, nint* slot) {
+        if (slot == null) return CoreStatus.InvalidArgument;
+        *slot = 0;
+        try {
+            if (!Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
+            *slot = crest.ContentFilterSlot();
+            return CoreStatus.Ok;
+        } catch {
+            return CoreStatus.InternalError;
+        }
+    }
+
     /// Answers a query that reads no state without an app, for a host that
     /// has none yet or asks from code that holds none.
     [UnmanagedCallersOnly(EntryPoint = "crest_core_answer", CallConvs = [typeof(CallConvCdecl)])]

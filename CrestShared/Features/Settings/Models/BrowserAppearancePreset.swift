@@ -14,7 +14,6 @@ struct BrowserAppearancePreset: Equatable, Identifiable, Sendable {
 
 enum BrowserAppearancePresets {
     static let cornerRadiusTolerance = 0.5
-    static let tabScaleTolerance = 0.025
 
     static var cornerRadius: [BrowserAppearancePreset] {
         [
@@ -22,14 +21,6 @@ enum BrowserAppearancePresets {
             .init(id: "soft", title: String(localized: "Soft"), value: 6),
             .init(id: "round", title: String(localized: "Round"), value: BrowserLookAndFeelDefaults.cornerRadius),
             .init(id: "capsule", title: String(localized: "Capsule"), value: 40),
-        ]
-    }
-
-    static var tabScale: [BrowserAppearancePreset] {
-        [
-            .init(id: "compact", title: String(localized: "Compact"), value: 0.85),
-            .init(id: "default", title: String(localized: "Default"), value: BrowserLookAndFeelDefaults.tabScale),
-            .init(id: "comfortable", title: String(localized: "Comfortable"), value: 1.15),
         ]
     }
 

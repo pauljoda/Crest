@@ -79,6 +79,8 @@ extension MobileBrowserRootModel {
         guard !hasPreparedBrowser else { return false }
         await pages.prepareContentBlocking()
         hasPreparedBrowser = true
+        // Pages opened while the rules compiled were built without them.
+        await pages.reconcileContentBlocking()
         if startupBehavior.opensNewTab {
             return showDefaultSpaceForNewTab()
         }
@@ -385,12 +387,6 @@ extension MobileBrowserRootModel {
 
     func commitSidebarWidth(_ width: CGFloat) -> CGFloat? {
         layoutPersistence.commitSidebarWidth(width, transaction: &sidebarWidthTransaction)
-    }
-
-    func revealSidebarForUtilityCommand(
-        presentation: MobileBrowserPresentation
-    ) {
-        presentation.revealSidebar(on: navigation)
     }
 
     func hideRegularSidebar(reduceMotion: Bool) {

@@ -43,10 +43,9 @@ enum BrowserEngineRegistration {
     ///   incomplete.
     /// - Whole-page translation rewrites the main document through the
     ///   engine's content scripting, as WebKit's does through its own.
-    /// - Protected media plays through Widevine once its module has downloaded.
-    ///   A page that asks for a key system the engine lacks moves to WebKit,
-    ///   and the core opens video services that refuse Chromium's Widevine
-    ///   there.
+    /// - Protected media is left to WebKit: the engine carries no Widevine, a
+    ///   page that asks for a key system moves to WebKit, and the core opens
+    ///   known video services there from the start.
     /// - Site permission decisions reach the engine as content settings for the
     ///   page's current site; the host has no command to stop live camera,
     ///   microphone or location use directly, so revocation relies on the engine
@@ -54,6 +53,9 @@ enum BrowserEngineRegistration {
     /// - A page's web notifications reach Crest's own system delivery, which
     ///   the WebKit pages share; a service worker's or an extension's
     ///   notifications are closed without showing.
+    /// - Content blocking checks each request of a page against the core's
+    ///   filter; Crest's cosmetic bridge hides what the lists hide, as on
+    ///   WebKit. Scriptlets are not applied.
     static let chromium = BrowserAdapterRegistration(
         kind: .chromium,
         implementation: .chromiumMacOS,
@@ -63,8 +65,9 @@ enum BrowserEngineRegistration {
             .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
             .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
             .extensions, .translation, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
+            .contentBlocking,
         ],
-        unavailable: [.reader, .contentBlocking, .protectedMedia],
+        unavailable: [.reader, .protectedMedia],
         archiveFormat: .mhtml)
 
     private static var desktopWebKit: [EngineCapability] {

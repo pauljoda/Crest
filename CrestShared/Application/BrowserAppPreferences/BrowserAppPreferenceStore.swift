@@ -66,6 +66,13 @@ final class BrowserAppPreferenceStore {
         }
     }
 
+    /// Whether a saved tab stays as it is once its page is unloaded. Off,
+    /// its row offers to delete it once it is unloaded.
+    var unloadedSavedTabsStay: Bool {
+        get { preferences.unloadedSavedTabsStay }
+        set { set { $0.unloadedSavedTabsStay = newValue } }
+    }
+
     var splitFocusFollowsMouse: Bool {
         get { preferences.splitFocusFollowsMouse }
         set { set { $0.splitFocusFollowsMouse = newValue } }

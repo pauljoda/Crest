@@ -89,6 +89,10 @@ struct MobileSelectedPageActionPort: MobilePageActions {
         activePage?.blockedPopupNotice
     }
 
+    var canAddToHomeScreen: Bool {
+        !browser.isPrivateBrowsing && activePage?.canAddToHomeScreen == true
+    }
+
     func goBack() {
         activePage?.goBack()
     }
@@ -175,6 +179,11 @@ struct MobileSelectedPageActionPort: MobilePageActions {
         activePage?.printPage()
     }
 
+    func addToHomeScreen(from source: CGRect?) {
+        guard canAddToHomeScreen else { return }
+        activePage?.addToHomeScreen(from: source)
+    }
+
     func exportPDF(to destination: MobileBrowserFileExportDestination) {
         activePage?.exportPDF(to: destination)
     }
@@ -185,5 +194,9 @@ struct MobileSelectedPageActionPort: MobilePageActions {
 
     func reconcileContentBlocking() async {
         await pages.reconcileContentBlocking()
+    }
+
+    func reloadContentBlocking() async {
+        await pages.reloadContentBlocking()
     }
 }

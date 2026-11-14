@@ -43,6 +43,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     private var blockedPopupMessageProxy: BrowserScriptMessageProxy?
     private var mediaSessionMessageProxy: BrowserScriptMessageProxy?
     private var hostedNotificationMessageProxy: BrowserScriptMessageProxy?
+    private var cosmeticFilterMessageProxy: BrowserScriptMessageProxy?
     /// Names the document the hosted notification bridge answers; a new one
     /// begins with each navigation.
     var hostedNotificationDocumentIdentifier = UUID().uuidString
@@ -101,7 +102,8 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         webKit = webKitPage.engine
         contentRuleSession = BrowserPageContentRuleSession(
             ruleLists: webKitPage.contentRuleLists,
-            additionalRuleList: contentRuleList
+            additionalRuleList: contentRuleList,
+            blocksSite: webKitPage.blocksSite
         )
         ownsUserContentController = webKitPage.ownsUserContentController
         self.geolocationService = geolocationService
@@ -166,6 +168,10 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             blockedPopupMessageProxy = BrowserBlockedPopupContentBridge.install(in: controller) { [weak page] message in
                 page?.receiveBlockedPopupMessage(message)
             }
+            cosmeticFilterMessageProxy = BrowserCosmeticFilterContentBridge.install(in: controller) {
+                [weak page] message in
+                page?.receiveCosmeticFilterMessage(message)
+            }
         }
         let dialogPresenter = page.dialogPresenter
         geolocationCoordinator = BrowserGeolocationCoordinator(
@@ -220,6 +226,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             blockedPopupMessageProxy = nil
             hostedNotificationMessageProxy = nil
             mediaSessionMessageProxy = nil
+            cosmeticFilterMessageProxy = nil
             return
         }
         let controller = webView.configuration.userContentController
@@ -255,6 +262,10 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             mediaSessionMessageProxy, name: BrowserMediaSessionContentBridge.messageHandlerName,
             world: BrowserMediaSessionContentBridge.contentWorld)
         mediaSessionMessageProxy = nil
+        remove(
+            cosmeticFilterMessageProxy, name: BrowserCosmeticFilterContentBridge.messageHandlerName,
+            world: BrowserCosmeticFilterContentBridge.contentWorld)
+        cosmeticFilterMessageProxy = nil
     }
 
     // MARK: - Actions - Page services

@@ -410,6 +410,9 @@
         }
       }
     },
+    "%@, customized" : {
+
+    },
     "%@, Shared" : {
       "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
     },
@@ -715,6 +718,9 @@
     },
     "%lld left out" : {
       "comment" : "How many of a browser's profiles or Spaces an import cannot bring, shown in the import review."
+    },
+    "%lld ms" : {
+
     },
     "%lld of %lld" : {
       "localizations" : {
@@ -1779,6 +1785,12 @@
         }
       }
     },
+    "Ad Blocking" : {
+
+    },
+    "Add" : {
+
+    },
     "Add Accent Color" : {
 
     },
@@ -1812,6 +1824,9 @@
 
     },
     "Add languages in System Settings › General › Language & Region." : {
+
+    },
+    "Add List" : {
 
     },
     "Add Packing list" : {
@@ -1848,6 +1863,9 @@
       }
     },
     "Add to Current Tabs Folder" : {
+
+    },
+    "Add to Home Screen" : {
 
     },
     "Add to Selection" : {
@@ -1912,6 +1930,27 @@
       }
     },
     "Adds or removes this password from the selection." : {
+
+    },
+    "AdGuard Annoyances" : {
+
+    },
+    "AdGuard Base" : {
+
+    },
+    "AdGuard Japanese" : {
+
+    },
+    "AdGuard Russian" : {
+
+    },
+    "AdGuard Turkish" : {
+
+    },
+    "Ads and Trackers" : {
+
+    },
+    "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced" : {
 
     },
     "ads trackers privacy protection" : {
@@ -2108,6 +2147,9 @@
     "Already saved" : {
 
     },
+    "Also hides cookie notices and other annoyances. A few sites may not work." : {
+
+    },
     "Also share tab audio" : {
       "comment" : "Screen sharing picker option to include the shared tab's sound."
     },
@@ -2144,6 +2186,9 @@
 
     },
     "Animate pages when switching Spaces" : {
+
+    },
+    "Annoyances" : {
 
     },
     "Another browser" : {
@@ -2781,7 +2826,10 @@
         }
       }
     },
-    "Block known ads and trackers" : {
+    "Block ads and trackers" : {
+      "extractionState" : "stale"
+    },
+    "Block Element" : {
 
     },
     "Block known trackers" : {
@@ -2791,6 +2839,15 @@
 
     },
     "Blocked for Session" : {
+
+    },
+    "Blocking" : {
+
+    },
+    "Blocking off" : {
+      "extractionState" : "stale"
+    },
+    "Blocks ads and trackers while keeping sites working." : {
 
     },
     "Blood" : {
@@ -2984,6 +3041,9 @@
 
     },
     "Camera & Microphone" : {
+
+    },
+    "camera microphone site access history cookies data website cache clear browsing" : {
 
     },
     "Cancel" : {
@@ -3332,6 +3392,12 @@
     "Choose sidebar widget" : {
 
     },
+    "Choose the Element Around It" : {
+
+    },
+    "Choose the Element Inside" : {
+
+    },
     "Choose the focused card" : {
 
     },
@@ -3530,6 +3596,9 @@
 
     },
     "Click the name to rename" : {
+
+    },
+    "Click what you want to block" : {
 
     },
     "Click, then press the new shortcut" : {
@@ -3778,6 +3847,9 @@
         }
       }
     },
+    "Collapses this Split View" : {
+
+    },
     "Color" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3814,6 +3886,9 @@
           }
         }
       }
+    },
+    "Colors" : {
+
     },
     "Combine in Split View" : {
 
@@ -3936,6 +4011,7 @@
 
     },
     "Content blocking" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3967,6 +4043,9 @@
       "extractionState" : "stale"
     },
     "content blocking ads trackers camera microphone site access history cookies data website cache clear browsing" : {
+
+    },
+    "content blocking ads trackers filter lists EasyList uBlock AdGuard my filters camera microphone site access history cookies data website cache clear browsing" : {
 
     },
     "Continue" : {
@@ -4145,6 +4224,9 @@
 
     },
     "Couldn’t open language downloads." : {
+
+    },
+    "Couldn’t update" : {
 
     },
     "Country" : {
@@ -4605,6 +4687,9 @@
         }
       }
     },
+    "Crest doesn’t block ads or trackers." : {
+
+    },
     "Crest encountered an unexpected problem while opening %@." : {
       "localizations" : {
         "ar" : {
@@ -4883,6 +4968,9 @@
     "Custom accent" : {
 
     },
+    "Custom color" : {
+
+    },
     "Custom Color" : {
       "localizations" : {
         "ar" : {
@@ -4892,6 +4980,9 @@
           }
         }
       }
+    },
+    "Custom gradient" : {
+
     },
     "Customize" : {
       "localizations" : {
@@ -4915,6 +5006,9 @@
           }
         }
       }
+    },
+    "Customized" : {
+
     },
     "Cut" : {
 
@@ -5300,6 +5394,9 @@
     "Dim the page behind Peek" : {
 
     },
+    "Direction" : {
+
+    },
     "Direwolf" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5386,6 +5483,9 @@
       }
     },
     "Done Customizing" : {
+
+    },
+    "Dots" : {
 
     },
     "Double Line" : {
@@ -5666,6 +5766,9 @@
     "Each Space gets an independent copy with the permissions you choose. Extension data stays separate." : {
 
     },
+    "Each Space keeps its own history and site permissions." : {
+
+    },
     "Each Space keeps its own history, site permissions and blocking." : {
 
     },
@@ -5682,6 +5785,33 @@
           }
         }
       }
+    },
+    "EasyList" : {
+
+    },
+    "EasyList China" : {
+
+    },
+    "EasyList Cookie List" : {
+
+    },
+    "EasyList Dutch" : {
+
+    },
+    "EasyList Germany" : {
+
+    },
+    "EasyList Italy" : {
+
+    },
+    "EasyList Polish" : {
+
+    },
+    "EasyList Spanish" : {
+
+    },
+    "EasyPrivacy" : {
+
     },
     "Edge" : {
 
@@ -5838,6 +5968,9 @@
     "Enter an HTTP or HTTPS website." : {
 
     },
+    "Enter an https address." : {
+
+    },
     "Enter Full Screen" : {
 
     },
@@ -5963,6 +6096,9 @@
           }
         }
       }
+    },
+    "Expands this Split View" : {
+
     },
     "Experimental" : {
 
@@ -6185,6 +6321,9 @@
     "Files & Folders" : {
 
     },
+    "Fill" : {
+
+    },
     "Fills the address without opening it. Press Tab or Right Arrow to accept." : {
 
     },
@@ -6227,6 +6366,15 @@
           }
         }
       }
+    },
+    "Filter list address" : {
+
+    },
+    "Filter lists updated %@" : {
+
+    },
+    "Filter lists, your rules and sites" : {
+
     },
     "Find" : {
 
@@ -6719,6 +6867,9 @@
     "Help" : {
 
     },
+    "Heraldic (Full)" : {
+
+    },
     "Heraldry" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6791,6 +6942,9 @@
           }
         }
       }
+    },
+    "hide remove ads annoyance picker filter" : {
+
     },
     "Hide Sidebar" : {
       "localizations" : {
@@ -6929,6 +7083,9 @@
     "https://example.com" : {
 
     },
+    "https://example.com/list.txt" : {
+
+    },
     "Hybrid" : {
 
     },
@@ -7019,6 +7176,9 @@
 
     },
     "Icon Type" : {
+
+    },
+    "Icons" : {
 
     },
     "Identity" : {
@@ -7688,6 +7848,9 @@
     "Installing Update" : {
 
     },
+    "Instant" : {
+
+    },
     "Intensity" : {
 
     },
@@ -7780,6 +7943,9 @@
     "Keep Pages Loaded" : {
 
     },
+    "Keep saved tabs after unloading" : {
+
+    },
     "Keep work, personal browsing, and projects in separate Spaces." : {
 
     },
@@ -7849,6 +8015,9 @@
     "Lapis" : {
 
     },
+    "Large" : {
+
+    },
     "Large Phone" : {
 
     },
@@ -7903,6 +8072,9 @@
           }
         }
       }
+    },
+    "Last viewed" : {
+
     },
     "Latest First" : {
 
@@ -8046,6 +8218,9 @@
           }
         }
       }
+    },
+    "Liste FR" : {
+
     },
     "little arc quick lookup" : {
       "localizations" : {
@@ -8288,6 +8463,9 @@
     "Material" : {
 
     },
+    "Material color" : {
+
+    },
     "Meadow" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8479,6 +8657,9 @@
     },
     "Muted" : {
       "comment" : "A tab's mark while its page plays with its sound muted."
+    },
+    "My Filters" : {
+
     },
     "Name" : {
       "localizations" : {
@@ -8916,6 +9097,9 @@
     "No saved permissions" : {
 
     },
+    "No Sites Found" : {
+
+    },
     "No Space" : {
       "localizations" : {
         "ar" : {
@@ -8940,6 +9124,9 @@
 
     },
     "No supported page text was found. Editable fields, embedded pages, and images are excluded." : {
+
+    },
+    "No Tabs" : {
 
     },
     "No username" : {
@@ -9011,6 +9198,9 @@
       }
     },
     "Not signed in" : {
+
+    },
+    "Not yet" : {
 
     },
     "Notes why each result is there, such as “Often visited” or “Already open”." : {
@@ -9114,10 +9304,19 @@
         }
       }
     },
+    "One line" : {
+
+    },
     "One or two letters" : {
 
     },
     "One per row" : {
+
+    },
+    "One rule per line, as filter lists write them." : {
+
+    },
+    "One rule per line, as filter lists write them. Block Element adds its rules here." : {
 
     },
     "One-time macOS permission · No folder search" : {
@@ -10187,6 +10386,9 @@
     "Press Tab, enter your query, then press Return." : {
 
     },
+    "Preview hover" : {
+
+    },
     "Preview open" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10210,6 +10412,9 @@
       }
     },
     "Preview Unavailable" : {
+
+    },
+    "Previews" : {
 
     },
     "Previous" : {
@@ -10346,6 +10551,9 @@
       }
     },
     "Private windows" : {
+
+    },
+    "Private windows can't be locked." : {
 
     },
     "Private windows can't have Sub-Spaces." : {
@@ -10663,10 +10871,16 @@
     "Region" : {
 
     },
+    "Regional" : {
+
+    },
     "Regular" : {
       "extractionState" : "manual"
     },
     "Rejected rows" : {
+
+    },
+    "Relaxed" : {
 
     },
     "Release Notes" : {
@@ -11127,6 +11341,21 @@
     "Requests permission" : {
 
     },
+    "Require Face ID or passcode" : {
+
+    },
+    "Require Optic ID or passcode" : {
+
+    },
+    "Require passcode" : {
+
+    },
+    "Require password" : {
+
+    },
+    "Require Touch ID or passcode" : {
+
+    },
     "Require Touch ID or password" : {
 
     },
@@ -11357,6 +11586,9 @@
           }
         }
       }
+    },
+    "Revert" : {
+
     },
     "Review" : {
 
@@ -11966,6 +12198,9 @@
     "Search shortcuts" : {
 
     },
+    "Search Sites" : {
+
+    },
     "Search suggestions" : {
 
     },
@@ -11976,6 +12211,9 @@
 
     },
     "Search symbols" : {
+
+    },
+    "Search Tabs" : {
 
     },
     "Search the Web" : {
@@ -12431,6 +12669,9 @@
         }
       }
     },
+    "Show Blocked Elements" : {
+
+    },
     "Show Developer Toolbar" : {
 
     },
@@ -12616,10 +12857,16 @@
     "Sidebar hover area" : {
 
     },
+    "Sidebar hover delay" : {
+
+    },
     "Sidebar on left" : {
 
     },
     "Sidebar on right" : {
+
+    },
+    "Sidebar slide time" : {
 
     },
     "Sidebar widgets" : {
@@ -12640,6 +12887,9 @@
     "Silver" : {
 
     },
+    "Simple" : {
+
+    },
     "Simple Symbol" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -12650,6 +12900,9 @@
           }
         }
       }
+    },
+    "Site" : {
+
     },
     "Site access and data" : {
       "localizations" : {
@@ -12667,6 +12920,9 @@
     "site data storage local session indexeddb service workers sign out delete remove" : {
 
     },
+    "Site only" : {
+
+    },
     "Site permissions" : {
 
     },
@@ -12674,6 +12930,9 @@
 
     },
     "Site Settings" : {
+
+    },
+    "Sites with Blocking Off" : {
 
     },
     "Size" : {
@@ -12725,6 +12984,9 @@
 
     },
     "Smooth webpage performance" : {
+
+    },
+    "Snap" : {
 
     },
     "Snowflake" : {
@@ -12873,6 +13135,9 @@
     "Space icon size" : {
 
     },
+    "Space icons" : {
+
+    },
     "Space in review" : {
 
     },
@@ -12925,6 +13190,9 @@
     },
     "Spaces, tabs, folders, colors, icons, and passwords" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
+    "Spacing" : {
+
     },
     "Sparkles" : {
       "extractionState" : "stale",
@@ -13395,6 +13663,9 @@
         }
       }
     },
+    "Style" : {
+
+    },
     "Sub-Space of %@" : {
       "localizations" : {
         "ar" : {
@@ -13406,6 +13677,9 @@
       }
     },
     "Sub-Spaces" : {
+
+    },
+    "Subscribe to any list by its address. It updates with the built-in lists." : {
 
     },
     "Substitutions" : {
@@ -13440,6 +13714,9 @@
       }
     },
     "Sunset Red" : {
+
+    },
+    "Super Copy" : {
 
     },
     "Suspend" : {
@@ -13695,6 +13972,9 @@
     "Tab scale" : {
 
     },
+    "Tab size" : {
+
+    },
     "Tab status" : {
 
     },
@@ -13733,6 +14013,9 @@
 
     },
     "Tap the name to rename" : {
+
+    },
+    "Tap what you want to block" : {
 
     },
     "Teal" : {
@@ -13922,6 +14205,9 @@
     "The file couldn’t be saved in its folder." : {
 
     },
+    "The folder is empty." : {
+
+    },
     "The original filename used invisible or direction-changing characters that can disguise its real extension." : {
       "localizations" : {
         "ar" : {
@@ -14043,6 +14329,9 @@
     "These credentials are valid and will be imported. Review the security limitation before continuing." : {
 
     },
+    "These filters are too long to keep." : {
+
+    },
     "These items cannot be placed here. Choose another destination." : {
 
     },
@@ -14059,6 +14348,15 @@
 
     },
     "This agent is no longer connected to Crest." : {
+
+    },
+    "This also deletes everything inside it: ^[%lld tab](inflect: true) and ^[%lld folder](inflect: true). Deleted tabs go to the Archive." : {
+
+    },
+    "This also deletes the ^[%lld empty folder](inflect: true) inside it." : {
+
+    },
+    "This also deletes the ^[%lld tab](inflect: true) inside it. Deleted tabs go to the Archive." : {
 
     },
     "This bookmark file exceeds Crest’s folder, depth, tab, or Space limits." : {
@@ -14457,6 +14755,9 @@
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
 
     },
+    "Tight" : {
+
+    },
     "Time range" : {
 
     },
@@ -14517,6 +14818,9 @@
           }
         }
       }
+    },
+    "Too large to use" : {
+
     },
     "Too many agents are allowed. Forget one in Settings first." : {
 
@@ -14762,7 +15066,17 @@
         }
       }
     },
+    "Turn blocking off for a site from its page menu. Ad blocking settings stay on this device." : {
+
+    },
+    "Turn Off Blocking on %@" : {
+
+    },
+    "Turn Off Blocking on This Site" : {
+
+    },
     "Turn Off Content Blocking in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14773,6 +15087,7 @@
       }
     },
     "Turn On Balanced Content Blocking in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14781,6 +15096,15 @@
           }
         }
       }
+    },
+    "Turn On Blocking" : {
+
+    },
+    "Turn on blocking for %@" : {
+
+    },
+    "Turn On Blocking on %@" : {
+
     },
     "Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings." : {
       "localizations" : {
@@ -14811,6 +15135,9 @@
           }
         }
       }
+    },
+    "Two lines" : {
+
     },
     "Two records share one identity." : {
 
@@ -14844,6 +15171,21 @@
 
     },
     "Typing" : {
+
+    },
+    "uBlock filters" : {
+
+    },
+    "uBlock filters – Badware risks" : {
+
+    },
+    "uBlock filters – Privacy" : {
+
+    },
+    "uBlock filters – Quick fixes" : {
+
+    },
+    "uBlock filters – Unbreak" : {
 
     },
     "Ultra Thick" : {
@@ -14895,6 +15237,9 @@
 
     },
     "Undock Sidebar" : {
+
+    },
+    "unhide restore undo picker filter" : {
 
     },
     "Unicorn" : {
@@ -15071,6 +15416,9 @@
     "Update Installed" : {
 
     },
+    "Update Now" : {
+
+    },
     "Update password?" : {
       "localizations" : {
         "ar" : {
@@ -15080,6 +15428,9 @@
           }
         }
       }
+    },
+    "Updated" : {
+
     },
     "Updated your Spaces and added %lld tabs." : {
       "comment" : "Completion summary after updating existing Spaces.",
@@ -15188,6 +15539,9 @@
           }
         }
       }
+    },
+    "Updating…" : {
+
     },
     "URL completion: %@. Press Tab or Right Arrow to accept." : {
 
@@ -15677,6 +16031,9 @@
     "With a Sub-Space" : {
 
     },
+    "With Super Copy, copying or sharing a link leaves out its trackers, using AdGuard's URL Tracking filter. Copying the selected address keeps everything." : {
+
+    },
     "Wolf Grey" : {
 
     },
@@ -15708,6 +16065,9 @@
       }
     },
     "You approve each destination in the Save dialog." : {
+
+    },
+    "You can add up to %lld lists." : {
 
     },
     "You can add up to %lld search providers." : {
@@ -15761,6 +16121,9 @@
 
     },
     "Your example Space" : {
+
+    },
+    "Your Lists" : {
 
     },
     "Your pinned and saved tabs are still in the sidebar." : {

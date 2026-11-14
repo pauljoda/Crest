@@ -30,10 +30,10 @@ public sealed partial record SpaceBranding {
     /// crest unless `figure` names another. An imported look keeps controls
     /// readable with `LegacyReadabilityFade` unless it names its own.
     internal static SpaceBranding Painted(IReadOnlyList<BrandColor> colors, SpaceBannerPattern pattern, double strength,
-        double readabilityFade, SpaceThemeMode theme, double gradientAngle, bool showsTexture, CrestSymbol? figure = null) {
+        double readabilityFade, SpaceThemeMode theme, double gradientAngle, double textureStrength, CrestSymbol? figure = null) {
         var crest = SpaceCrest.PlainField(CrestBackplate.Shield, figure ?? CrestSymbol.Mountain, CrestTrim.None, ImportedLayers,
             trimWeight: 1, chargeScale: 1);
-        return new(new(colors), pattern, strength, readabilityFade, readabilityFade > 0, theme, gradientAngle, showsTexture,
+        return new(new(colors), pattern, strength, readabilityFade, readabilityFade > 0, theme, gradientAngle, textureStrength,
             SpaceIconStyle.SimpleSymbol, SymbolColor: null, crest, BaselineRenderingVersion, FolderColorIntensity: 0,
             SpaceTextColorMode.Automatic, HasCustomAppearance: null);
     }

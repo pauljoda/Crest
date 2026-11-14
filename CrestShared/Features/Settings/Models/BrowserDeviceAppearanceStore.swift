@@ -41,6 +41,15 @@ final class BrowserTabAppearance {
 /// choice as ``BrowserTabAppearance`` is.
 @MainActor @Observable
 final class BrowserAddressAppearance {
+    /// What the field shows of a page's address while it is not being edited.
+    enum Display: String, Codable, CaseIterable {
+        /// The site over its path, on two lines.
+        case twoLines
+        /// The site and its path on one line, cut short after the site.
+        case oneLine
+        /// The site alone.
+        case siteOnly
+    }
     var fill: Double = 0 { didSet { changed() } }
     var border: Double = 0 { didSet { changed() } }
     var usesAccentWhenEditing = false { didSet { changed() } }
@@ -50,6 +59,7 @@ final class BrowserAddressAppearance {
     /// Whether a live site's address field offers a button that copies its
     /// URL, beside Site Controls. Only the Mac's sidebar field draws it.
     var showsCopyURLButton = false { didSet { changed() } }
+    var display: Display = .twoLines { didSet { changed() } }
     var color: BrandColor? { didSet { changed() } }
     /// Called after any choice changes, so its owner can save it.
     @ObservationIgnored var changed: () -> Void = {}
@@ -95,7 +105,7 @@ extension BrowserTabAppearance: @MainActor Codable {
 
 extension BrowserAddressAppearance: @MainActor Codable {
     private enum CodingKeys: String, CodingKey {
-        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, showsCopyURLButton, color
+        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, showsCopyURLButton, display, color
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -107,6 +117,7 @@ extension BrowserAddressAppearance: @MainActor Codable {
         animatesIntoCommandPalette =
             (try? values.decode(Bool.self, forKey: .animatesIntoCommandPalette)) ?? true
         showsCopyURLButton = (try? values.decode(Bool.self, forKey: .showsCopyURLButton)) ?? false
+        display = (try? values.decode(Display.self, forKey: .display)) ?? .twoLines
         color = try? values.decode(BrandColor.self, forKey: .color)
     }
 
@@ -117,6 +128,7 @@ extension BrowserAddressAppearance: @MainActor Codable {
         try values.encode(usesAccentWhenEditing, forKey: .usesAccentWhenEditing)
         try values.encode(animatesIntoCommandPalette, forKey: .animatesIntoCommandPalette)
         try values.encode(showsCopyURLButton, forKey: .showsCopyURLButton)
+        try values.encode(display, forKey: .display)
         try values.encodeIfPresent(color, forKey: .color)
     }
 }
@@ -139,12 +151,26 @@ final class BrowserDeviceAppearanceStore {
     static let addressKey = "crest.appearance.address"
     static let cornerRadiusKey = "crest.appearance.cornerRadius"
     static let surfaceMaterialKey = "crest.appearance.surfaceMaterial"
+    static let surfaceToneKey = "crest.appearance.surfaceTone"
     static let modeKey = "crest.appearance.mode"
     static let darkSpaceDimmingKey = "crest.appearance.darkSpaceDimming"
     static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
+    static let sidebarRevealDelayKey = "crest.appearance.sidebar-reveal-delay"
+    static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-length"
+    /// Where Sidebar slide time was kept while every appearance save also
+    /// wrote its 240 ms default, so a stored 240 there says nothing about what
+    /// the person chose.
+    static let legacySidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
+    static let legacySidebarSlideDefault: Double = 240
     static let peekSizeKey = "crest.appearance.peek-size"
+    static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
+    static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
+    static let customizationStyleKey = "crest.appearance.customization-style"
+    static let spaceIconsKey = "crest.appearance.space-icons"
+    static let spaceCustomizationStylesKey = "crest.appearance.space-customization-styles"
+    static let rememberedLooksKey = "crest.appearance.space-style-looks"
     static let maximumCornerRadius: Double = 40
     /// How long the choices stay still before the store writes them out.
     static let settleDelay = Duration.milliseconds(300)
@@ -182,10 +208,30 @@ final class BrowserDeviceAppearanceStore {
     var sidebarRevealWidth: Double {
         didSet { saveSoon() }
     }
+    /// How long, in milliseconds, the pointer rests on that strip before the
+    /// hidden sidebar shows; zero shows it at once.
+    var sidebarRevealDelay: Double {
+        didSet { saveSoon() }
+    }
+    /// How long, in milliseconds, the sidebar takes to slide out over the
+    /// page, the length every other sidebar slide is measured against; zero
+    /// puts it in place at once.
+    var sidebarSlideDuration: Double {
+        didSet { saveSoon() }
+    }
     /// How much of the room beside the sidebar a Peek's card takes, within
     /// ``BrowserTransientCardArrangement/pointerCardShares``. Only the Mac's
     /// Peek floats in that room.
     var peekSize: Double {
+        didSet { saveSoon() }
+    }
+    /// Whether a sidebar tab or pin the pointer rests on shows its preview
+    /// card, where the window draws one.
+    var previewsTabsOnHover: Bool {
+        didSet { saveSoon() }
+    }
+    /// Whether a sidebar folder the pointer rests on shows a card of its tabs.
+    var previewsFoldersOnHover: Bool {
         didSet { saveSoon() }
     }
     /// How tabs look. Replaced only to reset it; otherwise its choices change
@@ -210,6 +256,11 @@ final class BrowserDeviceAppearanceStore {
     var surfaceMaterial: CrestSurfaceMaterial {
         didSet { saveSoon() }
     }
+    /// Whether that material, and the text on it, reads light or dark,
+    /// stored by name.
+    var surfaceTone: CrestSurfaceTone {
+        didSet { saveSoon() }
+    }
     /// Whether windows draw light, dark, or as the system does, stored by name.
     var mode: BrowserAppearanceMode {
         didSet { saveSoon() }
@@ -232,9 +283,37 @@ final class BrowserDeviceAppearanceStore {
     var spaceIconScale: Double {
         didSet { saveSoon() }
     }
+    /// How much of the customization every Space shows, stored by name.
+    var customizationStyle: BrowserCustomizationStyle {
+        didSet { saveSoon() }
+    }
+    /// How the Space switcher shows Spaces as the person chose it, or nil
+    /// while it follows ``customizationStyle``.
+    var chosenSpaceIcons: BrowserSpaceIconDisplay? {
+        didSet { saveSoon() }
+    }
+    /// How the Space switcher shows Spaces.
+    var spaceIcons: BrowserSpaceIconDisplay { chosenSpaceIcons ?? customizationStyle.spaceIcons }
+    /// The style each Space shows its own customization in where it differs
+    /// from ``customizationStyle``, by Space.
+    private(set) var spaceCustomizationStyles: [UUID: BrowserCustomizationStyle] {
+        didSet { saveSoon() }
+    }
+    /// The look each Space last wore in each style, by Space and then by the
+    /// style's name, so choosing a style again gives a Space back its look in
+    /// it. Kept in the form the stored session keeps branding in, which every
+    /// later build reads.
+    @ObservationIgnored private var rememberedLooks: [UUID: [String: SpaceBranding]] {
+        didSet { saveSoon() }
+    }
     /// The size tabs, pins and folders are drawn at, as a fraction of their
     /// usual size.
     var tabScale: Double {
+        didSet { saveSoon() }
+    }
+    /// How much room the sidebar keeps between its rows, bars and sections,
+    /// stored by name.
+    var sidebarSpacing: BrowserSidebarSpacing {
         didSet { saveSoon() }
     }
     /// How many pins a row holds at most; zero balances the rows.
@@ -295,6 +374,20 @@ final class BrowserDeviceAppearanceStore {
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
+        sidebarRevealDelay =
+            chrome.object(forKey: Self.sidebarRevealDelayKey) as? Double
+            ?? BrowserLookAndFeelDefaults.sidebarRevealDelay
+        sidebarSlideDuration =
+            chrome.object(forKey: Self.sidebarSlideDurationKey) as? Double
+            ?? (chrome.object(forKey: Self.legacySidebarSlideDurationKey) as? Double).flatMap {
+                $0 == Self.legacySidebarSlideDefault ? nil : $0
+            }
+            ?? BrowserLookAndFeelDefaults.sidebarSlideDuration
+        previewsTabsOnHover =
+            defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover
+        previewsFoldersOnHover =
+            defaults.object(forKey: Self.folderHoverPreviewKey) as? Bool
+            ?? BrowserLookAndFeelDefaults.previewsFoldersOnHover
         let shares = BrowserTransientCardArrangement.pointerCardShares
         peekSize =
             (defaults.object(forKey: Self.peekSizeKey) as? Double).flatMap {
@@ -326,6 +419,9 @@ final class BrowserDeviceAppearanceStore {
         surfaceMaterial =
             CrestSurfaceMaterial.named(defaults.string(forKey: Self.surfaceMaterialKey))
             ?? BrowserLookAndFeelDefaults.surfaceMaterial
+        surfaceTone =
+            CrestSurfaceTone.named(defaults.string(forKey: Self.surfaceToneKey))
+            ?? BrowserLookAndFeelDefaults.surfaceTone
         mode =
             BrowserAppearanceMode.named(defaults.string(forKey: Self.modeKey))
             ?? BrowserLookAndFeelDefaults.appearanceMode
@@ -340,10 +436,25 @@ final class BrowserDeviceAppearanceStore {
             (defaults.object(forKey: Self.spaceIconScaleKey) as? Double).map {
                 Double(BrowserSpaceIconSizing.clamped($0))
             } ?? BrowserLookAndFeelDefaults.spaceIconScale
+        customizationStyle =
+            BrowserCustomizationStyle.named(defaults.string(forKey: Self.customizationStyleKey))
+            ?? BrowserLookAndFeelDefaults.customizationStyle
+        chosenSpaceIcons = BrowserSpaceIconDisplay.named(defaults.string(forKey: Self.spaceIconsKey))
+        spaceCustomizationStyles =
+            (defaults.dictionary(forKey: Self.spaceCustomizationStylesKey) as? [String: String] ?? [:])
+            .reduce(into: [:]) { styles, entry in
+                guard let space = UUID(uuidString: entry.key), let style = BrowserCustomizationStyle.named(entry.value)
+                else { return }
+                styles[space] = style
+            }
+        rememberedLooks = Self.rememberedLooks(in: defaults)
         tabScale =
             (defaults.object(forKey: BrowserSidebarDensityPreference.scaleKey) as? Double).flatMap {
-                $0.isFinite ? $0 : nil
+                $0.isFinite ? BrowserSidebarDensity.stepped($0) : nil
             } ?? BrowserLookAndFeelDefaults.tabScale
+        sidebarSpacing =
+            BrowserSidebarSpacing.named(defaults.string(forKey: BrowserSidebarDensityPreference.spacingKey))
+            ?? BrowserLookAndFeelDefaults.sidebarSpacing
         pinColumns =
             defaults.object(forKey: BrowserSidebarDensityPreference.pinColumnsKey) as? Int
             ?? BrowserLookAndFeelDefaults.pinColumns
@@ -377,6 +488,57 @@ final class BrowserDeviceAppearanceStore {
         }
     }
 
+    // MARK: - Actions - Customization Styles
+
+    /// The style `spaceID` shows its customization in: its own, or else
+    /// ``customizationStyle``.
+    func customizationStyle(for spaceID: UUID) -> BrowserCustomizationStyle {
+        spaceCustomizationStyles[spaceID] ?? customizationStyle
+    }
+
+    /// Whether `spaceID` shows its customization in a style of its own.
+    func hasOwnCustomizationStyle(_ spaceID: UUID) -> Bool {
+        spaceCustomizationStyles[spaceID] != nil
+    }
+
+    /// Gives `spaceID` `style` for its customization, or has it follow
+    /// ``customizationStyle`` again when `style` is nil or that same style.
+    func setCustomizationStyle(_ style: BrowserCustomizationStyle?, for spaceID: UUID) {
+        spaceCustomizationStyles[spaceID] = style == customizationStyle ? nil : style
+    }
+
+    /// The look `spaceID`, wearing `branding`, takes on moving from
+    /// `previous` to `style`: the look it wore in `style` before, or else that
+    /// style's look made from its own. The look it leaves is kept for when it
+    /// comes back, when it is a look of `previous` at all.
+    func look(
+        of spaceID: UUID, wearing branding: SpaceBranding, movingFrom previous: BrowserCustomizationStyle,
+        to style: BrowserCustomizationStyle
+    ) -> SpaceBranding {
+        guard previous != style else { return branding }
+        if previous.keeps(branding) { remember(branding, of: spaceID, in: previous) }
+        return style.look(for: branding, remembered: rememberedLook(of: spaceID, in: style))
+    }
+
+    /// The look `spaceID` wore when it was last in `style`, if it has been.
+    private func rememberedLook(of spaceID: UUID, in style: BrowserCustomizationStyle) -> SpaceBranding? {
+        rememberedLooks[spaceID]?[style.name]
+    }
+
+    /// Keeps `branding` as the look `spaceID` wears in `style`.
+    private func remember(_ branding: SpaceBranding, of spaceID: UUID, in style: BrowserCustomizationStyle) {
+        rememberedLooks[spaceID, default: [:]][style.name] = branding
+    }
+
+    /// The looks `defaults` keeps, each read back by the core.
+    private static func rememberedLooks(in defaults: UserDefaults) -> [UUID: [String: SpaceBranding]] {
+        let stored = defaults.dictionary(forKey: rememberedLooksKey) as? [String: [String: String]] ?? [:]
+        return stored.reduce(into: [:]) { looks, entry in
+            guard let space = UUID(uuidString: entry.key) else { return }
+            looks[space] = entry.value.compactMapValues { (try? CrestCore.answer(RestoreLook(text: $0)))?.look }
+        }
+    }
+
     // MARK: - Actions - Space Colors
 
     /// Whether a window in `colorScheme` dims Space colors `dimming` of the way.
@@ -394,12 +556,32 @@ final class BrowserDeviceAppearanceStore {
         write(try? JSONEncoder().encode(tabs), forKey: Self.tabsKey, in: defaults)
         write(try? JSONEncoder().encode(address), forKey: Self.addressKey, in: defaults)
         write(surfaceMaterial.name, forKey: Self.surfaceMaterialKey, in: defaults)
+        write(surfaceTone.name, forKey: Self.surfaceToneKey, in: defaults)
         write(mode.name, forKey: Self.modeKey, in: defaults)
         write(darkSpaceDimming, forKey: Self.darkSpaceDimmingKey, in: defaults)
         write(spaceIconSizing.name, forKey: Self.spaceIconSizingKey, in: defaults)
         write(spaceIconScale, forKey: Self.spaceIconScaleKey, in: defaults)
+        write(customizationStyle.name, forKey: Self.customizationStyleKey, in: defaults)
+        if let chosenSpaceIcons {
+            write(chosenSpaceIcons.name, forKey: Self.spaceIconsKey, in: defaults)
+        } else if defaults.object(forKey: Self.spaceIconsKey) != nil {
+            defaults.removeObject(forKey: Self.spaceIconsKey)
+        }
+        let spaceStyles = spaceCustomizationStyles.reduce(into: [String: String]()) {
+            $0[$1.key.uuidString] = $1.value.name
+        }
+        write(spaceStyles as NSDictionary, forKey: Self.spaceCustomizationStylesKey, in: defaults)
+        let looks = rememberedLooks.reduce(into: [String: [String: String]]()) { looks, entry in
+            looks[entry.key.uuidString] = entry.value.compactMapValues {
+                (try? CrestCore.answer(StoreLook(look: $0)))?.text
+            }
+        }
+        write(looks as NSDictionary, forKey: Self.rememberedLooksKey, in: defaults)
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
+        write(sidebarSpacing.name, forKey: BrowserSidebarDensityPreference.spacingKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
+        write(previewsTabsOnHover, forKey: Self.tabHoverPreviewKey, in: defaults)
+        write(previewsFoldersOnHover, forKey: Self.folderHoverPreviewKey, in: defaults)
         write(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey, in: defaults)
         write(pinsFillRow, forKey: BrowserSidebarDensityPreference.pinsFillRowKey, in: defaults)
         write(foldersAlwaysVisible, forKey: BrowserFolderAppearancePreference.alwaysVisibleKey, in: defaults)
@@ -410,6 +592,8 @@ final class BrowserDeviceAppearanceStore {
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
+        write(sidebarRevealDelay, forKey: Self.sidebarRevealDelayKey, in: chrome)
+        write(sidebarSlideDuration, forKey: Self.sidebarSlideDurationKey, in: chrome)
     }
 
     /// Writes the choices once they have stayed still for ``settleDelay``.

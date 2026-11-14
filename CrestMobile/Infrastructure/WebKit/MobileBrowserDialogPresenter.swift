@@ -300,19 +300,36 @@ enum MobileBrowserDialogPresenter {
         _ viewController: UIViewController,
         fallback: @escaping @MainActor @Sendable () -> Void
     ) {
+        present(viewController, from: nil, fallback: fallback)
+    }
+
+    /// Presents `viewController` over the top view controller, or calls
+    /// `fallback` when there is none to present it over. Where it shows as a
+    /// popover, it points at `source`, a frame in the window, or floats at the
+    /// bottom of the window without one.
+    static func present(
+        _ viewController: UIViewController,
+        from source: CGRect?,
+        fallback: @escaping @MainActor @Sendable () -> Void
+    ) {
         guard let presenter = topViewController() else {
             fallback()
             return
         }
         if let popover = viewController.popoverPresentationController {
             popover.sourceView = presenter.view
-            popover.sourceRect = CGRect(
-                x: presenter.view.bounds.midX,
-                y: presenter.view.bounds.maxY,
-                width: 1,
-                height: 1
-            )
-            popover.permittedArrowDirections = []
+            if let source {
+                popover.sourceRect = presenter.view.convert(source, from: nil)
+                popover.permittedArrowDirections = .any
+            } else {
+                popover.sourceRect = CGRect(
+                    x: presenter.view.bounds.midX,
+                    y: presenter.view.bounds.maxY,
+                    width: 1,
+                    height: 1
+                )
+                popover.permittedArrowDirections = []
+            }
         }
         presenter.present(viewController, animated: true)
     }

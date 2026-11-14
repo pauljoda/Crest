@@ -19,6 +19,7 @@ extension BrowserPage: WKNavigationDelegate {
         // WebKit starts any replacement navigation.
         mediaSessionCoordinator?.prepareForNavigation()
         pictureInPicture?.invalidate()
+        elementPicker.cancel()
         isAwaitingPopupNavigation = false
         beginBlockedPopupNavigation()
         beginGeolocationNavigation()

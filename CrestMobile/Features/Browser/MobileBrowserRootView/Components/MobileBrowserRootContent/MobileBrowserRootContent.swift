@@ -15,10 +15,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @Environment(\.accessibilityReduceTransparency) var reduceTransparency
     @Environment(\.layoutDirection) var layoutDirection
     @State private var spacePagerPresentation = SpacePagerPresentation()
+    /// The tab preview of the sidebar that floats over a phone's page.
+    @State private var floatingSidebarPreview = BrowserTabPreviewState()
     @State var isAddressEditing = false
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
-    @State var historyAssignment: BrowserSpaceRuntimeAssignment?
+    @State var presentedListSheet: MobileBrowserSidebarSpaceSheet?
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
@@ -122,7 +124,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsPresented: true,
                     sidebarIsDocked: true,
                     utilityPresentation: navigation.utilityPresentation
-                ),
+                )
+                .overlay {
+                    MobileTabPreviewLayer(
+                        preview: sidebarInteraction.tabPreview, pages: pages, spaceAccess: spaceAccess)
+                },
                 floatingSidebar: MobileBrowserSidebarSurface(
                     browser: browser,
                     pages: pages,
@@ -157,6 +163,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsDocked: false,
                     utilityPresentation: navigation.utilityPresentation
                 )
+                // The floating sidebar over a phone's page has cards of its
+                // own, so the tab viewer's, under the page, never draws one.
+                .environment(\.browserTabPreviewState, floatingSidebarPreview)
+                .overlay {
+                    MobileTabPreviewLayer(preview: floatingSidebarPreview, pages: pages, spaceAccess: spaceAccess)
+                }
                 .modifier(
                     BrowserPlatformObservedTapModifier(claimsTaps: true) {
                         navigation.handleRegularSidebarInteraction()
@@ -228,7 +240,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 // History and download prompts present from it; the floating
                 // sidebar lives on it too.
                 .sheet(isPresented: settingsSheet(overPage: true)) { settingsSheetContent }
-                .sheet(item: historySheet(overPage: true)) { historySheetContent($0) }
+                .sheet(item: listSheet(overPage: true)) { listSheetContent($0) }
                 .modifier(downloadRiskConfirmation(overPage: true))
             ),
             regular: { layout in
@@ -340,6 +352,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         select: navigation.utilityPresentation.present
                     )
                 }
+                .overlay {
+                    MobileTabPreviewLayer(
+                        preview: sidebarInteraction.tabPreview, pages: pages, spaceAccess: spaceAccess,
+                        sidebarEdge: navigation.regularSidebarIsDocked && layout.reservesSidebarWidth
+                            ? layout.sidebarWidth : BrowserSidebarPresentation.floatingCardInset + layout.sidebarWidth)
+                }
             },
             palette: { contentInsets in
                 MobileBrowserCommandPaletteLayer(
@@ -375,7 +393,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: model.lockedSpaceIDs) {
             model.settings.reconcile()
         }
-        .sheet(item: historySheet(overPage: false)) { historySheetContent($0) }
+        .sheet(item: listSheet(overPage: false)) { listSheetContent($0) }
+        .onChange(of: browser.shownSpace.map(BrowserSpaceRuntimeAssignment.init(space:))) { _, assignment in
+            // A list belongs to the Space it opened for, as the sidebar's do.
+            if presentedListSheet?.assignment != assignment { presentedListSheet = nil }
+        }
         .modifier(downloadRiskConfirmation(overPage: false))
         .modifier(
             MobileBrowserRootLifecycleModifier(
@@ -389,8 +411,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: allowsFloatingSidebar, initial: true) { _, allows in
             navigation.allowsCompactFloatingSidebar = allows
         }
+        // A card a sidebar shows keeps that sidebar up while it is read.
         .onChange(
-            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging,
+            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging
+                || sidebarInteraction.tabPreview.shown != nil || floatingSidebarPreview.shown != nil,
             initial: true
         ) { _, keepsSidebarVisible in
             navigation.setTransientSidebarDismissalPaused(keepsSidebarVisible)

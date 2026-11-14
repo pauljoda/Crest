@@ -168,6 +168,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         notifications: { [weak self] in await self?.authorizedForSystemNotifications(requestIfNeeded: true) ?? false })
     @ObservationIgnored let serverTrustOverrides: BrowserServerTrustOverrideStore
     @ObservationIgnored let spaceID: UUID
+    /// Answers the page's cosmetic bridge, once it first posts.
+    @ObservationIgnored var cosmeticFilters: BrowserCosmeticFilterSession?
+    /// The element picker the page's bar shows while the person picks
+    /// something to block.
+    @ObservationIgnored let elementPicker = BrowserElementPicker()
+    /// Runs the content filter's scriptlets in a WebKit page's own world.
+    @ObservationIgnored private(set) lazy var scriptlets = BrowserPageScriptletSession(
+        core: downloadCenter.core, spaceID: spaceID)
     @ObservationIgnored let profileID: UUID
     @ObservationIgnored let spaceName: String
     @ObservationIgnored let navigationDecider: BrowserNavigationDecider
@@ -386,6 +394,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 guard let self else { return }
                 self.credentialSession.receive(
                     message.body, from: message.frame, topLevelURL: self.pageEngine.currentURL)
+            }
+        }
+        if let scripting = pageEngine.contentScripting {
+            cosmeticFilters = BrowserCosmeticFilterSession(
+                core: downloadCenter.core, spaceID: spaceID, picker: elementPicker,
+                siteURL: { [weak self] in self?.pageEngine.currentURL ?? self?.live.documentURL },
+                evaluate: { body, arguments, frame in
+                    try await scripting.callAsyncJavaScript(body, arguments: arguments, in: frame)
+                })
+            _ = scripting.install(
+                BrowserContentScript(
+                    source: BrowserCosmeticFilterContentBridge.source,
+                    handlerName: BrowserCosmeticFilterContentBridge.messageHandlerName,
+                    mainFrameOnly: false
+                )
+            ) { [weak self] message in
+                self?.cosmeticFilters?.receive(message.body, from: message.frame)
             }
         }
     }
@@ -762,6 +787,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             point: point, presses: presses, revision: (agentPointer?.revision ?? 0) &+ 1)
     }
 
+    // MARK: - Actions - Content blocking
+
+    /// Lets the person point at an element of the page to block on its site
+    /// from now on, starting from what they last right-clicked when
+    /// `fromContextMenu`. Answers whether the picker started.
+    @discardableResult
+    func pickElementToBlock(fromContextMenu: Bool = false) async -> Bool {
+        await cosmeticFilters?.pickElement(fromContextMenu: fromContextMenu) ?? false
+    }
+
     // MARK: - Actions - Reader and info bars
 
     func refreshReaderModeAvailability() async {
@@ -849,9 +884,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     // MARK: - Actions - Sharing and export
 
+    /// Copies the page's address, without its trackers while Super Copy is
+    /// on.
     @discardableResult
     func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(live.documentURL)
+        BrowserPageLinkClipboard.copy(linkToCopy)
     }
 
     func copyDeveloperPageLink() {
@@ -860,19 +897,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// The page's address as copying or sharing it hands it out.
+    var linkToCopy: BrowserCopiedLink? {
+        live.documentURL.map(downloadCenter.core.linkToCopy)
+    }
+
     @discardableResult
     func copyPageLinkAsMarkdown() -> Bool {
-        guard let url = live.documentURL else { return false }
-        let label = live.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedLabel = label.isEmpty ? (url.host() ?? url.absoluteString) : label
-        let escapedLabel =
-            resolvedLabel
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "]", with: "\\]")
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString("[\(escapedLabel)](\(url.absoluteString))", forType: .string)
-        return true
+        BrowserPageLinkClipboard.copyMarkdown(linkToCopy, title: live.title)
     }
 
     /// The whole page as an image `snapshotWidth` points wide, or as wide in
@@ -965,8 +997,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func sharePage() {
-        guard let url = live.documentURL else { return }
-        let picker = NSSharingServicePicker(items: [url])
+        guard let link = linkToCopy else { return }
+        let picker = NSSharingServicePicker(items: [link.url])
         picker.delegate = self
         sharingPicker = picker
         Task { @MainActor [weak self] in
@@ -1121,6 +1153,15 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // actually starts provisional navigation.
         linkDrag?.cancel()
         isRegionCapturePresented = false
+        // The picker belongs to the document the page leaves.
+        elementPicker.cancel()
+        // The site it goes to may have content blocking turned off, or on.
+        if let url, let webKit = webKitAdapter {
+            webKit.contentRuleSession.navigating(to: url, in: webKit.webView)
+            if webKit.ownsUserContentController {
+                scriptlets.navigating(to: url, in: webKit.webView.configuration.userContentController)
+            }
+        }
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         translation.reset()

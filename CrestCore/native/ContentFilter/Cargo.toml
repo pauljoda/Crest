@@ -1,0 +1,37 @@
+[package]
+name = "crest-content-filter"
+version = "1.0.0"
+edition = "2024"
+license = "MPL-2.0"
+description = "Crest's content filter: Brave's adblock engine behind a C interface the core links."
+publish = false
+
+[lib]
+name = "crest_content_filter"
+# The static library links into the native core on every Apple platform; the
+# dynamic one is what the core's tests load when they run without Native AOT.
+crate-type = ["staticlib", "cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+# Pinned exactly: an engine the core saved can only be loaded by the same
+# version, and the content rules WebKit compiles change with it.
+# `css-validation` splits procedural cosmetic filters into the operators a
+# page script applies, and drops selectors no engine can read.
+adblock = { version = "=0.13.5", default-features = false, features = [
+    "content-blocking",
+    "css-validation",
+    "embedded-domain-resolver",
+    "full-regex-handling",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+# Every export catches panics, so a malformed list fails a call instead of
+# ending the browser.
+panic = "unwind"
+debug = false

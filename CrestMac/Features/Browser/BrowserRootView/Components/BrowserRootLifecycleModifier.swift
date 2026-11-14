@@ -3,13 +3,13 @@ import SwiftUI
 
 struct BrowserRootLifecycleModifier: ViewModifier {
     let model: BrowserRootModel
-    let persistSidebarWidth: (Double) -> Void
+    let persistSidebarWidth: @MainActor (Double) -> Void
     @Binding var storedSidebarWidth: Double
 
     init(
         model: BrowserRootModel,
         storedSidebarWidth: Binding<Double>,
-        persistSidebarWidth: @escaping (Double) -> Void = { _ in }
+        persistSidebarWidth: @escaping @MainActor (Double) -> Void = { _ in }
     ) {
         self.model = model
         self.persistSidebarWidth = persistSidebarWidth
@@ -113,6 +113,11 @@ private struct BrowserRootSessionFollower: ViewModifier {
                 runtimeSessionProjection = model.pages.runtimeProjection
                 model.reconcilePages()
             }
+            // Blocking holds for every Space alike, so the device's level
+            // reaches the pages without any change to the session.
+            .onChange(of: model.browser.core.state.contentBlockingPolicy) {
+                runtimeSessionProjection = model.pages.runtimeProjection
+            }
             .onChange(
                 of: runtimeSessionProjection.tabIconState,
                 initial: true
@@ -123,6 +128,12 @@ private struct BrowserRootSessionFollower: ViewModifier {
                 of: runtimeSessionProjection.contentBlockingState,
                 initial: true
             ) {
+                model.reconcileContentBlocking()
+            }
+            .onChange(of: model.browser.core.state.contentRuleLists) {
+                model.reloadContentBlocking()
+            }
+            .onChange(of: model.browser.core.state.blockingSites) {
                 model.reconcileContentBlocking()
             }
             .onChange(
@@ -137,7 +148,7 @@ private struct BrowserRootSessionFollower: ViewModifier {
 private struct BrowserRootChromeObserver: ViewModifier {
     let model: BrowserRootModel
     @Binding var storedSidebarWidth: Double
-    let persistSidebarWidth: (Double) -> Void
+    let persistSidebarWidth: @MainActor (Double) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 

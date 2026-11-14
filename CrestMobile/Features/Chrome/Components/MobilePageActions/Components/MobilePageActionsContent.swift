@@ -5,6 +5,9 @@ struct MobilePageActionsContent: View {
     let pages: any MobilePageActions
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
+    /// The frame in the window of the control that opened these actions,
+    /// which a sheet they open points at on iPad.
+    var source: CGRect? = nil
 
     var body: some View {
         if let downloadsAccess {
@@ -52,8 +55,8 @@ struct MobilePageActionsContent: View {
         }
 
         ControlGroup {
-            if let url = pages.activeURL {
-                ShareLink(item: url) {
+            if let link = pages.activePage?.linkToCopy {
+                ShareLink(item: link.url) {
                     Label(ShortcutCommand.sharePage)
                 }
             }
@@ -68,6 +71,13 @@ struct MobilePageActionsContent: View {
 
         }
         .labelStyle(.iconOnly)
+
+        if pages.canAddToHomeScreen {
+            Button("Add to Home Screen", systemImage: "plus.app") {
+                pages.addToHomeScreen(from: source)
+            }
+            .accessibilityIdentifier("page-actions-add-to-home-screen")
+        }
 
         Button(
             pages.preferredContentModeActionTitle,
@@ -93,6 +103,22 @@ struct MobilePageActionsContent: View {
                 : "shield.slash"
         ) {
             Task { await contentBlockingAction.perform() }
+        }
+        .disabled(contentBlockingAction.siteSwitch == nil)
+
+        if let page = pages.activePage, page.canPickElementToBlock {
+            Button(ShortcutCommand.blockElement) {
+                Task { await page.pickElementToBlock() }
+            }
+        }
+
+        if blockedElements.exist {
+            Button(ShortcutCommand.showBlockedElements) {
+                let elements = blockedElements
+                Task {
+                    await elements.show(refresh: { await pages.reloadContentBlocking() }, reload: { pages.reload() })
+                }
+            }
         }
 
         if let page = pages.activePage {
@@ -150,8 +176,8 @@ struct MobilePageActionsContent: View {
 
             Menu("Share & Export…", systemImage: "square.and.arrow.up") {
                 Group {
-                    if let url = pages.activeURL {
-                        ShareLink(item: url) {
+                    if let link = pages.activePage?.linkToCopy {
+                        ShareLink(item: link.url) {
                             Label(ShortcutCommand.sharePage)
                         }
                     }
@@ -221,11 +247,15 @@ struct MobilePageActionsContent: View {
         }
     }
 
+    private var blockedElements: BrowserBlockedElements {
+        BrowserBlockedElements(core: browser.core, pageURL: pages.activePage?.webView.url)
+    }
+
     private var contentBlockingAction: MobileContentBlockingAction {
         MobileContentBlockingAction(browser: browser, pages: pages)
     }
 
     private var contentBlockingActionTitle: LocalizedStringResource {
-        ContentBlockingPolicy.switchTitle(for: browser.shownSpace?.settings.browsingPreferences.contentBlocking)
+        contentBlockingAction.title
     }
 }

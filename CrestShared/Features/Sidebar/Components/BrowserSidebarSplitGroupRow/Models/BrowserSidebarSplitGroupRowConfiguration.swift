@@ -64,6 +64,23 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     var shownTitle: String { choices.shownTitle }
     var emojiIcon: String? { choices.displayEmojiIcon }
     var tint: BrandColor? { choices.tint }
+    /// Whether the split shows only its header, and the tab the window shows.
+    var isCollapsed: Bool { choices.isCollapsed }
+
+    /// The members the split lists: every one while it is open, and once it
+    /// is collapsed only the one the window shows, as a collapsed folder
+    /// keeps its shown tab.
+    var shownMembers: [TabStateModel] {
+        isCollapsed ? members.filter { $0.id == focusedMemberID } : members
+    }
+
+    /// The Space's look as the sidebar draws it, for the folder surface the
+    /// split wears, or nil for a row drawn for a Space the sidebar no longer
+    /// shows.
+    var displayBranding: SpaceBranding? {
+        guard let spacePresentation else { return context.space.settings.look }
+        return spacePresentation.assignment == assignment ? spacePresentation.branding : nil
+    }
 
     /// Selecting any member presents the whole split, so the container reads as
     /// presented whenever the window shows one of its members.
@@ -155,7 +172,8 @@ struct BrowserSidebarSplitGroupRowInteractionContext {
     let isChoosingIcon: Binding<Bool>
     let isChoosingTint: Binding<Bool>
     let tint: Binding<BrandColor>
-    let activate: () -> Void
+    /// Opens or closes the split's tabs under its header.
+    let toggleCollapse: () -> Void
     let closeSplit: @MainActor () -> Void
     let beginRenaming: () -> Void
     let beginChangingIcon: () -> Void

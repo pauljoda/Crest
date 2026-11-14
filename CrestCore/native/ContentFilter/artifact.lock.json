@@ -1,0 +1,11 @@
+{
+  "key": "902cd23e83555ee3eddf31346dd0939fdea38d6a131a3e809a4c22be80ae0f33",
+  "archive": "Crest-Content-Filter-902cd23e83555ee3.zip",
+  "sha256": "7b8e0c15098834bc654f439245b587e15b181ac6080d058deb0d453826746240",
+  "files": {
+    "include/crest_content_filter.h": "3441a762b17722dce9684ca1b4846ed55db5ff0a1be592bcc9d64820b9aaf63b",
+    "ios-arm64/libcrest_content_filter.a": "aee558432209297dfb8a1676bc629f97ff55af8184831ddb5038772742beaae3",
+    "iossimulator-arm64/libcrest_content_filter.a": "b9fd0df42537ee751cf6c98dd2b19a7263e030bde2698bfd36e157ecf987ed0c",
+    "osx-arm64/libcrest_content_filter.a": "96247710283974958c681ce527c8059fd330acef2f9c255db79345ecea2138cd"
+  }
+}

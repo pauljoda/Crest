@@ -13,14 +13,22 @@ import AppKit
 /// there after crossing to another Mac.
 ///
 /// The pointer also has to stay on the strip a moment before the sidebar comes
-/// out. A pointer passing over the edge on its way to something near it, a
-/// control at the side of the page, never brings the sidebar out.
+/// out, for as long as Appearance's Sidebar hover delay asks. A pointer passing
+/// over the edge on its way to something near it, a control at the side of the
+/// page, never brings the sidebar out; with no delay, any pointer reaching the
+/// strip does.
+///
+/// Reaching for the edge of a window that stands away from the screen's edge
+/// often carries the pointer across the strip and out of the window. A pointer
+/// that leaves through the window's edge beside the strip and stays just past
+/// it counts as resting on the strip.
 @MainActor
 final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     // MARK: - Static Variables
 
-    /// How long the pointer stays on the strip before the sidebar comes out.
-    static let revealDelay: Duration = .milliseconds(200)
+    /// How far past the window's edge a pointer that overshot the strip still
+    /// counts as reaching for it.
+    static let overshootReach: CGFloat = 40
 
     // MARK: - Variables
 
@@ -37,6 +45,35 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     private var isPointerOnStrip: Bool {
         guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
         return bounds.contains(convert(window.convertPoint(fromScreen: pointerLocation()), from: nil))
+    }
+
+    /// Whether the pointer is out of the key window just past the edge the
+    /// strip lies along, beside the strip.
+    private var isPointerPastStrip: Bool {
+        guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor, let content = window.contentView else {
+            return false
+        }
+        let strip = convert(bounds, to: nil)
+        let location = window.convertPoint(fromScreen: pointerLocation())
+        let edges = content.bounds
+        guard location.y >= strip.minY, location.y <= strip.maxY else { return false }
+        // The strip lies along the window's edge on the sidebar's side.
+        if strip.midX < edges.midX {
+            return location.x < edges.minX && location.x >= edges.minX - Self.overshootReach
+        }
+        return location.x > edges.maxX && location.x <= edges.maxX + Self.overshootReach
+    }
+
+    /// Whether the pointer rests on the strip, or just past the window's edge
+    /// beside it.
+    private var isPointerReachingForStrip: Bool {
+        isPointerOnStrip || isPointerPastStrip
+    }
+
+    /// How long the pointer stays on the strip before the sidebar comes out,
+    /// as Appearance sets it.
+    private var revealDelay: Duration {
+        SidebarRevealDelayPreference.delay(BrowserDeviceAppearanceStore.shared.sidebarRevealDelay)
     }
 
     // MARK: - Initializers
@@ -96,6 +133,12 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         restingPointer = nil
+        // Out through the window's edge, the pointer overshot the strip it was
+        // reaching for, and the wait goes on.
+        if isPointerPastStrip {
+            revealIfPointerMoved()
+            return
+        }
         cancelPendingReveal()
         reportHover(false)
     }
@@ -104,19 +147,25 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
         onHoverChange(isHovering)
     }
 
-    /// Starts the wait for a pointer that moved onto the strip. Moving along
-    /// the strip keeps the wait going; leaving it ends the wait.
+    /// Starts the wait for a pointer that moved onto the strip, or reveals at
+    /// once without one. Moving along the strip keeps the wait going; leaving
+    /// it ends the wait.
     private func revealIfPointerMoved() {
         if let restingPointer {
             guard pointerLocation() != restingPointer else { return }
             self.restingPointer = nil
         }
         guard pendingReveal == nil else { return }
+        let delay = revealDelay
+        guard delay > .zero else {
+            if isPointerReachingForStrip { reportHover(true) }
+            return
+        }
         pendingReveal = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: Self.revealDelay)
+            try? await Task.sleep(for: delay)
             guard let self, !Task.isCancelled else { return }
             pendingReveal = nil
-            guard isPointerOnStrip else { return }
+            guard isPointerReachingForStrip else { return }
             reportHover(true)
         }
     }

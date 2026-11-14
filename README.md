@@ -5,7 +5,7 @@
   <p>Built with SwiftUI, running Chromium and WebKit on Mac, with separate Spaces for different parts of your life.</p>
   <p>
     <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
-    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver"></a>
+    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver&filter=v*"></a>
     <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-315f93"></a>
   </p>
   <p>
@@ -43,10 +43,11 @@ Crest for Mac opens pages in **Chromium** by default. Its engine is Chromium
 with Crest's privacy changes, which keep your browsing, form and account data
 away from Google, and runs Chrome Web Store extensions. Any website or page can
 open in **WebKit** instead, which adds Reader, whole-page translation, built-in
-content blocking, and FairPlay video. Chromium plays Widevine video; Netflix,
-Disney+, Max and Prime Video open in WebKit, and a page that needs protected
-video Chromium can't play switches to WebKit automatically, respecting any
-unsaved-changes prompt before moving it. Choose the default engine and
+content blocking, and FairPlay video. Chromium leaves protected video to
+WebKit: Netflix, Disney+, Max and Prime Video open in WebKit, and any other
+page that asks for Widevine or PlayReady video, itself or from a frame of its
+own site, switches to WebKit automatically, respecting any unsaved-changes
+prompt before moving it. Choose the default engine and
 per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine
 supports.
@@ -148,9 +149,11 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-The [Crest 0.8 release notes](CHANGELOG.md#080---2026-10-12) describe coding
-agents on Mac, the new command palette and Settings, and more browsers to import
-from. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone and
+[Crest 0.9.1](CHANGELOG.md#091---2026-11-10) updates Chromium to
+157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in
+the wild. The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-10) describe
+Sub-Spaces, built-in ad blocking, and the Chromium engine now built from
+Chromium itself. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone and
 iPad use WebKit.
 
 When updating from a WebKit-only release, your Spaces, tabs, history, and Crest

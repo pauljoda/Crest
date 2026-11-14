@@ -17,9 +17,11 @@ struct BrowserSpaceSwitcherScrollingSegments: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let base: CrestSpaceIconPickerStyle =
+                BrowserDeviceAppearanceStore.shared.spaceIcons.showsDots ? .touch.dotted() : .touch
             let scale = iconSizing.scale(
-                chosen: chosenIconScale, spaceCount: spaces.count, style: .touch, width: geometry.size.width)
-            let style = CrestSpaceIconPickerStyle.touch.scaled(by: scale)
+                chosen: chosenIconScale, spaceCount: spaces.count, style: base, width: geometry.size.width)
+            let style = base.scaled(by: scale)
             let allocation = BrowserSpaceSwitcherCompactAllocation(
                 pickerViewportWidth: geometry.size.width,
                 pickerContentWidth: style.contentWidth(spaceCount: spaces.count),

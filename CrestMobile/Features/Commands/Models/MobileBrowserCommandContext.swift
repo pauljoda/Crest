@@ -66,6 +66,9 @@ struct MobileBrowserCommandContext {
     let toggleReaderMode: () -> Void
     let setTranslationToolbarVisible: (Bool) -> Void
     let toggleContentBlocking: () async -> Void
+    let pickElementToBlock: () -> Void
+    let hasBlockedElements: Bool
+    let showBlockedElements: () -> Void
     let presentFind: () -> Void
     let zoomIn: () -> Void
     let zoomOut: () -> Void

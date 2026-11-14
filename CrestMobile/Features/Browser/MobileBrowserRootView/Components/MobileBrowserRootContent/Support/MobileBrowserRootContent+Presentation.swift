@@ -113,17 +113,29 @@ extension MobileBrowserRootContent {
         }
     }
 
-    /// The Space whose History shows as a sheet from the page, or from the
-    /// window.
-    func historySheet(overPage: Bool) -> Binding<BrowserSpaceRuntimeAssignment?> {
+    /// The Space list showing as a sheet from the page, or from the window.
+    func listSheet(overPage: Bool) -> Binding<MobileBrowserSidebarSpaceSheet?> {
         Binding(
-            get: { pageCoversWindow == overPage ? historyAssignment : nil },
-            set: { historyAssignment = $0 }
+            get: { pageCoversWindow == overPage ? presentedListSheet : nil },
+            set: { presentedListSheet = $0 }
         )
     }
 
-    func historySheetContent(_ assignment: BrowserSpaceRuntimeAssignment) -> some View {
-        MobileHistoryView(browser: browser, assignment: assignment, spaceAccess: spaceAccess, openURL: openURL)
+    func listSheetContent(_ request: MobileBrowserSidebarSpaceSheet) -> some View {
+        MobileBrowserSpaceListSheet(
+            request: request, browser: browser, pages: pages, spaceAccess: spaceAccess, selectTab: selectTab,
+            openURL: openURL)
+    }
+
+    /// Puts the shown Space's `surface` up as a sheet, unless the Space is
+    /// locked.
+    func presentListSheet(_ surface: BrowserUtilitySurface) {
+        guard let space = browser.shownSpace, !spaceAccess.isLocked(space) else { return }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        presentedListSheet = MobileBrowserSidebarSpaceSheet(surface: surface, assignment: assignment)
+        if surface == .downloads {
+            _ = pages.downloadCenter.acknowledgeItems(for: assignment.profileID)
+        }
     }
 
     /// Asks about a risky download from the page, or from the window.

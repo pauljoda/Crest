@@ -73,6 +73,12 @@ public sealed record SessionState(
         return Replacing([edited, .. others.Select(member => member.Configured(setting.Copied(edited.Settings, member.Settings)))]);
     }
 
+    /// The session with every Space opening freely, as a workspace that never
+    /// locks its Spaces holds it, whatever policy each arrived with.
+    internal SessionState OpeningFreely() => this with {
+        Spaces = [.. Spaces.Select(space => space.Configured(space.Settings with { AccessPolicy = SpaceAccessPolicy.Open }))]
+    };
+
     /// Whether the Space `spaceId` names leads a Sub-Space that stays.
     internal bool Leads(Guid spaceId) => Spaces.Any(space => space.PrimaryId == spaceId && PendingDeletion(space.Id) is null);
 

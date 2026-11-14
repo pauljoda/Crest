@@ -125,7 +125,8 @@ internal static partial class StoredSessionCodec {
         var value = Object(node);
         return new(Identity(value[Key.Id]), Text(value[Key.CustomTitle]), OptionalDate(value[Key.TitleModifiedAt]),
             Text(value[Key.CustomIconSymbol]), OptionalDate(value[Key.IconModifiedAt]),
-            value[Key.Tint] is JsonObject tint ? DecodeColor(tint) : null, OptionalDate(value[Key.TintModifiedAt]));
+            value[Key.Tint] is JsonObject tint ? DecodeColor(tint) : null, OptionalDate(value[Key.TintModifiedAt]),
+            Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]));
     }
 
     internal static JsonObject Encode(SplitGroupState group) {
@@ -136,6 +137,10 @@ internal static partial class StoredSessionCodec {
         PutEdit(value, Key.IconModifiedAt, group.IconModifiedAt);
         if (group.Tint is { } tint) value[Key.Tint] = Encode(tint);
         PutEdit(value, Key.TintModifiedAt, group.TintModifiedAt);
+        // An expanded split writes no flag, so a session from before splits
+        // collapsed writes back as it was.
+        if (group.IsCollapsed) value[Key.IsCollapsed] = true;
+        PutEdit(value, Key.CollapseModifiedAt, group.CollapseModifiedAt);
         return value;
     }
 

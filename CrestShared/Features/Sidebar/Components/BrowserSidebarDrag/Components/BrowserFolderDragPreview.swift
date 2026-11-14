@@ -32,6 +32,7 @@ struct BrowserFolderDragPreview: View {
         .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(folder.title) folder")
+        .modifier(SurfaceToneAppearance())
     }
 
     private func folderHeader(_ folder: FolderStateModel, depth: Int = 0) -> some View {

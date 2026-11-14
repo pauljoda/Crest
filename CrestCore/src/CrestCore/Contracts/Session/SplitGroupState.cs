@@ -4,9 +4,10 @@ using CrestCore.Domain;
 namespace CrestCore.Contracts;
 
 /// <summary>
-/// What a person chose for a split: its name, icon and tint, each with the time it
-/// last changed so devices merge the fields independently. Membership stays on the
-/// tabs, whose <see cref="TabState.SplitGroupId"/> names this group.
+/// What a person chose for a split: its name, icon, tint and whether the sidebar
+/// shows it collapsed, each with the time it last changed so devices merge the fields
+/// independently. Membership stays on the tabs, whose <see cref="TabState.SplitGroupId"/>
+/// names this group.
 /// </summary>
 public sealed record SplitGroupState(
     Guid Id,
@@ -15,7 +16,9 @@ public sealed record SplitGroupState(
     string? CustomIconSymbol = null,
     DateTimeOffset? IconModifiedAt = null,
     BrandColor? Tint = null,
-    DateTimeOffset? TintModifiedAt = null) {
+    DateTimeOffset? TintModifiedAt = null,
+    bool IsCollapsed = false,
+    DateTimeOffset? CollapseModifiedAt = null) {
     #region Static Variables
 
     /// The fewest tabs of one split a sidebar or a window shows as a split. A shorter
@@ -55,7 +58,8 @@ public sealed record SplitGroupState(
                 CustomTitle = string.IsNullOrWhiteSpace(group.CustomTitle) ? null : group.CustomTitle.Trim(),
                 TitleModifiedAt = Normalized(group.TitleModifiedAt),
                 IconModifiedAt = Normalized(group.IconModifiedAt),
-                TintModifiedAt = Normalized(group.TintModifiedAt)
+                TintModifiedAt = Normalized(group.TintModifiedAt),
+                CollapseModifiedAt = Normalized(group.CollapseModifiedAt)
             };
             int index = groups.FindIndex(candidate => candidate.Id == group.Id);
             if (index < 0) { groups.Add(normalized); continue; }
@@ -66,6 +70,8 @@ public sealed record SplitGroupState(
                 normalized = normalized with { CustomIconSymbol = previous.CustomIconSymbol, IconModifiedAt = previous.IconModifiedAt };
             if (PreviousWins(previous.TintModifiedAt, normalized.TintModifiedAt))
                 normalized = normalized with { Tint = previous.Tint, TintModifiedAt = previous.TintModifiedAt };
+            if (PreviousWins(previous.CollapseModifiedAt, normalized.CollapseModifiedAt))
+                normalized = normalized with { IsCollapsed = previous.IsCollapsed, CollapseModifiedAt = previous.CollapseModifiedAt };
             groups[index] = normalized;
         }
         return [.. groups];

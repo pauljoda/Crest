@@ -59,12 +59,15 @@ struct BrowserSidebarListRows<Trailing: View>: View {
 
     let list: SidebarListModel
     let context: BrowserSidebarListContext
+    /// The tabs a collapsed folder around the list keeps on screen, which
+    /// shows only the rows that hold one, or nil for every row.
+    var keptTabIDs: Set<UUID>? = nil
     /// What the list shows after its rows, given the rows it holds, such as
     /// the band an empty run keeps.
     @ViewBuilder var trailing: ([BrowserSidebarListItem]) -> Trailing
 
     var body: some View {
-        let items = BrowserSidebarListItem.items(of: list, in: context.space)
+        let items = BrowserSidebarListItem.items(of: list, in: context.space).filter(isShown)
         VStack(spacing: 0) {
             ForEach(Run.runs(of: items)) { run in
                 if run.isLazy {
@@ -82,8 +85,16 @@ struct BrowserSidebarListRows<Trailing: View>: View {
 
     private func rows(_ items: [BrowserSidebarListItem]) -> some View {
         ForEach(items) { item in
-            BrowserSidebarListRow(item: item, context: context).equatable()
+            BrowserSidebarListRow(item: item, context: context, keptTabIDs: keptTabIDs).equatable()
         }
+    }
+
+    /// Whether `item` shows: every row of an open list, and of a kept one
+    /// the rows that hold a kept tab, the tab itself, its split, or a folder
+    /// on the way to it.
+    private func isShown(_ item: BrowserSidebarListItem) -> Bool {
+        guard let keptTabIDs else { return true }
+        return keptTabIDs.contains { item.content.contains(tabID: $0, in: context.space) }
     }
 }
 
@@ -92,13 +103,13 @@ extension BrowserSidebarListRows: @MainActor Equatable {
     /// window, as SwiftUI compares a view's inputs, so a section that redraws
     /// leaves its list alone. What trails the rows depends only on those.
     static func == (lhs: BrowserSidebarListRows, rhs: BrowserSidebarListRows) -> Bool {
-        lhs.list === rhs.list && lhs.context == rhs.context
+        lhs.list === rhs.list && lhs.context == rhs.context && lhs.keptTabIDs == rhs.keptTabIDs
     }
 }
 
 extension BrowserSidebarListRows where Trailing == EmptyView {
-    init(list: SidebarListModel, context: BrowserSidebarListContext) {
-        self.init(list: list, context: context) { _ in EmptyView() }
+    init(list: SidebarListModel, context: BrowserSidebarListContext, keptTabIDs: Set<UUID>? = nil) {
+        self.init(list: list, context: context, keptTabIDs: keptTabIDs) { _ in EmptyView() }
     }
 }
 
@@ -109,9 +120,9 @@ struct BrowserSidebarListRow: View {
 
     let item: BrowserSidebarListItem
     let context: BrowserSidebarListContext
-    /// The tab a collapsed folder around the row keeps on screen, which a
-    /// folder row shows in place of its contents.
-    var keptTabID: UUID? = nil
+    /// The tabs a collapsed folder around the row keeps on screen, which a
+    /// folder row shows the way to in place of its contents.
+    var keptTabIDs: Set<UUID>? = nil
 
     var body: some View {
         content.environment(\.sidebarLayerDepth, item.depth)
@@ -139,11 +150,11 @@ struct BrowserSidebarListRow: View {
                     .geometryGroup()
                 #endif
         case .folder(let folder):
-            BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabID: keptTabID)
+            BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabIDs: keptTabIDs)
                 .equatable()
                 .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.nestingIndent : 0)
                 .modifier(
-                    BrowserFolderOffscreenPlaceholder(folder: folder, context: context, isEnabled: keptTabID == nil)
+                    BrowserFolderOffscreenPlaceholder(folder: folder, context: context, isEnabled: keptTabIDs == nil)
                 )
                 .crestCollectionItemTransition()
         }
@@ -155,7 +166,7 @@ extension BrowserSidebarListRow: @MainActor Equatable {
     /// as SwiftUI compares a view's inputs, so a list that redraws leaves every
     /// unchanged row alone.
     static func == (lhs: BrowserSidebarListRow, rhs: BrowserSidebarListRow) -> Bool {
-        lhs.item == rhs.item && lhs.context == rhs.context && lhs.keptTabID == rhs.keptTabID
+        lhs.item == rhs.item && lhs.context == rhs.context && lhs.keptTabIDs == rhs.keptTabIDs
     }
 }
 
@@ -166,6 +177,8 @@ extension BrowserSidebarListRow: @MainActor Equatable {
 private struct BrowserSidebarFolderRowIndent: ViewModifier {
     let depth: Int
 
+    @Environment(\.sidebarFolderRowTransition) private var transition
+
     @ViewBuilder
     func body(content: Content) -> some View {
         if depth > 0 {
@@ -174,7 +187,9 @@ private struct BrowserSidebarFolderRowIndent: ViewModifier {
                 .padding(.leading, BrowserFolderLayout.rowLeadingInset(depth: depth - 1))
                 .padding(.trailing, BrowserFolderLayout.nestingIndent)
                 .frame(maxWidth: .infinity)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                // The innermost transition is the one a row uses, so a row
+                // that comes and goes its own way says so here.
+                .transition(transition ?? .opacity.combined(with: .move(edge: .top)))
         } else {
             content
         }

@@ -11,6 +11,9 @@ struct MobilePageActionsMenu: View {
     /// side toolbar can stand it on end with the others.
     var isToolbarItem = false
 
+    /// Where the menu's control sits in the window.
+    @State private var frame: CGRect?
+
     var body: some View {
         if isToolbarItem {
             menu {
@@ -34,11 +37,17 @@ struct MobilePageActionsMenu: View {
                 browser: browser,
                 pages: pages,
                 downloadsAccess: downloadsAccess,
-                hideToolbar: hideToolbar
+                hideToolbar: hideToolbar,
+                source: frame
             )
             .crestMenuActionLabelStyle()
         } label: {
             label()
+        }
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .global)
+        } action: { frame in
+            self.frame = frame
         }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)

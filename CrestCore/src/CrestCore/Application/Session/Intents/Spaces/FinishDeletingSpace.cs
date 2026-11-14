@@ -51,6 +51,7 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
         app.Device.ForgetSitePermissions(SpaceId, changes);
         app.Device.ForgetLinks(SpaceId, changes);
         app.Device.ForgetAgents(SpaceId, changes);
+        app.Device.ForgetBlockingSites(SpaceId, changes);
     }
 
     #endregion

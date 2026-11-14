@@ -52,10 +52,14 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     /// Reading other browsers' data and browser-data files, and exports.
     private readonly Portability portability;
 
+    /// The device's filter lists and the content rules made from them.
+    private readonly FilterLibrary filters;
+
     // The areas each message routes itself to, which only the core's own
     // messages reach.
     internal Downloads Downloads => downloads;
     internal Device Device => device;
+    internal FilterLibrary Filters => filters;
     internal Pages Pages => pages;
     internal Prompts Prompts => prompts;
     internal Extensions Extensions => extensions;
@@ -97,6 +101,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
             device = new(configuration.Platform, storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower, clock);
+            filters = new(null, configuration.Platform, configuration.Languages, () => device.FilterChoices, Announce, clock, configuration.FilterResourcesUrl);
             engines.Prefer(device.DefaultEngine);
             pages = new(device, engines, clock, ids);
             prompts = new(device, pages);
@@ -110,6 +115,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
         device = new(configuration.Platform, storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower, clock);
+        filters = new(directory, configuration.Platform, configuration.Languages, () => device.FilterChoices, Announce, clock, configuration.FilterResourcesUrl);
         engines.Prefer(device.DefaultEngine);
         pages = new(device, engines, clock, ids);
         prompts = new(device, pages);
@@ -192,6 +198,27 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         ArgumentNullException.ThrowIfNull(query);
         if (!query.AnsweredUnderLock) return query.Answer(this);
         lock (gate) return query.Answer(this);
+    }
+
+    #endregion
+
+    #region Actions - Content filter
+
+    /// The address of the content filter slot an engine that checks each
+    /// request itself passes to `crest_content_filter_slot_check`. The first
+    /// ask compiles the filter; the slot lives as long as the core.
+    public nint ContentFilterSlot() => filters.SlotAddress();
+
+    /// Runs `change` on the device's filter lists holding no core lock, since
+    /// it hashes, parses and writes what it keeps, and then, in a turn,
+    /// publishes the lists as they are by then if it changed them. Reading
+    /// them in the turn keeps two changes from publishing out of order.
+    internal IReadOnlyList<Change> ChangeFilters(Func<bool> change) {
+        ArgumentNullException.ThrowIfNull(change);
+        bool changed = change();
+        return Turn(changes => {
+            if (changed) changes.Publish(new FilterListsChanged(filters.States()));
+        });
     }
 
     #endregion

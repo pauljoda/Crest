@@ -270,14 +270,13 @@ final class WebKitEngineBinding: EngineBinding {
 
     /// The page for `creation` in `space`: a popup's with the configuration
     /// WebKit derived from its opener's, as `popup` gives it, and any other's
-    /// assembled for its profile's store and its Space's content rules with
+    /// assembled for its profile's store and the device's content rules with
     /// the platform's own settings, telling the binding when its media starts
     /// or stops. A page the core asked to bring back restores what it kept
     /// once its host attaches.
     func build(_ creation: CreatePage, in space: SpaceModel?, popup: WebKitPopup?) -> WebKitEnginePage {
         let contentRuleLists =
-            space.map { contentRules.ruleLists(for: $0.settings.browsingPreferences.contentBlocking) }
-            ?? []
+            space == nil ? [] : contentRules.ruleLists(for: core?.state.contentBlockingPolicy ?? .off)
         let configuration =
             popup?.configuration
             ?? BrowserPageConfiguration.make(
@@ -293,11 +292,17 @@ final class WebKitEngineBinding: EngineBinding {
                 self?.mediaActivityMayHaveChanged(in: message.webView)
             }
         }
+        let spaceID = space?.id
         return WebKitEnginePage(
             id: creation.pageID,
             profileID: creation.profileID,
             webView: BrowserPlatformWebKit.makeWebView(configuration: configuration),
             contentRuleLists: contentRuleLists,
+            blocksSite: { [weak self] url in
+                guard let spaceID, let core = self?.core else { return true }
+                let origin = url.flatMap(SiteOrigin.init(url:))
+                return (try? core.query(ContentBlockingApplies(spaceID: spaceID, origin: origin))) ?? true
+            },
             ownsUserContentController: popup == nil,
             isPrivate: creation.isPrivate,
             restoring: creation.restoreState)

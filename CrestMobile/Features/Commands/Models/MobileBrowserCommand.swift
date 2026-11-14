@@ -61,6 +61,10 @@ struct MobileBrowserCommand {
     static let toggleContentBlocking = MobileBrowserCommand(
         .toggleContentBlocking, menuTitle: { $0?.contentBlockingActionTitle ?? "Content Blocking" },
         isEnabled: { $0.hasActivePage }, run: { $0.beginTogglingContentBlocking() })
+    static let blockElement = MobileBrowserCommand(
+        .blockElement, isEnabled: { $0.hasActivePage }, run: { $0.pickElementToBlock() })
+    static let showBlockedElements = MobileBrowserCommand(
+        .showBlockedElements, isEnabled: { $0.hasBlockedElements }, run: { $0.showBlockedElements() })
     static let findInPage = MobileBrowserCommand(
         .findInPage, isEnabled: { $0.hasActivePage }, run: { $0.presentFind() })
     static let zoomIn = MobileBrowserCommand(.zoomIn, isEnabled: { $0.hasActivePage }, run: { $0.zoomIn() })
@@ -94,7 +98,9 @@ struct MobileBrowserCommand {
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace,
-        nextSpace, toggleReaderMode, toggleContentBlocking, findInPage, zoomIn, zoomOut, actualSize, copyPageLink,
+        nextSpace, toggleReaderMode, toggleContentBlocking, blockElement, showBlockedElements,
+        findInPage, zoomIn, zoomOut, actualSize,
+        copyPageLink,
         copyPageLinkAsMarkdown, printPage, clearSiteCookies, clearSiteCache, toggleSidebar, toggleTranslationToolbar,
         showHistory, showArchive,
         showDownloads,

@@ -23,7 +23,7 @@ extension SpaceScheme {
         updated.gradientAngle = look.gradientAngle
         updated.bannerStrength = look.bannerStrength
         updated.readabilityFade = look.readabilityFade
-        updated.showsTexture = look.showsTexture
+        updated.textureStrength = look.textureStrength
         updated.textColorMode = look.textColorMode
         updated.iconStyle = look.iconStyle
         updated.symbolColor = look.symbolColor
@@ -36,7 +36,7 @@ extension SpaceScheme {
     func isWorn(by branding: SpaceBranding) -> Bool {
         branding.hasCustomAppearance != true && branding.colors == look.colors
             && branding.themeMode == look.themeMode && branding.gradientAngle == look.gradientAngle
-            && branding.showsTexture == look.showsTexture && branding.iconStyle == look.iconStyle
+            && branding.textureStrength == look.textureStrength && branding.iconStyle == look.iconStyle
             && branding.symbolColor == look.symbolColor
     }
 }

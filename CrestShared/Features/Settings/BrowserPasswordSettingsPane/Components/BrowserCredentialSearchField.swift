@@ -11,7 +11,11 @@ struct BrowserCredentialSearchField: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
-            TextField(title, text: $text)
+            // A grouped form shows a field's title as a label beside it, which
+            // left the field to the right of words that looked like its prompt,
+            // so the title is the field's own prompt instead.
+            TextField(title, text: $text, prompt: Text(title))
+                .labelsHidden()
                 .textFieldStyle(.plain)
 
             if !text.isEmpty {

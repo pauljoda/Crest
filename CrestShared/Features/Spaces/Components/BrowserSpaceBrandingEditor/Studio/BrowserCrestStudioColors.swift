@@ -138,10 +138,7 @@ struct BrowserCrestStudioBackground: View {
             slider("Color intensity", \.bannerStrength)
             slider("Readability fade", \.readabilityFade)
             slider("Folder color intensity", \.folderColorIntensity)
-            let texture = context.setting(\.showsTexture)
-            CrestSettingRow("Texture", setting: texture.resettable("Texture")) {
-                Toggle("Texture", isOn: texture.binding).labelsHidden()
-            }
+            slider("Texture", \.textureStrength, readout: .percent(zero: "None", full: "Full"))
             let text = context.setting(\.textColorMode)
             CrestSettingRow("Text color", setting: text.resettable("Text color")) {
                 Picker("Text color", selection: text.binding) {

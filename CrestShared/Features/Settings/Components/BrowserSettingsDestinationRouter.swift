@@ -56,7 +56,8 @@ struct BrowserSettingsDestinationRouter: View {
                 BrowserEngineSettingsPane(core: browser.core)
             #endif
         case .lookAndFeel:
-            BrowserLookAndFeelSettingsPane(space: browser.shownSpace.map(BrowserSpaceAppearance.init(space:)))
+            BrowserLookAndFeelSettingsPane(
+                browser: browser, space: browser.shownSpace.map(BrowserSpaceAppearance.init(space:)))
         case .links:
             BrowserLinkSettingsPane(
                 browser: browser,
@@ -91,11 +92,14 @@ struct BrowserSettingsDestinationRouter: View {
                 BrowserPrivacySettingsPane(
                     browser: browser,
                     spaceAccess: spaceAccess,
-                    permissionCenter: permissionCenter,
-                    contentBlockingErrorDescription:
-                        contentBlockingErrorDescription
+                    permissionCenter: permissionCenter
                 )
             #endif
+        case .adBlocking:
+            BrowserAdBlockingSettingsPane(
+                browser: browser,
+                contentBlockingErrorDescription: contentBlockingErrorDescription
+            )
         case .extensions:
             BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess)
         case .passwords:
