@@ -150,10 +150,27 @@ struct BrowserTabBatchMenu: View {
     /// The two folders the selection can move into that don't exist yet.
     @ViewBuilder
     private var newFolderActions: some View {
-        action(
-            "New Current Tabs Folder", systemImage: "folder.badge.plus",
-            browser.filingInNewFolder(request, in: .current))
-        action("New Saved Folder", systemImage: "folder.badge.plus", browser.filingInNewFolder(request, in: .saved))
+        newFolderAction("New Current Tabs Folder", in: .current)
+        newFolderAction("New Saved Folder", in: .saved)
+    }
+
+    /// A menu item that files the selection into a folder of its own and opens
+    /// that folder's name, the way the Space's own New Folder does.
+    private func newFolderAction(_ title: LocalizedStringKey, in placement: TabPlacement) -> some View {
+        let batch = browser.filingInNewFolder(request, in: placement)
+        return Button(title, systemImage: "folder.badge.plus") { createFolder(batch, in: placement) }
+            .disabled(!actions.isAvailable(batch))
+    }
+
+    /// The saved section opens once the folder exists, so a saved folder's name
+    /// is never focused inside a section nobody can see, and an action the core
+    /// refuses leaves the section as the person had it. The row reads the
+    /// request as it appears, so opening the section first buys nothing.
+    private func createFolder(_ batch: BrowserTabBatch, in placement: TabPlacement) {
+        guard let folderID = actions.performCreatingFolder(batch, for: request) else { return }
+        if placement == .saved { browser.setSavedTabsExpanded(true, matching: request.assignment) }
+        sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
+            folderID: folderID, spaceID: request.assignment.spaceID, profileID: request.assignment.profileID)
     }
 
     private func copyLinks() { actions.copyLinks(request) }

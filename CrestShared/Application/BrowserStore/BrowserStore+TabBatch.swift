@@ -122,9 +122,18 @@ extension BrowserStore {
 
     /// Sends the action, and then prepares the pages of the copies it made,
     /// selects what the action leaves selected, and remembers the tab the
-    /// window follows to another Space. Throws the rule that refused it.
-    func send(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) throws(Rejection) {
-        let sources = spaceModel(matching: request.assignment).map(BrowserTabCopySources.init)
+    /// window follows to another Space. Answers the folder the action made,
+    /// so a caller can open its name for editing, and nil when it made none.
+    /// Throws the rule that refused it.
+    @discardableResult
+    func send(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) throws(Rejection) -> UUID? {
+        let space = spaceModel(matching: request.assignment)
+        let sources = space.map(BrowserTabCopySources.init)
+        // The folders the Space held before the edit. The core names the folder
+        // it makes, so the made one is the one that was not there. A Space this
+        // window can no longer read leaves nothing to tell a made folder from a
+        // moved one, and the edit still stands.
+        let existingFolderIDs = space.map { Set($0.folders.models.map(\.id)) }
         let changes = try family.commit(batch.intent, from: self)
         let copies: [TabCopied] = changes.compactMap {
             guard case .tabCopied(let copied) = $0, copied.workspaceID == family.workspaceID else { return nil }
@@ -139,5 +148,12 @@ extension BrowserStore {
             }
         }
         batch.reselection.apply(tabMultiSelection, copies, request)
+        guard let existingFolderIDs else { return nil }
+        return changes.compactMap { change -> UUID? in
+            guard case .foldersChanged(let folders) = change,
+                folders.workspaceID == family.workspaceID, folders.spaceID == request.spaceID
+            else { return nil }
+            return folders.updated.first { !existingFolderIDs.contains($0.id) }?.id
+        }.first
     }
 }

@@ -5453,6 +5453,10 @@
     "snappier-sidebar-slide": {
       "category": "improved",
       "message": "On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time."
+    },
+    "new-folder-name-ready-to-type": {
+      "category": "improved",
+      "message": "A folder you make from a tab's menu opens with its name selected, so you can type the name you want straight away instead of renaming it afterwards. Making one in the saved section opens that section first, so the name is never hidden."
     }
   }
 }
