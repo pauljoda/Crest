@@ -191,21 +191,23 @@ public sealed record SessionState(
     #region Actions - Folders
 
     /// This session without the folders of the open tabs that `previous`
-    /// showed holding tabs and that hold none here, each with the empty
-    /// folders inside it: a folder of the open tabs, a group among them, goes
-    /// with its last tab, whether it closed, was archived or moved out. A saved
-    /// folder stays empty. A folder that held no tabs before stays, since its
-    /// tabs may not have arrived from another device yet.
+    /// showed holding something and that hold nothing here: a folder of the
+    /// open tabs, a group among them, goes once its last tab closed, was
+    /// archived or moved out, or its last folder went, and a folder it held
+    /// that goes leaves it the same way. A folder that still holds a folder
+    /// stays, and so does that folder. A saved folder stays empty, and so does
+    /// one that held nothing before, since its tabs may not have arrived from
+    /// another device yet.
     internal SessionState ClearingEmptiedFolders(SessionState previous) {
         var cleared = false;
         var spaces = Spaces.Select(space => {
-            if (previous.Space(space.Id) is not { } before || ReferenceEquals(space.Tabs, before.Tabs)
+            if (previous.Space(space.Id) is not { } before
+                || (ReferenceEquals(space.Tabs, before.Tabs) && ReferenceEquals(space.Folders, before.Folders))
                 || !space.Folders.Any(folder => folder.GoesWhenEmptied)) return space;
-            var held = new FolderTree(before.Folders).Holding(before.Tabs);
+            var filled = new FolderTree(before.Folders).Holding(before.Tabs);
+            filled.UnionWith(before.Folders.Select(folder => folder.ParentId).OfType<Guid>());
             var tree = new FolderTree(space.Folders);
-            var holding = tree.Holding(space.Tabs);
-            var removed = space.Folders.Where(folder => folder.GoesWhenEmptied && held.Contains(folder.Id) && !holding.Contains(folder.Id))
-                .SelectMany(folder => tree.Subtree(folder.Id)).ToHashSet();
+            var removed = tree.Empty(tree.Holding(space.Tabs), folder => folder.GoesWhenEmptied && filled.Contains(folder.Id));
             if (removed.Count == 0) return space;
             cleared = true;
             return space with { Folders = [.. space.Folders.Where(folder => !removed.Contains(folder.Id))] };

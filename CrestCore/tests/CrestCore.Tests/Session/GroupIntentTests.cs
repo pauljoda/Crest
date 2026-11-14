@@ -53,11 +53,11 @@ public sealed partial class BrowserContractsTests {
         Assert.True(JsonNode.DeepEquals(marked, FolderValue(sync, f.OpenFolder)));
     }
 
-    /// A folder of the open tabs goes with its last tab, taking the empty
-    /// folders inside it, and keeps its record, marked emptied; a saved folder
-    /// stays when it empties.
+    /// A folder of the open tabs goes once nothing is left in it and keeps its
+    /// record, marked emptied; a saved folder stays when it empties. A folder
+    /// that still holds a folder stays, and so does that folder, even empty.
     [Fact]
-    public void AnOpenFolderGoesWhenItsLastTabMovesOutButASavedFolderStays() {
+    public void AnOpenFolderGoesOnceNothingIsLeftInItButASavedFolderStays() {
         var f = new BatchSpace();
         using var device = new TestDevice(f.Session);
         var (core, sync) = (device.Authority, Syncing(device.Authority));
@@ -70,13 +70,38 @@ public sealed partial class BrowserContractsTests {
         device.Send(new MoveTab(device.Workspace, f.Space, f.Filed, TabPlacement.Pinned, null, null, LeavesSplit: false));
         device.Send(new MoveTab(device.Workspace, f.Space, f.Saved, TabPlacement.Current, null, null, LeavesSplit: false));
         sync.Flush();
-
         var folders = core.Current.Spaces[0].Folders;
-        Assert.DoesNotContain(folders, held => held.Id == f.OpenFolder || held.Id == inner);
+        Assert.Contains(folders, held => held.Id == f.OpenFolder);
+        Assert.Contains(folders, held => held.Id == inner && held.ParentId == f.OpenFolder);
         Assert.Contains(folders, held => held.Id == f.SavedFolder);
+
+        device.Send(new DeleteFolder(device.Workspace, f.Space, inner));
+        sync.Flush();
+        Assert.DoesNotContain(core.Current.Spaces[0].Folders, held => held.Id == f.OpenFolder || held.Id == inner);
         Assert.NotNull(FolderValue(sync, f.OpenFolder)["emptiedAt"]);
-        Assert.NotNull(FolderValue(sync, inner)["emptiedAt"]);
+        Assert.Equal("explicitDelete", FolderRecord(sync, inner)!["tombstone"]!["reason"]!.GetValue<string>());
         Assert.Null(FolderValue(sync, f.SavedFolder)["emptiedAt"]);
+    }
+
+    /// A folder whose tabs all sit in a folder inside it stays while that
+    /// folder does, and goes once that folder moves out.
+    [Fact]
+    public void AFolderGoesOnceItsLastFolderMovesOut() {
+        var f = new BatchSpace();
+        var (nested, _, _, _) = f.Nest();
+        using var device = new TestDevice(f.Session);
+        var (core, sync) = (device.Authority, Syncing(device.Authority));
+
+        device.Send(new MoveTab(device.Workspace, f.Space, f.Filed, TabPlacement.Pinned, null, null, LeavesSplit: false));
+        sync.Flush();
+        Assert.Contains(core.Current.Spaces[0].Folders, held => held.Id == f.OpenFolder);
+
+        device.Send(new MoveFolder(device.Workspace, f.Space, nested, TabPlacement.Current, null, null, null));
+        sync.Flush();
+        var folders = core.Current.Spaces[0].Folders;
+        Assert.DoesNotContain(folders, held => held.Id == f.OpenFolder);
+        Assert.Contains(folders, held => held.Id == nested && held.ParentId is null);
+        Assert.NotNull(FolderValue(sync, f.OpenFolder)["emptiedAt"]);
     }
 
     /// A new tab the person opens from a tab in a folder joins that folder at
