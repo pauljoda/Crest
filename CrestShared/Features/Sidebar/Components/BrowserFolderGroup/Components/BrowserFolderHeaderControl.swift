@@ -14,6 +14,9 @@ struct BrowserFolderHeaderControl: View {
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
+    /// The rename field's selection, which takes the whole name as renaming
+    /// begins, so typing replaces it on every platform.
+    @State private var nameSelection: TextSelection?
     private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
     private var showsTabCounts: Bool { appearance[keyPath: folder.kind.showsTabCounts] }
     private var alwaysVisible: Bool { appearance[keyPath: folder.kind.showsHighlights] }
@@ -37,10 +40,13 @@ struct BrowserFolderHeaderControl: View {
                         )
                     }
 
-                    TextField(folder.kind.namePrompt, text: interaction.draftTitle)
+                    TextField(folder.kind.namePrompt, text: interaction.draftTitle, selection: $nameSelection)
                         .textFieldStyle(.plain)
                         .modifier(BrowserFolderNameFieldFont(kind: folder.kind))
                         .focused(interaction.isTitleFocused)
+                        .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
+                            if focused { selectWholeName() }
+                        }
                         .submitLabel(.done)
                         .onSubmit(interaction.commitTitle)
                         .onKeyPress(.escape) {
@@ -125,6 +131,17 @@ struct BrowserFolderHeaderControl: View {
             }
         }
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
+    }
+
+    /// Selects the whole name once the field has it, which it takes as focus
+    /// arrives.
+    private func selectWholeName() {
+        Task { @MainActor in
+            await Task.yield()
+            let name = interaction.draftTitle.wrappedValue
+            guard !name.isEmpty else { return }
+            nameSelection = TextSelection(range: name.startIndex..<name.endIndex)
+        }
     }
 
     private var accessibilityLabel: LocalizedStringKey { folder.kind.spokenName(folder.shownTitle) }
