@@ -529,9 +529,13 @@ extension BrowserRootModel {
     private func dismissFloatingSidebarIfInteractionAllows(
         reduceMotion: Bool
     ) {
+        // A pointer that jumped from a row into the row's preview card leaves
+        // the sidebar before the card reports it, and the card keeps the
+        // sidebar out as it would once it does.
         guard !isSidebarMorphing,
             !isSidebarSurfaceHovered,
-            !chrome.utilityPresentation.isSidebarInteractionActive
+            !chrome.utilityPresentation.isSidebarInteractionActive,
+            !sidebarInteraction.tabPreview.isPointerOnShownCard
         else { return }
         dismissFloatingSidebar(reduceMotion: reduceMotion)
     }
