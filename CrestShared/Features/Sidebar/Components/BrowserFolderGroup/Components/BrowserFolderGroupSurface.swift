@@ -190,6 +190,14 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 .onChange(of: interaction.isExpanded.wrappedValue, initial: true) { _, _ in reconcileVisibility() }
                 .onChange(of: configuration.shownFolderTabID) { _, _ in reconcileVisibility() }
                 .onChange(of: configuration.residencyRevision, initial: true) { _, _ in reconcileVisibility() }
+                // A folder that turns into a group, or back, keeps the rows its
+                // new kind keeps when closed, as though it closed now.
+                .onChange(of: configuration.folder.isGroup) { _, _ in
+                    configuration.sidebarInteraction.rekeepCollapsedFolder(
+                        configuration.folderRuntimeAssignment, isExpanded: !configuration.folder.isCollapsed,
+                        selectedTabID: configuration.shownFolderTabID, folderTabIDs: configuration.folderTabIDs,
+                        residentFolderTabIDs: configuration.residentFolderTabIDs)
+                }
         #else
             content
                 .onChange(
@@ -213,6 +221,16 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
                     interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
                         isExpanded: interaction.isExpanded.wrappedValue,
+                        residentFolderTabIDs: configuration.residentFolderTabIDs
+                    )
+                }
+                // A folder that turns into a group, or back, keeps the rows its
+                // new kind keeps when closed, as though it closed now.
+                .onChange(of: configuration.folder.isGroup) { _, _ in
+                    interaction.collapsedTabVisibility.wrappedValue.expansionDidChange(
+                        isExpanded: interaction.isExpanded.wrappedValue,
+                        selectedTabID: configuration.shownFolderTabID,
+                        folderTabIDs: configuration.folderTabIDs,
                         residentFolderTabIDs: configuration.residentFolderTabIDs
                     )
                 }

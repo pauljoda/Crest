@@ -147,7 +147,8 @@ public sealed partial class BrowserTabCollection {
         var predecessors = remainingTree.EmptyPredecessors(beforeFolder, anchor, folder, location, remaining);
         int insertion;
         if (anchor is { } actual) insertion = remaining.FindIndex(t => t.Id == actual);
-        else if (folder is not null && remaining.FindLastIndex(t => t.FolderId == folder) is var last && last >= 0) insertion = last + 1;
+        else if (folder is { } destination && tree.Subtree(destination) is var within
+            && remaining.FindLastIndex(t => t.FolderId is { } owner && within.Contains(owner)) is var last && last >= 0) insertion = last + 1;
         else insertion = folder is null ? SectionEnd(remaining, location) : Math.Min(tabs.FindIndex(t => memberIds.Contains(t.Id)), remaining.Count);
         if (detachSplitMembers && anchor is null && insertion > 0 && insertion < remaining.Count
             && remaining[insertion].SplitGroupId is { } crossing && remaining[insertion - 1].SplitGroupId == crossing)

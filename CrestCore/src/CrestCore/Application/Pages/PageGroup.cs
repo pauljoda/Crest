@@ -134,8 +134,9 @@ internal sealed class PageGroup {
     /// whether it is collapsed, and the live pages of its tabs, with the
     /// grouped pages it does not hold. A folder that lost its last tab goes,
     /// as every folder of the open tabs does, and the group keeps only the
-    /// pages outside it; a folder the person deleted, whose tabs stay open,
-    /// takes every page out of the group. Answers whether the group is still
+    /// pages outside it, whether those tabs closed or moved into another
+    /// folder; a folder the person deleted, whose tabs stay open at the top
+    /// level, takes every page out of the group. Answers whether the group is still
     /// followed.
     public bool Reconcile(Pages pages, Action<Engine, EngineCommand> issue) {
         if (!Located(pages)) return false;
@@ -154,7 +155,8 @@ internal sealed class PageGroup {
         if (folder is null) {
             if (!showsFolder) return kept.Count > 0;
             showsFolder = false;
-            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && tab.Placement == TabPlacement.Current);
+            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && tab.Placement == TabPlacement.Current
+                && tab.FolderId is null);
             Ask(pages, issue, live, heldCollapsed, deleted ? [] : kept);
             return !deleted && kept.Count > 0;
         }

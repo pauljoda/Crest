@@ -105,28 +105,41 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(launched).Placement, Held(launched).FolderId));
     }
 
+    /// A Group another device emptied stays here while only its tabs' moves
+    /// have arrived, since records come over several batches and the tab that
+    /// keeps it may still be on its way; it goes with the deletion the device
+    /// that emptied it stages.
     [Fact]
-    public void AGroupAnotherDeviceEmptiedGoesOnceItsTabsArrive() {
+    public void AGroupAnotherDeviceEmptiedGoesOnlyWithThatDevicesDeletion() {
         const double now = 811679532;
         var f = new BatchSpace();
         var grouped = NativeSessionMaintenance.Repair(f.Session.DeepClone().AsObject(), now)["session"]!;
         grouped["spaces"]![0]!["folders"]!.AsArray().Single(folder => JsonNode.DeepEquals(folder!["id"], SwiftId(f.OpenFolder)))!
             ["isGroup"] = true;
-        // An older device files the group's last tab out and keeps the group.
         var emptied = grouped.DeepClone();
         var moved = emptied["spaces"]![0]!["tabs"]!.AsArray().Single(tab => JsonNode.DeepEquals(tab!["folderID"], SwiftId(f.OpenFolder)))!;
         moved["folderID"] = null;
         moved["positionModifiedAt"] = now;
-        NativeSyncJournal Staged(NativeSyncJournal journal, JsonNode session) =>
-            journal.Stage(session.DeepClone().AsObject(), SyncDeletionReason.Superseded, now);
+        var deleted = emptied.DeepClone();
+        deleted["spaces"]![0]!["folders"]!.AsArray().Remove(deleted["spaces"]![0]!["folders"]!.AsArray()
+            .Single(folder => JsonNode.DeepEquals(folder!["id"], SwiftId(f.OpenFolder))));
+        NativeSyncJournal Staged(NativeSyncJournal journal, JsonNode session, SyncDeletionReason reason) =>
+            journal.Stage(session.DeepClone().AsObject(), reason, now);
         JsonNode Records(NativeSyncJournal journal) => JsonNode.Parse(journal.Read())!["records"]!;
-        var sender = Staged(NativeSyncJournal.Fresh(Guid.NewGuid()), grouped);
-        var later = Staged(sender, emptied);
+        var sender = Staged(NativeSyncJournal.Fresh(Guid.NewGuid()), grouped, SyncDeletionReason.Superseded);
+        var tabMoved = Staged(sender, emptied, SyncDeletionReason.Superseded);
+        var groupDeleted = Staged(tabMoved, deleted, SyncDeletionReason.ExplicitDelete);
+        NativeSyncSessionTransition Received(NativeSyncSessionTransition seen, NativeSyncJournal from) =>
+            NativeSyncSessionTransition.Prepare(seen.Journal, seen.Session, Records(from).AsArray(), replacing: false,
+                StoredSessionCodec.Date(now), emptySpace: null, access: null, new TestIds());
 
         var seen = Transition(NativeSyncJournal.Fresh(Guid.NewGuid()), grouped, Records(sender), replacing: true, now);
-        var received = NativeSyncSessionTransition.Prepare(seen.Journal, seen.Session, Records(later).AsArray(), replacing: false,
-            StoredSessionCodec.Date(now), emptySpace: null, access: null, new TestIds());
-        Assert.DoesNotContain(received.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder);
-        Assert.Equal("explicitDelete", FolderRecord(received.Journal, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
+        var afterMove = Received(seen, tabMoved);
+        Assert.Contains(afterMove.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder && folder.IsGroup);
+        Assert.NotNull(FolderRecord(afterMove.Journal, f.OpenFolder)!["payload"]);
+
+        var afterDeletion = Received(afterMove, groupDeleted);
+        Assert.DoesNotContain(afterDeletion.Session.Spaces[0].Folders, folder => folder.Id == f.OpenFolder);
+        Assert.Equal("explicitDelete", FolderRecord(afterDeletion.Journal, f.OpenFolder)!["tombstone"]!["reason"]!.GetValue<string>());
     }
 }

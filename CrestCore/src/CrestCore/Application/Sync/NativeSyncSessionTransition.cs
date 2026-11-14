@@ -94,16 +94,12 @@ public sealed record NativeSyncSessionTransition {
             }
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
-        // A folder of the open tabs whose last tab another device closed or
-        // moved out goes here too, for every device. One that held no tab here
-        // stays, since its tabs may not have arrived yet.
-        var settled = repaired.ClearingEmptiedFolders(local);
-        var emptied = settled.FoldersGoneSince(repaired).Select(SyncRecordKind.Folder.RecordName)
-            .ToDictionary(name => name, _ => SyncDeletionReason.ExplicitDelete, StringComparer.Ordinal);
-        repaired = settled;
-        if (!replacing || removed || emptied.Count > 0)
-            next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds,
-                emptied);
+        // A folder of the open tabs that another device emptied goes with the
+        // deletion that device stages. Records can arrive over several
+        // batches, so a folder that holds no tab here is never cleared, since
+        // the tab that keeps it may not have arrived yet.
+        if (!replacing || removed)
+            next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds);
         return new(next, repaired, origins);
     }
 

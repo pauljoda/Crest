@@ -103,6 +103,20 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
             folderID: folderID, spaceID: space.id, profileID: space.profileID)
     }
 
+    /// Takes the rows a closed folder keeps again, as though it closed now, as
+    /// when it turns into a group or back and its new kind keeps other rows.
+    func rekeepCollapsedFolder(
+        _ assignment: BrowserFolderRuntimeAssignment, isExpanded: Bool, selectedTabID: UUID?,
+        folderTabIDs: [UUID], residentFolderTabIDs: [UUID]
+    ) {
+        let visibility = collapsedFolderVisibility(for: assignment)
+        var next = visibility.state
+        next.expansionDidChange(
+            isExpanded: isExpanded, selectedTabID: selectedTabID, folderTabIDs: folderTabIDs,
+            residentFolderTabIDs: residentFolderTabIDs)
+        if next != visibility.state { visibility.state = next }
+    }
+
     /// Forgets the kept rows of folders none of `spaces` holds any longer.
     func pruneCollapsedFolders(keepingFoldersOf spaces: [SpaceModel]) {
         let kept = spaces.flatMap { space in
