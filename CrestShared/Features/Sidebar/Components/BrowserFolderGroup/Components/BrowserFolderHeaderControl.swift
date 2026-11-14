@@ -86,10 +86,14 @@ struct BrowserFolderHeaderControl: View {
                         Spacer(minLength: 8)
                         if showsTabCounts {
                             BrowserFolderTabCount(folder: folder, space: configuration.context.space).equatable()
+                                // Where the `…` button waits for hover, the count
+                                // holds its place and gives way to it.
+                                .frame(width: countSharesMenuSlot ? menuMetrics.controlSize.width : nil)
+                                .opacity(countSharesMenuSlot && isMenuRevealed ? 0 : 1)
                         }
-                        if showsMenuButton {
-                            // Room for the `…` button drawn over the header, so
-                            // the count never sits under it.
+                        if showsMenuButton, menuMetrics.isAlwaysVisible {
+                            // Room for the `…` button a touch shell always
+                            // draws over the header, so the count sits beside it.
                             Color.clear.frame(width: menuMetrics.controlSize.width, height: 1)
                         }
                     }
@@ -111,7 +115,7 @@ struct BrowserFolderHeaderControl: View {
                     if showsMenuButton {
                         BrowserFolderMenuButton(
                             configuration: configuration, interaction: interaction, metrics: menuMetrics,
-                            isRevealed: menuMetrics.isRevealed(isHovering: isHovering, isSelected: false)
+                            isRevealed: isMenuRevealed
                         )
                         .padding(.trailing, configuration.headerMetrics.contentTrailingInset)
                     }
@@ -144,6 +148,13 @@ struct BrowserFolderHeaderControl: View {
     /// The size and reveal rule a tab row's trailing control follows, so the
     /// header's matches it.
     private var menuMetrics: BrowserTabTrailingControlMetrics { capabilities.trailingControlMetrics }
+
+    /// Whether the `…` button shows now.
+    private var isMenuRevealed: Bool { menuMetrics.isRevealed(isHovering: isHovering, isSelected: false) }
+
+    /// Whether the tab count stands where the `…` button appears on hover,
+    /// rather than beside a button that is always there.
+    private var countSharesMenuSlot: Bool { showsMenuButton && !menuMetrics.isAlwaysVisible }
 }
 
 /// The `…` button at a folder or group header's trailing edge, which opens
