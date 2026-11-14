@@ -32,6 +32,18 @@ struct CrestSettingSliderReadout: Sendable {
             value <= 0 ? String(localized: zero) : String(localized: "\(Int(value.rounded())) pt")
         }
     }
+
+    /// A length of time in steps of ten milliseconds, such as how long a
+    /// sidebar waits or slides, whose zero is a word. A stored value that is
+    /// not a number or past any length a slider offers reads as its nearest
+    /// end rather than stopping the page.
+    static func milliseconds(zero: LocalizedStringResource) -> Self {
+        CrestSettingSliderReadout { value in
+            let length = value.isFinite ? min(max(value, 0), 3_600_000) : 0
+            let milliseconds = Int((length / 10).rounded()) * 10
+            return milliseconds <= 0 ? String(localized: zero) : String(localized: "\(milliseconds) ms")
+        }
+    }
 }
 
 /// Shared by settings and Space appearance. On the Mac the title and reset sit

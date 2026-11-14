@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The shared Window group, plus the window choices only the desktop has:
 /// light or dark, how far dark dims Space colors, Space page motion, the
-/// sidebar hover area and whether it stays live over a page in full screen.
+/// sidebar hover area, how long it waits and how long the sidebar slides, and
+/// whether it stays live over a page in full screen.
 struct BrowserPlatformAppearanceSettingsSection: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -22,6 +23,9 @@ struct BrowserPlatformAppearanceSettingsSection: View {
 
         let revealWidth = CrestSettingValue(
             $appearance.sidebarRevealWidth, default: SidebarRevealWidthPreference.defaultValue)
+        let revealDelay = CrestSettingValue(
+            $appearance.sidebarRevealDelay, default: SidebarRevealDelayPreference.defaultValue)
+        let slide = CrestSettingValue($appearance.sidebarSlideDuration, default: BrowserSidebarSlide.defaultValue)
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
 
@@ -33,6 +37,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 (.darkSpaceDimming, dimming.resettable("Dim Space colors in dark")),
                 (.spacePageMotion, motion.resettable("Animate pages when switching Spaces")),
                 (.sidebarRevealWidth, revealWidth.resettable("Sidebar hover area")),
+                (.sidebarRevealDelay, revealDelay.resettable("Sidebar hover delay")),
+                (.sidebarSlideDuration, slide.resettable("Sidebar slide time")),
                 (.fullScreenSidebarReveal, fullscreenReveal.resettable("Show sidebar on hover in full screen")),
             ]
         ) {
@@ -77,6 +83,24 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             )
             .onChange(of: appearance.sidebarRevealWidth) { SidebarRevealWidthPreview.shared.adjusted() }
             .browserAppearanceSetting(.sidebarRevealWidth)
+
+            CrestSettingSlider(
+                "Sidebar hover delay",
+                value: revealDelay,
+                range: SidebarRevealDelayPreference.range,
+                readout: .milliseconds(zero: "Instant"),
+                identifier: "sidebar-reveal-delay"
+            )
+            .browserAppearanceSetting(.sidebarRevealDelay)
+
+            CrestSettingSlider(
+                "Sidebar slide time",
+                value: slide,
+                range: BrowserSidebarSlide.range,
+                readout: .milliseconds(zero: "Snap"),
+                identifier: "sidebar-slide-time"
+            )
+            .browserAppearanceSetting(.sidebarSlideDuration)
 
             CrestSettingRow(
                 "Show sidebar on hover in full screen",

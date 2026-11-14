@@ -157,6 +157,8 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
+    static let sidebarRevealDelayKey = "crest.appearance.sidebar-reveal-delay"
+    static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
     static let peekSizeKey = "crest.appearance.peek-size"
     static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
     static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
@@ -199,6 +201,17 @@ final class BrowserDeviceAppearanceStore {
     /// How wide, in points, the strip along the window's edge is that shows a
     /// hidden sidebar when the pointer rests on it. Only the Mac has one.
     var sidebarRevealWidth: Double {
+        didSet { saveSoon() }
+    }
+    /// How long, in milliseconds, the pointer rests on that strip before the
+    /// hidden sidebar shows; zero shows it at once.
+    var sidebarRevealDelay: Double {
+        didSet { saveSoon() }
+    }
+    /// How long, in milliseconds, the sidebar takes to slide out over the
+    /// page, the length every other sidebar slide is measured against; zero
+    /// puts it in place at once.
+    var sidebarSlideDuration: Double {
         didSet { saveSoon() }
     }
     /// How much of the room beside the sidebar a Peek's card takes, within
@@ -351,6 +364,12 @@ final class BrowserDeviceAppearanceStore {
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
+        sidebarRevealDelay =
+            chrome.object(forKey: Self.sidebarRevealDelayKey) as? Double
+            ?? BrowserLookAndFeelDefaults.sidebarRevealDelay
+        sidebarSlideDuration =
+            chrome.object(forKey: Self.sidebarSlideDurationKey) as? Double
+            ?? BrowserLookAndFeelDefaults.sidebarSlideDuration
         previewsTabsOnHover =
             defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover
         previewsFoldersOnHover =
@@ -556,6 +575,8 @@ final class BrowserDeviceAppearanceStore {
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
+        write(sidebarRevealDelay, forKey: Self.sidebarRevealDelayKey, in: chrome)
+        write(sidebarSlideDuration, forKey: Self.sidebarSlideDurationKey, in: chrome)
     }
 
     /// Writes the choices once they have stayed still for ``settleDelay``.

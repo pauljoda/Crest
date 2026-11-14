@@ -13,15 +13,12 @@ import AppKit
 /// there after crossing to another Mac.
 ///
 /// The pointer also has to stay on the strip a moment before the sidebar comes
-/// out. A pointer passing over the edge on its way to something near it, a
-/// control at the side of the page, never brings the sidebar out.
+/// out, for as long as Appearance's Sidebar hover delay asks. A pointer passing
+/// over the edge on its way to something near it, a control at the side of the
+/// page, never brings the sidebar out; with no delay, any pointer reaching the
+/// strip does.
 @MainActor
 final class BrowserCollapsedSidebarHoverTrackingView: NSView {
-    // MARK: - Static Variables
-
-    /// How long the pointer stays on the strip before the sidebar comes out.
-    static let revealDelay: Duration = .milliseconds(200)
-
     // MARK: - Variables
 
     var onHoverChange: @MainActor @Sendable (Bool) -> Void
@@ -37,6 +34,12 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     private var isPointerOnStrip: Bool {
         guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
         return bounds.contains(convert(window.convertPoint(fromScreen: pointerLocation()), from: nil))
+    }
+
+    /// How long the pointer stays on the strip before the sidebar comes out,
+    /// as Appearance sets it.
+    private var revealDelay: Duration {
+        SidebarRevealDelayPreference.delay(BrowserDeviceAppearanceStore.shared.sidebarRevealDelay)
     }
 
     // MARK: - Initializers
@@ -104,16 +107,22 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
         onHoverChange(isHovering)
     }
 
-    /// Starts the wait for a pointer that moved onto the strip. Moving along
-    /// the strip keeps the wait going; leaving it ends the wait.
+    /// Starts the wait for a pointer that moved onto the strip, or reveals at
+    /// once without one. Moving along the strip keeps the wait going; leaving
+    /// it ends the wait.
     private func revealIfPointerMoved() {
         if let restingPointer {
             guard pointerLocation() != restingPointer else { return }
             self.restingPointer = nil
         }
         guard pendingReveal == nil else { return }
+        let delay = revealDelay
+        guard delay > .zero else {
+            if isPointerOnStrip { reportHover(true) }
+            return
+        }
         pendingReveal = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: Self.revealDelay)
+            try? await Task.sleep(for: delay)
             guard let self, !Task.isCancelled else { return }
             pendingReveal = nil
             guard isPointerOnStrip else { return }
