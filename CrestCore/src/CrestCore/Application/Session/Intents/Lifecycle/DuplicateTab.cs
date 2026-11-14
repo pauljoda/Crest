@@ -3,10 +3,11 @@ using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
-/// Copies a tab into `Placement`'s section, or among the open tabs when null,
-/// with an identity the core gives it, published as `TabCopied`. A copy of a
-/// web page starts from where the source's page is now. When `Shows`, the
-/// window that asked shows the copy and its Space.
+/// Copies a tab into `Placement`'s section, or when null beside its source:
+/// at the end of the folder the source sits in, saved with a saved folder, or
+/// among the open tabs. Its identity is one the core gives it, published as
+/// `TabCopied`. A copy of a web page starts from where the source's page is
+/// now. When `Shows`, the window that asked shows the copy and its Space.
 public sealed record DuplicateTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, TabPlacement? Placement, bool Shows)
     : SessionIntent(WorkspaceId) {
     #region Actions - Session
@@ -19,6 +20,7 @@ public sealed record DuplicateTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId,
         var edited = BrowserTabCollection.Restore(space);
         if (edited.Tab(TabId).Content.IsStartPage) throw new Rejected(new StartPageNotCopied(TabId));
         var copy = edited.DuplicateTab(TabId, turn.Ids, turn.Now, Placement ?? TabPlacement.Current);
+        if (Placement is null) edited.JoinFolderOf(TabId, copy.Id, turn.Now);
         workspace.StartFromSourcePage(copy, TabId, WindowId, turn.Pages);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, copy.Id).ShowSpace(space.Id);

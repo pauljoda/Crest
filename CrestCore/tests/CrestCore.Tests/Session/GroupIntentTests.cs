@@ -60,6 +60,51 @@ public sealed partial class BrowserContractsTests {
         Assert.NotNull(FolderRecord(sync, f.SavedFolder)!["payload"]);
     }
 
+    /// A new tab the person opens from a tab in a folder joins that folder at
+    /// its end: a Start Page reuses the one the folder holds, a copy stays
+    /// beside its source, and a link, a typed address or a Start Page from a
+    /// saved folder's tab is saved there and belongs to the first page it
+    /// shows. A tab opened for
+    /// anyone else, and the Start Page a window shows on launch, stay outside.
+    [Fact]
+    public void ANewTabFromATabInAFolderJoinsThatFolderAtItsEnd() {
+        var f = new BatchSpace();
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
+        TabState Held(Guid tab) => core.Current.Spaces[0].Tabs.Single(held => held.Id == tab);
+        Guid[] Inside(Guid folder) => [.. core.Current.Spaces[0].Tabs.Where(tab => tab.FolderId == folder).Select(tab => tab.Id)];
+        var open = device.Open(f.Space, (f.Space, f.Filed));
+
+        var page = Guid.NewGuid();
+        device.Send(new ShowStartPage(device.Workspace, open, f.Space, page, OutsideSplits: false, JoinsFolder: true));
+        device.Send(new ShowStartPage(device.Workspace, open, f.Space, Guid.NewGuid(), OutsideSplits: false, JoinsFolder: true));
+        var before = core.Current.Spaces[0].Tabs.Select(tab => tab.Id).ToHashSet();
+        device.Send(new DuplicateTab(device.Workspace, open, f.Space, f.Filed, Placement: null, Shows: false));
+        var copy = core.Current.Spaces[0].Tabs.Single(tab => !before.Contains(tab.Id)).Id;
+        Assert.Equal([f.Filed, page, copy], Inside(f.OpenFolder));
+        Assert.Equal(TabPlacement.Current, Held(page).Placement);
+
+        var saved = device.Open(f.Space, (f.Space, f.Saved));
+        var (link, other, savedPage) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        device.Send(new OpenTab(device.Workspace, saved, f.Space, link, new TabContent("https://example.com/link", View: null, Title: null),
+            TabPlacement.Current, AfterTabId: f.Saved, Shows: false, JoinsFolder: true));
+        device.Send(new OpenTab(device.Workspace, saved, f.Space, other, new TabContent("https://example.com/other", View: null, Title: null),
+            TabPlacement.Current, AfterTabId: f.Saved, Shows: false));
+        device.Send(new ShowStartPage(device.Workspace, saved, f.Space, savedPage, OutsideSplits: false, JoinsFolder: true));
+        device.Send(new NavigateTab(device.Workspace, f.Space, savedPage, "https://example.org/"));
+        Assert.Equal([f.Saved, link, savedPage], Inside(f.SavedFolder));
+        Assert.Equal((TabPlacement.Saved, "https://example.com/link"), (Held(link).Placement, Held(link).SavedUrl));
+        Assert.Equal((TabPlacement.Saved, "https://example.org/"), (Held(savedPage).Placement, Held(savedPage).SavedUrl));
+        Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(other).Placement, Held(other).FolderId));
+        var typed = Guid.NewGuid();
+        device.Send(new OpenAddress(device.Workspace, saved, f.Space, typed, "https://example.com/typed", JoinsFolder: true));
+        Assert.Equal([f.Saved, link, savedPage, typed], Inside(f.SavedFolder));
+
+        var launched = Guid.NewGuid();
+        device.Send(new ShowStartPage(device.Workspace, saved, f.Space, launched, OutsideSplits: false));
+        Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(launched).Placement, Held(launched).FolderId));
+    }
+
     [Fact]
     public void AGroupAnotherDeviceEmptiedGoesOnceItsTabsArrive() {
         const double now = 811679532;

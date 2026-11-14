@@ -4470,6 +4470,7 @@ struct OpenAddress: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let address: String
+    let joinsFolder: Bool
 }
 
 struct OpenCloudTransport: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -4513,6 +4514,7 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement
     let afterTabID: UUID?
     let shows: Bool
+    let joinsFolder: Bool
 }
 
 struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
@@ -6494,6 +6496,7 @@ struct ShowStartPage: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let outsideSplits: Bool
+    let joinsFolder: Bool
 }
 
 struct ShowTab: Intent, WindowIntent, Equatable, Sendable {

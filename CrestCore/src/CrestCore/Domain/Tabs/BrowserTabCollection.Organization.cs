@@ -117,6 +117,14 @@ public sealed partial class BrowserTabCollection {
             if (group.Count() < 2) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
     }
 
+    /// Files `tabId`, a tab just opened from `origin`, at the end of the folder
+    /// `origin` sits in, when it sits in one: among the open tabs for a folder
+    /// of the open tabs or a group, and saved with a saved folder.
+    public void JoinFolderOf(Guid origin, Guid tabId, DateTimeOffset now) {
+        if (tabs.FirstOrDefault(tab => tab.Id == origin)?.FolderId is not { } folder || folders.All(f => f.Id != folder)) return;
+        FileTabs([tabId], KnownFolder(folder).Location, folder, now);
+    }
+
     public void FileTabs(IReadOnlyCollection<Guid> requested, TabPlacement location, Guid? folder,
         DateTimeOffset now, Guid? before = null, Guid? beforeFolder = null, bool detachSplitMembers = false) {
         if (requested.Count == 0 || !location.HoldsFolders) throw new Rejected(new InvalidFolderPlacement());

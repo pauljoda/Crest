@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x99, 0x0f, 0x4c, 0x78, 0xce, 0x06, 0x22, 0xf4, 0xba, 0x72, 0xdc, 0x53, 0x6a, 0x25, 0x1d, 0x4a, 0x87, 0x7d, 0x61, 0x95, 0xaf, 0xf8, 0x4c, 0xfa, 0x00, 0xfe, 0xb3, 0xc4, 0xee, 0xd8, 0xc0, 0x8a
+        0x70, 0x01, 0x47, 0x35, 0xdb, 0x0a, 0x79, 0xc2, 0xf5, 0xf7, 0x92, 0x38, 0x33, 0xda, 0x9d, 0xd6, 0xe0, 0xf3, 0xac, 0x83, 0x91, 0xb4, 0x08, 0xb7, 0x5d, 0x7e, 0x9f, 0x53, 0xb5, 0xa4, 0x91, 0x33
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -15222,7 +15222,8 @@ extension OpenAddress {
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
         let address = try reader.readString()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, address: address)
+        let joinsFolder = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, address: address, joinsFolder: joinsFolder)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15231,6 +15232,7 @@ extension OpenAddress {
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
         writer.writeString(address)
+        writer.writeBool(joinsFolder)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -15407,7 +15409,8 @@ extension OpenTab {
             afterTabID = nil
         }
         let shows = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, content: content, placement: placement, afterTabID: afterTabID, shows: shows)
+        let joinsFolder = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, content: content, placement: placement, afterTabID: afterTabID, shows: shows, joinsFolder: joinsFolder)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15424,6 +15427,7 @@ extension OpenTab {
             writer.writePresence(false)
         }
         writer.writeBool(shows)
+        writer.writeBool(joinsFolder)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -22881,7 +22885,8 @@ extension ShowStartPage {
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
         let outsideSplits = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, outsideSplits: outsideSplits)
+        let joinsFolder = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, outsideSplits: outsideSplits, joinsFolder: joinsFolder)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -22890,6 +22895,7 @@ extension ShowStartPage {
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
         writer.writeBool(outsideSplits)
+        writer.writeBool(joinsFolder)
     }
 
     func encodeIntent(into writer: inout WireWriter) {

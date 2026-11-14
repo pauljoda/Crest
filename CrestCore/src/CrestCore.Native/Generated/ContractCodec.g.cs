@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x99, 0x0f, 0x4c, 0x78, 0xce, 0x06, 0x22, 0xf4, 0xba, 0x72, 0xdc, 0x53, 0x6a, 0x25, 0x1d, 0x4a, 0x87, 0x7d, 0x61, 0x95, 0xaf, 0xf8, 0x4c, 0xfa, 0x00, 0xfe, 0xb3, 0xc4, 0xee, 0xd8, 0xc0, 0x8a
+        0x70, 0x01, 0x47, 0x35, 0xdb, 0x0a, 0x79, 0xc2, 0xf5, 0xf7, 0x92, 0x38, 0x33, 0xda, 0x9d, 0xd6, 0xe0, 0xf3, 0xac, 0x83, 0x91, 0xb4, 0x08, 0xb7, 0x5d, 0x7e, 0x9f, 0x53, 0xb5, 0xa4, 0x91, 0x33
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -13402,7 +13402,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadGuid(),
-            reader.ReadString());
+            reader.ReadString(),
+            reader.ReadBool());
     }
 
     public static void WriteOpenAddress(WireWriter writer, OpenAddress value) {
@@ -13413,6 +13414,7 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         writer.WriteGuid(value.TabId);
         writer.WriteString(value.Address);
+        writer.WriteBool(value.JoinsFolder);
     }
 
     public static OpenCloudTransport ReadOpenCloudTransport(WireReader reader) {
@@ -13507,6 +13509,7 @@ public static class ContractCodec {
             ReadTabContent(reader),
             ReadTabPlacement(reader),
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
             reader.ReadBool());
     }
 
@@ -13526,6 +13529,7 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.Shows);
+        writer.WriteBool(value.JoinsFolder);
     }
 
     public static OpenWindow ReadOpenWindow(WireReader reader) {
@@ -18163,6 +18167,7 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadGuid(),
+            reader.ReadBool(),
             reader.ReadBool());
     }
 
@@ -18174,6 +18179,7 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         writer.WriteGuid(value.TabId);
         writer.WriteBool(value.OutsideSplits);
+        writer.WriteBool(value.JoinsFolder);
     }
 
     public static ShowTab ReadShowTab(WireReader reader) {

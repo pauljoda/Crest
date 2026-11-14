@@ -5485,6 +5485,10 @@
     "open-folders-go-when-empty": {
       "category": "improved",
       "message": "A folder of open tabs now goes away when its last tab closes or moves out, as a group does. Saved folders stay when they empty."
+    },
+    "new-tabs-join-folder": {
+      "category": "new",
+      "message": "A new tab opens in the group or folder of the tab you're on, at its end, whether you open it with New Tab, from a link or with Duplicate Tab. From a saved folder, the new tab is saved there."
     }
   }
 }

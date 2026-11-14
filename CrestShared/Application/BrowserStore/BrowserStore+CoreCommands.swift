@@ -88,17 +88,18 @@ extension BrowserStore {
 
     /// Opens a tab showing `content` in `placement`'s section and answers its
     /// identity, or nil when the core refused it. The core places a tab
-    /// opened from `origin` after it and outside its split, resolves its
-    /// address and names a page it was given no title for.
+    /// opened from `origin` after it and outside its split, or, when
+    /// `joinsFolder`, at the end of the folder `origin` sits in; it resolves
+    /// its address and names a page it was given no title for.
     @discardableResult
     func openSessionTab(
         _ content: TabContent, in spaceID: UUID, placement: TabPlacement = .current,
-        insertingAfter origin: UUID? = nil, shouldSelect: Bool = true
+        insertingAfter origin: UUID? = nil, shouldSelect: Bool = true, joinsFolder: Bool = false
     ) -> UUID? {
         let id = UUID()
         let opening = OpenTab(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id,
-            content: content, placement: placement, afterTabID: origin, shows: shouldSelect)
+            content: content, placement: placement, afterTabID: origin, shows: shouldSelect, joinsFolder: joinsFolder)
         return family.perform(opening, from: self) == nil ? nil : id
     }
 
