@@ -225,6 +225,35 @@ public sealed partial class BrowserContractsTests {
         Assert.NotNull(record["payload"]!["value"]!["emptiedAt"]);
     }
 
+    /// A folder one device empties stays out of sight there, though another
+    /// device still shows it for a Start Page of its own, which never syncs:
+    /// that device keeps the mark rather than writing the folder back.
+    [Fact]
+    public void AFolderShownElsewhereOnlyForATabThatNeverSyncsStaysMarked() {
+        var (space, folder, held, page) = (Fixed(1_420), Fixed(1_421), Fixed(1_422), Fixed(1_423));
+        JsonObject Session(bool holdsPage) {
+            List<JsonObject> tabs = [
+                TabOf(Fixed(1_397), "Pinned", "https://example.com/pinned", placement: "pinned", activated: 500),
+                TabOf(held, "Inside", "https://example.com/inside", folder: folder, activated: 500)
+            ];
+            if (holdsPage) tabs.Add(TabOf(page, "Start Page", url: null, symbol: "flag.fill", folder: folder, activated: 500));
+            return SessionOf(SpaceOf(space, Fixed(1_398), "Trip", "airplane", folders: [FolderOf(folder, "Plain", location: "current")],
+                tabs: tabs));
+        }
+        var merged = CloudHolding(Session(holdsPage: false), 1_424);
+        using var showing = new SyncingDevice(Session(holdsPage: true), merged(1_425));
+        using var closing = new SyncingDevice(Session(holdsPage: false), merged(1_426));
+
+        var window = closing.Open(space, held);
+        closing.Edit(workspace => new CloseTabs(workspace, window, space, Picking(held)));
+        Settle(showing, closing);
+
+        Assert.Empty(SpaceIn(closing.Session, space)!["folders"]!.AsArray());
+        Assert.Contains(SpaceIn(showing.Session, space)!["tabs"]!.AsArray(),
+            tab => StoredSessionCodec.Identity(tab!["id"]) == page && StoredSessionCodec.Identity(tab["folderID"]) == folder);
+        Assert.NotNull(showing.Journal.Value(SyncRecordKind.Folder, folder)!["emptiedAt"]);
+    }
+
     /// One device closes the last tab it knows of in a Group while another has
     /// filed a second tab there that the first has not received. The Group
     /// still holds a tab, so both devices keep it with that tab inside.

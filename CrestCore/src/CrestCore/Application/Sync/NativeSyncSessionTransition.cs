@@ -94,10 +94,10 @@ public sealed record NativeSyncSessionTransition {
             }
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
-        // A folder of the open tabs that another device emptied goes with the
-        // deletion that device stages. Records can arrive over several
-        // batches, so a folder that holds no tab here is never cleared, since
-        // the tab that keeps it may not have arrived yet.
+        // A folder of the open tabs that another device emptied arrives marked,
+        // and stays out of sight here while it holds nothing. Records can
+        // arrive over several batches, so nothing here clears or deletes a
+        // folder: the tab that keeps it may not have arrived yet.
         if (!replacing || removed)
             next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds);
         return new(next, repaired, origins);
