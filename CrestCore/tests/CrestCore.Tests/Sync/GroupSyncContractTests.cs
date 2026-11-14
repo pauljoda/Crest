@@ -82,6 +82,38 @@ public sealed partial class BrowserContractsTests {
         Assert.Null(device.Journal.Value(SyncRecordKind.Folder, group)!["emptiedAt"]);
     }
 
+    /// A plain folder of the open tabs that one device empties stays out of
+    /// sight on a device that receives the mark, and on the emptying device
+    /// itself once it next takes in records from the cloud.
+    [Fact]
+    public void APlainFolderAnEditEmptiedStaysOutOfSightWhereItHoldsNothing() {
+        var (space, folder, held, loose) = (Fixed(1_450), Fixed(1_451), Fixed(1_452), Fixed(1_453));
+        var start = SessionOf(SpaceOf(space, Fixed(1_398), "Trip", "airplane", folders: [FolderOf(folder, "Plain", location: "current")], tabs: [
+            TabOf(Fixed(1_397), "Pinned", "https://example.com/pinned", placement: "pinned", activated: 500),
+            TabOf(held, "Inside", "https://example.com/inside", folder: folder, activated: 500),
+            TabOf(loose, "Loose", "https://example.com/loose", activated: 500)
+        ]));
+        var merged = CloudHolding(start, 1_454);
+        using var emptying = new SyncingDevice(start, merged(1_455));
+        using var receiving = new SyncingDevice(start, merged(1_456));
+
+        emptying.Edit(workspace => new MoveTab(workspace, space, held, TabPlacement.Current, null, null, LeavesSplit: false));
+        Assert.NotNull(emptying.Journal.Value(SyncRecordKind.Folder, folder)!["emptiedAt"]);
+        Settle(emptying, receiving);
+        var renamed = SessionOf(SpaceOf(space, Fixed(1_398), "Trip", "airplane", tabs: [
+            TabOf(Fixed(1_397), "Pinned", "https://example.com/pinned", placement: "pinned", activated: 500),
+            TabOf(held, "Inside", "https://example.com/inside", activated: 500, positioned: 900),
+            TabOf(loose, "Renamed", "https://example.com/loose", activated: 500)
+        ]));
+        var other = merged(1_457);
+        other.Merge(emptying.Journal.Records);
+        other.Stage(renamed, at: 900);
+        emptying.Merge(Pending(other).Where(record => RecordName(record["id"]!) == Name(SyncRecordKind.Tab, loose)));
+
+        foreach (var device in new[] { emptying, receiving })
+            Assert.Empty(SpaceIn(device.Session, space)!["folders"]!.AsArray());
+    }
+
     /// A device that knows no emptied mark keeps it on a Group's record when
     /// it writes the Group, as it keeps any member it does not know. Its rename
     /// arrives here with the mark, so the Group stays out of sight while it
