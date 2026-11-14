@@ -20,7 +20,8 @@ public sealed record RestoreArchivedTab(Guid WorkspaceId, Guid WindowId, Guid Sp
         var edited = BrowserTabCollection.Restore(remaining);
         var restored = edited.RestoreArchived(space.ArchivedTabs[index].Tab, turn.Now);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId)).ShowTab(space.Id, restored.Id);
-        return new(turn.Basis.Replacing(edited.Capture(remaining)), SyncStaging.Creation, followUp);
+        return new(turn.Basis.Replacing(edited.Capture(remaining)), SyncStaging.Creation, followUp,
+            SessionTabEvents.None.Opening(WindowId, space.Id, restored.Id));
     }
 
     #endregion

@@ -206,6 +206,7 @@ final class BrowserPagePool:
             self?.host.livePages.first { $0.corePage.id == started.pageID }?.showDownloadStarted(started)
         }
         followAdoptedPages()
+        followOpenedTabs()
         followPutAwayPages()
         core.followWindowsBroughtForward(self) { [weak self] brought in
             guard let self, self.browser.isOpen(as: brought.windowID) else { return }

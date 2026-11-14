@@ -68,4 +68,32 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(core.Current.Spaces[0].SplitGroups);
     }
 
+    [Fact]
+    public void TheWindowThatOpensATabHearsItOpenedNeverForAMoveOrAnImport() {
+        var f = new BatchSpace();
+        using var device = new TestDevice(f.Session);
+        var window = device.Open(f.Space, (f.Space, f.Open));
+        var other = device.Open(f.Space);
+        var opened = Guid.NewGuid();
+
+        var changes = device.Send(new OpenTab(device.Workspace, window, f.Space, opened, Page("https://opened.example/"),
+            TabPlacement.Current, AfterTabId: null, Shows: false));
+        Assert.Equal([new OpenedTab(f.Space, opened)], changes.OfType<TabsOpened>().Single(change => change.WindowId == window).Tabs);
+        Assert.DoesNotContain(changes.OfType<TabsOpened>(), change => change.WindowId == other);
+
+        // A copy and a closed tab brought back are opened too.
+        var copied = device.Send(new DuplicateTab(device.Workspace, window, f.Space, opened, Placement: null, Shows: false));
+        Assert.Equal(copied.OfType<TabCopied>().Single().CopyTabId, copied.OfType<TabsOpened>().Single().Tabs.Single().TabId);
+        device.Send(new CloseTab(device.Workspace, window, f.Space, opened));
+        Assert.Equal([new OpenedTab(f.Space, opened)],
+            device.Send(new ReopenClosedTab(device.Workspace, window, f.Space)).OfType<TabsOpened>().Single().Tabs);
+
+        // A tab that only moves to another Space is not opened.
+        Assert.Empty(device.Send(new MoveTabToSpace(device.Workspace, window, f.Space, opened, f.Other, null, null, null))
+            .OfType<TabsOpened>());
+
+        // An imported Space's tabs are the import's, not the window's.
+        Assert.Empty(device.Send(new ImportSpaces(device.Workspace, window, ReadSpaces(f.Session["spaces"]![0]!)))
+            .OfType<TabsOpened>());
+    }
 }

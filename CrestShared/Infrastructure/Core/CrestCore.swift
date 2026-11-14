@@ -87,6 +87,9 @@ final class CrestCore {
     /// Who hears each page an engine opened by itself that the core adopted
     /// for a tab, once its batch is applied.
     @ObservationIgnored private var adoptionFollowers: [Follower<OfferedPageAdopted>] = []
+    /// Who hears each set of tabs a window's command opened, once its batch
+    /// is applied.
+    @ObservationIgnored private var openedTabFollowers: [Follower<TabsOpened>] = []
     /// Who hears each window the core brings to the front, once its batch is
     /// applied.
     @ObservationIgnored private var broughtForwardFollowers: [Follower<WindowBroughtForward>] = []
@@ -377,6 +380,7 @@ final class CrestCore {
         if !batch.movedPages.isEmpty { engines.pagesMoved(batch.movedPages) }
         if !batch.rehostedPages.isEmpty { pagesRehosted(batch.rehostedPages) }
         if !batch.adoptedPages.isEmpty { pagesAdopted(batch.adoptedPages) }
+        if !batch.openedTabs.isEmpty { tabsOpened(batch.openedTabs) }
         if !batch.broughtForward.isEmpty { windowsBroughtForward(batch.broughtForward) }
         if !batch.adoptedWindows.isEmpty { windowsAdopted(batch.adoptedWindows) }
         if !batch.closedTransientPages.isEmpty { transientPagesClosed(batch.closedTransientPages) }
@@ -513,6 +517,22 @@ final class CrestCore {
         let followers = transientCloseFollowers
         for page in pages {
             for follower in followers { follower.handler(page) }
+        }
+    }
+
+    /// Calls `handler` with each set of tabs a window's command opened, once
+    /// its batch is applied, so that window can bring one into view. The
+    /// registration lasts as long as `owner`.
+    func followOpenedTabs(_ owner: AnyObject, _ handler: @escaping @MainActor (TabsOpened) -> Void) {
+        openedTabFollowers.removeAll { $0.owner == nil }
+        openedTabFollowers.append(Follower(owner: owner, handler: handler))
+    }
+
+    private func tabsOpened(_ opened: [TabsOpened]) {
+        openedTabFollowers.removeAll { $0.owner == nil }
+        let followers = openedTabFollowers
+        for tabs in opened {
+            for follower in followers { follower.handler(tabs) }
         }
     }
 

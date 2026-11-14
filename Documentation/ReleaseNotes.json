@@ -5461,6 +5461,10 @@
     "restored-tab-back-redraws": {
       "category": "fixed",
       "message": "In a tab Crest reopened after a relaunch, going back on sites such as Reddit shows the earlier page again, instead of leaving the page you left on screen until a refresh."
+    },
+    "sidebar-reveals-opened-tab": {
+      "category": "new",
+      "message": "On Mac, the sidebar scrolls to show a tab you open when it lands out of view, such as a link opened in the background."
     }
   }
 }
