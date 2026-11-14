@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "quick-window-address-click-anywhere",
+    "development": "delete-unloaded-saved-tabs",
     "nightly": "settings-scroll-anywhere"
   }
 }
