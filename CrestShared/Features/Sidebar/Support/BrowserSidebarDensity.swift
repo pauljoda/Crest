@@ -20,6 +20,8 @@ struct BrowserSidebarDensity: Equatable, Sendable {
     private static let presetSteps: [(stored: Double, step: Double)] = [(0.85, 0.8), (1.15, 1.2)]
     private static let pointerBodySize: CGFloat = 13
     private static let touchBodySize: CGFloat = 17
+    private static let pointerCaptionSize: CGFloat = 10
+    private static let touchCaptionSize: CGFloat = 12
     private static let minimumTouchTarget: CGFloat = 44
     private static let minimumPointerTarget: CGFloat = 24
     private static let minimumPointerPinHeight: CGFloat = 32
@@ -78,6 +80,12 @@ struct BrowserSidebarDensity: Equatable, Sendable {
 
     static func bodySize(touch: Bool) -> CGFloat {
         touch ? touchBodySize : pointerBodySize
+    }
+
+    /// The size of a caption beside text of ``bodySize(touch:)``, such as a
+    /// group's name.
+    static func captionSize(touch: Bool) -> CGFloat {
+        touch ? touchCaptionSize : pointerCaptionSize
     }
 
     func rowHeight(base: CGFloat, touch: Bool) -> CGFloat {

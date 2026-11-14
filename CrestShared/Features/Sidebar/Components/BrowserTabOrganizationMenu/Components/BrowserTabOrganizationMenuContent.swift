@@ -9,6 +9,7 @@ struct BrowserTabOrganizationMenuContent: View {
     var changeIcon: (() -> Void)? = nil
 
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
 
     init(menu: BrowserTabOrganizationMenu) {
         tab = menu.tab
@@ -109,7 +110,9 @@ struct BrowserTabOrganizationMenuContent: View {
                 Group {
                     Button("New Group", systemImage: "rectangle.stack.badge.plus") {
                         performIfCurrent {
-                            browser.createTabFolder([tab.id], in: assignment.spaceID, isGroup: true)
+                            guard let group = browser.createTabFolder([tab.id], in: assignment.spaceID, isGroup: true)
+                            else { return }
+                            sidebarInteraction?.beginRenaming(folder: group, in: context.space)
                         }
                     }
                     let groups = context.space.folderChoices(in: [.current]).map(\.folder).filter(\.isGroup)

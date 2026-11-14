@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// What the folder surfaces draw from a folder of the read model, in their
 /// own vocabulary. Each member reads only the fields it names.
@@ -7,6 +7,12 @@ extension FolderStateModel {
     var shownTitle: String {
         title.isEmpty ? String(localized: "Folder") : title
     }
+
+    /// The prompt of the field that renames the folder.
+    var namePrompt: LocalizedStringKey { isGroup ? "Group Name" : "Folder Name" }
+
+    /// The title of the popover that chooses the folder's color.
+    var colorTitle: LocalizedStringKey { isGroup ? "Group Color" : "Folder Color" }
 
     /// Whether closing the folder keeps its loaded tabs on screen under its
     /// header. A group's tabs are open tabs and nearly always loaded, so a

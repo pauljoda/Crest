@@ -38,9 +38,7 @@ struct BrowserTabBatchMenu: View {
         // A group holds only tabs, so a selection with folders has none to offer.
         if request.folderIDs.isEmpty {
             Menu("Move to Group", systemImage: "rectangle.stack.badge.plus") {
-                action(
-                    "New Group", systemImage: "rectangle.stack.badge.plus",
-                    browser.filingInNewFolder(request, in: .current, isGroup: true))
+                newGroupAction
                 ForEach(groupChoices) { choice in
                     action(group: choice.folder, browser.filing(request, .current, folder: choice.id))
                 }
@@ -167,6 +165,20 @@ struct BrowserTabBatchMenu: View {
             "New Current Tabs Folder", systemImage: "folder.badge.plus",
             browser.filingInNewFolder(request, in: .current))
         action("New Saved Folder", systemImage: "folder.badge.plus", browser.filingInNewFolder(request, in: .saved))
+    }
+
+    /// Files the selection into a new group, whose name then starts editing.
+    private var newGroupAction: some View {
+        let batch = browser.filingInNewFolder(request, in: .current, isGroup: true)
+        return Button("New Group", systemImage: "rectangle.stack.badge.plus") {
+            let before = Set(browser.spaceModel(request.spaceID)?.folders.models.map(\.id) ?? [])
+            actions.perform(batch, for: request)
+            guard let space = browser.spaceModel(request.spaceID),
+                let made = space.folders.models.first(where: { $0.isGroup && !before.contains($0.id) })
+            else { return }
+            sidebarInteraction.beginRenaming(folder: made.id, in: space)
+        }
+        .disabled(!actions.isAvailable(batch))
     }
 
     /// A menu item titled by a group's own name, beside its icon in its color.

@@ -33,14 +33,17 @@ struct BrowserFolderHeaderControl: View {
         Group {
             if isEditing {
                 HStack(spacing: BrowserFolderLayout.headerSpacing) {
-                    BrowserFolderIcon(
-                        folder: folder,
-                        isExpanded: interaction.isExpanded.wrappedValue,
-                        metrics: configuration.headerMetrics
-                    )
+                    if !folder.isGroup {
+                        BrowserFolderIcon(
+                            folder: folder,
+                            isExpanded: interaction.isExpanded.wrappedValue,
+                            metrics: configuration.headerMetrics
+                        )
+                    }
 
-                    TextField("Folder Name", text: interaction.draftTitle)
+                    TextField(folder.namePrompt, text: interaction.draftTitle)
                         .textFieldStyle(.plain)
+                        .modifier(BrowserFolderNameFieldFont(isGroup: folder.isGroup))
                         .focused(interaction.isTitleFocused)
                         .submitLabel(.done)
                         .onSubmit(interaction.commitTitle)
@@ -234,5 +237,19 @@ private struct BrowserFolderTabCount: View, Equatable {
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.folder === rhs.folder && lhs.space === rhs.space
+    }
+}
+
+/// A group's name keeps its own size while it is renamed; a folder's takes the
+/// sidebar's.
+private struct BrowserFolderNameFieldFont: ViewModifier {
+    let isGroup: Bool
+
+    func body(content: Content) -> some View {
+        if isGroup {
+            content.modifier(BrowserGroupNameFont())
+        } else {
+            content
+        }
     }
 }
