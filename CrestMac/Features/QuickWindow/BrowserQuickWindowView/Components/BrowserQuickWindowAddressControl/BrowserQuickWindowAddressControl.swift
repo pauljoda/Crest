@@ -61,7 +61,8 @@ struct BrowserQuickWindowAddressControl: View {
             progress: model.page?.estimatedProgress ?? 0,
             isLoading: model.page?.live.isLoading == true,
             isEditing: isAddressEditing,
-            isGlass: true
+            isGlass: true,
+            activate: openFromSurface
         )
         .coordinateSpace(Self.field)
         .anchorPreference(key: BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
@@ -115,6 +116,20 @@ struct BrowserQuickWindowAddressControl: View {
     private var openPalette: (() -> Void)? {
         guard let chrome else { return nil }
         return { [model] in chrome.openLocation(model.address) }
+    }
+
+    // MARK: - Actions - Address
+
+    /// What a click on the field's surface does where nothing in the field
+    /// takes it, such as the band above and below the address: what a click
+    /// on the address does. An address being edited keeps its edit.
+    private func openFromSurface() {
+        guard !isAddressEditing else { return }
+        if let openPalette {
+            openPalette()
+        } else {
+            isAddressEditing = true
+        }
     }
 
     // MARK: - Actions - Page

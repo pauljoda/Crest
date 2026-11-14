@@ -5429,6 +5429,10 @@
     "sidebar-slide-time": {
       "category": "new",
       "message": "On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time."
+    },
+    "quick-window-address-click-anywhere": {
+      "category": "fixed",
+      "message": "A click anywhere in a Quick Window's address field opens it, including above and below the address or \"Search or enter website\" and on the lock before it, where clicks used to do nothing."
     }
   }
 }
