@@ -186,6 +186,19 @@ public sealed partial class BrowserContractsTests {
             stored.App.Drain();
         }
 
+        /// The journal the device's file holds now.
+        public JsonObject StoredJournal => JsonNode.Parse(StoredParts(directory.File)["journal"])!.AsObject();
+
+        /// The session the device's file holds now.
+        public JsonObject StoredSession => JsonNode.Parse(StoredParts(directory.File)["core"])!.AsObject();
+
+        /// Sends `intent`, made for the device's workspace, as the person's
+        /// edit, without waiting for a stage it queues.
+        public void Send(Func<Guid, Intent> intent) {
+            stored.App.Send(intent(stored.Workspace));
+            stored.App.Drain();
+        }
+
         /// Sends `intent`, made for the device's workspace, as the person's
         /// edit, and stages it as a pause in editing does.
         public void Edit(Func<Guid, Intent> intent) {

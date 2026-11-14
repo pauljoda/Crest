@@ -209,6 +209,22 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
+    /// Moving a Group's last tab out, an edit that otherwise stages once edits
+    /// pause, writes the Group's mark to disk with the edit's own save, so a
+    /// crash right after it can't leave the Group's record unmarked.
+    [Fact]
+    public void AGroupAnEditEmptiesIsMarkedOnDiskWithTheEditsSave() {
+        var (space, group, held, loose) = (Fixed(1_410), Fixed(1_411), Fixed(1_412), Fixed(1_413));
+        var start = GroupedSession(space, group, [held], [loose], activated: 500);
+        using var device = new SyncingDevice(start, CloudHolding(start, 1_414)(1_415));
+
+        device.Send(workspace => new MoveTab(workspace, space, held, TabPlacement.Current, null, null, LeavesSplit: false));
+
+        Assert.Empty(device.StoredSession["spaces"]![0]!["folders"]!.AsArray());
+        var record = device.StoredJournal["records"]!.AsArray().Single(item => RecordName(item!["id"]!) == Name(SyncRecordKind.Folder, group))!;
+        Assert.NotNull(record["payload"]!["value"]!["emptiedAt"]);
+    }
+
     /// One device closes the last tab it knows of in a Group while another has
     /// filed a second tab there that the first has not received. The Group
     /// still holds a tab, so both devices keep it with that tab inside.

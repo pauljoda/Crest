@@ -94,8 +94,15 @@ public sealed partial class NativeSessionAuthority {
         var edit = intent.Edit(this, new SessionTurn(basis, now, ids, pages, previewed));
         if (edit is null) return null;
         var cleared = edit.Next.ClearingEmptiedFolders(basis);
-        if (edit.Staging is { } staging)
-            edit = edit with { Staging = staging.Deleting(edit.Next.FoldersGoneSince(basis)).Emptying(cleared.FoldersGoneSince(edit.Next)) };
+        if (edit.Staging is { } staging) {
+            var emptied = cleared.FoldersGoneSince(edit.Next);
+            staging = staging.Deleting(edit.Next.FoldersGoneSince(basis)).Emptying(emptied);
+            // A folder the edit empties is marked with the edit's own save, so
+            // a crash before a queued stage never leaves its record unmarked,
+            // which would bring it back empty on every device.
+            if (emptied.Count > 0) staging = staging with { Urgency = SyncUrgency.WithSave };
+            edit = edit with { Staging = staging };
+        }
         edit = edit with { Next = cleared };
         if (intent.ValidatesWholeSession) Validate(edit.Next);
         else Validate(basis, edit.Next);
