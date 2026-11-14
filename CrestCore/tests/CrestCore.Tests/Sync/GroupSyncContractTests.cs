@@ -60,16 +60,18 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
-    /// A device that hears of a Group's mark before the tab another device
-    /// filed in it leaves the Group out until the tab arrives, then shows it
-    /// with the tab and clears the mark.
-    [Fact]
-    public void AGroupMarkedEmptiedShowsAgainOnceATabFiledInItArrives() {
+    /// A device that hears of a Group's or a plain folder's mark before the
+    /// tab another device filed in it leaves it out until the tab arrives,
+    /// then shows it with the tab and clears the mark.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AFolderMarkedEmptiedShowsAgainOnceATabFiledInItArrives(bool asGroup) {
         var (space, group, held, filed) = (Fixed(1_370), Fixed(1_371), Fixed(1_372), Fixed(1_373));
-        var (cloud, emptying, filing) = TripDevices(space, group, held, filed, 1_374);
+        var (cloud, emptying, filing) = TripDevices(space, group, held, filed, 1_374, asGroup);
         emptying.Stage(TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: false, keepsGroup: false),
             SyncDeletionReason.ExplicitDelete, at: 600, group);
-        filing.Stage(TripSession(space, group, held, filed, heldInGroup: true, filedInGroup: true, keepsGroup: true), at: 610);
+        filing.Stage(TripSession(space, group, held, filed, heldInGroup: true, filedInGroup: true, keepsGroup: true, asGroup), at: 610);
         using var device = new SyncingDevice(cloud, Fixed(1_377));
 
         Assert.Empty(SpaceIn(device.Merge(Pending(emptying)), space)!["folders"]!.AsArray());
@@ -134,6 +136,7 @@ public sealed partial class BrowserContractsTests {
         deleting.Stage(Session(keepsFolders: false, tabIn: null), SyncDeletionReason.ExplicitDelete, at: 600, outer);
         filing.Stage(Session(keepsFolders: true, tabIn: inner), at: 610);
         holding.Merge(Pending(deleting));
+        Assert.Empty(SpaceIn(holding.Materialize(start), space)!["folders"]!.AsArray());
         holding.Merge(Pending(filing));
         Assert.NotNull(holding.Value(SyncRecordKind.Folder, outer)!["emptiedAt"]);
         Assert.NotNull(holding.Record(SyncRecordKind.Folder, inner)!["tombstone"]);
@@ -144,14 +147,16 @@ public sealed partial class BrowserContractsTests {
             item => StoredSessionCodec.Identity(item!["id"]) == tab && StoredSessionCodec.Identity(item["folderID"]) == outer);
     }
 
-    /// A device that knows no emptied mark keeps it on a Group's record when
-    /// it writes the Group, as it keeps any member it does not know. Its rename
-    /// arrives here with the mark, so the Group stays out of sight while it
-    /// holds nothing, and shows renamed once a tab sits in it.
-    [Fact]
-    public void AnOlderDevicesWriteOfAMarkedGroupKeepsItOutOfSight() {
+    /// A device that knows no emptied mark keeps it on a Group's or a plain
+    /// folder's record when it writes it, as it keeps any member it does not
+    /// know. Its rename arrives here with the mark, so the folder stays out of
+    /// sight while it holds nothing, and shows renamed once a tab sits in it.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AnOlderDevicesWriteOfAMarkedFolderKeepsItOutOfSight(bool asGroup) {
         var (space, group, held, filed) = (Fixed(1_380), Fixed(1_381), Fixed(1_382), Fixed(1_383));
-        var (_, emptying, older) = TripDevices(space, group, held, filed, 1_384);
+        var (_, emptying, older) = TripDevices(space, group, held, filed, 1_384, asGroup);
         var emptied = TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: false, keepsGroup: false);
         emptying.Stage(emptied, SyncDeletionReason.ExplicitDelete, at: 600, group);
         older.Merge(Pending(emptying));
@@ -163,12 +168,12 @@ public sealed partial class BrowserContractsTests {
         emptying.Merge(renamed);
         Assert.Empty(SpaceIn(emptying.Materialize(emptied), space)!["folders"]!.AsArray());
 
-        var filedThere = TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: true, keepsGroup: true);
+        var filedThere = TripSession(space, group, held, filed, heldInGroup: false, filedInGroup: true, keepsGroup: true, asGroup);
         FirstSpace(filedThere)["folders"]![0]!["title"] = "Lisbon";
         older.Stage(filedThere, at: 700);
         emptying.Merge(Pending(older).Where(record => RecordName(record["id"]!) == Name(SyncRecordKind.Tab, filed)));
         var shown = StoredSessionCodec.DecodeFolder(Assert.Single(SpaceIn(emptying.Materialize(emptied), space)!["folders"]!.AsArray())!);
-        Assert.Equal((group, "Lisbon", true), (shown.Id, shown.Title, shown.IsGroup));
+        Assert.Equal((group, "Lisbon", asGroup), (shown.Id, shown.Title, shown.IsGroup));
     }
 
     /// A device that knows no Groups moves a Group's last tab out and keeps the
@@ -309,6 +314,14 @@ public sealed partial class BrowserContractsTests {
         var window = closing.Open(space, held);
         closing.Edit(workspace => new CloseTabs(workspace, window, space, Picking(held)));
         Settle(showing, closing);
+        var other = merged(1_427);
+        other.Merge(closing.Journal.Records);
+        var renamed = Session(holdsPage: false);
+        FirstSpace(renamed)["tabs"]!.AsArray().RemoveAt(1);
+        FirstSpace(renamed)["tabs"]![0]!["title"] = "Renamed";
+        FirstSpace(renamed)["folders"] = new JsonArray();
+        other.Stage(renamed, SyncDeletionReason.Superseded, at: 900);
+        closing.Merge(Pending(other).Where(record => RecordName(record["id"]!) == Name(SyncRecordKind.Tab, Fixed(1_397))));
 
         Assert.Empty(SpaceIn(closing.Session, space)!["folders"]!.AsArray());
         Assert.Contains(SpaceIn(showing.Session, space)!["tabs"]!.AsArray(),
@@ -347,10 +360,12 @@ public sealed partial class BrowserContractsTests {
         return group;
     }
 
-    /// A Space holding the Group `group` with `held` in it, and `filed` beside
-    /// or in it, each where its flag says.
+    /// A Space holding the Group `group`, or a plain folder of the open tabs
+    /// unless `asGroup`, with `held` in it, and `filed` beside or in it, each
+    /// where its flag says.
     private static JsonObject TripSession(Guid space, Guid group, Guid held, Guid filed, bool heldInGroup, bool filedInGroup,
-        bool keepsGroup) => SessionOf(SpaceOf(space, Fixed(1_399), "Trip", "airplane", folders: keepsGroup ? [GroupOf(group)] : [],
+        bool keepsGroup, bool asGroup = true) => SessionOf(SpaceOf(space, Fixed(1_399), "Trip", "airplane",
+        folders: keepsGroup ? [asGroup ? GroupOf(group) : FolderOf(group, "Trip", location: "current")] : [],
         tabs: [
             TabOf(held, "Flights", "https://example.com/flights", folder: heldInGroup ? group : null, activated: 500,
                 positioned: heldInGroup ? null : 600),
@@ -358,11 +373,12 @@ public sealed partial class BrowserContractsTests {
                 positioned: filedInGroup ? 605 : null)
         ]));
 
-    /// The cloud's copy of a trip with `held` in its Group, written by the
-    /// device `seed` names, and two devices, the next two, that have merged it.
+    /// The cloud's copy of a trip with `held` in its Group, or plain folder
+    /// unless `asGroup`, written by the device `seed` names, and two devices,
+    /// the next two, that have merged it.
     private static (JsonObject Cloud, JournalUnderTest First, JournalUnderTest Second) TripDevices(Guid space, Guid group, Guid held,
-        Guid filed, int seed) {
-        var cloudSession = TripSession(space, group, held, filed, heldInGroup: true, filedInGroup: false, keepsGroup: true);
+        Guid filed, int seed, bool asGroup = true) {
+        var cloudSession = TripSession(space, group, held, filed, heldInGroup: true, filedInGroup: false, keepsGroup: true, asGroup);
         var cloud = new JournalUnderTest(Fixed(seed));
         cloud.Stage(cloudSession, at: 500);
         var first = new JournalUnderTest(Fixed(seed + 1));
