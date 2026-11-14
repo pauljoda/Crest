@@ -39,6 +39,11 @@ struct BrowserTabPreviewSource: ViewModifier {
         return sidebarInteraction.tabDragState.item != nil || sidebarInteraction.sidebarReorderState.hasLiftInFlight
     }
 
+    /// Whether the keyboard's focus, rather than the pointer, rests on the row.
+    private var isRestedByKeyboard: Bool {
+        context.map(isKeyboardFocused(in:)) ?? false
+    }
+
     // MARK: - Actions - Presentation
 
     func body(content: Content) -> some View {
@@ -51,6 +56,10 @@ struct BrowserTabPreviewSource: ViewModifier {
                         Color.clear
                             .onAppear { report(frame) }
                             .onChange(of: frame) { _, frame in report(frame) }
+                            // The keyboard's focus coming onto a row the
+                            // pointer rests on, or leaving it, changes what
+                            // the rest counts on without moving the row.
+                            .onChange(of: isRestedByKeyboard) { report(frame) }
                     }
                 }
             }
@@ -76,7 +85,7 @@ struct BrowserTabPreviewSource: ViewModifier {
     private func report(_ frame: CGRect) {
         guard isRested, let preview, let context, !frame.isEmpty else { return }
         var target = BrowserTabPreviewTarget(subject: subject, context: context, frame: frame)
-        target.isRestedByPointer = !isKeyboardFocused(in: context)
+        target.isRestedByPointer = !isRestedByKeyboard
         if entered == target.key {
             preview.move(target)
         } else {

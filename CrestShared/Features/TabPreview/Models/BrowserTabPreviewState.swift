@@ -38,8 +38,12 @@ final class BrowserTabPreviewState {
     /// How long a card stays after the pointer leaves its tab and the card.
     static let leaveDelay: Duration = .milliseconds(150)
     /// How often a tab whose row the pointer isn't on yet looks again for the
-    /// pointer coming onto it.
+    /// pointer coming onto it, at first.
     static let pointerCheckInterval: Duration = .milliseconds(100)
+    /// How often it looks once it has waited `pointerCheckEasing`.
+    static let easedPointerCheckInterval: Duration = .milliseconds(500)
+    /// How long a tab looks often before it looks less often.
+    static let pointerCheckEasing: Duration = .seconds(2)
     /// How long after the person last typed in the window a card's search
     /// leaves the keyboard where it is.
     static let typingPause: TimeInterval = 1
@@ -262,20 +266,24 @@ final class BrowserTabPreviewState {
 
     /// Shows the card of the tab `key` names once it has been rested on for
     /// `delay` with the pointer on its row. A row the pointer isn't on yet
-    /// waits for it to come on, then for `delay` again.
+    /// waits for it to come on, looking less often after a while, then waits
+    /// for `delay` again.
     private func waitToShow(_ key: BrowserTabPreviewKey, after delay: Duration) {
         waiting?.cancel()
         waiting = Task { [weak self] in
             var wait = delay
-            var isAwaitingPointer = false
+            var awaitingPointerSince: ContinuousClock.Instant?
             while true {
                 try? await Task.sleep(for: wait)
                 guard !Task.isCancelled, let self, !isPointerInCard, let resting, resting.key == key else { return }
                 if isPointerOff(resting) {
-                    isAwaitingPointer = true
-                    wait = Self.pointerCheckInterval
-                } else if isAwaitingPointer {
-                    isAwaitingPointer = false
+                    let since = awaitingPointerSince ?? .now
+                    awaitingPointerSince = since
+                    wait =
+                        since.duration(to: .now) < Self.pointerCheckEasing
+                        ? Self.pointerCheckInterval : Self.easedPointerCheckInterval
+                } else if awaitingPointerSince != nil {
+                    awaitingPointerSince = nil
                     wait = delay
                 } else {
                     shown = resting
