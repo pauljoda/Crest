@@ -12,8 +12,10 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     private let capabilities: BrowserInteractionCapabilities
     private let trailingAccessory: TrailingAccessory
 
-    /// Back and forward both stay in the strip, disabled while there is
-    /// nowhere to go, so each keeps the place the reader learned.
+    /// Back and forward both stay in the strip at every width, disabled
+    /// while there is nowhere to go, so each keeps the place the reader
+    /// learned. A narrow sidebar draws the strip narrower before it gives up
+    /// anything after them.
     init(
         port: BrowserSidebarNavigationPort,
         capabilities: BrowserInteractionCapabilities,
@@ -28,7 +30,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The strip's width, which decides whether Forward fits.
+    /// The strip's width, which decides how its controls fit.
     @State private var width: CGFloat = .infinity
 
     var body: some View {
@@ -64,37 +66,37 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                 metrics: metrics
             )
 
-            if showsForward {
-                BrowserSidebarNavigationHistoryControl(
-                    direction: .forward,
-                    port: port,
-                    metrics: metrics
+            BrowserSidebarNavigationHistoryControl(
+                direction: .forward,
+                port: port,
+                metrics: metrics
+            )
+
+            if fit.showsReload {
+                BrowserReloadControl(
+                    isLoading: port.isLoading(),
+                    isDeveloperMode: fit.showsDeveloperMenu,
+                    reloadOrStop: port.reloadOrStop,
+                    reload: port.reload,
+                    reloadFromOrigin: port.reloadFromOrigin,
+                    clearCookiesAndReload: port.clearCookiesAndReload,
+                    isEnabled: port.hasActivePage(),
+                    reloadControlSize: metrics.controlSize,
+                    menuControlSize: metrics.reloadMenuControlSize,
+                    symbolPointSize: metrics.reloadSymbolPointSize
                 )
             }
-
-            BrowserReloadControl(
-                isLoading: port.isLoading(),
-                isDeveloperMode: isDeveloperMode,
-                reloadOrStop: port.reloadOrStop,
-                reload: port.reload,
-                reloadFromOrigin: port.reloadFromOrigin,
-                clearCookiesAndReload: port.clearCookiesAndReload,
-                isEnabled: port.hasActivePage(),
-                reloadControlSize: metrics.controlSize,
-                menuControlSize: metrics.reloadMenuControlSize,
-                symbolPointSize: metrics.reloadSymbolPointSize
-            )
 
             trailingAccessory
         }
     }
 
-    /// Whether Forward fits beside the window's own controls. The developer
-    /// reload menu beside reload asks for its room too.
-    private var showsForward: Bool {
-        guard let fold = metrics.forwardFoldWidth else { return true }
-        let developerMenu = isDeveloperMode ? metrics.reloadMenuControlSize.width + metrics.controlSpacing : 0
-        return width >= fold + developerMenu
+    /// How the controls fit the strip's width beside the window's own,
+    /// which sit beside the sidebar unless it is on the right.
+    private var fit: BrowserSidebarNavigationStripFit {
+        capabilities.navigationControlMetrics.fitting(
+            width: width, includesDeveloperMenu: isDeveloperMode,
+            besideWindowControls: !BrowserDeviceAppearanceStore.shared.sidebarOnRight)
     }
 
     private var isDeveloperMode: Bool {
@@ -114,6 +116,6 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     }
 
     private var metrics: BrowserSidebarNavigationControlMetrics {
-        capabilities.navigationControlMetrics
+        fit.metrics
     }
 }

@@ -5453,6 +5453,10 @@
     "snappier-sidebar-slide": {
       "category": "improved",
       "message": "On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time."
+    },
+    "narrow-sidebar-navigation": {
+      "category": "fixed",
+      "message": "On Mac, a narrow sidebar keeps back, forward and reload, drawing them closer together instead of hiding Forward."
     }
   }
 }
