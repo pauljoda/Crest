@@ -40,16 +40,35 @@ internal sealed record SessionPagePutAway(Guid WindowId, Guid SpaceId, Guid TabI
     #endregion
 }
 
+/// The tabs a command of window `WindowId` opened, in the order it opened
+/// them.
+internal sealed record SessionTabsOpened(Guid WindowId, IReadOnlyList<OpenedTab> Tabs) {
+    #region Actions - Publishing
+
+    public TabsOpened Opened(Guid workspaceId) => new(workspaceId, WindowId, Tabs);
+
+    #endregion
+}
+
 /// The tabs a command copied, the image it assigned, the transient page it
-/// kept as a tab, the tabs an import placed from its Spaces and the page a
-/// saved or pinned tab put away, which comparing the sessions before and
-/// after it cannot tell.
+/// kept as a tab, the tabs an import placed from its Spaces, the page a
+/// saved or pinned tab put away and the tabs a window opened, which comparing
+/// the sessions before and after it cannot tell.
 internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, SessionFaviconUpdate? Favicon,
     SessionTransientPromotion? Promotion = null, IReadOnlyList<ImportedTab>? Imported = null,
-    SessionPagePutAway? PutAway = null) {
+    SessionPagePutAway? PutAway = null, SessionTabsOpened? Opened = null) {
     #region Static Variables
 
     public static SessionTabEvents None { get; } = new([], null);
+
+    #endregion
+
+    #region Actions - Opening
+
+    /// These events, with the tabs `tabIds` that window `windowId` opened in
+    /// `spaceId`.
+    public SessionTabEvents Opening(Guid windowId, Guid spaceId, params IEnumerable<Guid> tabIds) =>
+        this with { Opened = new(windowId, [.. tabIds.Select(id => new OpenedTab(spaceId, id))]) };
 
     #endregion
 
@@ -61,7 +80,8 @@ internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, Se
             .Concat(Favicon is { } favicon ? [favicon.Assigned(workspaceId)] : [])
             .Concat(Promotion is { } promotion ? [promotion.Promoted(workspaceId)] : [])
             .Concat(Imported is { Count: > 0 } imported ? [new TabsImported(workspaceId, imported)] : [])
-            .Concat(PutAway is { } putAway ? [putAway.PutAway(workspaceId)] : []);
+            .Concat(PutAway is { } putAway ? [putAway.PutAway(workspaceId)] : [])
+            .Concat(Opened is { Tabs.Count: > 0 } opened ? [opened.Opened(workspaceId)] : []);
 
     #endregion
 }

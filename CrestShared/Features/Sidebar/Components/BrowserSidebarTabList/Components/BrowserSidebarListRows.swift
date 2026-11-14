@@ -140,7 +140,7 @@ struct BrowserSidebarListRow: View {
                     // including native controls and SwiftUI drawing layers.
                     .geometryGroup()
                 #endif
-                // Keep the identity used when revealing the shown tab.
+                // Keep the identity used when revealing an opened tab.
                 .id(tab.id)
         case .split(let groupID, let members):
             BrowserSidebarSplitGroupRow(groupID: groupID, members: members, context: context)
@@ -157,6 +157,8 @@ struct BrowserSidebarListRow: View {
                     BrowserFolderOffscreenPlaceholder(folder: folder, context: context, isEnabled: keptTabIDs == nil)
                 )
                 .crestCollectionItemTransition()
+                // Keep the identity used when revealing a tab the folder hides.
+                .id(folder.id)
         }
     }
 }

@@ -20,7 +20,8 @@ public sealed record OpenLinkInSplit(Guid WorkspaceId, Guid WindowId, Guid Space
             SavedUrl: null, TabIconMode.WebSymbol, FaviconUrl: null, IconAccent: null, StoredIconMode: null, TabPlacement.Current,
             FolderId: null, SplitGroupId: null, turn.Now, PositionModifiedAt: null, CustomTitle: null, TitleModifiedAt: null,
             KeepsPageLoaded: false)), null);
-        return workspace.Joining(turn.Basis, space, edited, WindowId, TabId, TargetTabId, null, turn.Pages, turn.Now, turn.Ids);
+        var joined = workspace.Joining(turn.Basis, space, edited, WindowId, TabId, TargetTabId, null, turn.Pages, turn.Now, turn.Ids);
+        return joined with { Events = (joined.Events ?? SessionTabEvents.None).Opening(WindowId, space.Id, TabId) };
     }
 
     #endregion

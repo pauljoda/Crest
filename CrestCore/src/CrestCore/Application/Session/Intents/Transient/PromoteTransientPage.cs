@@ -33,7 +33,8 @@ public sealed record PromoteTransientPage(Guid WorkspaceId, Guid WindowId, Guid 
         followUp.ShowTab(destination.Id, tab.Id).ShowSpace(destination.Id);
         var adopts = page.MovesBetweenWindows && page.SpaceId == destination.Id && page.ProfileId == destination.ProfileId;
         return new(turn.Basis.Replacing(edited.Capture(destination)), SyncStaging.Creation, followUp,
-            new([], null, new SessionTransientPromotion(page.Id, tab.Id, adopts)), Completes: page.Id);
+            new SessionTabEvents([], null, new SessionTransientPromotion(page.Id, tab.Id, adopts))
+                .Opening(WindowId, destination.Id, tab.Id), Completes: page.Id);
     }
 
     #endregion

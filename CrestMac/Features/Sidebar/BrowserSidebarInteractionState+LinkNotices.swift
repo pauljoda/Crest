@@ -7,4 +7,9 @@ extension BrowserSidebarInteractionState {
     func browserDidOpenBackgroundTab() {
         BrowserNoticeCenter.shared.post(.openedInBackgroundTab)
     }
+
+    /// Asks the window's sidebar to bring a tab this window opened into view.
+    func browserDidOpenTab(_ tabID: UUID, in spaceID: UUID) {
+        revealRequest = BrowserSidebarRevealRequest(tabID: tabID, spaceID: spaceID)
+    }
 }

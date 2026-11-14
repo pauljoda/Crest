@@ -53,6 +53,15 @@ public sealed record TabPagePutAway(Guid WorkspaceId, Guid WindowId, Guid SpaceI
 /// from.
 public sealed record TabsImported(Guid WorkspaceId, IReadOnlyList<ImportedTab> Tabs) : Change;
 
+/// A tab the window `TabsOpened` names opened in `SpaceId`.
+public sealed record OpenedTab(Guid SpaceId, Guid TabId);
+
+/// A command of window `WindowId` opened `Tabs`, in the order it opened them:
+/// new tabs, copies, and closed tabs brought back, never tabs that only moved
+/// and never the tabs an import placed. The window can bring the one it cares
+/// about into view.
+public sealed record TabsOpened(Guid WorkspaceId, Guid WindowId, IReadOnlyList<OpenedTab> Tabs) : Change;
+
 /// A Quick Window's or Peek's page, `PageId`, became the tab `TabId`. When
 /// `AdoptsPage`, the tab takes the live page, which the platform moves to the
 /// tab's window; otherwise the page goes and the tab opens its own.

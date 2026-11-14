@@ -228,12 +228,15 @@ public sealed partial class BrowserContractsTests {
 
         var answered = app.Send(new ShowTab(window, space.Id, space.Tabs[0].Id));
 
-        Assert.Equal([typeof(TabsChanged), typeof(SidebarChanged), typeof(WindowChanged), typeof(TabsChanged), typeof(WindowChanged)],
-            answered.Select(change => change.GetType()));
+        Assert.Equal([typeof(TabsChanged), typeof(SidebarChanged), typeof(TabsOpened), typeof(WindowChanged), typeof(TabsChanged),
+            typeof(WindowChanged)], answered.Select(change => change.GetType()));
         Assert.Contains(((TabsChanged)answered[0]).Updated, tab => tab.Id == opened);
-        Assert.Equal(opened, ((WindowChanged)answered[2]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
-        Assert.Equal(space.Tabs[0].Id, Assert.Single(((TabsChanged)answered[3]).Updated).Id);
-        Assert.Equal(space.Tabs[0].Id, ((WindowChanged)answered[4]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
+        var announced = (TabsOpened)answered[2];
+        Assert.Equal((workspace, window), (announced.WorkspaceId, announced.WindowId));
+        Assert.Equal([new OpenedTab(space.Id, opened)], announced.Tabs);
+        Assert.Equal(opened, ((WindowChanged)answered[3]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
+        Assert.Equal(space.Tabs[0].Id, Assert.Single(((TabsChanged)answered[4]).Updated).Id);
+        Assert.Equal(space.Tabs[0].Id, ((WindowChanged)answered[5]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
         reader.Apply(answered);
         Assert.Equal(authority.Current, reader.State);
         Assert.Contains(reader.State.Spaces[0].Tabs, tab => tab.Id == opened);

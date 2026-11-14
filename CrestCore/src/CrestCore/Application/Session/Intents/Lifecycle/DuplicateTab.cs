@@ -23,7 +23,7 @@ public sealed record DuplicateTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId,
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, copy.Id).ShowSpace(space.Id);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp,
-            new([new SessionTabCopy(TabId, copy.Id)], null));
+            new SessionTabEvents([new SessionTabCopy(TabId, copy.Id)], null).Opening(WindowId, space.Id, copy.Id));
     }
 
     #endregion
