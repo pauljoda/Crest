@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "sidebar-slide-time",
+    "development": "quick-window-address-click-anywhere",
     "nightly": "settings-scroll-anywhere"
   }
 }

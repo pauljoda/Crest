@@ -6,35 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.38</title>
-            <pubDate>Sat, 14 Nov 2026 00:51:16 +0000</pubDate>
+            <title>0.9.39</title>
+            <pubDate>Sat, 14 Nov 2026 01:47:17 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1604</sparkle:version>
-            <sparkle:shortVersionString>0.9.38</sparkle:shortVersionString>
+            <sparkle:version>1605</sparkle:version>
+            <sparkle:shortVersionString>0.9.39</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- On Mac, choose how long the pointer rests on the window's edge before a hidden sidebar comes out, from Instant to a second, in Settings › Appearance › Sidebar hover delay. It applies in a window and in full screen, and moving off the edge before then still keeps the sidebar hidden.
-- On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time.
-
 ### Fixed
 
-- The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark.
-- On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below "Search or enter website", or an address shown on one line, used to do nothing.
+- A click anywhere in a Quick Window's address field opens it, including above and below the address or "Search or enter website" and on the lock before it, where clicks used to do nothing.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/4ef85e61dd15d86c878b9dfab40530906417e04c...3ea5e53dccd99b221b5d818c3c684b2f73723233) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.38-2026-11-14-1604-r604.1/Installer-Crest-0.9.38-development-2026-11-14-3ea5e53-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/3ea5e53dccd99b221b5d818c3c684b2f73723233...16ce607234935f1ec9289c656ec5c222574adf68) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.39-2026-11-14-1605-r605.1/Installer-Crest-0.9.39-development-2026-11-14-16ce607-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.38-2026-11-14-1604-r604.1/Installer-Crest-0.9.38-development-2026-11-14-3ea5e53-arm64.dmg" length="220851332" type="application/octet-stream" sparkle:edSignature="3B2UMFi9w8wAM90q63RL9xcsD+I9k/52bpbw+lAXtnHbRCOcqgHdrwdc7jr3fQeVT6OXCEq0XMIgXK7Q0JQABQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.39-2026-11-14-1605-r605.1/Installer-Crest-0.9.39-development-2026-11-14-16ce607-arm64.dmg" length="220857989" type="application/octet-stream" sparkle:edSignature="fNX0jbQbZQPk9khXnBdKcp3yWeem2G+fkPlUlxiVwJl4c7r7RViQJ4xnj85d/hK0YTSPlgJsEQ623jumdaeBBQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -66,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: U/SlIFmZx3Z6QHbffmoBhi+Zu4nV/J+1mgQz3gqjXrYx5+6w36F8kriSgcksDoyH6RtbeGaVFmq5oT+YzB4iCA==
-length: 4745
+edSignature: kJRdETIWlN+acibE0UWyHilVP6imkH6t7c6KLpB59El2kgBXiCF5qLWgxwFDYiG8rIAbK+GxHV3bgn1Gh2s3Cw==
+length: 4080
 -->
