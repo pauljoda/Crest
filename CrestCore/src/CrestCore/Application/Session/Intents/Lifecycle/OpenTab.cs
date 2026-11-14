@@ -7,21 +7,14 @@ namespace CrestCore.Contracts;
 /// Space: after the tab `AfterTabId` names and outside its split, or where its
 /// section puts a new tab. When `JoinsFolder`, as for a tab the person opened
 /// from a link, an open tab after a tab in a folder of the open tabs files at
-/// the end of that folder instead. When `Shows`, the window that
+/// the end of that folder instead, and, when `SavesInSavedFolder` as well, as
+/// for an address the person typed for a new tab, one after a tab in a saved
+/// folder is saved at the end of that folder. When `Shows`, the window that
 /// asked shows the tab and its Space. Refused with `TabLimitReached` or
 /// `PinnedTabsFull` when the Space or the section is full, and with
 /// `UnsupportedAddress` for an address a page cannot load.
 public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, TabContent Content, TabPlacement Placement,
-    Guid? AfterTabId, bool Shows, bool JoinsFolder = false) : SessionIntent(WorkspaceId) {
-    #region Variables
-
-    /// Whether a tab that joins a saved folder is saved there, as a new tab
-    /// the person asked for is, rather than opened among the open tabs, as a
-    /// link is.
-    internal bool SavesInSavedFolder { get; init; }
-
-    #endregion
-
+    Guid? AfterTabId, bool Shows, bool JoinsFolder = false, bool SavesInSavedFolder = false) : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     /// Opens the tab, which the issuing window shows when the intent asks.

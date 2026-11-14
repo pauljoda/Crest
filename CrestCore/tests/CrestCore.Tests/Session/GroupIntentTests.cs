@@ -107,8 +107,9 @@ public sealed partial class BrowserContractsTests {
     /// A new tab the person opens from a tab in a folder of the open tabs joins
     /// that folder at its end: a Start Page reuses the one the folder holds, and
     /// a copy stays beside its source. From a saved folder's tab, a Start Page
-    /// or a typed address is saved there and belongs to the first page it
-    /// shows, while a link and a copy open among the open tabs. A tab opened
+    /// or a typed address, shown or opened behind, is saved there and belongs
+    /// to the first page it shows, while a link and a copy open among the open
+    /// tabs. A tab opened
     /// for anyone else stays outside, and the Start Page a window shows on
     /// launch is the Space's open one, wherever it sits.
     [Fact]
@@ -142,9 +143,12 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((TabPlacement.Saved, "https://example.org/"), (Held(savedPage).Placement, Held(savedPage).SavedUrl));
         Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(link).Placement, Held(link).FolderId));
         Assert.Equal((TabPlacement.Current, (Guid?)null), (Held(savedCopy).Placement, Held(savedCopy).FolderId));
-        var typed = Guid.NewGuid();
+        var (typed, behind) = (Guid.NewGuid(), Guid.NewGuid());
         device.Send(new OpenAddress(device.Workspace, saved, f.Space, typed, "https://example.com/typed", JoinsFolder: true));
-        Assert.Equal([f.Saved, savedPage, typed], Inside(f.SavedFolder));
+        device.Send(new OpenTab(device.Workspace, saved, f.Space, behind, new TabContent("https://example.com/behind", View: null, Title: null),
+            TabPlacement.Current, AfterTabId: f.Saved, Shows: false, JoinsFolder: true, SavesInSavedFolder: true));
+        Assert.Equal([f.Saved, savedPage, typed, behind], Inside(f.SavedFolder));
+        Assert.Equal((TabPlacement.Saved, "https://example.com/behind"), (Held(behind).Placement, Held(behind).SavedUrl));
 
         var launched = device.Open(f.Space, (f.Space, f.Last));
         device.Send(new ShowStartPage(device.Workspace, launched, f.Space, Guid.NewGuid(), OutsideSplits: false));

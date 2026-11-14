@@ -52,18 +52,20 @@ extension BrowserStore {
 
     /// Opens `url` in a new tab after the one shown in Space `spaceID`, or,
     /// when `joinsFolder`, as for a link the person opened, at the end of the
-    /// folder that tab sits in.
+    /// folder of the open tabs that tab sits in, and of a saved folder too when
+    /// `savesInSavedFolder`, as for an address typed for a new tab.
     @discardableResult
     func openNewTab(
         url: URL,
         in spaceID: UUID,
         selecting: Bool,
-        joinsFolder: Bool = false
+        joinsFolder: Bool = false,
+        savesInSavedFolder: Bool = false
     ) -> UUID? {
         guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
         return openSessionTab(
             .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting,
-            joinsFolder: joinsFolder)
+            joinsFolder: joinsFolder, savesInSavedFolder: savesInSavedFolder)
     }
 
     @discardableResult
@@ -81,11 +83,16 @@ extension BrowserStore {
     }
 
     /// Opens `url` in a new tab behind the one shown in Space `spaceID`, as a
-    /// person asked from a link or the palette, and confirms it. Tabs opened
-    /// for anyone else, such as an agent, use `openNewTab`.
+    /// person asked from a link or the palette, and confirms it: in a saved
+    /// folder the shown tab sits in only when `savesInSavedFolder`, as for an
+    /// address typed in the palette. Tabs opened for anyone else, such as an
+    /// agent, use `openNewTab`.
     @discardableResult
-    func openBackgroundTab(url: URL, in spaceID: UUID) -> UUID? {
-        guard let tabID = openNewTab(url: url, in: spaceID, selecting: false, joinsFolder: true) else { return nil }
+    func openBackgroundTab(url: URL, in spaceID: UUID, savesInSavedFolder: Bool = false) -> UUID? {
+        guard
+            let tabID = openNewTab(
+                url: url, in: spaceID, selecting: false, joinsFolder: true, savesInSavedFolder: savesInSavedFolder)
+        else { return nil }
         interactionObserver?.browserDidOpenBackgroundTab()
         return tabID
     }

@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x70, 0x01, 0x47, 0x35, 0xdb, 0x0a, 0x79, 0xc2, 0xf5, 0xf7, 0x92, 0x38, 0x33, 0xda, 0x9d, 0xd6, 0xe0, 0xf3, 0xac, 0x83, 0x91, 0xb4, 0x08, 0xb7, 0x5d, 0x7e, 0x9f, 0x53, 0xb5, 0xa4, 0x91, 0x33
+        0xcf, 0xe0, 0xc5, 0x2c, 0xde, 0x94, 0x78, 0xbe, 0x0e, 0xdc, 0xdf, 0xc1, 0x67, 0xa7, 0x65, 0xea, 0x39, 0x39, 0xc8, 0xaa, 0x4c, 0x12, 0xcb, 0x3b, 0xcb, 0xf2, 0x40, 0xfc, 0x04, 0x65, 0x79, 0x3f
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -13510,6 +13510,7 @@ public static class ContractCodec {
             ReadTabPlacement(reader),
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
             reader.ReadBool(),
+            reader.ReadBool(),
             reader.ReadBool());
     }
 
@@ -13530,6 +13531,7 @@ public static class ContractCodec {
         }
         writer.WriteBool(value.Shows);
         writer.WriteBool(value.JoinsFolder);
+        writer.WriteBool(value.SavesInSavedFolder);
     }
 
     public static OpenWindow ReadOpenWindow(WireReader reader) {

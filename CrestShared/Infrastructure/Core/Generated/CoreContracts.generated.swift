@@ -4515,6 +4515,7 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let afterTabID: UUID?
     let shows: Bool
     let joinsFolder: Bool
+    let savesInSavedFolder: Bool
 }
 
 struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
