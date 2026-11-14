@@ -184,6 +184,24 @@ public sealed partial class BrowserContractsTests {
             stored.App.Drain();
         }
 
+        /// Sends `intent`, made for the device's workspace, as the person's
+        /// edit, and stages it as a pause in editing does.
+        public void Edit(Func<Guid, Intent> intent) {
+            stored.App.Send(intent(stored.Workspace));
+            stored.App.Drain();
+            stored.Sync.Flush();
+            stored.App.Drain();
+        }
+
+        /// A window on the device's workspace showing `tab` in `space`.
+        public Guid Open(Guid space, Guid tab) {
+            var window = Guid.NewGuid();
+            stored.App.Send(new OpenWindow(window, stored.Workspace, Saved: false, CopyingWindowId: null, ShowingSpaceId: space,
+                [new ShownTab(space, tab)], RestoresTabs: true));
+            stored.App.Drain();
+            return window;
+        }
+
         /// The cloud saved every record that waits to upload, at the version
         /// the journal holds it at.
         public void MarkUploaded() {
