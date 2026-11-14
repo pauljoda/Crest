@@ -18,6 +18,9 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     /// snapshot reports.
     @ObservationIgnored private(set) var knownMediaActivity: PageMediaActivity = []
     @ObservationIgnored private var stagedRequest: URLRequest?
+    /// Whether the web view runs `WebKitRestoredTraversalBridge`, which it
+    /// takes on the first restore of saved history.
+    @ObservationIgnored private var runsRestoredTraversalBridge = false
     #if os(macOS)
         @ObservationIgnored private var closeCompletion: (@MainActor (Bool) -> Void)?
         @ObservationIgnored private var closeTimeout: Task<Void, Never>?
@@ -55,6 +58,12 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     func restoreHistory(_ state: Data) -> Bool {
         // Supplements describe the list being replaced.
         history = BrowserPageNavigationHistory()
+        // A page restored from saved history misses WebKit's navigate event
+        // on moves back to its restored entries; the bridge replays them.
+        if !runsRestoredTraversalBridge {
+            runsRestoredTraversalBridge = true
+            WebKitRestoredTraversalBridge.install(in: webView.configuration.userContentController)
+        }
         webView.interactionState = state
         return webView.backForwardList.currentItem != nil
     }
