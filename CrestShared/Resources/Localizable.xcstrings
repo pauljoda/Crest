@@ -8015,6 +8015,9 @@
     "Lapis" : {
 
     },
+    "Large" : {
+
+    },
     "Large Phone" : {
 
     },
@@ -10877,6 +10880,9 @@
     "Rejected rows" : {
 
     },
+    "Relaxed" : {
+
+    },
     "Release Notes" : {
 
     },
@@ -13185,6 +13191,9 @@
     "Spaces, tabs, folders, colors, icons, and passwords" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
     },
+    "Spacing" : {
+
+    },
     "Sparkles" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13961,6 +13970,9 @@
       }
     },
     "Tab scale" : {
+
+    },
+    "Tab size" : {
 
     },
     "Tab status" : {
@@ -14741,6 +14753,9 @@
 
     },
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
+
+    },
+    "Tight" : {
 
     },
     "Time range" : {

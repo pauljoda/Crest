@@ -15,6 +15,7 @@ enum BrowserLookAndFeelDefaults {
     static let surfaceTone = CrestSurfaceTone.standard
     static let cornerRadius: Double = 10
     static let tabScale: Double = 1
+    static let sidebarSpacing = BrowserSidebarSpacing.standard
     static let pinColumns = 0
     static let pinsFillRow = false
     static let spaceIconSizing = BrowserSpaceIconSizing.standard
@@ -58,6 +59,7 @@ enum BrowserLookAndFeelDefaults {
         appearance.windowBorderWidth = windowBorderWidth
         appearance.sidebarOnRight = sidebarOnRight
         appearance.tabScale = tabScale
+        appearance.sidebarSpacing = sidebarSpacing
         appearance.pinColumns = pinColumns
         appearance.pinsFillRow = pinsFillRow
         appearance.foldersAlwaysVisible = foldersAlwaysVisible

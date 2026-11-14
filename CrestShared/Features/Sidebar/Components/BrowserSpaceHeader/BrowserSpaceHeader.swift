@@ -15,6 +15,7 @@ struct BrowserSpaceHeader: View {
     let actions: BrowserSpaceHeaderActions
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(
         space: some BrowserSpaceIdentifying, isPrivateBrowsing: Bool, isSavedTabsExpanded: Binding<Bool>,
@@ -93,14 +94,20 @@ struct BrowserSpaceHeader: View {
     }
 
     /// A fixed band where the shell holds every row to one height, and a floor
-    /// where the row is allowed to grow with its label instead.
+    /// where the row is allowed to grow with its label instead. Either way the
+    /// header is as tall as a tab row at the person's tab size.
     @ViewBuilder
     private func heightConstrained(_ content: some View) -> some View {
         if metrics.fillsRowHeight {
-            content.frame(height: CrestLayout.sidebarRowHeight)
+            content.frame(height: rowHeight)
         } else {
-            content.frame(minHeight: CrestLayout.sidebarRowHeight)
+            content.frame(minHeight: rowHeight)
         }
+    }
+
+    private var rowHeight: CGFloat {
+        capabilities.tabRowHeight(
+            tabScale: BrowserDeviceAppearanceStore.shared.tabScale, dynamicTypeSize: dynamicTypeSize)
     }
 
     private var metrics: BrowserSpaceHeaderMetrics {

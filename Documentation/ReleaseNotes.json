@@ -5441,6 +5441,14 @@
     "delete-unloaded-saved-tabs": {
       "category": "new",
       "message": "Turn off Keep saved tabs after unloading in Settings › Tabs and a saved tab you unload shows an X that deletes it. The X waits a moment after you unload the tab, and on iPhone and iPad it always shows rather than on hover. The setting appears in the Heraldic and Modern styles."
+    },
+    "sidebar-tab-size-steps": {
+      "category": "improved",
+      "message": "Tab size in Settings › Appearance is now a slider with nine steps, from Thin to Large, and a thin tab keeps its title readable while losing the room around it. The Space header grows and shrinks with your tabs."
+    },
+    "sidebar-spacing": {
+      "category": "new",
+      "message": "Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style."
     }
   }
 }

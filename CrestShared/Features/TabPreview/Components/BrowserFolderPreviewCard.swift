@@ -71,7 +71,7 @@ struct BrowserFolderPreviewCard: View {
         // search the sidebar's gap above its rows, as its address field
         // keeps. The rows keep that inset and half their separation inside
         // their own frames.
-        let separation = BrowserSidebarDensity(BrowserDeviceAppearanceStore.shared.tabScale).rowSeparation(
+        let separation = BrowserSidebarDensity.current.rowSeparation(
             hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all)
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: BrowserSidebarMetrics.layerInset) {

@@ -55,7 +55,7 @@ struct BrowserFolderPreviewSearchField: View {
 
     /// The column a pointer row's favicon takes at the sidebar's text size.
     private var faviconSize: CGFloat {
-        TabFaviconMetrics.defaultSize * BrowserSidebarDensity(tabScale).scale
+        TabFaviconMetrics.defaultSize * BrowserSidebarDensity(tabScale).contentScale
     }
 }
 

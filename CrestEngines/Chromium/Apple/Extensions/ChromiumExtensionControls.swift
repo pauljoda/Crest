@@ -45,12 +45,12 @@ struct BrowserPinnedExtensionStrip: View {
                     perform: run,
                     presentMenu: presentMenu
                 )
-                .padding(.top, BrowserSidebarMetrics.topSectionSpacing)
+                .padding(.top, BrowserSidebarMetrics.topSectionGap)
                 // Pinned tabs below hold the same gap above themselves. A
                 // Sub-Space shows the ones its group shares, not its own.
                 .padding(
                     .bottom,
-                    space.pinSource.sidebar.section(.pinned).isEmpty ? BrowserSidebarMetrics.topSectionSpacing : 0
+                    space.pinSource.sidebar.section(.pinned).isEmpty ? BrowserSidebarMetrics.topSectionGap : 0
                 )
                 .transition(.opacity)
             }

@@ -306,6 +306,11 @@ final class BrowserDeviceAppearanceStore {
     var tabScale: Double {
         didSet { saveSoon() }
     }
+    /// How much room the sidebar keeps between its rows, bars and sections,
+    /// stored by name.
+    var sidebarSpacing: BrowserSidebarSpacing {
+        didSet { saveSoon() }
+    }
     /// How many pins a row holds at most; zero balances the rows.
     var pinColumns: Int {
         didSet { saveSoon() }
@@ -437,8 +442,11 @@ final class BrowserDeviceAppearanceStore {
         rememberedLooks = Self.rememberedLooks(in: defaults)
         tabScale =
             (defaults.object(forKey: BrowserSidebarDensityPreference.scaleKey) as? Double).flatMap {
-                $0.isFinite ? $0 : nil
+                $0.isFinite ? BrowserSidebarDensity.stepped($0) : nil
             } ?? BrowserLookAndFeelDefaults.tabScale
+        sidebarSpacing =
+            BrowserSidebarSpacing.named(defaults.string(forKey: BrowserSidebarDensityPreference.spacingKey))
+            ?? BrowserLookAndFeelDefaults.sidebarSpacing
         pinColumns =
             defaults.object(forKey: BrowserSidebarDensityPreference.pinColumnsKey) as? Int
             ?? BrowserLookAndFeelDefaults.pinColumns
@@ -562,6 +570,7 @@ final class BrowserDeviceAppearanceStore {
         }
         write(looks as NSDictionary, forKey: Self.rememberedLooksKey, in: defaults)
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
+        write(sidebarSpacing.name, forKey: BrowserSidebarDensityPreference.spacingKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
         write(previewsTabsOnHover, forKey: Self.tabHoverPreviewKey, in: defaults)
         write(previewsFoldersOnHover, forKey: Self.folderHoverPreviewKey, in: defaults)

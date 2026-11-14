@@ -65,9 +65,9 @@ enum BrowserFolderLayout {
     /// taken off, so a closed folder stands exactly as tall as a tab row. It
     /// never gets shorter than `minimum`, the column its symbol takes.
     @MainActor
-    static func headerHeight(rowHeight: CGFloat, tabScale: Double, minimum: CGFloat) -> CGFloat {
+    static func headerHeight(rowHeight: CGFloat, minimum: CGFloat) -> CGFloat {
         let chrome =
-            BrowserSidebarMetrics.containerPadding + BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale)
+            BrowserSidebarMetrics.containerPadding + BrowserSidebarMetrics.containerBottomPadding
             + BrowserSidebarMetrics.containerSpacing * 2
         return max(rowHeight - chrome, minimum)
     }

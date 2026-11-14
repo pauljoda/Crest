@@ -32,14 +32,29 @@ struct BrowserTabAppearanceGroup: View {
                 identifier: "tab-corner-radius"
             )
             .browserAppearanceSetting(.cornerRadius)
-            BrowserAppearancePresetPicker(
-                "Tab scale",
+            CrestSettingSlider(
+                "Tab size",
                 value: scale,
-                presets: BrowserAppearancePresets.tabScale,
-                tolerance: BrowserAppearancePresets.tabScaleTolerance,
+                range: BrowserSidebarDensity.scaleRange,
+                step: BrowserSidebarDensity.scaleStep,
+                readout: .percent(naming: [
+                    0.6: "Thin", 0.8: "Compact", 1: "Default", 1.2: "Comfortable", 1.4: "Large",
+                ]),
                 identifier: "tab-scale"
             )
             .browserAppearanceSetting(.tabScale)
+            CrestSettingRow("Spacing", setting: spacing.resettable("Spacing")) {
+                Picker("Spacing", selection: spacing.binding) {
+                    ForEach(BrowserSidebarSpacing.all) { spacing in
+                        Text(spacing.title).tag(spacing)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("sidebar-spacing")
+            }
+            .browserAppearanceSetting(.sidebarSpacing)
             CrestSettingRow("Pin layout", setting: columns.resettable("Pin layout")) {
                 Picker("Pin layout", selection: columns.binding) {
                     Text("Balanced rows").tag(0)
@@ -104,6 +119,10 @@ struct BrowserTabAppearanceGroup: View {
         CrestSettingValue($appearance.tabScale, default: BrowserLookAndFeelDefaults.tabScale)
     }
 
+    private var spacing: CrestSettingValue<BrowserSidebarSpacing> {
+        CrestSettingValue($appearance.sidebarSpacing, default: BrowserLookAndFeelDefaults.sidebarSpacing)
+    }
+
     private var columns: CrestSettingValue<Int> {
         CrestSettingValue($appearance.pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
     }
@@ -149,7 +168,8 @@ struct BrowserTabAppearanceGroup: View {
     private var rows: [(BrowserAppearanceSetting, CrestResettableSetting)] {
         [
             (.cornerRadius, cornerRadius.resettable("Corner radius")),
-            (.tabScale, scale.resettable("Tab scale")),
+            (.tabScale, scale.resettable("Tab size")),
+            (.sidebarSpacing, spacing.resettable("Spacing")),
             (.pinLayout, columns.resettable("Pin layout")),
             (.pinsFillRow, fillsRow.resettable("Stretch pins to fill the row")),
             (.colorBorders, borders.resettable("Color borders")),
