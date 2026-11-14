@@ -5437,6 +5437,10 @@
     "quick-window-navigation-ink": {
       "category": "fixed",
       "message": "On Mac, a Quick Window's back and forward buttons draw in the Space's text color, so they stay visible over a dark Space in a light window, or a light Space in a dark one."
+    },
+    "delete-unloaded-saved-tabs": {
+      "category": "new",
+      "message": "Turn off Keep saved tabs after unloading in Settings › Tabs and a saved tab you unload shows an X that deletes it. The X waits a moment after you unload the tab, and on iPhone and iPad it always shows rather than on hover. The setting appears in the Heraldic and Modern styles."
     }
   }
 }

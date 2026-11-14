@@ -16,6 +16,10 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     @ObservationIgnored weak var sidebarSpaceAccess: BrowserSpaceAccessController?
     @ObservationIgnored private var collapsedFolders: [BrowserFolderRuntimeAssignment: BrowserSidebarFolderVisibility] =
         [:]
+    /// The saved tabs whose delete control waits after the sidebar unloaded
+    /// them, each with the hold that last began. They belong to the window,
+    /// not to a row, which the sidebar can build anew as its tab unloads.
+    private var deleteHolds: [UUID: UUID] = [:]
 
     // SwiftUI can evaluate a discarded root initializer while retaining the visible model.
     static func connected(to browser: BrowserStore) -> BrowserSidebarInteractionState {
@@ -107,6 +111,25 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         for assignment in Array(collapsedFolders.keys) where !valid.contains(assignment) {
             let removed = collapsedFolders.removeValue(forKey: assignment)
             removed?.state = BrowserCollapsedFolderTabVisibilityState()
+        }
+    }
+
+    // MARK: - Actions - Delete hold
+
+    /// Whether the delete control of the saved tab `tabID` is held back.
+    func holdsDelete(of tabID: UUID) -> Bool {
+        deleteHolds[tabID] != nil
+    }
+
+    /// Holds back the delete control of the saved tab `tabID` for `duration`,
+    /// so the second click or tap of a double one on unload never deletes it.
+    func holdDelete(of tabID: UUID, for duration: Duration) {
+        let hold = UUID()
+        deleteHolds[tabID] = hold
+        Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard let self, self.deleteHolds[tabID] == hold else { return }
+            self.deleteHolds[tabID] = nil
         }
     }
 

@@ -5,7 +5,8 @@ namespace CrestCore.Contracts;
 /// <summary>
 /// The app-wide behavior preferences of one installation: what a window opens with,
 /// page translation and its per-language rules, spelling, automatic Picture in
-/// Picture, what closing a saved tab does, whether Split View focus follows the
+/// Picture, what closing a saved tab does, whether an unloaded saved tab stays
+/// as it is or offers to be deleted, whether Split View focus follows the
 /// pointer, whether local pages open with the developer toolbar, whether holding
 /// a Most Recent Tab shortcut shows the recent tabs, and how the command palette
 /// ranks and arranges what it offers. Translation rules are in
@@ -14,7 +15,7 @@ namespace CrestCore.Contracts;
 /// </summary>
 public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslation, bool AutomaticallyTranslates,
     IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
-    SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl, bool SplitFocusFollowsMouse,
+    SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl, bool UnloadedSavedTabsStay, bool SplitFocusFollowsMouse,
     bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs, PalettePreferences Palette) {
     #region Static Variables
 
@@ -22,7 +23,8 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
     /// shows and applies until its session holds the record.
     public static AppPreferences Default { get; } = new(StartupBehavior.ShowStartPage, OffersTranslation: true,
         AutomaticallyTranslates: false, TranslationRules: [], ChecksSpelling: false, AutomaticallyEntersPictureInPicture: true,
-        SavedTabClosePolicy.ResumeLastLocation, SavedTabFaviconReturnsToSavedUrl: false, SplitFocusFollowsMouse: false,
+        SavedTabClosePolicy.ResumeLastLocation, SavedTabFaviconReturnsToSavedUrl: false, UnloadedSavedTabsStay: true,
+        SplitFocusFollowsMouse: false,
         AutomaticallyShowsDeveloperToolbar: true, ShowsRecentTabs: true, PalettePreferences.Default);
 
     #endregion
@@ -57,6 +59,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && AutomaticallyEntersPictureInPicture == other.AutomaticallyEntersPictureInPicture
         && SavedTabClose == other.SavedTabClose
         && SavedTabFaviconReturnsToSavedUrl == other.SavedTabFaviconReturnsToSavedUrl
+        && UnloadedSavedTabsStay == other.UnloadedSavedTabsStay
         && SplitFocusFollowsMouse == other.SplitFocusFollowsMouse
         && AutomaticallyShowsDeveloperToolbar == other.AutomaticallyShowsDeveloperToolbar
         && ShowsRecentTabs == other.ShowsRecentTabs
@@ -64,8 +67,8 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
 
     public override int GetHashCode() => HashCode.Combine(Startup, OffersTranslation, AutomaticallyTranslates,
         TranslationRules.Count, ChecksSpelling, AutomaticallyEntersPictureInPicture, SavedTabClose,
-        HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, SplitFocusFollowsMouse, AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs,
-            Palette));
+        HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, UnloadedSavedTabsStay, SplitFocusFollowsMouse,
+            AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs, Palette));
 
     #endregion
 }

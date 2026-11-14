@@ -1,7 +1,8 @@
 import Foundation
 
-/// A row of Settings › Appearance that a customization style can leave out of
-/// the page, for Advanced at its end.
+/// A row of Settings that a customization style can leave out of its page:
+/// for Advanced at the end of Appearance, or, on a page without Advanced, off
+/// the page.
 enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case windowBorder
     case material
@@ -46,4 +47,6 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case appIcon
     case tabHoverPreview
     case folderHoverPreview
+    /// Whether an unloaded saved tab stays as it is, in Settings › Tabs.
+    case unloadedSavedTabs
 }
