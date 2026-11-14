@@ -5481,6 +5481,10 @@
     "recent-tab-switcher-delayed-close-keeps-current-selection": {
       "category": "fixed",
       "message": "The recent tab switcher skips tabs closed while a confirmation is pending and preserves a newer tab selection when the final preview closes."
+    },
+    "recent-tab-switcher-preserves-confirmation-focus": {
+      "category": "fixed",
+      "message": "The recent tab switcher stays open while a page asks whether to discard unsaved changes, and resumes after the answer."
     }
   }
 }

@@ -61,6 +61,13 @@ final class BrowserMacRecentTabSwitcher {
                 let window = (note.object as AnyObject?).map(ObjectIdentifier.init)
                 MainActor.assumeIsolated {
                     guard let self, window == self.hold.map({ ObjectIdentifier($0.window) }) else { return }
+                    // The close's confirmation sheet takes the key window while
+                    // its answer is pending, without ending the held switcher.
+                    if let hold = self.hold, hold.model.session.pendingCloseItem != nil,
+                        hold.window.attachedSheet != nil
+                    {
+                        return
+                    }
                     self.end(.cancel)
                 }
             },
@@ -68,7 +75,16 @@ final class BrowserMacRecentTabSwitcher {
                 [weak self] _ in MainActor.assumeIsolated { self?.end(.cancel) }
             },
             center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) {
-                [weak self] _ in MainActor.assumeIsolated { self?.followKeyWindow() }
+                [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    if let hold = self.hold, let keyWindow = NSApp.keyWindow,
+                        keyWindow !== hold.window, keyWindow.sheetParent !== hold.window
+                    {
+                        self.end(.cancel)
+                    }
+                    self.followKeyWindow()
+                }
             },
             center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) {
                 [weak self] note in
