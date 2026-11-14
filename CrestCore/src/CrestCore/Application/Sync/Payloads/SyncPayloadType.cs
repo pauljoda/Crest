@@ -220,12 +220,15 @@ internal abstract class SyncPayloadType {
         /// A folder keeps its record when an edit empties it: the record is
         /// dated emptied, after any time a device held a tab in it, and every
         /// device shows the folder again once a tab sits in it. A record that
-        /// stands emptied already stays as it is.
+        /// stands emptied already stays as it is. Only the date changes, so a
+        /// record an earlier build stored keeps everything else as it was.
         public override JsonObject? Emptied(JsonObject payload, double now) {
-            var folder = (FolderPayload)SyncPayload.Decode(payload, SyncPayloadForm.Journal);
-            if (folder.IsEmptied) return payload;
-            var emptied = Math.Max(now, (folder.HeldAt?.ReferenceSeconds ?? double.MinValue) + 0.001);
-            return NativeSyncCompatibility.Preserve((folder with { EmptiedAt = new(emptied) }).Encode(SyncPayloadForm.Journal), payload);
+            var value = SyncPayload.ValueOf(payload);
+            var held = NativeSyncEvaluator.Date(value, SyncPayload.Key.HeldAt);
+            if (FolderPayload.StandsEmptied(NativeSyncEvaluator.Date(value, SyncPayload.Key.EmptiedAt), held)) return payload;
+            var marked = payload.DeepClone().AsObject();
+            SyncPayload.ValueOf(marked)[SyncPayload.Key.EmptiedAt] = Math.Max(now, (held ?? double.MinValue) + 0.001);
+            return marked;
         }
 
         public override bool HidesWhenEmpty(JsonObject value) =>

@@ -47,11 +47,19 @@ internal sealed record FolderPayload(
     /// Whether the folder went for holding nothing after a device last held a
     /// tab that syncs in it, so every device leaves it out while it holds
     /// nothing there.
-    public bool IsEmptied => EmptiedAt is { } emptied && (HeldAt is not { } held || emptied.ReferenceSeconds > held.ReferenceSeconds);
+    public bool IsEmptied => StandsEmptied(EmptiedAt?.ReferenceSeconds, HeldAt?.ReferenceSeconds);
 
     /// Clients before open folders synced cannot place one, so a folder of
     /// the current tabs needs schema 2.
     public override int Schema => Location.IsDurable ? 1 : 2;
+
+    #endregion
+
+    #region Actions - Emptying
+
+    /// Whether a folder dated emptied at `emptied` and last held at `held`, in
+    /// one form's seconds, stands emptied: it emptied after it was last held.
+    public static bool StandsEmptied(double? emptied, double? held) => emptied is { } went && (held is not { } kept || went > kept);
 
     #endregion
 

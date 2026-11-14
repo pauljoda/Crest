@@ -234,11 +234,17 @@ public sealed class NativeSyncJournal {
     /// stays emptied, so every other device goes on leaving it out. `held` are
     /// the records the journal holds; `now` is in seconds since 2001.
     private void CarryMarks(Dictionary<string, JsonObject> desired, IReadOnlyDictionary<string, JsonObject> held, double now) {
-        static FolderPayload? Recorded(JsonObject? record) => record is not null && new SyncJournalRecord(record).Payload is { } payload
-            && SyncPayloadType.Of(payload) == SyncPayloadType.Folder ? (FolderPayload)SyncPayload.Decode(payload, SyncPayloadForm.Journal) : null;
+        // Only the dates are read, so a record an earlier build stored, which
+        // the strict reader may refuse, never stops a stage.
+        static (double? Emptied, double? Held) Dates(JsonObject? record) {
+            if (record is null || new SyncJournalRecord(record).Payload is not { } payload || SyncPayloadType.Of(payload) != SyncPayloadType.Folder)
+                return (null, null);
+            var value = SyncPayload.ValueOf(payload);
+            return (NativeSyncEvaluator.Date(value, SyncPayload.Key.EmptiedAt), NativeSyncEvaluator.Date(value, SyncPayload.Key.HeldAt));
+        }
         var dated = desired.Where(item => SyncPayloadType.Of(item.Value) == SyncPayloadType.Folder)
-            .Select(item => (Name: item.Key, Recorded: Recorded(held.GetValueOrDefault(item.Key))))
-            .Where(item => item.Recorded is { EmptiedAt: not null } or { HeldAt: not null }).ToArray();
+            .Select(item => (Name: item.Key, Dates: Dates(held.GetValueOrDefault(item.Key))))
+            .Where(item => item.Dates is not (null, null)).ToArray();
         if (dated.Length == 0) return;
         var parents = desired.Values.Where(payload => SyncPayloadType.Of(payload) == SyncPayloadType.Folder).Select(SyncPayload.ValueOf)
             .ToDictionary(value => Id(value[StoredSessionCodec.Key.Id]), value => SyncPayloadType.Folder.ParentFolder(value) is { } parent ? Id(parent) : (Guid?)null);
@@ -249,14 +255,14 @@ public sealed class NativeSyncJournal {
             for (var next = type.ParentFolder(value) is { } folder ? Id(folder) : (Guid?)null; next is { } id && holding.Add(id);
                 next = parents.GetValueOrDefault(id)) { }
         }
-        foreach (var (name, recorded) in dated) {
-            var heldAt = recorded!.HeldAt;
-            if (recorded.IsEmptied && holding.Contains(recorded.Id))
-                heldAt = new(Math.Max(now, recorded.EmptiedAt!.Value.ReferenceSeconds + 0.001));
+        foreach (var (name, (emptied, heldAt)) in dated) {
             var carried = desired[name].DeepClone().AsObject();
             var value = SyncPayload.ValueOf(carried);
-            if (recorded.EmptiedAt is { } emptied) value[SyncPayload.Key.EmptiedAt] = SyncPayloadForm.Journal.Seconds(emptied);
-            if (heldAt is { } heldTime) value[SyncPayload.Key.HeldAt] = SyncPayloadForm.Journal.Seconds(heldTime);
+            var lastHeld = heldAt;
+            if (FolderPayload.StandsEmptied(emptied, heldAt) && holding.Contains(Id(value[StoredSessionCodec.Key.Id])))
+                lastHeld = Math.Max(now, emptied!.Value + 0.001);
+            if (emptied is { } went) value[SyncPayload.Key.EmptiedAt] = went;
+            if (lastHeld is { } kept) value[SyncPayload.Key.HeldAt] = kept;
             desired[name] = carried;
         }
     }

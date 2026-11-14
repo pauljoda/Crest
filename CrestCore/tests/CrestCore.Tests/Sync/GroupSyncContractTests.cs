@@ -403,6 +403,33 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
+    /// A folder record an earlier build stored without a position still
+    /// stages: an ordinary edit writes it, and an edit that empties it marks
+    /// it, keeping what else the record holds.
+    [Fact]
+    public void AStoredFolderRecordWithoutAPositionStillStages() {
+        var (space, folder, held, loose) = (Fixed(1_480), Fixed(1_481), Fixed(1_482), Fixed(1_483));
+        var start = PlainSession(space, folder, held, loose);
+        var journal = new JournalUnderTest(Fixed(1_484));
+        journal.Stage(start, at: 500);
+        var stored = journal.Record(SyncRecordKind.Folder, folder)!.DeepClone().AsObject();
+        stored["payload"]!["value"]!.AsObject().Remove("orderToken");
+        stored["payload"]!["value"]!["heldAt"] = At(400);
+        stored["version"] = new JsonObject { ["logicalClock"] = journal.Clock + 1, ["deviceID"] = Fixed(1_485).ToString("D").ToUpperInvariant() };
+        journal.Merge(stored);
+
+        var renamed = PlainSession(space, folder, held, loose);
+        FirstSpace(renamed)["tabs"]![2]!["title"] = "Renamed";
+        journal.Stage(renamed, at: 600);
+        Assert.Equal(At(400), journal.Value(SyncRecordKind.Folder, folder)!["heldAt"]!.GetValue<double>());
+
+        var emptied = PlainSession(space, folder, held, loose);
+        FirstSpace(emptied)["folders"] = new JsonArray();
+        FirstSpace(emptied)["tabs"]![1]!.AsObject().Remove("folderID");
+        journal.Stage(emptied, SyncDeletionReason.ExplicitDelete, at: 700, folder);
+        Assert.True(Marked(journal.Value(SyncRecordKind.Folder, folder)));
+    }
+
     /// One device closes the last tab it knows of in a Group while another has
     /// filed a second tab there that the first has not received. The Group
     /// still holds a tab, so both devices keep it with that tab inside.
