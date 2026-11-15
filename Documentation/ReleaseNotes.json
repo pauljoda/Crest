@@ -5561,6 +5561,10 @@
     "peek-idle-cpu": {
       "category": "fixed",
       "message": "An open Peek no longer keeps Crest busy while it sits still, which saves battery."
+    },
+    "developer-url-drag-select": {
+      "category": "fixed",
+      "message": "On Mac, dragging across the developer toolbar's address field selects text instead of moving the window."
     }
   }
 }
