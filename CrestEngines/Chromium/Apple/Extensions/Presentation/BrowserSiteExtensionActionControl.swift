@@ -6,6 +6,10 @@ struct BrowserSiteExtensionActionControl: View {
     let togglePinned: () -> Void
     var presentMenu: (BrowserExtensionPopupAnchor?) -> Void = { _ in }
 
+    /// Whether the action can run now, as the pinned tile decides: the page
+    /// allows it and the extension has finished loading.
+    private var canRun: Bool { action.isEnabled && !action.isLoading }
+
     var body: some View {
         Button(action: perform) {
             BrowserSiteExtensionActionLabel(action: action)
@@ -13,9 +17,10 @@ struct BrowserSiteExtensionActionControl: View {
         .buttonStyle(
             CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.compact, showsRestingFill: true)
         )
-        // Only running the action waits on the page: an extension it can't
-        // run there still opens its menu and can be pinned.
-        .disabled(!action.isEnabled)
+        // Only running the action waits on the page and on the extension
+        // loading: an extension it can't run there still opens its menu and
+        // can be pinned.
+        .disabled(!canRun)
         .frame(maxWidth: .infinity)
         .overlay {
             BrowserExtensionContextMenuTrigger(presentMenu: presentMenu)
@@ -27,7 +32,7 @@ struct BrowserSiteExtensionActionControl: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("extension-action-\(action.id)")
         .accessibilityAction {
-            guard action.isEnabled else { return }
+            guard canRun else { return }
             perform()
         }
         .accessibilityAction(
