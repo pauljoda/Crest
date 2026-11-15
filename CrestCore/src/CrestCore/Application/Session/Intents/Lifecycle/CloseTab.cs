@@ -17,7 +17,8 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
     /// the tab returns to the one it showed before; one that put a saved or
     /// pinned tab away skips its split, whose other members would present it
     /// again. A page put away keeps what brings it back unless the tab
-    /// returns to its saved address, and the window that asked lets it go.
+    /// returns to its saved address, and the window that asked lets it go. A
+    /// tab returning from another page wears its saved page's image again.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         var edited = BrowserTabCollection.Restore(space);
@@ -35,8 +36,12 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
                 .Select(candidate => candidate.Id).ToHashSet());
             var returns = workspace.ClosePolicy(turn.Basis) == SavedTabClosePolicy.ReturnToSavedUrl
                 && (tab.SavedUrl ?? tab.Url) is not null;
+            var restoresImage = returns && tab.State.ReturnRestoresImage;
             selected = edited.CloseDurable(tab.Id, shown, fallback, returns);
-            events = SessionTabEvents.None with { PutAway = new(WindowId, space.Id, tab.Id, KeepsState: !returns) };
+            events = SessionTabEvents.None with {
+                PutAway = new(WindowId, space.Id, tab.Id, KeepsState: !returns),
+                SavedImage = restoresImage ? new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl) : null
+            };
         } else {
             var fallback = followUp.FallbackAfterDismissing(space.Id, tab.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
             selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, deleting: false, ensureSelection: false,

@@ -37,6 +37,15 @@
             _ = ChromiumComposition.shell?.openExternal(urls)
         }
 
+        /// A page handed off from another device, which opens as a link from
+        /// another app does.
+        func application(
+            _ application: NSApplication, continue userActivity: NSUserActivity,
+            restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void
+        ) -> Bool {
+            ChromiumComposition.shell?.continueBrowsing(userActivity) ?? false
+        }
+
         func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ChromiumComposition.shell?.dockMenu() }
     }
 #endif

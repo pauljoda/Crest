@@ -11,12 +11,11 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Splits
 
-    private BrowserTab CopyTab(BrowserTab source, Guid id, DateTimeOffset now) => BrowserTab.Restore(source.State with {
+    private BrowserTab CopyTab(BrowserTab source, Guid id, DateTimeOffset now) => BrowserTab.Restore(source.State.SavedAt(null) with {
         Id = id,
         Placement = TabPlacement.Current,
         FolderId = null,
         SplitGroupId = null,
-        SavedUrl = null,
         LastActivatedAt = now,
         PositionModifiedAt = BrowserEditTimestamp.Normalize(now),
         TitleModifiedAt = source.CustomTitle is null ? null : BrowserEditTimestamp.Normalize(now),

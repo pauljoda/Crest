@@ -351,10 +351,9 @@ internal sealed class NativeWorkspaceImport {
                 folder = overflowFolder?.Id;
             } else folder = Kept(tab) && tab.FolderId is { } old && mapping.TryGetValue(old, out var copied)
                   ? copied : null;
-            return Copied(tab, tab with {
+            return Copied(tab, tab.SavedAt(placement.IsDurable ? tab.SavedUrl ?? tab.Url : null) with {
                 Placement = placement,
                 FolderId = folder,
-                SavedUrl = placement.IsDurable ? tab.SavedUrl ?? tab.Url : null,
                 Symbol = placement.ImportedSymbol ?? tab.Symbol
             });
         }).ToArray();

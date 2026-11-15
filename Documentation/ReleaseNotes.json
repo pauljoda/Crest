@@ -5553,6 +5553,50 @@
     "notices-fit-their-words": {
       "category": "improved",
       "message": "Notices such as URL Copied are only as wide as their words. On Mac and iPad they appear in the top right corner of the page, clear of the sidebar and the bars along the top; on iPhone they stay at the top of the screen."
+    },
+    "password-selection-search": {
+      "category": "fixed",
+      "message": "On Mac, right-clicking text selected in a password field no longer offers to search for it."
+    },
+    "split-focus-covering-chrome": {
+      "category": "fixed",
+      "message": "In Split View, clicking or pointing at the floating sidebar or a Peek no longer moves focus to the pane underneath, so Site Controls open for the pane you chose and a Peek stays open."
+    },
+    "backdrop-reduce-motion": {
+      "category": "fixed",
+      "message": "With Reduce Motion on, switching Spaces shows the new Space's backdrop instead of the previous one's."
+    },
+    "handoff-opens-page": {
+      "category": "fixed",
+      "message": "On Mac, choosing Crest's Handoff icon for a page open on another device now opens that page."
+    },
+    "translation-check-crash": {
+      "category": "fixed",
+      "message": "Crest no longer crashes while it checks which languages it can translate a page into."
+    },
+    "peek-idle-cpu": {
+      "category": "fixed",
+      "message": "An open Peek no longer keeps Crest busy while it sits still, which saves battery."
+    },
+    "developer-url-drag-select": {
+      "category": "fixed",
+      "message": "On Mac, dragging across the developer toolbar's address field selects text instead of moving the window."
+    },
+    "saved-tab-return-appearance": {
+      "category": "fixed",
+      "message": "When closing a saved or pinned tab returns it to its saved address, its row now shows that page's name and icon right away instead of the last page's."
+    },
+    "sparkle-security-update": {
+      "category": "fixed",
+      "message": "Crest's updater now includes two security fixes for how updates are installed."
+    },
+    "recent-tabs-loaded-only": {
+      "category": "improved",
+      "message": "On Mac, the recent tabs switcher lists only tabs whose page is loaded, beside the one on screen."
+    },
+    "save-unsave-tab-menu": {
+      "category": "improved",
+      "message": "A tab's menu now offers Save Tab, which moves it into Saved Tabs, and a saved tab's offers Unsave Tab, which moves it back among your open tabs. A selection of tabs offers the same."
     }
   }
 }
