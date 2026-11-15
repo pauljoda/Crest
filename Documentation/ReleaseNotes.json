@@ -5517,6 +5517,10 @@
     "open-next-extension": {
       "category": "new",
       "message": "On Mac, Command-E opens your extensions one at a time: the pinned ones from left to right, then the rest. Press it again for the next one, and once more after the last to close it. Archive Tab moves to Shift-Command-E."
+    },
+    "command-w-closes-selection": {
+      "category": "fixed",
+      "message": "On Mac, Command-W closes every tab you selected in the sidebar again, and Command-D duplicates them, instead of acting on the tab on screen."
     }
   }
 }

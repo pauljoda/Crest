@@ -229,6 +229,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     func closeTabOrWindow() {
         // A Peek open over the tab closes first, as it is what shows.
         if pages.closePeek() { return }
+        if closeSidebarSelection() { return }
         guard let selectedTab = browser.shownTab, let space = browser.shownSpace,
             !browser.closingLeavesOnlyTheWindow(selectedTab.id, in: space.id)
         else {
@@ -252,6 +253,22 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         } else {
             archiveSelectedTab()
         }
+    }
+
+    /// Closes the tabs selected in the sidebar together, as the selection's
+    /// Archive does, while the selection has this window's keyboard; answers
+    /// whether it did. A Quick Window in front, a page or a field with the
+    /// keyboard, and a selection of the shown tab alone leave the close to
+    /// the shown tab.
+    private func closeSidebarSelection() -> Bool {
+        let selection = browser.tabMultiSelection
+        guard let window = pages.presentationWindow, window.isKeyWindow, selection.hasKeyboard(in: window),
+            let item = selection.focusedItem, let request = BrowserSidebarSelection.capture(for: item, in: browser),
+            request.rootItems != browser.shownTab.map({ [BrowserSelectionItemID.tab($0.id)] })
+        else { return false }
+        BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).perform(
+            browser.closing(request), for: request)
+        return true
     }
 
     // MARK: - Conditions

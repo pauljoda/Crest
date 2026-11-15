@@ -49,6 +49,10 @@ struct BrowserTabSelectionMonitor: View {
     }
 
     final class SelectionView: NSView {
+        /// Every selection view, so the shell can offer the one in a window
+        /// the keys pressed there.
+        private static let views = NSHashTable<SelectionView>.weakObjects()
+
         weak var browser: BrowserStore?
         weak var sidebarInteraction: BrowserSidebarInteractionState?
         weak var spaceAccess: BrowserSpaceAccessController?
@@ -67,10 +71,21 @@ struct BrowserTabSelectionMonitor: View {
             return super.resignFirstResponder()
         }
 
+        /// Offers a key press to the sidebar selection of the window it was
+        /// pressed in, and answers whether the selection took it. The shell
+        /// asks before any command claims the key: AppKit asks local monitors
+        /// in an order that differs between the engines, so the selection's
+        /// own monitor can come after the shell's.
+        static func takesKey(_ event: NSEvent) -> Bool {
+            guard event.type == .keyDown, let window = event.window else { return false }
+            return views.allObjects.contains { $0.window === window && $0.handle(event) == nil }
+        }
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             stop()
             guard let window else { return }
+            Self.views.add(self)
             for name in [NSWindow.willCloseNotification, NSWindow.didResignKeyNotification] {
                 windowObservers.append(
                     NotificationCenter.default.addObserver(
@@ -122,7 +137,7 @@ struct BrowserTabSelectionMonitor: View {
                     selection.clear()
                     return nil
                 }
-                guard window?.firstResponder === self else { return event }
+                guard window?.firstResponder === self || selection.hasKeyboard(in: window) else { return event }
                 return handleKey(event, browser: browser)
             }
             if event.type == .leftMouseUp {
@@ -178,6 +193,8 @@ struct BrowserTabSelectionMonitor: View {
                 if shift { selection.clear() } else { selection.selectAll(units: units) }
                 return nil
             }
+            // Command-W goes on to Close Tab, which closes the selection while
+            // it has the keyboard; see `BrowserCommandActions.closeTabOrWindow`.
             if command, !shift, !event.modifierFlags.contains(.option),
                 !event.modifierFlags.contains(.control), let id = selection.focusedItem,
                 let request = BrowserSidebarSelection.capture(for: id, in: browser), let spaceAccess
@@ -189,9 +206,6 @@ struct BrowserTabSelectionMonitor: View {
                     return nil
                 case .character("d"):
                     actions.perform(browser.duplicating(request), for: request)
-                    return nil
-                case .character("w"):
-                    actions.perform(browser.closing(request), for: request)
                     return nil
                 default: break
                 }
@@ -235,5 +249,21 @@ struct BrowserTabSelectionMonitor: View {
             browser.tabMultiSelection.selectAll(
                 units: BrowserSidebarSelection.itemUnits(in: browser))
         }
+    }
+}
+
+extension BrowserTabMultiSelection {
+    // MARK: - Actions - Keyboard
+
+    /// Whether the keys pressed in `window` act on the selection: it is
+    /// engaged, and neither a page, a text field nor a shortcut recorder there
+    /// has the keyboard. Any other view holding the keyboard, such as one a
+    /// card, a button or a menu in the sidebar left it on, leaves the keys to
+    /// the selection.
+    func hasKeyboard(in window: NSWindow?) -> Bool {
+        guard isEngaged, let window else { return false }
+        let responder = window.firstResponder
+        return !(responder is NSText) && !(responder is ShortcutRecorderButton)
+            && !BrowserWebHostView.isPageContent(responder)
     }
 }
