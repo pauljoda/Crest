@@ -5541,6 +5541,10 @@
     "password-selection-search": {
       "category": "fixed",
       "message": "On Mac, right-clicking text selected in a password field no longer offers to search for it."
+    },
+    "split-focus-covering-chrome": {
+      "category": "fixed",
+      "message": "In Split View, clicking or pointing at the floating sidebar or a Peek no longer moves focus to the pane underneath, so Site Controls open for the pane you chose and a Peek stays open."
     }
   }
 }

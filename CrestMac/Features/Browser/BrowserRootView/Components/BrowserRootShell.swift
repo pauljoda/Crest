@@ -245,6 +245,13 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 activeTarget: { [pages = model.pages] in pages.activePage }
             )
         }
+        // A floating sidebar keeps Split View from handing the pointer to
+        // the card beneath it.
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: {
+            model.splitCoveringChrome.sidebarFrame = $0
+        }
     }
 
     private var shellControls: some View {
