@@ -49,18 +49,27 @@ internal sealed class Page {
     /// itself.
     public bool OpenedByPage { get; }
 
+    /// The tab whose page opened this page's tab, while that tab is an open
+    /// tab: a link followed into a new tab or split, or a page's own new tab.
+    /// Going back from the page's first entry closes its tab and shows that
+    /// one. A tab the person opened, or one saved or pinned since, has none,
+    /// and neither does a page brought back across a relaunch: the link is
+    /// never saved or synced.
+    public Guid? OpenerTabId { get; private set; }
+
     public PagePhase Phase { get; private set; } = PagePhase.Opening;
 
     public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase, Live);
 
     /// What rules and views read of the page now: what its engine last showed,
     /// how secure its document's connection is, judged from what the engine
-    /// knows of it, whether its history reaches back or forward, and why its
-    /// latest navigation failed. A failure over the document the page still
-    /// shows can be left for that document, so the page can go back even when
-    /// its history cannot.
+    /// knows of it, whether it can go back or forward, and why its latest
+    /// navigation failed. A failure over the document the page still shows
+    /// can be left for that document, and a tab another tab opened closes
+    /// back to it, so the page can go back even when its history cannot.
     public PageLiveState Live => new(shown.Url, shown.PendingUrl, shown.Title, shown.IsLoading,
-        History.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null, History.CanGoForward,
+        History.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null || OpenerTabId is not null,
+        History.CanGoForward,
         PageSecurity.Judging(shown.Security, shown.Url), failure, shown.Media);
 
     /// The page's back and forward history across the engines it moved
@@ -149,7 +158,7 @@ internal sealed class Page {
     #region Constructors
 
     public Page(Guid id, Engine engine, Guid profileId, Guid workspaceId, Guid spaceId, Guid? tabId, Guid windowId,
-        TransientPresentation? transient, bool openedByPage = false) {
+        TransientPresentation? transient, bool openedByPage = false, Guid? openerTabId = null) {
         Id = id;
         Engine = engine;
         ProfileId = profileId;
@@ -159,6 +168,7 @@ internal sealed class Page {
         WindowId = windowId;
         Transient = transient;
         OpenedByPage = openedByPage;
+        OpenerTabId = openerTabId;
     }
 
     #endregion
@@ -311,6 +321,10 @@ internal sealed class Page {
 
     /// The person left the page's failure for the document behind it.
     public void LeaveFailure() => failure = null;
+
+    /// The page's tab was saved or pinned, which closes as its section keeps
+    /// it, so going back from its first entry no longer closes it.
+    public void ForgetOpener() => OpenerTabId = null;
 
     /// The page restores what an earlier page of its tab showed at `url`, and
     /// shows it heading there at once, so its owner does not load it anew.

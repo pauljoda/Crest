@@ -46,6 +46,17 @@ final class BrowserDesktopWebView: WKWebView {
         true
     }
 
+    /// WebKit takes a swipe back through its own list and drops one it has no
+    /// entry for. That one goes on to the window, which goes back through the
+    /// core: there, the first page of a tab another tab opened closes it.
+    override func swipe(with event: NSEvent) {
+        guard event.deltaX > 0, !canGoBack else {
+            super.swipe(with: event)
+            return
+        }
+        nextResponder?.swipe(with: event)
+    }
+
     /// Adds Crest's actions ahead of WebKit's native and extension items.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
