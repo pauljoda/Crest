@@ -3668,3 +3668,17 @@
  // Async drag callbacks (called from async helpers).
  - (void)dragEnterHitTestDidCompleteForView:
              (base::WeakPtr<content::RenderWidgetHostViewBase>)targetView
+--- a/chrome/browser/ui/views/storage/storage_pressure_bubble_view.cc
++++ b/chrome/browser/ui/views/storage/storage_pressure_bubble_view.cc
+@@ -45,6 +45,11 @@
+   }
+ 
+   auto* browser_view = BrowserView::GetBrowserViewForBrowser(bwi);
++  // A browser hosted by Crest has a native window and no BrowserView to
++  // anchor the bubble to, so the notice is skipped.
++  if (!browser_view) {
++    return;
++  }
+   auto* control = browser_view->toolbar_button_provider()->GetAppMenuControl();
+   views::BubbleAnchor anchor =
+       control ? control->GetAnchor() : views::BubbleAnchor();

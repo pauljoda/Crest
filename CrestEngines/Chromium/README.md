@@ -257,10 +257,11 @@ last-used engine profile, which belongs to no Space, so
 Space a link from that app routes to. A navigation throttle completes the
 request when that window's page reaches the app's callback URL and then closes
 the window; closing the window first cancels the request. Chromium's toasts,
-which anchor to a Views frame this build never creates, become Crest notices,
-and the sad-tab overlay yields to Crest's own renderer recovery. Chromium's Dock
-tile view, which draws the bundle's default icon under its download badge, is
-never installed, so the Dock keeps the icon the person picked.
+which anchor to a Views frame this build never creates, become Crest notices;
+its low-storage bubble, which anchors to the same frame, is not shown; and the
+sad-tab overlay yields to Crest's own renderer recovery. Chromium's Dock tile
+view, which draws the bundle's default icon under its download badge, is never
+installed, so the Dock keeps the icon the person picked.
 
 Site state reaches Crest through the location bar Chromium already calls.
 `CrestLocationBar::UpdateContentSettingsIcons` forwards to
