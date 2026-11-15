@@ -5613,6 +5613,10 @@
     "link-menu-new-tab-first": {
       "category": "improved",
       "message": "On Mac, Open Link in New Tab now leads a link's right-click menu, ahead of opening it in another Space, in Peek or in Split View."
+    },
+    "closed-folder-shows-loaded-tabs": {
+      "category": "improved",
+      "message": "A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it."
     }
   }
 }

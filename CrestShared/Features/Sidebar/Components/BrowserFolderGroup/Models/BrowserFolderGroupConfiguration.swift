@@ -129,11 +129,16 @@ struct BrowserFolderGroupConfiguration {
         folderTabIDs.first { context.window.shownTabIDs.contains($0) }
     }
 
+    /// The folder's tabs that hold a page, whatever its kind.
+    var loadedFolderTabIDs: [UUID] {
+        folderTabIDs.filter { pageAccess.containsResidentPage($0) }
+    }
+
     /// The folder's loaded tabs, which closing keeps on screen, or none for a
     /// folder that closes without them.
     var residentFolderTabIDs: [UUID] {
         guard folder.kind.keepsLoadedTabsWhenClosed else { return [] }
-        return folderTabIDs.filter { pageAccess.containsResidentPage($0) }
+        return loadedFolderTabIDs
     }
 
     /// Read inside the body so Observation tracks residency, which is
