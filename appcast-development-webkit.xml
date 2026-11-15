@@ -6,29 +6,38 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.67</title>
-            <pubDate>Sun, 15 Nov 2026 15:44:31 +0000</pubDate>
+            <title>0.9.71</title>
+            <pubDate>Sun, 15 Nov 2026 17:01:10 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1616</sparkle:version>
-            <sparkle:shortVersionString>0.9.67</sparkle:shortVersionString>
+            <sparkle:version>1619</sparkle:version>
+            <sparkle:shortVersionString>0.9.71</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- On Mac, you can put the address bar on top: choose Top under Address bar in Settings › Appearance, and the address field with back, forward and reload moves above the page.
+- On Mac, each page in Split View carries its own bar with back, forward, its address, Site Controls and pinned extensions, wherever the address bar is.
+
+### Improved
+
+- On Mac, pages slide and resize into place as they join or leave Split View instead of jumping.
+
 ### Fixed
 
-- On Mac, Command-W closes every tab you selected in the sidebar again, and Command-D duplicates them, instead of acting on the tab on screen.
+- On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/951460c1d61fb190ba9a6e0b335f7ce96309dc7c...140368cf43cd108377bbebec5b26c53a3b8fd7c4) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.67-2026-11-15-1616-r616.1/Installer-Crest-0.9.67-development-2026-11-15-140368c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/140368cf43cd108377bbebec5b26c53a3b8fd7c4...ffd7d88380e623ce1ac8975d57dd22578c297afa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.71-2026-11-15-1619-r619.1/Installer-Crest-0.9.71-development-2026-11-15-ffd7d88-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.67-2026-11-15-1616-r616.1/Installer-Crest-0.9.67-development-2026-11-15-140368c-arm64.dmg" length="221168260" type="application/octet-stream" sparkle:edSignature="BHR5NqMayE8IM/XHUA0JMsHM/1/zZLOiTRSg+GLvKB2EeLobA3BuPME4Rk1g54P2wNNSNYRN2JvL6GFYPFB4AQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.71-2026-11-15-1619-r619.1/Installer-Crest-0.9.71-development-2026-11-15-ffd7d88-arm64.dmg" length="221339780" type="application/octet-stream" sparkle:edSignature="C9jnNHiPP0We57+EY0GQYS/i8dVLy4dz0KTH9w43TNuAPFggvs6g6705gTsd2Ntb6ubUYK9GlOYQV9vhY2nwBw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +69,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Wm+2flDxIa2uTT+Bd+wPl5TblEyjLSsOab+Yz0KIQL9KLeamQ6vMtTdCJYuJHnd6ll16x8xBbjh00y8b4LvyDg==
-length: 4033
+edSignature: 0TlB7/leSDvmdmI8IWlVRcCfd+0JGIYqhhKf+/x9MTu+b7BbgABYRDLJuQ9X8Qfx8ZaLNyypgbD2p+QPdeb1AQ==
+length: 4472
 -->
