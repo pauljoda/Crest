@@ -62,20 +62,24 @@ internal sealed partial class Device {
         lock (gate) return open.TryGetValue(windowId, out var window) ? window : throw new Rejected(new WindowNotOpen(windowId));
     }
 
-    /// What `window` switches between in `space` (see `Window.RecentItems`).
-    /// While it has listed no other tab there, as after a launch or in a new
-    /// window, the Space's tab used last stands second, a split as one item,
+    /// What `window` switches between in `space` (see `Window.RecentItems`):
+    /// the shown item and the others whose pages `pages` holds loaded or that
+    /// show a native view, which has nothing to load. While
+    /// it has listed no other tab there, as after a launch or in a new window,
+    /// the Space's loaded tab used last stands second, a split as one item,
     /// unless another open window shows it. A locked Space lists nothing, as
     /// its palette offers none of its tabs. Called without the device lock,
     /// since it reads whether the Space is locked.
-    internal IReadOnlyList<RecentTabItem> RecentItems(Window window, SpaceState space) {
+    internal IReadOnlyList<RecentTabItem> RecentItems(Window window, SpaceState space, Pages pages) {
         if (Workspace(window.WorkspaceId).IsLocked(space)) return [];
+        HashSet<Guid> loaded = [.. pages.LoadedTabs(window.WorkspaceId),
+            .. space.Tabs.Where(tab => tab.NativeContent is not null).Select(tab => tab.Id)];
         lock (gate) {
-            var items = window.RecentItems(space);
+            var items = window.RecentItems(space, loaded);
             if (items.Count != 1) return items;
             HashSet<Guid> elsewhere = [.. open.Values.Where(other => other.Id != window.Id)
                 .Select(other => other.Tab(space.Id)).OfType<Guid>()];
-            return window.LastUsed(space, elsewhere) is { } last ? [items[0], last] : items;
+            return window.LastUsed(space, elsewhere, loaded) is { } last ? [items[0], last] : items;
         }
     }
 

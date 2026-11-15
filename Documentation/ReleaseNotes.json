@@ -5573,6 +5573,10 @@
     "sparkle-security-update": {
       "category": "fixed",
       "message": "Crest's updater now includes two security fixes for how updates are installed."
+    },
+    "recent-tabs-loaded-only": {
+      "category": "improved",
+      "message": "On Mac, the recent tabs switcher lists only tabs whose page is loaded, beside the one on screen."
     }
   }
 }
