@@ -162,11 +162,16 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             }
             string title = ImportText.Bounded(tab.Title, tab.Address.Host, ImportText.MaximumTitle)
                 ?? throw new Rejected(new SessionOverLimits());
+            // The name the person gave the tab comes in as a rename in Crest
+            // does, over its page's title; a blank one is none, and one too
+            // long to keep stays behind with the page's title showing.
+            string? rename = ImportText.Bounded(tab.CustomTitle, "", ImportText.MaximumTitle);
             string url = tab.Address.Spelling;
             bool fits = folder is { } held && folderPlaces.TryGetValue(held, out var place) && place == placement;
             tabs.Add(new(ids.Next(), title, NativeContent: null, url, placement.IsDurable ? url : null,
                 placement.ImportedSymbol ?? TabIconMode.WebSymbol, placement,
-                fits ? folder : null, SplitGroupId: null, tab.LastActivatedAt ?? importedAt));
+                fits ? folder : null, SplitGroupId: null, tab.LastActivatedAt ?? importedAt, rename,
+                rename is null ? null : BrowserEditTimestamp.Normalize(importedAt)));
         }
         var splits = Split(ordered, tabs, ids);
 
