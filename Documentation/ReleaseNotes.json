@@ -5553,6 +5553,10 @@
     "handoff-opens-page": {
       "category": "fixed",
       "message": "On Mac, choosing Crest's Handoff icon for a page open on another device now opens that page."
+    },
+    "translation-check-crash": {
+      "category": "fixed",
+      "message": "Crest no longer crashes while it checks which languages it can translate a page into."
     }
   }
 }
