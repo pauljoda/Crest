@@ -7,6 +7,7 @@ import Foundation
 protocol BrowserFileDestinationOpener {
     func openFile(_ fileURL: URL)
     func revealFile(_ fileURL: URL)
+    func previewFile(_ fileURL: URL)
     func shareFile(_ fileURL: URL)
     func saveFileToFiles(_ fileURL: URL)
 }

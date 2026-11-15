@@ -587,17 +587,21 @@ final class MobileBrowserPageStore:
         downloadCenter.clear(itemID)
     }
 
-    func exportDownload(
+    func openDownload(
         _ itemID: UUID,
-        to destination: MobileBrowserFileExportDestination
+        in destination: BrowserUtilityDownloadDestination
     ) {
         guard let item = downloadCenter.item(itemID),
             item.phase.isComplete,
             let destinationURL = item.destinationURL
         else { return }
-        MobileBrowserDialogPresenter.exportDownloadedFile(
+        // A file saved in a folder the person chose is readable only while
+        // that folder's access is open.
+        BrowserPlatformDownloadPreferences.shared.openDirectories(
+            for: browser.spaceModels.lazy.filter { $0.profileID == item.profileID }.map(\.id))
+        MobileBrowserDialogPresenter.openDownloadedFile(
             at: destinationURL,
-            to: destination
+            in: destination
         )
     }
 

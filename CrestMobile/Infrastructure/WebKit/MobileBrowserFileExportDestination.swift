@@ -4,8 +4,8 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
-/// Where an exported page or a finished download goes on a device without a
-/// Finder: the share sheet or the Files picker.
+/// Where an exported page goes on a device without a Finder: the share sheet
+/// or the Files picker.
 struct MobileBrowserFileExportDestination: Hashable, Identifiable, Sendable {
     // MARK: - Static Variables
 
@@ -31,13 +31,6 @@ struct MobileBrowserFileExportDestination: Hashable, Identifiable, Sendable {
 
     private init(download: BrowserUtilityDownloadDestination) {
         self.download = download
-    }
-
-    // MARK: - Actions - Lookup
-
-    /// The export a download row's destination asks for, if it is one.
-    static func exporting(_ download: BrowserUtilityDownloadDestination) -> MobileBrowserFileExportDestination? {
-        all.first { $0.download == download }
     }
 
     // MARK: - Actions - Identity

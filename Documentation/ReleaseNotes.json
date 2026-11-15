@@ -5517,6 +5517,26 @@
     "open-next-extension": {
       "category": "new",
       "message": "On Mac, Command-E opens your extensions one at a time: the pinned ones from left to right, then the rest. Press it again for the next one, and once more after the last to close it. Archive Tab moves to Shift-Command-E."
+    },
+    "ios-downloads-open-in-quick-look": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, tapping a finished download opens it in Quick Look, and its menu can show it in the Files app."
+    },
+    "ios-space-download-folder": {
+      "category": "new",
+      "message": "On iPhone and iPad, choose where a Space saves downloads, such as the Downloads folder in Files, in that Space's settings."
+    },
+    "ios-download-finished-notice": {
+      "category": "new",
+      "message": "On iPhone and iPad, a notice says when each download finishes, with an Open button that shows the file in Quick Look."
+    },
+    "ios-files-download-instead-of-showing": {
+      "category": "improved",
+      "message": "On iPhone and iPad, a link to a PDF, Word document, image or other file downloads it instead of showing it in the tab, ready to open from the notice or Downloads."
+    },
+    "roomier-window-notices": {
+      "category": "improved",
+      "message": "Notices at the top of the window leave more room around their words."
     }
   }
 }

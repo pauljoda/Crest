@@ -9,27 +9,33 @@ import SwiftUI
 struct BrowserSpaceDownloadsSection: View {
     let settings: BrowserSpaceDownloadSettings
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         Section("Downloads") {
-            Toggle(
-                "Ask where to save each download",
-                isOn: settings.asksWhereToSave
-            )
-            .accessibilityIdentifier("space-download-save-panel")
+            if let asksWhereToSave = settings.asksWhereToSave {
+                Toggle(
+                    "Ask where to save each download",
+                    isOn: asksWhereToSave
+                )
+                .accessibilityIdentifier("space-download-save-panel")
+            }
 
             LabeledContent("Download location") {
                 Text(settings.directoryName)
                     .foregroundStyle(.secondary)
             }
 
-            HStack {
-                Button("Choose Folder…") {
-                    settings.chooseDirectory()
+            if capabilities.supportsTouch {
+                // A row of a touch Form fires every button it holds, so each
+                // gets its own row.
+                chooseButton
+                resetButton
+            } else {
+                HStack {
+                    chooseButton
+                    resetButton
                 }
-                Button("Use Downloads") {
-                    settings.resetDirectory()
-                }
-                .disabled(!settings.usesCustomDirectory)
             }
 
             if let errorMessage = settings.errorMessage {
@@ -41,5 +47,20 @@ struct BrowserSpaceDownloadsSection: View {
                 .foregroundStyle(CrestColor.danger)
             }
         }
+    }
+
+    private var chooseButton: some View {
+        Button("Choose Folder…") {
+            settings.chooseDirectory()
+        }
+    }
+
+    private var resetButton: some View {
+        Button {
+            settings.resetDirectory()
+        } label: {
+            Text(settings.resetTitle)
+        }
+        .disabled(!settings.usesCustomDirectory)
     }
 }

@@ -26,10 +26,8 @@ struct BrowserNoticeView: View {
             }
         }
         .font(.callout.weight(.semibold))
-        .padding(
-            .horizontal,
-            BrowserRootMetrics.noticeHorizontalPadding
-        )
+        .padding(.horizontal, BrowserRootMetrics.noticeHorizontalPadding)
+        .padding(.vertical, BrowserRootMetrics.noticeVerticalPadding)
         .frame(minHeight: BrowserRootMetrics.noticeHeight)
         .frame(maxWidth: BrowserRootMetrics.noticeMaximumWidth)
         .fixedSize(horizontal: false, vertical: true)

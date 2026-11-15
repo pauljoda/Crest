@@ -47,6 +47,7 @@ private final class BrowserMobileApplication {
     /// process's one core.
     let downloads: MobileBrowserDownloads
     let privateDownloads: MobileBrowserDownloads
+    let downloadNotices: BrowserDownloadNotices
     let tabStateArchive: (any BrowserTabStateArchiving)?
     let windowLayouts: BrowserWindowLayouts
     let startupBehavior: StartupBehavior
@@ -155,6 +156,9 @@ private final class BrowserMobileApplication {
         self.mediaSessions = mediaSessions
         self.downloads = downloads
         self.privateDownloads = privateDownloads
+        downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess) { [weak pages] download in
+            pages?.openDownload(download.id, in: .quickLook)
+        }
         self.tabStateArchive = tabStateArchive
         if usesIsolatedLaunch {
             windowLayouts = BrowserWindowLayouts(
