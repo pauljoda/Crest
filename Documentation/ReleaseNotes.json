@@ -5557,6 +5557,10 @@
     "translation-check-crash": {
       "category": "fixed",
       "message": "Crest no longer crashes while it checks which languages it can translate a page into."
+    },
+    "peek-idle-cpu": {
+      "category": "fixed",
+      "message": "An open Peek no longer keeps Crest busy while it sits still, which saves battery."
     }
   }
 }

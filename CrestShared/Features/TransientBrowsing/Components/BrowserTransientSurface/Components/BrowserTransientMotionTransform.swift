@@ -1,19 +1,38 @@
 import SwiftUI
 
 /// Animates the existing card without replacing its page or controls.
+///
+/// The clock that drives a released card's spring runs only while that
+/// spring settles. A clock left running over a card at rest kept the main
+/// process redrawing the open Peek for as long as it stayed open.
 struct BrowserTransientMotionTransform: ViewModifier {
+    // MARK: - Variables
+
     let state: BrowserPeekMotionState?
     let containerSize: CGSize
     let reduceMotion: Bool
+
+    /// The release whose spring has run its course, which redraws the card
+    /// once more so its clock stops.
+    @State private var settledRelease: Date?
+
+    // MARK: - Actions - Presentation
 
     func body(content: Content) -> some View {
         let motionState = state
         let size = containerSize
         let shouldReduceMotion = reduceMotion
-        // Keep the native page attached while the outgoing card fades.
-        return TimelineView(.explicit(BrowserTransientMotion.dates(for: state, reduceMotion: reduceMotion))) {
-            timeline in
-            let date = timeline.date
+        let isSettling =
+            state?.releasedAt != settledRelease
+            && BrowserTransientMotion.isSettling(state, at: .now, reduceMotion: reduceMotion)
+        // Keep the native page attached while the outgoing card fades: the
+        // clock pauses rather than leaving the card's tree.
+        return TimelineView(
+            .animation(minimumInterval: BrowserTransientMotion.frameInterval, paused: !isSettling)
+        ) { timeline in
+            // A paused clock keeps the moment it paused at; a card at rest
+            // takes the pose its spring ends in.
+            let date = isSettling ? timeline.date : .distantFuture
             content.visualEffect { card, geometry in
                 let frame = geometry.frame(in: .named(BrowserTransientMotion.coordinateSpaceName))
                 let pose = BrowserTransientMotion.pose(
@@ -26,8 +45,15 @@ struct BrowserTransientMotionTransform: ViewModifier {
                     .opacity(pose.opacity)
             }
         }
+        .task(id: state?.releasedAt) {
+            guard let releasedAt = state?.releasedAt else { return }
+            let remaining = BrowserTransientMotion.settledAt(releasedAt).timeIntervalSinceNow
+            if remaining > 0 {
+                do { try await Task.sleep(for: .seconds(remaining)) } catch { return }
+            }
+            settledRelease = releasedAt
+        }
     }
-
 }
 
 /// Shared scale and position springs for the held card and its release.
@@ -40,6 +66,8 @@ enum BrowserTransientMotion {
     private static let minimumScale = 0.001
     private static let returnFadeDuration = 0.55
     private static let framesPerSecond = 120.0
+    /// The shortest time between two frames of a settling card.
+    static let frameInterval = 1 / framesPerSecond
 
     static func pose(
         for state: BrowserPeekMotionState?, frame: CGRect, containerSize: CGSize,
@@ -85,10 +113,17 @@ enum BrowserTransientMotion {
         let scale: Double
         let opacity: Double
     }
-    static func dates(for state: BrowserPeekMotionState?, reduceMotion: Bool) -> [Date] {
-        guard !reduceMotion, let start = state?.releasedAt else { return [.distantPast] }
-        let frameCount = Int(settlingDuration * framesPerSecond)
-        return (0...frameCount).map { start.addingTimeInterval(Double($0) / framesPerSecond) }
+
+    /// When the spring of a card released at `releasedAt` comes to rest.
+    static func settledAt(_ releasedAt: Date) -> Date {
+        releasedAt.addingTimeInterval(settlingDuration)
+    }
+
+    /// Whether a card in `state` is still springing at `date`: released, not
+    /// yet at rest, and moving at all.
+    static func isSettling(_ state: BrowserPeekMotionState?, at date: Date, reduceMotion: Bool) -> Bool {
+        guard !reduceMotion, let releasedAt = state?.releasedAt else { return false }
+        return date < settledAt(releasedAt)
     }
 
     static func scale(for state: BrowserPeekMotionState, at date: Date) -> Double {
