@@ -10,6 +10,10 @@ import SwiftUI
 struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     private let port: BrowserSidebarNavigationPort
     private let capabilities: BrowserInteractionCapabilities
+    /// Whether the strip shares its width with the window's own buttons, or
+    /// nil for the sidebar's rule: beside them unless the sidebar is on the
+    /// right. Along the top of a page the strip stands clear of them.
+    private let besideWindowControls: Bool?
     private let trailingAccessory: TrailingAccessory
 
     /// Back and forward both stay in the strip at every width, disabled
@@ -19,12 +23,14 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     init(
         port: BrowserSidebarNavigationPort,
         capabilities: BrowserInteractionCapabilities,
+        besideWindowControls: Bool? = nil,
         @ViewBuilder trailingAccessory: () -> TrailingAccessory = {
             EmptyView()
         }
     ) {
         self.port = port
         self.capabilities = capabilities
+        self.besideWindowControls = besideWindowControls
         self.trailingAccessory = trailingAccessory()
     }
 
@@ -96,7 +102,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     private var fit: BrowserSidebarNavigationStripFit {
         capabilities.navigationControlMetrics.fitting(
             width: width, includesDeveloperMenu: isDeveloperMode,
-            besideWindowControls: !BrowserDeviceAppearanceStore.shared.sidebarOnRight)
+            besideWindowControls: besideWindowControls ?? !BrowserDeviceAppearanceStore.shared.sidebarOnRight)
     }
 
     private var isDeveloperMode: Bool {

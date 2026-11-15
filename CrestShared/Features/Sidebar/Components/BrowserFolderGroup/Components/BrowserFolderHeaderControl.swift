@@ -102,6 +102,10 @@ struct BrowserFolderHeaderControl: View {
                             Color.clear.frame(width: menuMetrics.controlSize.width, height: 1)
                         }
                     }
+                    .modifier(
+                        BrowserFolderHeaderMenuClearance(
+                            width: menuMetrics.controlSize.width, isActive: titleMeetsMenuButton)
+                    )
                     .browserSavedFolderHeaderLayout(configuration: configuration)
                     // A finger gets the folder's padding too, so a header
                     // shorter than a tab row still takes a whole row's touch.
@@ -164,6 +168,39 @@ struct BrowserFolderHeaderControl: View {
     /// Whether the tab count stands where the `…` button appears on hover,
     /// rather than beside a button that is always there.
     private var countSharesMenuSlot: Bool { showsMenuButton && !menuMetrics.isAlwaysVisible }
+
+    /// Whether the `…` button shows now over the end of the title. A tab
+    /// count holds the button's place, and a button that is always there has
+    /// its own, but a hover-revealed button with no count beside it stands
+    /// over a long enough name.
+    private var titleMeetsMenuButton: Bool { countSharesMenuSlot && !showsTabCounts && isMenuRevealed }
+}
+
+/// Fades a folder header's title out under its `…` button while the button
+/// shows, so a name that reaches the button never runs under it.
+private struct BrowserFolderHeaderMenuClearance: ViewModifier {
+    /// How far the title fades before it reaches the button.
+    private static let fadeWidth: CGFloat = 12
+
+    /// The button's width at the header's trailing edge.
+    let width: CGFloat
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content.mask {
+            if isActive {
+                HStack(spacing: 0) {
+                    Rectangle()
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: Self.fadeWidth)
+                        .flipsForRightToLeftLayoutDirection(true)
+                    Color.clear.frame(width: width)
+                }
+            } else {
+                Rectangle()
+            }
+        }
+    }
 }
 
 /// The `…` button at a folder or group header's trailing edge, which opens

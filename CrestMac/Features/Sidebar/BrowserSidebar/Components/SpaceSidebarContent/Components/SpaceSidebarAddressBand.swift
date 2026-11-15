@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Fixed address controls. The pager owns the changing extension-strip seam
 /// so semantic selection cannot resize the viewport during a Space transition.
+/// The same field stands along the top of a lone page while the address bar
+/// is on top (``BrowserWindowAddressBar``).
 struct SpaceSidebarAddressBand: View {
     let space: SpaceModel
     /// Whether the site controls act for `space`; they offer nothing while it
@@ -20,6 +22,9 @@ struct SpaceSidebarAddressBand: View {
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
+    /// How far the field stands in from the band's edges: the sidebar's
+    /// layer inset there, none along the top of a page.
+    var horizontalInset = BrowserSidebarMetrics.layerInset
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The field's width, which decides whether Copy URL fits beside Site
@@ -54,7 +59,7 @@ struct SpaceSidebarAddressBand: View {
         .onHover { hovering in
             withAnimation(CrestMotion.controlState.unlessReducingMotion(reduceMotion)) { isHovering = hovering }
         }
-        .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+        .padding(.horizontal, horizontalInset)
 
     }
 

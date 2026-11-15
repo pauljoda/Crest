@@ -22,10 +22,12 @@ import SwiftUI
 ///   the same gap, the same surface, and the same width arithmetic serve both,
 ///   and the slot under the pointer is already the exact width and position the
 ///   card that lands in it will have.
-/// - `ForEach` identity distinguishes tabs, the placeholder, and the panel, so a
+/// - `ForEach` identity distinguishes cards, the placeholder, and the panel, so a
 ///   focus change, a resize, a neighbour arriving, or the drop itself updates a
 ///   card's host rather than remounting it. A remounted host would hand a live
-///   `WKWebView` to a second superview.
+///   `WKWebView` to a second superview. A card is its member's tab, except that
+///   a lone card stays the same card when another tab is shown alone
+///   (`BrowserSplitCardIdentities`), so a tab switch swaps the page in its host.
 /// - A card carried out of the row on the pointer is *not* a fourth kind of
 ///   slot. It is still its own member, at whichever position the gap has reached,
 ///   and it simply stops drawing. That is what lets a whole reorder happen with
@@ -41,6 +43,17 @@ import SwiftUI
 /// below belongs to a column opening or closing, not to pointer tracking, which
 /// has to land on the frame it was measured for.
 struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>: View where Member.ID == UUID {
+    // MARK: - Types
+
+    /// One slot of the row under the identity its column keeps.
+    private struct Column: Identifiable {
+        let index: Int
+        let slot: BrowserSplitColumnSlot<Member>
+        let id: BrowserSplitColumnSlotID
+    }
+
+    // MARK: - Variables
+
     /// The presented cards, in session member order.
     let members: [Member]
     /// The one card browser chrome speaks for.
@@ -71,24 +84,35 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
 
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
+    @Environment(\.browserSplitLoneCardTopSection) private var loneCardTopSection
     @Environment(\.browserSplitInterCardGap) private var interCardGap
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
+    @State private var cardIdentities = BrowserSplitCardIdentities()
 
     private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
+        let cards = cardIdentities.cards(for: members.map(\.id))
         GeometryReader { proxy in
-            columns(containerWidth: proxy.size.width)
+            columns(containerWidth: proxy.size.width, cards: cards)
         }
-        .padding(frameInsets)
-        // Keyed on the slot list rather than on membership alone, so the drop
-        // column opening, moving between gaps, and closing again all settle
-        // with the same motion a member joining or leaving does.
+        .padding(rowInsets)
+        // A card joining, leaving or moving settles with the row's motion; a
+        // tab switch, which shows another page alone or trades a lone page for
+        // cards it shares nothing with, lands at once, as it does outside a
+        // split.
+        .animation(
+            cardIdentities.settles ? CrestMotion.collection.unlessReducingMotion(reduceMotion) : nil,
+            value: members.map { cards[$0.id] ?? $0.id }
+        )
+        // The drop column opening, moving between gaps, and closing again, and
+        // the extension panel arriving or leaving, settle with the same motion
+        // a member joining or leaving does.
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),
-            value: slots.map(\.id)
+            value: BrowserSplitAddedColumns(placeholderIndex: resolvedPlaceholderIndex, includesPanel: panel != nil)
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Split View Columns")
@@ -97,11 +121,11 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         }
     }
 
-    private func columns(containerWidth: CGFloat) -> some View {
+    private func columns(containerWidth: CGFloat, cards: [UUID: UUID]) -> some View {
         let widths = slotWidths(containerWidth: containerWidth)
         let memberWidth = memberContainerWidth(containerWidth: containerWidth)
         return ZStack(alignment: .leading) {
-            cardRow(widths: widths)
+            cardRow(widths: widths, cards: cards)
             dividers(cardWidths: widths, containerWidth: memberWidth)
             if panel != nil, resolvedPlaceholderIndex == nil, liftedTabID == nil,
                 let panelWidth = widths.last, panelWidth > 0
@@ -112,15 +136,24 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         .coordinateSpace(BrowserSplitResizeSpace.coordinateSpace)
     }
 
-    private func cardRow(widths: [CGFloat]) -> some View {
+    private func cardRow(widths: [CGFloat], cards: [UUID: UUID]) -> some View {
         HStack(spacing: interCardGap) {
-            ForEach(Array(slots.enumerated()), id: \.element.id) { column in
+            ForEach(columns(cards: cards)) { column in
                 columnSlot(
-                    column.element,
-                    width: width(at: column.offset, in: widths)
+                    column.slot,
+                    width: width(at: column.index, in: widths)
                 )
-                .zIndex(cardZIndex(for: column.element))
+                .zIndex(cardZIndex(for: column.slot))
             }
+        }
+    }
+
+    /// The row's slots, each under the identity its column keeps: a member's
+    /// card, the placeholder or the panel.
+    private func columns(cards: [UUID: UUID]) -> [Column] {
+        slots.enumerated().map { index, slot -> Column in
+            guard case .member(let member) = slot else { return Column(index: index, slot: slot, id: slot.id) }
+            return Column(index: index, slot: slot, id: .member(cards[member.id] ?? member.id))
         }
     }
 
@@ -296,6 +329,16 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         return Array(0..<(members.count - 1))
     }
 
+    /// The page insets the row sits inside, taller at the top for a lone card
+    /// while the window's top section holds its address bar above it; a
+    /// split's cards carry bars of their own and keep the frame's inset.
+    private var rowInsets: EdgeInsets {
+        guard members.count == 1 else { return frameInsets }
+        var insets = frameInsets
+        insets.top = max(insets.top, loneCardTopSection)
+        return insets
+    }
+
     private var slots: [BrowserSplitColumnSlot<Member>] {
         BrowserSplitColumnSlot.slots(
             members: members,
@@ -401,6 +444,11 @@ extension BrowserSplitColumnsView where Panel == EmptyView {
 // Default preserves the mobile and embedded split presentation.
 extension EnvironmentValues {
     @Entry var browserSplitUsesBorderlessFrame = false
+    /// How far below the window's top a lone card's row starts while the
+    /// address bar is on top, leaving the window's own address bar room
+    /// above it; zero leaves the row where its frame puts it. A split's cards
+    /// carry bars of their own and stay put.
+    @Entry var browserSplitLoneCardTopSection: CGFloat = 0
     /// The space between cards: wider where a display's fold runs between
     /// them, so neither page reaches into the crease.
     @Entry var browserSplitInterCardGap = BrowserSplitLayoutMetrics.interCardGap

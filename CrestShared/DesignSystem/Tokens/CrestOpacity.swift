@@ -17,6 +17,9 @@ enum CrestOpacity {
     /// The edge a selected row's dark glass wears over a dark sidebar.
     static let darkSelectionBorder = 0.18
     static let disabled = 0.5
+    /// Chrome that belongs to a part of the window without focus but stays
+    /// usable, such as the bar of a split card another card has focus over.
+    static let unfocusedChrome = 0.5
     /// Disabled chrome glyphs remain visible against both page and sidebar glass.
     static let controlDisabledForeground = 0.48
     static let controlShadow = 0.16

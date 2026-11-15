@@ -55,9 +55,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // The window's chrome belongs to the window, not to the chrome a
             // fullscreen page hides: taking it down would restore the window's
             // style while AppKit is carrying it into fullscreen.
+            // With the address bar on top the buttons stay at the window's top
+            // left in every sidebar state, over the window's address bar or the
+            // leading card's when the sidebar does not hold them.
             BrowserNativeWindowControlsBridge(
-                isVisible: model.sidebarPresentation.showsWindowControls,
-                sidebarOnRight: sidebarOnRight,
+                isVisible: model.sidebarPresentation.showsWindowControls || model.showsPageCardBars,
+                sidebarOnRight: sidebarOnRight && !model.showsPageCardBars,
                 sidebarWidth: model.sidebarWidth
             )
             .frame(maxWidth: .infinity)
@@ -87,7 +90,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     contentInsets: BrowserChromeAppearance.contentInsets(
                         for: rect, in: proxy.size, direction: layoutDirection
-                    )
+                    ),
+                    fieldOrigin: proxy.frame(in: .global).origin
                 )
             }
         }
@@ -98,6 +102,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .environment(model.extensionTileLift)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
+        // The address bar changing place carries the window's field between
+        // the sidebar and the top of the page.
+        .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: model.showsPageCardBars)
         .animation(
             model.sidebarAnimation(
                 model.isSidebarApproachingDock
@@ -175,6 +182,14 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 sidebarSurface
             } controls: {
                 shellControls
+            }
+            // Over the page and the sidebar alike, so the field it shares with
+            // the sidebar is never hidden under either while it moves between
+            // them.
+            .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
+                BrowserWindowAddressBarLayer(
+                    model: model, transientBrowsing: transientBrowsing, page: anchor,
+                    commandSurfaceNamespace: commandSurfaceNamespace)
             }
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
@@ -280,14 +295,35 @@ private struct BrowserRootFullscreenContent<Content: View, Sidebar: View, Contro
 }
 
 private struct BrowserRootPermissionObserver: ViewModifier {
+    // MARK: - Types
+
+    /// The active page's waiting request, and whether the sidebar's field is
+    /// where it asks.
+    private struct Prompt: Equatable {
+        let requestID: UUID?
+        let asksInSidebar: Bool
+    }
+
+    // MARK: - Variables
+
     let model: BrowserRootModel
     let reduceMotion: Bool
 
+    /// A page card's bar asks on its own card, as a split's cards always do,
+    /// so the sidebar comes out only while its field is where the request
+    /// asks: when a request arrives there, or when a request still waiting
+    /// moves there, as the address bar returns to the sidebar or a split ends.
     func body(content: Content) -> some View {
-        content.onChange(of: model.pages.activePage?.sitePermissionRequests.current?.id) {
-            if model.pages.activePage?.sitePermissionRequests.current != nil {
+        content.onChange(of: prompt) { _, prompt in
+            if prompt.requestID != nil, prompt.asksInSidebar {
                 model.presentFloatingSidebar(reduceMotion: reduceMotion)
             }
         }
+    }
+
+    private var prompt: Prompt {
+        Prompt(
+            requestID: model.pages.activePage?.sitePermissionRequests.current?.id,
+            asksInSidebar: !model.showsPageCardBars && !model.presentsSplitBars)
     }
 }

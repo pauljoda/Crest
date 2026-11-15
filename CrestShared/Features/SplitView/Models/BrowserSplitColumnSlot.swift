@@ -63,3 +63,10 @@ enum BrowserSplitColumnSlotID: Hashable {
     case placeholder
     case panel
 }
+
+/// The columns a row lays out beside its members: the drop column a drag has
+/// opened, where it stands, and the extension panel.
+struct BrowserSplitAddedColumns: Equatable {
+    let placeholderIndex: Int?
+    let includesPanel: Bool
+}

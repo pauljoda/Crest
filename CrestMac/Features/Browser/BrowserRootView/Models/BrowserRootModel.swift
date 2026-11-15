@@ -101,6 +101,9 @@ final class BrowserRootModel {
     /// This window's extension side panel, if one is open. Transient by
     /// construction: nothing about it reaches the session, disk or sync.
     let extensionSidePanel = BrowserExtensionSidePanelHost()
+    /// Where each page card's address field lies, while the address bar is
+    /// on top, for the palette to drop out of.
+    let pageBarFieldFrames = BrowserPageBarFieldFrames()
 
     init(
         browser: BrowserStore,
@@ -635,11 +638,12 @@ extension BrowserRootModel {
     }
 
     /// Which side of the field-to-palette morph holds the shared identity. The
-    /// field is on screen whenever the sidebar is, docked or floating.
+    /// sidebar's field is on screen whenever the sidebar is, docked or
+    /// floating, unless the address bar is on top and the sidebar has none.
     func commandPaletteHandoff(reduceMotion: Bool) -> BrowserCommandPaletteHandoff {
         .resolve(
             isPaletteShown: isCommandPaletteShown,
-            isFieldOnScreen: sidebarPresentation.showsSidebar,
+            isFieldOnScreen: showsPageCardBars ? showsWindowTopBar : sidebarPresentation.showsSidebar,
             animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
         )
     }

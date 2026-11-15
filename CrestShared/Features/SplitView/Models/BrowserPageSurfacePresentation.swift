@@ -50,19 +50,26 @@ enum BrowserPageSurfacePresentation {
     ///     width change.
     ///   - resolvedTarget: Where the lift in flight would land. Only a
     ///     `.splitInsert` aimed at this very Space opens a slot in this row.
+    ///   - presentsCardsInRow: Whether even a lone card is drawn in the row,
+    ///     as the Mac draws it: a card that joins or leaves is then only a
+    ///     width change, and the cards resize into place instead of the page
+    ///     moving to another host.
     init(
         space: SpaceModel?,
         isLocked: Bool,
         cards: [TabStateModel],
         hasEnteredSplitContent: Bool,
         resolvedTarget: BrowserSidebarReorderTarget?,
-        presentsTrailingPanel: Bool = false
+        presentsTrailingPanel: Bool = false,
+        presentsCardsInRow: Bool = false
     ) {
         guard let space, !isLocked else {
             self = .unavailable
             return
         }
-        guard !cards.isEmpty, cards.count > 1 || hasEnteredSplitContent || presentsTrailingPanel else {
+        guard !cards.isEmpty,
+            cards.count > 1 || hasEnteredSplitContent || presentsTrailingPanel || presentsCardsInRow
+        else {
             self = .single(space: space, cardTabID: cards.first?.id)
             return
         }

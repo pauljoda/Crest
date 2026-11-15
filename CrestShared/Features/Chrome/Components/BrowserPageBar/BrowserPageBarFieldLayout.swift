@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// Lays out a Quick Window's address field and the pinned extensions after it
+/// Lays out a page bar's address field and the pinned extensions after it
 /// in the width the toolbar leaves them: the extensions are offered what the
 /// field leaves beyond `widthBeforeExtensions`, showing as many as fit, and
-/// the field takes the rest. Without extensions the field takes it all, and it
-/// is never narrower than `fieldMinimumWidth`.
-struct BrowserQuickWindowFieldLayout: Layout {
+/// the field takes the rest. Without extensions the field takes it all.
+///
+/// The field keeps `fieldMinimumWidth` while the bar has room for it, and
+/// gives way below it in a bar too narrow for its controls, such as a split's
+/// leading card at its narrowest beside the window's buttons, rather than push
+/// the bar past its edges.
+struct BrowserPageBarFieldLayout: Layout {
     // MARK: - Variables
 
     let fieldMinimumWidth: CGFloat
@@ -20,11 +24,11 @@ struct BrowserQuickWindowFieldLayout: Layout {
             let extensions = subviews.dropFirst().first?.sizeThatFits(.unspecified).width ?? 0
             return CGSize(width: widthBeforeExtensions + (extensions > 0 ? spacing + extensions : 0), height: height)
         }
-        // Never narrower than the field's minimum and the extensions' own,
-        // the overflow button alone, beside it.
+        // The field's minimum and the extensions' own, the overflow button
+        // alone, beside it, as far as the bar has the room.
         let extensions = subviews.dropFirst().first?.sizeThatFits(ProposedViewSize(width: 0, height: nil)).width ?? 0
         let minimum = fieldMinimumWidth + (extensions > 0 ? spacing + extensions : 0)
-        return CGSize(width: max(width, minimum), height: proposal.height ?? height)
+        return CGSize(width: width > 0 ? width : minimum, height: proposal.height ?? height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {

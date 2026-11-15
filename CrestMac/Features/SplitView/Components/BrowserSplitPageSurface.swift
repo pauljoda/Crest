@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The macOS content area when it is presenting more than one card.
+/// The macOS content area presenting its cards: a lone page, or several side
+/// by side.
 ///
 /// This is the split half of `BrowserRootPageSurface`'s branch: it composes the
 /// shared columns layout with macOS cards and re-establishes, at row level, the
@@ -36,11 +37,15 @@ struct BrowserSplitPageSurface: View {
     let tabPromotionNamespace: Namespace.ID
     /// The chords the window's commands show in a Start Page card's palette.
     let shortcuts: BrowserShortcutStore?
+    /// Whether a lone card stands below the window's top section, as it does
+    /// with the address bar on top.
+    var bandsLoneCard = false
 
     /// The core's app preference; an unbound preview store keeps click-to-focus.
     private var appPreferences: BrowserAppPreferenceStore { .shared }
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.browserMacWindows) private var windows
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var cardFrames = BrowserSplitCardFrameRegistry()
     /// Where the card-frame space begins in the window, so a pointer measured in
     /// one can be drawn in the other.
@@ -75,7 +80,7 @@ struct BrowserSplitPageSurface: View {
             onResizeCommit: { if isSelectedSpace { model.commitSplitColumnFractions($0) } },
             onFocus: { if isSelectedSpace { model.focusSplitCard($0) } },
             usesTransparentInnerSurface: usesTransparentInnerSurface,
-            content: { member, _ in
+            content: { member, isFocused in
                 BrowserSplitCardView(
                     tab: member,
                     space: space,
@@ -91,7 +96,14 @@ struct BrowserSplitPageSurface: View {
                         windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts),
                     cardFrames: cardFrames,
                     focusesOnHover: { focusesOnHover(member.id) },
-                    onFocusRequest: { if isSelectedSpace { model.focusSplitCard(member.id) } }
+                    onFocusRequest: { if isSelectedSpace { model.focusSplitCard(member.id) } },
+                    // A split's cards carry their own bars in either
+                    // placement, as a Quick Window does; a lone card's address
+                    // bar is the window's.
+                    cardBar: displayMembers.count > 1
+                        ? model.pageCardBarContext(reduceMotion: reduceMotion, layoutDirection: layoutDirection) : nil,
+                    isFocused: isFocused,
+                    isLeadingCard: member.id == displayMembers.first?.id
                 )
             },
             panel: isSelectedSpace && model.extensionSidePanel.panel != nil
@@ -112,6 +124,9 @@ struct BrowserSplitPageSurface: View {
             }
         )
         .environment(\.browserSplitUsesBorderlessFrame, BrowserDeviceAppearanceStore.shared.isBorderless)
+        // A lone card moves down below the window's top section, where the
+        // window's own address bar rests.
+        .environment(\.browserSplitLoneCardTopSection, bandsLoneCard ? BrowserPageBarMetrics.topSectionHeight : 0)
         .background {
             if isSelectedSpace {
                 BrowserSplitCardPointerMonitor(
@@ -134,9 +149,12 @@ struct BrowserSplitPageSurface: View {
                 model.chrome.handleWebContentInteraction()
             }
         )
-        .onChange(of: members.map(\.id), initial: true) { _, identifiers in
+        .onChange(of: members.map(\.id), initial: true) { previous, identifiers in
             guard isSelectedSpace else { return }
-            model.seedSplitColumnFractions()
+            // Another tab shown alone is a tab switch, with no split to lay out.
+            if previous.count > 1 || identifiers.count > 1 || previous == identifiers {
+                model.seedSplitColumnFractions()
+            }
             // A card that left the row — a sync, another window, a closed tab —
             // is a card with nothing to drop onto and no slot to be put back in.
             if let carried = model.splitCardLift.lift?.tabID,

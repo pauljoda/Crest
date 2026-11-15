@@ -5521,6 +5521,22 @@
     "command-w-closes-selection": {
       "category": "fixed",
       "message": "On Mac, Command-W closes every tab you selected in the sidebar again, and Command-D duplicates them, instead of acting on the tab on screen."
+    },
+    "address-bar-on-top": {
+      "category": "new",
+      "message": "On Mac, you can put the address bar on top: choose Top under Address bar in Settings › Appearance, and the address field with back, forward and reload moves above the page."
+    },
+    "split-view-card-bars": {
+      "category": "new",
+      "message": "On Mac, each page in Split View carries its own bar with back, forward, its address, Site Controls and pinned extensions, wherever the address bar is."
+    },
+    "split-view-resizes-into-place": {
+      "category": "improved",
+      "message": "On Mac, pages slide and resize into place as they join or leave Split View instead of jumping."
+    },
+    "folder-menu-button-clears-name": {
+      "category": "fixed",
+      "message": "On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button."
     }
   }
 }

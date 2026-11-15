@@ -48,6 +48,14 @@ struct BrowserSplitCardView: View {
     let focusesOnHover: @MainActor @Sendable () -> Bool
     /// This card's request to become the focused one.
     let onFocusRequest: @MainActor @Sendable () -> Void
+    /// The window's part of the bar this card carries while the address bar
+    /// is on top, or nil while it is in the sidebar.
+    var cardBar: BrowserPageCardBarContext? = nil
+    /// Whether this card is the focused one, which its bar draws at full
+    /// strength.
+    var isFocused = false
+    /// Whether this card comes first in reading order.
+    var isLeadingCard = false
 
     private var isSelectedSpace: Bool {
         browser.selectedSpaceID == space.id && !spaceAccess.isLocked(space)
@@ -55,19 +63,28 @@ struct BrowserSplitCardView: View {
 
     var body: some View {
         let page = presentedPage
-        BrowserDetailContent(
-            page: page,
-            tab: tab,
-            space: space,
-            pagePresentation: .of(tab.surface, page: page),
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess,
-            tabPromotionNamespace: tabPromotionNamespace,
-            startPageFocusRequest: startPageFocusRequest,
-            isCommandPalettePresented: isCommandPalettePresented,
-            commands: commands
-        )
+        VStack(spacing: 0) {
+            if let cardBar {
+                BrowserPageCardBar(
+                    page: page, tab: tab, space: space, browser: browser, pages: pages, context: cardBar,
+                    isFocused: isFocused, isLeadingCard: isLeadingCard
+                )
+                .transition(BrowserPageCardBar.transition)
+            }
+            BrowserDetailContent(
+                page: page,
+                tab: tab,
+                space: space,
+                pagePresentation: .of(tab.surface, page: page),
+                browser: browser,
+                pages: pages,
+                spaceAccess: spaceAccess,
+                tabPromotionNamespace: tabPromotionNamespace,
+                startPageFocusRequest: startPageFocusRequest,
+                isCommandPalettePresented: isCommandPalettePresented,
+                commands: commands
+            )
+        }
         .overlay {
             BrowserSplitCardHoverTracker { isHovering in
                 guard isSelectedSpace, isHovering, focusesOnHover() else { return }
@@ -78,6 +95,11 @@ struct BrowserSplitCardView: View {
             proxy.frame(in: BrowserSplitCardFrameRegistry.coordinateSpace)
         } action: { frame in
             cardFrames.register(frame, for: tab.id)
+        }
+        // A lone card shows another tab where it stands, at the same frame,
+        // so its entry follows the tab rather than waiting for the geometry.
+        .onChange(of: tab.id) { oldTabID, newTabID in
+            cardFrames.moveFrame(from: oldTabID, to: newTabID)
         }
         .onDisappear {
             cardFrames.removeFrame(for: tab.id)

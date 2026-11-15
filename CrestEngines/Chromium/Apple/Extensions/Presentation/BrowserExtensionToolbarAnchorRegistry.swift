@@ -11,6 +11,10 @@ import AppKit
 ///
 /// Registrations are per window and weakly held: a control that leaves the view
 /// hierarchy stops being an answer, and the registry never keeps one alive.
+/// Where a window shows the same control more than once, as a split's card bars
+/// do, the strongest standing answers (`BrowserExtensionAnchorStanding`), read
+/// at the moment of asking, so focus moving between cards needs no
+/// re-registration.
 @MainActor
 enum BrowserExtensionToolbarAnchorRegistry {
     enum Site: Hashable {
@@ -21,19 +25,19 @@ enum BrowserExtensionToolbarAnchorRegistry {
     }
 
     private final class Entry {
-        weak var view: NSView?
-        init(_ view: NSView) { self.view = view }
+        weak var view: BrowserExtensionPopupAnchorView?
+        init(_ view: BrowserExtensionPopupAnchorView) { self.view = view }
     }
 
     private static var entries: [Site: [Entry]] = [:]
 
-    static func register(_ view: NSView, as site: Site) {
+    static func register(_ view: BrowserExtensionPopupAnchorView, as site: Site) {
         var sited = entries[site, default: []].filter { $0.view != nil && $0.view !== view }
         sited.append(Entry(view))
         entries[site] = sited
     }
 
-    static func unregister(_ view: NSView, as site: Site) {
+    static func unregister(_ view: BrowserExtensionPopupAnchorView, as site: Site) {
         let sited = entries[site, default: []].filter { $0.view != nil && $0.view !== view }
         entries[site] = sited.isEmpty ? nil : sited
     }
@@ -53,9 +57,16 @@ enum BrowserExtensionToolbarAnchorRegistry {
         return view.map(BrowserExtensionPopupAnchor.init(sourceView:))
     }
 
+    /// The strongest of the window's controls for `site` on show, and of
+    /// those equally strong, the one that appeared first.
     private static func resolve(_ site: Site, in window: NSWindow) -> NSView? {
-        entries[site]?.lazy.compactMap(\.view).first {
+        let shown = (entries[site] ?? []).compactMap(\.view).filter {
             $0.window === window && !$0.isHiddenOrHasHiddenAncestor
         }
+        var strongest: BrowserExtensionPopupAnchorView?
+        for view in shown where strongest.map({ view.standing > $0.standing }) ?? true {
+            strongest = view
+        }
+        return strongest
     }
 }
