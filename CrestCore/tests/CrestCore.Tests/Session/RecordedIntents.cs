@@ -17,10 +17,14 @@ internal sealed class TestClock(DateTimeOffset now) : IClock {
 }
 
 /// The identities a test supplied, in order, and fresh ones once they run out.
+/// While `Failure` is set, asking for one throws it, as a step that breaks
+/// partway through an edit would.
 internal sealed class TestIds : IIdSource {
     #region Variables
 
     private readonly Queue<Guid> supplied = [];
+
+    public Exception? Failure { get; set; }
 
     #endregion
 
@@ -30,7 +34,7 @@ internal sealed class TestIds : IIdSource {
         foreach (var id in ids) supplied.Enqueue(id);
     }
 
-    public Guid Next() => supplied.TryDequeue(out var id) ? id : Guid.NewGuid();
+    public Guid Next() => Failure is { } failure ? throw failure : supplied.TryDequeue(out var id) ? id : Guid.NewGuid();
 
     #endregion
 }

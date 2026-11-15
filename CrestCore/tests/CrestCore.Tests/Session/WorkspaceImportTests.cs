@@ -106,6 +106,28 @@ public sealed partial class BrowserContractsTests {
             device.Authority.Current.DisposableSeedMarker));
     }
 
+    /// An import whose work breaks on what it brings is refused, naming what
+    /// broke and where but nothing it brings, and changes nothing, so the app
+    /// shows the refusal rather than quitting. A reviewed import and its
+    /// preview do the same work.
+    [Fact]
+    public void AnImportThatBreaksOnWhatItBringsIsRefusedAndChangesNothing() {
+        var session = SavedSession().Document["session"]!;
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var before = device.Authority.Current;
+        // The file holds this session's own Space, whose records take new identities, and drawing one breaks.
+        device.Ids.Failure = new InvalidOperationException("https://private.example/");
+
+        var refusal = Assert.IsType<UnpreparedImport>(Assert.Throws<Rejected>(() =>
+            device.Send(new ImportSpaces(device.Workspace, window, ReadSpaces(session["spaces"]![0]!)))).Rejection);
+
+        Assert.StartsWith($"{nameof(InvalidOperationException)} < ", refusal.Cause);
+        Assert.Contains($"{nameof(NativeWorkspaceImport)}.", refusal.Cause);
+        Assert.DoesNotContain("private.example", refusal.Cause);
+        Assert.Same(before, device.Authority.Current);
+    }
+
     /// Spaces that shared one session where they came from come in as one
     /// group: the first brought leads, a Sub-Space leaves the pinned tabs the
     /// primary holds to it and keeps its own as saved tabs, and one the review

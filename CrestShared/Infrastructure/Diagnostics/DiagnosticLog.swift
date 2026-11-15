@@ -8,6 +8,9 @@ import os
 struct DiagnosticLog: Sendable {
     // MARK: - Static Variables
 
+    /// Why the core refused to preview or apply an import from another
+    /// browser.
+    static let imports = DiagnosticLog(category: "Import")
     static let links = DiagnosticLog(category: "Links")
     /// Which pages each window shows, the engine told to show or hide a page,
     /// Picture in Picture and what memory pressure takes back. Pages are named

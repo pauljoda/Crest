@@ -11,17 +11,23 @@ public sealed partial class NativeSessionAuthority {
     /// every record takes the identity sync needs and the issuing window shows
     /// what the import brought. Unless the import is only `previewed`, no Space
     /// it changes may be locked; a locked Space it leaves as it was never
-    /// refuses it.
+    /// refuses it. An import works on Spaces read from outside Crest and
+    /// changes nothing until it returns, so a step that breaks on them refuses
+    /// it with `UnpreparedImport` rather than failing the app.
     internal SessionEdit Importing(SessionState basis, ImportWorkspace intent, IReadOnlyList<SpaceState> spaces, bool previewed,
         DateTimeOffset now, IIdSource ids, Action<NativeWorkspaceImport> apply) {
         if (!workspaceKind.KeepsAppPreferences) throw new Rejected(new PersistentWorkspaceRequired(workspaceId));
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId));
-        var import = new NativeWorkspaceImport(basis, spaces);
-        apply(import);
-        if (!previewed && import.Changed.FirstOrDefault(IsLockedUnderGate) is { } locked) throw new Rejected(new SpaceLocked(locked.Id));
-        var result = import.Finish(now, ids, followUp);
-        return new(result.Session, SyncStaging.Import, followUp,
-            new SessionTabEvents(result.Copied, Favicon: null, Imported: result.Imported));
+        try {
+            var import = new NativeWorkspaceImport(basis, spaces);
+            apply(import);
+            if (!previewed && import.Changed.FirstOrDefault(IsLockedUnderGate) is { } locked) throw new Rejected(new SpaceLocked(locked.Id));
+            var result = import.Finish(now, ids, followUp);
+            return new(result.Session, SyncStaging.Import, followUp,
+                new SessionTabEvents(result.Copied, Favicon: null, Imported: result.Imported));
+        } catch (Exception error) when (error is not Rejected) {
+            throw new Rejected(UnpreparedImport.Of(error));
+        }
     }
 
     /// The session `intent` would leave, at `now`, and where the tabs it would

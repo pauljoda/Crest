@@ -49,8 +49,10 @@ final class BrowserOnboardingFlow {
     /// another Space changes no choice, so moving through the review builds
     /// nothing again.
     @ObservationIgnored private var reviewCache: (choices: [SetupReviewSpace], spaces: [BrowserImportSpaceReview])?
-    /// The session the review would leave, until its choices change.
-    @ObservationIgnored private var previewCache: (choices: [SetupReviewSpace], session: BrowserSessionPreview?)?
+    /// The session the review would leave, or the rule that refused it, until
+    /// its choices change.
+    @ObservationIgnored private var previewCache:
+        (choices: [SetupReviewSpace], outcome: Result<BrowserSessionPreview, Rejection>)?
     @ObservationIgnored private var operationGeneration = 0
 
     /// Setup as the core holds it, or nil before it opens.
@@ -463,23 +465,38 @@ final class BrowserOnboardingFlow {
         BrowserImportReviewAnalysis(review)
     }
 
-    /// The session the review would leave. The core answers once each time
-    /// the review's choices change.
-    private func reviewPreview() -> BrowserSessionPreview? {
-        guard let review else { return nil }
-        if let previewCache, previewCache.choices == review.spaces { return previewCache.session }
-        let session = try? browser.reviewedImportPreview()
-        previewCache = (review.spaces, session)
-        return session
+    /// The session the review would leave, or the rule that refused it. The
+    /// core answers once each time the review's choices change, and a review
+    /// that brings no Space has nothing to preview.
+    private func reviewPreview() -> Result<BrowserSessionPreview, Rejection>? {
+        guard let review, review.hasIncludedSpaces else { return nil }
+        if let previewCache, previewCache.choices == review.spaces { return previewCache.outcome }
+        let outcome: Result<BrowserSessionPreview, Rejection>
+        do {
+            outcome = .success(try browser.reviewedImportPreview())
+        } catch {
+            outcome = .failure(error)
+            Self.logRefusal(error, of: "preview", review)
+        }
+        previewCache = (review.spaces, outcome)
+        return outcome
+    }
+
+    /// Why the core can't build the session the review would leave, when it
+    /// can't. The review then says so and offers Back and Skip, since the
+    /// import would be refused alike.
+    var previewRefusal: Rejection? {
+        guard case .failure(let refusal) = reviewPreview() else { return nil }
+        return refusal
     }
 
     /// The images the tabs of the session the review would leave wear.
     var previewFavicons: FaviconAssets {
-        reviewPreview()?.favicons ?? FaviconAssets()
+        (try? reviewPreview()?.get())?.favicons ?? FaviconAssets()
     }
 
     func previewDestinationSpace(for review: BrowserImportSpaceReview) -> SpaceModel? {
-        reviewPreview()?.space(id: review.destination.spaceID ?? review.id)
+        (try? reviewPreview()?.get())?.space(id: review.destination.spaceID ?? review.id)
     }
 
     func customizationPreviewSpace(_ spaceID: UUID) -> SpaceModel? {
@@ -585,12 +602,14 @@ final class BrowserOnboardingFlow {
                         passwordCount: passwords.importedCount, unsavedPasswordCount: passwords.unsavedCount))
                 readCurrentSource()
             case .failure(let error):
+                Self.logRefusal(error, of: "import", review)
                 send(FailImport(source: review.source, reason: .import, detail: error.personFacingDescription))
             }
         } catch is CancellationError {
             return
         } catch {
             guard operationGeneration == generation else { return }
+            Self.logRefusal(error, of: "import", review)
             send(FailImport(source: review.source, reason: .import, detail: error.personFacingDescription))
         }
     }
@@ -609,6 +628,18 @@ final class BrowserOnboardingFlow {
         self.pendingResetRequest = nil
         applyReset(for: pendingResetRequest)
         return true
+    }
+
+    // MARK: - Actions - Logging
+
+    /// Writes why `step` of importing `review` failed to Crest's log: the
+    /// rule that refused it, and for an import the core couldn't work out, the
+    /// exception and methods it names, which hold nothing the browser's data
+    /// holds.
+    private static func logRefusal(_ error: any Error, of step: String, _ review: SetupImportReview) {
+        var message = "Crest couldn’t \(step) the \(review.title) import: \(DiagnosticLog.describe(error))"
+        if case .unpreparedImport(let refusal) = error as? Rejection { message += " (\(refusal.cause))" }
+        DiagnosticLog.imports.error(message)
     }
 
     // MARK: - Actions - Sending

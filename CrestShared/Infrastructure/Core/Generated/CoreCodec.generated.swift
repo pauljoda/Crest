@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xcf, 0xe0, 0xc5, 0x2c, 0xde, 0x94, 0x78, 0xbe, 0x0e, 0xdc, 0xdf, 0xc1, 0x67, 0xa7, 0x65, 0xea, 0x39, 0x39, 0xc8, 0xaa, 0x4c, 0x12, 0xcb, 0x3b, 0xcb, 0xf2, 0x40, 0xfc, 0x04, 0x65, 0x79, 0x3f
+        0xd1, 0x43, 0xdb, 0xde, 0x57, 0x95, 0xa5, 0xe2, 0x3d, 0x6f, 0xab, 0x90, 0xc0, 0x82, 0x7e, 0xda, 0xf9, 0xb7, 0x79, 0x85, 0x94, 0xf8, 0x7a, 0x46, 0x52, 0x77, 0xe7, 0x40, 0xec, 0x17, 0x43, 0x32
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -994,16 +994,17 @@ extension Rejection {
         case 166: self = .unknownSplitGroup(try UnknownSplitGroup(from: &reader))
         case 167: self = .unknownTab(try UnknownTab(from: &reader))
         case 168: self = .unknownWorkspace(try UnknownWorkspace(from: &reader))
-        case 169: self = .unregisteredEngine(try UnregisteredEngine(from: &reader))
-        case 170: self = .unrelatedWorkspaces(try UnrelatedWorkspaces(from: &reader))
-        case 171: self = .unsavedWorkspace(try UnsavedWorkspace(from: &reader))
-        case 172: self = .unsuitableDefaultSearch(try UnsuitableDefaultSearch(from: &reader))
-        case 173: self = .unsupportedAddress(try UnsupportedAddress(from: &reader))
-        case 174: self = .unsupportedArchiveVersion(try UnsupportedArchiveVersion(from: &reader))
-        case 175: self = .webPagesOnly(try WebPagesOnly(from: &reader))
-        case 176: self = .windowNotOpen(try WindowNotOpen(from: &reader))
-        case 177: self = .workspaceBusy(try WorkspaceBusy(from: &reader))
-        case 178: self = .wrongDeletionOperation(try WrongDeletionOperation(from: &reader))
+        case 169: self = .unpreparedImport(try UnpreparedImport(from: &reader))
+        case 170: self = .unregisteredEngine(try UnregisteredEngine(from: &reader))
+        case 171: self = .unrelatedWorkspaces(try UnrelatedWorkspaces(from: &reader))
+        case 172: self = .unsavedWorkspace(try UnsavedWorkspace(from: &reader))
+        case 173: self = .unsuitableDefaultSearch(try UnsuitableDefaultSearch(from: &reader))
+        case 174: self = .unsupportedAddress(try UnsupportedAddress(from: &reader))
+        case 175: self = .unsupportedArchiveVersion(try UnsupportedArchiveVersion(from: &reader))
+        case 176: self = .webPagesOnly(try WebPagesOnly(from: &reader))
+        case 177: self = .windowNotOpen(try WindowNotOpen(from: &reader))
+        case 178: self = .workspaceBusy(try WorkspaceBusy(from: &reader))
+        case 179: self = .wrongDeletionOperation(try WrongDeletionOperation(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -1517,35 +1518,38 @@ extension Rejection {
         case .unknownWorkspace(let value):
             writer.writeTag(168)
             value.encode(into: &writer)
-        case .unregisteredEngine(let value):
+        case .unpreparedImport(let value):
             writer.writeTag(169)
             value.encode(into: &writer)
-        case .unrelatedWorkspaces(let value):
+        case .unregisteredEngine(let value):
             writer.writeTag(170)
             value.encode(into: &writer)
-        case .unsavedWorkspace(let value):
+        case .unrelatedWorkspaces(let value):
             writer.writeTag(171)
             value.encode(into: &writer)
-        case .unsuitableDefaultSearch(let value):
+        case .unsavedWorkspace(let value):
             writer.writeTag(172)
             value.encode(into: &writer)
-        case .unsupportedAddress(let value):
+        case .unsuitableDefaultSearch(let value):
             writer.writeTag(173)
             value.encode(into: &writer)
-        case .unsupportedArchiveVersion(let value):
+        case .unsupportedAddress(let value):
             writer.writeTag(174)
             value.encode(into: &writer)
-        case .webPagesOnly(let value):
+        case .unsupportedArchiveVersion(let value):
             writer.writeTag(175)
             value.encode(into: &writer)
-        case .windowNotOpen(let value):
+        case .webPagesOnly(let value):
             writer.writeTag(176)
             value.encode(into: &writer)
-        case .workspaceBusy(let value):
+        case .windowNotOpen(let value):
             writer.writeTag(177)
             value.encode(into: &writer)
-        case .wrongDeletionOperation(let value):
+        case .workspaceBusy(let value):
             writer.writeTag(178)
+            value.encode(into: &writer)
+        case .wrongDeletionOperation(let value):
+            writer.writeTag(179)
             value.encode(into: &writer)
         }
     }
@@ -26585,6 +26589,17 @@ extension UnknownWorkspace {
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(workspaceID)
+    }
+}
+
+extension UnpreparedImport {
+    init(from reader: inout WireReader) throws(WireError) {
+        let cause = try reader.readString()
+        self.init(cause: cause)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(cause)
     }
 }
 

@@ -5497,6 +5497,14 @@
     "deleted-folder-keeps-filed-tab": {
       "category": "fixed",
       "message": "A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs."
+    },
+    "arc-import-damaged-data": {
+      "category": "fixed",
+      "message": "On Mac, Crest no longer quits while it prepares an import from Arc or another browser when some of that browser's data is damaged."
+    },
+    "import-review-shows-errors": {
+      "category": "fixed",
+      "message": "On Mac, when Crest can't prepare an import from another browser, the review now shows an error with Back and Skip instead of quitting."
     }
   }
 }

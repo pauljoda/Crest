@@ -326,6 +326,28 @@ public sealed unsafe class ContractCodecTests {
         Assert.Equal(CoreStatus.LimitExceeded, app.Dispatch(adoption).Status);
     }
 
+    /// The first and last times a date holds cross the wire, though writing
+    /// rounds them a tick past the end, and a later or earlier date the app's
+    /// side holds reads as that end, as a stored date does. An imported tab
+    /// dated that far out reaches the app and comes back with its review.
+    [Fact]
+    public void EveryDateAWriterWritesReadsBack() {
+        static DateTimeOffset Wired(DateTimeOffset date) {
+            var bytes = AppClient.Encode(writer => writer.WriteDate(date));
+            var reader = new WireReader(bytes);
+            var read = reader.ReadDate();
+            reader.EnsureEnd();
+            return read;
+        }
+        var ordinary = new DateTimeOffset(2026, 11, 14, 12, 30, 15, 250, TimeSpan.Zero);
+
+        Assert.Equal(DateTimeOffset.MaxValue, Wired(DateTimeOffset.MaxValue));
+        Assert.Equal(DateTimeOffset.MinValue, Wired(DateTimeOffset.MinValue));
+        Assert.Equal(ordinary, Wired(ordinary));
+        Assert.Equal(DateTimeOffset.MaxValue, new WireReader(BitConverter.GetBytes(1e15)).ReadDate());
+        Assert.Equal(DateTimeOffset.MinValue, new WireReader(BitConverter.GetBytes(-1e15)).ReadDate());
+    }
+
     [Fact]
     public void TheReaderRefusesBytesNoWriterProduces() {
         Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 0x80, 0x00 }).ReadVarint());
