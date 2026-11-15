@@ -1078,6 +1078,8 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
 <script>
 (function(){
   var q=new URLSearchParams(location.search);
+  /* a query value names one of a table's own entries, never an inherited one such as toString */
+  function own(o,k){return k!=null&&Object.prototype.hasOwnProperty.call(o,k)}
   var shot=q.has('shot');
   var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   var still=shot||reduce;
@@ -1332,7 +1334,8 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
   var WIN=[1329,768], SIDEBAR=[1329,768,289];
 
   /* what the page is wearing: one look per style, as the app remembers them, and the style shown */
-  var state={style:{modern:1,simple:1}[q.get('style')]?q.get('style'):'heraldic',looks:{}};
+  var askedStyle=q.get('style');
+  var state={style:askedStyle==='modern'||askedStyle==='simple'?askedStyle:'heraldic',looks:{}};
   function dress(id,pattern){['heraldic','modern','simple'].forEach(function(s){state.looks[s]=lookFor(id,s,{pattern:pattern})})}
   function cur(){return state.looks[state.style]}
   /* the second Space wears another template in the same style */
@@ -1698,8 +1701,9 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
   }
   function setTour(i){
     if(tourStep===i){if(tourDirty){tourDirty=false;drawTour(i)}return}
-    tourStep=i; tourDirty=false;
-    if(phone.matches)placeList(i);
+    var dirty=tourDirty; tourStep=i; tourDirty=false;
+    /* a style change while away from the tour leaves the phone list in the old look */
+    if(phone.matches){if(dirty)drawList();else placeList(i)}
     else{drawTour(i);tourCap.classList.remove('swap'); void tourCap.offsetWidth; tourCap.classList.add('swap')}
     each('#tour-dots i',function(d,k){d.classList.toggle('on',k===i)});
     each('[data-go]',function(b){b.setAttribute('aria-selected',String(Number(b.dataset.go)===i))},tourEl);
@@ -1721,8 +1725,9 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
 
   /* ---------------------------------------------------------- first dress
      a different template, in its banner's background, on each load unless ?crest= pins one */
-  var first=T[q.get('crest')]?q.get('crest'):ORDER[Math.floor(Math.random()*ORDER.length)];
-  dress(first,MODE_NAME[q.get('mode')]?q.get('mode'):(q.get('crest')?'diagonal':CHIP_MODE[first]));
+  var pinned=own(T,q.get('crest'));
+  var first=pinned?q.get('crest'):ORDER[Math.floor(Math.random()*ORDER.length)];
+  dress(first,own(MODE_NAME,q.get('mode'))?q.get('mode'):(pinned?'diagonal':CHIP_MODE[first]));
   if(q.get('scheme')==='light')TW.scheme='light';
   drawBento();
   wear(true); heroLayers[heroOn].classList.add('on');
@@ -1739,6 +1744,8 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
     each('[data-go]',function(b){b.addEventListener('click',function(){
       var i=Number(b.dataset.go), st=stage.offsetHeight, total=tourEl.offsetHeight-st, top=tourEl.getBoundingClientRect().top+scrollY;
       scrollTo({top:top+(i+.5)*(total/n),behavior:reduce?'auto':'smooth'});
+      /* with reduced motion no scroll handler follows the page, so the tab chooses the step itself */
+      if(still)setTour(i);
     })},tourEl);
     if(!still){addEventListener('scroll',update,{passive:true});addEventListener('resize',update);update()}
     else setTour(Number(q.get('step')||0))
