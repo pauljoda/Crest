@@ -5538,6 +5538,10 @@
       "category": "fixed",
       "message": "On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button."
     },
+    "ad-hiding-stays-out-of-page-work": {
+      "category": "improved",
+      "message": "Pages load and run faster with ad blocking on."
+    },
     "password-selection-search": {
       "category": "fixed",
       "message": "On Mac, right-clicking text selected in a password field no longer offers to search for it."

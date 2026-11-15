@@ -4,16 +4,21 @@ import Foundation
 /// documents beyond what the page's engine blocks, so blocked ads leave no
 /// empty boxes. It runs in every document, in Crest's own world, on both
 /// engines. It asks the core as the document starts, for the site's hiding
-/// rules and procedural filters, and again as elements appear: their classes
-/// and ids, for the lists' generic rules, and the frames, images and objects
-/// they load. It applies the answer: style rules, the procedural filters,
-/// re-run as the document changes, and the collapse of elements whose loads
-/// the filter blocks. On Chromium the style rules go into user style sheets,
-/// which the page's scripts can neither read nor override; WebKit has no such
-/// sheet, so there they go into a sheet this world adopts and keeps in place.
-/// Generic rules applied as elements appear, rather than by the engine as a
-/// page first renders, keep sites from mistaking the hiding for a reason to
-/// complain about blocking.
+/// rules and procedural filters. Once the answer says the page blocks, it
+/// surveys the elements already there and those that appear, for as long as
+/// the document lives, and asks again about their classes and ids, for the
+/// lists' generic rules, and the frames, images and objects they load. The
+/// survey never runs inside the page's own work: what changes is queued and
+/// looked at once the page is idle, a few milliseconds at a time, and on a
+/// page that keeps bringing nothing to hide it looks less often. It applies
+/// the answer: style rules, the procedural filters, re-run as the document
+/// changes, and the collapse of elements whose loads the filter blocks. On
+/// Chromium the style rules go into user style sheets, which the page's
+/// scripts can neither read nor override; WebKit has no such sheet, so there
+/// they go into a sheet this world adopts and keeps in place. Generic rules
+/// applied as elements appear, rather than by the engine as a page first
+/// renders, keep sites from mistaking the hiding for a reason to complain
+/// about blocking.
 @MainActor
 enum BrowserCosmeticFilterContentBridge {
     static let messageHandlerName = "crestCosmetics"
@@ -46,13 +51,47 @@ enum BrowserCosmeticFilterContentBridge {
           if (!handler || !/^https?:$/.test(location.protocol)) return;
 
           const maximumNames = 4000, maximumResources = 400, maximumSeen = 20000;
+          // The survey looks at what appears a few milliseconds at a time, and
+          // slows down on a page that keeps asking without anything to hide:
+          // this many asks about names in a row, with nothing hidden for this
+          // long. It looks sooner and gathers its asks for less time while the
+          // page brings things to hide.
+          const sliceBudget = 4, maximumFruitless = 64, fruitlessAfter = 60000;
+          const prompt = { look: 100, gather: 60 }, slowed = { look: 1000, gather: 500 };
+          // Elements that never carry anything the lists hide.
+          const quiet = new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "TEMPLATE", "BR", "HEAD", "TITLE", "BASE"]);
           const kinds = { IFRAME: "frame", FRAME: "frame", IMG: "image", EMBED: "object", OBJECT: "object" };
           const loading = "iframe,frame,img,embed,object";
-          const seenNames = new Set(), seenResources = new Set(), collapsed = new Set();
+          const seenClasses = new Set(), seenIds = new Set(), seenResources = new Set(), collapsed = new Set();
           const pending = { classes: [], ids: [], resources: [] };
           const procedural = [];
-          let stopped = false, first = true, blocking = false;
+          const isTop = globalThis.top === globalThis;
+          let stopped = false, first = true, blocking = false, surveying = false;
           let sendTimer = 0, proceduralTimer = 0, sweepTimer = 0, sheet = null, observer = null, inserted = 0;
+          // The first ask goes again if no answer comes, a couple of times at
+          // most, so one lost answer never leaves the document unfiltered.
+          let firstRetry = 0, firstAsks = 0;
+          // What the survey still has to look at: the observer's batches of
+          // records, the subtrees that appeared, the elements of the current
+          // one, and the elements whose names or sources changed.
+          let batches = [], batchHead = 0, recordHead = 0, nodeHead = 0, roots = [], listed = null, listedHead = 0;
+          const changed = new Set();
+          // Asks about names since something was last hidden, and when that was.
+          let fruitless = 0, lastHidden = performance.now();
+          // The survey's next turn: an idle callback, a frame or a timer.
+          let turn = 0, turnKind = "", fallbackTurn = 0;
+          const idle = globalThis.requestIdleCallback?.bind(globalThis) ?? null;
+          // An element is read through the prototypes: a page's named form
+          // controls shadow a form's own properties, so a form holding an
+          // input named "id" or "getAttribute" would answer with the input.
+          const attribute = Element.prototype.getAttribute;
+          const tagOf = Object.getOwnPropertyDescriptor(Element.prototype, "tagName").get;
+          const parentOf = Object.getOwnPropertyDescriptor(Node.prototype, "parentElement").get;
+          const connected = Object.getOwnPropertyDescriptor(Node.prototype, "isConnected").get;
+          // A subtree's elements are listed once and looked at a slice at a
+          // time. A walk through the live tree would lose its place when the
+          // page replaced part of it between two slices.
+          const selectAll = Element.prototype.querySelectorAll;
           const styleRules = [];
           // Chromium's renderer gives this world alone a way to add user style
           // sheets; WebKit has none.
@@ -63,48 +102,227 @@ enum BrowserCosmeticFilterContentBridge {
           const hide = (element) => { try { element.style.setProperty("display", "none", "important"); } catch (_) {} };
 
           function sourceOf(element) {
-            const value = element.tagName === "OBJECT" ? element.data : (element.currentSrc || element.src);
+            const value = tagOf.call(element) === "OBJECT" ? element.data : (element.currentSrc || element.src);
             return typeof value === "string" && /^https?:/.test(value) ? value : null;
           }
 
           function note(element) {
-            if (seenNames.size < maximumSeen) {
-              if (element.classList) {
-                for (const name of element.classList) {
-                  if (!seenNames.has("." + name)) { seenNames.add("." + name); pending.classes.push(name); }
+            const tag = tagOf.call(element);
+            if (quiet.has(tag)) return;
+            if (seenClasses.size + seenIds.size < maximumSeen) {
+              // The attribute's text, which costs less to read than the class list.
+              const names = attribute.call(element, "class");
+              if (names) {
+                for (const name of names.split(/\s+/)) {
+                  if (name && !seenClasses.has(name)) { seenClasses.add(name); pending.classes.push(name); }
                 }
               }
-              if (element.id && !seenNames.has("#" + element.id)) { seenNames.add("#" + element.id); pending.ids.push(element.id); }
+              const id = attribute.call(element, "id");
+              if (id && !seenIds.has(id)) { seenIds.add(id); pending.ids.push(id); }
             }
-            const kind = kinds[element.tagName];
+            const kind = kinds[tag];
             const url = kind ? sourceOf(element) : null;
             if (!url) return;
-            if (collapsed.has(url)) { hide(element); return; }
+            if (collapsed.has(url)) { hide(element); sawHidden(); return; }
             if (!seenResources.has(kind + " " + url) && seenResources.size < maximumSeen) {
               seenResources.add(kind + " " + url);
               pending.resources.push({ kind, url });
             }
           }
 
-          function scan(root) {
-            if (!root || root.nodeType !== 1) return;
-            note(root);
-            for (const element of root.querySelectorAll("[class],[id]," + loading)) note(element);
+          // An element the page made odd enough to throw is passed over.
+          function look(element) {
+            try { note(element); } catch (_) {}
+          }
+
+          function sawHidden() {
+            fruitless = 0;
+            lastHidden = performance.now();
+          }
+
+          function pace() {
+            return fruitless >= maximumFruitless && performance.now() - lastHidden > fruitlessAfter ? slowed : prompt;
+          }
+
+          // The survey. The page's own work comes first: the observer only
+          // queues what changed, and the elements are looked at once the page
+          // is idle, a few milliseconds at a time, so a page that changes its
+          // document never waits for the survey. Where the engine has no idle
+          // callbacks, the survey runs just after the next frame: a frame
+          // callback of a frame's document runs in the middle of the frame,
+          // after the top document's, which may still be working on it. A page
+          // that has slowed down is looked at a while later.
+          function wake() {
+            if (turn || !surveying) return;
+            if (pace() === slowed) {
+              turnKind = "timer";
+              turn = setTimeout(() => { turn = 0; begin(); }, slowed.look);
+            } else {
+              begin();
+            }
+          }
+
+          function begin() {
+            if (!surveying) return;
+            if (idle) {
+              turnKind = "idle";
+              turn = idle(survey, { timeout: prompt.look });
+            } else if (document.visibilityState === "hidden") {
+              turnKind = "timer";
+              turn = setTimeout(survey, 200);
+            } else {
+              turnKind = "frame";
+              turn = requestAnimationFrame(() => { turnKind = "timer"; turn = setTimeout(survey, 0); });
+              // A window that is covered may get no frames for a while.
+              fallbackTurn = setTimeout(survey, 1000);
+            }
+          }
+
+          function cancelWake() {
+            if (turnKind === "idle") cancelIdleCallback(turn);
+            else if (turnKind === "frame") cancelAnimationFrame(turn);
+            else clearTimeout(turn);
+            clearTimeout(fallbackTurn);
+            turn = 0;
+            fallbackTurn = 0;
+          }
+
+          // Runs `task` when the page is idle, or at once where the engine
+          // has no idle callbacks.
+          function whenIdle(task, wait) {
+            if (idle) idle(task, { timeout: wait }); else task();
+          }
+
+          function survey(deadline) {
+            cancelWake();
+            if (!surveying) return;
+            const spare = deadline && !deadline.didTimeout ? deadline.timeRemaining() : sliceBudget;
+            const end = performance.now() + Math.max(1, Math.min(sliceBudget, spare));
+            const late = () => performance.now() >= end;
+            let count = 0;
+            slice: while (true) {
+              if (listed) {
+                if (listedHead < listed.length) {
+                  // An element the page removed meanwhile is passed over; put
+                  // back, it comes again as a record.
+                  const element = listed[listedHead++];
+                  try { if (connected.call(element)) look(element); } catch (_) {}
+                  if (++count % 32 === 0 && late()) break;
+                  continue;
+                }
+                listed = null;
+                listedHead = 0;
+              }
+              if (roots.length) {
+                try { listed = selectAll.call(roots.pop(), "*"); } catch (_) {}
+              } else if (batchHead < batches.length) {
+                const batch = batches[batchHead];
+                if (!take(batch[recordHead], end)) break;
+                nodeHead = 0;
+                if (++recordHead >= batch.length) { batchHead++; recordHead = 0; }
+              } else if (changed.size) {
+                for (const element of changed) {
+                  changed.delete(element);
+                  try { if (element.isConnected) look(element); } catch (_) {}
+                  if (++count % 32 === 0 && late()) break slice;
+                }
+              } else {
+                break;
+              }
+              if (late()) break;
+            }
+            if (batchHead === batches.length) { batches = []; batchHead = 0; recordHead = 0; nodeHead = 0; }
+            if (pending.classes.length || pending.ids.length || pending.resources.length) schedule();
+            if (procedural.length) rerunProcedural();
+            scheduleSweep(500);
+            adopt();
+            if (listed || roots.length || batchHead < batches.length || changed.size) wake();
+          }
+
+          // One of the observer's records: an element that appeared is looked
+          // at, and its subtree walked; an element whose names or source
+          // changed is looked at again. A record that adds many elements is
+          // taken a slice at a time; answers whether it is done.
+          function take(record, end) {
+            try {
+              if (record.type !== "childList") {
+                const target = record.target;
+                if (target.nodeType === 1) changed.add(target);
+                return true;
+              }
+              const nodes = record.addedNodes;
+              while (nodeHead < nodes.length) {
+                const node = nodes[nodeHead++];
+                try {
+                  if (node.nodeType === 1 && node.isConnected && !quiet.has(tagOf.call(node))) {
+                    look(node);
+                    if (node.firstElementChild) roots.push(node);
+                  }
+                } catch (_) {}
+                if (nodeHead % 32 === 0 && performance.now() >= end) return nodeHead >= nodes.length;
+              }
+            } catch (_) {}
+            return true;
+          }
+
+          // The observer keeps each batch of records as it comes and reads
+          // none of it: even looking at a node costs this world a wrapper of
+          // its own for it, which the survey makes later. What can't wait is
+          // done here: a collapsed slot that content fills shows again before
+          // the page paints, and WebKit's sheet goes back if the page took it.
+          function observed(records) {
+            batches.push(records);
+            if (sweptCount) {
+              for (const record of records) if (record.type === "childList") restoreIfFilled(record);
+            }
+            if (sheet) adopt();
+            wake();
+          }
+
+          // The survey starts once the first answer says the page blocks, from
+          // the document as it stands; a page that blocks nothing never runs
+          // it. It runs as long as the document does.
+          function startSurvey() {
+            if (surveying || stopped) return;
+            surveying = true;
+            const root = document.documentElement;
+            if (root) { look(root); roots.push(root); }
+            observer = new MutationObserver(observed);
+            observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "id", "src", "data"] });
+            // A page that moves within itself starts afresh.
+            const fresh = () => { sawHidden(); wake(); };
+            addEventListener("popstate", fresh);
+            try { globalThis.navigation?.addEventListener("currententrychange", fresh); } catch (_) {}
+            wake();
           }
 
           function schedule() {
-            if (!sendTimer && !stopped) sendTimer = setTimeout(send, 120);
+            if (!sendTimer && !stopped) {
+              const gather = pace().gather;
+              sendTimer = setTimeout(() => whenIdle(send, gather), gather);
+            }
           }
 
           function send() {
             sendTimer = 0;
             if (stopped) return;
             if (!first && !pending.classes.length && !pending.ids.length && !pending.resources.length) return;
+            const names = pending.classes.length + pending.ids.length;
             post({
               version: 1, first, url: location.href,
               classes: pending.classes.splice(0, maximumNames), ids: pending.ids.splice(0, maximumNames),
               resources: pending.resources.splice(0, maximumResources),
             });
+            // Only an ask about names counts toward slowing down: the app
+            // answers only an ask that hides something, and most images are
+            // never blocked.
+            if (!first && names) fruitless++;
+            if (first) {
+              clearTimeout(firstRetry);
+              firstRetry = setTimeout(() => {
+                if (!blocking && !stopped && ++firstAsks < 3) { first = true; send(); }
+              }, 2000);
+            }
             first = false;
             if (pending.classes.length || pending.ids.length || pending.resources.length) schedule();
           }
@@ -293,14 +511,26 @@ enum BrowserCosmeticFilterContentBridge {
           }
 
           function runProcedural() {
+            let acted = false;
             for (const filter of procedural) {
               let elements = null;
               for (const operator of filter.selector ?? []) {
                 elements = step(operator, elements);
                 if (!elements.length) break;
               }
-              for (const element of elements ?? []) { try { act(filter, element); } catch (_) {} }
+              for (const element of elements ?? []) { try { act(filter, element); acted = true; } catch (_) {} }
             }
+            if (acted) sawHidden();
+          }
+
+          // The procedural filters run again a moment after the document
+          // changes, once the page is idle.
+          function rerunProcedural() {
+            if (proceduralTimer || stopped) return;
+            proceduralTimer = setTimeout(() => whenIdle(() => {
+              proceduralTimer = 0;
+              if (!stopped) runProcedural();
+            }, 500), 150);
           }
 
           // An ad slot left with nothing to show collapses: an element named as
@@ -322,7 +552,7 @@ enum BrowserCosmeticFilterContentBridge {
           let sweptCount = 0;
 
           function namedAsSlot(element) {
-            const name = element.id + " " + (typeof element.className === "string" ? element.className : "");
+            const name = (attribute.call(element, "id") ?? "") + " " + (attribute.call(element, "class") ?? "");
             return name.split(/[\s_-]+/).some((word) => slotWord.test(word));
           }
 
@@ -369,7 +599,7 @@ enum BrowserCosmeticFilterContentBridge {
               ? !carriers.has(node.tagName)
               : node.nodeType === 3 && node.textContent.trim() && !adLabel.test(node.textContent.trim()));
             if (!fills) return;
-            for (let node = record.target; node && node !== document.body; node = node.parentElement) {
+            for (let node = record.target, level = 0; node && node !== document.body && level < 256; node = parentOf.call(node), level++) {
               const kept = swept.get(node);
               if (!kept) continue;
               swept.delete(node);
@@ -385,20 +615,30 @@ enum BrowserCosmeticFilterContentBridge {
             sweepTimer = 0;
             if (stopped || !blocking || !document.body) return;
             for (const element of document.body.querySelectorAll("[id],[class]")) {
-              if (namedAsSlot(element)) collapseIfEmpty(element);
+              try { if (namedAsSlot(element)) collapseIfEmpty(element); } catch (_) {}
             }
-            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-            while (walker.nextNode()) {
-              if (!adLabel.test(walker.currentNode.textContent.trim())) continue;
-              let holder = walker.currentNode.parentElement;
-              for (let level = 0; holder && level < 3; level++, holder = holder.parentElement) {
-                if (holder.getBoundingClientRect().height >= 40) { collapseIfEmpty(holder); break; }
-              }
+            const texts = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            while (texts.nextNode()) {
+              try {
+                if (!adLabel.test(texts.currentNode.textContent.trim())) continue;
+                let holder = parentOf.call(texts.currentNode);
+                for (let level = 0; holder && level < 3; level++, holder = parentOf.call(holder)) {
+                  if (holder.getBoundingClientRect().height >= 40) { collapseIfEmpty(holder); break; }
+                }
+              } catch (_) {}
             }
           }
 
+          // The sweep reads layout, so it runs a while after the change that
+          // prompted it, when the page is idle, or just after the next frame
+          // where the engine has no idle callbacks.
           function scheduleSweep(delay) {
-            if (!sweepTimer && !stopped && blocking) sweepTimer = setTimeout(sweep, delay);
+            if (sweepTimer || stopped || !blocking) return;
+            sweepTimer = setTimeout(() => {
+              if (idle) idle(sweep, { timeout: 1000 });
+              else if (document.visibilityState === "hidden") sweep();
+              else requestAnimationFrame(() => setTimeout(sweep, 0));
+            }, delay);
           }
 
           function collapseKnown() {
@@ -410,8 +650,14 @@ enum BrowserCosmeticFilterContentBridge {
 
           function stop() {
             stopped = true;
+            surveying = false;
             observer?.disconnect();
+            observer = null;
+            cancelWake();
+            batches = []; batchHead = 0; recordHead = 0; nodeHead = 0; roots = []; listed = null; listedHead = 0;
+            changed.clear();
             clearTimeout(sendTimer);
+            clearTimeout(firstRetry);
             clearTimeout(proceduralTimer);
             clearTimeout(sweepTimer);
           }
@@ -419,20 +665,27 @@ enum BrowserCosmeticFilterContentBridge {
           function apply(answer) {
             if (stopped || !answer) return;
             if (!answer.blocks) { stop(); return; }
-            if (!blocking) {
-              blocking = true;
-              scheduleSweep(600);
-              addEventListener("load", () => setTimeout(() => scheduleSweep(0), 1500), { once: true });
-            }
-            if (answer.style) addStyle(answer.style);
+            const firstAnswer = !blocking;
+            blocking = true;
+            let hides = false;
+            if (answer.style) { addStyle(answer.style); hides = true; }
             for (const text of answer.procedural ?? []) {
               try { procedural.push(JSON.parse(text)); } catch (_) {}
             }
-            if (answer.procedural?.length) runProcedural();
+            if (answer.procedural?.length) { runProcedural(); hides = true; }
             if (answer.collapse?.length) {
               for (const url of answer.collapse) collapsed.add(url);
               collapseKnown();
-              scheduleSweep(200);
+              hides = true;
+            }
+            if (hides) { sawHidden(); scheduleSweep(200); }
+            if (firstAnswer) {
+              clearTimeout(firstRetry);
+              scheduleSweep(600);
+              if (document.readyState !== "complete") {
+                addEventListener("load", () => setTimeout(() => scheduleSweep(0), 1500), { once: true });
+              }
+              startSurvey();
             }
           }
 
@@ -441,7 +694,6 @@ enum BrowserCosmeticFilterContentBridge {
           // blocks it on this site from now on. The picker outlines what it
           // offers in a closed shadow root over the page and reports what it
           // holds; the bar is the app's own.
-          const isTop = globalThis.top === globalThis;
           // The longest selector the core keeps in a rule.
           const maximumSelector = 1024;
           let picker = null, contextTarget = null;
@@ -680,30 +932,10 @@ enum BrowserCosmeticFilterContentBridge {
 
           globalThis.__crestCosmetics = Object.freeze({ apply, pick, command });
 
-          observer = new MutationObserver((records) => {
-            for (const record of records) {
-              if (record.type === "childList") {
-                for (const node of record.addedNodes) scan(node);
-                restoreIfFilled(record);
-              } else if (record.target.nodeType === 1) {
-                note(record.target);
-              }
-            }
-            schedule();
-            if (procedural.length && !proceduralTimer) {
-              proceduralTimer = setTimeout(() => { proceduralTimer = 0; if (!stopped) runProcedural(); }, 150);
-            }
-            scheduleSweep(500);
-            adopt();
-          });
-          observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "id", "src", "data"] });
-
           // The first ask names only the document, so the site's filters can
-          // apply before it renders; what it shows follows as it appears.
+          // apply before it renders; the survey of what it shows starts with
+          // the answer, if the page blocks anything.
           send();
-          const start = () => { if (!stopped) { scan(document.documentElement); schedule(); } };
-          if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
-          else start();
         })();
         """#
 }

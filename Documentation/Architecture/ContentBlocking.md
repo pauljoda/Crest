@@ -104,9 +104,13 @@ Each page owns its user content controller. A main-frame navigation installs
 or removes Crest's lists for the site it goes to before the page loads it, so a
 site's switch costs no compilation. A list update takes effect on each page's
 next navigation; the page whose site the person switched reloads. The lists
-carry the sites' own hiding rules; generic hiding, and what WebKit cannot
-express, such as procedural element hiding, are left to the cosmetic bridge
-below. A main-frame navigation also installs the site's scriptlets
+carry the rules that block loads, and the person's own hiding rules, which
+Block Element writes. The filter lists' hiding, the sites' own included, is
+left to the cosmetic bridge below: in a list, a site's hiding rule matches every
+address and is weighed on every load a page makes, which slowed pages that load
+as they go several times over. The person's few rules stay, because WebKit
+applies them before a page first renders, in a sheet the page can neither
+reach nor outrank. A main-frame navigation also installs the site's scriptlets
 (`PageScriptlets`) as one user script in the page's own world, at document
 start, in place of the previous site's (`BrowserPageScriptletSession`).
 WebKit cannot replace a response, so a redirect filter is left out and its
@@ -166,6 +170,38 @@ its compiled filter for the page's Space and the site it shows:
   show, and whether the frames, images and objects they load are ones the
   filter blocks; those elements collapse.
 
+The bridge stays out of the page's own work, and keeps hiding for as long as
+the document lives:
+- **When it starts:** it watches what appears only once the first answer
+  says the page blocks. The first ask goes again if no answer comes, a couple
+  of times at most.
+- **The observer only queues:** the elements it queues are looked at while
+  the page is idle, a few milliseconds at a time. Each subtree's elements are
+  listed once and looked at a slice at a time, and an element the page removed
+  meanwhile is passed over.
+- **What can't wait:** two things are done in the observer callback itself:
+  - a collapsed slot that content fills shows again;
+  - on WebKit, the bridge's sheet goes back if the page took it away.
+- **No idle callbacks:** where an engine has none, the work runs just after
+  the next frame, never in a frame callback. A frame's document runs its frame
+  callbacks after the top document's, in the middle of that frame. A hidden
+  page is looked at on a timer.
+- **Asks:** they gather briefly before they go out, so a new ad is usually
+  hidden within a few tenths of a second.
+- **On a quiet page:** a page that keeps asking about new names without
+  anything to hide, for over a minute, is looked at less often and its asks
+  gather longer.
+  - **What still counts:** the survey still looks at everything, and the
+    procedural filters still run again.
+  - **Back to the normal pace:** anything hidden, or the page moving to
+    another entry of its own history.
+- **The empty-slot sweep** (below) runs in every document that blocks. It
+  reads layout, so it runs a while after the change that prompted it: while the
+  page is idle, or just after the next frame where the engine has no idle
+  callbacks.
+- **Odd elements:** an element the page made odd enough to throw, such as a
+  form whose inputs are named after its own properties, is passed over.
+
 The hiding rules, the site's and the generic ones alike, go where the page's
 scripts cannot reach them where the engine allows it:
 
@@ -177,16 +213,20 @@ scripts cannot reach them where the engine allows it:
   own included, and user `!important` rules win over the page's, inline styles
   included. The bridge parses each rule on its own first and passes the
   browser's own rewrite of it, so a malformed rule can't swallow the next.
-- WebKit has no user style sheet a page can't reach, and its content rules'
-  `css-display-none` applies before the first render, which is what bait checks
-  catch. There the rules go into one sheet the bridge adopts, which it puts back
-  as the document changes if the page removes it, turns it off or deletes its
-  rules.
+- WebKit has no user style sheet a page can't reach. There the rules go into
+  one sheet the bridge adopts, which it puts back as the document changes if the
+  page removes it, turns it off or deletes its rules. Only the person's own
+  rules also go into WebKit's content rules (see WebKit above).
+- **On the Mac,** the bridge answers WebKit pages from the filter compiled with
+  Chromium's conditions, which Chromium's pages check requests against. So a
+  list's hiding rule inside `!#if env_safari` doesn't apply on Mac WebKit pages.
+  iPhone and iPad compile theirs with Safari's.
 
-Generic rules apply as elements appear on both engines, rather than through
-WebKit's content rules before a page first renders: sites that check whether a
-bait element was hidden at once otherwise take the hiding for blocking and
-interrupt the page. An ad slot left with nothing to show also collapses: an
+The filter lists' hiding comes from the bridge on both engines: the sites'
+rules from its first answer, and the generic rules as elements appear. WebKit's
+content rules would apply the generic ones before a page first renders, and
+sites that check whether a bait element was hidden at once take that for
+blocking and interrupt the page. An ad slot left with nothing to show also collapses: an
 element named as one (`ad`, `advert`, `billboard`, `leaderboard`, `dfp` and the
 like) or holding only an ad label such as "Advertisement", that shows no text,
 image, video, frame or control, no image still to load and no background
