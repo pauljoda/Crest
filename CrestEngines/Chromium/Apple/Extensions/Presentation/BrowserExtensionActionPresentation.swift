@@ -9,6 +9,9 @@ struct BrowserExtensionActionPresentation: Identifiable {
     let isEnabled: Bool
     let isPinned: Bool
     let isLoading: Bool
+    /// Whether running the action opens its popup, rather than acting at once
+    /// or toggling a side panel.
+    let hasPopup: Bool
 
     init(
         id: String,
@@ -17,7 +20,8 @@ struct BrowserExtensionActionPresentation: Identifiable {
         icon: NSImage? = nil,
         isEnabled: Bool = true,
         isPinned: Bool = false,
-        isLoading: Bool = false
+        isLoading: Bool = false,
+        hasPopup: Bool = false
     ) {
         self.id = id
         self.displayName = displayName
@@ -26,6 +30,7 @@ struct BrowserExtensionActionPresentation: Identifiable {
         self.isEnabled = isEnabled
         self.isPinned = isPinned
         self.isLoading = isLoading
+        self.hasPopup = hasPopup
     }
 
 }
@@ -36,7 +41,7 @@ extension BrowserExtensionActionPresentation {
         self.init(
             id: action.id, displayName: action.name, badgeText: action.badge,
             icon: action.icon.flatMap(NSImage.extensionIcon), isEnabled: action.enabled,
-            isPinned: action.pinned)
+            isPinned: action.pinned, hasPopup: action.hasPopup)
     }
 }
 

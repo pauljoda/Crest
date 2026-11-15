@@ -19,6 +19,15 @@ protocol BrowserMacEngineHost: AnyObject {
     /// whether the engine took it.
     func handleUnclaimedShortcut(_ event: NSEvent, page: BrowserPage) -> Bool
 
+    /// Whether `space`, with `page` in front, has an extension whose popup
+    /// Open Next Extension can open.
+    func opensExtensions(in space: SpaceModel, page: BrowserPage?) -> Bool
+
+    /// Opens the popup of the extension after the one whose popup shows in
+    /// `window`, the pinned ones from left to right and then the others, or
+    /// the first when none shows. After the last, it closes the popup.
+    func openNextExtension(in space: SpaceModel, page: BrowserPage?, window: NSWindow?)
+
     /// What installs the extensions an import brings, or nil for an engine
     /// that runs none.
     var importedExtensionInstaller: (any BrowserImportedExtensionInstalling)? { get }

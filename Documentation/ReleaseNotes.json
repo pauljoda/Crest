@@ -5509,6 +5509,14 @@
     "arc-import-keeps-tab-renames": {
       "category": "fixed",
       "message": "Importing from Arc keeps the names you gave tabs there, and the import review shows them. Clearing a name shows the page's title again."
+    },
+    "pinned-extension-order": {
+      "category": "new",
+      "message": "On Mac, drag a pinned extension along the sidebar to put your extensions in the order you want, as you move tabs. Every Space with the same browsing profile shows them in that order. From the first launch after updating, the strip shows your extensions in the order you pinned them instead of by name."
+    },
+    "open-next-extension": {
+      "category": "new",
+      "message": "On Mac, Command-E opens your extensions one at a time: the pinned ones from left to right, then the rest. Press it again for the next one, and once more after the last to close it. Archive Tab moves to Shift-Command-E."
     }
   }
 }

@@ -149,6 +149,11 @@ NS_SWIFT_UI_ACTOR
 - (BOOL)runExtension:(NSString *)extensionID profile:(NSUUID *)profileID window:(NSUUID *)windowID
           anchorView:(NSView *)anchorView anchorRect:(NSRect)anchorRect
     NS_SWIFT_NAME(runExtension(_:profile:window:anchorView:anchorRect:));
+// The extension whose action popup shows in the Crest window `windowID`, or
+// nil when none does.
+- (nullable NSString *)extensionPopupInWindow:(NSUUID *)windowID NS_SWIFT_NAME(extensionPopup(inWindow:));
+// Closes the action popup showing in the Crest window `windowID`, if one does.
+- (void)closeExtensionPopupInWindow:(NSUUID *)windowID NS_SWIFT_NAME(closeExtensionPopup(inWindow:));
 // Extension side panels. A panel is hosted as a Crest split-row card beside
 // the page it belongs to: it is not a tab, is never persisted and never syncs.
 // `closed` runs when the panel document or its extension host goes away.

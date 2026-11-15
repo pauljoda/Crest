@@ -128,6 +128,13 @@ public sealed record ListEngineExtensions(Guid ProfileId) : EngineCommand;
 /// reports the profile's extensions again once they changed.
 public sealed record ChangeEngineExtension(Guid ProfileId, string ExtensionId, ExtensionChange Change) : EngineCommand;
 
+/// Moves the pinned extension `ExtensionId` in the profile `ProfileId` names
+/// to just before the pinned extension `BeforeExtensionId` in the order its
+/// pins show, or to the end when that is null. The binding reports the
+/// profile's extensions again once the order changed.
+public sealed record MoveEngineExtensionPin(Guid ProfileId, string ExtensionId, string? BeforeExtensionId)
+    : EngineCommand;
+
 /// Downloads the package of the extension `ExtensionId` for install
 /// `InstallId` through the network of the profile `ProfileId` names, as the
 /// engine's own installer would, presenting `ExtensionDownloadProgressed` as

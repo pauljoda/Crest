@@ -451,6 +451,22 @@ void EngineBinding::Handle(const engine::ChangeEngineExtension& command) {
                              weak_factory_.GetWeakPtr(), id, command));
 }
 
+void EngineBinding::Handle(const engine::MoveEngineExtensionPin& command) {
+  const std::string id = GuidText(command.profile_id);
+  Profiles().Prepare(id, base::BindOnce(
+                             [](base::WeakPtr<EngineBinding> binding, std::string id,
+                                engine::MoveEngineExtensionPin command, bool ready) {
+                               if (!binding || binding->disposing_ || !ready) {
+                                 return;
+                               }
+                               if (Profile* profile = binding->Profiles().Find(id)) {
+                                 binding->Extensions().MovePin(profile, command.extension_id,
+                                                               command.before_extension_id);
+                               }
+                             },
+                             weak_factory_.GetWeakPtr(), id, command));
+}
+
 void EngineBinding::Handle(const engine::DownloadExtension& command) {
   Installs().Download(command);
 }
