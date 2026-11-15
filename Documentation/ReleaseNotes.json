@@ -5545,6 +5545,10 @@
     "floating-surfaces-readable": {
       "category": "fixed",
       "message": "Notices, the cards that preview a tab or folder from the sidebar, link previews and the bars over a page now draw on the same solid surface as Site Controls, so their text stays readable on any Space, appearance and page."
+    },
+    "notices-fit-their-words": {
+      "category": "improved",
+      "message": "Notices such as URL Copied are only as wide as their words. On Mac and iPad they appear in the top right corner of the page, clear of the sidebar and the bars along the top; on iPhone they stay at the top of the screen."
     }
   }
 }
