@@ -24,6 +24,8 @@ struct BrowserPinnedExtensionActionList: View {
             Void = { _, _ in }
     /// How the tiles move, or nil for a strip that keeps its order.
     var reordering: Reordering?
+    /// The Space whose strip this is, whether or not it can be reordered.
+    var spaceID: UUID?
 
     @Environment(BrowserExtensionTileLiftState.self) private var tileLift: BrowserExtensionTileLiftState?
     @Environment(\.sidebarSpaceIsSelected) private var isSelectedSpace
@@ -54,6 +56,9 @@ struct BrowserPinnedExtensionActionList: View {
                     rowOrigin = $0
                 }
                 .animation(CrestMotion.dragSource.unlessReducingMotion(reduceMotion), value: layout.slots)
+                // The slots run left to right in every language, as the drag
+                // reads them from the pointer's place in the window.
+                .environment(\.layoutDirection, .leftToRight)
                 // Size the scroll content in both axes so the buttons stay
                 // centered when the viewport is laid out again.
                 .frame(
@@ -65,8 +70,12 @@ struct BrowserPinnedExtensionActionList: View {
             .scrollDisabled(tileLift?.isCarrying == true)
         }
         .onChange(of: actions.map(\.id), initial: true) { _, ids in
-            guard let reordering else { return }
-            tileLift?.engineReported(ids, profileID: reordering.space.profileID)
+            if let reordering { tileLift?.engineReported(ids, profileID: reordering.space.profileID) }
+            if let spaceID { tileLift?.stripChanged(to: ids, in: spaceID, isReorderable: isReorderable) }
+        }
+        .onChange(of: isReorderable) { _, isReorderable in
+            guard let spaceID else { return }
+            tileLift?.stripChanged(to: actions.map(\.id), in: spaceID, isReorderable: isReorderable)
         }
         .onDisappear {
             guard let reordering, tileLift?.lift?.spaceID == reordering.space.id else { return }
@@ -96,6 +105,12 @@ struct BrowserPinnedExtensionActionList: View {
         return layout
     }
 
+    /// Whether the strip's tiles can be dragged now: it moves them, and it is
+    /// the selected Space's.
+    private var isReorderable: Bool {
+        reordering != nil && isSelectedSpace != false
+    }
+
     private func hidesTile(_ id: String) -> Bool {
         guard let reordering, let tileLift else { return false }
         return tileLift.hidesTile(id, in: reordering.space.id)
@@ -106,7 +121,7 @@ struct BrowserPinnedExtensionActionList: View {
     ) -> BrowserPinnedExtensionLiftSource {
         BrowserPinnedExtensionLiftSource(
             action: action, order: order, rowOrigin: rowOrigin,
-            reordering: isSelectedSpace != false ? reordering : nil, tileLift: tileLift)
+            reordering: isReorderable ? reordering : nil, tileLift: tileLift)
     }
 }
 

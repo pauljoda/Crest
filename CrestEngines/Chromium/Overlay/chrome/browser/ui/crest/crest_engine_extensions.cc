@@ -11,6 +11,7 @@
 #include "base/location.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/sequenced_task_runner.h"
+#include "chrome/browser/extensions/extension_action_runner.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "components/sessions/content/session_tab_helper.h"
@@ -23,6 +24,7 @@
 #include "extensions/browser/extension_system.h"
 #include "extensions/browser/extension_util.h"
 #include "extensions/browser/management_policy.h"
+#include "extensions/browser/permissions/site_permissions_helper.h"
 #include "extensions/browser/pref_names.h"
 #include "extensions/browser/uninstall_reason.h"
 #include "extensions/common/api/extension_action/action_info.h"
@@ -298,8 +300,8 @@ engine::ExtensionActionList EngineExtensions::PageActions(content::WebContents* 
                                                    .badge = action->GetDisplayBadgeText(tab),
                                                    .icon = IconPNG(state.IconFor(*extension, action, tab)),
                                                    .pinned = model && model->IsActionPinned(extension->id()),
-                                                   .enabled = true,
-                                                   .has_popup = action->HasPopup(tab)});
+                                                   .enabled = IsEnabled(contents, *extension, *action, tab),
+                                                   .has_popup = OpensPopup(contents, *extension, *action, tab)});
   }
   return list;
 }
@@ -454,6 +456,41 @@ void EngineExtensions::Change(Profile* profile, const std::string& extension_id,
   }
 }
 
+// The toolbar button's own rule: an action the extension turned off for the
+// tab still runs when a click would grant it the site, or toggles its panel.
+// static
+bool EngineExtensions::IsEnabled(content::WebContents* contents, const extensions::Extension& extension,
+                                 const extensions::ExtensionAction& action, int tab) {
+  if (action.GetIsVisible(tab)) {
+    return true;
+  }
+  using SiteInteraction = extensions::SitePermissionsHelper::SiteInteraction;
+  const auto interaction =
+      extensions::SitePermissionsHelper(contents->GetBrowserContext()).GetSiteInteraction(extension, contents);
+  if (interaction == SiteInteraction::kWithheld || interaction == SiteInteraction::kActiveTab) {
+    return true;
+  }
+  auto* panels = extensions::SidePanelService::Get(contents->GetBrowserContext());
+  return panels && panels->HasSidePanelActionForTab(extension, tab);
+}
+
+// Running the action opens no popup when it toggles the extension's panel,
+// which the action runner decides first, or when the click runs the actions
+// the extension was blocked from running on the page.
+// static
+bool EngineExtensions::OpensPopup(content::WebContents* contents, const extensions::Extension& extension,
+                                  const extensions::ExtensionAction& action, int tab) {
+  if (!action.HasPopup(tab)) {
+    return false;
+  }
+  auto* runner = extensions::ExtensionActionRunner::GetForWebContents(contents);
+  if (runner && runner->GetBlockedActions(extension.id())) {
+    return false;
+  }
+  auto* panels = extensions::SidePanelService::Get(contents->GetBrowserContext());
+  return !panels || !panels->HasSidePanelActionForTab(extension, tab);
+}
+
 // Chromium keeps force-pinned actions after the others and never moves
 // them, and a pin a policy keeps is not in the preference to reorder.
 void EngineExtensions::MovePin(Profile* profile, const std::string& extension_id,
@@ -471,7 +508,11 @@ void EngineExtensions::MovePin(Profile* profile, const std::string& extension_id
     return;
   }
   const size_t from = static_cast<size_t>(current - pinned.begin());
+  // The end is the last place before the force-pinned actions.
   size_t to = pinned.size() - 1;
+  while (to > from && model->IsActionForcePinned(pinned[to])) {
+    --to;
+  }
   if (before) {
     const auto target = std::ranges::find(pinned, *before);
     if (target == pinned.end()) {

@@ -48,7 +48,8 @@ struct BrowserPinnedExtensionStrip: View {
                         ? BrowserPinnedExtensionActionList.Reordering(
                             space: space.identity,
                             move: { store.movePin($0, before: $1, space: space.identity) })
-                        : nil
+                        : nil,
+                    spaceID: space.id
                 )
                 .padding(.top, BrowserSidebarMetrics.topSectionGap)
                 // Pinned tabs below hold the same gap above themselves. A

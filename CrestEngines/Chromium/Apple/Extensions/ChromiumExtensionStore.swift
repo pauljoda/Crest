@@ -267,16 +267,15 @@ final class ChromiumExtensionStore {
 
     // MARK: - Actions - Popup Cycle
 
-    /// The actions Open Next Extension steps through in `space` with `page`
-    /// in front: the pinned ones from left to right, then the others the page
-    /// offers, each only while running it opens its popup.
-    func popupCycle(
-        for space: BrowserSpaceIdentity, page: ChromiumNativePage?
-    ) -> [BrowserExtensionActionPresentation] {
-        let others = page.map { actions(for: $0).filter { !$0.isPinned } } ?? []
-        return (pinnedActions(for: space, page: page) + others).filter {
-            $0.isEnabled && $0.hasPopup && !$0.isLoading
-        }
+    /// The extensions Open Next Extension steps through in `space` with
+    /// `page` in front: the pinned ones in the strip's order, then the others
+    /// the page offers, each only while running it opens its popup. A pin a
+    /// policy keeps is not in the strip, so it comes with the others.
+    func popupCycle(for space: BrowserSpaceIdentity, page: ChromiumNativePage?) -> BrowserExtensionPopupCycle {
+        let opensPopup: (BrowserExtensionActionPresentation) -> Bool = { $0.isEnabled && $0.hasPopup && !$0.isLoading }
+        return BrowserExtensionPopupCycle(
+            pinned: pinnedActions(for: space, page: page).filter(opensPopup).map(\.id),
+            others: page.map { actions(for: $0).filter(opensPopup).map(\.id) } ?? [])
     }
 
     /// Opens the popup of the action after the one whose popup shows in
@@ -292,23 +291,20 @@ final class ChromiumExtensionStore {
                 guard let self, let window, let host = ChromiumComposition.engineHost,
                     let windowID = window.identifier.flatMap({ UUID(uuidString: $0.rawValue) })
                 else { return }
-                let cycle = self.popupCycle(for: space, page: page)
-                let shown = host.extensionPopup(inWindow: windowID)
-                let next =
-                    if let shown, let index = cycle.firstIndex(where: { $0.id == shown }) {
-                        cycle.indices.contains(index + 1) ? cycle[index + 1] : nil
-                    } else {
-                        cycle.first
-                    }
-                guard let next else {
-                    host.closeExtensionPopup(inWindow: windowID)
+                switch self.popupCycle(for: space, page: page).step(showing: host.extensionPopup(inWindow: windowID)) {
+                case nil:
                     return
-                }
-                let anchor = BrowserExtensionToolbarAnchorRegistry.anchor(for: next.id, in: window)
-                if let page {
-                    page.runExtension(next.id, anchor: anchor)
-                } else {
-                    self.runPinned(next, space: space, anchor: anchor)
+                case .close:
+                    host.closeExtensionPopup(inWindow: windowID)
+                case .open(let extensionID):
+                    let anchor = BrowserExtensionToolbarAnchorRegistry.anchor(for: extensionID, in: window)
+                    if let page {
+                        page.runExtension(extensionID, anchor: anchor)
+                    } else if let action = self.pinnedActions(for: space, page: nil).first(where: {
+                        $0.id == extensionID
+                    }) {
+                        self.runPinned(action, space: space, anchor: anchor)
+                    }
                 }
             }
         }

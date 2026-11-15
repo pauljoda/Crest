@@ -112,6 +112,18 @@ final class BrowserExtensionTileLiftState {
             .map(\.element)
     }
 
+    /// The strip of `spaceID` now shows `ids`, and can be reordered or not. A
+    /// tile carried from it goes once the strip no longer shows the tiles it
+    /// was lifted among, as when its extension updates or is unpinned
+    /// elsewhere, or once the strip can't be reordered: the carried tile's
+    /// drag may never hear its release.
+    func stripChanged(to ids: [String], in spaceID: UUID, isReorderable: Bool) {
+        guard let lift, lift.landing == nil, lift.spaceID == spaceID else { return }
+        let stands = isReorderable && ids.count > 1 && Set(ids) == Set(lift.order)
+        guard !stands else { return }
+        abandon()
+    }
+
     /// The engine reported `order` for the strips of `profileID`. Once it is
     /// the order a release made, the strips show the engine's own again.
     func engineReported(_ order: [String], profileID: UUID) {

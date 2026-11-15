@@ -256,8 +256,12 @@ class ExtensionPopup final : public extensions::ExtensionView,
   }
   ~ExtensionPopup() override { Close(); }
   bool IsOpen() const { return host_ != nullptr; }
-  // Whether the popup shows over `window`, the Crest window it opened in.
-  bool ShowsIn(NSWindow* window) const { return presented_ && host_ && window_ && window_.parentWindow == window; }
+  // Whether the popup shows over `window`, the Crest window it opened in, or
+  // is still loading there from a control in it.
+  bool ShowsIn(NSWindow* window) const {
+    if (!host_ || !window) return false;
+    return presented_ ? window_ && window_.parentWindow == window : anchor_view_.window == window;
+  }
   // The extension whose popup this is.
   std::string ExtensionId() const { return host_ ? host_->extension_id() : std::string(); }
   void Close() {
