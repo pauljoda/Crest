@@ -256,6 +256,14 @@ class ExtensionPopup final : public extensions::ExtensionView,
   }
   ~ExtensionPopup() override { Close(); }
   bool IsOpen() const { return host_ != nullptr; }
+  // Whether the popup shows over `window`, the Crest window it opened in, or
+  // is still loading there from a control in it.
+  bool ShowsIn(NSWindow* window) const {
+    if (!host_ || !window) return false;
+    return presented_ ? window_ && window_.parentWindow == window : anchor_view_.window == window;
+  }
+  // The extension whose popup this is.
+  std::string ExtensionId() const { return host_ ? host_->extension_id() : std::string(); }
   void Close() {
     if (shown_) std::move(shown_).Run(nullptr);
     weak_factory_.InvalidateWeakPtrs();
@@ -672,6 +680,17 @@ PageViews* FindViews(const std::string& page) {
   return found == State().views.end() ? nullptr : found->second.get();
 }
 
+// The action popup showing in `window`: a page's own, or the one opened from
+// a Space with no page.
+ExtensionPopup* PopupShownIn(NSWindow* window) {
+  if (!window) return nullptr;
+  if (ExtensionPopup* popup = State().space_extension_popup.get(); popup && popup->ShowsIn(window)) return popup;
+  for (const auto& entry : State().views) {
+    if (ExtensionPopup* popup = entry.second->extension_popup.get(); popup && popup->ShowsIn(window)) return popup;
+  }
+  return nullptr;
+}
+
 // What only AppKit does for the portable binding: the Crest windows its
 // Browsers show in, and the views beside each page. The binding keeps the
 // Browsers themselves.
@@ -850,6 +869,15 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   if (!popup) return NO;
   State().space_extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), anchorView, anchorRect);
   return YES;
+}
+- (NSString*)extensionPopupInWindow:(NSUUID*)windowID {
+  CHECK(NSThread.isMainThread);
+  ExtensionPopup* popup = PopupShownIn([UI() windowWithID:windowID]);
+  return popup ? base::SysUTF8ToNSString(popup->ExtensionId()) : nil;
+}
+- (void)closeExtensionPopupInWindow:(NSUUID*)windowID {
+  CHECK(NSThread.isMainThread);
+  if (ExtensionPopup* popup = PopupShownIn([UI() windowWithID:windowID])) popup->Close();
 }
 - (NSView*)openSidePanel:(NSString*)extensionID page:(NSUUID*)pageID closed:(void (^)(void))closed {
   CHECK(NSThread.isMainThread);

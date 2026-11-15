@@ -9,7 +9,7 @@ extension EngineCommand {
         case .approveEngineDownload(let command): command.perform(on: binding)
         case .cancelEngineDownload(let command): command.perform(on: binding)
         case .changeEngineExtension, .downloadExtension, .endExtensionInstall, .installExtensionPackage,
-            .listEngineExtensions:
+            .listEngineExtensions, .moveEngineExtensionPin:
             // WebKit declares no extensions, so the core refuses every
             // extension intent for it before any of these is issued.
             break

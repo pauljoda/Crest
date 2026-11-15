@@ -315,6 +315,7 @@ class EngineBinding {
   void Handle(const engine::SettleExtensionInstall& command);
   void Handle(const engine::ListEngineExtensions& command);
   void Handle(const engine::ChangeEngineExtension& command);
+  void Handle(const engine::MoveEngineExtensionPin& command);
   void Handle(const engine::DownloadExtension& command);
   void Handle(const engine::InstallExtensionPackage& command);
   void Handle(const engine::EndExtensionInstall& command);

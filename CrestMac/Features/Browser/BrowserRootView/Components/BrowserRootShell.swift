@@ -99,6 +99,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // so the sidebar reads it from here rather than being handed a value
         // per tab through the tree between them.
         .environment(downloadFeedback)
+        .environment(model.extensionTileLift)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
         // The address bar changing place carries the window's field between

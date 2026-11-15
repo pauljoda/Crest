@@ -29,7 +29,7 @@ namespace crest::engine {
 // SHA-256 of the engine contract alone. A binding registers with it, so the
 // core refuses an engine built against any other contract.
 inline constexpr std::array<uint8_t, 32> kFingerprint = {
-    0xd5, 0xdd, 0x9d, 0x98, 0x24, 0xdf, 0xae, 0xaf, 0xe6, 0x2c, 0xcc, 0x70, 0x47, 0xe3, 0xf7, 0x45, 0xff, 0x4d, 0xa8, 0xea, 0x77, 0xb4, 0xa8, 0xb2, 0x4c, 0xe9, 0xc8, 0xe0, 0x79, 0x2c, 0x35, 0x26};
+    0x24, 0x85, 0xab, 0xe7, 0x9b, 0x90, 0x38, 0xfd, 0xb2, 0xdb, 0xa8, 0x55, 0x75, 0x19, 0x5f, 0xd3, 0x08, 0x80, 0xf5, 0x00, 0x58, 0xae, 0xcc, 0x56, 0x7a, 0xae, 0x59, 0xdd, 0x0e, 0x8e, 0xb7, 0xfa};
 
 // A GUID in RFC 4122 byte order, as the wire carries it.
 using Guid = std::array<uint8_t, 16>;
@@ -1677,6 +1677,7 @@ struct ExtensionAction {
   std::optional<Bytes> icon;
   bool pinned = false;
   bool enabled = false;
+  bool has_popup = false;
 
   friend bool operator==(const ExtensionAction&, const ExtensionAction&) = default;
 };
@@ -1687,6 +1688,7 @@ inline void Write(WireWriter& writer, const ExtensionAction& value) {
   Write(writer, value.icon);
   Write(writer, value.pinned);
   Write(writer, value.enabled);
+  Write(writer, value.has_popup);
 }
 inline bool Read(WireReader& reader, ExtensionAction& value) {
   return Read(reader, value.id)
@@ -1694,7 +1696,8 @@ inline bool Read(WireReader& reader, ExtensionAction& value) {
       && Read(reader, value.badge)
       && Read(reader, value.icon)
       && Read(reader, value.pinned)
-      && Read(reader, value.enabled);
+      && Read(reader, value.enabled)
+      && Read(reader, value.has_popup);
 }
 
 struct ExtensionActionList {
@@ -2337,6 +2340,24 @@ inline bool Read(WireReader& reader, MediaSessionChanged& value) {
       && Read(reader, value.audible)
       && Read(reader, value.muted)
       && Read(reader, value.actions);
+}
+
+struct MoveEngineExtensionPin {
+  Guid profile_id = {};
+  std::string extension_id;
+  std::optional<std::string> before_extension_id;
+
+  friend bool operator==(const MoveEngineExtensionPin&, const MoveEngineExtensionPin&) = default;
+};
+inline void Write(WireWriter& writer, const MoveEngineExtensionPin& value) {
+  Write(writer, value.profile_id);
+  Write(writer, value.extension_id);
+  Write(writer, value.before_extension_id);
+}
+inline bool Read(WireReader& reader, MoveEngineExtensionPin& value) {
+  return Read(reader, value.profile_id)
+      && Read(reader, value.extension_id)
+      && Read(reader, value.before_extension_id);
 }
 
 struct MovePageToWindow {
@@ -4184,7 +4205,7 @@ inline bool Read(WireReader& reader, ZoomPage& value) {
       && Read(reader, value.factor);
 }
 
-using EngineCommand = std::variant<AdoptOfferedPage, ApproveEngineDownload, CancelEngineDownload, ChangeEngineExtension, CheckBeforeUnload, ClosePage, CreatePage, DownloadExtension, DropStagedLink, EndExtensionInstall, EraseBrowsingData, EraseProfileData, EraseSiteData, ExitPictureInPicture, GoToHistoryEntry, GroupPages, InstallExtensionPackage, ListEngineExtensions, LoadPage, PauseEngineDownload, ReadSiteData, RecoverPage, RejectOfferedPage, RemoveEngineDownload, ResumeEngineDownload, SettleAuthentication, SettleDownloadDestination, SettleExtensionInstall, SettlePermission, SettleScriptDialog, StageNavigation>;
+using EngineCommand = std::variant<AdoptOfferedPage, ApproveEngineDownload, CancelEngineDownload, ChangeEngineExtension, CheckBeforeUnload, ClosePage, CreatePage, DownloadExtension, DropStagedLink, EndExtensionInstall, EraseBrowsingData, EraseProfileData, EraseSiteData, ExitPictureInPicture, GoToHistoryEntry, GroupPages, InstallExtensionPackage, ListEngineExtensions, LoadPage, MoveEngineExtensionPin, PauseEngineDownload, ReadSiteData, RecoverPage, RejectOfferedPage, RemoveEngineDownload, ResumeEngineDownload, SettleAuthentication, SettleDownloadDestination, SettleExtensionInstall, SettlePermission, SettleScriptDialog, StageNavigation>;
 inline void Write(WireWriter& writer, const EngineCommand& value) {
   writer.WriteVarint(value.index());
   std::visit([&writer](const auto& member) { Write(writer, member); }, value);
@@ -4306,72 +4327,78 @@ inline bool Read(WireReader& reader, EngineCommand& value) {
       return true;
     }
     case 19: {
-      PauseEngineDownload member;
+      MoveEngineExtensionPin member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 20: {
-      ReadSiteData member;
+      PauseEngineDownload member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 21: {
-      RecoverPage member;
+      ReadSiteData member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 22: {
-      RejectOfferedPage member;
+      RecoverPage member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 23: {
-      RemoveEngineDownload member;
+      RejectOfferedPage member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 24: {
-      ResumeEngineDownload member;
+      RemoveEngineDownload member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 25: {
-      SettleAuthentication member;
+      ResumeEngineDownload member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 26: {
-      SettleDownloadDestination member;
+      SettleAuthentication member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 27: {
-      SettleExtensionInstall member;
+      SettleDownloadDestination member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 28: {
-      SettlePermission member;
+      SettleExtensionInstall member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 29: {
-      SettleScriptDialog member;
+      SettlePermission member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;
     }
     case 30: {
+      SettleScriptDialog member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 31: {
       StageNavigation member;
       if (!Read(reader, member)) return false;
       value = std::move(member);

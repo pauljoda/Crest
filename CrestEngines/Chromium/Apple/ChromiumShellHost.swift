@@ -42,5 +42,17 @@
             }
             return true
         }
+
+        // MARK: - Actions - Extensions
+
+        func opensExtensions(in space: SpaceModel, page: BrowserPage?) -> Bool {
+            !ChromiumComposition.extensions.popupCycle(for: space.identity, page: page?.chromiumPage).isEmpty
+        }
+
+        func openNextExtension(in space: SpaceModel, page: BrowserPage?, window: NSWindow?) {
+            let page = page?.chromiumPage
+            guard let window = page?.surface.window ?? window else { return }
+            ChromiumComposition.extensions.openNextPopup(in: space.identity, page: page, window: window)
+        }
     }
 #endif

@@ -6299,6 +6299,9 @@
     "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
 
     },
+    "extensions popup menu cycle pinned toolbar" : {
+
+    },
     "External Apps" : {
 
     },
@@ -9602,6 +9605,9 @@
           }
         }
       }
+    },
+    "Open Next Extension" : {
+
     },
     "Open Page in %@" : {
 

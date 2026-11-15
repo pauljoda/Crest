@@ -22,4 +22,10 @@ final class WebKitShellHost: BrowserMacEngineHost {
     // MARK: - Actions - Shortcuts
 
     func handleUnclaimedShortcut(_ event: NSEvent, page: BrowserPage) -> Bool { false }
+
+    // MARK: - Actions - Extensions
+
+    func opensExtensions(in space: SpaceModel, page: BrowserPage?) -> Bool { false }
+
+    func openNextExtension(in space: SpaceModel, page: BrowserPage?, window: NSWindow?) {}
 }
