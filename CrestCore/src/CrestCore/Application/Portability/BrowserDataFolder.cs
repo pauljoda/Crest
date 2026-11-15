@@ -6,9 +6,10 @@ namespace CrestCore.Application;
 
 /// A folder as a Crest browser-data file keeps it. A file from before
 /// folders had a place, a color or a collapsed state reads as a saved,
-/// expanded folder in the default color.
+/// expanded folder in the default color, and one without a group mark as a
+/// folder.
 internal sealed record BrowserDataFolder(Guid Id, TabPlacement Location, string Title, string Symbol, BrandColor Color,
-    Guid? ParentId, bool IsCollapsed, Guid? OrderAnchorTabId) {
+    Guid? ParentId, bool IsCollapsed, Guid? OrderAnchorTabId, bool IsGroup = false) {
     #region Actions - Reading
 
     public static BrowserDataFolder Read(BrowserDataValue value) {
@@ -17,7 +18,7 @@ internal sealed record BrowserDataFolder(Guid Id, TabPlacement Location, string 
             : TabPlacement.Saved;
         return new(value.Identity("id"), location, value.Text("title"), value.Text("symbol"),
             value.OptionalColor("color") ?? FolderState.DefaultColor, value.OptionalIdentity("parentID"),
-            value.OptionalFlag("isCollapsed") ?? false, value.OptionalIdentity("orderAnchorTabID"));
+            value.OptionalFlag("isCollapsed") ?? false, value.OptionalIdentity("orderAnchorTabID"), value.OptionalFlag("isGroup") ?? false);
     }
 
     /// The folder a Space keeps, with its new identity and parent. Throws
@@ -25,7 +26,7 @@ internal sealed record BrowserDataFolder(Guid Id, TabPlacement Location, string 
     public FolderState Materialize(Guid id, Guid? parentId) {
         if (!ImportText.IsKept(Title, ImportText.MaximumFolderTitle) || !ImportText.IsKept(Symbol, ImportText.MaximumSymbol))
             throw BrowserDataValue.Invalid();
-        return new(id, Location, Title, Symbol, Color, parentId, IsCollapsed, CollapseModifiedAt: null, OrderAnchorTabId);
+        return new(id, Location, Title, Symbol, Color, parentId, IsCollapsed, CollapseModifiedAt: null, OrderAnchorTabId, IsGroup);
     }
 
     #endregion
@@ -35,7 +36,7 @@ internal sealed record BrowserDataFolder(Guid Id, TabPlacement Location, string 
     public static BrowserDataFolder From(FolderState folder) {
         ArgumentNullException.ThrowIfNull(folder);
         return new(folder.Id, folder.Location, folder.Title, folder.DisplaySymbol, folder.DisplayColor, folder.ParentId,
-            folder.IsCollapsed, folder.OrderAnchorTabId);
+            folder.IsCollapsed, folder.OrderAnchorTabId, folder.IsGroup);
     }
 
     public JsonObject Write() {
@@ -49,6 +50,7 @@ internal sealed record BrowserDataFolder(Guid Id, TabPlacement Location, string 
         if (ParentId is { } parent) value["parentID"] = BrowserDataFile.Identity(parent);
         value["isCollapsed"] = IsCollapsed;
         if (OrderAnchorTabId is { } anchor) value["orderAnchorTabID"] = BrowserDataFile.Identity(anchor);
+        if (IsGroup) value["isGroup"] = true;
         return value;
     }
 

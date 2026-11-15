@@ -5,12 +5,16 @@ namespace CrestCore.Contracts;
 
 /// Opens a tab, `TabId`, showing `Content` in `Placement`'s section of a
 /// Space: after the tab `AfterTabId` names and outside its split, or where its
-/// section puts a new tab. When `Shows`, the window that asked shows the tab
-/// and its Space. Refused with `TabLimitReached` or `PinnedTabsFull` when the
-/// Space or the section is full, and with `UnsupportedAddress` for an address
-/// a page cannot load.
+/// section puts a new tab. When `JoinsFolder`, as for a tab the person opened
+/// from a link, an open tab after a tab in a folder of the open tabs files at
+/// the end of that folder instead, and, when `SavesInSavedFolder` as well, as
+/// for an address the person typed for a new tab, one after a tab in a saved
+/// folder is saved at the end of that folder. When `Shows`, the window that
+/// asked shows the tab and its Space. Refused with `TabLimitReached` or
+/// `PinnedTabsFull` when the Space or the section is full, and with
+/// `UnsupportedAddress` for an address a page cannot load.
 public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, TabContent Content, TabPlacement Placement,
-    Guid? AfterTabId, bool Shows) : SessionIntent(WorkspaceId) {
+    Guid? AfterTabId, bool Shows, bool JoinsFolder = false, bool SavesInSavedFolder = false) : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     /// Opens the tab, which the issuing window shows when the intent asks.
@@ -21,6 +25,8 @@ public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid
         var edited = BrowserTabCollection.Restore(space);
         var tab = BrowserTab.Restore(workspace.NewTab(TabId, Content, Placement, turn.Now));
         edited.InsertTab(tab, AfterTabId is { } origin ? edited.InsertionIndexAfter(origin) : null);
+        if (JoinsFolder && AfterTabId is { } from && Placement == TabPlacement.Current)
+            edited.JoinFolderOf(from, tab.Id, turn.Now, SavesInSavedFolder);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, tab.Id).ShowSpace(space.Id);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp);

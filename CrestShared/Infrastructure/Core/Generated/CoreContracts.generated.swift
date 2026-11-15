@@ -216,6 +216,7 @@ enum Rejection: Equatable, Error, Sendable {
     case bookmarksUnrecognized(BookmarksUnrecognized)
     case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
     case borrowedWorkspaceRequiresSpace(BorrowedWorkspaceRequiresSpace)
+    case cannotBecomeGroup(CannotBecomeGroup)
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
@@ -244,6 +245,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
     case folderLimitReached(FolderLimitReached)
+    case groupHoldsOnlyTabs(GroupHoldsOnlyTabs)
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
     case invalidAgent(InvalidAgent)
@@ -1509,6 +1511,10 @@ struct CancelExtensionInstall: Intent, ExtensionIntent, Equatable, Sendable {
 struct CancelImportRead: Intent, SetupFlowIntent, Equatable, Sendable {
 }
 
+struct CannotBecomeGroup: Equatable, Sendable {
+    let folderID: UUID
+}
+
 struct CannotDeleteLastSpace: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest needs at least one Space.")
@@ -1980,6 +1986,7 @@ struct CreateFolder: Intent, SessionIntent, Equatable, Sendable {
     let symbol: String?
     let tabIDs: [UUID]
     let leavesSplits: Bool
+    let isGroup: Bool
 }
 
 struct CreatePage: Equatable, Sendable {
@@ -3210,6 +3217,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let isCollapsed: Bool
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
+    let isGroup: Bool
     let displaySymbol: String
     let displayColor: BrandColor
 
@@ -3225,6 +3233,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
         var isCollapsed: Bool
         var collapseModifiedAt: Date?
         var orderAnchorTabID: UUID?
+        var isGroup: Bool
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -3238,7 +3247,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
             parentID: parentID,
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
-            orderAnchorTabID: orderAnchorTabID
+            orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup
         )
     }
 }
@@ -3250,6 +3260,7 @@ struct FolderTabs: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
     let placement: TabPlacement
     let title: String?
+    let isGroup: Bool
 }
 
 struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
@@ -3259,6 +3270,7 @@ struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
     let tabID: UUID
     let title: String?
+    let isGroup: Bool
 }
 
 struct FoldersChanged: CoreChange, Equatable, Sendable {
@@ -3310,6 +3322,10 @@ struct GetSiteContentBlocking: Query, Equatable, Sendable {
 struct GoToHistoryEntry: Equatable, Sendable {
     let pageID: UUID
     let entryID: UUID
+}
+
+struct GroupHoldsOnlyTabs: Equatable, Sendable {
+    let groupID: UUID
 }
 
 struct GroupPages: Equatable, Sendable {
@@ -4454,6 +4470,7 @@ struct OpenAddress: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let address: String
+    let joinsFolder: Bool
 }
 
 struct OpenCloudTransport: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -4497,6 +4514,8 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement
     let afterTabID: UUID?
     let shows: Bool
+    let joinsFolder: Bool
+    let savesInSavedFolder: Bool
 }
 
 struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
@@ -6126,6 +6145,13 @@ struct SetFolderColor: Intent, SessionIntent, Equatable, Sendable {
     let color: BrandColor
 }
 
+struct SetFolderGroup: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let isGroup: Bool
+}
+
 struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6471,6 +6497,7 @@ struct ShowStartPage: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let outsideSplits: Bool
+    let joinsFolder: Bool
 }
 
 struct ShowTab: Intent, WindowIntent, Equatable, Sendable {
@@ -25142,6 +25169,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.orderAnchorTabID)
         return orderAnchorTabIDStorage
     }
+    var isGroup: Bool {
+        access(keyPath: \.isGroup)
+        return isGroupStorage
+    }
     var displaySymbol: String {
         access(keyPath: \.displaySymbol)
         return displaySymbolStorage
@@ -25159,6 +25190,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var isCollapsedStorage: Bool
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
+    @ObservationIgnored private var isGroupStorage: Bool
     @ObservationIgnored private var displaySymbolStorage: String
     @ObservationIgnored private var displayColorStorage: BrandColor
 
@@ -25173,6 +25205,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup,
             displaySymbol: displaySymbol,
             displayColor: displayColor
         )
@@ -25188,6 +25221,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
         isCollapsedStorage = value.isCollapsed
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
+        isGroupStorage = value.isGroup
         displaySymbolStorage = value.displaySymbol
         displayColorStorage = value.displayColor
     }
@@ -25225,6 +25259,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if orderAnchorTabIDStorage != value.orderAnchorTabID {
             orderAnchorTabIDStorage = value.orderAnchorTabID
             withMutation(keyPath: \.orderAnchorTabID) {}
+        }
+        if isGroupStorage != value.isGroup {
+            isGroupStorage = value.isGroup
+            withMutation(keyPath: \.isGroup) {}
         }
         if displaySymbolStorage != value.displaySymbol {
             displaySymbolStorage = value.displaySymbol

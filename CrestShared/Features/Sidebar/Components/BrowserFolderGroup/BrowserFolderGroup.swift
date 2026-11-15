@@ -124,6 +124,7 @@ struct BrowserFolderGroup: View {
         .modifier(
             BrowserFolderSectionSurface(
                 color: folder.displayColor,
+                kind: folder.kind,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
                 depth: depth,

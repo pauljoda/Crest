@@ -6,6 +6,8 @@ namespace CrestCore.Contracts;
 /// Gives a tab that shows a native view or the Start Page the web address
 /// `Input` names, resolved by its Space's address rules as `Navigate` resolves
 /// one and titled by its host, so a page can open for it and load there. A
+/// saved tab that belonged nowhere, as a Start Page opened in a saved folder
+/// does, comes to belong to that address. A
 /// tab that already shows a web page keeps its address until its engine
 /// reports where the navigation landed, so the intent changes nothing for it.
 /// Refused when the workspace, Space or tab is not there, the Space is locked
@@ -28,6 +30,7 @@ public sealed record NavigateTab(Guid WorkspaceId, Guid SpaceId, Guid TabId, str
         if (tab.Content.IsWebPage) return new(turn.Basis, SyncStaging.PageReport);
         var address = new Uri(url);
         tab.ObserveAppearance(url, address.Host.Length > 0 ? address.Host : url);
+        tab.BelongToShownAddressIfNone();
         var tabs = space.Tabs.Select(candidate => candidate.Id == TabId ? tab.State : candidate);
         return new(turn.Basis.Replacing(space with { Tabs = [.. tabs] }), SyncStaging.PageReport);
     }

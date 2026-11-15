@@ -5,7 +5,10 @@ using CrestCore.Contracts;
 namespace CrestCore.Application;
 
 /// A folder's synced value: where it lives, its title and look, its parent,
-/// its disclosure with the clock of its last change, and its position.
+/// its disclosure with the clock of its last change, its position, whether it
+/// is a group, which older clients keep and show as a folder, and when it went
+/// for holding nothing and when a device last held a tab in it after that,
+/// which older clients keep and ignore.
 internal sealed record FolderPayload(
     Guid Id,
     Guid SpaceId,
@@ -17,7 +20,10 @@ internal sealed record FolderPayload(
     bool IsCollapsed,
     SyncTime? CollapseModifiedAt,
     Guid? OrderAnchorTabId,
-    string OrderToken) : SyncPayload {
+    string OrderToken,
+    bool IsGroup = false,
+    SyncTime? EmptiedAt = null,
+    SyncTime? HeldAt = null) : SyncPayload {
     #region Static Variables
 
     /// The members a folder's value carries; a record keeps what a newer build
@@ -25,7 +31,8 @@ internal sealed record FolderPayload(
     public static IReadOnlyList<string> Members { get; } = [
         StoredSessionCodec.Key.Id, StoredSessionCodec.Key.SpaceId, StoredSessionCodec.Key.Title, StoredSessionCodec.Key.Location,
         StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.Color, StoredSessionCodec.Key.ParentId, StoredSessionCodec.Key.IsCollapsed,
-        StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.OrderAnchorTabId, SyncPayload.Key.OrderToken
+        StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.OrderAnchorTabId, SyncPayload.Key.OrderToken,
+        StoredSessionCodec.Key.IsGroup, Key.EmptiedAt, Key.HeldAt
     ];
 
     #endregion
@@ -37,9 +44,22 @@ internal sealed record FolderPayload(
     public override Guid SpaceId { get; } = SpaceId;
     public override SyncRecordKind Kind => SyncRecordKind.Folder;
 
+    /// Whether the folder went for holding nothing after a device last held a
+    /// tab that syncs in it, so every device leaves it out while it holds
+    /// nothing there.
+    public bool IsEmptied => StandsEmptied(EmptiedAt?.ReferenceSeconds, HeldAt?.ReferenceSeconds);
+
     /// Clients before open folders synced cannot place one, so a folder of
     /// the current tabs needs schema 2.
     public override int Schema => Location.IsDurable ? 1 : 2;
+
+    #endregion
+
+    #region Actions - Emptying
+
+    /// Whether a folder dated emptied at `emptied` and last held at `held`, in
+    /// one form's seconds, stands emptied: it emptied after it was last held.
+    public static bool StandsEmptied(double? emptied, double? held) => emptied is { } went && (held is not { } kept || went > kept);
 
     #endregion
 
@@ -48,7 +68,8 @@ internal sealed record FolderPayload(
     /// The folder `value` holds. One without a location is saved, without a
     /// symbol keeps none of its own and is drawn with the folder symbol,
     /// without a color takes the folder color, and without a disclosure is
-    /// expanded.
+    /// expanded, without a group mark is a folder, and without an emptied date
+    /// later than its held date shows wherever it is.
     public static FolderPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity(StoredSessionCodec.Key.Id),
         value.WrappedIdentity(StoredSessionCodec.Key.SpaceId),
         value.OptionalText(StoredSessionCodec.Key.Location) is { } location ? Placement(location) : TabPlacement.Saved,
@@ -56,7 +77,8 @@ internal sealed record FolderPayload(
         value.Value[StoredSessionCodec.Key.Color] is { } color ? SpacePayload.Color(color) : FolderState.DefaultColor,
         value.OptionalWrappedIdentity(StoredSessionCodec.Key.ParentId), value.OptionalFlag(StoredSessionCodec.Key.IsCollapsed) ?? false,
         value.OptionalTime(StoredSessionCodec.Key.CollapseModifiedAt), value.OptionalWrappedIdentity(StoredSessionCodec.Key.OrderAnchorTabId),
-        value.Text(Key.OrderToken));
+        value.Text(Key.OrderToken), value.OptionalFlag(StoredSessionCodec.Key.IsGroup) ?? false, value.OptionalTime(Key.EmptiedAt),
+        value.OptionalTime(Key.HeldAt));
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
         var value = new JsonObject {
@@ -72,6 +94,9 @@ internal sealed record FolderPayload(
         Put(value, StoredSessionCodec.Key.CollapseModifiedAt, CollapseModifiedAt, form);
         PutWrapped(value, StoredSessionCodec.Key.OrderAnchorTabId, OrderAnchorTabId);
         value[Key.OrderToken] = OrderToken;
+        if (IsGroup) value[StoredSessionCodec.Key.IsGroup] = true;
+        Put(value, Key.EmptiedAt, EmptiedAt, form);
+        Put(value, Key.HeldAt, HeldAt, form);
         return value;
     }
 

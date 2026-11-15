@@ -7,6 +7,9 @@ namespace CrestCore.Contracts;
 /// <see cref="ParentId"/>, and a child always shares its parent's <see cref="Location"/>.
 /// <see cref="Symbol"/> and <see cref="Color"/> are null until someone chooses them.
 /// <see cref="OrderAnchorTabId"/> is the tab an empty folder keeps its place before.
+/// <see cref="IsGroup"/> marks a group: a single-level folder of open tabs that
+/// holds no folders and sits in no folder. A folder of the open tabs, a group
+/// among them, goes when its last tab leaves it; a saved folder stays empty.
 /// </summary>
 [Observed]
 public sealed record FolderState(
@@ -18,7 +21,8 @@ public sealed record FolderState(
     Guid? ParentId = null,
     bool IsCollapsed = false,
     DateTimeOffset? CollapseModifiedAt = null,
-    Guid? OrderAnchorTabId = null) {
+    Guid? OrderAnchorTabId = null,
+    bool IsGroup = false) {
     #region Static Variables
 
     /// The most folders deep a folder may nest, counting the folder itself.
@@ -42,6 +46,10 @@ public sealed record FolderState(
     /// The color the folder is drawn in: the one chosen, or <see cref="DefaultColor"/>.
     [Resolved]
     public BrandColor DisplayColor => Color ?? DefaultColor;
+
+    /// Whether the folder goes when its last tab leaves it: a folder of the
+    /// open tabs does, and a saved folder stays empty.
+    internal bool GoesWhenEmptied => Location == TabPlacement.Current;
 
     #endregion
 

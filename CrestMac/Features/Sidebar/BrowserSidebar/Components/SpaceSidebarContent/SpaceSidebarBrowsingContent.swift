@@ -203,10 +203,11 @@ private struct BrowserSidebarSelectionReconciler: View {
                 isExpanded: !folder.isCollapsed,
                 selectedTabID: folderTabIDs.first { context.window.shownTabIDs.contains($0) },
                 folderTabIDs: folderTabIDs,
-                residentFolderTabIDs: folderTabIDs.filter {
-                    context.pageAccess.containsResidentPageMatching(
-                        BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
-                })
+                residentFolderTabIDs: folder.kind.keepsLoadedTabsWhenClosed
+                    ? folderTabIDs.filter {
+                        context.pageAccess.containsResidentPageMatching(
+                            BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
+                    } : [])
         }
         guard browser.selectedSpaceID == space.id,
             !interaction.sidebarReorderState.hasLiftInFlight

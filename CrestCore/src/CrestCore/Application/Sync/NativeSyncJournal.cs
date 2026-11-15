@@ -106,25 +106,33 @@ public sealed class NativeSyncJournal {
     /// format that nothing else holds, under this journal's preferences.
     /// Records it no longer holds are deleted, where their absence authorizes a
     /// deletion, for the reason `removals` names for them by record name, else
-    /// for `reason`; `now` in seconds since 2001 dates the tombstones.
+    /// for `reason`, but a folder `emptied` names is marked emptied instead;
+    /// `now` in seconds since 2001 dates the tombstones and the marks.
     internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var archiveReasons = NativeSyncProjection.Items(session, StoredSessionCodec.Key.Spaces)
             .SelectMany(space => NativeSyncProjection.Items(space!, StoredSessionCodec.Key.ArchivedTabs))
             .ToDictionary(archived => Id(archived![StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]),
                 archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
         return Stage(NativeSyncProjection.Project(session, Preferences, records.Values), archiveReasons, Cleaning(session), reason, now,
-            removals);
+            removals, emptied);
     }
 
     /// The journal after staging `payloads`, everything a session holds that
     /// syncs, as `Stage(session:)` does: `archiveReasons` says why each archived
     /// tab was archived, and a record of a Space in `cleaning`, whose deletion
     /// is under way on this device, is left as it is.
+    ///
+    /// A folder an edit emptied keeps its record, marked emptied, so a device
+    /// that still holds a tab in it keeps it. Since a device leaves a group or
+    /// a marked folder out of its session while it holds nothing, absence alone
+    /// never deletes one: only an edit that removed it does.
     internal NativeSyncJournal Stage(JsonArray payloads, IReadOnlyDictionary<Guid, ArchiveReason> archiveReasons,
-        IReadOnlySet<Guid> cleaning, SyncDeletionReason reason, double now, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlySet<Guid> cleaning, SyncDeletionReason reason, double now, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null,
+        IReadOnlySet<string>? emptied = null) {
         var draft = new Draft(this);
         var desired = draft.Desired(payloads, cleaning);
+        CarryMarks(desired, draft.Records, now);
         // Parent evidence is from the accepted journal before staging.
         var accepted = records.Values.Select(r => new SyncJournalRecord(r)).ToArray();
         var spaces = accepted.Where(r => r.KindName == SyncRecordKind.Space.Name).Select(r => r.SpaceId).ToHashSet();
@@ -146,8 +154,16 @@ public sealed class NativeSyncJournal {
             if (!type.IsPortable(value)) deletion = SyncDeletionReason.Superseded;
             else {
                 if (!spaces.Contains(record.SpaceId) || !AncestryArrived(type.ParentFolder(value), folders)) continue;
-                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id),
-                    desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId)), removals?.GetValueOrDefault(name) ?? reason);
+                var spaceStays = desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId));
+                var removal = removals?.GetValueOrDefault(name);
+                if (spaceStays && emptied?.Contains(name) == true && type.Emptied(payload, now) is { } marked) {
+                    if (NativeSyncEvaluator.Equivalent(payload, marked)) continue;
+                    draft.Records[name] = draft.Save(marked);
+                    draft.Pending.Add(name);
+                    continue;
+                }
+                if (spaceStays && removal is null && type.HidesWhenEmpty(value)) continue;
+                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id), spaceStays, removal ?? reason);
             }
             if (deletion is null) continue;
             draft.Records[name] = draft.Delete(json, deletion, now);
@@ -208,6 +224,47 @@ public sealed class NativeSyncJournal {
             draft.Pending.Add(name);
         }
         return draft.Finish();
+    }
+
+    /// Carries each folder's emptied and held dates from the record it
+    /// replaces into the copy `desired` writes, since the session keeps
+    /// neither. A folder that stands emptied while it holds a tab that syncs is
+    /// held again as of `now`, so it shows on every device. One this device
+    /// shows only for a tab of its own that never syncs, such as a Start Page,
+    /// stays emptied, so every other device goes on leaving it out. `held` are
+    /// the records the journal holds; `now` is in seconds since 2001.
+    private void CarryMarks(Dictionary<string, JsonObject> desired, IReadOnlyDictionary<string, JsonObject> held, double now) {
+        // Only the dates are read, so a record an earlier build stored, which
+        // the strict reader may refuse, never stops a stage.
+        static (double? Emptied, double? Held) Dates(JsonObject? record) {
+            if (record is null || new SyncJournalRecord(record).Payload is not { } payload || SyncPayloadType.Of(payload) != SyncPayloadType.Folder)
+                return (null, null);
+            var value = SyncPayload.ValueOf(payload);
+            return (NativeSyncEvaluator.Date(value, SyncPayload.Key.EmptiedAt), NativeSyncEvaluator.Date(value, SyncPayload.Key.HeldAt));
+        }
+        var dated = desired.Where(item => SyncPayloadType.Of(item.Value) == SyncPayloadType.Folder)
+            .Select(item => (Name: item.Key, Dates: Dates(held.GetValueOrDefault(item.Key))))
+            .Where(item => item.Dates is not (null, null)).ToArray();
+        if (dated.Length == 0) return;
+        var parents = desired.Values.Where(payload => SyncPayloadType.Of(payload) == SyncPayloadType.Folder).Select(SyncPayload.ValueOf)
+            .ToDictionary(value => Id(value[StoredSessionCodec.Key.Id]), value => SyncPayloadType.Folder.ParentFolder(value) is { } parent ? Id(parent) : (Guid?)null);
+        HashSet<Guid> holding = [];
+        foreach (var payload in desired.Values) {
+            var (type, value) = (SyncPayloadType.Of(payload), SyncPayload.ValueOf(payload));
+            if (type != SyncPayloadType.Tab || !type.IsPortable(value) || !type.SyncsUnder(Preferences, value)) continue;
+            for (var next = type.ParentFolder(value) is { } folder ? Id(folder) : (Guid?)null; next is { } id && holding.Add(id);
+                next = parents.GetValueOrDefault(id)) { }
+        }
+        foreach (var (name, (emptied, heldAt)) in dated) {
+            var carried = desired[name].DeepClone().AsObject();
+            var value = SyncPayload.ValueOf(carried);
+            var lastHeld = heldAt;
+            if (FolderPayload.StandsEmptied(emptied, heldAt) && holding.Contains(Id(value[StoredSessionCodec.Key.Id])))
+                lastHeld = Math.Max(now, emptied!.Value + 0.001);
+            if (emptied is { } went) value[SyncPayload.Key.EmptiedAt] = went;
+            if (lastHeld is { } kept) value[SyncPayload.Key.HeldAt] = kept;
+            desired[name] = carried;
+        }
     }
 
     /// The Spaces `session` is deleting on this device. Pending cleanup is

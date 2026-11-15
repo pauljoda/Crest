@@ -5469,6 +5469,34 @@
     "sidebar-reveal-overshoot": {
       "category": "fixed",
       "message": "On Mac, the hidden sidebar also comes out when the pointer overshoots the window's edge, as it easily does when the window doesn't touch the edge of the screen."
+    },
+    "tab-groups": {
+      "category": "new",
+      "message": "Groups gather open tabs under a simple header that syncs to every device. Make one from a tab's menu or from selected tabs and name it as you make it, close it to its header, and turn a group into a folder and back. A group goes away when its last tab leaves."
+    },
+    "folder-header-actions": {
+      "category": "improved",
+      "message": "Folders and groups show a … button on their header for their actions, including Archive Tabs and turning a folder of open tabs into a group. A folder's tab count sits where the button appears."
+    },
+    "import-tab-folder-section": {
+      "category": "internal",
+      "message": "A browser-data import refuses a tab filed in a folder of another section."
+    },
+    "open-folders-go-when-empty": {
+      "category": "improved",
+      "message": "A folder of open tabs now goes away once nothing is left in it, as a group does: when its last tab closes or moves out, or its last folder leaves. A folder that still holds a folder stays, and so do saved folders when they empty."
+    },
+    "new-tabs-join-folder": {
+      "category": "new",
+      "message": "A new tab opens in the group or folder of the tab you're on, at its end, whether you open it with New Tab, from a link or with Duplicate Tab. From a saved folder, New Tab is saved there, while links and copies open with your open tabs."
+    },
+    "removed-tab-stays-near": {
+      "category": "improved",
+      "message": "Remove from Folder and Remove from Group put the tab just below its folder or group instead of at the end of your open tabs."
+    },
+    "deleted-folder-keeps-filed-tab": {
+      "category": "fixed",
+      "message": "A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs."
     }
   }
 }

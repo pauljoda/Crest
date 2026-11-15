@@ -9,6 +9,7 @@ struct BrowserTabOrganizationMenuContent: View {
     var changeIcon: (() -> Void)? = nil
 
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
 
     init(menu: BrowserTabOrganizationMenu) {
         tab = menu.tab
@@ -105,6 +106,35 @@ struct BrowserTabOrganizationMenuContent: View {
         }
 
         if !tab.placement.isDurable, !tab.isStartPage {
+            Menu("Add to Group", systemImage: "rectangle.stack.badge.plus") {
+                Group {
+                    Button("New Group", systemImage: "rectangle.stack.badge.plus") {
+                        performIfCurrent {
+                            guard let group = browser.createTabFolder([tab.id], in: assignment.spaceID, isGroup: true)
+                            else { return }
+                            sidebarInteraction?.beginRenaming(folder: group, in: context.space)
+                        }
+                    }
+                    let groups = context.space.folderChoices(in: [.current]).map(\.folder).filter(\.isGroup)
+                    if !groups.isEmpty { Divider() }
+                    ForEach(groups, id: \.id) { group in
+                        Button {
+                            performIfCurrent {
+                                browser.fileTabs(
+                                    [tab.id], matching: sourceAssignment, into: group.id, location: .current)
+                            }
+                        } label: {
+                            Label {
+                                Text(verbatim: group.shownTitle)
+                            } icon: {
+                                BrowserFolderMenuIcon(systemName: "rectangle.stack.fill", color: group.displayColor)
+                            }
+                        }
+                        .disabled(group.id == tab.folderID)
+                    }
+                }
+                .crestMenuActionLabelStyle()
+            }
             Menu("Add to Current Tabs Folder", systemImage: "folder.badge.plus") {
                 Group {
                     Button("New Folder", systemImage: "folder.badge.plus") {
@@ -112,7 +142,7 @@ struct BrowserTabOrganizationMenuContent: View {
                             browser.createTabFolder([tab.id], in: assignment.spaceID)
                         }
                     }
-                    let folders = context.space.folderChoices(in: [.current]).map(\.folder)
+                    let folders = context.space.folderChoices(in: [.current]).map(\.folder).filter { !$0.isGroup }
                     if !folders.isEmpty { Divider() }
                     ForEach(folders, id: \.id) { folder in
                         Button {
@@ -132,11 +162,12 @@ struct BrowserTabOrganizationMenuContent: View {
                 }
                 .crestMenuActionLabelStyle()
             }
-            if tab.folderID != nil {
-                Button("Remove from Folder", systemImage: "folder.badge.minus") {
-                    performIfCurrent {
-                        browser.fileTabs([tab.id], matching: sourceAssignment, into: nil, location: .current)
-                    }
+            if let folderID = tab.folderID {
+                Button(
+                    (context.space.folders.model(folderID)?.kind ?? .folder).removeTitle,
+                    systemImage: "folder.badge.minus"
+                ) {
+                    performIfCurrent { removeFromFolder(folderID) }
                 }
             }
         }
@@ -384,6 +415,18 @@ struct BrowserTabOrganizationMenuContent: View {
     /// Runs a menu action only while the window shows the tab's Space,
     /// unlocked, with the profile the menu was built for, and the Space still
     /// holds the tab.
+    /// Takes the tab out of its folder to sit just after the folder, or the
+    /// folder that holds it, at the top level of the open tabs.
+    private func removeFromFolder(_ folderID: UUID) {
+        var outer = folderID
+        var seen: Set<UUID> = [folderID]
+        while let parent = context.space.folders.model(outer)?.parentID, seen.insert(parent).inserted { outer = parent }
+        let place = context.space.sidebar.section(.current).placement(after: outer)
+        browser.fileTabs(
+            [tab.id], matching: sourceAssignment, into: nil, location: .current, before: place.beforeTab,
+            beforeFolderID: place.beforeFolder)
+    }
+
     private func performIfCurrent(_ action: () -> Void) {
         guard context.isCurrent(sourceAssignment), context.space.shownTab(tab.id) != nil else { return }
         action()

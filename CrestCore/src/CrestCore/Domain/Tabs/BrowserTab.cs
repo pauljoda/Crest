@@ -75,6 +75,12 @@ public sealed class BrowserTab {
 
     #region Actions - Saved address
 
+    /// Gives a saved tab that belongs nowhere, as a Start Page opened in a
+    /// saved folder does, the page it shows as the one it belongs to.
+    public void BelongToShownAddressIfNone() {
+        if (Placement.IsDurable && SavedUrl is null && Url is { } shown) State = State with { SavedUrl = shown };
+    }
+
     /// Adopts the page the tab shows as the one it belongs to. A tab at its
     /// saved address keeps it. Refused with `NoSavedAddress` for a tab that
     /// belongs nowhere.

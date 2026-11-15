@@ -6,18 +6,39 @@ extension BrowserStore {
     /// The name a new folder takes, in the app's language.
     static var newFolderTitle: String { String(localized: "New Folder") }
 
+    /// The name a new group takes, in the app's language.
+    static var newGroupTitle: String { String(localized: "New Group") }
+
+    /// Puts open tabs in a new folder, or a new group when `isGroup`, and
+    /// answers its identity, or nil when the core refused it.
     func createSessionTabFolder(
         _ tabIDs: [UUID], in spaceID: UUID,
-        detachesSplitMembers: Bool
+        detachesSplitMembers: Bool, isGroup: Bool = false
     ) -> UUID? {
         guard !tabIDs.isEmpty else { return nil }
         let id = UUID()
         let creation = CreateFolder(
             workspaceID: family.workspaceID, spaceID: spaceID, folderID: id, placement: .current,
-            parentID: nil, title: Self.newFolderTitle, color: BrandColor.folderDefault, symbol: "folder",
-            tabIDs: tabIDs, leavesSplits: detachesSplitMembers)
+            parentID: nil, title: isGroup ? Self.newGroupTitle : Self.newFolderTitle, color: BrandColor.folderDefault,
+            symbol: "folder", tabIDs: tabIDs, leavesSplits: detachesSplitMembers, isGroup: isGroup)
         guard family.send(creation, from: self) else { return nil }
         return spaceModel(spaceID)?.folders.contains(id) == true ? id : nil
+    }
+
+    /// Turns a folder into a group, or a group back into a folder, and answers
+    /// whether the core accepted it.
+    @discardableResult
+    func setSessionFolderGroup(_ folderID: UUID, in spaceID: UUID, isGroup: Bool) -> Bool {
+        family.send(setFolderGroup(folderID, in: spaceID, isGroup: isGroup), from: self)
+    }
+
+    /// Whether the core would turn the folder into a group, or back.
+    func canSetSessionFolderGroup(_ folderID: UUID, in spaceID: UUID, isGroup: Bool) -> Bool {
+        family.canSend(setFolderGroup(folderID, in: spaceID, isGroup: isGroup), from: self)
+    }
+
+    private func setFolderGroup(_ folderID: UUID, in spaceID: UUID, isGroup: Bool) -> SetFolderGroup {
+        SetFolderGroup(workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID, isGroup: isGroup)
     }
 
     /// Chooses how a tab's icon is filled, and answers whether the core
@@ -67,17 +88,21 @@ extension BrowserStore {
 
     /// Opens a tab showing `content` in `placement`'s section and answers its
     /// identity, or nil when the core refused it. The core places a tab
-    /// opened from `origin` after it and outside its split, resolves its
-    /// address and names a page it was given no title for.
+    /// opened from `origin` after it and outside its split, or, when
+    /// `joinsFolder`, at the end of the folder of the open tabs `origin` sits
+    /// in, and of a saved folder too when `savesInSavedFolder`; it resolves
+    /// its address and names a page it was given no title for.
     @discardableResult
     func openSessionTab(
         _ content: TabContent, in spaceID: UUID, placement: TabPlacement = .current,
-        insertingAfter origin: UUID? = nil, shouldSelect: Bool = true
+        insertingAfter origin: UUID? = nil, shouldSelect: Bool = true, joinsFolder: Bool = false,
+        savesInSavedFolder: Bool = false
     ) -> UUID? {
         let id = UUID()
         let opening = OpenTab(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id,
-            content: content, placement: placement, afterTabID: origin, shows: shouldSelect)
+            content: content, placement: placement, afterTabID: origin, shows: shouldSelect, joinsFolder: joinsFolder,
+            savesInSavedFolder: savesInSavedFolder)
         return family.perform(opening, from: self) == nil ? nil : id
     }
 

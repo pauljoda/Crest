@@ -39,9 +39,9 @@ public sealed record NativeSyncSessionTransition {
 
     internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, JsonObject local, JsonArray incoming,
         bool replacing, double now, JsonObject? emptySpace, SpaceAccessAuthority? access, IIdSource? ids,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var prepared = Prepare(journal, StoredSessionCodec.DecodeSession(local), incoming, replacing, StoredSessionCodec.Date(now),
-            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), access, ids ?? new SystemIdSource(), removals);
+            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), access, ids ?? new SystemIdSource(), removals, emptied);
         return new(prepared.Journal, prepared.Session, prepared.Origins, local.DeepClone().AsObject());
     }
 
@@ -49,11 +49,11 @@ public sealed record NativeSyncSessionTransition {
     /// session, retaining local deletion work and device preferences throughout.
     internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, SessionState local, JsonArray incoming,
         bool replacing, DateTimeOffset now, SpaceState? emptySpace, SpaceAccessAuthority? access, IIdSource ids,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var seconds = StoredSessionCodec.Seconds(now);
         var next = journal;
         if (!replacing && local.DisposableSeedMarker is null)
-            next = next.Stage(StoredSessionCodec.Encode(local), SyncDeletionReason.Superseded, seconds, removals);
+            next = next.Stage(StoredSessionCodec.Encode(local), SyncDeletionReason.Superseded, seconds, removals, emptied);
         next = replacing ? next.Replace(incoming) : next.Merge(incoming);
         var records = NativeSyncEvaluator.Reconcile(next.Records).Select(record => SyncSessionRecord.Read(record!.AsObject())).ToArray();
         // Only accepted explicit Space tombstones authorize erasing a local
@@ -94,6 +94,10 @@ public sealed record NativeSyncSessionTransition {
             }
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
+        // A folder of the open tabs that another device emptied arrives marked,
+        // and stays out of sight here while it holds nothing. Records can
+        // arrive over several batches, so nothing here clears or deletes a
+        // folder: the tab that keeps it may not have arrived yet.
         if (!replacing || removed)
             next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds);
         return new(next, repaired, origins);

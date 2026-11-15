@@ -54,6 +54,9 @@ internal sealed class PageGroup {
     private bool seesFolder;
     /// Whether the folder is made; one that went since was deleted.
     private bool showsFolder;
+    /// The tabs the folder held when the core last saw it, which tell a folder
+    /// that went with its last tab from one the person deleted.
+    private IReadOnlySet<Guid> filedTabIds = new HashSet<Guid>();
 
     #endregion
 
@@ -115,6 +118,9 @@ internal sealed class PageGroup {
             }
             if (Editable(workspace)?.Folders.FirstOrDefault(folder => folder.Id == Id) is { } shown)
                 (showsFolder, folderTitle, folderColor, seesFolder) = (true, shown.Title, shown.Color, true);
+            else if (leaving.Count > 0)
+                // The report took the folder's last tabs out, and it went with them.
+                showsFolder = false;
         }
         if (titled) wantedTitle = report.Title;
         if (colored) wantedColor = report.Color;
@@ -127,9 +133,11 @@ internal sealed class PageGroup {
     /// what the group holds: the title or color the person gave the folder,
     /// whether it is collapsed, and the live pages of its tabs, with the
     /// grouped pages it does not hold. A folder that lost its last tab goes,
-    /// as a group does, and the group keeps only the pages outside it; a
-    /// folder the person deleted takes every page out of the group. Answers
-    /// whether the group is still followed.
+    /// as every folder of the open tabs does, and the group keeps only the
+    /// pages outside it, whether those tabs closed or moved into another
+    /// folder; a folder the person deleted, whose tabs stay open at the top
+    /// level, takes every page out of the group. Answers whether the group is still
+    /// followed.
     public bool Reconcile(Pages pages, Action<Engine, EngineCommand> issue) {
         if (!Located(pages)) return false;
         if (WorkspaceId is not { } workspaceId) return true;
@@ -146,8 +154,11 @@ internal sealed class PageGroup {
         var folder = space.Folders.FirstOrDefault(candidate => candidate.Id == Id);
         if (folder is null) {
             if (!showsFolder) return kept.Count > 0;
-            Ask(pages, issue, live, heldCollapsed, []);
-            return false;
+            showsFolder = false;
+            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && tab.Placement == TabPlacement.Current
+                && tab.FolderId is null);
+            Ask(pages, issue, live, heldCollapsed, deleted ? [] : kept);
+            return !deleted && kept.Count > 0;
         }
         var tabs = space.Tabs.Where(tab => tab.FolderId == Id).ToList();
         if (tabs.Count == 0) {
@@ -161,6 +172,7 @@ internal sealed class PageGroup {
             Ask(pages, issue, live, heldCollapsed, kept);
             return kept.Count > 0;
         }
+        filedTabIds = tabs.Select(tab => tab.Id).ToHashSet();
         if (seesFolder && folder.Title != folderTitle) wantedTitle = folder.Title;
         if (seesFolder && folder.Color != folderColor) wantedColor = TabGroupColor.Nearest(folder.DisplayColor);
         (folderTitle, folderColor, seesFolder) = (folder.Title, folder.Color, true);

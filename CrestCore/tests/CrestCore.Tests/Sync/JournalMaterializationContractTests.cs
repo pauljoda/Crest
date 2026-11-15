@@ -61,6 +61,41 @@ public sealed partial class BrowserContractsTests {
         Assert.True(folders[1]!["isCollapsed"]!.GetValue<bool>());
     }
 
+    /// A Group arrives as a Group, and one whose tabs have not arrived waits
+    /// out of sight until one does. A Group a client that knows no Groups left
+    /// nested, holding a folder or outside the open tabs arrives as a folder
+    /// on every device.
+    [Fact]
+    public void GroupsArriveAsGroupsAndMisshapenOnesAsFolders() {
+        var session = OneSpaceSession();
+        var (group, waiting, plain, nested, holding, child, saved) =
+            (Fixed(250), Fixed(251), Fixed(252), Fixed(253), Fixed(254), Fixed(255), Fixed(256));
+        JsonObject GroupOf(Guid id, Guid? parent = null, string location = "current") {
+            var folder = FolderOf(id, "Group", parent: parent, location: location);
+            folder["isGroup"] = true;
+            return folder;
+        }
+        FirstSpace(session)["folders"] = new JsonArray(GroupOf(group), GroupOf(waiting), FolderOf(plain, "Plain", location: "current"),
+            GroupOf(nested, parent: plain), GroupOf(holding), FolderOf(child, "Child", parent: holding, location: "current"),
+            GroupOf(saved, location: "saved"));
+        FirstSpace(session)["tabs"]![0]!["folderID"] = SwiftId(group);
+        var journal = new JournalUnderTest(Fixed(257));
+
+        journal.Stage(session);
+        var folders = StoredSessionCodec.DecodeSpace(FirstSpace(journal.Materialize(session))).Folders.ToDictionary(folder => folder.Id);
+
+        Assert.True(folders[group].IsGroup);
+        Assert.DoesNotContain(waiting, folders.Keys);
+        Assert.False(folders[nested].IsGroup);
+        Assert.False(folders[holding].IsGroup);
+        Assert.False(folders[saved].IsGroup);
+
+        FirstSpace(session)["tabs"]!.AsArray().Add(TabOf(Fixed(258), "Arrived", "https://example.com/arrived", folder: waiting));
+        journal.Stage(session);
+        var arrived = StoredSessionCodec.DecodeSpace(FirstSpace(journal.Materialize(session))).Folders.Single(folder => folder.Id == waiting);
+        Assert.True(arrived.IsGroup);
+    }
+
     [Fact]
     public void ARenameTravelsWithItsTabWithinItsSpace() {
         var session = OneSpaceSession();
