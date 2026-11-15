@@ -30,9 +30,20 @@ struct BrowserTabBatchMenu: View {
             action(
                 count == 1 ? "Unpin Tab" : "Unpin \(count) Tabs", systemImage: "pin.slash",
                 browser.filing(request, .current))
+        } else if request.members.allSatisfy({ $0.placement == .saved }) {
+            // A selection of saved tabs only is unsaved, the pair of Save N
+            // Tabs, which moves it back among the open tabs.
+            action(
+                count == 1 ? "Pin Tab" : "Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
+            action(
+                count == 1 ? "Unsave Tab" : "Unsave \(count) Tabs", systemImage: "bookmark.slash",
+                browser.filing(request, .current))
         } else {
             action(
                 count == 1 ? "Pin Tab" : "Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
+            action(
+                count == 1 ? "Save Tab" : "Save \(count) Tabs", systemImage: "bookmark", browser.filing(request, .saved)
+            )
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
         }
         // A group holds only tabs, so a selection with folders has none to offer.

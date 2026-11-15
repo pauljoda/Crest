@@ -5577,6 +5577,10 @@
     "recent-tabs-loaded-only": {
       "category": "improved",
       "message": "On Mac, the recent tabs switcher lists only tabs whose page is loaded, beside the one on screen."
+    },
+    "save-unsave-tab-menu": {
+      "category": "improved",
+      "message": "A tab's menu now offers Save Tab, which moves it into Saved Tabs, and a saved tab's offers Unsave Tab, which moves it back among your open tabs. A selection of tabs offers the same."
     }
   }
 }
