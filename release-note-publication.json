@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "sidebar-reveal-overshoot",
+    "development": "deleted-folder-keeps-filed-tab",
     "nightly": "snappier-sidebar-slide"
   }
 }

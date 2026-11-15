@@ -6,30 +6,40 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.48</title>
-            <pubDate>Sat, 14 Nov 2026 18:11:32 +0000</pubDate>
+            <title>0.9.55</title>
+            <pubDate>Sun, 15 Nov 2026 01:03:48 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1611</sparkle:version>
-            <sparkle:shortVersionString>0.9.48</sparkle:shortVersionString>
+            <sparkle:version>1612</sparkle:version>
+            <sparkle:shortVersionString>0.9.55</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Groups gather open tabs under a simple header that syncs to every device. Make one from a tab's menu or from selected tabs and name it as you make it, close it to its header, and turn a group into a folder and back. A group goes away when its last tab leaves.
+- A new tab opens in the group or folder of the tab you're on, at its end, whether you open it with New Tab, from a link or with Duplicate Tab. From a saved folder, New Tab is saved there, while links and copies open with your open tabs.
+
+### Improved
+
+- Folders and groups show a … button on their header for their actions, including Archive Tabs and turning a folder of open tabs into a group. A folder's tab count sits where the button appears.
+- A folder of open tabs now goes away once nothing is left in it, as a group does: when its last tab closes or moves out, or its last folder leaves. A folder that still holds a folder stays, and so do saved folders when they empty.
+- Remove from Folder and Remove from Group put the tab just below its folder or group instead of at the end of your open tabs.
+
 ### Fixed
 
-- On Mac, a sidebar tab's preview no longer pops up when the hidden sidebar slides out under the pointer, and it goes away with the sidebar instead of staying on the page.
-- On Mac, the hidden sidebar also comes out when the pointer overshoots the window's edge, as it easily does when the window doesn't touch the edge of the screen.
+- A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/45347c24784757e9560a37c02e8122a2806ca476...9149409d7d25692b3eded73cddd7ff914d099df2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.48-2026-11-14-1611-r611.1/Installer-Crest-0.9.48-development-2026-11-14-9149409-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/9149409d7d25692b3eded73cddd7ff914d099df2...2a3cadd45a0d1dc04b2ae71c1ef79984d2df46be) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.55-2026-11-15-1612-r612.1/Installer-Crest-0.9.55-development-2026-11-15-2a3cadd-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.48-2026-11-14-1611-r611.1/Installer-Crest-0.9.48-development-2026-11-14-9149409-arm64.dmg" length="220938373" type="application/octet-stream" sparkle:edSignature="bBE14TlItUUH1o88G3XIKS0440+yMMYfajzfrjMBESORixaLKyRV/NSoc1tAXi1fvhSGTM5629BCsbOXvoItDg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.55-2026-11-15-1612-r612.1/Installer-Crest-0.9.55-development-2026-11-15-2a3cadd-arm64.dmg" length="221044868" type="application/octet-stream" sparkle:edSignature="m1+BLCM4Msy2W6kj+zvWxsAmI5nkOLabAcJ0Md9aXdTUY/YVsTjk7qB+nsLTZACGmLDxAh9cMsTaGDM9z+wZDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -61,6 +71,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: q72eqjztM/fQsFeD0tuhv9XRPxLweSXg4iotq6BxgC1PzsGsURa2pn3iIsBRKex7mtXqxKZY41cEm8H5jHIECw==
-length: 4225
+edSignature: iEPgoA90xtu48t5KsxSqMwiqspuHJ9170EPwpG2S+worMpTWtrvrPNZy6F3S3fLcPZvpS/H4WOUIyxKh9lPPCQ==
+length: 5138
 -->
