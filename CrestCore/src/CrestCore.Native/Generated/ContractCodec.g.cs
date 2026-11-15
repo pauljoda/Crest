@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xe1, 0xf9, 0xb3, 0xda, 0x40, 0x92, 0x84, 0x37, 0x7d, 0x29, 0xc7, 0x85, 0xf8, 0x9b, 0xee, 0xdf, 0x7d, 0xca, 0x06, 0xc3, 0x7b, 0x63, 0x7b, 0x71, 0x10, 0xc6, 0x99, 0xa4, 0x40, 0x8b, 0x71, 0xbc
+        0x7e, 0x14, 0xe0, 0x1f, 0x67, 0x2b, 0x87, 0x8e, 0x0c, 0xc6, 0xa3, 0x28, 0x4b, 0xbd, 0xaf, 0x23, 0xb1, 0xf3, 0x6d, 0x10, 0x93, 0x2d, 0x69, 0x7e, 0x9d, 0x43, 0x67, 0x40, 0x41, 0xa6, 0x85, 0x11
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -4904,6 +4904,8 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
+            ReadNewTabPosition(reader),
+            reader.ReadBool(),
             ReadPalettePreferences(reader));
     }
 
@@ -4925,6 +4927,8 @@ public static class ContractCodec {
         writer.WriteBool(value.SplitFocusFollowsMouse);
         writer.WriteBool(value.AutomaticallyShowsDeveloperToolbar);
         writer.WriteBool(value.ShowsRecentTabs);
+        WriteNewTabPosition(writer, value.NewTabPosition);
+        writer.WriteBool(value.NewTabsJoinFolder);
         WritePalettePreferences(writer, value.Palette);
     }
 
@@ -13480,7 +13484,7 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         writer.WriteGuid(value.TabId);
         writer.WriteString(value.Address);
-        writer.WriteBool(value.JoinsFolder);
+        writer.WriteBool(value.PlacesAsNewTab);
     }
 
     public static OpenCloudTransport ReadOpenCloudTransport(WireReader reader) {
@@ -13596,7 +13600,7 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.Shows);
-        writer.WriteBool(value.JoinsFolder);
+        writer.WriteBool(value.PlacesAsNewTab);
         writer.WriteBool(value.SavesInSavedFolder);
     }
 
@@ -18247,7 +18251,7 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
         writer.WriteGuid(value.TabId);
         writer.WriteBool(value.OutsideSplits);
-        writer.WriteBool(value.JoinsFolder);
+        writer.WriteBool(value.PlacesAsNewTab);
     }
 
     public static ShowTab ReadShowTab(WireReader reader) {
@@ -22389,6 +22393,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(NavigationError.All, value));
+    }
+
+    public static NewTabPosition ReadNewTabPosition(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return NewTabPosition.All[reader.ReadEnum(NewTabPosition.All.Count)];
+    }
+
+    public static void WriteNewTabPosition(WireWriter writer, NewTabPosition value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(NewTabPosition.All, value));
     }
 
     public static NumberedSelectionTarget ReadNumberedSelectionTarget(WireReader reader) {

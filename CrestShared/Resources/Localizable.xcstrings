@@ -3006,6 +3006,9 @@
         }
       }
     },
+    "Bottom" : {
+
+    },
     "Branding" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9609,6 +9612,12 @@
           }
         }
       }
+    },
+    "Open new tabs at" : {
+
+    },
+    "Open new tabs in the current folder" : {
+
     },
     "Open Next Extension" : {
 

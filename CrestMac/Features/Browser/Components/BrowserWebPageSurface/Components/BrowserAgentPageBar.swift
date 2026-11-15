@@ -3,7 +3,7 @@ import SwiftUI
 /// The bar a page wears while an agent uses its tab: the agent's mark in its
 /// colour, who uses the tab, and Stop, which keeps the agent out of the tab
 /// for as long as it stays connected. It sits where the engine's own bars do,
-/// in the same glass.
+/// on the same surface, outlined in the agent's colour.
 struct BrowserAgentPageBar: View {
     let session: AgentSessionState
     let stop: () -> Void
@@ -23,7 +23,7 @@ struct BrowserAgentPageBar: View {
         .padding(.horizontal, BrowserWebPageSurfaceMetrics.infoBarHorizontalPadding)
         .padding(.vertical, BrowserWebPageSurfaceMetrics.infoBarVerticalPadding)
         .frame(maxWidth: BrowserWebPageSurfaceMetrics.infoBarMaximumWidth)
-        .glassEffect(.regular, in: .rect(cornerRadius: BrowserWebPageSurfaceMetrics.infoBarCornerRadius))
+        .crestFlyoutStyle(in: .rect(cornerRadius: BrowserWebPageSurfaceMetrics.infoBarCornerRadius))
         .overlay {
             RoundedRectangle(cornerRadius: BrowserWebPageSurfaceMetrics.infoBarCornerRadius)
                 .strokeBorder((session.color ?? .agentDefault).color, lineWidth: 1)

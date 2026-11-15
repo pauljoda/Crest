@@ -3,11 +3,11 @@ import Foundation
 // MARK: - Opening
 
 extension BrowserStore {
-    /// Opens the new tab the person asked for: a Start Page, in the folder of
-    /// the tab this window shows when it sits in one.
+    /// Opens the new tab the person asked for: a Start Page where the app's
+    /// preferences put a new tab.
     @discardableResult
     func openNewTab() -> UUID? {
-        showStartPage(outsideSplits: false, joinsFolder: true)
+        showStartPage(outsideSplits: false, placesAsNewTab: true)
     }
 
     /// Presents the Start Page before the person chooses a restored tab.
@@ -28,13 +28,14 @@ extension BrowserStore {
     }
 
     /// Shows a Start Page in the Space this window shows, which the core
-    /// chooses or opens, and answers it. With `joinsFolder` it is the Start
-    /// Page of the folder the shown tab sits in.
-    private func showStartPage(outsideSplits: Bool, joinsFolder: Bool = false) -> UUID? {
+    /// chooses or opens, and answers it. With `placesAsNewTab` a new one goes
+    /// where the app's preferences put a new tab, which may be the folder the
+    /// shown tab sits in.
+    private func showStartPage(outsideSplits: Bool, placesAsNewTab: Bool = false) -> UUID? {
         guard let space = shownSpace else { return nil }
         let opening = ShowStartPage(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id, tabID: UUID(),
-            outsideSplits: outsideSplits, joinsFolder: joinsFolder)
+            outsideSplits: outsideSplits, placesAsNewTab: placesAsNewTab)
         guard family.perform(opening, from: self) != nil else { return nil }
         return selectedTabID(in: space.id)
     }
@@ -51,21 +52,22 @@ extension BrowserStore {
     }
 
     /// Opens `url` in a new tab after the one shown in Space `spaceID`, or,
-    /// when `joinsFolder`, as for a link the person opened, at the end of the
-    /// folder of the open tabs that tab sits in, and of a saved folder too when
-    /// `savesInSavedFolder`, as for an address typed for a new tab.
+    /// when `placesAsNewTab`, as for a link the person opened, where the app's
+    /// preferences put a new tab, which may be the end of the folder that tab
+    /// sits in, a saved one too when `savesInSavedFolder`, as for an address
+    /// typed for a new tab.
     @discardableResult
     func openNewTab(
         url: URL,
         in spaceID: UUID,
         selecting: Bool,
-        joinsFolder: Bool = false,
+        placesAsNewTab: Bool = false,
         savesInSavedFolder: Bool = false
     ) -> UUID? {
         guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
         return openSessionTab(
             .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting,
-            joinsFolder: joinsFolder, savesInSavedFolder: savesInSavedFolder)
+            placesAsNewTab: placesAsNewTab, savesInSavedFolder: savesInSavedFolder)
     }
 
     @discardableResult
@@ -91,7 +93,7 @@ extension BrowserStore {
     func openBackgroundTab(url: URL, in spaceID: UUID, savesInSavedFolder: Bool = false) -> UUID? {
         guard
             let tabID = openNewTab(
-                url: url, in: spaceID, selecting: false, joinsFolder: true, savesInSavedFolder: savesInSavedFolder)
+                url: url, in: spaceID, selecting: false, placesAsNewTab: true, savesInSavedFolder: savesInSavedFolder)
         else { return nil }
         interactionObserver?.browserDidOpenBackgroundTab()
         return tabID
@@ -102,7 +104,7 @@ extension BrowserStore {
     func openModifiedLink(_ url: URL, in spaceID: UUID, selecting: Bool) -> BrowserModifiedLinkRegistration? {
         let opened =
             selecting
-            ? openNewTab(url: url, in: spaceID, selecting: true, joinsFolder: true)
+            ? openNewTab(url: url, in: spaceID, selecting: true, placesAsNewTab: true)
             : openBackgroundTab(url: url, in: spaceID)
         guard let tabID = opened,
             let space = spaceModel(spaceID),
@@ -136,13 +138,13 @@ extension BrowserStore {
 
     /// Opens `url` in a Space this window shows: the Start Page on show there
     /// takes it, or a new tab opens it, which the core decides. With
-    /// `joinsFolder`, as for a new tab the person typed in the palette, that
-    /// tab joins the folder of the tab this window shows.
+    /// `placesAsNewTab`, as for a new tab the person typed in the palette, that
+    /// tab goes where the app's preferences put a new tab.
     @discardableResult
-    func openAddress(_ url: URL, in spaceID: UUID, joinsFolder: Bool = false) -> Bool {
+    func openAddress(_ url: URL, in spaceID: UUID, placesAsNewTab: Bool = false) -> Bool {
         let opening = OpenAddress(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: UUID(),
-            address: url.absoluteString, joinsFolder: joinsFolder)
+            address: url.absoluteString, placesAsNewTab: placesAsNewTab)
         return family.perform(opening, from: self) != nil
     }
 
