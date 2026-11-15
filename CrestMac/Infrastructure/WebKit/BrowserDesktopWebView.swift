@@ -57,18 +57,17 @@ final class BrowserDesktopWebView: WKWebView {
         nextResponder?.swipe(with: event)
     }
 
-    /// Adds Crest's actions ahead of WebKit's native and extension items.
+    /// Adds Crest's actions ahead of WebKit's native and extension items, led
+    /// by WebKit's own row that opens a link in a new tab.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
-        if menuHost?.opensLinksInCurrentSpace == true {
-            menu.relabelWebKitLinkDestination()
-        }
+        let newTab = menuHost?.opensLinksInCurrentSpace == true ? menu.webKitOpenLinkInNewTabItem() : nil
         menu.removeWebKitSelectionSearch()
         guard let menuHost, let context = menuHost.takeMenuContext() else { return }
         BrowserPageContextMenu(
             actions: menuHost.contextMenuActions(linkURL: context.linkURL, selectionText: context.selectionText),
             host: menuHost, view: self
-        ).insert(into: menu)
+        ).insert(into: menu, leading: newTab)
         if context.isEditable, let paste = menu.webKitPasteItem {
             let item = NSMenuItem(
                 title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainTextFromMenu(_:)),

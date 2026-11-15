@@ -5545,6 +5545,10 @@
     "fast-edge-reveals-sidebar": {
       "category": "fixed",
       "message": "On Mac, a hidden sidebar slides out as soon as the pointer reaches the window's edge: Sidebar hover delay in Settings › Appearance now starts at Instant instead of 200 ms, and any other delay you chose stays. A quick move that runs on into a gap beside the window brings the sidebar out too, and once it starts sliding out it comes all the way out before it hides again."
+    },
+    "link-menu-new-tab-first": {
+      "category": "improved",
+      "message": "On Mac, Open Link in New Tab now leads a link's right-click menu, ahead of opening it in another Space, in Peek or in Split View."
     }
   }
 }

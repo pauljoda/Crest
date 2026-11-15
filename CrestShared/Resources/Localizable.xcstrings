@@ -9570,6 +9570,9 @@
         }
       }
     },
+    "Open Link in New Tab" : {
+
+    },
     "Open Link in Peek" : {
 
     },
@@ -9584,6 +9587,7 @@
       }
     },
     "Open Link in This Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
