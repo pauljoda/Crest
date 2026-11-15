@@ -456,6 +456,19 @@ public sealed partial class BrowserContractsTests {
         app.Report(engine, new BeforeUnloadAnswered(deciding.PageId, Proceeds: true));
         Assert.DoesNotContain(app.Drain().OfType<WindowChanged>(),
             change => change.Window.ShownTabs.Any(shown => shown.SpaceId == space && shown.TabId == openerTab));
+        Assert.Contains(app.Workspace(workspace).Current.Spaces.Single(held => held.Id == space).Tabs,
+            tab => tab.Id == deciding.TabId && tab.Placement == TabPlacement.Pinned);
+
+        // One that gains a page to go back to while deciding stays too.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://gaining.example/", Foreground: true));
+        var gaining = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(gaining.PageId));
+        app.Send(new StepHistory(gaining.PageId, -1));
+        app.Report(engine, new PageHistoryReported(gaining.PageId,
+            [new PageHistoryEntry(Guid.NewGuid(), "https://gaining.example/", ""), new PageHistoryEntry(Guid.NewGuid(), "https://gaining.example/#more", "")], 1));
+        app.Report(engine, new BeforeUnloadAnswered(gaining.PageId, Proceeds: true));
+        app.Drain();
+        Assert.True(IsOpen(gaining.TabId));
 
         // Pinned, it keeps its own close, and going back does nothing.
         app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://pinned.example/", Foreground: true));
