@@ -27,21 +27,28 @@ struct BrowserRootDetailSurface<Content: View>: View {
     /// it hands over how rather than the result, so the frame is worked out
     /// here and a drag of the border never rebuilds the page inside.
     var frameInsets: (EdgeInsets) -> EdgeInsets = { $0 }
+    /// How far below the window's top the page's card starts while the
+    /// address bar is on top, leaving the window's own address bar room above
+    /// it; zero leaves the card where its frame puts it.
+    var topSection: CGFloat = 0
     let content: Content
 
     private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
-        BrowserRootContentSurface(
+        var insets =
+            usesBorderlessFrame
+            ? EdgeInsets()
+            : frameInsets(appearance.pageInsets(docked: adjoinsLeadingSidebar, direction: layoutDirection))
+        insets.top = max(insets.top, topSection)
+        return BrowserRootContentSurface(
             cornerRadius: usesBorderlessFrame
                 ? 0
                 : appearance.framedPageCornerRadius,
             seamWidth: usesBorderlessFrame
                 ? 0
                 : appearance.seamWidth,
-            frameInsets: usesBorderlessFrame
-                ? EdgeInsets()
-                : frameInsets(appearance.pageInsets(docked: adjoinsLeadingSidebar, direction: layoutDirection)),
+            frameInsets: insets,
             usesTransparentInnerSurface:
                 BrowserPageSurfacePresentation.usesTransparentInnerSurface(
                     isStartPage: isStartPage,

@@ -203,6 +203,11 @@ final class BrowserDeviceAppearanceStore {
     var sidebarOnRight: Bool {
         didSet { saveSoon() }
     }
+    /// Where the windows show a page's address, navigation and site controls.
+    /// Only the Mac offers the choice.
+    var addressBarPlacement: BrowserAddressBarPlacement {
+        didSet { saveSoon() }
+    }
     /// How wide, in points, the strip along the window's edge is that shows a
     /// hidden sidebar when the pointer rests on it. Only the Mac has one.
     var sidebarRevealWidth: Double {
@@ -388,6 +393,10 @@ final class BrowserDeviceAppearanceStore {
         windowBorderWidth = borderWidth
         isBorderless = BrowserChromeAppearance(borderWidth: borderWidth).borderless
         sidebarOnRight = chrome.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)
+        addressBarPlacement =
+            BrowserAddressBarPlacement.named(
+                chrome.string(forKey: BrowserChromeAppearancePreference.addressBarPlacementKey))
+            ?? BrowserLookAndFeelDefaults.addressBarPlacement
         sidebarRevealWidth =
             chrome.object(forKey: Self.sidebarRevealWidthKey) as? Double
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
@@ -624,6 +633,7 @@ final class BrowserDeviceAppearanceStore {
         write(groupsTintTitle, forKey: BrowserFolderAppearancePreference.groupsTintsTitleKey, in: defaults)
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
+        write(addressBarPlacement.name, forKey: BrowserChromeAppearancePreference.addressBarPlacementKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
         write(sidebarRevealDelay, forKey: Self.sidebarRevealDelayKey, in: chrome)
         write(sidebarSlideDuration, forKey: Self.sidebarSlideDurationKey, in: chrome)

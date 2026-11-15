@@ -10,6 +10,7 @@ import SwiftUI
 struct BrowserRootPageSurface: View, @MainActor Equatable {
     @Environment(\.spaceContentPresentation) private var contentPresentation
     @Environment(\.browserMacWindows) private var windows
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let model: BrowserRootModel
     let space: SpaceModel
     let isSelectedSpace: Bool
@@ -57,6 +58,10 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         !isSelectedSpace && model.pages.requiresStartPageOnEntry(to: space)
     }
 
+    /// Whether the address bar is on top, where a lone page's card stands
+    /// below the window's top section.
+    private var isAddressBarOnTop: Bool { model.showsPageCardBars }
+
     private var pageSurfacePresentation: BrowserPageSurfacePresentation {
         if previewsStartPage, !model.spaceAccess.isLocked(space) {
             return .single(space: space, cardTabID: nil)
@@ -68,13 +73,20 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
             hasEnteredSplitContent:
                 isSelectedSpace && model.sidebarInteraction.sidebarReorderState.hasEnteredSplitContent,
             resolvedTarget: isSelectedSpace ? model.sidebarInteraction.sidebarReorderState.resolvedTarget : nil,
-            presentsTrailingPanel: isSelectedSpace && model.extensionSidePanel.panel != nil
+            presentsTrailingPanel: isSelectedSpace && model.extensionSidePanel.panel != nil,
+            // A lone page is a row of one card, so a card joining or leaving
+            // it, or the address bar moving into the cards, only resizes and
+            // moves what is already there.
+            presentsCardsInRow: true
         )
     }
 
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
+            // The address bar moving on top or back moves the card with the
+            // window's chrome.
+            .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: isAddressBarOnTop)
             // Every edge of the window's frame around this Space's pages moves
             // the window.
             .overlay { BrowserPageFrameTitleBarSurface(docked: model.sidebarPresentation.reservesSidebarWidth) }
@@ -118,7 +130,8 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                 members: members,
                 placeholderIndex: placeholderIndex,
                 tabPromotionNamespace: tabPromotionNamespace,
-                shortcuts: shortcuts
+                shortcuts: shortcuts,
+                bandsLoneCard: isAddressBarOnTop
             )
         } else {
             BrowserRootDetailSurface(
@@ -130,6 +143,7 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                 completedNavigationCount: surfacePage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: true,
                 handleWebContentInteraction: model.chrome.handleWebContentInteraction,
+                topSection: isAddressBarOnTop ? BrowserPageBarMetrics.topSectionHeight : 0,
                 content: Group {
                     if model.spaceAccess.isLocked(space) {
                         BrowserSpaceAccessView(

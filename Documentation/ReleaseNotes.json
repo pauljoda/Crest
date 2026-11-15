@@ -5497,6 +5497,18 @@
     "deleted-folder-keeps-filed-tab": {
       "category": "fixed",
       "message": "A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs."
+    },
+    "address-bar-on-top": {
+      "category": "new",
+      "message": "On Mac, you can put the address bar on top: choose Top under Address bar in Settings › Appearance, and the address field with back, forward and reload moves above the page."
+    },
+    "split-view-card-bars": {
+      "category": "new",
+      "message": "On Mac, each page in Split View carries its own bar with back, forward, its address, Site Controls and pinned extensions, wherever the address bar is."
+    },
+    "split-view-resizes-into-place": {
+      "category": "improved",
+      "message": "On Mac, pages slide and resize into place as they join or leave Split View instead of jumping."
     }
   }
 }

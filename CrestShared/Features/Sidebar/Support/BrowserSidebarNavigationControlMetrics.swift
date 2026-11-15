@@ -104,10 +104,11 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         narrowing: Narrowing(controlWidth: 24, reloadMenuWidth: 14, windowControlsClearance: 86, trailingInset: 6)
     )
 
-    /// A Quick Window's toolbar: the pointer shell's controls drawn narrower and
-    /// side by side, since back and forward sit beside the address field
-    /// rather than spread along a strip of their own.
-    static let quickWindow = BrowserSidebarNavigationControlMetrics(
+    /// A page bar, a Quick Window's toolbar or a page card's: the pointer
+    /// shell's controls drawn narrower and side by side, since back and
+    /// forward sit beside the address field rather than spread along a strip
+    /// of their own.
+    static let pageBar = BrowserSidebarNavigationControlMetrics(
         controlSpacing: 0,
         leadingSpacerMinimum: 0,
         controlSize: CGSize(width: 24, height: BrowserChromeLayout.sidebarNavigationControlHitTarget),

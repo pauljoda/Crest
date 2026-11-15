@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// Lays out a Quick Window's address field and the pinned extensions after it
+/// Lays out a page bar's address field and the pinned extensions after it
 /// in the width the toolbar leaves them: the extensions are offered what the
 /// field leaves beyond `widthBeforeExtensions`, showing as many as fit, and
 /// the field takes the rest. Without extensions the field takes it all, and it
 /// is never narrower than `fieldMinimumWidth`.
-struct BrowserQuickWindowFieldLayout: Layout {
+struct BrowserPageBarFieldLayout: Layout {
     // MARK: - Variables
 
     let fieldMinimumWidth: CGFloat

@@ -37,7 +37,8 @@ struct BrowserRootSidebarContent: View {
                 },
                 commandSurfaceNamespace: commandSurfaceNamespace,
                 commandPaletteHandoff: model.commandPaletteHandoff(reduceMotion: reduceMotion),
-                tabPromotionNamespace: tabPromotionNamespace
+                tabPromotionNamespace: tabPromotionNamespace,
+                isDocked: model.sidebarPresentation.reservesSidebarWidth
             )
         }
     }

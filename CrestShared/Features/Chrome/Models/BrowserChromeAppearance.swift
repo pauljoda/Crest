@@ -107,6 +107,7 @@ struct BrowserChromeAppearance: Equatable {
 @MainActor
 enum BrowserChromeAppearancePreference {
     static let sidebarOnRightKey = "crest.appearance.sidebar-on-right"
+    static let addressBarPlacementKey = "crest.appearance.address-bar-placement"
     static let borderWidthKey = "crest.appearance.window-border-width"
     static let borderlessKey = "crest.appearance.borderless"
     static let defaults = defaults(for: .current)

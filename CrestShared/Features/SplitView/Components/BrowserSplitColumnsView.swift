@@ -71,6 +71,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
 
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
+    @Environment(\.browserSplitLoneCardTopSection) private var loneCardTopSection
     @Environment(\.browserSplitInterCardGap) private var interCardGap
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -82,7 +83,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         GeometryReader { proxy in
             columns(containerWidth: proxy.size.width)
         }
-        .padding(frameInsets)
+        .padding(rowInsets)
         // Keyed on the slot list rather than on membership alone, so the drop
         // column opening, moving between gaps, and closing again all settle
         // with the same motion a member joining or leaving does.
@@ -296,6 +297,16 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         return Array(0..<(members.count - 1))
     }
 
+    /// The page insets the row sits inside, taller at the top for a lone card
+    /// while the window's top section holds its address bar above it; a
+    /// split's cards carry bars of their own and keep the frame's inset.
+    private var rowInsets: EdgeInsets {
+        guard members.count == 1 else { return frameInsets }
+        var insets = frameInsets
+        insets.top = max(insets.top, loneCardTopSection)
+        return insets
+    }
+
     private var slots: [BrowserSplitColumnSlot<Member>] {
         BrowserSplitColumnSlot.slots(
             members: members,
@@ -401,6 +412,11 @@ extension BrowserSplitColumnsView where Panel == EmptyView {
 // Default preserves the mobile and embedded split presentation.
 extension EnvironmentValues {
     @Entry var browserSplitUsesBorderlessFrame = false
+    /// How far below the window's top a lone card's row starts while the
+    /// address bar is on top, leaving the window's own address bar room
+    /// above it; zero leaves the row where its frame puts it. A split's cards
+    /// carry bars of their own and stay put.
+    @Entry var browserSplitLoneCardTopSection: CGFloat = 0
     /// The space between cards: wider where a display's fold runs between
     /// them, so neither page reaches into the crease.
     @Entry var browserSplitInterCardGap = BrowserSplitLayoutMetrics.interCardGap

@@ -21,6 +21,9 @@ struct BrowserSidebarLoadedContent: View {
     let commandSurfaceNamespace: Namespace.ID
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let tabPromotionNamespace: Namespace.ID
+    /// Whether the sidebar is docked beside the pages rather than floating
+    /// over them.
+    var isDocked = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
@@ -43,7 +46,8 @@ struct BrowserSidebarLoadedContent: View {
                 activateAddress: activateAddress,
                 submitAddress: submitAddress,
                 commandSurfaceNamespace: commandSurfaceNamespace,
-                commandPaletteHandoff: commandPaletteHandoff
+                commandPaletteHandoff: commandPaletteHandoff,
+                isDocked: isDocked
             )
             .onGeometryChange(for: CGFloat.self) {
                 $0.size.height
@@ -105,6 +109,12 @@ struct BrowserSidebarLoadedContent: View {
                 SpaceForegroundBlend(
                     spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))
         }
+        // The address and navigation fade out as the page cards take them, and
+        // the Space's list moves up into their place, or back down.
+        .animation(
+            CrestMotion.chrome.unlessReducingMotion(reduceMotion),
+            value: BrowserDeviceAppearanceStore.shared.addressBarPlacement
+        )
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .environment(\.spaceSidebarBands, sidebarBands)
         .accessibilityElement(children: .contain)
