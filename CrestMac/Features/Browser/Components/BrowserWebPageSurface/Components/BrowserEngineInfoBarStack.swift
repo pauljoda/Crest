@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The engine's bars for this page, stacked at its top edge.
+/// The engine's bars for this page, stacked at its top edge on Crest's flyout
+/// surface.
 struct BrowserEngineInfoBarStack: View {
     let page: BrowserPage
     /// Where a sharing bar leads: the tab at the other end of the sharing.
@@ -95,7 +96,7 @@ private struct BrowserEngineInfoBarRow: View {
         .padding(.horizontal, BrowserWebPageSurfaceMetrics.infoBarHorizontalPadding)
         .padding(.vertical, BrowserWebPageSurfaceMetrics.infoBarVerticalPadding)
         .frame(maxWidth: BrowserWebPageSurfaceMetrics.infoBarMaximumWidth)
-        .glassEffect(.regular, in: .rect(cornerRadius: BrowserWebPageSurfaceMetrics.infoBarCornerRadius))
+        .crestFloatingFlyoutStyle(in: .rect(cornerRadius: BrowserWebPageSurfaceMetrics.infoBarCornerRadius))
         .accessibilityElement(children: .contain)
     }
 }

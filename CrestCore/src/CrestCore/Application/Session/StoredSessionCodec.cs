@@ -99,6 +99,8 @@ internal static partial class StoredSessionCodec {
         public const string MembershipModifiedAt = "membershipModifiedAt";
         public const string Name = "name";
         public const string NativeContent = "nativeContent";
+        public const string NewTabPosition = "newTabPosition";
+        public const string NewTabsJoinFolder = "newTabsJoinFolder";
         public const string OffersTranslation = "offersTranslation";
         public const string OperationId = "operationID";
         public const string OrderAnchorTabId = "orderAnchorTabID";

@@ -10,7 +10,7 @@ struct BrowserTabsSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.tabs) {
-            BrowserNewTabSettingsSection(preferences: browser.linkPreferences)
+            BrowserNewTabSettingsSection(preferences: browser.linkPreferences, appPreferences: appPreferences)
             BrowserDurableTabSettingsSection(preferences: appPreferences)
             #if os(macOS)
                 BrowserSplitFocusSettingsSection()
@@ -28,6 +28,7 @@ struct BrowserNewTabSettingsSection: View {
         "focus-new-tabs-opened-from-links-toggle"
 
     let preferences: BrowserLinkPreferenceStore
+    @Bindable var appPreferences: BrowserAppPreferenceStore
 
     var body: some View {
         Section {
@@ -42,6 +43,16 @@ struct BrowserNewTabSettingsSection: View {
                 isOn: preferences.binding(.followsMovedTabs, reading: \.followsMovedTabs)
             )
             .accessibilityIdentifier("follow-tabs-moved-to-another-space-toggle")
+
+            Picker("Open new tabs at", selection: $appPreferences.newTabPosition) {
+                ForEach(NewTabPosition.all, id: \.self) { position in
+                    Text(position.title).tag(position)
+                }
+            }
+            .accessibilityIdentifier("new-tab-position")
+
+            Toggle("Open new tabs in the current folder", isOn: $appPreferences.newTabsJoinFolder)
+                .accessibilityIdentifier("new-tabs-join-folder-toggle")
         } header: {
             Text("New tabs")
         } footer: {

@@ -33,6 +33,7 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
             if showsNotices {
                 BrowserNoticeLayer(
                     notices: notices,
+                    alignment: .top,
                     topInset: MobileBrowserRootLayout.compactOverlayTopPadding,
                     sideInset: MobileBrowserRootLayout.displayEdgeMargin
                 )

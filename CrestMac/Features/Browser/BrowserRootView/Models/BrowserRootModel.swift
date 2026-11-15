@@ -751,7 +751,7 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
         guard selecting else {
             return model.browser.openBackgroundTab(url: url, in: source.spaceID, savesInSavedFolder: true) != nil
         }
-        guard model.browser.openAddress(url, in: source.spaceID, joinsFolder: true) else { return false }
+        guard model.browser.openAddress(url, in: source.spaceID, placesAsNewTab: true) else { return false }
         model.showLoading(url)
         return true
     }

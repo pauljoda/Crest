@@ -107,6 +107,7 @@ extension MobileBrowserRootContent {
         .overlay(alignment: .top) {
             BrowserNoticeLayer(
                 notices: pages.notices,
+                alignment: .top,
                 topInset: MobileBrowserRootLayout.compactOverlayTopPadding,
                 sideInset: MobileBrowserRootLayout.displayEdgeMargin
             )
