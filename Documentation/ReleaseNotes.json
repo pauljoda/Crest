@@ -5537,6 +5537,10 @@
     "folder-menu-button-clears-name": {
       "category": "fixed",
       "message": "On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button."
+    },
+    "address-field-shows-peek-url": {
+      "category": "improved",
+      "message": "On Mac, while a Peek is open, the address field shows the Peek's address and its Copy URL button copies it. When the Peek closes or becomes a tab, the field shows the tab's address again."
     }
   }
 }

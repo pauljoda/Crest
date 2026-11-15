@@ -88,7 +88,15 @@ struct SpaceSidebarAddressBand: View {
         selectedTabID.flatMap { space.shownTab($0) }
     }
 
+    /// The page the field shows: the Peek open over the tab this window shows
+    /// in `space`, or else the tab's own page, as the page commands act on.
     private var displayedPage: BrowserPage? {
+        guard let tabPage else { return nil }
+        guard pages.activeTabID == selectedTabID else { return tabPage }
+        return pages.peekPage ?? tabPage
+    }
+
+    private var tabPage: BrowserPage? {
         guard let selectedTabID else { return nil }
         let assignment = BrowserTabRuntimeAssignment(
             tabID: selectedTabID, spaceID: space.id, profileID: space.profileID
