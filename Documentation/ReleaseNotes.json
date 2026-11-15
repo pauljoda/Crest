@@ -5549,6 +5549,10 @@
     "backdrop-reduce-motion": {
       "category": "fixed",
       "message": "With Reduce Motion on, switching Spaces shows the new Space's backdrop instead of the previous one's."
+    },
+    "handoff-opens-page": {
+      "category": "fixed",
+      "message": "On Mac, choosing Crest's Handoff icon for a page open on another device now opens that page."
     }
   }
 }
