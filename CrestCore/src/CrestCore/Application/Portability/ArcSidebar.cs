@@ -36,7 +36,9 @@ internal static class ArcSidebar {
 
     private sealed record Content(ArcTab? Tab, bool IsFolder, bool IsSplit);
 
-    private sealed record ArcTab(string Title, string? Url, JsonElement? LastActive);
+    /// A tab: its page's title, the name the person gave it, its address and
+    /// when it was last active.
+    private sealed record ArcTab(string Title, string? CustomTitle, string? Url, JsonElement? LastActive);
 
     private sealed record Space(string? Title, IReadOnlyList<string> Sections, string ProfileKey, string? ProfileFolder,
         JsonElement? CustomInfo);
@@ -118,19 +120,22 @@ internal static class ArcSidebar {
                 yield return (member.Value, member.Value.TryGetProperty("id", out var own) ? ImportJson.Text(own) : member.Name);
     }
 
+    /// An item, whose own `title` is the name the person gave it in Arc, or
+    /// null when they gave none; a tab's `savedTitle` is its page's title.
     private static Item ReadItem(JsonElement value) {
         var data = ImportJson.Object(ImportJson.Member(value, "data"));
+        string? title = ImportJson.Text(ImportJson.Member(value, "title"));
         Content? content = null;
         if (data is not null) {
             var tab = ImportJson.Object(ImportJson.Member(data, "tab"));
             content = new(tab is null ? null : new ArcTab(
-                ImportJson.Text(ImportJson.Member(tab, "savedTitle")) ?? ImportJson.Text(ImportJson.Member(value, "title")) ?? "",
+                ImportJson.Text(ImportJson.Member(tab, "savedTitle")) ?? title ?? "", title,
                 ImportJson.Text(ImportJson.Member(tab, "savedURL")),
                 ImportJson.Member(tab, "timeLastActiveAt") ?? ImportJson.Member(value, "createdAt")),
                 ImportJson.Object(ImportJson.Member(data, "list")) is not null,
                 ImportJson.Object(ImportJson.Member(data, "splitView")) is not null);
         }
-        return new(ImportJson.Text(ImportJson.Member(value, "title")), Strings(ImportJson.Member(value, "childrenIds")), content);
+        return new(title, Strings(ImportJson.Member(value, "childrenIds")), content);
     }
 
     private static Space ReadSpace(JsonElement value) {
@@ -187,7 +192,7 @@ internal static class ArcSidebar {
             var time = ImportJson.Number(tab.LastActive) is { } raw && double.IsFinite(raw) ? ImportDate.FromUnixOrReferenceSeconds(raw)
                 : null;
             draft.Tabs.Add(new SessionTab(tab.Title, address, placement, placement == TabPlacement.Saved ? parent : null,
-                time ?? importedAt, split));
+                time ?? importedAt, split, tab.CustomTitle));
             return;
         }
         if (content.IsSplit) {

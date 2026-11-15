@@ -71,6 +71,24 @@ public sealed partial class BrowserContractsTests {
         Assert.All(spaces, space => Assert.Null(space.Membership));
     }
 
+    /// A tab the person renamed in Arc, a pinned tab or a favorite, comes in
+    /// under that name as a rename made in Crest keeps it, over its page's
+    /// title, which shows again once the name is cleared. A tab never renamed
+    /// has no name of its own.
+    [Fact]
+    public void ArcTabsKeepTheNamesThePersonGaveThem() {
+        var work = ReadSession("arc", "arc-rich", "StorableSidebar.json")[0];
+
+        Assert.Equal([
+            ("Favorite", "Mail", "Mail"),
+            ("Today", null, "Today"),
+            ("today-two.example", null, "today-two.example"),
+            ("Saved", "Read later", "Read later"),
+            ("Deep title", "Deep title", "Deep title")
+        ], work.Tabs.Select(tab => (tab.Title, tab.CustomTitle, tab.DisplayTitle)));
+        Assert.All(work.Tabs, tab => Assert.Equal(tab.CustomTitle is null ? null : ImportedAt, tab.TitleModifiedAt));
+    }
+
     [Fact]
     public void ZenBringsItsSpacesWithTheirEssentialsFoldersAndThemes() {
         var spaces = ReadSession("zen", "zen-rich", Path.Combine("profile", "zen-sessions.jsonlz4"));

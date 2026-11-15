@@ -5505,6 +5505,10 @@
     "import-review-shows-errors": {
       "category": "fixed",
       "message": "On Mac, when Crest can't prepare an import from another browser, the review now shows an error with Back and Skip instead of quitting."
+    },
+    "arc-import-keeps-tab-renames": {
+      "category": "fixed",
+      "message": "Importing from Arc keeps the names you gave tabs there, and the import review shows them. Clearing a name shows the page's title again."
     }
   }
 }
