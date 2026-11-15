@@ -63,11 +63,17 @@ final class BrowserDesktopWebView: WKWebView {
         super.willOpenMenu(menu, with: event)
         let newTab = menuHost?.opensLinksInCurrentSpace == true ? menu.webKitOpenLinkInNewTabItem() : nil
         menu.removeWebKitSelectionSearch()
-        guard let menuHost, let context = menuHost.takeMenuContext() else { return }
+        guard let menuHost else { return }
+        // Without a capture of what the right-click landed on, Crest adds no
+        // rows of its own, and the new-tab row still leads.
+        let context = menuHost.takeMenuContext()
         BrowserPageContextMenu(
-            actions: menuHost.contextMenuActions(linkURL: context.linkURL, selectionText: context.selectionText),
+            actions: context.map {
+                menuHost.contextMenuActions(linkURL: $0.linkURL, selectionText: $0.selectionText)
+            } ?? [],
             host: menuHost, view: self
         ).insert(into: menu, leading: newTab)
+        guard let context else { return }
         if context.isEditable, let paste = menu.webKitPasteItem {
             let item = NSMenuItem(
                 title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainTextFromMenu(_:)),

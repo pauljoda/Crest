@@ -447,6 +447,16 @@ public sealed partial class BrowserContractsTests {
         app.Send(new OpenPage(pinnedAgain, workspace, space, unloaded.TabId, window));
         Assert.False(Hosted(pinnedAgain).Live.CanGoBack);
 
+        // Pinned while its document is deciding, it stays, as a pinned tab.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://deciding.example/", Foreground: true));
+        var deciding = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(deciding.PageId));
+        app.Send(new StepHistory(deciding.PageId, -1));
+        app.Send(new TogglePin(workspace, space, deciding.TabId));
+        app.Report(engine, new BeforeUnloadAnswered(deciding.PageId, Proceeds: true));
+        Assert.DoesNotContain(app.Drain().OfType<WindowChanged>(),
+            change => change.Window.ShownTabs.Any(shown => shown.SpaceId == space && shown.TabId == openerTab));
+
         // Pinned, it keeps its own close, and going back does nothing.
         app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://pinned.example/", Foreground: true));
         var pinned = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());

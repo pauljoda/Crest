@@ -118,9 +118,10 @@ internal sealed class ClosePreparations(Device device, Pages pages, Downloads do
     /// Going back past the first page of a tab another tab opened closes the
     /// tab and discards its document, so its before-unload decision finishes
     /// first, as the tab's close button asks it. A canceled answer leaves the
-    /// tab open, and a page that moved, closed or showed another document
-    /// while the question was open does not close; one that did not, closes
-    /// what owns it, returning its window to `returningTo`.
+    /// tab open, and a page that moved, closed, showed another document or
+    /// lost the tab that opened it, as its tab saved or pinned does, while the
+    /// question was open does not close; one that did not, closes what owns
+    /// it, returning its window to `returningTo`.
     internal void CloseOwner(Page page, Guid returningTo, PageTurn turn) {
         var previous = page.Engine;
         long document = page.Documents;
@@ -128,7 +129,7 @@ internal sealed class ClosePreparations(Device device, Pages pages, Downloads do
         Start(ids.Next(), quits: false, [page.Id], turn.Changes, turn.Issue, (allowed, changes) => {
             if (!allowed || !ReferenceEquals(pages.Hosted(page.Id), page) || !ReferenceEquals(page.Engine, previous)
                 || page.Documents != document || (page.WorkspaceId, page.SpaceId, page.TabId, page.WindowId) != owner
-                || pages.Shown(page) is null)
+                || page.OpenerTabId != returningTo || pages.Shown(page) is null)
                 return;
             pages.CloseOwner(page, new PageTurn(changes, turn.Issue, this), returningTo);
         });

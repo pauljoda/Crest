@@ -21,7 +21,7 @@ public sealed record StepHistory(Guid PageId, int Offset) : PageIntent {
             if (!failure.ReplacedDocument) return;
         }
         if (page.History.Step(Offset) is { } entry) pages.Traverse(page, entry.Id, turn);
-        else if (Offset < 0 && page.OpenerTabId is { } opener) turn.Closing.CloseOwner(page, opener, turn);
+        else if (Offset == -1 && page.OpenerTabId is { } opener) turn.Closing.CloseOwner(page, opener, turn);
     }
 
     #endregion
