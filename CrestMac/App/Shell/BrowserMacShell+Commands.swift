@@ -40,6 +40,9 @@ extension BrowserMacShell {
         // While a Most Recent Tab shortcut is held, its keys are the
         // switcher's and no page or command sees them.
         if event.type == .keyDown, recentTabSwitcher.handleKeyDown(event) { return true }
+        // A sidebar selection takes the keys it answers, such as Command-D
+        // duplicating it, before any command claims them.
+        if BrowserTabSelectionMonitor.SelectionView.takesKey(event) { return true }
         guard let windows, let application, event.type == .keyDown,
             NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil,
             (NSApp.keyWindow?.firstResponder as? ShortcutRecorderButton)?.isRecording != true,
