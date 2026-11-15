@@ -295,18 +295,35 @@ private struct BrowserRootFullscreenContent<Content: View, Sidebar: View, Contro
 }
 
 private struct BrowserRootPermissionObserver: ViewModifier {
+    // MARK: - Types
+
+    /// The active page's waiting request, and whether the sidebar's field is
+    /// where it asks.
+    private struct Prompt: Equatable {
+        let requestID: UUID?
+        let asksInSidebar: Bool
+    }
+
+    // MARK: - Variables
+
     let model: BrowserRootModel
     let reduceMotion: Bool
 
+    /// A page card's bar asks on its own card, as a split's cards always do,
+    /// so the sidebar comes out only while its field is where the request
+    /// asks: when a request arrives there, or when a request still waiting
+    /// moves there, as the address bar returns to the sidebar or a split ends.
     func body(content: Content) -> some View {
-        content.onChange(of: model.pages.activePage?.sitePermissionRequests.current?.id) {
-            // A page card's bar asks on its own card, as a split's cards
-            // always do, so the sidebar stays put.
-            if model.pages.activePage?.sitePermissionRequests.current != nil, !model.showsPageCardBars,
-                !model.presentsSplitBars
-            {
+        content.onChange(of: prompt) { _, prompt in
+            if prompt.requestID != nil, prompt.asksInSidebar {
                 model.presentFloatingSidebar(reduceMotion: reduceMotion)
             }
         }
+    }
+
+    private var prompt: Prompt {
+        Prompt(
+            requestID: model.pages.activePage?.sitePermissionRequests.current?.id,
+            asksInSidebar: !model.showsPageCardBars && !model.presentsSplitBars)
     }
 }

@@ -68,7 +68,14 @@ struct BrowserPageCardBar: View {
         BrowserPageBar(
             metrics: .pageCard,
             windowControlsClearance: windowControlsClearance,
-            port: BrowserSidebarNavigationPort(page: { [page] in page }, showHistory: context.showHistory),
+            // Back, forward and their history menus focus this card before
+            // they act, from the keyboard or accessibility as from a click.
+            port: BrowserSidebarNavigationPort(
+                page: { [page] in page },
+                recordActivity: { [tab, focusCard = context.focusCard] in
+                    if let tabID = tab?.id { focusCard(tabID) }
+                },
+                showHistory: context.showHistory),
             branding: space?.settings.look
         ) {
             BrowserPageCardAddressField(
