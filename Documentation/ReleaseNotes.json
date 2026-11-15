@@ -5545,6 +5545,10 @@
     "split-focus-covering-chrome": {
       "category": "fixed",
       "message": "In Split View, clicking or pointing at the floating sidebar or a Peek no longer moves focus to the pane underneath, so Site Controls open for the pane you chose and a Peek stays open."
+    },
+    "backdrop-reduce-motion": {
+      "category": "fixed",
+      "message": "With Reduce Motion on, switching Spaces shows the new Space's backdrop instead of the previous one's."
     }
   }
 }
