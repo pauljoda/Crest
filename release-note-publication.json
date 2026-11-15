@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "deleted-folder-keeps-filed-tab",
+    "development": "arc-import-keeps-tab-renames",
     "nightly": "snappier-sidebar-slide"
   }
 }
