@@ -208,8 +208,8 @@ final class ChromiumExtensionStore {
     ///
     /// The row belongs to the Space, so the pinned list comes from the Space's
     /// profile and is present whether or not a page is open. Where a page is
-    /// open its per-tab state — badge, dynamic icon, whether a page action has
-    /// anything to act on — is overlaid on top of it.
+    /// open its per-tab state — badge, dynamic icon, whether the action can run
+    /// on the page and whether it opens a popup — is overlaid on top of it.
     func pinnedActions(
         for space: BrowserSpaceIdentity, page: ChromiumNativePage?
     ) -> [BrowserExtensionActionPresentation] {
@@ -224,8 +224,8 @@ final class ChromiumExtensionStore {
             .map { action -> BrowserExtensionActionPresentation in
                 if let tab = live[action.id] {
                     return BrowserExtensionActionPresentation(
-                        id: tab.id, displayName: tab.displayName,
-                        badgeText: tab.badgeText, icon: tab.icon, isPinned: true, hasPopup: tab.hasPopup)
+                        id: tab.id, displayName: tab.displayName, badgeText: tab.badgeText, icon: tab.icon,
+                        isEnabled: tab.isEnabled, isPinned: true, isLoading: tab.isLoading, hasPopup: tab.hasPopup)
                 }
                 return BrowserExtensionActionPresentation(action)
             }
