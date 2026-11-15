@@ -5509,6 +5509,10 @@
     "split-view-resizes-into-place": {
       "category": "improved",
       "message": "On Mac, pages slide and resize into place as they join or leave Split View instead of jumping."
+    },
+    "folder-menu-button-clears-name": {
+      "category": "fixed",
+      "message": "On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button."
     }
   }
 }
