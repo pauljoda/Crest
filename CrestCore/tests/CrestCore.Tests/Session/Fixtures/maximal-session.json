@@ -753,6 +753,8 @@
     "splitFocusFollowsMouse" : true,
     "automaticallyShowsDeveloperToolbar" : false,
     "showsRecentTabs" : false,
+    "newTabPosition" : "bottom",
+    "newTabsJoinFolder" : true,
     "savedTabClosePolicy" : "returnToSavedURL",
     "translationRules" : {
       "sources" : {

@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xf9, 0x27, 0xa0, 0xc4, 0x83, 0xba, 0xc9, 0xf0, 0x15, 0xd1, 0x58, 0xff, 0xe9, 0x39, 0x7c, 0x95, 0x30, 0xe4, 0x22, 0x19, 0x32, 0x77, 0xf2, 0x4c, 0x54, 0x48, 0x4d, 0xf4, 0xf7, 0xfb, 0xeb, 0x32
+        0x70, 0xb9, 0x0a, 0x13, 0x62, 0x14, 0x7b, 0x48, 0x1a, 0xc2, 0x05, 0xd6, 0x76, 0x9a, 0x17, 0x67, 0x0a, 0x74, 0x6e, 0x94, 0x5e, 0xd4, 0xc1, 0x21, 0xec, 0xb7, 0x43, 0x77, 0xfa, 0x43, 0x29, 0x30
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -3095,8 +3095,10 @@ extension AppPreferences {
         let splitFocusFollowsMouse = try reader.readBool()
         let automaticallyShowsDeveloperToolbar = try reader.readBool()
         let showsRecentTabs = try reader.readBool()
+        let newTabPosition = try NewTabPosition(from: &reader)
+        let newTabsJoinFolder = try reader.readBool()
         let palette = try PalettePreferences(from: &reader)
-        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, palette: palette)
+        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, newTabPosition: newTabPosition, newTabsJoinFolder: newTabsJoinFolder, palette: palette)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -3115,6 +3117,8 @@ extension AppPreferences {
         writer.writeBool(splitFocusFollowsMouse)
         writer.writeBool(automaticallyShowsDeveloperToolbar)
         writer.writeBool(showsRecentTabs)
+        newTabPosition.encode(into: &writer)
+        writer.writeBool(newTabsJoinFolder)
         palette.encode(into: &writer)
     }
 }
@@ -15292,8 +15296,8 @@ extension OpenAddress {
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
         let address = try reader.readString()
-        let joinsFolder = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, address: address, joinsFolder: joinsFolder)
+        let placesAsNewTab = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, address: address, placesAsNewTab: placesAsNewTab)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15302,7 +15306,7 @@ extension OpenAddress {
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
         writer.writeString(address)
-        writer.writeBool(joinsFolder)
+        writer.writeBool(placesAsNewTab)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -15479,9 +15483,9 @@ extension OpenTab {
             afterTabID = nil
         }
         let shows = try reader.readBool()
-        let joinsFolder = try reader.readBool()
+        let placesAsNewTab = try reader.readBool()
         let savesInSavedFolder = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, content: content, placement: placement, afterTabID: afterTabID, shows: shows, joinsFolder: joinsFolder, savesInSavedFolder: savesInSavedFolder)
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, content: content, placement: placement, afterTabID: afterTabID, shows: shows, placesAsNewTab: placesAsNewTab, savesInSavedFolder: savesInSavedFolder)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15498,7 +15502,7 @@ extension OpenTab {
             writer.writePresence(false)
         }
         writer.writeBool(shows)
-        writer.writeBool(joinsFolder)
+        writer.writeBool(placesAsNewTab)
         writer.writeBool(savesInSavedFolder)
     }
 
@@ -22957,8 +22961,8 @@ extension ShowStartPage {
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
         let outsideSplits = try reader.readBool()
-        let joinsFolder = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, outsideSplits: outsideSplits, joinsFolder: joinsFolder)
+        let placesAsNewTab = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, outsideSplits: outsideSplits, placesAsNewTab: placesAsNewTab)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -22967,7 +22971,7 @@ extension ShowStartPage {
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
         writer.writeBool(outsideSplits)
-        writer.writeBool(joinsFolder)
+        writer.writeBool(placesAsNewTab)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -28716,6 +28720,20 @@ extension NavigationError {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown NavigationError \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension NewTabPosition {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown NewTabPosition \(tag)")
         }
         self = Self.all[tag]
     }
