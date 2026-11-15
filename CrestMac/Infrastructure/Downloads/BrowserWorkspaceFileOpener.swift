@@ -16,6 +16,9 @@ struct BrowserWorkspaceFileOpener: BrowserFileDestinationOpener {
     }
 
     /// The windowed shell does not offer this destination.
+    func previewFile(_ fileURL: URL) {}
+
+    /// The windowed shell does not offer this destination.
     func shareFile(_ fileURL: URL) {}
 
     /// The windowed shell does not offer this destination.

@@ -76,7 +76,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let spaces = BrowserSettingsDestination(
         kind: .spaces, name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
         searchTerms:
-            "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview",
+            "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview downloads download location save",
         symbol: "square.grid.2x2", tincture: .stormOr)
     static let sync = BrowserSettingsDestination(
         kind: .sync, name: "sync", title: "Sync", subtitle: "iCloud setup and status",

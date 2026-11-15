@@ -39,6 +39,7 @@ final class BrowserSpaceDownloadSettingsModel {
             usesCustomDirectory: usesCustomDirectory,
             errorMessage: errorMessage,
             chooseDirectory: { [self] in chooseDirectory(for: space) },
+            resetTitle: "Use Downloads",
             resetDirectory: { [self] in resetDirectory(for: space.id) }
         )
     }

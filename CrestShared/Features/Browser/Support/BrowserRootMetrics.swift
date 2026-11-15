@@ -10,8 +10,9 @@ enum BrowserRootMetrics {
     static let floatingSidebarShadowOpacity = 0.3
     static let floatingSidebarHighlightOpacity = CrestOpacity.chromeSurface
     static let floatingSidebarShadeOpacity = 0.09
-    static let noticeHorizontalPadding: CGFloat = 14
-    static let noticeHeight: CGFloat = 40
+    static let noticeHorizontalPadding: CGFloat = 20
+    static let noticeVerticalPadding: CGFloat = 10
+    static let noticeHeight: CGFloat = 44
     static let noticeShadowRadius: CGFloat = 16
     static let noticeShadowYOffset: CGFloat = 8
     static let noticeTopInset: CGFloat = 18

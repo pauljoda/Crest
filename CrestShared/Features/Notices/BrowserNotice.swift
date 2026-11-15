@@ -3,8 +3,9 @@ import Foundation
 /// A transient message at the top of a browser window. It asks nothing of the
 /// person: anything that needs a decision is a dialog, and everything else
 /// that Crest reports — a copy, a zoom change, an action that could not run —
-/// is one of these. It may offer one action that undoes what it reports, such
-/// as moving a page back to the engine it left.
+/// is one of these. It may offer one action that follows from what it
+/// reports, such as moving a page back to the engine it left or opening a
+/// finished download.
 struct BrowserNotice: Equatable, Hashable {
     // MARK: - Static Variables
 
@@ -42,11 +43,13 @@ struct BrowserNotice: Equatable, Hashable {
 
     // MARK: - Actions - Notices
 
-    /// What the window says once `filename` has finished downloading.
-    static func downloadFinished(_ filename: String) -> BrowserNotice {
+    /// What the window says once `filename` has finished downloading, with
+    /// a way to `open` it where the shell offers one.
+    static func downloadFinished(_ filename: String, open: (@MainActor () -> Void)? = nil) -> BrowserNotice {
         BrowserNotice(
             message: String(localized: "Downloaded \(filename)"),
-            systemImage: "checkmark.circle.fill"
+            systemImage: "checkmark.circle.fill",
+            action: open.map { BrowserNoticeAction(title: String(localized: "Open"), perform: $0) }
         )
     }
 

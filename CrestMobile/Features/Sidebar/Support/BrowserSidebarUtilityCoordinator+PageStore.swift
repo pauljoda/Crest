@@ -5,8 +5,9 @@ extension BrowserSidebarUtilityCoordinator {
     ///
     /// The compact shell has one page and a navigation stack around it, so a
     /// history entry is routed rather than opened in place and a restored tab
-    /// goes through the shell's own selection. Finished files leave through the
-    /// share sheet or the Files app, which is the store's export path.
+    /// goes through the shell's own selection. Finished files open in Quick
+    /// Look, show in the Files app, or leave through the share sheet or the
+    /// Files picker.
     init(
         browser: BrowserStore,
         pages: MobileBrowserPageStore,
@@ -19,12 +20,11 @@ extension BrowserSidebarUtilityCoordinator {
             downloadCenter: pages.downloadCenter,
             spaceAccess: spaceAccess,
             platformActions: BrowserSidebarUtilityPlatformActions(
-                downloadDestinations: [.share, .files],
+                downloadDestinations: MobileBrowserFilePresenter.downloadDestinations,
                 openHistoryEntry: { url, _ in openURL(url) },
                 selectRestoredTab: selectTab,
                 openFinishedDownload: { item, destination in
-                    guard let export = MobileBrowserFileExportDestination.exporting(destination) else { return }
-                    pages.exportDownload(item.id, to: export)
+                    pages.openDownload(item.id, in: destination)
                 },
                 cancelDownload: { itemID in
                     pages.cancelDownload(itemID)

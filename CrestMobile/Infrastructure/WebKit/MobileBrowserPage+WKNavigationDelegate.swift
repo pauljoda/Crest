@@ -94,6 +94,16 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
+        let followsLinkTap = navigationAction.navigationType == .linkActivated
+        if navigationAction.targetFrame?.isMainFrame == true {
+            mainFrameFollowsLinkTap = followsLinkTap
+        }
+        // Downloading here keeps the tab a new-tab link opens from sliding in
+        // only to close again once the file arrives.
+        if followsLinkTap, navigationAction.targetFrame == nil, Self.namesFile(navigationAction.request.url) {
+            decisionHandler(.download)
+            return
+        }
         navigationDecider.decision(
             for: navigationAction,
             isAppInitiated: isAppInitiated(navigationAction)
@@ -115,8 +125,43 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
+        // Only a link the person tapped downloads its file: a reload, a
+        // history step or a tab restoring what it showed keeps showing it.
+        if navigationResponse.isForMainFrame, mainFrameFollowsLinkTap, Self.isFile(navigationResponse) {
+            decisionHandler(.download)
+            return
+        }
         decideResponsePolicy(for: navigationResponse, in: webView, decisionHandler: decisionHandler)
     }
+
+    private static func isFile(_ navigationResponse: WKNavigationResponse) -> Bool {
+        guard navigationResponse.canShowMIMEType,
+            let mimeType = navigationResponse.response.mimeType,
+            let type = UTType(mimeType: mimeType)
+        else { return false }
+        return isFile(type)
+    }
+
+    /// Whether `url` is a web address whose name ends in a file's type, as a
+    /// link to a PDF or a Word document is. One with a query is left to the
+    /// server, since sharing services answer `report.pdf?dl=0` with a page.
+    private static func namesFile(_ url: URL?) -> Bool {
+        guard let url, let scheme = url.scheme?.lowercased(), webSchemes.contains(scheme), url.query == nil,
+            !url.pathExtension.isEmpty, let type = UTType(filenameExtension: url.pathExtension)
+        else { return false }
+        return isFile(type)
+    }
+
+    private static let webSchemes: Set<String> = ["http", "https"]
+
+    /// A type the system knows that is not a page: web pages and any other
+    /// text, such as plain text, JSON or a feed, which the tab shows as it
+    /// is, and audio and video, which play in the tab, are not.
+    private static func isFile(_ type: UTType) -> Bool {
+        type.isDeclared && !shownInTabTypes.contains { type.conforms(to: $0) }
+    }
+
+    private static let shownInTabTypes: [UTType] = [.text, .audiovisualContent]
 
     func webView(
         _ webView: WKWebView,

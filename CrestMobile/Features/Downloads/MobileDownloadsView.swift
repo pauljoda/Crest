@@ -24,7 +24,7 @@ struct MobileDownloadsView: View {
 
     private var actions: BrowserUtilityListActions {
         BrowserUtilityListActions(
-            downloadDestinations: [.share, .files],
+            downloadDestinations: MobileBrowserFilePresenter.downloadDestinations,
             performDownloadAction: performDownloadAction
         )
     }
@@ -56,9 +56,7 @@ struct MobileDownloadsView: View {
 
 extension MobileDownloadsView: BrowserDownloadActionPerformer {
     func openDownload(_ item: DownloadState, in destination: BrowserUtilityDownloadDestination) {
-        if let export = MobileBrowserFileExportDestination.exporting(destination) {
-            pages.exportDownload(item.id, to: export)
-        }
+        pages.openDownload(item.id, in: destination)
     }
 
     func retryDownload(_ item: DownloadState, matching assignment: BrowserSpaceRuntimeAssignment) {

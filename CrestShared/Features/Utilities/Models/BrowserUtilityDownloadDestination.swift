@@ -10,15 +10,18 @@ struct BrowserUtilityDownloadDestination: Hashable, Identifiable, Sendable {
     static let revealInFinder = BrowserUtilityDownloadDestination(
         name: "revealInFinder", title: "Show in Finder", symbol: "magnifyingglass", isPrimaryWhenFinished: true,
         delivery: { opener, fileURL in opener.revealFile(fileURL) })
+    static let revealInFiles = BrowserUtilityDownloadDestination(
+        name: "revealInFiles", title: "Show in Files", symbol: "magnifyingglass",
+        delivery: { opener, fileURL in opener.revealFile(fileURL) })
+    static let quickLook = BrowserUtilityDownloadDestination(
+        name: "quickLook", title: "Quick Look", symbol: "eye", isPrimaryWhenFinished: true,
+        delivery: { opener, fileURL in opener.previewFile(fileURL) })
     static let share = BrowserUtilityDownloadDestination(
         name: "share", title: "Share…", symbol: "square.and.arrow.up",
         delivery: { opener, fileURL in opener.shareFile(fileURL) })
     static let files = BrowserUtilityDownloadDestination(
         name: "files", title: "Save to Files…", symbol: "folder.badge.plus",
         delivery: { opener, fileURL in opener.saveFileToFiles(fileURL) })
-
-    /// Every destination.
-    static let all: [BrowserUtilityDownloadDestination] = [open, revealInFinder, share, files]
 
     // MARK: - Variables
 

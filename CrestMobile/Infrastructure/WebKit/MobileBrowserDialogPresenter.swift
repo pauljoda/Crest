@@ -234,12 +234,16 @@ enum MobileBrowserDialogPresenter {
         )
     }
 
-    static func exportDownloadedFile(
+    static func openDownloadedFile(
         at url: URL,
-        to destination: MobileBrowserFileExportDestination
+        in destination: BrowserUtilityDownloadDestination
     ) {
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
-        presentFile(at: url, temporaryDirectoryURL: nil, to: destination)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            BrowserNoticeCenter.shared.post(
+                .failure(String(localized: "Crest can’t find this file. It may have been moved or deleted.")))
+            return
+        }
+        destination.send(url, to: MobileBrowserFilePresenter(temporaryDirectoryURL: nil))
     }
 
     static func exportDocument(

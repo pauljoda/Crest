@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct MobileSpaceSettingsView: View {
     @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
@@ -15,6 +16,7 @@ struct MobileSpaceSettingsView: View {
     @State private var forgeStep = BrowserCrestStudioStep.shape
     @State private var pendingGroupChange: BrowserSpaceGroupChange?
     @State private var pendingDeletion: BrowserSpaceDeletionRequest?
+    @State private var downloads = MobileSpaceDownloadSettingsModel()
 
     var body: some View {
         Group {
@@ -29,6 +31,12 @@ struct MobileSpaceSettingsView: View {
         .browserSpaceDeletionConfirmation(
             $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
         )
+        .fileImporter(isPresented: $downloads.isChoosingDirectory, allowedContentTypes: [.folder]) { result in
+            downloads.finishChoosing(result)
+        }
+        .task(id: editedSpaceID) {
+            if let editedSpaceID { downloads.refresh(for: editedSpaceID) }
+        }
         .fullScreenCover(item: $editingAppearanceSpace) { requested in
             NavigationStack {
                 appearanceWorkspace(for: requested)
@@ -151,7 +159,9 @@ struct MobileSpaceSettingsView: View {
             space: space,
             spaceAccess: spaceAccess,
             dataDeleter: dataDeleter,
-            dismissKeyboard: dismissKeyboard)
+            downloads: downloads.settings(for: space),
+            dismissKeyboard: dismissKeyboard
+        )
     }
 
     private func selectEditedSpace(_ id: UUID?) {
