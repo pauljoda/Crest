@@ -602,8 +602,8 @@ jobs:
             done
           }
 
-          sparkle_version=2.9.5
-          sparkle_archive_sha256=015336b601493e05c237964954bff6191370003d94edefe663724c88840d73cc
+          sparkle_version=2.9.6
+          sparkle_archive_sha256=52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192
           sparkle_root="$RUNNER_TEMP/Sparkle-${sparkle_version}"
           feed_source="$RUNNER_TEMP/crest-appcast-source"
           updates_checkout="$RUNNER_TEMP/crest-updates-branch"
@@ -707,5 +707,5 @@ jobs:
             "$RUNNER_TEMP/crest-appcast-source" \
             "$RUNNER_TEMP/crest-appcast-source-webkit" \
             "$RUNNER_TEMP/crest-updates-branch" \
-            "$RUNNER_TEMP/Sparkle-2.9.5" \
+            "$RUNNER_TEMP/Sparkle-2.9.6" \
             -depth -delete 2>/dev/null || true

@@ -5569,6 +5569,10 @@
     "saved-tab-return-appearance": {
       "category": "fixed",
       "message": "When closing a saved or pinned tab returns it to its saved address, its row now shows that page's name and icon right away instead of the last page's."
+    },
+    "sparkle-security-update": {
+      "category": "fixed",
+      "message": "Crest's updater now includes two security fixes for how updates are installed."
     }
   }
 }
