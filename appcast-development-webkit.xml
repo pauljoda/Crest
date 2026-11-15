@@ -6,29 +6,45 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.72</title>
-            <pubDate>Sun, 15 Nov 2026 22:35:29 +0000</pubDate>
+            <title>0.9.86</title>
+            <pubDate>Sun, 15 Nov 2026 23:15:34 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1620</sparkle:version>
-            <sparkle:shortVersionString>0.9.72</sparkle:shortVersionString>
+            <sparkle:version>1622</sparkle:version>
+            <sparkle:shortVersionString>0.9.86</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 14 user-facing changes.
+
 ### Improved
 
-- Pages load and run faster with ad blocking on.
+- Notices such as URL Copied are only as wide as their words. On Mac and iPad they appear in the top right corner of the page, clear of the sidebar and the bars along the top; on iPhone they stay at the top of the screen.
+- On Mac, the recent tabs switcher lists only tabs whose page is loaded, beside the one on screen.
+- A tab's menu now offers Save Tab, which moves it into Saved Tabs, and a saved tab's offers Unsave Tab, which moves it back among your open tabs. A selection of tabs offers the same.
+
+### Fixed
+
+- On Mac, right-clicking text selected in a password field no longer offers to search for it.
+- In Split View, clicking or pointing at the floating sidebar or a Peek no longer moves focus to the pane underneath, so Site Controls open for the pane you chose and a Peek stays open.
+- With Reduce Motion on, switching Spaces shows the new Space's backdrop instead of the previous one's.
+- On Mac, choosing Crest's Handoff icon for a page open on another device now opens that page.
+- Crest no longer crashes while it checks which languages it can translate a page into.
+- An open Peek no longer keeps Crest busy while it sits still, which saves battery.
+- On Mac, dragging across the developer toolbar's address field selects text instead of moving the window.
+- When closing a saved or pinned tab returns it to its saved address, its row now shows that page's name and icon right away instead of the last page's.
+- Crest's updater now includes two security fixes for how updates are installed.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/ffd7d88380e623ce1ac8975d57dd22578c297afa...316b5c7727fdeb959097ee3025d8dd2d49a4d5aa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.72-2026-11-15-1620-r620.1/Installer-Crest-0.9.72-development-2026-11-15-316b5c7-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/316b5c7727fdeb959097ee3025d8dd2d49a4d5aa...efa7a58309a2f60105c77ea1afa8f052f61dee15) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.86-2026-11-15-1622-r622.1/Installer-Crest-0.9.86-development-2026-11-15-efa7a58-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.72-2026-11-15-1620-r620.1/Installer-Crest-0.9.72-development-2026-11-15-316b5c7-arm64.dmg" length="221351044" type="application/octet-stream" sparkle:edSignature="Nmh8KrDVF1pPGBEklTl2hWVvYyCCmZCXbqcXNw3JGlIEh0W3IVwMKnqUMesPhtM7vxt/7Ke3TV0Z2Npv2EW1BA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.86-2026-11-15-1622-r622.1/Installer-Crest-0.9.86-development-2026-11-15-efa7a58-arm64.dmg" length="221426820" type="application/octet-stream" sparkle:edSignature="rsUZKMqc5Tx77l10pT8K/LTLHpvu2+rhDSkVLWZMSwUCix6FnIHGz3sf7etSndhRV9EhpCyUBKjgAzBZQEtYBg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +76,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ea7p6Vm1euNf1bO11NLTCBabLf8pk8YrR7grnjO3JRp0NYPVZb7EdgbweYfexl+Tdj4X3Fci/l6hkvlsXr1WBw==
-length: 3942
+edSignature: poOpm3FzP8cKSt7bUIRk/kEduU4U5o9wrDchL4zLBANeulOICavLagtU/kiCMqCanuTNO9pLNC5oQAd1or8bBQ==
+length: 5470
 -->
