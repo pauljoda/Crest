@@ -43,8 +43,8 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
             var restoresImage = returns && tab.State.ReturnRestoresImage;
             selected = edited.CloseDurable(tab.Id, shown, fallback, returns);
             events = SessionTabEvents.None with {
-                PutAway = new(WindowId, space.Id, tab.Id, KeepsState: !returns),
-                SavedImage = restoresImage ? new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl) : null
+                PutAways = [new(WindowId, space.Id, tab.Id, KeepsState: !returns)],
+                SavedImages = restoresImage ? [new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl)] : null
             };
         } else {
             var fallback = Fallback(followUp, space.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());

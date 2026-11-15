@@ -17,7 +17,7 @@ public sealed record ReturnToSavedAddress(Guid WorkspaceId, Guid SpaceId, Guid T
             tab.ReturnToSavedAddress();
             if (restoresImage) saved = new(TabId, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl);
         });
-        return saved is null ? edit : edit with { Events = SessionTabEvents.None with { SavedImage = saved } };
+        return saved is null ? edit : edit with { Events = SessionTabEvents.None with { SavedImages = [saved] } };
     }
 
     #endregion

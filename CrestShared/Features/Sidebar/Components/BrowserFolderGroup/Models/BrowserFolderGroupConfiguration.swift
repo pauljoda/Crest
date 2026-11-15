@@ -134,6 +134,12 @@ struct BrowserFolderGroupConfiguration {
         folderTabIDs.filter { pageAccess.containsResidentPage($0) }
     }
 
+    /// Whether the folder holds something to close: a loaded tab, in a saved
+    /// folder, whose tabs stay saved, or any tab in a group or an open folder.
+    var hasTabsToClose: Bool {
+        folder.location.isDurable ? !loadedFolderTabIDs.isEmpty : !folderTabIDs.isEmpty
+    }
+
     /// The folder's loaded tabs, which closing keeps on screen, or none for a
     /// folder that closes without them.
     var residentFolderTabIDs: [UUID] {

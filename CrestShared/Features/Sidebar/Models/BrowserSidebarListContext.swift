@@ -135,7 +135,13 @@ struct BrowserSidebarListContext {
     }
 
     @MainActor func unload(_ tabID: UUID) {
-        pageAccess.unloadPage(tabID, assignment)
+        unload([tabID])
+    }
+
+    /// Unloads the tabs together, so their pages are asked once whether they
+    /// may go.
+    @MainActor func unload(_ tabIDs: [UUID]) {
+        pageAccess.unloadPages(tabIDs, assignment)
     }
 
     @MainActor func pullNewIcon(_ tabID: UUID) {

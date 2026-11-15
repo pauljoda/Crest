@@ -175,7 +175,7 @@ private final class BrowserAppearancePreviewState {
             containsResidentPage: { _ in true }, containsResidentPageMatching: { _ in true },
             siteThemeIconAccent: siteThemeAccent, residencyRevision: { 0 }, selectPages: {},
             deactivatePagePresentation: {},
-            unloadPage: { _, _ in }, pullFavicon: { _, _ in nil }, downloadCenter: downloads)
+            unloadPages: { _, _ in }, pullFavicon: { _, _ in nil }, downloadCenter: downloads)
     }
 
     var tabActions: BrowserSidebarTabActions {

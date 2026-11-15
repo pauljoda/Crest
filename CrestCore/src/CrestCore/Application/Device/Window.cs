@@ -239,6 +239,19 @@ internal sealed class Window {
         return null;
     }
 
+    /// The tab to show after every one of `dismissed` leaves `space` together:
+    /// the latest tab the window showed there before them that `available`
+    /// still holds, past any it no longer does. The history forgets all of
+    /// them, and forgets everything when nothing qualifies.
+    public Guid? DismissalFallback(Guid spaceId, IReadOnlySet<Guid> dismissed, IReadOnlySet<Guid> available) {
+        if (!recent.TryGetValue(spaceId, out var history)) return null;
+        history.RemoveAll(dismissed.Contains);
+        var latest = history.FindLastIndex(available.Contains);
+        if (latest >= 0) return history[latest];
+        history.Clear();
+        return null;
+    }
+
     /// Repairs the window after `session` changed under it: a tab that is gone shows nothing, a
     /// Space that is gone or being deleted gives way to the first remaining
     /// one on its fallback tab, split shares survive only while their group

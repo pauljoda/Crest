@@ -2,8 +2,9 @@ import SwiftUI
 
 /// Renames in place: Return or focus loss commits, and Escape cancels. A
 /// group's header shows its name alone, in small secondary text. Either kind
-/// keeps a `…` button at its trailing edge that opens the folder's menu: on
-/// hover where a pointer can reveal it, and always on a touch shell.
+/// keeps a `…` button at its trailing edge that opens the folder's menu, and
+/// a − beside it, while the folder holds something to close, that closes it
+/// all: on hover where a pointer can reveal them, and always on a touch shell.
 struct BrowserFolderHeaderControl: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -96,15 +97,15 @@ struct BrowserFolderHeaderControl: View {
                                 .frame(width: countSharesMenuSlot ? menuMetrics.controlSize.width : nil)
                                 .opacity(countSharesMenuSlot && isMenuRevealed ? 0 : 1)
                         }
-                        if showsMenuButton, menuMetrics.isAlwaysVisible {
-                            // Room for the `…` button a touch shell always
-                            // draws over the header, so the count sits beside it.
-                            Color.clear.frame(width: menuMetrics.controlSize.width, height: 1)
+                        if menuMetrics.isAlwaysVisible, trailingControlCount > 0 {
+                            // Room for the controls a touch shell always draws
+                            // over the header, so the count sits beside them.
+                            Color.clear.frame(width: trailingControlsWidth, height: 1)
                         }
                     }
                     .modifier(
                         BrowserFolderHeaderMenuClearance(
-                            width: menuMetrics.controlSize.width, isActive: titleMeetsMenuButton)
+                            width: trailingControlsWidth, isActive: titleMeetsTrailingControls)
                     )
                     .browserSavedFolderHeaderLayout(configuration: configuration)
                     // A finger gets the folder's padding too, so a header
@@ -121,13 +122,21 @@ struct BrowserFolderHeaderControl: View {
                 )
                 .accessibilityHint(accessibilityHint)
                 .overlay(alignment: .trailing) {
-                    if showsMenuButton {
-                        BrowserFolderMenuButton(
-                            configuration: configuration, interaction: interaction, metrics: menuMetrics,
-                            isRevealed: isMenuRevealed
-                        )
-                        .padding(.trailing, configuration.headerMetrics.contentTrailingInset)
+                    HStack(spacing: 0) {
+                        if showsCloseAll {
+                            BrowserFolderCloseAllButton(
+                                configuration: configuration, interaction: interaction, metrics: menuMetrics,
+                                isRevealed: isMenuRevealed
+                            )
+                        }
+                        if showsMenuButton {
+                            BrowserFolderMenuButton(
+                                configuration: configuration, interaction: interaction, metrics: menuMetrics,
+                                isRevealed: isMenuRevealed
+                            )
+                        }
                     }
+                    .padding(.trailing, configuration.headerMetrics.contentTrailingInset)
                 }
                 .onHover { isHovering = $0 }
                 // A folder being renamed shows no card.
@@ -169,11 +178,62 @@ struct BrowserFolderHeaderControl: View {
     /// rather than beside a button that is always there.
     private var countSharesMenuSlot: Bool { showsMenuButton && !menuMetrics.isAlwaysVisible }
 
-    /// Whether the `…` button shows now over the end of the title. A tab
-    /// count holds the button's place, and a button that is always there has
-    /// its own, but a hover-revealed button with no count beside it stands
-    /// over a long enough name.
-    private var titleMeetsMenuButton: Bool { countSharesMenuSlot && !showsTabCounts && isMenuRevealed }
+    /// Whether the header offers its − now, which closes what the folder
+    /// holds to close. Reading it observes the folder's pages.
+    private var showsCloseAll: Bool {
+        _ = configuration.residencyRevision
+        return configuration.hasTabsToClose
+    }
+
+    /// How many controls stand at the header's trailing edge.
+    private var trailingControlCount: Int { (showsMenuButton ? 1 : 0) + (showsCloseAll ? 1 : 0) }
+
+    /// The width the trailing controls take together.
+    private var trailingControlsWidth: CGFloat { menuMetrics.controlSize.width * CGFloat(trailingControlCount) }
+
+    /// Whether the trailing controls show now over the end of the title. A
+    /// tab count holds the `…` button's place, and controls that are always
+    /// there have their own, but hover-revealed controls reach past a count
+    /// when the − stands beside the button, and a button with no count beside
+    /// it stands over a long enough name.
+    private var titleMeetsTrailingControls: Bool {
+        guard !menuMetrics.isAlwaysVisible, isMenuRevealed else { return false }
+        return showsCloseAll || (showsMenuButton && !showsTabCounts)
+    }
+}
+
+/// The − at a folder or group header's trailing edge, which closes what the
+/// folder holds to close and then closes the folder, as a tab row's own −
+/// unloads its tab.
+private struct BrowserFolderCloseAllButton: View {
+    let configuration: BrowserFolderGroupConfiguration
+    let interaction: BrowserFolderGroupInteractionContext
+    let metrics: BrowserTabTrailingControlMetrics
+    let isRevealed: Bool
+
+    var body: some View {
+        Button(action: interaction.closeAllTabs) {
+            BrowserSidebarTabTrailingControlLabel(systemName: "minus", metrics: metrics)
+        }
+        .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
+        .contentShape(.rect)
+        .opacity(isRevealed ? 1 : 0)
+        .allowsHitTesting(isRevealed)
+        .disabled(!configuration.isAvailableForDisplay)
+        .accessibilityLabel(accessibilityLabel)
+        .help(title)
+    }
+
+    /// Unload for a saved folder, whose tabs stay saved, and close for a
+    /// group's or an open folder's.
+    private var unloads: Bool { configuration.folder.location.isDurable }
+
+    private var title: LocalizedStringKey { unloads ? "Unload All Tabs" : "Close All Tabs" }
+
+    private var accessibilityLabel: Text {
+        let name = configuration.folder.shownTitle
+        return unloads ? Text("Unload All Tabs in \(name)") : Text("Close All Tabs in \(name)")
+    }
 }
 
 /// Fades a folder header's title out under its `…` button while the button

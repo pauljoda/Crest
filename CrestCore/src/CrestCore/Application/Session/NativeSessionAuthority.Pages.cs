@@ -49,7 +49,8 @@ public sealed partial class NativeSessionAuthority {
         try {
             var now = Stamp(edit.At);
             if (edit.Apply(original, now) is not { } edited) return null;
-            events = new SessionTabEvents([], edited.Favicon, SavedImage: edited.SavedImage);
+            events = new SessionTabEvents([], edited.Favicon,
+                SavedImages: edited.SavedImage is { } saved ? [saved] : null);
             var keeper = session.RecordsOwner(original);
             var recorded = keeper.Id == original.Id ? edited.Space : keeper;
             if (edit.Recorded(recorded.History, now) is { } history) recorded = recorded with { History = history };

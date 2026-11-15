@@ -5617,6 +5617,10 @@
     "closed-folder-shows-loaded-tabs": {
       "category": "improved",
       "message": "A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it."
+    },
+    "folder-header-close-all": {
+      "category": "improved",
+      "message": "A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back."
     }
   }
 }
