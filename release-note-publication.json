@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "arc-import-keeps-tab-renames",
+    "development": "open-next-extension",
     "nightly": "snappier-sidebar-slide"
   }
 }
