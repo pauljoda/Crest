@@ -3,6 +3,6 @@
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
     "development": "command-w-closes-selection",
-    "nightly": "snappier-sidebar-slide"
+    "nightly": "folder-menu-button-clears-name"
   }
 }

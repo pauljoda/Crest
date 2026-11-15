@@ -6,48 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.44</title>
-            <pubDate>Sat, 14 Nov 2026 15:48:19 +0000</pubDate>
+            <title>0.9.71</title>
+            <pubDate>Sun, 15 Nov 2026 16:20:09 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1608</sparkle:version>
-            <sparkle:shortVersionString>0.9.44</sparkle:shortVersionString>
+            <sparkle:version>1618</sparkle:version>
+            <sparkle:shortVersionString>0.9.71</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 14 user-facing changes.
+Showing the 12 most recent highlights from 20 user-facing changes.
 
 ### New
 
-- On Mac, resting the pointer on a folder in the sidebar lists its tabs, including those in folders inside it, with a search field ready for typing. Open, unload or close a tab there, or drag it out of the folder, without opening the folder. Turn it off in Settings › Appearance › Preview hover.
-- On iPhone and iPad, holding a tab or pin in the sidebar shows its title, its site and how its page last looked above its menu, and holding a folder, or clicking it with a secondary click, opens a card with its tabs, a search field and the folder's menu behind "…". Hold and move to drag the folder instead. With a pointer on iPad, resting on a tab or folder shows its card beside the sidebar. Turn them off in Settings › Appearance › Previews.
-- On Mac, choose how long the pointer rests on the window's edge before a hidden sidebar comes out, from Instant to a second, in Settings › Appearance › Sidebar hover delay. It applies in a window and in full screen, and moving off the edge before then still keeps the sidebar hidden.
-- On Mac, choose how fast the sidebar slides in and out, when it shows from the window's edge and when you hide or dock it, from Snap, which puts it in place at once, to twice as slow as before, in Settings › Appearance › Sidebar slide time.
-- Turn off Keep saved tabs after unloading in Settings › Tabs and a saved tab you unload shows an X that deletes it. The X waits a moment after you unload the tab, and on iPhone and iPad it always shows rather than on hover. The setting appears in the Heraldic and Modern styles.
-- Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style.
+- On Mac, drag a pinned extension along the sidebar to put your extensions in the order you want, as you move tabs. Every Space with the same browsing profile shows them in that order. From the first launch after updating, the strip shows your extensions in the order you pinned them instead of by name.
+- On Mac, Command-E opens your extensions one at a time: the pinned ones from left to right, then the rest. Press it again for the next one, and once more after the last to close it. Archive Tab moves to Shift-Command-E.
+- On Mac, you can put the address bar on top: choose Top under Address bar in Settings › Appearance, and the address field with back, forward and reload moves above the page.
+- On Mac, each page in Split View carries its own bar with back, forward, its address, Site Controls and pinned extensions, wherever the address bar is.
 
 ### Improved
 
-- Tab size in Settings › Appearance is now a slider with nine steps, from Thin to Large, and a thin tab keeps its title readable while losing the room around it. The Space header grows and shrinks with your tabs.
-- On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time.
+- Remove from Folder and Remove from Group put the tab just below its folder or group instead of at the end of your open tabs.
+- On Mac, pages slide and resize into place as they join or leave Split View instead of jumping.
 
 ### Fixed
 
-- The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark.
-- On Mac, a click anywhere in the sidebar's address field opens it. Clicks above and below "Search or enter website", or an address shown on one line, used to do nothing.
-- A click anywhere in a Quick Window's address field opens it, including above and below the address or "Search or enter website" and on the lock before it, where clicks used to do nothing.
-- On Mac, a Quick Window's back and forward buttons draw in the Space's text color, so they stay visible over a dark Space in a light window, or a light Space in a dark one.
+- A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs.
+- On Mac, Crest no longer quits while it prepares an import from Arc or another browser when some of that browser's data is damaged.
+- On Mac, when Crest can't prepare an import from another browser, the review now shows an error with Back and Skip instead of quitting.
+- Importing from Arc keeps the names you gave tabs there, and the import review shows them. Clearing a name shows the page's title again.
+- On Mac, Command-W closes every tab you selected in the sidebar again, and Command-D duplicates them, instead of acting on the tab on screen.
+- On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/7fffbc8c49e43b2fb00af3f5db2fb303c3456b59...049dc612e601a44ecb59e35f7d29d385f87fb04a) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.44-2026-11-14-1608-r608.1/Installer-Crest-0.9.44-nightly-2026-11-14-049dc61-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/049dc612e601a44ecb59e35f7d29d385f87fb04a...c44daae960ff67ca7ac8fffe8ab18c4dfdefe15f) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.71-2026-11-15-1618-r618.1/Installer-Crest-0.9.71-nightly-2026-11-15-c44daae-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.44-2026-11-14-1608-r608.1/Installer-Crest-0.9.44-nightly-2026-11-14-049dc61-arm64.dmg" length="220922493" type="application/octet-stream" sparkle:edSignature="z9oGU82ISXX/TgW4zg2zez73dpc9bu7LbACEQ8Fqrgajjl2n8u4ig9HGBi8xuOz80ZuSIrZJuUlkoh2vho5cDg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.71-2026-11-15-1618-r618.1/Installer-Crest-0.9.71-nightly-2026-11-15-c44daae-arm64.dmg" length="221299324" type="application/octet-stream" sparkle:edSignature="bHepsvluNmVEXxP3SvhgDlmy5uHrTQ+m8QigVLbZKnz2YTTYrjiI7cUyMVhgaPlirZAl2kUJhF2GOx7A+JOoDA=="/>
         </item>
         <item>
             <title>0.9.1</title>
@@ -114,6 +114,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: bfPg5QZtmHsX2Z95wlT20XBu7PBjyzCSejsg1zkuQJxU+1g5sfEk/SRaP42Km5TefzbkvzfEChO7YMFRQbM1AA==
-length: 9208
+edSignature: Mo+1ZDbmHCx2LnzKS2oNVPVpwGqdN/OnVOL74tEMw95be2tgS/v07UupOgORh9fpaKk/ku0oo+YcqVqw1WCDCg==
+length: 8328
 -->
