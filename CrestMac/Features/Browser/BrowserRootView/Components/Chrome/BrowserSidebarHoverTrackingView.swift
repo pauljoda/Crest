@@ -15,12 +15,12 @@ import AppKit
 /// still on its way has time to reach it. Once the slide is over, the hover
 /// follows the pointer again.
 ///
-/// Reaching for the edge of a window that stands away from the screen's edge
-/// often carries the pointer out of the window. Just past the sidebar's side
-/// of the window, beside it, the pointer keeps the sidebar out as the exit
-/// margin does; back over the page, the hover lets go after the hold's usual
-/// delay. Further away, or above or below the window, the pointer has gone on
-/// to something else, such as the Dock or another app, and the sidebar goes.
+/// A pointer that leaves the window through its edge on the sidebar's side
+/// keeps the sidebar out, as the exit margin does, for as long as it stays
+/// out of the window, wherever it goes there; back over the page, the hover
+/// lets go after the hold's usual delay. One that leaves through any other
+/// edge, toward the Dock or the page's side, has gone on to something else,
+/// and the sidebar goes.
 ///
 /// Menu tracking can leave an exit queued after the pointer has returned to
 /// the sidebar. Sample the current position instead of trusting that event.
@@ -78,6 +78,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
     private var isRevealing = false
     private var revealRevision = 0
     private var lastReportedHover: Bool?
+    /// Whether the pointer left the window through the edge on the sidebar's
+    /// side and has not come back in since.
+    private var hasLeftThroughSidebarSide = false
     /// Samples the pointer while it is out of the window, where no tracking
     /// area reports it, until it comes back.
     private var outsideWatch: Task<Void, Never>?
@@ -94,8 +97,8 @@ final class BrowserSidebarHoverTrackingView: NSView {
     }
 
     /// Whether the pointer that revealed the sidebar has gone somewhere a
-    /// slide-in cannot explain: out of the window anywhere but just past its
-    /// side, or into another app. It can get there before the region first
+    /// slide-in cannot explain: out of the window through any edge but the
+    /// sidebar's, or into another app. It can get there before the region first
     /// reports it inside, and nothing in the region reports an exit it never
     /// saw an entry for.
     private var hasRevealingPointerLeft: Bool {
@@ -103,20 +106,17 @@ final class BrowserSidebarHoverTrackingView: NSView {
         return !window.isKeyWindow || (!window.frame.contains(pointerLocation()) && !isPointerBeyondSidebarSide)
     }
 
-    /// Whether the pointer is out of the key window beside it on a floating
-    /// card's side, no further past its edge than a pointer reaching for the
-    /// collapsed strip goes. Only a floating card, the region with an exit
-    /// margin, comes and goes with the pointer.
+    /// Whether the pointer is out of the key window after leaving it through
+    /// its edge on a floating card's side, wherever it has gone since. Only a
+    /// floating card, the region with an exit margin, comes and goes with the
+    /// pointer.
     private var isPointerBeyondSidebarSide: Bool {
         guard exitMargin > 0, let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
         let location = pointerLocation()
         let frame = window.frame
-        guard location.y >= frame.minY, location.y <= frame.maxY else { return false }
-        let reach = BrowserCollapsedSidebarHoverTrackingView.overshootReach
+        guard !frame.contains(location) else { return false }
         // The exit margin lies on the page's side, across from the sidebar's.
-        return exitEdge == .maxXEdge
-            ? location.x < frame.minX && location.x >= frame.minX - reach
-            : location.x > frame.maxX && location.x <= frame.maxX + reach
+        return hasLeftThroughSidebarSide || (exitEdge == .maxXEdge ? location.x < frame.minX : location.x > frame.maxX)
     }
 
     /// Whether the pointer out past the sidebar's side of the window keeps the
@@ -202,6 +202,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
         holdReleaseRevision += 1
         isReleasingHold = false
         lastReportedHover = nil
+        hasLeftThroughSidebarSide = false
         guard let window else { return }
         let observations: [(Selector, Notification.Name, NSWindow?)] = [
             (#selector(menuTrackingBegan), NSMenu.didBeginTrackingNotification, nil),
@@ -264,6 +265,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
 
     func refreshPointerHover() {
         guard window != nil else { return }
+        hasLeftThroughSidebarSide = isPointerBeyondSidebarSide
         releaseWindowsNoLongerShown()
         let isOutside = isPointerHeldOutside
         followPointer(outside: isOutside)

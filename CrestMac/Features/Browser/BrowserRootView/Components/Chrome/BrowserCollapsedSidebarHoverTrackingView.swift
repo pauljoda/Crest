@@ -18,19 +18,14 @@ import AppKit
 /// page, never brings the sidebar out; with no delay, any pointer reaching the
 /// strip does.
 ///
-/// Reaching for the edge of a window that stands away from the screen's edge
-/// often carries the pointer across the strip and out of the window. A pointer
-/// that leaves through the window's edge beside the strip and stays just past
-/// it counts as resting on the strip, even when it moved so fast that AppKit
-/// never saw it on the strip: the window's own exit starts the wait then.
+/// A pointer that leaves the window through the edge on the sidebar's side
+/// counts as resting on the strip for as long as it stays out past that edge,
+/// however far: reaching for the edge of a window that stands away from the
+/// screen's edge often carries it across the strip and out, even so fast that
+/// AppKit never saw it on the strip, and the window's own exit starts the
+/// wait then.
 @MainActor
 final class BrowserCollapsedSidebarHoverTrackingView: NSView {
-    // MARK: - Static Variables
-
-    /// How far past the window's edge a pointer that overshot the strip still
-    /// counts as reaching for it.
-    static let overshootReach: CGFloat = 40
-
     // MARK: - Variables
 
     var onHoverChange: @MainActor @Sendable (Bool) -> Void
@@ -51,8 +46,8 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
         return bounds.contains(convert(window.convertPoint(fromScreen: pointerLocation()), from: nil))
     }
 
-    /// Whether the pointer is out of the key window just past the edge the
-    /// strip lies along, beside the strip.
+    /// Whether the pointer is out of the key window past the edge the strip
+    /// lies along.
     private var isPointerPastStrip: Bool {
         guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor, let content = window.contentView else {
             return false
@@ -60,16 +55,12 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
         let strip = convert(bounds, to: nil)
         let location = window.convertPoint(fromScreen: pointerLocation())
         let edges = content.bounds
-        guard location.y >= strip.minY, location.y <= strip.maxY else { return false }
         // The strip lies along the window's edge on the sidebar's side.
-        if strip.midX < edges.midX {
-            return location.x < edges.minX && location.x >= edges.minX - Self.overshootReach
-        }
-        return location.x > edges.maxX && location.x <= edges.maxX + Self.overshootReach
+        return strip.midX < edges.midX ? location.x < edges.minX : location.x > edges.maxX
     }
 
-    /// Whether the pointer rests on the strip, or just past the window's edge
-    /// beside it.
+    /// Whether the pointer rests on the strip, or is out past the window's
+    /// edge beside it.
     private var isPointerReachingForStrip: Bool {
         isPointerOnStrip || isPointerPastStrip
     }

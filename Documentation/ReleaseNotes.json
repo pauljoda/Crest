@@ -5548,7 +5548,7 @@
     },
     "fast-edge-reveals-sidebar": {
       "category": "fixed",
-      "message": "On Mac, a hidden sidebar slides out as soon as the pointer reaches the window's edge: Sidebar hover delay in Settings › Appearance now starts at Instant instead of 200 ms, and any other delay you chose stays. A quick move that runs on into a gap beside the window brings the sidebar out too, and once it starts sliding out it comes all the way out before it hides again."
+      "message": "On Mac, a hidden sidebar slides out as soon as the pointer reaches the window's edge: Sidebar hover delay in Settings › Appearance now starts at Instant instead of 200 ms, and any other delay you chose stays. Moving the pointer off the window on the sidebar's side, however fast, brings the sidebar out and keeps it out while the pointer stays outside the window, and once it starts sliding out it comes all the way out before it hides again."
     },
     "link-menu-new-tab-first": {
       "category": "improved",
