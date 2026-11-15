@@ -137,9 +137,10 @@ internal sealed class Window {
     /// between, the shown one first and then the rest most recent first, up to
     /// the limit. The members of a split are one item, at the place of the
     /// member shown last, which the item focuses; a Start Page leaves out of
-    /// every item but the shown one, and a tab the Space no longer holds drops
-    /// out. A window that shows no tab in `space` has none.
-    public IReadOnlyList<RecentTabItem> RecentItems(SpaceState space) {
+    /// every item but the shown one, and so does an item none of whose pages
+    /// is among the `loaded` tabs. A tab the Space no longer holds drops out.
+    /// A window that shows no tab in `space` has none.
+    public IReadOnlyList<RecentTabItem> RecentItems(SpaceState space, IReadOnlySet<Guid> loaded) {
         ArgumentNullException.ThrowIfNull(space);
         if (Tab(space.Id) is not { } shown || !Contains(space, shown)) return [];
         List<RecentTabItem> items = [new(Cards(space, shown).TabIds, shown)];
@@ -148,21 +149,23 @@ internal sealed class Window {
             var tab = space.Tabs.FirstOrDefault(candidate => candidate.Id == history[index]);
             if (tab is null || tab.IsStartPage || unseen.Contains((space.Id, tab.Id))
                 || departed.Contains((space.Id, tab.Id)) || items.Any(item => item.TabIds.Contains(tab.Id))) continue;
-            items.Add(new(Cards(space, tab.Id).TabIds, tab.Id));
+            var cards = Cards(space, tab.Id).TabIds;
+            if (cards.Any(loaded.Contains)) items.Add(new(cards, tab.Id));
         }
         return items;
     }
 
     /// The Space's tab used last other than the shown one, as an item that
     /// focuses the page of its split used last; never a Start Page, a tab
-    /// another window took over or one whose split holds one of `elsewhere`.
-    /// Null when there is none.
-    public RecentTabItem? LastUsed(SpaceState space, IReadOnlySet<Guid> elsewhere) {
+    /// another window took over, one whose split holds one of `elsewhere`, or
+    /// one none of whose pages is among the `loaded` tabs. Null when there is
+    /// none.
+    public RecentTabItem? LastUsed(SpaceState space, IReadOnlySet<Guid> elsewhere, IReadOnlySet<Guid> loaded) {
         ArgumentNullException.ThrowIfNull(space);
         if (Tab(space.Id) is not { } shown) return null;
         var shownItem = Cards(space, shown).TabIds;
         return space.Tabs.Where(tab => !tab.IsStartPage && !shownItem.Contains(tab.Id) && !departed.Contains((space.Id, tab.Id))
-                && !Cards(space, tab.Id).TabIds.Any(elsewhere.Contains))
+                && !Cards(space, tab.Id).TabIds.Any(elsewhere.Contains) && Cards(space, tab.Id).TabIds.Any(loaded.Contains))
             .MaxBy(tab => tab.LastActivatedAt) is { } last ? new(Cards(space, last.Id).TabIds, last.Id) : null;
     }
 

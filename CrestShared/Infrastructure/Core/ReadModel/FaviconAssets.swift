@@ -64,6 +64,12 @@ final class FaviconAssets {
     // MARK: - Variables
 
     @ObservationIgnored private var slots: [UUID: Slot] = [:]
+    /// The image each saved or pinned tab keeps for the page at its saved
+    /// address, which it wears again when it returns there. Read only then,
+    /// so nothing observes it.
+    @ObservationIgnored private var savedImages: [UUID: BrowserSavedFavicon] = [:]
+    /// Tabs whose saved page's image changed since `keeper` last took it.
+    @ObservationIgnored private var savedChanges: Set<UUID> = []
     /// The offer of the command whose changes are being applied, by workspace.
     @ObservationIgnored private var offers: [UUID: Offer] = [:]
     /// Tabs a change of the batch being applied removed, whose images stay
@@ -120,7 +126,8 @@ final class FaviconAssets {
 
     /// Brings the kept images in line with `workspace`, when it is the kept
     /// one: an open tab whose image changed since the store last took it is
-    /// written, and the images of tabs it no longer holds open go, or with
+    /// written, one that wore an image and now wears none loses it from the
+    /// store too, and the images of tabs it no longer holds open go, or with
     /// `pruning` the images of every tab it does not hold open.
     func keepImages(of workspace: WorkspaceModel, pruning: Bool = false) {
         guard let keeper, keeper.workspaceID == workspace.id else { return }
@@ -129,10 +136,19 @@ final class FaviconAssets {
             for tab in space.tabs.models {
                 let icon = slots[tab.id]?.image
                 open.updateValue(icon?.identity, forKey: tab.id)
-                if let previous = kept[tab.id], previous == icon?.identity { continue }
-                keeper.store.reconcile(icon?.data, tabID: tab.id)
+                let previous = kept[tab.id]
+                if let previous, previous == icon?.identity { continue }
+                if icon == nil, let previous, previous != nil {
+                    keeper.store.forgetFavicon(tabID: tab.id)
+                } else {
+                    keeper.store.reconcile(icon?.data, tabID: tab.id)
+                }
             }
         }
+        for tabID in savedChanges where open.index(forKey: tabID) != nil {
+            keeper.store.keepSavedFavicon(savedImages[tabID], tabID: tabID)
+        }
+        savedChanges.removeAll()
         if pruning || kept.keys.contains(where: { open.index(forKey: $0) == nil }) {
             keeper.store.pruneFavicons(keeping: Set(open.keys))
         }
@@ -172,6 +188,39 @@ final class FaviconAssets {
         for (tabID, data) in images where slots[tabID]?.data == nil && holds(tabID) {
             setImage(data, of: tabID)
         }
+    }
+
+    /// The saved pages' images the platform kept before its session reached
+    /// the read model, as a launch reads them from disk: each tab `holds`
+    /// names that keeps none takes its own. A tab in `unkept`, such as one a
+    /// repair gave a new identity, has none of its own on disk yet, so the
+    /// store takes it on the next keeping.
+    func adoptSaved(
+        _ images: [UUID: BrowserSavedFavicon], unkept: Set<UUID> = [], holding holds: (UUID) -> Bool
+    ) {
+        for (tabID, image) in images where savedImages[tabID] == nil && holds(tabID) {
+            savedImages[tabID] = image
+            if unkept.contains(tabID) { savedChanges.insert(tabID) }
+        }
+    }
+
+    /// The tab's saved page is the one whose favicon address is `address`,
+    /// and the image it wears now is that page's; without an address or an
+    /// image it keeps none.
+    func keepSavedImage(of tabID: UUID, for address: String?) {
+        let image = address.flatMap { address in
+            slots[tabID]?.data.map { BrowserSavedFavicon(address: address, data: $0) }
+        }
+        guard savedImages[tabID] != image else { return }
+        savedImages[tabID] = image
+        savedChanges.insert(tabID)
+    }
+
+    /// The tab returned to its saved address: it wears the image kept for the
+    /// page whose favicon address is `address`, or none, and never the image
+    /// of the page it left.
+    func wearSavedImage(of tabID: UUID, for address: String?) {
+        setImage(savedImages[tabID].flatMap { $0.address == address ? $0.data : nil }, of: tabID)
     }
 
     /// Tabs a change removed keep their images until the batch ends.
@@ -215,6 +264,7 @@ final class FaviconAssets {
     func finishBatch(holding holds: (UUID) -> Bool) {
         for tabID in detached where !holds(tabID) {
             slots.removeValue(forKey: tabID)?.image = nil
+            savedImages[tabID] = nil
         }
         detached.removeAll()
     }

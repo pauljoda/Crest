@@ -4,7 +4,7 @@ Crest ships these third-party runtime components:
 
 | Component | Version | Use | License |
 | --- | --- | --- | --- |
-| [Sparkle](https://github.com/sparkle-project/Sparkle) | 2.9.5 | Signed software updates on macOS | MIT-style license with bundled BSD, MIT, and zlib-style notices |
+| [Sparkle](https://github.com/sparkle-project/Sparkle) | 2.9.6 | Signed software updates on macOS | MIT-style license with bundled BSD, MIT, and zlib-style notices |
 | [.NET runtime](https://github.com/dotnet/runtime) (Native AOT) | 10.0.5 | Crest's core, compiled ahead of time into every app | MIT, with bundled third-party notices |
 | [adblock-rust](https://github.com/brave/adblock-rust), Brave's ad-block engine | 0.13.5 | Crest's content filter, compiled into the core on every platform | MPL-2.0, built from MIT, Apache-2.0, Unicode-3.0 and Unlicense Rust crates |
 | [Chromium](https://www.chromium.org/), with Crest's patches, some adapted from [ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium) | 156.0.8078.80 | The Chromium engine in Crest's Chromium build for macOS | BSD-3-Clause, with bundled third-party licenses |

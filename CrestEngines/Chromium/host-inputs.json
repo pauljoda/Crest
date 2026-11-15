@@ -403,6 +403,10 @@
     "before": "557570517c78917428c6b983658def903af999a37976cf1c8b8004b4ff23e211",
     "after": "4033ef2f59ba6189bf783690c139bfa25bf7fcf1712242f264137abb27f01cab"
   },
+  "chrome/browser/ui/views/storage/storage_pressure_bubble_view.cc": {
+    "before": "10e657b3ae3dd3867cb404908baab34d95d0466b58285c59e451ea49c48e8c75",
+    "after": "861d50b96adcffef8431a33e52bc41890e38681a2c29fa11ff85d4aac1872c62"
+  },
   "services/network/BUILD.gn": {
     "before": "93eecf495835d2a670fe8e9ba029ca6675c152c21e07cecd527d12164d65b374",
     "after": "9d21e5f50b68b07683a29e1c05ec3b79e2851e968112a2fd4d9d3b5688141e8a"

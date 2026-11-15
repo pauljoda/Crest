@@ -354,6 +354,12 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         if (page.ShowsPictureInPicture && (shownAgain || Shown(page) is null)) issue(page.Engine, new ExitPictureInPicture(page.Id));
     }
 
+    /// The tabs of `workspaceId` whose page is loaded in some window: one
+    /// that holds its engine's page, which the recent tabs list.
+    internal IReadOnlySet<Guid> LoadedTabs(Guid workspaceId) =>
+        open.Values.Where(page => page.WorkspaceId == workspaceId && page.Phase.HoldsEnginePage).Select(page => page.TabId)
+            .OfType<Guid>().ToHashSet();
+
     /// The tabs of `workspaceId` whose pages run media, which stay open and
     /// loaded however long nobody looks at them.
     internal IReadOnlySet<Guid> TabsRunningMedia(Guid workspaceId) =>

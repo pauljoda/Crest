@@ -17,7 +17,8 @@ internal static partial class StoredSessionCodec {
 
     /// A tab. A native view keeps no address, a missing symbol is the one its
     /// content shows, and a placement or icon mode this build cannot name reads
-    /// as saved and as unchosen, exactly as the native reader decides them.
+    /// as saved and as unchosen, exactly as the native reader decides them. A
+    /// tab written before saved pages kept their title and favicon has neither.
     internal static TabState DecodeTab(JsonNode? node) {
         var value = Object(node);
         var native = value[Key.NativeContent] is JsonObject content
@@ -33,7 +34,9 @@ internal static partial class StoredSessionCodec {
             OptionalIdentity(value[Key.FolderId]), OptionalIdentity(value[Key.SplitGroupId]),
             Date(value[Key.LastActivatedAt]), OptionalDate(value[Key.PositionModifiedAt]),
             Text(value[Key.CustomTitle]), OptionalDate(value[Key.TitleModifiedAt]),
-            Flag(value[Key.KeepsPageLoaded]) ?? false);
+            Flag(value[Key.KeepsPageLoaded]) ?? false,
+            native is null ? Text(value[Key.SavedTitle]) : null, native is null ? Text(value[Key.SavedFaviconUrl]) : null,
+            native is null && value[Key.SavedIconAccent] is JsonObject savedAccent ? DecodeIconAccent(savedAccent) : null);
     }
 
     internal static JsonObject Encode(TabState tab) {
@@ -45,6 +48,9 @@ internal static partial class StoredSessionCodec {
             value[Key.NativeContent] = content;
         }
         Put(value, Key.SavedUrl, tab.SavedUrl);
+        Put(value, Key.SavedTitle, tab.SavedTitle);
+        Put(value, Key.SavedFaviconUrl, tab.SavedFaviconUrl);
+        if (tab.SavedIconAccent is { } savedAccent) value[Key.SavedIconAccent] = Encode(savedAccent);
         value[Key.Symbol] = tab.Symbol;
         Put(value, Key.FaviconUrl, tab.FaviconUrl);
         if (tab.IconAccent is { } accent) value[Key.IconAccent] = Encode(accent);

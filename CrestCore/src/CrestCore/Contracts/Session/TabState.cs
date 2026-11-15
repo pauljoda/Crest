@@ -8,7 +8,11 @@ namespace CrestCore.Contracts;
 /// for a tab that never chose how its icon is filled, which then follows its
 /// <see cref="Symbol"/>. Favicon bytes, live pages and engine history are never part of it.
 /// The core publishes the values it resolves from these fields beside them, so no
-/// platform works them out again, and never stores them.
+/// platform works them out again, and never stores them. <see cref="SavedTitle"/>,
+/// <see cref="SavedFaviconUrl"/> and <see cref="SavedIconAccent"/> are the title,
+/// favicon address and icon color of the page at <see cref="SavedUrl"/>, kept as the
+/// tab leaves that page, which a tab that returns there shows again; a tab written
+/// before they were kept has none until it next leaves its saved address.
 /// </summary>
 [Observed]
 public sealed record TabState(
@@ -28,7 +32,10 @@ public sealed record TabState(
     DateTimeOffset? PositionModifiedAt,
     string? CustomTitle,
     DateTimeOffset? TitleModifiedAt,
-    bool KeepsPageLoaded) {
+    bool KeepsPageLoaded,
+    string? SavedTitle = null,
+    string? SavedFaviconUrl = null,
+    TabIconAccent? SavedIconAccent = null) {
     #region Variables
 
     /// <summary>How the tab's icon is filled: its stored mode, or for a tab written
@@ -47,6 +54,15 @@ public sealed record TabState(
     [Resolved]
     public bool IsAwayFromSavedAddress => SavedAddress is { } saved && Url is { } url
         && !new WebAddress(url).IsSamePage(new WebAddress(saved));
+
+    /// <summary>Whether returning to its saved address puts the saved page's image back
+    /// on the tab: it shows another page, and its icon follows its page.</summary>
+    internal bool ReturnRestoresImage => IsAwayFromSavedAddress && IconMode.FollowsPage;
+
+    /// <summary>Whether the favicon the tab wears was taken from the page at its saved
+    /// address, rather than one it showed before that page's own icon arrived.</summary>
+    internal bool WearsSavedPageIcon => SavedUrl is { } saved && FaviconUrl is { } icon
+        && new WebAddress(icon).IsSamePage(new WebAddress(saved));
 
     /// <summary>The icon follows the page, and the favicon the tab keeps was taken from
     /// the page it shows, so the page need not fetch it again once the platform holds
@@ -75,6 +91,51 @@ public sealed record TabState(
 
     /// The tab is one of its Space's pinned tabs.
     internal bool IsPinned => Placement == TabPlacement.Pinned;
+
+    #endregion
+
+    #region Actions - Saved address
+
+    /// <summary>The tab belonging to <paramref name="savedUrl"/>: one newly saved at the
+    /// page it shows keeps that page's title and favicon as the saved page's, one whose
+    /// saved address stays keeps what it has, and one that belongs nowhere keeps
+    /// none.</summary>
+    internal TabState SavedAt(string? savedUrl) {
+        if (savedUrl is null) return this with { SavedUrl = null, SavedTitle = null, SavedFaviconUrl = null, SavedIconAccent = null };
+        if (savedUrl == SavedUrl) return this;
+        var showsIt = Url is { } url && new WebAddress(url).IsSamePage(new WebAddress(savedUrl));
+        // A favicon from the page shown before this one is not the saved page's.
+        var wearsItsIcon = showsIt && FaviconUrl is { } icon && new WebAddress(icon).IsSamePage(new WebAddress(savedUrl));
+        return this with {
+            SavedUrl = savedUrl,
+            SavedTitle = showsIt ? Title : null,
+            SavedFaviconUrl = wearsItsIcon ? FaviconUrl : null,
+            SavedIconAccent = wearsItsIcon ? IconAccent : null
+        };
+    }
+
+    /// <summary>Whether showing <paramref name="url"/> takes the saved or pinned tab
+    /// away from the page at its saved address.</summary>
+    internal bool LeavesSavedAddress(string url) => Placement.IsDurable && SavedUrl is { } saved && Url is not null
+        && !IsAwayFromSavedAddress && !new WebAddress(url).IsSamePage(new WebAddress(saved));
+
+    /// <summary>The tab keeping the title of the page it shows as its saved page's, as
+    /// it leaves that page, and its favicon address and icon color when that page's
+    /// own icon had arrived; otherwise the ones kept before stay.</summary>
+    internal TabState KeepingSavedAppearance() => WearsSavedPageIcon
+        ? this with { SavedTitle = Title, SavedFaviconUrl = FaviconUrl, SavedIconAccent = IconAccent }
+        : this with { SavedTitle = Title };
+
+    /// <summary>The tab back at its saved address. One that showed another page wears
+    /// the saved page's title where it knows it, and, when its icon follows its page,
+    /// that page's favicon address and color, or none, so its row never names the page
+    /// it left. A rename stays, as it is the person's.</summary>
+    internal TabState ReturnedTo(string savedUrl) {
+        if (!IsAwayFromSavedAddress) return this with { Url = savedUrl };
+        var returned = this with { Url = savedUrl, Title = SavedTitle ?? Title };
+        return ReturnRestoresImage && SavedFaviconUrl != FaviconUrl
+            ? returned with { FaviconUrl = SavedFaviconUrl, IconAccent = SavedIconAccent } : returned;
+    }
 
     #endregion
 

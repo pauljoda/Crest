@@ -42,6 +42,27 @@ public sealed record TabCopied(Guid WorkspaceId, Guid SourceTabId, Guid CopyTabI
 /// with the platform.</summary>
 public sealed record TabFaviconAssigned(Guid WorkspaceId, Guid TabId, bool Adopts, Guid? PageId) : Change;
 
+/// <summary>What becomes of the image the platform keeps for the page at a tab's
+/// saved address.</summary>
+public enum TabSavedImageChange {
+    /// <summary>The image the tab wears now is its saved page's: the tab is leaving its
+    /// saved address, or the page it shows became that address.</summary>
+    Keep,
+    /// <summary>The tab returned to its saved address and wears its saved page's image
+    /// again, or none.</summary>
+    Restore
+}
+
+/// <summary>The core decided what becomes of the image the platform keeps for the
+/// page at tab <see cref="TabId"/>'s saved address, the page whose favicon address
+/// is <see cref="FaviconUrl"/>. On <see cref="TabSavedImageChange.Keep"/> the image
+/// the tab wears now is kept for that address, and none is kept without one. On
+/// <see cref="TabSavedImageChange.Restore"/> the tab wears the image kept for that
+/// address, or none when the image kept is another address's or none is kept, so
+/// it never wears the page it left. The platform keeps the image with the tab's
+/// own and never syncs it.</summary>
+public sealed record TabSavedImageChanged(Guid WorkspaceId, Guid TabId, TabSavedImageChange Change, string? FaviconUrl) : Change;
+
 /// The saved or pinned tab `TabId` put its page away, as window `WindowId`
 /// asked. The platform that hosts the tab's page for that window lets it go,
 /// keeping what brings it back when `KeepsState`; otherwise the tab returned

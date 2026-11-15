@@ -33,6 +33,8 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
     /// The shell's control the link menu opens from, under the card.
     @ViewBuilder let linkMenuAnchor: (BrowserPeekLinkMenuPresentation) -> LinkMenuAnchor
 
+    /// Told where the card and its controls stand in the window.
+    @Environment(\.browserTransientCardFrameReport) private var reportFrame
     /// Whether the card is the preview above its link menu.
     @State private var showsLinkMenu = false
     /// Counts the times the person opened the link menu.
@@ -52,6 +54,13 @@ struct BrowserTransientCardStack<WebContent: View, LinkMenuAnchor: View>: View {
                 pageCard
                 actionBar
             }
+        }
+        // Where the card and its controls stand once they settle, for a shell
+        // that keeps what lies under them from taking the pointer.
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: {
+            reportFrame($0)
         }
         // A card the person pulls carries its controls with it as it grows
         // and springs into place.
@@ -287,4 +296,11 @@ private struct BrowserTransientControlBarWidth: ViewModifier {
             content.frame(width: BrowserPeekActionBar.width)
         }
     }
+}
+
+extension EnvironmentValues {
+    /// Told where a transient card and its controls stand in the window, in
+    /// the global space, whenever they move. It does nothing unless a shell
+    /// asks.
+    @Entry var browserTransientCardFrameReport: @MainActor (CGRect) -> Void = { _ in }
 }
