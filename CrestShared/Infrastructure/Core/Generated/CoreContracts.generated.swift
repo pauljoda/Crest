@@ -1142,6 +1142,8 @@ struct AppPreferences: Equatable, Sendable {
         splitFocusFollowsMouse: false,
         automaticallyShowsDeveloperToolbar: true,
         showsRecentTabs: true,
+        newTabPosition: NewTabPosition.top,
+        newTabsJoinFolder: false,
         palette: PalettePreferences(
             layout: PaletteLayout.sections,
             sources: [
@@ -1180,6 +1182,8 @@ struct AppPreferences: Equatable, Sendable {
     var splitFocusFollowsMouse: Bool
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
+    var newTabPosition: NewTabPosition
+    var newTabsJoinFolder: Bool
     var palette: PalettePreferences
 }
 
@@ -4487,7 +4491,7 @@ struct OpenAddress: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let address: String
-    let joinsFolder: Bool
+    let placesAsNewTab: Bool
 }
 
 struct OpenCloudTransport: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -4531,7 +4535,7 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement
     let afterTabID: UUID?
     let shows: Bool
-    let joinsFolder: Bool
+    let placesAsNewTab: Bool
     let savesInSavedFolder: Bool
 }
 
@@ -6514,7 +6518,7 @@ struct ShowStartPage: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let outsideSplits: Bool
-    let joinsFolder: Bool
+    let placesAsNewTab: Bool
 }
 
 struct ShowTab: Intent, WindowIntent, Equatable, Sendable {
@@ -15651,6 +15655,46 @@ struct NavigationError: Hashable, Sendable {
             self.primarySuggestion = primarySuggestion
             self.secondarySuggestion = secondarySuggestion
             self.symbol = symbol
+        }
+    }
+}
+
+/// The members of the core's `NewTabPosition`. A member's wire tag is its index in `all`.
+struct NewTabPosition: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let top = NewTabPosition(tag: 0, name: "top", title: LocalizedStringResource("Top"))
+    static let bottom = NewTabPosition(tag: 1, name: "bottom", title: LocalizedStringResource("Bottom"))
+
+    static let all: [NewTabPosition] = [top, bottom]
+
+    static func named(_ name: String?) -> NewTabPosition? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: NewTabPosition, rhs: NewTabPosition) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }

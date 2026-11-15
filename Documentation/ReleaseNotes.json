@@ -5541,6 +5541,18 @@
     "ad-hiding-stays-out-of-page-work": {
       "category": "improved",
       "message": "Pages load and run faster with ad blocking on."
+    },
+    "choose-where-new-tabs-open": {
+      "category": "improved",
+      "message": "New tabs open at the top of your open tabs, just under New Tab, instead of right after the tab you're on. Choose Bottom under Open new tabs at in Settings › Tabs to put them last instead, or turn on Open new tabs in the current folder to have a new tab, a link you open in a new tab or a duplicated tab join the folder or Group of the tab you're on. From a tab in a saved folder, only a new tab joins the folder; links and duplicated tabs open among your open tabs."
+    },
+    "floating-surfaces-readable": {
+      "category": "fixed",
+      "message": "Notices, the cards that preview a tab or folder from the sidebar, link previews and the bars over a page now draw on the same solid surface as Site Controls, so their text stays readable on any Space, appearance and page."
+    },
+    "notices-fit-their-words": {
+      "category": "improved",
+      "message": "Notices such as URL Copied are only as wide as their words. On Mac and iPad they appear in the top right corner of the page, clear of the sidebar and the bars along the top; on iPhone they stay at the top of the screen."
     }
   }
 }

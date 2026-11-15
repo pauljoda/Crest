@@ -43,7 +43,7 @@ struct BrowserAgentPointerOverlay: View {
                 .lineLimit(1)
                 .padding(.horizontal, BrowserWebPageSurfaceMetrics.agentPointerTagHorizontalPadding)
                 .padding(.vertical, BrowserWebPageSurfaceMetrics.agentPointerTagVerticalPadding)
-                .glassEffect(.regular, in: .capsule)
+                .crestFlyoutStyle(in: .capsule)
                 .overlay { Capsule().strokeBorder(colour, lineWidth: 1) }
                 .offset(BrowserWebPageSurfaceMetrics.agentPointerTagOffset)
         }

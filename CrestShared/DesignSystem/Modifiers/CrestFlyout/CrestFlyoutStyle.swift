@@ -14,18 +14,25 @@ import SwiftUI
 ///
 /// A presented flyout, such as a popover, gets its surface from its
 /// presentation. A flyout laid over the page inside the window draws it in
-/// its own shape, and leaves the window's appearance alone.
+/// its own shape, and leaves the window's appearance alone. One that floats
+/// over the page on its own, such as a notice or a hover preview, is
+/// outlined just inside its edge, so it stands apart from a page as dark as
+/// the surface.
 struct CrestFlyoutStyle: ViewModifier {
     // MARK: - Static Variables
 
     private static let colorScheme = ColorScheme.dark
     private static let material = CrestSurfaceMaterial.thick
+    fileprivate static let outlineWidth: CGFloat = 0.5
 
     // MARK: - Variables
 
     /// The shape an in-window flyout's surface fills, or nil for a presented
     /// flyout, whose presentation fills its own.
     let inWindowShape: AnyShape?
+    /// The line a floating flyout draws its outline along, or nil for a
+    /// flyout that has none.
+    var outline: AnyShape?
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -35,7 +42,16 @@ struct CrestFlyoutStyle: ViewModifier {
             .tint(CrestBrandTheme.accent(Self.colorScheme))
             .environment(\.colorScheme, Self.colorScheme)
         if let inWindowShape {
-            labels.background { Self.surface(in: inWindowShape) }
+            labels
+                .background { Self.surface(in: inWindowShape) }
+                .overlay {
+                    if let outline {
+                        outline
+                            .stroke(.separator, lineWidth: Self.outlineWidth)
+                            .environment(\.colorScheme, Self.colorScheme)
+                            .allowsHitTesting(false)
+                    }
+                }
         } else {
             labels
                 .presentationBackground { Self.surface(in: Rectangle()) }
@@ -66,6 +82,16 @@ extension View {
     /// flyout draws, so they read in the surface's appearance too.
     func crestFlyoutStyle(in shape: some Shape) -> some View {
         modifier(CrestFlyoutStyle(inWindowShape: AnyShape(shape)))
+    }
+
+    /// Draws this card, floating over the page inside the window on its own,
+    /// such as a notice, a hover preview or a bar over the page, on Crest's
+    /// flyout surface in `shape`, outlined just inside its edge.
+    func crestFloatingFlyoutStyle(in shape: some InsettableShape) -> some View {
+        modifier(
+            CrestFlyoutStyle(
+                inWindowShape: AnyShape(shape),
+                outline: AnyShape(shape.inset(by: CrestFlyoutStyle.outlineWidth / 2))))
     }
 }
 

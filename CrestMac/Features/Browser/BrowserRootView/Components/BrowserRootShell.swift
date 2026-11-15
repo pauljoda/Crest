@@ -75,10 +75,15 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // The card of the tab the sidebar is rested on shows beside the
             // sidebar and over the page, a floating sidebar's too.
             BrowserMacTabPreviewLayer(model: model)
-
-            // Notices show over a fullscreen page too, so one posted there
-            // is never lost.
-            BrowserNoticeLayer(notices: model.chrome.notices)
+        }
+        // Notices stand in the top trailing corner of the page, below the
+        // bars along its top, and over a fullscreen page too, so one posted
+        // there is never lost.
+        .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
+            GeometryReader { proxy in
+                BrowserNoticeLayer(notices: model.chrome.notices)
+                    .padding(noticeArea(page: anchor.map { proxy[$0] }, in: proxy.size))
+            }
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -205,6 +210,18 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 reduceMotion: reduceMotion
             )
         }
+    }
+
+    /// The insets, from the window's edges, of the area a notice stands in:
+    /// the page below the bars along its top, or the whole window while a
+    /// page fills it.
+    private func noticeArea(page: CGRect?, in size: CGSize) -> EdgeInsets {
+        guard let page, model.pages.activePage?.isContentFullscreen != true else { return EdgeInsets() }
+        var insets = BrowserChromeAppearance.contentInsets(for: page, in: size, direction: layoutDirection)
+        if model.showsPageCardBars || model.presentsSplitBars {
+            insets.top += BrowserPageBarMetrics.topSectionHeight
+        }
+        return insets
     }
 
     private var revealsSidebarOverFullscreenPage: Bool {
