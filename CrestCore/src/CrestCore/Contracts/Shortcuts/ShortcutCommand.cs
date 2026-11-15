@@ -146,7 +146,7 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ClearUnpinnedTabs = new(Kinds.ClearUnpinnedTabs, name: "clearUnpinnedTabs",
         ShortcutSection.Tabs, title: "Clear Unpinned Tabs", symbol: "sparkles",
         shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned tabs");
-    // The Mac gives ⌘E to extensions, as Arc does, and moves archiving a modifier up.
+    // The Mac gives ⌘E to opening extensions and moves archiving a modifier up.
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
         title: "Archive Tab", symbol: "archivebox",
         shortcuts: [
