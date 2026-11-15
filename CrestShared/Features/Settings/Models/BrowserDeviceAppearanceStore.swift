@@ -157,7 +157,12 @@ final class BrowserDeviceAppearanceStore {
     static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
     static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let sidebarRevealWidthKey = "crest.appearance.sidebar-reveal-width"
-    static let sidebarRevealDelayKey = "crest.appearance.sidebar-reveal-delay"
+    static let sidebarRevealDelayKey = "crest.appearance.sidebar-reveal-wait"
+    /// Where Sidebar hover delay was kept while its default was 200 ms and
+    /// every appearance save also wrote it, so a stored 200 there says nothing
+    /// about what the person chose.
+    static let legacySidebarRevealDelayKey = "crest.appearance.sidebar-reveal-delay"
+    static let legacySidebarRevealDelayDefault: Double = 200
     static let sidebarSlideDurationKey = "crest.appearance.sidebar-slide-length"
     /// Where Sidebar slide time was kept while every appearance save also
     /// wrote its 240 ms default, so a stored 240 there says nothing about what
@@ -402,6 +407,9 @@ final class BrowserDeviceAppearanceStore {
             ?? Double(BrowserCollapsedSidebarRevealMetrics.pointer.width)
         sidebarRevealDelay =
             chrome.object(forKey: Self.sidebarRevealDelayKey) as? Double
+            ?? (chrome.object(forKey: Self.legacySidebarRevealDelayKey) as? Double).flatMap {
+                $0 == Self.legacySidebarRevealDelayDefault ? nil : $0
+            }
             ?? BrowserLookAndFeelDefaults.sidebarRevealDelay
         sidebarSlideDuration =
             chrome.object(forKey: Self.sidebarSlideDurationKey) as? Double

@@ -10,10 +10,17 @@ import AppKit
 /// that resizes it. A hold only keeps a hover the pointer started; it never
 /// reveals the sidebar on its own.
 ///
+/// A sidebar the pointer brought out comes all the way out before the pointer
+/// can let it go again, so a reveal never turns back halfway and a pointer
+/// still on its way has time to reach it. Once the slide is over, the hover
+/// follows the pointer again.
+///
 /// Reaching for the edge of a window that stands away from the screen's edge
-/// often carries the pointer out of the window. Out past the sidebar's side of
-/// the window, the pointer keeps the sidebar out as the exit margin does; back
-/// over the page, the hover lets go after the hold's usual delay.
+/// often carries the pointer out of the window. Just past the sidebar's side
+/// of the window, beside it, the pointer keeps the sidebar out as the exit
+/// margin does; back over the page, the hover lets go after the hold's usual
+/// delay. Further away, or above or below the window, the pointer has gone on
+/// to something else, such as the Dock or another app, and the sidebar goes.
 ///
 /// Menu tracking can leave an exit queued after the pointer has returned to
 /// the sidebar. Sample the current position instead of trusting that event.
@@ -41,6 +48,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
         didSet {
             guard isRevealedByPointer, !oldValue else { return }
             lastReportedHover = nil
+            holdWhileRevealing()
         }
     }
 
@@ -66,6 +74,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
     private var trackingMenus: Set<ObjectIdentifier> = []
     private var holdReleaseRevision = 0
     private var isReleasingHold = false
+    /// Whether the sidebar the pointer brought out is still sliding in.
+    private var isRevealing = false
+    private var revealRevision = 0
     private var lastReportedHover: Bool?
     /// Samples the pointer while it is out of the window, where no tracking
     /// area reports it, until it comes back.
@@ -83,26 +94,29 @@ final class BrowserSidebarHoverTrackingView: NSView {
     }
 
     /// Whether the pointer that revealed the sidebar has gone somewhere a
-    /// slide-in cannot explain: out of the window on the page's side, or into
-    /// another app. It can get there before the region first reports it
-    /// inside, and nothing in the region reports an exit it never saw an entry
-    /// for.
+    /// slide-in cannot explain: out of the window anywhere but just past its
+    /// side, or into another app. It can get there before the region first
+    /// reports it inside, and nothing in the region reports an exit it never
+    /// saw an entry for.
     private var hasRevealingPointerLeft: Bool {
         guard isRevealedByPointer, let window else { return false }
         return !window.isKeyWindow || (!window.frame.contains(pointerLocation()) && !isPointerBeyondSidebarSide)
     }
 
-    /// Whether the pointer is out of the key window on a floating card's side:
-    /// past the window's edge there, or above or below the card. Only a
-    /// floating card, the region with an exit margin, comes and goes with
-    /// the pointer.
+    /// Whether the pointer is out of the key window beside it on a floating
+    /// card's side, no further past its edge than a pointer reaching for the
+    /// collapsed strip goes. Only a floating card, the region with an exit
+    /// margin, comes and goes with the pointer.
     private var isPointerBeyondSidebarSide: Bool {
         guard exitMargin > 0, let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
-        let screenLocation = pointerLocation()
-        guard !window.frame.contains(screenLocation) else { return false }
-        let location = convert(window.convertPoint(fromScreen: screenLocation), from: nil)
-        let sidebar = bounds.divided(atDistance: exitMargin, from: exitEdge).remainder
-        return exitEdge == .maxXEdge ? location.x < sidebar.maxX : location.x > sidebar.minX
+        let location = pointerLocation()
+        let frame = window.frame
+        guard location.y >= frame.minY, location.y <= frame.maxY else { return false }
+        let reach = BrowserCollapsedSidebarHoverTrackingView.overshootReach
+        // The exit margin lies on the page's side, across from the sidebar's.
+        return exitEdge == .maxXEdge
+            ? location.x < frame.minX && location.x >= frame.minX - reach
+            : location.x > frame.maxX && location.x <= frame.maxX + reach
     }
 
     /// Whether the pointer out past the sidebar's side of the window keeps the
@@ -119,6 +133,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
             || !heldPopovers.allObjects.isEmpty
             || !heldWindows.allObjects.isEmpty
             || isReleasingHold
+            || isRevealing
             || isEditingInside
     }
 
@@ -255,9 +270,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
         let isHovering = isPointerInside || isOutside || (lastReportedHover == true && isHeldOpen)
         // A newly revealed sidebar starts offscreen while it slides in.
         // Absence before its first entry is not a pointer exit, unless the
-        // pointer that revealed it has already left the window on the page's
-        // side.
-        guard isHovering || lastReportedHover != nil || hasRevealingPointerLeft else { return }
+        // pointer that revealed it has already left the window for somewhere
+        // else, which counts once the slide is over.
+        guard isHovering || lastReportedHover != nil || (hasRevealingPointerLeft && !isRevealing) else { return }
         guard isHovering != lastReportedHover else { return }
         lastReportedHover = isHovering
         onHoverChange(isHovering)
@@ -374,6 +389,21 @@ final class BrowserSidebarHoverTrackingView: NSView {
         guard !hidden.isEmpty else { return }
         hidden.forEach(heldWindows.remove)
         beginHoldRelease()
+    }
+
+    /// Holds a hover the pointer starts for as long as the sidebar it brought
+    /// out takes to slide in, at the length Appearance sets.
+    private func holdWhileRevealing() {
+        revealRevision += 1
+        let revision = revealRevision
+        isRevealing = true
+        let slide = BrowserSidebarSlide.chosen.delay(.seconds(CrestMotion.floatingPaneTransition))
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: slide)
+            guard let self, revealRevision == revision else { return }
+            isRevealing = false
+            refreshPointerHover()
+        }
     }
 
     private func beginHoldRelease() {

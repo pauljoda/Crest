@@ -21,7 +21,8 @@ import AppKit
 /// Reaching for the edge of a window that stands away from the screen's edge
 /// often carries the pointer across the strip and out of the window. A pointer
 /// that leaves through the window's edge beside the strip and stays just past
-/// it counts as resting on the strip.
+/// it counts as resting on the strip, even when it moved so fast that AppKit
+/// never saw it on the strip: the window's own exit starts the wait then.
 @MainActor
 final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     // MARK: - Static Variables
@@ -36,6 +37,9 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
 
     private let pointerLocation: @MainActor () -> NSPoint
     private var trackingArea: NSTrackingArea?
+    /// Covers the window's content, so a pointer leaving the window reports
+    /// it wherever it last was.
+    private var windowTrackingArea: NSTrackingArea?
     /// Where the pointer rested when the strip appeared, until it moves.
     private var restingPointer: NSPoint?
     /// The reveal waiting for the pointer to stay on the strip.
@@ -102,6 +106,8 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
         super.viewDidMoveToWindow()
         cancelPendingReveal()
         restingPointer = window == nil ? nil : pointerLocation()
+        // The window area spans the window the view just joined.
+        if window != nil { updateTrackingAreas() }
     }
 
     override func updateTrackingAreas() {
@@ -121,9 +127,22 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
         )
         addTrackingArea(area)
         trackingArea = area
+        if let windowTrackingArea {
+            removeTrackingArea(windowTrackingArea)
+            self.windowTrackingArea = nil
+        }
+        guard let content = window?.contentView else { return }
+        let windowArea = NSTrackingArea(
+            rect: convert(content.bounds, from: content),
+            options: [.mouseEnteredAndExited, .activeInKeyWindow],
+            owner: self
+        )
+        addTrackingArea(windowArea)
+        windowTrackingArea = windowArea
     }
 
     override func mouseEntered(with event: NSEvent) {
+        guard event.trackingArea !== windowTrackingArea else { return }
         revealIfPointerMoved()
     }
 
@@ -132,6 +151,14 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) {
+        // Out of the window past the strip, a pointer too fast for the strip
+        // to see crossed it on the way.
+        if event.trackingArea === windowTrackingArea {
+            guard isPointerPastStrip else { return }
+            restingPointer = nil
+            revealIfPointerMoved()
+            return
+        }
         restingPointer = nil
         // Out through the window's edge, the pointer overshot the strip it was
         // reaching for, and the wait goes on.

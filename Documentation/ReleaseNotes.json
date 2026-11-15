@@ -5541,6 +5541,10 @@
     "back-closes-opened-tab": {
       "category": "new",
       "message": "Going back from the first page of a tab that a link, Command-click or the page itself opened closes that tab and takes you back to the tab that opened it. Tabs you open yourself, and saved or pinned tabs, work as before."
+    },
+    "fast-edge-reveals-sidebar": {
+      "category": "fixed",
+      "message": "On Mac, a hidden sidebar slides out as soon as the pointer reaches the window's edge: Sidebar hover delay in Settings › Appearance now starts at Instant instead of 200 ms, and any other delay you chose stays. A quick move that runs on into a gap beside the window brings the sidebar out too, and once it starts sliding out it comes all the way out before it hides again."
     }
   }
 }

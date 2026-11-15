@@ -23,7 +23,7 @@ enum BrowserLookAndFeelDefaults {
     static let spaceIconScale: Double = 1
     /// How long, in milliseconds, the pointer rests on the window's edge
     /// before a hidden sidebar shows.
-    static let sidebarRevealDelay: Double = 200
+    static let sidebarRevealDelay: Double = 0
     /// How long, in milliseconds, the sidebar slides out over the page: a
     /// third quicker than the motion it is measured against.
     static let sidebarSlideDuration: Double = 160
