@@ -6,30 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.66</title>
-            <pubDate>Sun, 15 Nov 2026 07:32:53 +0000</pubDate>
+            <title>0.9.67</title>
+            <pubDate>Sun, 15 Nov 2026 15:44:24 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1615</sparkle:version>
-            <sparkle:shortVersionString>0.9.66</sparkle:shortVersionString>
+            <sparkle:version>1616</sparkle:version>
+            <sparkle:shortVersionString>0.9.67</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Fixed
 
-- On Mac, drag a pinned extension along the sidebar to put your extensions in the order you want, as you move tabs. Every Space with the same browsing profile shows them in that order. From the first launch after updating, the strip shows your extensions in the order you pinned them instead of by name.
-- On Mac, Command-E opens your extensions one at a time: the pinned ones from left to right, then the rest. Press it again for the next one, and once more after the last to close it. Archive Tab moves to Shift-Command-E.
+- On Mac, Command-W closes every tab you selected in the sidebar again, and Command-D duplicates them, instead of acting on the tab on screen.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/2cb8ac6e744542adb61f0b94ed87e0177b155c35...951460c1d61fb190ba9a6e0b335f7ce96309dc7c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.66-2026-11-15-1615-r615.1/Installer-Crest-0.9.66-development-2026-11-15-951460c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/951460c1d61fb190ba9a6e0b335f7ce96309dc7c...140368cf43cd108377bbebec5b26c53a3b8fd7c4) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.67-2026-11-15-1616-r616.1/Installer-Crest-0.9.67-development-2026-11-15-140368c-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.66-2026-11-15-1615-r615.1/Installer-Crest-0.9.66-development-2026-11-15-951460c-arm64.dmg" length="221096068" type="application/octet-stream" sparkle:edSignature="Q0lxAET5M8BqwqgpCKXNB7G/1RUFpMGP/7kNHXE+WrKyZ9sCwe9yGC3FqM9W2UYnLDtUgY3hrfE36g8AkhG6CQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.67-2026-11-15-1616-r616.1/Installer-Crest-0.9.67-development-2026-11-15-140368c-arm64.dmg" length="221168260" type="application/octet-stream" sparkle:edSignature="BHR5NqMayE8IM/XHUA0JMsHM/1/zZLOiTRSg+GLvKB2EeLobA3BuPME4Rk1g54P2wNNSNYRN2JvL6GFYPFB4AQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -61,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: E9OolEm1Ee12kP/YTvfCaIdfEGSdqQsomizTcmm+PhVeMw0Edvm1sEU+VEatjTxfFgBb05dGH0rwTDRaInHVAQ==
-length: 4413
+edSignature: np4aYbbf274CDXGqDdjTPIsXBR3WxWJ3edcZR0xhbD+P7f9E8CwayDt9RDDsz1uqpV+kM4Huuw5ttg8JqpN1AQ==
+length: 4033
 -->
