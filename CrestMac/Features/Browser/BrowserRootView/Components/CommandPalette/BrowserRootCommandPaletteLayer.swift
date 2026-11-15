@@ -7,12 +7,10 @@ struct BrowserRootCommandPaletteLayer: View {
     var spaceSettingsPresentation: BrowserSpaceSettingsPresentationState? = nil
     let commandSurfaceNamespace: Namespace.ID
     var contentInsets = EdgeInsets()
-    /// The field the palette drops out of while the address bar is on top, in
-    /// this layer's coordinates, or nil to centre it over the window.
-    var fieldFrame: CGRect? = nil
-    /// Whether that field is a split card's, which lives out of reach of this
-    /// layer's namespace and needs a stand-in to grow the palette from.
-    var fieldIsCard = false
+    /// Where this layer begins in the window, so the field the palette drops
+    /// out of, which the window's fields report in its coordinates, can be
+    /// placed here.
+    var fieldOrigin = CGPoint.zero
 
     @Environment(\.browserMacWindows) private var windows
     @Environment(\.layoutDirection) private var layoutDirection
@@ -58,11 +56,19 @@ struct BrowserRootCommandPaletteLayer: View {
             .environment(\.colorScheme, paletteColorScheme)
             .transition(.browserCommandPaletteOverlay)
             .zIndex(BrowserRootMetrics.commandPaletteZIndex)
-        } else if fieldIsCard, let fieldFrame, let paletteSpace,
-            BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
+        } else if BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion),
+            model.paletteFieldIsCard, let fieldFrame, let paletteSpace
         {
             fieldAnchor(fieldFrame, spaceID: paletteSpace.id)
         }
+    }
+
+    /// The field the palette drops out of while the address bar is on top, in
+    /// this layer's coordinates, or nil to centre it over the window. Read
+    /// here rather than handed down, so the window's shell never depends on
+    /// the shown tab.
+    private var fieldFrame: CGRect? {
+        model.paletteFieldFrame?.offsetBy(dx: -fieldOrigin.x, dy: -fieldOrigin.y)
     }
 
     /// A split card's field frame, carrying the palette's identity while the

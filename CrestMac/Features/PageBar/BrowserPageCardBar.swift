@@ -39,12 +39,6 @@ struct BrowserPageCardBarContext {
 struct BrowserPageCardBar: View {
     // MARK: - Static Variables
 
-    /// Where the window's own buttons end, from its leading edge: the zoom
-    /// button ends 80 pt in, and the bar keeps 12 pt clear of it.
-    private static let windowControlsTrailingEdge: CGFloat = 92
-    private static let unfocusedOpacity = 0.5
-    private static let sidebarToggleSize = CGSize(width: 30, height: 30)
-
     /// How a bar arrives and leaves as a page joins or leaves a split: down
     /// out of the card's top edge, and back up.
     static let transition = AnyTransition.move(edge: .top).combined(with: .opacity)
@@ -66,6 +60,9 @@ struct BrowserPageCardBar: View {
     /// A full-screen window has no corners and shows no buttons over its pages.
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.layoutDirection) private var layoutDirection
+    /// How wide this card's bar stands, which decides whether the leading
+    /// card has room for the sidebar's toggle.
+    @State private var barWidth = CGFloat.infinity
 
     var body: some View {
         BrowserPageBar(
@@ -81,7 +78,6 @@ struct BrowserPageCardBar: View {
                 pages: pages,
                 isUnderPalette: isFocused && context.opensFromOwnField && context.isPaletteShown(),
                 fieldFrames: context.fieldFrames,
-                offersSiteControls: context.opensFromOwnField || !isFocused,
                 activate: openLocation
             )
         } extensions: {
@@ -96,12 +92,16 @@ struct BrowserPageCardBar: View {
                     action: context.toggleSidebar
                 )
                 .labelStyle(.iconOnly)
-                .buttonStyle(CrestChromeButtonStyle(controlSize: Self.sidebarToggleSize))
+                .buttonStyle(CrestChromeButtonStyle(controlSize: BrowserPageBarMetrics.sidebarToggleSize))
                 .help(context.sidebarToggleAction.title)
                 .accessibilityIdentifier("page-card-sidebar-toggle")
             }
         }
-        .opacity(isFocused ? 1 : Self.unfocusedOpacity)
+        .opacity(isFocused ? 1 : CrestOpacity.unfocusedChrome)
+        // An extension popup nothing was clicked for opens at the focused
+        // card's tile or Site Controls, ahead of the window's own and the
+        // other cards'.
+        .environment(\.browserExtensionAnchorStanding, isFocused ? .focusedCard : .unfocusedCard)
         .modifier(SpaceColorScheme(branding: space?.settings.look))
         .background {
             // Only the bar's empty parts act as the title bar. Its controls
@@ -109,9 +109,11 @@ struct BrowserPageCardBar: View {
             BrowserWindowTitleBarSurface()
         }
         .background(barColor)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { barWidth = $0 }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Page bar")
-        .accessibilityIdentifier("page-card-bar")
+        // Each card's bar is named by its page, so VoiceOver tells them apart.
+        .accessibilityLabel(Text("Page bar for \(spokenPageName)"))
+        .accessibilityIdentifier(tab.map { "page-card-bar-\($0.id.uuidString)" } ?? "page-card-bar")
     }
 
     /// The Space's own color, as the windows show it now.
@@ -127,13 +129,33 @@ struct BrowserPageCardBar: View {
         guard isLeadingCard, context.windowControlsOverLeadingCard, windowCornerRadius != nil else { return 0 }
         let frameLeading = BrowserChromeAppearance.device(windowCornerRadius: nil)
             .pageInsets(docked: context.isSidebarDocked, direction: layoutDirection).leading
-        return max(0, Self.windowControlsTrailingEdge - frameLeading - BrowserPageBarMetrics.pageCard.leadingPadding)
+        return max(
+            0,
+            BrowserPageBarMetrics.windowControlsClearance - frameLeading - BrowserPageBarMetrics.pageCard.leadingPadding
+        )
     }
 
     /// The leading card carries the sidebar's toggle while the sidebar is not
-    /// docked, so a hidden sidebar is a click away.
+    /// docked, so a hidden sidebar is a click away, as long as the card has
+    /// room for it beside the window's buttons, back and forward, and the
+    /// field at its narrowest. A narrower card leaves the sidebar to the View
+    /// menu and the window's edge.
     private var showsSidebarToggle: Bool {
-        isLeadingCard && !context.isSidebarDocked
+        isLeadingCard && !context.isSidebarDocked && barWidth >= widthForSidebarToggle
+    }
+
+    private var widthForSidebarToggle: CGFloat {
+        let metrics = BrowserPageBarMetrics.pageCard
+        return metrics.leadingPadding + windowControlsClearance + BrowserPageBarMetrics.sidebarToggleSize.width
+            + metrics.spacing + BrowserPageBarNavigation.width + metrics.spacing + metrics.fieldMinimumWidth
+            + metrics.trailingPadding
+    }
+
+    /// The page this bar belongs to, as VoiceOver names it: its title, or its
+    /// address while it has none.
+    private var spokenPageName: String {
+        if let title = page?.live.title, !title.isEmpty { return title }
+        return address
     }
 
     /// The page's address, or the tab's while it has no page.

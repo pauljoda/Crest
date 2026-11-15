@@ -149,9 +149,12 @@ struct BrowserSplitPageSurface: View {
                 model.chrome.handleWebContentInteraction()
             }
         )
-        .onChange(of: members.map(\.id), initial: true) { _, identifiers in
+        .onChange(of: members.map(\.id), initial: true) { previous, identifiers in
             guard isSelectedSpace else { return }
-            model.seedSplitColumnFractions()
+            // Another tab shown alone is a tab switch, with no split to lay out.
+            if previous.count > 1 || identifiers.count > 1 || previous == identifiers {
+                model.seedSplitColumnFractions()
+            }
             // A card that left the row — a sync, another window, a closed tab —
             // is a card with nothing to drop onto and no slot to be put back in.
             if let carried = model.splitCardLift.lift?.tabID,

@@ -83,7 +83,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
                 let rect = anchor.map { proxy[$0] } ?? CGRect(origin: .zero, size: proxy.size)
-                let origin = proxy.frame(in: .global).origin
                 BrowserRootCommandPaletteLayer(
                     model: model,
                     shortcuts: shortcuts,
@@ -92,10 +91,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     contentInsets: BrowserChromeAppearance.contentInsets(
                         for: rect, in: proxy.size, direction: layoutDirection
                     ),
-                    // The field it drops out of, from the window's coordinates
-                    // into the layer's.
-                    fieldFrame: model.paletteFieldFrame?.offsetBy(dx: -origin.x, dy: -origin.y),
-                    fieldIsCard: model.paletteFieldIsCard
+                    fieldOrigin: proxy.frame(in: .global).origin
                 )
             }
         }
@@ -106,11 +102,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
         // The address bar changing place carries the window's field between
-        // the sidebar and the top of the page; a page joining or leaving a
-        // split hands the top of the page between the window's bar and the
-        // cards' own.
+        // the sidebar and the top of the page.
         .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: model.showsPageCardBars)
-        .animation(CrestMotion.collection.unlessReducingMotion(reduceMotion), value: model.presentsSplitBars)
         .animation(
             model.sidebarAnimation(
                 model.isSidebarApproachingDock
@@ -193,15 +186,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // the sidebar is never hidden under either while it moves between
             // them.
             .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
-                GeometryReader { proxy in
-                    if let anchor {
-                        let page = BrowserChromeAppearance.placementFrame(
-                            for: proxy[anchor], in: proxy.size.width, direction: layoutDirection)
-                        windowAddressBar
-                            .frame(width: page.width)
-                            .position(x: page.midX, y: page.minY + BrowserPageBarMetrics.topSectionHeight / 2)
-                    }
-                }
+                BrowserWindowAddressBarLayer(
+                    model: model, transientBrowsing: transientBrowsing, page: anchor,
+                    commandSurfaceNamespace: commandSurfaceNamespace)
             }
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
@@ -216,21 +203,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 model: model,
                 reduceMotion: reduceMotion
             )
-        }
-    }
-
-    /// The window's own address bar along the top of a lone page, while the
-    /// address bar is on top. It stands in the window rather than in the Space
-    /// pager, like the sidebar's field, so it stays put while Spaces page
-    /// underneath, and it shares the sidebar field's identity so the two
-    /// placements carry the same field between them.
-    @ViewBuilder
-    private var windowAddressBar: some View {
-        if model.showsWindowTopBar, model.pages.activePage?.isContentFullscreen != true,
-            let space = model.browser.shownSpace
-        {
-            BrowserWindowAddressBar(model: model, space: space, commandSurfaceNamespace: commandSurfaceNamespace)
-                .transition(BrowserWindowChromeMorph.transition)
         }
     }
 
@@ -327,8 +299,11 @@ private struct BrowserRootPermissionObserver: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onChange(of: model.pages.activePage?.sitePermissionRequests.current?.id) {
-            // A page card's bar asks on its own card, so the sidebar stays put.
-            if model.pages.activePage?.sitePermissionRequests.current != nil, !model.showsPageCardBars {
+            // A page card's bar asks on its own card, as a split's cards
+            // always do, so the sidebar stays put.
+            if model.pages.activePage?.sitePermissionRequests.current != nil, !model.showsPageCardBars,
+                !model.presentsSplitBars
+            {
                 model.presentFloatingSidebar(reduceMotion: reduceMotion)
             }
         }

@@ -13,12 +13,8 @@ import SwiftUI
 struct BrowserWindowAddressBar: View {
     // MARK: - Static Variables
 
-    /// Where the window's own buttons end, from its leading edge: the zoom
-    /// button ends 80 pt in, and the bar keeps 12 pt clear of it.
-    private static let windowControlsTrailingEdge: CGFloat = 92
     /// How far the bar's controls stand in from the card's edges.
     private static let horizontalPadding: CGFloat = 8
-    private static let sidebarToggleSize = CGSize(width: 30, height: 30)
 
     // MARK: - Variables
 
@@ -122,7 +118,7 @@ struct BrowserWindowAddressBar: View {
             model.toggleSidebar(reduceMotion: reduceMotion)
         }
         .labelStyle(.iconOnly)
-        .buttonStyle(CrestChromeButtonStyle(controlSize: Self.sidebarToggleSize))
+        .buttonStyle(CrestChromeButtonStyle(controlSize: BrowserPageBarMetrics.sidebarToggleSize))
         .help(action.title)
         .accessibilityIdentifier("window-address-bar-sidebar-toggle")
     }
@@ -146,6 +142,6 @@ struct BrowserWindowAddressBar: View {
     /// and shows no buttons.
     private var windowControlsClearance: CGFloat {
         guard model.windowControlsStandOverPage(in: layoutDirection), windowCornerRadius != nil else { return 0 }
-        return max(0, Self.windowControlsTrailingEdge - insets.leading - Self.horizontalPadding)
+        return max(0, BrowserPageBarMetrics.windowControlsClearance - insets.leading - Self.horizontalPadding)
     }
 }

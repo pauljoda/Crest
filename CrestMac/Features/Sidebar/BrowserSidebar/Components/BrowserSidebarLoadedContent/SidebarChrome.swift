@@ -69,7 +69,9 @@ struct SidebarChrome: View {
         if context.utilityPresentation.surface == nil {
             SpaceSidebarAddressBand(
                 space: space,
-                offersSiteControls: !context.browser.isDeleting(space.id),
+                // A split's cards carry Site Controls in their own bars, where
+                // each card's prompts stay whichever card has focus.
+                offersSiteControls: !context.browser.isDeleting(space.id) && context.browser.cards(in: space).count < 2,
                 selectedTabID: context.browser.selectedTabID(in: space.id),
                 pages: pages,
                 capabilities: context.capabilities,

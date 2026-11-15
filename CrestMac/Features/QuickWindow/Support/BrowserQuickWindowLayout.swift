@@ -24,15 +24,15 @@ enum BrowserQuickWindowLayout {
     static let horizontalPadding: CGFloat = BrowserPageBarMetrics.quickWindow.trailingPadding
     /// Where the window's traffic lights are centred, from its top: the
     /// toolbar's controls share their centre line.
-    static let windowControlsCenterY: CGFloat = 26
+    static let windowControlsCenterY: CGFloat = BrowserPageBarMetrics.windowControlsCenterY
     static let toolbarTopPadding: CGFloat = BrowserPageBarMetrics.quickWindow.topPadding
     /// Reload, its menu and Site Controls at the field's end sit close
     /// together, each as wide as its glyph needs.
     static let trailingControlSpacing: CGFloat = 2
-    static let reloadControlSize = CGSize(width: 24, height: minimumMacHitTarget)
-    static let reloadMenuControlSize = CGSize(width: 14, height: minimumMacHitTarget)
+    static let reloadControlSize = BrowserPageBarMetrics.reloadControlSize
+    static let reloadMenuControlSize = BrowserPageBarMetrics.reloadMenuControlSize
     static let sourceChipLeadingInset: CGFloat = (controlHeight - CrestLayout.minimumHitTarget) / 2
-    static let windowControlClearance: CGFloat = 92
+    static let windowControlClearance: CGFloat = BrowserPageBarMetrics.windowControlsClearance
     static let spacePickerWidth: CGFloat = 240
     static let spacePickerRowHeight: CGFloat = 38
     static let initialAddressFocusDelay: Duration = .milliseconds(120)

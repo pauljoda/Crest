@@ -12,6 +12,9 @@ struct BrowserPageBarNavigation: View {
 
     private static let metrics = BrowserSidebarNavigationControlMetrics.pageBar
 
+    /// The width back and forward take side by side.
+    static var width: CGFloat { metrics.controlSize.width * 2 + metrics.controlSpacing }
+
     // MARK: - Variables
 
     /// The page the controls act on, read at call time.

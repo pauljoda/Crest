@@ -96,6 +96,11 @@ struct BrowserSplitCardView: View {
         } action: { frame in
             cardFrames.register(frame, for: tab.id)
         }
+        // A lone card shows another tab where it stands, at the same frame,
+        // so its entry follows the tab rather than waiting for the geometry.
+        .onChange(of: tab.id) { oldTabID, newTabID in
+            cardFrames.moveFrame(from: oldTabID, to: newTabID)
+        }
         .onDisappear {
             cardFrames.removeFrame(for: tab.id)
         }

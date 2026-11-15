@@ -22,10 +22,6 @@ struct BrowserPageCardAddressField: View {
     let isUnderPalette: Bool
     /// Where the field reports its frame for the palette to drop out of.
     let fieldFrames: BrowserPageBarFieldFrames
-    /// Whether this field offers Site Controls, and with them the page's
-    /// permission prompts. The focused card's are the window field's while
-    /// that field shows in the sidebar, so the same prompt never opens twice.
-    var offersSiteControls = true
     let activate: () -> Void
 
     /// The field's width, which decides whether Copy URL fits beside Site
@@ -34,6 +30,9 @@ struct BrowserPageCardAddressField: View {
     /// Whether the pointer is over the field, which brings Copy URL back in a
     /// field too narrow to keep it.
     @State private var isHovering = false
+    /// This field's stamp on the frame it reports, so a field for the same
+    /// tab arriving before this one leaves keeps its entry.
+    @State private var frameOwner = UUID()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -61,8 +60,8 @@ struct BrowserPageCardAddressField: View {
                         reload: { page.performReload(.standard) },
                         reloadFromOrigin: { page.performReload(.fromOrigin) },
                         clearCookiesAndReload: { await page.clearSiteData(.siteData) },
-                        reloadControlSize: CGSize(width: 24, height: CrestLayout.minimumHitTarget),
-                        menuControlSize: CGSize(width: 14, height: CrestLayout.minimumHitTarget)
+                        reloadControlSize: BrowserPageBarMetrics.reloadControlSize,
+                        menuControlSize: BrowserPageBarMetrics.reloadMenuControlSize
                     )
                 }
                 if let siteControl {
@@ -88,10 +87,10 @@ struct BrowserPageCardAddressField: View {
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
         } action: { frame in
-            if let tabID = tab?.id { fieldFrames.register(frame, for: tabID) }
+            if let tabID = tab?.id { fieldFrames.register(frame, for: tabID, owner: frameOwner) }
         }
         .onDisappear {
-            if let tabID = tab?.id { fieldFrames.removeFrame(for: tabID) }
+            if let tabID = tab?.id { fieldFrames.removeFrame(for: tabID, owner: frameOwner) }
         }
         .onHover { hovering in
             withAnimation(CrestMotion.controlState.unlessReducingMotion(reduceMotion)) { isHovering = hovering }
@@ -134,7 +133,7 @@ struct BrowserPageCardAddressField: View {
     /// extensions. A request on this card's page opens them here, on this
     /// card, whether or not it has focus.
     private var siteControl: BrowserSiteControlConfiguration? {
-        guard offersSiteControls, let page, page.live.displayURL != nil, let space else { return nil }
+        guard let page, page.live.displayURL != nil, let space else { return nil }
         return BrowserSiteControlConfiguration(
             page: page, space: space, selectedTabID: tab?.id, permissionCenter: pages.permissionCenter,
             presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
