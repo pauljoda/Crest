@@ -12,8 +12,25 @@ public sealed partial class BrowserContractsTests {
     private static Guid[] RecentFocus(TestDevice device, Guid window) =>
         [.. device.Query(new RecentTabs(window)).Items.Select(item => item.FocusedTabId)];
 
+    /// Shows each of `tabs` in `window` in turn, loading its page as showing
+    /// it does, and loads the page of the tab shown before them too.
     private static void ShowAll(TestDevice device, Guid window, Guid space, params Guid[] tabs) {
-        foreach (var tab in tabs) device.Send(new ShowTab(window, space, tab));
+        Load(device, window, space, device.Tab(window, space));
+        foreach (var tab in tabs) {
+            device.Send(new ShowTab(window, space, tab));
+            Load(device, window, space, tab);
+        }
+    }
+
+    /// Loads `tab`'s page in `window`, unless it already has one or takes
+    /// none, as a Start Page does.
+    private static void Load(TestDevice device, Guid window, Guid space, Guid? tab) {
+        if (tab is not { } id) return;
+        try {
+            device.ShowPage(window, space, id, PageSnapshot.Blank);
+        } catch (Rejected) {
+            // The tab's page is already open, or it has none to open.
+        }
     }
 
     /// The list holds five items with the shown one first, leaves a Start Page
@@ -159,6 +176,7 @@ public sealed partial class BrowserContractsTests {
         using var device = new TestDevice(f.Session);
         var first = device.Open(f.Space, (f.Space, f.C1));
         var second = device.Open(f.Space, (f.Space, f.C5));
+        ShowAll(device, second, f.Space);
 
         ShowAll(device, first, f.Space, f.C2, f.C3);
         device.Send(new MoveTabToWindow(device.Workspace, first, f.Space, f.C2, second));
@@ -175,5 +193,29 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain(f.C3, afterwards);
         device.Send(new ShowTab(first, f.Space, f.C3));
         Assert.Equal([f.C3, f.C1], RecentFocus(device, first));
+    }
+
+    /// Only tabs whose page is loaded are offered, the shown one whatever its
+    /// page, so a tab put away, unloaded or never opened since a launch drops
+    /// out of the panel and the quick jumps, and comes back once loaded again.
+    [Fact]
+    public void RecentTabsOfferOnlyLoadedTabsBesideTheShownOne() {
+        var f = new OrderSpace();
+        using var device = new TestDevice(f.Session);
+        var window = device.Open(f.Space, (f.Space, f.C1));
+        ShowAll(device, window, f.Space, f.C2, f.C3);
+        device.Send(new ShowTab(window, f.Space, f.C5));
+        Assert.Equal([f.C5, f.C3, f.C2, f.C1], RecentFocus(device, window));
+
+        // A tab shown without a page loads none, and one whose page closes drops out.
+        device.Send(new ShowTab(window, f.Space, f.P1));
+        Assert.Equal([f.P1, f.C3, f.C2, f.C1], RecentFocus(device, window));
+        var page = device.ShowPage(window, f.Space, f.P2, PageSnapshot.Blank);
+        device.Send(new ShowTab(window, f.Space, f.P2));
+        device.Send(new ReleasePage(page, KeepsState: true));
+        device.Send(new ShowTab(window, f.Space, f.C3));
+        Assert.Equal([f.C3, f.C2, f.C1], RecentFocus(device, window));
+        device.Send(new ShowMostRecentTab(window));
+        Assert.Equal(f.C2, device.Tab(window, f.Space));
     }
 }

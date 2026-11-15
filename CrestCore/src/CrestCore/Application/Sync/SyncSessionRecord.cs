@@ -41,7 +41,14 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
         return type.Read(new SyncPayloadReader(prepared, SyncPayloadForm.Journal));
     }
 
-    private static JsonObject ReadTab(JsonObject value) => Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeTab(value)), value);
+    private static JsonObject ReadTab(JsonObject value) {
+        var prepared = Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeTab(value)), value);
+        // The address a saved title was written for travels only in the
+        // record, which the stored tab codec leaves out.
+        if (value[StoredSessionCodec.Key.SavedTitleUrl] is { } titled)
+            prepared[StoredSessionCodec.Key.SavedTitleUrl] = titled.DeepClone();
+        return prepared;
+    }
 
     /// `prepared` with the Space and position `value` names, which the stored
     /// folder and tab codecs leave out; an empty position when it names none.

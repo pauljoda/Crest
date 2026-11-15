@@ -3,9 +3,10 @@ using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
-/// Copies a tab into `Placement`'s section, or when null beside its source:
-/// at the end of the folder of the open tabs the source sits in, or among the
-/// open tabs. Its identity is one the core gives it, published as
+/// Copies a tab into `Placement`'s section, or when null where the app's
+/// preferences put a new tab: at the end of the folder of the open tabs the
+/// source sits in, while they open new tabs in their folder, or at the top or
+/// bottom of the open tabs. Its identity is one the core gives it, published as
 /// `TabCopied`. A copy of a web page starts from where the source's page is
 /// now. When `Shows`, the window that asked shows the copy and its Space.
 public sealed record DuplicateTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, TabPlacement? Placement, bool Shows)
@@ -19,8 +20,9 @@ public sealed record DuplicateTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId,
         var space = workspace.Editable(turn.Basis, SpaceId);
         var edited = BrowserTabCollection.Restore(space);
         if (edited.Tab(TabId).Content.IsStartPage) throw new Rejected(new StartPageNotCopied(TabId));
-        var copy = edited.DuplicateTab(TabId, turn.Ids, turn.Now, Placement ?? TabPlacement.Current);
-        if (Placement is null) edited.JoinFolderOf(TabId, copy.Id, turn.Now);
+        var copy = edited.DuplicateTab(TabId, turn.Ids, turn.Now, Placement ?? TabPlacement.Current,
+            Placement is null ? workspace.PositionForNewTabs(turn.Basis).InsertionIndex : null);
+        if (Placement is null && workspace.NewTabsJoinFolder(turn.Basis)) edited.JoinFolderOf(TabId, copy.Id, turn.Now);
         workspace.StartFromSourcePage(copy, TabId, WindowId, turn.Pages);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, copy.Id).ShowSpace(space.Id);

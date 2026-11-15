@@ -174,7 +174,9 @@ public sealed partial class FilterLibraryTests {
             && rule["trigger"]!["url-filter"]!.GetValue<string>().Contains("doubleclick", StringComparison.Ordinal));
 
         // Enough rules for three compiled lists, exceptions that undo rules
-        // wherever those rules land, and a generic and a site hiding rule.
+        // wherever those rules land, a generic and a site hiding rule, and a
+        // hiding rule of the person's own.
+        library.CustomFilters = "news.example##.own-box";
         var list = new StringBuilder("! Title: Large\n");
         for (int index = 0; index < 150_000; index++) list.Append("||host").Append(index).Append(".example^\n");
         list.Append("@@||host1.example/allowed^\n@@||host149999.example/allowed^\n##.generic-ad\nnews.example##.site-ad\n");
@@ -193,10 +195,11 @@ public sealed partial class FilterLibraryTests {
         });
         Assert.Equal(150_001 + baselineRules.Count(rule => Action(rule) != "ignore-previous-rules"), compiled.Sum(rulesOfList => rulesOfList.Count - exceptions));
         Assert.Throws<Rejected>(() => library.Filters.Source(baseline.Identifiers[0]));
-        // Generic hiding goes through the cosmetic bridge, never into the
-        // compiled lists, where it would apply before a page first renders.
-        Assert.All(compiled, rulesOfList => Assert.DoesNotContain(rulesOfList,
-            rule => Action(rule) == "css-display-none" && rule["trigger"]!["if-domain"] is null));
+        // The lists' hiding goes through the cosmetic bridge, the sites' own
+        // included, never into the compiled lists, where each hiding rule is
+        // weighed on every load a page makes; the person's own stays.
+        var hiding = compiled.SelectMany(rulesOfList => rulesOfList).Where(rule => Action(rule) == "css-display-none").ToList();
+        Assert.Equal(".own-box", Assert.Single(hiding)["action"]!["selector"]!.GetValue<string>());
 
         // Turning the list off brings back the baseline rules.
         library.Choices[FilterList.EasyList] = false;

@@ -166,12 +166,30 @@ public static class NativeSyncMaterializer {
         return [.. folders.Where(folder => !hidden.Contains(folder.Id))];
     }
 
-    private static TabState Tab(TabPayload remote, TabState? local, bool archived = false) => new(remote.Id, remote.Title,
-        remote.Url is { } url ? url.Spelled ?? url.Text : null, remote.NativeContent,
-        !archived && remote.Placement.IsDurable ? remote.SavedUrl?.Spelled ?? remote.SavedUrl?.Text ?? remote.Url?.Spelled ?? remote.Url?.Text : null,
-        remote.Symbol, local?.FaviconUrl, local?.IconAccent, local?.StoredIconMode, archived ? TabPlacement.Current : remote.Placement,
-        null, archived ? null : remote.SplitGroupId, remote.LastActivatedAt.Moment, remote.PositionModifiedAt?.Moment,
-        remote.CustomTitle, remote.TitleModifiedAt?.Moment, remote.KeepsPageLoaded);
+    /// The tab `remote` describes, keeping what never syncs from `local`: its
+    /// favicon, and the saved page's favicon and accent while the tab still
+    /// belongs to the same address. A record without a saved title for its
+    /// saved address keeps the one this device holds for that address.
+    private static TabState Tab(TabPayload remote, TabState? local, bool archived = false) {
+        var savedUrl = !archived && remote.Placement.IsDurable
+            ? remote.SavedUrl?.Spelled ?? remote.SavedUrl?.Text ?? remote.Url?.Spelled ?? remote.Url?.Text : null;
+        // The record spells the address as sync does, so the local one is compared spelled the same way.
+        var sameSavedPage = savedUrl is not null && local?.SavedUrl is { } localSaved
+            && (new SyncedAddress(localSaved).Spelled ?? localSaved) == savedUrl;
+        return new(remote.Id, remote.Title, remote.Url is { } url ? url.Spelled ?? url.Text : null, remote.NativeContent, savedUrl,
+            remote.Symbol, local?.FaviconUrl, local?.IconAccent, local?.StoredIconMode, archived ? TabPlacement.Current : remote.Placement,
+            null, archived ? null : remote.SplitGroupId, remote.LastActivatedAt.Moment, remote.PositionModifiedAt?.Moment,
+            remote.CustomTitle, remote.TitleModifiedAt?.Moment, remote.KeepsPageLoaded,
+            savedUrl is null ? null : SavedPageTitle(remote) ?? (sameSavedPage ? local!.SavedTitle : null),
+            sameSavedPage ? local!.SavedFaviconUrl : null, sameSavedPage ? local!.SavedIconAccent : null);
+    }
+
+    /// The saved page's title `remote` carries, when it was written for the
+    /// address the tab is saved at. A build that changes the saved address
+    /// without knowing the title carries the old one forward with its old
+    /// address, which no longer counts.
+    private static string? SavedPageTitle(TabPayload remote) =>
+        remote.SavedTitleUrl is { } titled && titled == remote.SavedUrl ? remote.SavedTitle : null;
 
     /// The tabs of `space` the records and this device hold. A tab whose
     /// folder was deleted, at the time `deletedAt` gives, moves to that
@@ -235,7 +253,7 @@ public static class NativeSyncMaterializer {
         foreach (var record in records.Where(record => record.Kind == SyncRecordKind.Tab && record.SpaceId == space
             && record.Tombstone?.Reason.IsExplicit == true)) {
             if (projected.Contains(record.Id) || !localTabs.TryGetValue(record.Id, out var tab)) continue;
-            result.Add(new(tab with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null, SplitGroupId = null },
+            result.Add(new(tab.SavedAt(null) with { Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null },
                 record.Tombstone!.DeletedAt.Moment, ArchiveReason.Received(explicitDeletion: true)));
         }
         return [.. result.Concat(localOnly).OrderByDescending(archived => archived.ArchivedAt)];

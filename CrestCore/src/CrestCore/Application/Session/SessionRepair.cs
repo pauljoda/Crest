@@ -101,10 +101,9 @@ internal sealed class SessionRepair(IIdSource ids, DateTimeOffset now) {
             var placement = tab.Placement.Fitting(counts[tab.Placement]);
             var folder = placement.HoldsFolders && tab.FolderId is { } folderId
                 && locations.TryGetValue(folderId, out var location) && location == placement ? tab.FolderId : null;
-            return (tab with {
+            return (tab.SavedAt(placement.IsDurable ? tab.SavedUrl ?? tab.Url : null) with {
                 Id = id,
                 Placement = placement,
-                SavedUrl = placement.IsDurable ? tab.SavedUrl ?? tab.Url : null,
                 FolderId = folder
             }).Normalized();
         }).ToList();
@@ -116,10 +115,9 @@ internal sealed class SessionRepair(IIdSource ids, DateTimeOffset now) {
     /// its own, as current tabs in no folder or split.
     private List<ArchivedTabState> Archive(SpaceState space) => [.. space.ArchivedTabs.Where(archived => !archived.Tab.IsStartPage)
         .Select(archived => archived with {
-            Tab = (archived.Tab with {
+            Tab = (archived.Tab.SavedAt(null) with {
                 Id = tabIds.Claim(archived.Tab.Id),
                 Placement = TabPlacement.Current,
-                SavedUrl = null,
                 FolderId = null,
                 SplitGroupId = null
             }).Normalized()

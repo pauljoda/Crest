@@ -221,6 +221,15 @@ final class BrowserMacShell {
         return true
     }
 
+    /// A page another device hands off, such as one open on an iPhone, which
+    /// opens as a link from another app does. Answers whether Crest takes it.
+    func continueBrowsing(_ activity: NSUserActivity) -> Bool {
+        guard activity.activityType == NSUserActivityTypeBrowsingWeb, let url = activity.webpageURL else {
+            return false
+        }
+        return openExternal([url])
+    }
+
     // MARK: - Actions - System sign-in
 
     /// An app's `ASWebAuthenticationSession` sign-in. It lands in the Space a

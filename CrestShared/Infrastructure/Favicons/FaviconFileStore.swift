@@ -20,6 +20,9 @@ final class BrowserFaviconFileStore: BrowserFaviconStoring, @unchecked Sendable 
     static let defaultMaximumFaviconByteCount = BrowserFaviconCapture.maximumByteCount
     static let directoryName = "Favicons"
     static let fileExtension = "favicon"
+    /// A saved page's image, with the address it came from, beside the tab's
+    /// own.
+    static let savedFileExtension = "savedfavicon"
 
     let rootDirectory: URL
 
@@ -68,6 +71,12 @@ final class BrowserFaviconFileStore: BrowserFaviconStoring, @unchecked Sendable 
             .appendingPathExtension(Self.fileExtension)
     }
 
+    func savedFaviconFileURL(tabID: UUID) -> URL {
+        rootDirectory
+            .appendingPathComponent(tabID.uuidString)
+            .appendingPathExtension(Self.savedFileExtension)
+    }
+
     /// Reads on the write queue so an icon stored a moment ago is visible and a
     /// read never races a half-written file.
     func favicon(tabID: UUID) -> Data? {
@@ -97,6 +106,41 @@ final class BrowserFaviconFileStore: BrowserFaviconStoring, @unchecked Sendable 
         }
     }
 
+    func forgetFavicon(tabID: UUID) {
+        let url = faviconFileURL(tabID: tabID)
+        writeQueue.async { [self] in
+            try? fileManager.removeItem(at: url)
+        }
+    }
+
+    func savedFavicon(tabID: UUID) -> BrowserSavedFavicon? {
+        let url = savedFaviconFileURL(tabID: tabID)
+        return writeQueue.sync {
+            guard let data = try? Data(contentsOf: url),
+                let favicon = try? PropertyListDecoder().decode(BrowserSavedFavicon.self, from: data),
+                !favicon.data.isEmpty
+            else { return nil }
+            return favicon
+        }
+    }
+
+    /// Writes the saved page's image, or removes it when nil or too large to
+    /// keep, so a tab never keeps another page's.
+    func keepSavedFavicon(_ favicon: BrowserSavedFavicon?, tabID: UUID) {
+        let url = savedFaviconFileURL(tabID: tabID)
+        writeQueue.async { [self] in
+            guard let favicon, !favicon.data.isEmpty, favicon.data.count <= maximumFaviconByteCount else {
+                try? fileManager.removeItem(at: url)
+                return
+            }
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            guard let encoded = try? encoder.encode(favicon) else { return }
+            try? fileManager.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+            try? encoded.write(to: url, options: .atomic)
+        }
+    }
+
     func pruneFavicons(keeping tabIDs: Set<UUID>) {
         writeQueue.async { [self] in
             let retainedNames = Set(tabIDs.map(\.uuidString))
@@ -122,6 +166,6 @@ final class BrowserFaviconFileStore: BrowserFaviconStoring, @unchecked Sendable 
                 includingPropertiesForKeys: nil,
                 options: [.skipsHiddenFiles]
             )) ?? []
-        return contents.filter { $0.pathExtension == Self.fileExtension }
+        return contents.filter { $0.pathExtension == Self.fileExtension || $0.pathExtension == Self.savedFileExtension }
     }
 }

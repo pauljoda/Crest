@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xf9, 0x27, 0xa0, 0xc4, 0x83, 0xba, 0xc9, 0xf0, 0x15, 0xd1, 0x58, 0xff, 0xe9, 0x39, 0x7c, 0x95, 0x30, 0xe4, 0x22, 0x19, 0x32, 0x77, 0xf2, 0x4c, 0x54, 0x48, 0x4d, 0xf4, 0xf7, 0xfb, 0xeb, 0x32
+        0x40, 0x16, 0x85, 0x13, 0xd9, 0xb3, 0xe6, 0xf6, 0x2a, 0xd3, 0x48, 0x6f, 0x9c, 0xfd, 0xaf, 0x18, 0xb8, 0x5a, 0xaa, 0x8a, 0xeb, 0x92, 0xf1, 0x45, 0x4b, 0x00, 0xa1, 0x50, 0xa1, 0x20, 0x64, 0x50
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -587,18 +587,19 @@ extension Change {
         case 56: self = .tabCopied(try TabCopied(from: &reader))
         case 57: self = .tabFaviconAssigned(try TabFaviconAssigned(from: &reader))
         case 58: self = .tabPagePutAway(try TabPagePutAway(from: &reader))
-        case 59: self = .tabsChanged(try TabsChanged(from: &reader))
-        case 60: self = .tabsImported(try TabsImported(from: &reader))
-        case 61: self = .transientPageClosed(try TransientPageClosed(from: &reader))
-        case 62: self = .transientPagePromoted(try TransientPagePromoted(from: &reader))
-        case 63: self = .websiteDataRead(try WebsiteDataRead(from: &reader))
-        case 64: self = .windowBroughtForward(try WindowBroughtForward(from: &reader))
-        case 65: self = .windowChanged(try WindowChanged(from: &reader))
-        case 66: self = .windowClosed(try WindowClosed(from: &reader))
-        case 67: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
-        case 68: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
-        case 69: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
-        case 70: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
+        case 59: self = .tabSavedImageChanged(try TabSavedImageChanged(from: &reader))
+        case 60: self = .tabsChanged(try TabsChanged(from: &reader))
+        case 61: self = .tabsImported(try TabsImported(from: &reader))
+        case 62: self = .transientPageClosed(try TransientPageClosed(from: &reader))
+        case 63: self = .transientPagePromoted(try TransientPagePromoted(from: &reader))
+        case 64: self = .websiteDataRead(try WebsiteDataRead(from: &reader))
+        case 65: self = .windowBroughtForward(try WindowBroughtForward(from: &reader))
+        case 66: self = .windowChanged(try WindowChanged(from: &reader))
+        case 67: self = .windowClosed(try WindowClosed(from: &reader))
+        case 68: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
+        case 69: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
+        case 70: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
+        case 71: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
         default: throw WireError.malformed("Unknown Change tag \(tag)")
         }
     }
@@ -782,41 +783,44 @@ extension Change {
         case .tabPagePutAway(let value):
             writer.writeTag(58)
             value.encode(into: &writer)
-        case .tabsChanged(let value):
+        case .tabSavedImageChanged(let value):
             writer.writeTag(59)
             value.encode(into: &writer)
-        case .tabsImported(let value):
+        case .tabsChanged(let value):
             writer.writeTag(60)
             value.encode(into: &writer)
-        case .transientPageClosed(let value):
+        case .tabsImported(let value):
             writer.writeTag(61)
             value.encode(into: &writer)
-        case .transientPagePromoted(let value):
+        case .transientPageClosed(let value):
             writer.writeTag(62)
             value.encode(into: &writer)
-        case .websiteDataRead(let value):
+        case .transientPagePromoted(let value):
             writer.writeTag(63)
             value.encode(into: &writer)
-        case .windowBroughtForward(let value):
+        case .websiteDataRead(let value):
             writer.writeTag(64)
             value.encode(into: &writer)
-        case .windowChanged(let value):
+        case .windowBroughtForward(let value):
             writer.writeTag(65)
             value.encode(into: &writer)
-        case .windowClosed(let value):
+        case .windowChanged(let value):
             writer.writeTag(66)
             value.encode(into: &writer)
-        case .windowRecordsAdopted(let value):
+        case .windowClosed(let value):
             writer.writeTag(67)
             value.encode(into: &writer)
-        case .workspaceChanged(let value):
+        case .windowRecordsAdopted(let value):
             writer.writeTag(68)
             value.encode(into: &writer)
-        case .workspaceClosed(let value):
+        case .workspaceChanged(let value):
             writer.writeTag(69)
             value.encode(into: &writer)
-        case .workspaceOpened(let value):
+        case .workspaceClosed(let value):
             writer.writeTag(70)
+            value.encode(into: &writer)
+        case .workspaceOpened(let value):
+            writer.writeTag(71)
             value.encode(into: &writer)
         }
     }
@@ -3095,8 +3099,10 @@ extension AppPreferences {
         let splitFocusFollowsMouse = try reader.readBool()
         let automaticallyShowsDeveloperToolbar = try reader.readBool()
         let showsRecentTabs = try reader.readBool()
+        let newTabPosition = try NewTabPosition(from: &reader)
+        let newTabsJoinFolder = try reader.readBool()
         let palette = try PalettePreferences(from: &reader)
-        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, palette: palette)
+        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, newTabPosition: newTabPosition, newTabsJoinFolder: newTabsJoinFolder, palette: palette)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -3115,6 +3121,8 @@ extension AppPreferences {
         writer.writeBool(splitFocusFollowsMouse)
         writer.writeBool(automaticallyShowsDeveloperToolbar)
         writer.writeBool(showsRecentTabs)
+        newTabPosition.encode(into: &writer)
+        writer.writeBool(newTabsJoinFolder)
         palette.encode(into: &writer)
     }
 }
@@ -15292,8 +15300,8 @@ extension OpenAddress {
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
         let address = try reader.readString()
-        let joinsFolder = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, address: address, joinsFolder: joinsFolder)
+        let placesAsNewTab = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, address: address, placesAsNewTab: placesAsNewTab)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15302,7 +15310,7 @@ extension OpenAddress {
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
         writer.writeString(address)
-        writer.writeBool(joinsFolder)
+        writer.writeBool(placesAsNewTab)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -15479,9 +15487,9 @@ extension OpenTab {
             afterTabID = nil
         }
         let shows = try reader.readBool()
-        let joinsFolder = try reader.readBool()
+        let placesAsNewTab = try reader.readBool()
         let savesInSavedFolder = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, content: content, placement: placement, afterTabID: afterTabID, shows: shows, joinsFolder: joinsFolder, savesInSavedFolder: savesInSavedFolder)
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, content: content, placement: placement, afterTabID: afterTabID, shows: shows, placesAsNewTab: placesAsNewTab, savesInSavedFolder: savesInSavedFolder)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15498,7 +15506,7 @@ extension OpenTab {
             writer.writePresence(false)
         }
         writer.writeBool(shows)
-        writer.writeBool(joinsFolder)
+        writer.writeBool(placesAsNewTab)
         writer.writeBool(savesInSavedFolder)
     }
 
@@ -22957,8 +22965,8 @@ extension ShowStartPage {
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
         let outsideSplits = try reader.readBool()
-        let joinsFolder = try reader.readBool()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, outsideSplits: outsideSplits, joinsFolder: joinsFolder)
+        let placesAsNewTab = try reader.readBool()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, outsideSplits: outsideSplits, placesAsNewTab: placesAsNewTab)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -22967,7 +22975,7 @@ extension ShowStartPage {
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
         writer.writeBool(outsideSplits)
-        writer.writeBool(joinsFolder)
+        writer.writeBool(placesAsNewTab)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -25722,6 +25730,34 @@ extension TabPlacementChoice {
     }
 }
 
+extension TabSavedImageChanged {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let tabID = try reader.readUUID()
+        let change = try TabSavedImageChange(from: &reader)
+        let faviconURL: String?
+        if try reader.readPresence() {
+            let faviconURLValue = try reader.readString()
+            faviconURL = faviconURLValue
+        } else {
+            faviconURL = nil
+        }
+        self.init(workspaceID: workspaceID, tabID: tabID, change: change, faviconURL: faviconURL)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeUUID(tabID)
+        change.encode(into: &writer)
+        if let present0 = faviconURL {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
 extension TabSelection {
     init(from reader: inout WireReader) throws(WireError) {
         let tabIDsCount = try reader.readCount()
@@ -25864,6 +25900,27 @@ extension TabState {
             titleModifiedAt = nil
         }
         let keepsPageLoaded = try reader.readBool()
+        let savedTitle: String?
+        if try reader.readPresence() {
+            let savedTitleValue = try reader.readString()
+            savedTitle = savedTitleValue
+        } else {
+            savedTitle = nil
+        }
+        let savedFaviconURL: String?
+        if try reader.readPresence() {
+            let savedFaviconURLValue = try reader.readString()
+            savedFaviconURL = savedFaviconURLValue
+        } else {
+            savedFaviconURL = nil
+        }
+        let savedIconAccent: TabIconAccent?
+        if try reader.readPresence() {
+            let savedIconAccentValue = try TabIconAccent(from: &reader)
+            savedIconAccent = savedIconAccentValue
+        } else {
+            savedIconAccent = nil
+        }
         let iconMode = try TabIconMode(from: &reader)
         let displayTitle = try reader.readString()
         let isAwayFromSavedAddress = try reader.readBool()
@@ -25876,7 +25933,7 @@ extension TabState {
         } else {
             nativeView = nil
         }
-        self.init(id: id, title: title, url: url, nativeContent: nativeContent, savedURL: savedURL, symbol: symbol, faviconURL: faviconURL, iconAccent: iconAccent, storedIconMode: storedIconMode, placement: placement, folderID: folderID, splitGroupID: splitGroupID, lastActivatedAt: lastActivatedAt, positionModifiedAt: positionModifiedAt, customTitle: customTitle, titleModifiedAt: titleModifiedAt, keepsPageLoaded: keepsPageLoaded, iconMode: iconMode, displayTitle: displayTitle, isAwayFromSavedAddress: isAwayFromSavedAddress, pageIconIsCurrent: pageIconIsCurrent, surface: surface, nativeView: nativeView)
+        self.init(id: id, title: title, url: url, nativeContent: nativeContent, savedURL: savedURL, symbol: symbol, faviconURL: faviconURL, iconAccent: iconAccent, storedIconMode: storedIconMode, placement: placement, folderID: folderID, splitGroupID: splitGroupID, lastActivatedAt: lastActivatedAt, positionModifiedAt: positionModifiedAt, customTitle: customTitle, titleModifiedAt: titleModifiedAt, keepsPageLoaded: keepsPageLoaded, savedTitle: savedTitle, savedFaviconURL: savedFaviconURL, savedIconAccent: savedIconAccent, iconMode: iconMode, displayTitle: displayTitle, isAwayFromSavedAddress: isAwayFromSavedAddress, pageIconIsCurrent: pageIconIsCurrent, surface: surface, nativeView: nativeView)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -25952,6 +26009,24 @@ extension TabState {
             writer.writePresence(false)
         }
         writer.writeBool(keepsPageLoaded)
+        if let present0 = savedTitle {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = savedFaviconURL {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = savedIconAccent {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
         iconMode.encode(into: &writer)
         writer.writeString(displayTitle)
         writer.writeBool(isAwayFromSavedAddress)
@@ -26051,7 +26126,28 @@ extension TabState.Seed {
             titleModifiedAt = nil
         }
         let keepsPageLoaded = try reader.readBool()
-        self.init(id: id, title: title, url: url, nativeContent: nativeContent, savedURL: savedURL, symbol: symbol, faviconURL: faviconURL, iconAccent: iconAccent, storedIconMode: storedIconMode, placement: placement, folderID: folderID, splitGroupID: splitGroupID, lastActivatedAt: lastActivatedAt, positionModifiedAt: positionModifiedAt, customTitle: customTitle, titleModifiedAt: titleModifiedAt, keepsPageLoaded: keepsPageLoaded)
+        let savedTitle: String?
+        if try reader.readPresence() {
+            let savedTitleValue = try reader.readString()
+            savedTitle = savedTitleValue
+        } else {
+            savedTitle = nil
+        }
+        let savedFaviconURL: String?
+        if try reader.readPresence() {
+            let savedFaviconURLValue = try reader.readString()
+            savedFaviconURL = savedFaviconURLValue
+        } else {
+            savedFaviconURL = nil
+        }
+        let savedIconAccent: TabIconAccent?
+        if try reader.readPresence() {
+            let savedIconAccentValue = try TabIconAccent(from: &reader)
+            savedIconAccent = savedIconAccentValue
+        } else {
+            savedIconAccent = nil
+        }
+        self.init(id: id, title: title, url: url, nativeContent: nativeContent, savedURL: savedURL, symbol: symbol, faviconURL: faviconURL, iconAccent: iconAccent, storedIconMode: storedIconMode, placement: placement, folderID: folderID, splitGroupID: splitGroupID, lastActivatedAt: lastActivatedAt, positionModifiedAt: positionModifiedAt, customTitle: customTitle, titleModifiedAt: titleModifiedAt, keepsPageLoaded: keepsPageLoaded, savedTitle: savedTitle, savedFaviconURL: savedFaviconURL, savedIconAccent: savedIconAccent)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -26127,6 +26223,24 @@ extension TabState.Seed {
             writer.writePresence(false)
         }
         writer.writeBool(keepsPageLoaded)
+        if let present0 = savedTitle {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = savedFaviconURL {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = savedIconAccent {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -27717,6 +27831,20 @@ extension SystemTint {
     }
 }
 
+extension TabSavedImageChange {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = TabSavedImageChange(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown TabSavedImageChange \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
 extension TearOffRefusal {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -28716,6 +28844,20 @@ extension NavigationError {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown NavigationError \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension NewTabPosition {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown NewTabPosition \(tag)")
         }
         self = Self.all[tag]
     }

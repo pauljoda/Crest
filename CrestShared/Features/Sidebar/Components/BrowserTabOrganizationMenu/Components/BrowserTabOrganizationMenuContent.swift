@@ -105,6 +105,22 @@ struct BrowserTabOrganizationMenuContent: View {
             }
         }
 
+        // Save Tab and Unsave Tab move a tab between the open tabs and Saved
+        // Tabs, as the Save or Unsave Current Tab command does.
+        if tab.placement == .saved {
+            Button("Unsave Tab", systemImage: "bookmark.slash") {
+                performIfCurrent {
+                    browser.moveTab(tab.id, matching: sourceAssignment, to: .current)
+                }
+            }
+        } else if tab.placement == .current, !tab.isStartPage {
+            Button("Save Tab", systemImage: "bookmark") {
+                performIfCurrent {
+                    browser.moveTab(tab.id, matching: sourceAssignment, to: .saved)
+                }
+            }
+        }
+
         if !tab.placement.isDurable, !tab.isStartPage {
             Menu("Add to Group", systemImage: "rectangle.stack.badge.plus") {
                 Group {

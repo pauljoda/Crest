@@ -53,9 +53,17 @@ enum BrowserLinkContextContentBridge {
           let sequence = 0;
 
           const selectionText = (event) => {
-            const element = event.target instanceof Element
-              ? event.target
-              : null;
+            // The innermost target, so a field inside a shadow root is the
+            // field itself rather than its host.
+            const origin = typeof event.composedPath === "function"
+              ? event.composedPath()[0]
+              : event.target;
+            const element = origin instanceof Element ? origin : null;
+            // A password never leaves its field, so the menu offers no
+            // search for it.
+            if (element instanceof HTMLInputElement && element.type === "password") {
+              return null;
+            }
             if (
               element instanceof HTMLInputElement
               || element instanceof HTMLTextAreaElement
