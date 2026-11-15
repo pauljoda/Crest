@@ -369,12 +369,15 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             if (Held(key.WorkspaceId, kept.SpaceId, key.TabId) is null) ForgetHistory(key);
     }
 
-    /// Forgets the opener of each page whose tab is saved or pinned now, which
-    /// closes as its section keeps it, so going back from its first entry
-    /// does nothing there.
+    /// Forgets the opener of each page, and of each history a closed page
+    /// kept, whose tab is saved or pinned now, which closes as its section
+    /// keeps it, so going back from its first entry does nothing there.
     public void PruneOpeners(ChangeFeed changes) {
         foreach (var page in open.Values.Where(page => page.OpenerTabId is not null && Tab(page) is { Placement.IsDurable: true }))
             Update(page, changes, page.ForgetOpener);
+        foreach (var (key, kept) in histories.ToArray())
+            if (kept.OpenerTabId is not null && Held(key.WorkspaceId, kept.SpaceId, key.TabId) is { Placement.IsDurable: true })
+                histories[key] = kept with { OpenerTabId = null };
     }
 
     /// Asks the engine to close the page. A tab's page closed keeping its

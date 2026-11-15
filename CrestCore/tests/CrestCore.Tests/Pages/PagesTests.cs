@@ -439,6 +439,14 @@ public sealed partial class BrowserContractsTests {
         app.Send(new OpenPage(reopened, workspace, space, unloaded.TabId, window));
         Assert.True(Hosted(reopened).Live.CanGoBack);
 
+        // Pinned while unloaded, it opens again without its opener.
+        app.Report(engine, new PageHistoryReported(reopened, [new PageHistoryEntry(Guid.NewGuid(), "https://unloaded.example/", "")], 0));
+        app.Send(new ReleasePage(reopened, KeepsState: true));
+        app.Send(new TogglePin(workspace, space, unloaded.TabId));
+        var pinnedAgain = Guid.NewGuid();
+        app.Send(new OpenPage(pinnedAgain, workspace, space, unloaded.TabId, window));
+        Assert.False(Hosted(pinnedAgain).Live.CanGoBack);
+
         // Pinned, it keeps its own close, and going back does nothing.
         app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://pinned.example/", Foreground: true));
         var pinned = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());

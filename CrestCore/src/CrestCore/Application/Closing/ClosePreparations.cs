@@ -124,9 +124,11 @@ internal sealed class ClosePreparations(Device device, Pages pages, Downloads do
     internal void CloseOwner(Page page, Guid returningTo, PageTurn turn) {
         var previous = page.Engine;
         long document = page.Documents;
+        var owner = (page.WorkspaceId, page.SpaceId, page.TabId, page.WindowId);
         Start(ids.Next(), quits: false, [page.Id], turn.Changes, turn.Issue, (allowed, changes) => {
             if (!allowed || !ReferenceEquals(pages.Hosted(page.Id), page) || !ReferenceEquals(page.Engine, previous)
-                || page.Documents != document || pages.Shown(page) is null)
+                || page.Documents != document || (page.WorkspaceId, page.SpaceId, page.TabId, page.WindowId) != owner
+                || pages.Shown(page) is null)
                 return;
             pages.CloseOwner(page, new PageTurn(changes, turn.Issue, this), returningTo);
         });
