@@ -33,7 +33,7 @@ struct BrowserNoticeView: View {
         .frame(minHeight: BrowserRootMetrics.noticeHeight)
         .frame(maxWidth: BrowserRootMetrics.noticeMaximumWidth)
         .fixedSize(horizontal: false, vertical: true)
-        .glassEffect(.regular, in: .rect(cornerRadius: BrowserRootMetrics.noticeHeight / 2))
+        .crestFloatingFlyoutStyle(in: .rect(cornerRadius: BrowserRootMetrics.noticeHeight / 2))
         .shadow(
             color: .black.opacity(
                 reduceTransparency ? 0 : CrestOpacity.controlShadow

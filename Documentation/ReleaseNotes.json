@@ -5541,6 +5541,10 @@
     "choose-where-new-tabs-open": {
       "category": "improved",
       "message": "New tabs open at the top of your open tabs, just under New Tab, instead of right after the tab you're on. Choose Bottom under Open new tabs at in Settings › Tabs to put them last instead, or turn on Open new tabs in the current folder to have a new tab, a link you open in a new tab or a duplicated tab join the folder or Group of the tab you're on."
+    },
+    "floating-surfaces-readable": {
+      "category": "fixed",
+      "message": "Notices, the cards that preview a tab or folder from the sidebar, link previews and the bars over a page now draw on the same solid surface as Site Controls, so their text stays readable on any Space, appearance and page."
     }
   }
 }
