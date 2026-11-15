@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x40, 0x16, 0x85, 0x13, 0xd9, 0xb3, 0xe6, 0xf6, 0x2a, 0xd3, 0x48, 0x6f, 0x9c, 0xfd, 0xaf, 0x18, 0xb8, 0x5a, 0xaa, 0x8a, 0xeb, 0x92, 0xf1, 0x45, 0x4b, 0x00, 0xa1, 0x50, 0xa1, 0x20, 0x64, 0x50
+        0x30, 0xb4, 0xd8, 0x46, 0x5e, 0x43, 0xf4, 0x89, 0x25, 0xf4, 0x76, 0xd9, 0xc3, 0x51, 0xe4, 0x01, 0x7b, 0x43, 0xa2, 0x89, 0xe0, 0xbd, 0x19, 0x47, 0x96, 0x07, 0x03, 0x60, 0x71, 0xbd, 0xf0, 0x65
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -4954,7 +4954,14 @@ extension CloseTab {
         let windowID = try reader.readUUID()
         let spaceID = try reader.readUUID()
         let tabID = try reader.readUUID()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID)
+        let returnTabID: UUID?
+        if try reader.readPresence() {
+            let returnTabIDValue = try reader.readUUID()
+            returnTabID = returnTabIDValue
+        } else {
+            returnTabID = nil
+        }
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, returnTabID: returnTabID)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -4962,6 +4969,12 @@ extension CloseTab {
         writer.writeUUID(windowID)
         writer.writeUUID(spaceID)
         writer.writeUUID(tabID)
+        if let present0 = returnTabID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 
     func encodeIntent(into writer: inout WireWriter) {

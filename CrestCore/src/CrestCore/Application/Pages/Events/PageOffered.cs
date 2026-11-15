@@ -26,7 +26,8 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
     /// - A Quick Window's or Peek's page keeps the other pages it opens. The engine
     ///   closes the offered page, and the page that opened it loads its web
     ///   address, as a popup there does on every engine.
-    /// - A tab's page opens a tab after its own, in its Space and window.
+    /// - A tab's page opens a tab after its own, in its Space and window,
+    ///   which going back from its first entry closes back to.
     /// - Any other page joins the window that holds it: the Space its engine
     ///   window was reserved for, or else the Space the window shows, after
     ///   the tab the window shows there.
@@ -81,7 +82,7 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         // extension, never by the person, so it may close itself as it would
         // in any browser, and it stays on the engine that opened it.
         var page = new Page(pages.Ids.Next(), engine, space.ProfileId, workspaceId, space.Id, tabId, windowId, transient: null,
-            openedByPage: true);
+            openedByPage: true, openerTabId: source?.TabId);
         pages.Add(page);
         turn.Changes.Publish(new PageOpened(page.State));
         turn.Changes.Publish(new OfferedPageAdopted(page.Id, workspaceId, windowId, space.Id, tabId, Foreground));

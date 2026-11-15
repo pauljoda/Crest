@@ -5601,6 +5601,18 @@
     "storage-pressure-crash": {
       "category": "fixed",
       "message": "On Mac, Crest no longer quits when your disk is almost full and a site saves data."
+    },
+    "back-closes-opened-tab": {
+      "category": "new",
+      "message": "Going back from the first page of a tab that a link, Command-click or the page itself opened closes that tab and takes you back to the tab that opened it. Tabs you open yourself, and saved or pinned tabs, work as before."
+    },
+    "fast-edge-reveals-sidebar": {
+      "category": "fixed",
+      "message": "On Mac, moving the pointer off the window's sidebar edge opens the hidden sidebar at once and keeps it open until you come back to the page."
+    },
+    "link-menu-new-tab-first": {
+      "category": "improved",
+      "message": "On Mac, Open Link in New Tab now leads a link's right-click menu, ahead of opening it in another Space, in Peek or in Split View."
     }
   }
 }

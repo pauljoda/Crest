@@ -46,18 +46,34 @@ final class BrowserDesktopWebView: WKWebView {
         true
     }
 
-    /// Adds Crest's actions ahead of WebKit's native and extension items.
+    /// WebKit takes a swipe back through its own list and drops one it has no
+    /// entry for. That one goes on to the window, which goes back through the
+    /// core: there, the first page of a tab another tab opened closes it.
+    override func swipe(with event: NSEvent) {
+        guard event.deltaX > 0, !canGoBack else {
+            super.swipe(with: event)
+            return
+        }
+        nextResponder?.swipe(with: event)
+    }
+
+    /// Adds Crest's actions ahead of WebKit's native and extension items, led
+    /// by WebKit's own row that opens a link in a new tab.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
-        if menuHost?.opensLinksInCurrentSpace == true {
-            menu.relabelWebKitLinkDestination()
-        }
+        let newTab = menuHost?.opensLinksInCurrentSpace == true ? menu.webKitOpenLinkInNewTabItem() : nil
         menu.removeWebKitSelectionSearch()
-        guard let menuHost, let context = menuHost.takeMenuContext() else { return }
+        guard let menuHost else { return }
+        // Without a capture of what the right-click landed on, Crest adds no
+        // rows of its own, and the new-tab row still leads.
+        let context = menuHost.takeMenuContext()
         BrowserPageContextMenu(
-            actions: menuHost.contextMenuActions(linkURL: context.linkURL, selectionText: context.selectionText),
+            actions: context.map {
+                menuHost.contextMenuActions(linkURL: $0.linkURL, selectionText: $0.selectionText)
+            } ?? [],
             host: menuHost, view: self
-        ).insert(into: menu)
+        ).insert(into: menu, leading: newTab)
+        guard let context else { return }
         if context.isEditable, let paste = menu.webKitPasteItem {
             let item = NSMenuItem(
                 title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainTextFromMenu(_:)),

@@ -1728,6 +1728,7 @@ struct CloseTab: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+    let returnTabID: UUID?
 }
 
 struct CloseTabs: Intent, SessionIntent, Equatable, Sendable {

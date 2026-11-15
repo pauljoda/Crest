@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x40, 0x16, 0x85, 0x13, 0xd9, 0xb3, 0xe6, 0xf6, 0x2a, 0xd3, 0x48, 0x6f, 0x9c, 0xfd, 0xaf, 0x18, 0xb8, 0x5a, 0xaa, 0x8a, 0xeb, 0x92, 0xf1, 0x45, 0x4b, 0x00, 0xa1, 0x50, 0xa1, 0x20, 0x64, 0x50
+        0x30, 0xb4, 0xd8, 0x46, 0x5e, 0x43, 0xf4, 0x89, 0x25, 0xf4, 0x76, 0xd9, 0xc3, 0x51, 0xe4, 0x01, 0x7b, 0x43, 0xa2, 0x89, 0xe0, 0xbd, 0x19, 0x47, 0x96, 0x07, 0x03, 0x60, 0x71, 0xbd, 0xf0, 0x65
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -6247,7 +6247,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadGuid(),
-            reader.ReadGuid());
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
     }
 
     public static void WriteCloseTab(WireWriter writer, CloseTab value) {
@@ -6257,6 +6258,12 @@ public static class ContractCodec {
         writer.WriteGuid(value.WindowId);
         writer.WriteGuid(value.SpaceId);
         writer.WriteGuid(value.TabId);
+        if (value.ReturnTabId is { } presentReturnTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentReturnTabId);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static CloseTabs ReadCloseTabs(WireReader reader) {

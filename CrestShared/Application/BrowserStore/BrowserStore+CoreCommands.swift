@@ -115,7 +115,7 @@ extension BrowserStore {
         family.perform(
             CloseTab(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID,
-                tabID: id),
+                tabID: id, returnTabID: nil),
             from: self) != nil
     }
 
@@ -123,7 +123,7 @@ extension BrowserStore {
     /// the Start Page that is its Space's only tab.
     func closingLeavesOnlyTheWindow(_ id: UUID, in spaceID: UUID) -> Bool {
         let closing = CloseTab(
-            workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id)
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id, returnTabID: nil)
         guard case .lastStartPage = family.refusal(of: closing, from: self) else { return false }
         return true
     }

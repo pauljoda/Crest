@@ -67,9 +67,11 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// The history each tab's last page held when it closed keeping its
     /// state, which the tab's next page takes on, with the page that held it,
     /// whose engines may still hand back what they kept, or an empty identity
-    /// for one the tab's archive brought back across a relaunch. Gone with
-    /// the tab, its Space or its workspace, as what the tab kept is.
-    private readonly Dictionary<(Guid WorkspaceId, Guid TabId), (Guid SpaceId, Guid PageId, PageHistory History)> histories = [];
+    /// for one the tab's archive brought back across a relaunch, and the tab
+    /// that opened the tab, which a relaunch forgets. Gone with the tab, its
+    /// Space or its workspace, as what the tab kept is.
+    private readonly Dictionary<(Guid WorkspaceId, Guid TabId), (Guid SpaceId, Guid PageId, PageHistory History, Guid? OpenerTabId)>
+        histories = [];
     private readonly List<(Guid WorkspaceId, Guid TabId)> historyOrder = [];
     /// The tab groups extensions made of the pages, by identity, each shown as
     /// the folder of the same identity, starting from those of the persistent
@@ -242,12 +244,12 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     /// Closes what owns `page`, as the person closing it would. Its tab closes
     /// the way its section closes one (see `CloseTab`), and the window that
-    /// hosts the page returns to the tab it showed before; whatever shows a
-    /// Quick Window's or Peek's page closes, keeping nothing of it. A tab its
-    /// Space no longer holds and a Space being deleted have nothing to close,
-    /// and a locked Space, or the Start Page as its Space's only tab, keeps
-    /// its tab.
-    internal void CloseOwner(Page page, PageTurn turn) {
+    /// hosts the page returns to `returningTo` while its Space holds that tab,
+    /// or else to the tab it showed before; whatever shows a Quick Window's or
+    /// Peek's page closes, keeping nothing of it. A tab its Space no longer
+    /// holds and a Space being deleted have nothing to close, and a locked
+    /// Space, or the Start Page as its Space's only tab, keeps its tab.
+    internal void CloseOwner(Page page, PageTurn turn, Guid? returningTo = null) {
         if (device.Attached(page.WorkspaceId) is not { } workspace) return;
         if (page.TabId is null) {
             if (!workspace.IsDeleting(page.SpaceId) && workspace.Current.Space(page.SpaceId) is not null)
@@ -256,7 +258,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         }
         if (Tab(page) is not { } tab) return;
         try {
-            workspace.Handle(new CloseTab(page.WorkspaceId, page.WindowId, page.SpaceId, tab.Id), clock.Now, ids, this);
+            workspace.Handle(new CloseTab(page.WorkspaceId, page.WindowId, page.SpaceId, tab.Id, returningTo), clock.Now, ids, this);
         } catch (Rejected) {
             // The Space is locked, or its only tab is the Start Page.
         }
@@ -373,6 +375,17 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             if (Held(key.WorkspaceId, kept.SpaceId, key.TabId) is null) ForgetHistory(key);
     }
 
+    /// Forgets the opener of each page, and of each history a closed page
+    /// kept, whose tab is saved or pinned now, which closes as its section
+    /// keeps it, so going back from its first entry does nothing there.
+    public void PruneOpeners(ChangeFeed changes) {
+        foreach (var page in open.Values.Where(page => page.OpenerTabId is not null && Tab(page) is { Placement.IsDurable: true }))
+            Update(page, changes, page.ForgetOpener);
+        foreach (var (key, kept) in histories.ToArray())
+            if (kept.OpenerTabId is not null && Held(key.WorkspaceId, kept.SpaceId, key.TabId) is { Placement.IsDurable: true })
+                histories[key] = kept with { OpenerTabId = null };
+    }
+
     /// Asks the engine to close the page. A tab's page closed keeping its
     /// state hands back what brings it back, which the tab keeps.
     internal void Close(Page page, bool keepsState, Action<Engine, EngineCommand> issue) {
@@ -412,15 +425,15 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// lives in the Space that page did and shows the entry the history
     /// shows. A history for another Space or address is dropped.
     /// Answers whether it came from the tab's archive, whose engine history
-    /// the platform restores itself.
-    internal (PageHistory History, bool Archived)? KeptHistory(Guid workspaceId, SpaceState space, Guid tabId) {
+    /// the platform restores itself, and the tab that opened the tab.
+    internal (PageHistory History, bool Archived, Guid? OpenerTabId)? KeptHistory(Guid workspaceId, SpaceState space, Guid tabId) {
         var key = (workspaceId, tabId);
         if (!histories.TryGetValue(key, out var kept)) return null;
         ForgetHistory(key);
         var tab = space.Tabs.FirstOrDefault(tab => tab.Id == tabId);
         return kept.SpaceId == space.Id && kept.History.Shown is { } shown && tab?.Url is { } url
             && new WebAddress(url).IsSamePage(new WebAddress(shown.Url))
-                ? (kept.History, kept.PageId == Guid.Empty)
+                ? (kept.History, kept.PageId == Guid.Empty, kept.OpenerTabId)
                 : null;
     }
 
@@ -430,7 +443,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     internal void KeepArchivedHistory(Guid workspaceId, SpaceState space, Guid tabId, PageHistory history) {
         var key = (workspaceId, tabId);
         if (histories.ContainsKey(key) || open.Values.Any(page => page.WorkspaceId == workspaceId && page.TabId == tabId)) return;
-        Remember(key, (space.Id, Guid.Empty, history));
+        Remember(key, (space.Id, Guid.Empty, history, OpenerTabId: null));
     }
 
     /// The history of the page `pageId` names, or of the tab's page it was
@@ -446,10 +459,10 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     private void KeepHistory((Guid WorkspaceId, Guid TabId) key, Page page) {
         ForgetHistory(key);
-        if (page.History.Shown is not null) Remember(key, (page.SpaceId, page.Id, page.History));
+        if (page.History.Shown is not null) Remember(key, (page.SpaceId, page.Id, page.History, page.OpenerTabId));
     }
 
-    private void Remember((Guid WorkspaceId, Guid TabId) key, (Guid SpaceId, Guid PageId, PageHistory History) kept) {
+    private void Remember((Guid WorkspaceId, Guid TabId) key, (Guid SpaceId, Guid PageId, PageHistory History, Guid? OpenerTabId) kept) {
         histories[key] = kept;
         historyOrder.Add(key);
         while (historyOrder.Count > MaximumRestoreStates) ForgetHistory(historyOrder[0]);
