@@ -48,7 +48,7 @@ internal sealed class FilterLibrary {
     /// Names the converter: change it whenever the content filter's crate
     /// changes what lists convert to, so devices convert theirs again. The
     /// keys also hold the baseline rules' digest, so changing those does too.
-    private const string RulesRevision = "adblock-0.13.5+css-validation;site-hiding-only;trusted-chosen";
+    private const string RulesRevision = "adblock-0.13.5+css-validation;own-hiding-only;trusted-chosen";
 
     private static readonly string BaselineDigest =
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(BaselineRules)));
@@ -520,12 +520,23 @@ internal sealed class FilterLibrary {
         bool again;
         try {
             var texts = new List<string> { BaselineRules };
-            foreach (var (name, _) in inputs)
-                if (TextOf(name, customFilters) is { } text) texts.Add(new FilterListText(text).Resolved(conditions));
+            string? own = null;
+            foreach (var (name, _) in inputs) {
+                if (TextOf(name, customFilters) is not { } text) continue;
+                var resolved = new FilterListText(text).Resolved(conditions);
+                texts.Add(resolved);
+                if (name == CustomFiltersName) own = resolved;
+            }
             var rules = ContentFilter.ContentRulesFor(texts);
-            // Generic hiding goes through the cosmetic bridge, as elements
-            // appear, on every engine; the site's own hiding stays here.
-            rules = rules with { Rules = [.. rules.Rules.Where(rule => !HidesGenerically(rule))] };
+            // The lists' hiding goes through the cosmetic bridge on every
+            // engine: the generic rules as elements appear, and the sites' own
+            // from its first answer. In the lists, a site's hiding rule matches
+            // every address and is weighed on every load the page makes. The
+            // person's own hiding, which Block Element writes, stays here: few
+            // rules, which WebKit applies before a page first renders and in a
+            // sheet the page can neither reach nor outrank.
+            var ownHiding = own is null ? [] : ContentFilter.ContentRulesFor([own]).Rules.Where(Hides);
+            rules = rules with { Rules = [.. rules.Rules.Where(rule => !Hides(rule)).Concat(ownHiding)] };
             built = new([.. Split(rules).Select((source, index) => Keep(Identifier(key, index), source))]);
         } catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException
             or DllNotFoundException or EntryPointNotFoundException) {
@@ -551,10 +562,8 @@ internal sealed class FilterLibrary {
         if (again) RebuildRules();
     }
 
-    /// Whether a converted rule hides elements on every site: a hiding rule
-    /// with no site it is limited to.
-    private static bool HidesGenerically(string rule) =>
-        rule.Contains("\"css-display-none\"", StringComparison.Ordinal) && !rule.Contains("\"if-domain\"", StringComparison.Ordinal);
+    /// Whether a converted rule hides elements rather than blocking a load.
+    private static bool Hides(string rule) => rule.Contains("\"css-display-none\"", StringComparison.Ordinal);
 
     /// The compiled lists for `rules`: as many rules as fit beside every
     /// exception, the exceptions after them in each list, since an exception
