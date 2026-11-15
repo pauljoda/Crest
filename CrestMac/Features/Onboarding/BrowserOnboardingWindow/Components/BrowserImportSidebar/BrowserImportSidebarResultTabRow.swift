@@ -11,7 +11,7 @@ struct BrowserImportSidebarResultTabRow: View {
     var body: some View {
         HStack(spacing: 8) {
             TabStateFaviconView(tab: tab, favicons: favicons, profileID: profileID, size: 18)
-            Text(tab.title)
+            Text(tab.shownTitle)
                 .lineLimit(1)
             Spacer(minLength: 8)
             if isMatched {

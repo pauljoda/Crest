@@ -366,6 +366,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownSplitGroup(UnknownSplitGroup)
     case unknownTab(UnknownTab)
     case unknownWorkspace(UnknownWorkspace)
+    case unpreparedImport(UnpreparedImport)
     case unregisteredEngine(UnregisteredEngine)
     case unrelatedWorkspaces(UnrelatedWorkspaces)
     case unsavedWorkspace(UnsavedWorkspace)
@@ -445,6 +446,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .unknownAgentSession(let value): value.message
         case .unknownCloudMerge(let value): value.message
         case .unknownExtension(let value): value.message
+        case .unpreparedImport(let value): value.message
         case .unsuitableDefaultSearch(let value): value.message
         case .unsupportedArchiveVersion(let value): value.message
         case .webPagesOnly(let value): value.message
@@ -7580,6 +7582,14 @@ struct UnknownTab: Equatable, Sendable {
 
 struct UnknownWorkspace: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct UnpreparedImport: Equatable, Sendable {
+    let cause: String
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t prepare this import.")
+    }
 }
 
 struct UnregisteredEngine: Equatable, Sendable {

@@ -83,7 +83,8 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
         BrowserOnboardingReviewPage(
             flow: flow,
             customizationSpaceID: $customizationSpaceID,
-            back: back
+            back: back,
+            skip: beginManualSetup
         )
     }
 

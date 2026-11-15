@@ -122,13 +122,16 @@ public sealed class WireReader(ReadOnlyMemory<byte> bytes) {
 
     public Guid ReadGuid() => new(Take(16), bigEndian: true);
 
+    /// A date past either end of the times a date holds reads as that end, as
+    /// a stored date does: a writer rounds the first and last of them a tick
+    /// beyond, and the app's side writes any finite date it holds.
     public DateTimeOffset ReadDate() {
-        long ticks = Ticks(ReadDouble(), "date");
-        try {
-            return ReferenceDate.AddTicks(ticks);
-        } catch (ArgumentOutOfRangeException) {
-            throw new WireFormatException("A date is out of range.");
-        }
+        double seconds = ReadDouble();
+        if (!double.IsFinite(seconds)) throw new WireFormatException($"A date of {seconds} seconds is out of range.");
+        double ticks = Math.Round(seconds * TimeSpan.TicksPerSecond);
+        if (ticks <= (DateTimeOffset.MinValue - ReferenceDate).Ticks) return DateTimeOffset.MinValue;
+        if (ticks >= (DateTimeOffset.MaxValue - ReferenceDate).Ticks) return DateTimeOffset.MaxValue;
+        return ReferenceDate.AddTicks((long)ticks);
     }
 
     public TimeSpan ReadDuration() => TimeSpan.FromTicks(Ticks(ReadDouble(), "duration"));

@@ -22,7 +22,7 @@ struct BrowserSourceImportTabPlacementMenu: View {
         .menuStyle(.borderlessButton)
         .crestMenuActionLabelStyle()
         .fixedSize()
-        .accessibilityLabel(Text("Tab placement for \(tab.title)"))
+        .accessibilityLabel(Text("Tab placement for \(tab.shownTitle)"))
         .accessibilityValue(Text(tab.placement.title))
     }
 }

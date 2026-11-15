@@ -43,7 +43,7 @@ struct BrowserCrestImportPinnedGrid: View {
                             )
                     }
                 }
-                .accessibilityLabel(tab.title)
+                .accessibilityLabel(tab.shownTitle)
                 .accessibilityValue(isMatched ? "Matched in source browser" : "In Crest")
             }
         }

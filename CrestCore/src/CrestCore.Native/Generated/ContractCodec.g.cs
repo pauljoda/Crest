@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xcf, 0xe0, 0xc5, 0x2c, 0xde, 0x94, 0x78, 0xbe, 0x0e, 0xdc, 0xdf, 0xc1, 0x67, 0xa7, 0x65, 0xea, 0x39, 0x39, 0xc8, 0xaa, 0x4c, 0x12, 0xcb, 0x3b, 0xcb, 0xf2, 0x40, 0xfc, 0x04, 0x65, 0x79, 0x3f
+        0xd1, 0x43, 0xdb, 0xde, 0x57, 0x95, 0xa5, 0xe2, 0x3d, 0x6f, 0xab, 0x90, 0xc0, 0x82, 0x7e, 0xda, 0xf9, 0xb7, 0x79, 0x85, 0x94, 0xf8, 0x7a, 0x46, 0x52, 0x77, 0xe7, 0x40, 0xec, 0x17, 0x43, 0x32
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -1979,16 +1979,17 @@ public static class ContractCodec {
             case 166: return ReadUnknownSplitGroup(reader);
             case 167: return ReadUnknownTab(reader);
             case 168: return ReadUnknownWorkspace(reader);
-            case 169: return ReadUnregisteredEngine(reader);
-            case 170: return ReadUnrelatedWorkspaces(reader);
-            case 171: return ReadUnsavedWorkspace(reader);
-            case 172: return ReadUnsuitableDefaultSearch(reader);
-            case 173: return ReadUnsupportedAddress(reader);
-            case 174: return ReadUnsupportedArchiveVersion(reader);
-            case 175: return ReadWebPagesOnly(reader);
-            case 176: return ReadWindowNotOpen(reader);
-            case 177: return ReadWorkspaceBusy(reader);
-            case 178: return ReadWrongDeletionOperation(reader);
+            case 169: return ReadUnpreparedImport(reader);
+            case 170: return ReadUnregisteredEngine(reader);
+            case 171: return ReadUnrelatedWorkspaces(reader);
+            case 172: return ReadUnsavedWorkspace(reader);
+            case 173: return ReadUnsuitableDefaultSearch(reader);
+            case 174: return ReadUnsupportedAddress(reader);
+            case 175: return ReadUnsupportedArchiveVersion(reader);
+            case 176: return ReadWebPagesOnly(reader);
+            case 177: return ReadWindowNotOpen(reader);
+            case 178: return ReadWorkspaceBusy(reader);
+            case 179: return ReadWrongDeletionOperation(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -2673,44 +2674,48 @@ public static class ContractCodec {
                 writer.WriteTag(168);
                 WriteUnknownWorkspace(writer, member);
                 break;
-            case UnregisteredEngine member:
+            case UnpreparedImport member:
                 writer.WriteTag(169);
+                WriteUnpreparedImport(writer, member);
+                break;
+            case UnregisteredEngine member:
+                writer.WriteTag(170);
                 WriteUnregisteredEngine(writer, member);
                 break;
             case UnrelatedWorkspaces member:
-                writer.WriteTag(170);
+                writer.WriteTag(171);
                 WriteUnrelatedWorkspaces(writer, member);
                 break;
             case UnsavedWorkspace member:
-                writer.WriteTag(171);
+                writer.WriteTag(172);
                 WriteUnsavedWorkspace(writer, member);
                 break;
             case UnsuitableDefaultSearch member:
-                writer.WriteTag(172);
+                writer.WriteTag(173);
                 WriteUnsuitableDefaultSearch(writer, member);
                 break;
             case UnsupportedAddress member:
-                writer.WriteTag(173);
+                writer.WriteTag(174);
                 WriteUnsupportedAddress(writer, member);
                 break;
             case UnsupportedArchiveVersion member:
-                writer.WriteTag(174);
+                writer.WriteTag(175);
                 WriteUnsupportedArchiveVersion(writer, member);
                 break;
             case WebPagesOnly member:
-                writer.WriteTag(175);
+                writer.WriteTag(176);
                 WriteWebPagesOnly(writer, member);
                 break;
             case WindowNotOpen member:
-                writer.WriteTag(176);
+                writer.WriteTag(177);
                 WriteWindowNotOpen(writer, member);
                 break;
             case WorkspaceBusy member:
-                writer.WriteTag(177);
+                writer.WriteTag(178);
                 WriteWorkspaceBusy(writer, member);
                 break;
             case WrongDeletionOperation member:
-                writer.WriteTag(178);
+                writer.WriteTag(179);
                 WriteWrongDeletionOperation(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -20888,6 +20893,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.WorkspaceId);
+    }
+
+    public static UnpreparedImport ReadUnpreparedImport(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new UnpreparedImport(
+            reader.ReadString());
+    }
+
+    public static void WriteUnpreparedImport(WireWriter writer, UnpreparedImport value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Cause);
     }
 
     public static UnregisteredEngine ReadUnregisteredEngine(WireReader reader) {

@@ -18,7 +18,8 @@ namespace CrestCore.Contracts;
 /// `SpaceLocked` when it would change a locked Space, giving it tabs or
 /// folders or another name or look, `InvalidImport` for Spaces or choices it
 /// cannot read, `SpaceLimitReached` when the workspace would hold too many
-/// Spaces, and `SpaceBeingDeleted` when a Space it names is going away. A
+/// Spaces, `SpaceBeingDeleted` when a Space it names is going away, and
+/// `UnpreparedImport` when working it out breaks on what it brings. A
 /// locked Space the import leaves as it was, such as one a review leaves out,
 /// a draft left unchanged or one it only moves in the order, never refuses it.
 public abstract record ImportWorkspace(Guid WorkspaceId, Guid WindowId) : SessionIntent(WorkspaceId) {

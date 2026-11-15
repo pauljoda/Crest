@@ -19,7 +19,7 @@ struct BrowserSourceImportTabRow: View {
                     profileID: review.sourceSpace.profileID,
                     size: 18
                 )
-                Text(tab.title)
+                Text(tab.shownTitle)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 6)
@@ -61,7 +61,7 @@ struct BrowserSourceImportTabRow: View {
         }
         .padding(.horizontal, 8)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(tab.title)
+        .accessibilityLabel(tab.shownTitle)
         .accessibilityValue(accessibilityValue)
     }
 

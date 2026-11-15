@@ -1,7 +1,7 @@
 {"sidebar":{"containers":[
   {"items":[
     "favorite-root",{"id":"favorite-root","childrenIds":["favorite"],"data":{"itemContainer":{}}},
-    "favorite",{"id":"favorite","data":{"tab":{"savedTitle":"Favorite","savedURL":"https://favorite.example/"}}},
+    "favorite",{"id":"favorite","title":"Mail","data":{"tab":{"savedTitle":"Favorite","savedURL":"https://favorite.example/"}}},
     "today-root",{"id":"today-root","childrenIds":["today","nested-list"],"data":{"itemContainer":{}}},
     "today",{"id":"today","data":{"tab":{"savedTitle":"Today","savedURL":"https://today.example/"}}},
     "nested-list",{"id":"nested-list","title":"Not a folder here","childrenIds":["today-two"],"data":{"list":{}}},
@@ -10,7 +10,7 @@
     "folder",{"id":"folder","title":"Reading","childrenIds":["saved","sub"],"data":{"list":{}}},
     "sub",{"id":"sub","childrenIds":["deep"],"data":{"list":{}}},
     "deep",{"id":"deep","title":"Deep title","data":{"tab":{"savedURL":"https://deep.example/"}}},
-    "saved",{"id":"saved","data":{"tab":{"savedTitle":"Saved","savedURL":"https://saved.example/"}}},
+    "saved",{"id":"saved","title":"  Read   later ","data":{"tab":{"savedTitle":"Saved","savedURL":"https://saved.example/"}}},
     "bad",{"id":"bad","data":{"tab":{"savedTitle":"Bad","savedURL":"file:///etc/hosts"}}}
   ],
   "spaces":[
