@@ -10,7 +10,9 @@ struct BrowserPageBar<Field: View, Extensions: View, LeadingAccessory: View, Tra
 
     let metrics: BrowserPageBarMetrics
     /// The room the bar leaves at its leading edge for the window's own
-    /// buttons where they stand over it, beyond the metrics' padding.
+    /// buttons where they stand over it, beyond the metrics' padding. AppKit
+    /// keeps the buttons in the window's leading corner, which is the top
+    /// right in a right-to-left layout, so the room is leading either way.
     let windowControlsClearance: CGFloat
     /// The page back and forward act on.
     let port: BrowserSidebarNavigationPort

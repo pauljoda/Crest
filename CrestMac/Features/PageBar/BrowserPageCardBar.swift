@@ -8,8 +8,8 @@ struct BrowserPageCardBarContext {
     let chrome: BrowserChromeState
     let fieldFrames: BrowserPageBarFieldFrames
     /// Whether the window's own buttons stand over the leading card's bar:
-    /// with the address bar on top, unless a sidebar docked on the left holds
-    /// them in its strip.
+    /// with the address bar on top, unless a sidebar docked on the window's
+    /// leading edge holds them in its strip.
     let windowControlsOverLeadingCard: Bool
     /// Whether the palette drops out of the card's own field, as it does with
     /// the address bar on top. In the sidebar placement the window's field in
@@ -65,8 +65,7 @@ struct BrowserPageCardBar: View {
 
     /// A full-screen window has no corners and shows no buttons over its pages.
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
-    /// Where the card begins in its window.
-    @State private var cardMinX: CGFloat = 0
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         BrowserPageBar(
@@ -110,11 +109,6 @@ struct BrowserPageCardBar: View {
             BrowserWindowTitleBarSurface()
         }
         .background(barColor)
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.frame(in: .global).minX
-        } action: { minX in
-            cardMinX = minX
-        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Page bar")
         .accessibilityIdentifier("page-card-bar")
@@ -126,10 +120,14 @@ struct BrowserPageCardBar: View {
     }
 
     /// The room the leading card leaves for the window's buttons where they
-    /// stand over it.
+    /// stand over it. AppKit keeps them in the window's leading corner in
+    /// either direction, and while they stand over the cards the row starts
+    /// one window frame in from that edge.
     private var windowControlsClearance: CGFloat {
         guard isLeadingCard, context.windowControlsOverLeadingCard, windowCornerRadius != nil else { return 0 }
-        return max(0, Self.windowControlsTrailingEdge - cardMinX - BrowserPageBarMetrics.pageCard.leadingPadding)
+        let frameLeading = BrowserChromeAppearance.device(windowCornerRadius: nil)
+            .pageInsets(docked: context.isSidebarDocked, direction: layoutDirection).leading
+        return max(0, Self.windowControlsTrailingEdge - frameLeading - BrowserPageBarMetrics.pageCard.leadingPadding)
     }
 
     /// The leading card carries the sidebar's toggle while the sidebar is not

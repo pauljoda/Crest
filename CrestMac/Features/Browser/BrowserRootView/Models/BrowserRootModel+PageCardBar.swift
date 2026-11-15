@@ -23,16 +23,26 @@ extension BrowserRootModel {
         showsPageCardBars && !presentsSplitBars
     }
 
+    /// Whether the window's own buttons stand over the top of the page in
+    /// `direction`. With the address bar on top they stay in the window's
+    /// leading corner, where AppKit puts them, so they stand over the page
+    /// unless a sidebar docked on that edge holds them. In the sidebar
+    /// placement they stay in the sidebar's strip, or hide with it.
+    func windowControlsStandOverPage(in direction: LayoutDirection) -> Bool {
+        guard showsPageCardBars else { return false }
+        let sidebarEdge = BrowserChromeAppearance.sidebarEdge(
+            onRight: BrowserDeviceAppearanceStore.shared.sidebarOnRight, in: direction)
+        return !(sidebarPresentation.reservesSidebarWidth && sidebarEdge == .leading)
+    }
+
     /// What every card's bar in a split needs from this window.
-    func pageCardBarContext(reduceMotion: Bool) -> BrowserPageCardBarContext {
+    func pageCardBarContext(reduceMotion: Bool, layoutDirection: LayoutDirection) -> BrowserPageCardBarContext {
         let presentation = sidebarPresentation
         let sidebarOnRight = BrowserDeviceAppearanceStore.shared.sidebarOnRight
         return BrowserPageCardBarContext(
             chrome: chrome,
             fieldFrames: pageBarFieldFrames,
-            // In the sidebar placement the buttons stay in the sidebar's
-            // strip, or hide with it.
-            windowControlsOverLeadingCard: showsPageCardBars && (!presentation.reservesSidebarWidth || sidebarOnRight),
+            windowControlsOverLeadingCard: windowControlsStandOverPage(in: layoutDirection),
             opensFromOwnField: showsPageCardBars,
             isSidebarDocked: presentation.reservesSidebarWidth,
             sidebarOnRight: sidebarOnRight,

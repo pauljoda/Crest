@@ -195,7 +195,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
                 GeometryReader { proxy in
                     if let anchor {
-                        let page = proxy[anchor]
+                        let page = BrowserChromeAppearance.placementFrame(
+                            for: proxy[anchor], in: proxy.size.width, direction: layoutDirection)
                         windowAddressBar
                             .frame(width: page.width)
                             .position(x: page.midX, y: page.minY + BrowserPageBarMetrics.topSectionHeight / 2)

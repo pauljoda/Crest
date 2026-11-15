@@ -1,4 +1,4 @@
-import CoreGraphics
+import SwiftUI
 
 enum BrowserCommandPaletteLayout {
     static let maximumResultAreaHeight = BrowserCommandPaletteMetrics.maximumResultAreaHeight
@@ -61,14 +61,20 @@ enum BrowserCommandPaletteLayout {
     /// or across the whole space for one as wide as it; and from the field's
     /// top edge down to the bottom of the space, or for one listing upward,
     /// from its bottom edge up to the top, clear of the screen's safe area
-    /// there as a Peek is.
+    /// there as a Peek is. `field` and the region are physical frames, so in
+    /// a right-to-left layout the region starts at the field's right edge.
     static func fieldRegion(
-        field: CGRect, in size: CGSize, safeAreaTop: CGFloat = 0, presentation: BrowserCommandPalettePresentation
+        field: CGRect, in size: CGSize, safeAreaTop: CGFloat = 0, presentation: BrowserCommandPalettePresentation,
+        direction: LayoutDirection = .leftToRight
     ) -> CGRect {
         let margin = BrowserCommandPaletteMetrics.fieldRegionMargin
         let wanted = max(field.width, presentation.minimumWidth)
-        let minX = wanted >= size.width - margin * 2 ? margin : max(margin, field.minX)
-        let width = max(0, min(size.width - margin - minX, wanted))
+        // How far in from the leading edge the field, and so the region,
+        // starts.
+        let fieldLeading = direction == .leftToRight ? field.minX : size.width - field.maxX
+        let leading = wanted >= size.width - margin * 2 ? margin : max(margin, fieldLeading)
+        let width = max(0, min(size.width - margin - leading, wanted))
+        let minX = direction == .leftToRight ? leading : size.width - leading - width
         let minY =
             presentation.listsUpward
             ? max(safeAreaTop, BrowserCommandPaletteMetrics.fieldRegionTopMargin) : field.minY

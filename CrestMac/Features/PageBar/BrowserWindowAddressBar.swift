@@ -29,8 +29,6 @@ struct BrowserWindowAddressBar: View {
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Where the page area begins in its window.
-    @State private var pageMinX: CGFloat = 0
 
     var body: some View {
         let isLocked = model.spaceAccess.isLocked(space)
@@ -72,11 +70,6 @@ struct BrowserWindowAddressBar: View {
             // Only the bar's empty parts act as the title bar. Its controls
             // keep their own presses.
             BrowserWindowTitleBarSurface()
-        }
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.frame(in: .global).minX
-        } action: { minX in
-            pageMinX = minX
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Address bar")
@@ -146,13 +139,13 @@ struct BrowserWindowAddressBar: View {
         !model.sidebarPresentation.reservesSidebarWidth
     }
 
-    /// The room the bar leaves for the window's buttons where they stand over
-    /// it: while the sidebar is hidden or on the right. A full-screen window
-    /// has no corners and shows no buttons.
+    /// The room the bar leaves at its leading edge for the window's buttons
+    /// where they stand over it. They stand there unless a sidebar docked on
+    /// that edge holds them, and then the page, and the bar with it, starts
+    /// at the window's own leading edge. A full-screen window has no corners
+    /// and shows no buttons.
     private var windowControlsClearance: CGFloat {
-        let buttonsOverBar =
-            !model.sidebarPresentation.reservesSidebarWidth || BrowserDeviceAppearanceStore.shared.sidebarOnRight
-        guard buttonsOverBar, windowCornerRadius != nil else { return 0 }
-        return max(0, Self.windowControlsTrailingEdge - pageMinX - insets.leading - Self.horizontalPadding)
+        guard model.windowControlsStandOverPage(in: layoutDirection), windowCornerRadius != nil else { return 0 }
+        return max(0, Self.windowControlsTrailingEdge - insets.leading - Self.horizontalPadding)
     }
 }

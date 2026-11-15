@@ -100,7 +100,8 @@ struct BrowserSplitPageSurface: View {
                     // A split's cards carry their own bars in either
                     // placement, as a Quick Window does; a lone card's address
                     // bar is the window's.
-                    cardBar: displayMembers.count > 1 ? model.pageCardBarContext(reduceMotion: reduceMotion) : nil,
+                    cardBar: displayMembers.count > 1
+                        ? model.pageCardBarContext(reduceMotion: reduceMotion, layoutDirection: layoutDirection) : nil,
                     isFocused: isFocused,
                     isLeadingCard: member.id == displayMembers.first?.id
                 )

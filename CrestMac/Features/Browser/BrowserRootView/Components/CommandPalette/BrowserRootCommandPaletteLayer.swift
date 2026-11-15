@@ -74,18 +74,22 @@ struct BrowserRootCommandPaletteLayer: View {
     /// the transaction that inserts the palette grows the palette out of the
     /// field, and putting it back as the palette leaves shrinks it in again.
     private func fieldAnchor(_ frame: CGRect, spaceID: UUID) -> some View {
-        Color.clear
-            .frame(width: frame.width, height: frame.height)
-            .matchedGeometryEffect(
-                id: BrowserCommandSurfaceMorph.commandPalette(spaceID: spaceID),
-                in: commandSurfaceNamespace,
-                properties: .frame,
-                anchor: .center,
-                isSource: true
-            )
-            .position(x: frame.midX, y: frame.midY)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        GeometryReader { proxy in
+            let placement = BrowserChromeAppearance.placementFrame(
+                for: frame, in: proxy.size.width, direction: layoutDirection)
+            Color.clear
+                .frame(width: frame.width, height: frame.height)
+                .matchedGeometryEffect(
+                    id: BrowserCommandSurfaceMorph.commandPalette(spaceID: spaceID),
+                    in: commandSurfaceNamespace,
+                    properties: .frame,
+                    anchor: .center,
+                    isSource: true
+                )
+                .position(x: placement.midX, y: placement.midY)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     /// The palette's scheme: the material color's, over the Space it searches.
