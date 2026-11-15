@@ -45,7 +45,9 @@ final class BrowserPageHost {
     /// nothing knows only the Spaces its pages name.
     @ObservationIgnored var showsTab: @MainActor (_ spaceID: UUID, _ tabID: UUID) -> Bool = { _, _ in false }
     @ObservationIgnored private(set) var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
-    @ObservationIgnored private var peekLeases: [UUID: PeekLease] = [:]
+    /// Each open or staged Peek's lease, by request. Observed, so the address
+    /// field follows a Peek as it opens and closes.
+    private var peekLeases: [UUID: PeekLease] = [:]
     /// The pages the core adopted as windows pages asked for, by page, until
     /// the Quick Window that shows each takes it. Every window over the
     /// workspace shares them, so the Quick Window finds its page whichever
@@ -478,7 +480,8 @@ final class BrowserPageHost {
 
     /// The Peek over tab `tabID` that `isOpen` accepts, which shows in front
     /// of the tab's own page; nil when no such Peek is there. A staged Peek
-    /// keeps its lease to draw, but is not open.
+    /// keeps its lease to draw, but is not open. Reading it follows the Peeks'
+    /// leases as they come and go.
     func peekRequest(over tabID: UUID, where isOpen: (BrowserPeekRequest) -> Bool) -> BrowserPeekRequest? {
         peekLeases.values.first { $0.request.sourceTabID == tabID && isOpen($0.request) }?.request
     }

@@ -94,6 +94,9 @@ private struct BrowserRootPageMetadataObserver: ViewModifier {
             .onChange(of: model.pages.activePage?.live.displayURL) {
                 model.synchronizePageMetadata()
             }
+            .onChange(of: model.pages.peekPage?.live.displayURL) {
+                model.synchronizePageMetadata()
+            }
     }
 }
 
