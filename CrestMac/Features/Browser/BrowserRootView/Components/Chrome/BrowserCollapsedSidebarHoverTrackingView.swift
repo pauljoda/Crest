@@ -12,18 +12,17 @@ import AppKit
 /// reached for the edge again: Universal Control leaves the pointer parked
 /// there after crossing to another Mac.
 ///
-/// The pointer also has to stay on the strip a moment before the sidebar comes
-/// out, for as long as Appearance's Sidebar hover delay asks. A pointer passing
-/// over the edge on its way to something near it, a control at the side of the
-/// page, never brings the sidebar out; with no delay, any pointer reaching the
-/// strip does.
+/// Inside the window, the pointer also has to stay on the strip a moment before
+/// the sidebar comes out, for as long as Appearance's Sidebar hover delay asks.
+/// A pointer passing over the edge on its way to something near it, a control
+/// at the side of the page, never brings the sidebar out; with no delay, any
+/// pointer reaching the strip does.
 ///
 /// A pointer that leaves the window through the edge on the sidebar's side
-/// counts as resting on the strip for as long as it stays out past that edge,
-/// however far: reaching for the edge of a window that stands away from the
-/// screen's edge often carries it across the strip and out, even so fast that
-/// AppKit never saw it on the strip, and the window's own exit starts the
-/// wait then.
+/// brings the sidebar out at once, without the delay, however fast it went:
+/// reaching for the edge of a window that stands away from the screen's edge
+/// often carries it across the strip and out, even so fast that AppKit never
+/// saw it on the strip, and the window's own exit reveals it then.
 @MainActor
 final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     // MARK: - Variables
@@ -142,23 +141,15 @@ final class BrowserCollapsedSidebarHoverTrackingView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) {
-        // Out of the window past the strip, a pointer too fast for the strip
-        // to see crossed it on the way.
-        if event.trackingArea === windowTrackingArea {
-            guard isPointerPastStrip else { return }
-            restingPointer = nil
-            revealIfPointerMoved()
-            return
-        }
+        let isPastStrip = isPointerPastStrip
+        // The window's own exit counts only through the strip's edge, where a
+        // pointer too fast for the strip to see crossed it on the way.
+        if event.trackingArea === windowTrackingArea, !isPastStrip { return }
         restingPointer = nil
-        // Out through the window's edge, the pointer overshot the strip it was
-        // reaching for, and the wait goes on.
-        if isPointerPastStrip {
-            revealIfPointerMoved()
-            return
-        }
         cancelPendingReveal()
-        reportHover(false)
+        // Out through the window's edge, the pointer was reaching for the
+        // sidebar, which comes out at once.
+        reportHover(isPastStrip)
     }
 
     func reportHover(_ isHovering: Bool) {
