@@ -125,6 +125,10 @@ internal static partial class StoredSessionCodec {
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
         public const string CredentialsEnabledModifiedAt = "credentialsEnabledModifiedAt";
         public const string AccessPolicyModifiedAt = "accessPolicyModifiedAt";
+        public const string SavedFaviconUrl = "savedFaviconURL";
+        public const string SavedIconAccent = "savedIconAccent";
+        public const string SavedTitle = "savedTitle";
+        public const string SavedTitleUrl = "savedTitleURL";
         public const string SavedUrl = "savedURL";
         public const string SearchesSitesWithTab = "searchesSitesWithTab";
         public const string SearchFollowsDefault = "searchFollowsDefault";

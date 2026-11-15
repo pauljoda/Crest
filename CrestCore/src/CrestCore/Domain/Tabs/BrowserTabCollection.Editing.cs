@@ -108,7 +108,7 @@ public sealed partial class BrowserTabCollection {
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
         foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
             var value = tab.State with { SplitGroupId = null };
-            if (resetArchivePlacement) value = value with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null };
+            if (resetArchivePlacement) value = value.SavedAt(null) with { Placement = TabPlacement.Current, FolderId = null };
             archive.Add(new(value, now, deleting ? ArchiveReason.Deleted : ArchiveReason.Closed));
         }
         tabs.RemoveAll(t => removing.Contains(t.Id));

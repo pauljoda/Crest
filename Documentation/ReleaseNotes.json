@@ -5565,6 +5565,10 @@
     "developer-url-drag-select": {
       "category": "fixed",
       "message": "On Mac, dragging across the developer toolbar's address field selects text instead of moving the window."
+    },
+    "saved-tab-return-appearance": {
+      "category": "fixed",
+      "message": "When closing a saved or pinned tab returns it to its saved address, its row now shows that page's name and icon right away instead of the last page's."
     }
   }
 }

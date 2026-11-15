@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf9, 0x27, 0xa0, 0xc4, 0x83, 0xba, 0xc9, 0xf0, 0x15, 0xd1, 0x58, 0xff, 0xe9, 0x39, 0x7c, 0x95, 0x30, 0xe4, 0x22, 0x19, 0x32, 0x77, 0xf2, 0x4c, 0x54, 0x48, 0x4d, 0xf4, 0xf7, 0xfb, 0xeb, 0x32
+        0x0d, 0x97, 0x0f, 0x15, 0xd0, 0x2c, 0x32, 0xbc, 0x16, 0x19, 0x13, 0x77, 0xb5, 0x37, 0xcd, 0x21, 0xc1, 0xb7, 0x4e, 0x3c, 0x2c, 0x09, 0x2e, 0x75, 0x58, 0x52, 0xc0, 0xa2, 0x66, 0x44, 0x7c, 0x1b
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -1504,18 +1504,19 @@ public static class ContractCodec {
             case 56: return ReadTabCopied(reader);
             case 57: return ReadTabFaviconAssigned(reader);
             case 58: return ReadTabPagePutAway(reader);
-            case 59: return ReadTabsChanged(reader);
-            case 60: return ReadTabsImported(reader);
-            case 61: return ReadTransientPageClosed(reader);
-            case 62: return ReadTransientPagePromoted(reader);
-            case 63: return ReadWebsiteDataRead(reader);
-            case 64: return ReadWindowBroughtForward(reader);
-            case 65: return ReadWindowChanged(reader);
-            case 66: return ReadWindowClosed(reader);
-            case 67: return ReadWindowRecordsAdopted(reader);
-            case 68: return ReadWorkspaceChanged(reader);
-            case 69: return ReadWorkspaceClosed(reader);
-            case 70: return ReadWorkspaceOpened(reader);
+            case 59: return ReadTabSavedImageChanged(reader);
+            case 60: return ReadTabsChanged(reader);
+            case 61: return ReadTabsImported(reader);
+            case 62: return ReadTransientPageClosed(reader);
+            case 63: return ReadTransientPagePromoted(reader);
+            case 64: return ReadWebsiteDataRead(reader);
+            case 65: return ReadWindowBroughtForward(reader);
+            case 66: return ReadWindowChanged(reader);
+            case 67: return ReadWindowClosed(reader);
+            case 68: return ReadWindowRecordsAdopted(reader);
+            case 69: return ReadWorkspaceChanged(reader);
+            case 70: return ReadWorkspaceClosed(reader);
+            case 71: return ReadWorkspaceOpened(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -1760,52 +1761,56 @@ public static class ContractCodec {
                 writer.WriteTag(58);
                 WriteTabPagePutAway(writer, member);
                 break;
-            case TabsChanged member:
+            case TabSavedImageChanged member:
                 writer.WriteTag(59);
+                WriteTabSavedImageChanged(writer, member);
+                break;
+            case TabsChanged member:
+                writer.WriteTag(60);
                 WriteTabsChanged(writer, member);
                 break;
             case TabsImported member:
-                writer.WriteTag(60);
+                writer.WriteTag(61);
                 WriteTabsImported(writer, member);
                 break;
             case TransientPageClosed member:
-                writer.WriteTag(61);
+                writer.WriteTag(62);
                 WriteTransientPageClosed(writer, member);
                 break;
             case TransientPagePromoted member:
-                writer.WriteTag(62);
+                writer.WriteTag(63);
                 WriteTransientPagePromoted(writer, member);
                 break;
             case WebsiteDataRead member:
-                writer.WriteTag(63);
+                writer.WriteTag(64);
                 WriteWebsiteDataRead(writer, member);
                 break;
             case WindowBroughtForward member:
-                writer.WriteTag(64);
+                writer.WriteTag(65);
                 WriteWindowBroughtForward(writer, member);
                 break;
             case WindowChanged member:
-                writer.WriteTag(65);
+                writer.WriteTag(66);
                 WriteWindowChanged(writer, member);
                 break;
             case WindowClosed member:
-                writer.WriteTag(66);
+                writer.WriteTag(67);
                 WriteWindowClosed(writer, member);
                 break;
             case WindowRecordsAdopted member:
-                writer.WriteTag(67);
+                writer.WriteTag(68);
                 WriteWindowRecordsAdopted(writer, member);
                 break;
             case WorkspaceChanged member:
-                writer.WriteTag(68);
+                writer.WriteTag(69);
                 WriteWorkspaceChanged(writer, member);
                 break;
             case WorkspaceClosed member:
-                writer.WriteTag(69);
+                writer.WriteTag(70);
                 WriteWorkspaceClosed(writer, member);
                 break;
             case WorkspaceOpened member:
-                writer.WriteTag(70);
+                writer.WriteTag(71);
                 WriteWorkspaceOpened(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
@@ -20277,6 +20282,29 @@ public static class ContractCodec {
         WriteTabPlacement(writer, value.Placement);
     }
 
+    public static TabSavedImageChanged ReadTabSavedImageChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabSavedImageChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            ReadTabSavedImageChange(reader),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+    }
+
+    public static void WriteTabSavedImageChanged(WireWriter writer, TabSavedImageChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.TabId);
+        WriteTabSavedImageChange(writer, value.Change);
+        if (value.FaviconUrl is { } presentFaviconUrl) {
+            writer.WritePresence(true);
+            writer.WriteString(presentFaviconUrl);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static TabSelection ReadTabSelection(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new TabSelection(
@@ -20321,7 +20349,10 @@ public static class ContractCodec {
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
-            reader.ReadBool());
+            reader.ReadBool(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (TabIconAccent?)ReadTabIconAccent(reader) : null);
         _ = ReadTabIconMode(reader);
         _ = reader.ReadString();
         _ = reader.ReadBool();
@@ -20406,6 +20437,24 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.KeepsPageLoaded);
+        if (value.SavedTitle is { } presentSavedTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSavedTitle);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SavedFaviconUrl is { } presentSavedFaviconUrl) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSavedFaviconUrl);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SavedIconAccent is { } presentSavedIconAccent) {
+            writer.WritePresence(true);
+            WriteTabIconAccent(writer, presentSavedIconAccent);
+        } else {
+            writer.WritePresence(false);
+        }
         WriteTabIconMode(writer, value.IconMode);
         writer.WriteString(value.DisplayTitle);
         writer.WriteBool(value.IsAwayFromSavedAddress);
@@ -20438,7 +20487,10 @@ public static class ContractCodec {
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
-            reader.ReadBool());
+            reader.ReadBool(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (TabIconAccent?)ReadTabIconAccent(reader) : null);
     }
 
     public static void WriteTabStateSeed(WireWriter writer, TabState value) {
@@ -20516,6 +20568,24 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.KeepsPageLoaded);
+        if (value.SavedTitle is { } presentSavedTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSavedTitle);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SavedFaviconUrl is { } presentSavedFaviconUrl) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSavedFaviconUrl);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SavedIconAccent is { } presentSavedIconAccent) {
+            writer.WritePresence(true);
+            WriteTabIconAccent(writer, presentSavedIconAccent);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static TabsChanged ReadTabsChanged(WireReader reader) {
@@ -21600,6 +21670,16 @@ public static class ContractCodec {
     }
 
     public static void WriteSystemTint(WireWriter writer, SystemTint value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static TabSavedImageChange ReadTabSavedImageChange(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (TabSavedImageChange)reader.ReadEnum(2);
+    }
+
+    public static void WriteTabSavedImageChange(WireWriter writer, TabSavedImageChange value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

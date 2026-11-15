@@ -60,15 +60,30 @@ public sealed class BrowserTab {
     /// A page reporting where it landed and what it is called. A URL entered
     /// while a native view is shown replaces that view with a web page, since
     /// persisting both is an impossible tab. A blank title is the page saying
-    /// nothing rather than clearing the name.
-    public void ObserveAppearance(string? url, string? title) {
+    /// nothing rather than clearing the name, except on arriving back at the
+    /// saved address, where the page before's title would be kept as the saved
+    /// page's: the tab shows the title kept for that page, or its host. Answers
+    /// whether the tab left its saved address for `url`, keeping the title and
+    /// favicon address of the page it showed there as its saved page's.
+    public bool ObserveAppearance(string? url, string? title) {
+        var leaves = url is not null && State.LeavesSavedAddress(url);
+        var arrives = url is not null && State.IsAwayFromSavedAddress && State.SavedAddress is { } saved
+            && new WebAddress(url).IsSamePage(new WebAddress(saved));
+        if (leaves) State = State.KeepingSavedAppearance();
         if (url is not null) State = State with { NativeContent = null, Url = url };
         if (!string.IsNullOrEmpty(title)) State = State with { Title = title };
+        else if (arrives) State = State with { Title = State.SavedTitle ?? HostTitle(url!) };
+        return leaves;
     }
 
-    /// A closed saved tab reopens at the address it was saved with.
+    /// The name of a page that names itself nothing: its host.
+    private static string HostTitle(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var address) && address.Host.Length > 0 ? address.Host : url;
+
+    /// A closed saved tab reopens at the address it was saved with, showing
+    /// that page's title and favicon meanwhile where it knows them.
     public void ReturnToSavedUrl() {
-        if (SavedUrl is { } saved) State = State with { Url = saved };
+        if (SavedUrl is { } saved) State = State.ReturnedTo(saved);
     }
 
     #endregion
@@ -78,7 +93,7 @@ public sealed class BrowserTab {
     /// Gives a saved tab that belongs nowhere, as a Start Page opened in a
     /// saved folder does, the page it shows as the one it belongs to.
     public void BelongToShownAddressIfNone() {
-        if (Placement.IsDurable && SavedUrl is null && Url is { } shown) State = State with { SavedUrl = shown };
+        if (Placement.IsDurable && SavedUrl is null && Url is { } shown) State = State.SavedAt(shown);
     }
 
     /// Adopts the page the tab shows as the one it belongs to. A tab at its
@@ -86,12 +101,13 @@ public sealed class BrowserTab {
     /// belongs nowhere.
     public void ReplaceSavedAddress() {
         _ = RequiredSavedAddress();
-        if (State.IsAwayFromSavedAddress) State = State with { SavedUrl = Url };
+        if (State.IsAwayFromSavedAddress) State = State.SavedAt(Url);
     }
 
     /// Returns the tab to the address it belongs to, which its page then
-    /// loads. Refused with `NoSavedAddress` for a tab that belongs nowhere.
-    public void ReturnToSavedAddress() => State = State with { Url = RequiredSavedAddress() };
+    /// loads, showing that page's title and favicon meanwhile where it knows
+    /// them. Refused with `NoSavedAddress` for a tab that belongs nowhere.
+    public void ReturnToSavedAddress() => State = State.ReturnedTo(RequiredSavedAddress());
 
     private string RequiredSavedAddress() => State.SavedAddress ?? throw new Rejected(new NoSavedAddress(Id));
 
@@ -151,8 +167,7 @@ public sealed class BrowserTab {
     public void Place(TabPlacement placement, Guid? folder, DateTimeOffset? now = null, bool preservesSplit = false) {
         if (Placement == placement && FolderId == folder) return;
         var savedUrl = placement.IsDurable ? SavedUrl ?? Url : null;
-        State = State with {
-            SavedUrl = savedUrl,
+        State = State.SavedAt(savedUrl) with {
             Placement = placement,
             FolderId = folder,
             SplitGroupId = preservesSplit ? SplitGroupId : null
