@@ -74,7 +74,7 @@ jobs:
         id: build
         env:
           GH_TOKEN: ${{ github.token }}
-          JOBS: ${{ vars.CHROMIUM_BUILD_JOBS || '4' }}
+          JOBS: ${{ vars.CHROMIUM_BUILD_JOBS || '8' }}
         run: python Scripts/control-plane/chromium-fork.py build --sdk "$CHROMIUM_SDK" --jobs "$JOBS"
       - name: Publish the engine
         env:

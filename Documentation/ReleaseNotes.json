@@ -5661,6 +5661,14 @@
     "space-switch-page-fades": {
       "category": "improved",
       "message": "With “Animate pages when switching Spaces” off or Reduce Motion on, the page now fades into the next Space's as you switch, following your swipe and the sidebar, instead of jumping when the switch ends, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have the setting in Appearance too."
+    },
+    "chromium-upstream-157-0-8103-80": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.80, with 83 upstream security fixes, five of them critical."
+    },
+    "chromium-update-planning": {
+      "category": "internal",
+      "message": "Chromium updates are planned before they build: the tooling reports how each of Crest's patches carries over and what upstream fixed, moves the built engine to a security fix in place, and opens scheduled updates as drafts for a maintainer to publish."
     }
   }
 }

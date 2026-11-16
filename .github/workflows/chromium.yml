@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Check upstream, build the pinned engine, or build an upstream update
+        description: Check upstream, build the pinned engine, or build an upstream update as a draft PR
         type: choice
         default: check
         options: [check, build, update]
@@ -18,7 +18,7 @@ on:
         description: Chrome release on the fork's channel. Empty selects the latest eligible release.
         type: string
       allow_major:
-        description: Allow a milestone update for manual review
+        description: Allow a milestone update (manual dispatch only)
         type: boolean
         default: false
 
@@ -57,7 +57,7 @@ jobs:
           import json, os, subprocess, sys
           from pathlib import Path
           sys.path.insert(0, 'Scripts/control-plane')
-          from chromium_fork import select_update, upstream_releases, release_version
+          from chromium_fork import release_notes, select_update, upstream_releases, release_version
           policy = json.loads(Path('CrestEngines/Chromium/fork.json').read_text())
           branch = policy['integrationBranch']
           subprocess.run(['git', 'fetch', '--depth=1', 'origin', f'refs/heads/{branch}'], check=True)
@@ -65,16 +65,14 @@ jobs:
           lock = json.loads(subprocess.check_output(['git', 'show', f'{sha}:CrestEngines/Chromium/source.lock.json'], text=True))
           releases = upstream_releases(policy)
           scheduled = os.environ['GITHUB_EVENT_NAME'] == 'schedule'
-          allow_major = policy['automaticMajorUpdates'] or (os.environ['ALLOW_MAJOR'] == 'true' and os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch')
+          allow_major = os.environ['ALLOW_MAJOR'] == 'true' and os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch'
           plan = select_update(lock['chromium']['version'], releases, allow_major)
           version = os.environ['UPSTREAM_VERSION'] or plan['candidate'] or ''
           operation = os.environ['OPERATION']
           if scheduled:
-              # Fixes on the pinned milestone come first. A newer milestone then
-              # opens a review PR as well; the publisher still keeps it from
-              # shipping on its own unless fork.json allows major updates.
-              if not version and plan['majorReviewRequired']:
-                  version, allow_major = plan['latest'], True
+              # The schedule builds fixes on the pinned milestone. A new milestone
+              # needs its patches rebased and its requests reviewed in a session,
+              # starting from `chromium-fork.py plan --allow-major`.
               operation = 'update' if os.environ['UPSTREAM_ENABLED'] == 'true' and version else 'check'
           if operation == 'update':
               if not version or release_version(version) <= release_version(plan['current']):
@@ -105,7 +103,7 @@ jobs:
           if note:
               pass
           elif operation == 'update':
-              note = f'Building Chromium {version}. A review PR opens once its engine is published.'
+              note = f'Building Chromium {version}. A draft PR opens when it builds; a maintainer publishes its engine.'
           elif operation == 'build':
               note = f"Building and publishing the pinned Chromium {plan['current']} engine."
           elif not available:
@@ -115,6 +113,11 @@ jobs:
           else:
               milestone = release_version(available)[0] != release_version(plan['current'])[0]
               note = f"Chromium {available} is available. Run operation=update{' with allow_major' if milestone else ''} to build it for review."
+          for field in ('candidate', 'latest'):
+              if plan[field] and plan[field] != plan['current']:
+                  plan[f'{field}Notes'] = release_notes(plan[field])
+          if (notes := plan.get('candidateNotes', {})).get('exploited'):
+              note += f" Upstream reports a fix for a vulnerability exploited in the wild; ship {version} the same day."
           print(f'::notice title=Chromium::{note}')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'base_sha={sha}\noperation={operation}\nversion={version}\nmajor={str(major).lower()}\n')
@@ -134,8 +137,6 @@ jobs:
       pull-requests: write
     outputs:
       pull_request: ${{ steps.update.outputs.pull_request }}
-      head: ${{ steps.update.outputs.head }}
-      automatic_release: ${{ steps.update.outputs.automatic_release }}
     env:
       CREST_CHROMIUM_WORKSPACE: ${{ vars.CHROMIUM_WORKSPACE }}
       CHROMIUM_SDK: ${{ vars.CHROMIUM_SDK }}
@@ -161,11 +162,12 @@ jobs:
           OPERATION: ${{ needs.resolve.outputs.operation }}
           UPSTREAM_VERSION: ${{ needs.resolve.outputs.version }}
           MAJOR: ${{ needs.resolve.outputs.major }}
-          JOBS: ${{ vars.CHROMIUM_BUILD_JOBS || '4' }}
+          JOBS: ${{ vars.CHROMIUM_BUILD_JOBS || '8' }}
         run: |
           args=("$OPERATION" --sdk "$CHROMIUM_SDK" --jobs "$JOBS")
           if [[ "$OPERATION" == update ]]; then
-            args+=(--version "$UPSTREAM_VERSION")
+            # A session or another engine build may own the shared tree; the update then waits for the next check.
+            args+=(--version "$UPSTREAM_VERSION" --when-idle)
             if [[ "$MAJOR" == true ]]; then args+=(--allow-major); fi
           fi
           python Scripts/control-plane/chromium-fork.py "${args[@]}"
@@ -178,62 +180,14 @@ jobs:
           python Scripts/control-plane/publish-chromium-engine.py \
             --source "$ENGINE_SOURCE" --ninja "$CREST_CHROMIUM_WORKSPACE/tools/bin/ninja" \
             --repository "$GITHUB_REPOSITORY"
-      - name: Publish upstream update for review
+      - name: Open the update as a draft for review
         id: update
-        if: needs.resolve.outputs.operation == 'update'
+        # The engine stays unpublished: a maintainer tests it, publishes it and merges.
+        if: needs.resolve.outputs.operation == 'update' && steps.build.outputs.skipped != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          ENGINE_SOURCE: ${{ steps.build.outputs.source }}
           BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
-          MAJOR: ${{ needs.resolve.outputs.major }}
-          CHROMIUM_AUTO_RELEASE: ${{ vars.CHROMIUM_AUTO_RELEASE }}
         run: |
           git config --local credential.https://github.com.helper '!gh auth git-credential'
-          args=(--source "$ENGINE_SOURCE" --ninja "$CREST_CHROMIUM_WORKSPACE/tools/bin/ninja"
-                --base-sha "$BASE_SHA" --repository "$GITHUB_REPOSITORY")
-          if [[ "$MAJOR" == true ]]; then args+=(--major-update); fi
-          python Scripts/control-plane/publish-chromium-update.py "${args[@]}"
-
-  promote:
-    needs: engine
-    if: needs.engine.outputs.automatic_release == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: write
-    steps:
-      - name: Merge the verified update and publish it to Development
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          UPDATE_PR: ${{ needs.engine.outputs.pull_request }}
-          UPDATE_HEAD: ${{ needs.engine.outputs.head }}
-        run: |
-          if [[ "$(gh pr view "$UPDATE_PR" --json state --jq .state)" != MERGED ]]; then
-            gh pr merge "$UPDATE_PR" --squash --auto --match-head-commit "$UPDATE_HEAD"
-          fi
-          python3 - <<'PY'
-          import base64, json, os, subprocess, time
-          def gh(*args):
-              return subprocess.check_output(['gh', *args], text=True).strip()
-          for attempt in range(330):
-              pr = json.loads(gh('pr', 'view', os.environ['UPDATE_PR'], '--json', 'state,headRefOid,mergeCommit'))
-              if pr['headRefOid'] != os.environ['UPDATE_HEAD']:
-                  raise SystemExit('The reviewed update changed; refusing to publish')
-              if pr['state'] == 'MERGED': break
-              if pr['state'] == 'CLOSED': raise SystemExit('Update was closed without merging')
-              time.sleep(10)
-          else: raise SystemExit('Update is waiting for required checks or review; no release was dispatched')
-          repo, sha = os.environ['GH_REPO'], pr['mergeCommit']['oid']
-          content = json.loads(gh('api', f'repos/{repo}/contents/CrestEngines/Chromium/fork.json?ref={sha}'))
-          policy = json.loads(base64.b64decode(content['content']))
-          default = json.loads(gh('api', f'repos/{repo}'))['default_branch']
-          branch = policy['integrationBranch']
-          if policy['automaticChannel'] != 'development' or branch != default:
-              raise SystemExit('Automatic publication requires Development on the default branch')
-          # Dispatch explicitly because GITHUB_TOKEN pushes do not trigger workflows.
-          # Publish trusted main, including any newer merges that arrived meanwhile.
-          gh('workflow', 'run', 'release.yml', '--ref', branch, '-f', 'channel=development')
-          PY
+          python Scripts/control-plane/publish-chromium-update.py --base-sha "$BASE_SHA" \
+            --repository "$GITHUB_REPOSITORY" --receipt "$CREST_CHROMIUM_WORKSPACE/last-build.json"

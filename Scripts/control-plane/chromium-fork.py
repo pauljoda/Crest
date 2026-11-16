@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 from pathlib import Path
 import platform
 import shutil
 
-from chromium_fork import (ENGINE, REPO, Workspace, exclusive_workspace, prepare_update,
-                           read_json, release_version, run, select_update, sha256,
-                           upstream_releases, write_json)
+from chromium_fork import (ENGINE, REPO, Workspace, building, exclusive_workspace, plan_update, prepare_update,
+                           prune_downloads, prune_sources, read_json, release_notes, release_version, run,
+                           select_update, sha256, upstream_releases, write_json)
 import chromium_engine
 
 
@@ -60,22 +61,35 @@ def main():
                         default=Path(os.environ.get("CREST_CHROMIUM_WORKSPACE") or Path.home() / "Dev/CrestChromium"))
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("status")
+    commands.add_parser("prune", help="Remove every prepared source except the one this checkout builds from")
     check = commands.add_parser("check-upstream")
     check.add_argument("--allow-major", action="store_true")
     adoption = commands.add_parser("adopt")
     adoption.add_argument("--source", type=Path, required=True)
+    planning = commands.add_parser("plan", help="Check an upstream release against Crest's patches; changes nothing")
+    planning.add_argument("--version", default="auto", help="A release on the fork's channel, or auto for the newest eligible")
+    planning.add_argument("--allow-major", action="store_true")
+    planning.add_argument("--report", type=Path, help="Where to write the plan, rebased patches and conflicts")
     for name in ("build", "update"):
         build = commands.add_parser(name)
         build.add_argument("--sdk", type=Path, required=True)
         build.add_argument("--ninja", type=Path, default=Path(shutil.which("ninja") or "ninja"))
-        build.add_argument("--jobs", type=int, default=4)
+        build.add_argument("--jobs", type=int, default=8)
         build.add_argument("--min-free-gib", type=int, default=15)
         if name == "update":
-            build.add_argument("--version", required=True, help="A Chrome release on the fork's channel")
+            build.add_argument("--version", required=True, help="A release on the fork's channel, or auto")
             build.add_argument("--allow-major", action="store_true")
+            build.add_argument("--when-idle", action="store_true",
+                               help="Exit successfully without building while another Chromium operation runs")
     args = parser.parse_args()
     workspace = Workspace(args.workspace)
     policy = read_json(REPO / ENGINE / "fork.json")
+    if getattr(args, "version", None) == "auto":
+        plan = select_update(workspace.lock["chromium"]["version"], upstream_releases(policy), args.allow_major)
+        if not plan["candidate"]:
+            print(json.dumps(plan, indent=2))
+            return
+        args.version = plan["candidate"]
     if args.command == "status":
         key = chromium_engine.engine_key(REPO)
         print(json.dumps({"workspace": str(workspace.root), "source": str(workspace.source),
@@ -86,14 +100,41 @@ def main():
         return
     if args.command == "check-upstream":
         result = select_update(workspace.lock["chromium"]["version"], upstream_releases(policy), args.allow_major)
+        for field in ("candidate", "latest"):
+            if result[field] and result[field] != result["current"]:
+                result[f"{field}Notes"] = release_notes(result[field])
         print(json.dumps(result, indent=2))
+        return
+    if args.command == "plan":
+        if args.version not in upstream_releases(policy):
+            parser.error(f"{args.version} is not a {policy['upstream']['channel']} release")
+        plan, _ = plan_update(REPO, workspace.root, args.version, args.allow_major, args.report)
+        print(json.dumps(plan, indent=2))
         return
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         parser.error("Engine preparation and builds require an Apple Silicon Mac")
-    with exclusive_workspace(workspace.root):
+    if getattr(args, "when_idle", False) and building():
+        return skip("A Chromium build is running in the workspace; this update waits for the next check.")
+    with contextlib.ExitStack() as stack:
+        try:
+            stack.enter_context(exclusive_workspace(workspace.root))
+        except ValueError:
+            if getattr(args, "when_idle", False):
+                return skip("Another Chromium operation owns the workspace; this update waits for the next check.")
+            raise
         if args.command == "adopt":
             adopt(workspace, args.source)
             return
+        if args.command == "prune":
+            if not (workspace.directory / "prepared.json").is_file():
+                parser.error(f"This checkout's Chromium {workspace.lock['chromium']['version']} source isn't prepared; "
+                             "prune from the checkout whose engine the workspace builds")
+            for name in prune_sources(workspace.root, {workspace.directory.name}):
+                print(f"Removed Chromium source {name}")
+            for name in prune_downloads(workspace.root, workspace.lock):
+                print(f"Removed cached {name}")
+            return
+        timings, plan = {}, None
         if args.command == "update":
             current = workspace.lock["chromium"]["version"]
             if args.version not in upstream_releases(policy):
@@ -102,18 +143,30 @@ def main():
                 parser.error("Select a release on the current milestone, or explicitly pass --allow-major")
             if run("git", "-C", REPO, "status", "--porcelain", capture=True).strip():
                 parser.error("Start an upstream update from a clean Crest checkout")
-            workspace = prepare_update(REPO, workspace.root, args.version)
-        workspace.build(args.sdk, args.ninja.resolve(), args.jobs, args.min_free_gib)
+            workspace, plan = prepare_update(REPO, workspace.root, args.version, args.allow_major, timings)
+        workspace.build(args.sdk, args.ninja.resolve(), args.jobs, args.min_free_gib, timings)
         key = chromium_engine.engine_key(REPO)
         receipt = {"engineKey": key, "chromium": workspace.lock["chromium"]["version"],
                    "source": str(workspace.source), "configuration": "performance",
                    "argsSHA256": sha256(workspace.source / "out/CrestBaseline/args.gn"),
-                   "commit": run("git", "-C", REPO, "rev-parse", "HEAD", capture=True).strip()}
+                   "commit": run("git", "-C", REPO, "rev-parse", "HEAD", capture=True).strip(),
+                   "secondsPerStep": timings}
+        if plan:
+            receipt |= {"path": plan["path"], "pgoChanged": plan["pgoChanged"], "plan": plan["report"]}
         write_json(workspace.root / "last-build.json", receipt)
         print(json.dumps(receipt, indent=2))
         if output := os.environ.get("GITHUB_OUTPUT"):
             with Path(output).open("a") as stream:
-                stream.write(f"source={workspace.source}\nengine_tag={chromium_engine.release_tag(key)}\n")
+                stream.write(f"source={workspace.source}\nengine_tag={chromium_engine.release_tag(key)}\n"
+                             f"plan={plan['report'] if plan else ''}\n")
+
+
+def skip(reason):
+    """End a scheduled update without building, leaving a notice in the run."""
+    print(f"::notice title=Chromium::{reason}")
+    if output := os.environ.get("GITHUB_OUTPUT"):
+        with Path(output).open("a") as stream:
+            stream.write("skipped=true\n")
 
 
 if __name__ == "__main__":
