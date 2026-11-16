@@ -17,8 +17,8 @@ a persistent workspace outside the checkout, by default `~/Dev/CrestChromium`.
 They are build products, not the source of truth. Keeping the fork here lets a
 change to the engine contract and its Swift caller be reviewed together.
 
-`fork.json` defines the upstream release channel, integration branch, and
-automatic release channel: Crest follows Chrome's Stable releases for Mac.
+`fork.json` defines the upstream release channel and the integration branch:
+Crest follows the upstream Stable releases for Mac.
 `source.lock.json` pins the complete upstream recipe; `host-inputs.json` records
 the inputs and outputs of Crest's patches. A new upstream release must apply
 every existing Crest hunk without fuzz. A conflict, new toolchain requirement,
@@ -623,4 +623,5 @@ subsequent user channel choices remain respected. Keep those final experimental
 feeds available so installations that update later can still make the transition.
 Development build numbers exceed every published channel and feed.
 Merging a PR into main publishes the development release from the merge commit. Chromium maintenance
-also targets main and publishes verified engine updates to Development.
+also targets main and opens upstream updates as draft PRs, whose engines a maintainer publishes
+before merging.

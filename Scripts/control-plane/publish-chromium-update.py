@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
-"""Commit a built upstream update, publish its engine, and open its review."""
+"""Commit a built upstream update and open it as a draft for review.
+
+The engine is not published here. A maintainer tests the build, publishes it
+from the build Mac with `publish-chromium-engine.py`, and only then merges, so
+nothing an update builds reaches people without that decision.
+"""
 import argparse
 import json
 import os
 from pathlib import Path
 import re
-import sys
 
 from chromium_fork import ENGINE, REPO, read_json, run
 import chromium_engine
-
-
-def automatic_release_allowed(policy, *, enabled, default_branch, major_update):
-    return (enabled == "true"
-            and policy["automaticChannel"] == "development"
-            and policy["integrationBranch"] == default_branch
-            and (not major_update or policy["automaticMajorUpdates"]))
 
 
 def append_release_note(catalog, identifier, note):
@@ -38,19 +35,41 @@ def append_release_note(catalog, identifier, note):
     return appended
 
 
+def update_plan(receipt, *, version, base_sha, engine_key):
+    """The plan behind `receipt`, once the receipt is shown to be this update's own build.
+
+    The receipt is read after the build has released the workspace, so another
+    build may have replaced it with one for a different release or commit.
+    """
+    if "plan" not in receipt:
+        raise ValueError("The receipt has no update plan; pass the receipt of this update's build")
+    found = {"chromium": receipt.get("chromium"), "commit": receipt.get("commit"), "engineKey": receipt.get("engineKey")}
+    expected = {"chromium": version, "commit": base_sha, "engineKey": engine_key}
+    if found != expected:
+        raise ValueError(f"The receipt belongs to another build: {found}, expected {expected}")
+    plan = read_json(Path(receipt["plan"]) / "plan.json")
+    if plan["version"] != version:
+        raise ValueError(f"The receipt's plan is for {plan['version']}, not {version}")
+    return plan
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, required=True)
-    parser.add_argument("--ninja", type=Path, required=True)
     parser.add_argument("--base-sha", required=True)
     parser.add_argument("--repository", required=True)
-    parser.add_argument("--major-update", action="store_true")
+    parser.add_argument("--receipt", type=Path, required=True, help="The build's last-build.json")
     args = parser.parse_args()
     if not re.fullmatch(r"[a-f0-9]{40}", args.base_sha):
         parser.error("Expected an immutable base commit")
     policy = read_json(REPO / ENGINE / "fork.json")
     base = policy["integrationBranch"]
     version = read_json(REPO / ENGINE / "source.lock.json")["chromium"]["version"]
+    receipt = read_json(args.receipt)
+    try:
+        plan = update_plan(receipt, version=version, base_sha=args.base_sha,
+                           engine_key=chromium_engine.engine_key(REPO))
+    except ValueError as error:
+        parser.error(str(error))
     branch = f"codex/chromium-upstream-{version}-{args.base_sha[:12]}"
     allowed_paths = {str(ENGINE / "source.lock.json"), str(ENGINE / "host-inputs.json")}
     changed = set(run("git", "diff", "--name-only", capture=True).splitlines())
@@ -74,29 +93,41 @@ def main():
     run("git", "add", *sorted(allowed_paths), "Config/Version.xcconfig", "Documentation/ReleaseNotes.json")
     run(REPO / "Scripts/check-version.sh", "--fix-commit")
     run("git", "commit", "-s", "-m", f"Update Chromium to {version}")
-    head = run("git", "rev-parse", "HEAD", capture=True).strip()
-    # A branch is never pushed until its engine is available by the exact input key.
-    run(sys.executable, REPO / "Scripts/control-plane/publish-chromium-engine.py",
-        "--source", args.source, "--ninja", args.ninja, "--repository", args.repository)
     run("git", "push", "origin", f"HEAD:refs/heads/{branch}")
-    body = (f"Updates the maintained Chromium fork to Chrome {version}"
-            f"{', a new Chromium milestone' if args.major_update else ''}.\n\n"
-            "Crest's unchanged patches applied without fuzz, and the performance engine built successfully. "
-            f"Engine: `{chromium_engine.release_tag(chromium_engine.engine_key(REPO))}`.\n\n"
-            "A compiled engine alone does not verify native browsing behavior. To try it, check out this branch "
-            "and run `Scripts/install-local-macos-release.sh`, which installs Crest with this published engine. "
-            "Merging publishes it to Development.")
+    body = review_body(version, plan, receipt, chromium_engine.release_tag(chromium_engine.engine_key(REPO)))
     existing = json.loads(run("gh", "pr", "list", "--repo", args.repository, "--head", branch,
                               "--base", base, "--state", "open", "--json", "url", capture=True))
-    url = existing[0]["url"] if existing else run("gh", "pr", "create", "--repo", args.repository,
+    url = existing[0]["url"] if existing else run("gh", "pr", "create", "--repo", args.repository, "--draft",
         "--base", base, "--head", branch, "--title", f"Update Chromium to {version}", "--body", body, capture=True).strip()
-    default_branch = json.loads(run("gh", "api", f"repos/{args.repository}", capture=True))["default_branch"]
-    promote = automatic_release_allowed(policy, enabled=os.environ.get("CHROMIUM_AUTO_RELEASE"),
-        default_branch=default_branch, major_update=args.major_update)
     print(url)
     if output := os.environ.get("GITHUB_OUTPUT"):
         with Path(output).open("a") as stream:
-            stream.write(f"pull_request={url}\nhead={head}\nautomatic_release={str(promote).lower()}\n")
+            stream.write(f"pull_request={url}\n")
+
+
+def review_body(version, plan, receipt, tag):
+    """The draft's description: what upstream fixed, how the update went, and what is left before it ships."""
+    notes = plan.get("releaseNotes", {})
+    if "error" in notes:
+        security = notes["error"] + "."
+    else:
+        covered = "" if notes["exact"] else f" (the note for {notes['notedVersion']}, the latest release it covers)"
+        security = (f"Upstream's release note{covered}: {notes['securityFixes']} security fixes, "
+                    f"{notes['critical']} Critical and {notes['high']} High"
+                    f"{', one of them exploited in the wild' if notes['exploited'] else ''}"
+                    f"{'. This is an early stable release, which reaches a small share of people first' if notes['earlyStable'] else ''}.")
+    minutes = {step: round(seconds / 60) for step, seconds in receipt.get("secondsPerStep", {}).items()}
+    return (f"Updates Chromium from {plan['current']} to {version}"
+            f"{', a new milestone' if plan['milestone'] else ''}.\n\n{security}\n\n"
+            f"The build {'advanced the pinned source in place' if plan['path'] == 'advance' else 'prepared a new source'}"
+            f"{' and recompiled everything for the new PGO profile' if plan['pgoChanged'] else ''}. "
+            f"Every Crest patch applied without fuzz, and the engine passed its headless smoke check. "
+            f"Minutes per step: {json.dumps(minutes)}.\n\n"
+            f"Engine `{tag}` is built on the build Mac and **not published**. Before this leaves draft:\n\n"
+            "1. Package Crest with `package-chromium-host.py --product --distribution` from the built engine and "
+            "load real pages, extensions and sign-ins in an isolated copy.\n"
+            "2. A maintainer publishes the engine with `publish-chromium-engine.py`.\n"
+            "3. Merging then publishes it to Development.\n")
 
 
 if __name__ == "__main__":
