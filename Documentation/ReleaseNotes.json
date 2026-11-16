@@ -5653,6 +5653,14 @@
     "open-folder-archive-icon": {
       "category": "improved",
       "message": "The button on a group's or an open folder's header that archives all its tabs now shows an archive box instead of a −. Saved folders keep their −, which unloads their tabs."
+    },
+    "space-switch-page-slides": {
+      "category": "improved",
+      "message": "On iPad and an unfolded iPhone, the page now slides with the sidebar as you switch Spaces, instead of changing all at once when the switch ends. With Reduce Motion on, the page stays still."
+    },
+    "space-switch-page-fades": {
+      "category": "improved",
+      "message": "With “Animate pages when switching Spaces” off or Reduce Motion on, the page now fades into the next Space's as you switch, following your swipe and the sidebar, instead of jumping when the switch ends, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have the setting in Appearance too."
     }
   }
 }

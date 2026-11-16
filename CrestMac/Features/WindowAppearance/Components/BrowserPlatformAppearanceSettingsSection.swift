@@ -63,15 +63,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             )
             .browserAppearanceSetting(.darkSpaceDimming)
 
-            CrestSettingRow(
-                "Animate pages when switching Spaces",
-                setting: motion.resettable("Animate pages when switching Spaces")
-            ) {
-                Toggle("Animate pages when switching Spaces", isOn: motion.binding)
-                    .labelsHidden()
-                    .accessibilityIdentifier("animate-space-pages")
-            }
-            .browserAppearanceSetting(.spacePageMotion)
+            BrowserSpacePageMotionRow(motion: motion)
 
             CrestSettingSlider(
                 "Sidebar hover area",

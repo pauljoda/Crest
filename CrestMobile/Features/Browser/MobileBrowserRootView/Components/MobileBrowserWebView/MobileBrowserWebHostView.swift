@@ -25,6 +25,11 @@ final class MobileBrowserWebHostView: UIView {
     private var viewport = MobileBrowserPageViewport.inline
     /// When this host claimed `hostedWebView`: the newest claim is the largest.
     private var claim = 0
+    /// Whether this host took its web view before SwiftUI gave it a size. The
+    /// web view keeps the size it had until the host has one, rather than
+    /// being laid out at none for a frame as it moves between hosts, which
+    /// shows its page narrower for a moment.
+    private var awaitsSize = false
 
     // MARK: - Actions - Hosting
 
@@ -78,6 +83,10 @@ final class MobileBrowserWebHostView: UIView {
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = true
         webView.transform = .identity
+        if bounds.isEmpty {
+            awaitsSize = true
+            clipsToBounds = true
+        }
         addSubview(webView)
         applyViewportInsets()
     }
@@ -86,6 +95,10 @@ final class MobileBrowserWebHostView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        if awaitsSize, !bounds.isEmpty {
+            awaitsSize = false
+            clipsToBounds = false
+        }
         placeHostedWebView()
     }
 
@@ -100,7 +113,7 @@ final class MobileBrowserWebHostView: UIView {
     /// frame insets. It is placed by bounds and centre rather than frame, which
     /// stay true while a history swipe shifts the page aside.
     private func placeHostedWebView() {
-        guard let hostedWebView, hostedWebView.superview === self else { return }
+        guard let hostedWebView, hostedWebView.superview === self, !awaitsSize else { return }
         let frame = pageFrame
         hostedWebView.bounds = CGRect(
             origin: .zero,

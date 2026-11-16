@@ -148,9 +148,22 @@ extension MobileBrowserRootContent {
         )
     }
 
-    /// The expanded detail area. The container decides whether it adjoins a
-    /// docked sidebar, while the page and split composition stay identical.
+    /// The expanded detail area, which slides with the sidebar's Space pager.
+    /// The container decides whether it adjoins a docked sidebar, while the
+    /// page and split composition stay identical.
     func regularPageSurface(
+        adjoinsSidebar: Bool,
+        commands: BrowserCommandPaletteCommandRegistry
+    ) -> MobileSpacePageStage<MobileRegularPageSurface> {
+        MobileSpacePageStage(
+            model: model,
+            adjoinsSidebar: adjoinsSidebar,
+            usesBorderlessPageFrame: usesBorderlessPageFrame,
+            shown: shownRegularPageSurface(adjoinsSidebar: adjoinsSidebar, commands: commands)
+        )
+    }
+
+    private func shownRegularPageSurface(
         adjoinsSidebar: Bool,
         commands: BrowserCommandPaletteCommandRegistry
     ) -> MobileRegularPageSurface {

@@ -1,18 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Presentation is independent of selection: both sides of a slide need their
-/// content, but neither may own input until the selected page has settled.
-enum SpaceContentPresentation {
-    case inactive
-    case preview
-    case interactive
-}
-
-extension EnvironmentValues {
-    @Entry var spaceContentPresentation = SpaceContentPresentation.interactive
-}
-
 /// The hosting view inherits its environment through the representable's native
 /// hierarchy. Copying the parent's entire EnvironmentValues back into this root
 /// duplicates propagation through every row on native geometry/focus updates.

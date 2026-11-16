@@ -12,6 +12,9 @@ struct SpacePagerSettlement: Equatable {
     var releaseSpeed: CGFloat = 0
 
     static let trackingPagesPerSecond: CGFloat = 4
+    /// A one-page slide nothing threw, as the keyboard's: the standard
+    /// duration on the measured curve.
+    static let onePage = SpacePagerSettlement(startPosition: 0, endPosition: 1, generation: 0)
     private static let firstControl = CGPoint(x: 0.27, y: 1)
     private static let secondControl = CGPoint(x: 0.18, y: 1)
 

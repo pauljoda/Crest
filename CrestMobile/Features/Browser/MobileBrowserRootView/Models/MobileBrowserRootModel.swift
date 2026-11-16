@@ -462,6 +462,13 @@ extension MobileBrowserRootModel {
         )
     }
 
+    /// The widths the columns of `space`'s split take in this window, as
+    /// fractions of its row, for a split another Space shows.
+    func splitColumnFractions(in space: SpaceModel) -> [Double] {
+        layoutPersistence.splitColumnFractions(
+            groupID: browser.shownSplitGroupID(in: space), memberCount: browser.cards(in: space).count)
+    }
+
     func commitSplitColumnFractions(_ fractions: [Double]) {
         layoutPersistence.commitSplitLayout(fractions, groupID: presentedSplitGroupID)
     }

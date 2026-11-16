@@ -3,9 +3,9 @@ import SwiftUI
 /// The window's frame: how much of the Space shows around a page, which side
 /// the sidebar sits on, and the accent its tabs and address field wear.
 ///
-/// The desktop hands in the choices only it has — focused-window transparency
-/// and Space page motion — as extra rows and the settings that go with them, so
-/// the group's own Reset covers them too. The group shows the rows the page's
+/// Each platform hands in the rest as extra rows and the settings that go
+/// with them — Space page motion on every platform, and the window choices
+/// only the desktop has — so the group's own Reset covers them too. The group shows the rows the page's
 /// filter keeps, and none of itself when it keeps none.
 struct BrowserWindowAppearanceGroup<Extra: View>: View {
     // MARK: - Variables
