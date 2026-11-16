@@ -34,26 +34,14 @@ struct BrowserFolderHeaderControl: View {
             if isEditing {
                 HStack(spacing: BrowserFolderLayout.headerSpacing) {
                     if folder.kind.showsArtwork {
-                        BrowserFolderIcon(
-                            folder: folder,
-                            isExpanded: interaction.isExpanded.wrappedValue,
-                            metrics: configuration.headerMetrics
-                        )
+                        Label {
+                            nameField
+                        } icon: {
+                            folderIcon
+                        }
+                    } else {
+                        nameField
                     }
-
-                    TextField(folder.kind.namePrompt, text: interaction.draftTitle, selection: $nameSelection)
-                        .textFieldStyle(.plain)
-                        .modifier(BrowserFolderNameFieldFont(kind: folder.kind))
-                        .focused(interaction.isTitleFocused)
-                        .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
-                            if focused { selectWholeName() }
-                        }
-                        .submitLabel(.done)
-                        .onSubmit(interaction.commitTitle)
-                        .onKeyPress(.escape) {
-                            interaction.cancelTitleEditing()
-                            return .handled
-                        }
 
                     Spacer(minLength: 8)
                 }
@@ -74,17 +62,18 @@ struct BrowserFolderHeaderControl: View {
                 } label: {
                     HStack(spacing: BrowserFolderLayout.headerSpacing) {
                         if folder.kind.showsArtwork {
-                            BrowserFolderIcon(
-                                folder: folder,
-                                isExpanded: interaction.isExpanded.wrappedValue,
-                                metrics: configuration.headerMetrics
-                            )
-
-                            BrowserFolderHeaderTitle(
-                                folder: folder, context: configuration.context, tintsTitle: tintsTitle,
-                                emphasizesShownTab: alwaysVisible
-                            )
-                            .equatable()
+                            // A tab row's own label, so the title keeps the
+                            // favicons' gap from the icon and starts where
+                            // the tabs' titles do.
+                            Label {
+                                BrowserFolderHeaderTitle(
+                                    folder: folder, context: configuration.context, tintsTitle: tintsTitle,
+                                    emphasizesShownTab: alwaysVisible
+                                )
+                                .equatable()
+                            } icon: {
+                                folderIcon
+                            }
                         } else {
                             BrowserGroupHeaderTitle(folder: folder, tintsTitle: tintsTitle)
                         }
@@ -136,7 +125,7 @@ struct BrowserFolderHeaderControl: View {
                             )
                         }
                     }
-                    .padding(.trailing, configuration.headerMetrics.contentTrailingInset)
+                    .padding(.trailing, configuration.headerTrailingInset)
                 }
                 .onHover { isHovering = $0 }
                 // A folder being renamed shows no card.
@@ -144,6 +133,32 @@ struct BrowserFolderHeaderControl: View {
             }
         }
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
+    }
+
+    /// The folder's symbol in the tab rows' favicon column.
+    private var folderIcon: some View {
+        BrowserFolderIcon(
+            folder: folder,
+            isExpanded: interaction.isExpanded.wrappedValue,
+            metrics: configuration.headerMetrics
+        )
+    }
+
+    /// The field the folder is renamed in.
+    private var nameField: some View {
+        TextField(folder.kind.namePrompt, text: interaction.draftTitle, selection: $nameSelection)
+            .textFieldStyle(.plain)
+            .modifier(BrowserFolderNameFieldFont(kind: folder.kind))
+            .focused(interaction.isTitleFocused)
+            .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
+                if focused { selectWholeName() }
+            }
+            .submitLabel(.done)
+            .onSubmit(interaction.commitTitle)
+            .onKeyPress(.escape) {
+                interaction.cancelTitleEditing()
+                return .handled
+            }
     }
 
     /// Selects the whole name once the field has it, which it takes as focus
