@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channels": {
-    "stable": "chromium-upstream-157-0-8103-51",
+    "stable": "crest-0-10-customization",
     "development": "chromium-update-planning",
     "nightly": "space-switch-page-fades"
   }

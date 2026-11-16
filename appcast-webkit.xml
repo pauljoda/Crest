@@ -6,6 +6,49 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.10.8</title>
+            <pubDate>Mon, 16 Nov 2026 20:49:56 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1635</sparkle:version>
+            <sparkle:shortVersionString>0.10.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 95 user-facing changes.
+
+### New
+
+- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
+
+### Improved
+
+- A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back.
+- On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space.
+- On Mac, closing a Peek shrinks it back into the link it grew out of, instead of it vanishing.
+- On Mac, a quick swipe between Spaces now finishes as fast as switching with the keyboard shortcut.
+- The button on a group's or an open folder's header that archives all its tabs now shows an archive box instead of a −. Saved folders keep their −, which unloads their tabs.
+- On iPad and an unfolded iPhone, the page now slides with the sidebar as you switch Spaces, instead of changing all at once when the switch ends. With Reduce Motion on, the page stays still.
+- With “Animate pages when switching Spaces” off or Reduce Motion on, the page now fades into the next Space's as you switch, following your swipe and the sidebar, instead of jumping when the switch ends, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have the setting in Appearance too.
+
+### Fixed
+
+- On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window.
+- In the sidebar, a folder's icon, title and … button now line up with the icons, titles and buttons of the tabs beside it.
+- Choosing Modern or Simple during setup now restyles your Spaces as choosing it in Settings does, including the Spaces you already had and the ones setup imports, instead of leaving them with crests. Setup also opens on the style you use, and imports from Settings bring Spaces in that style.
+- Chromium is updated to 157.0.8103.80, with 83 upstream security fixes, five of them critical.
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/2a4fc3bfad799bc4d85266c00cc0d25e6ae85565...0196e6fb4196ca21957c03b4f614914b89e4983b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.10.8/Installer-Crest-0.10.8-arm64.dmg)
+
+[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.10.8/Installer-Crest-0.10.8-arm64.dmg" length="221549638" type="application/octet-stream" sparkle:edSignature="hPJaZgRrgbc1PopRn20xJTgJuFD7soiDr31HQYB5j/2gcJgoFITC4dm3NG/LA5cwj6C6sag1nVB/cMpEyNF8AA=="/>
+        </item>
+        <item>
             <title>0.10.7</title>
             <pubDate>Mon, 16 Nov 2026 19:25:43 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -114,6 +157,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: SM8fa1US6zORSfMKz/LE/wrKb8/J5umLEnUkqxoJ1w22rDsiMdq+v9NKz64jW+3LpPyXQjuSp1+uGUxosXEiDQ==
-length: 8769
+edSignature: HSnBwuMGc798YH+8t91tBMsNZXHSrJlKYi9hCBxtQ3g36uwtAE2FcbG18+/r7YSPe1GW2nzZCfvVr3CW8k2OBg==
+length: 12437
 -->
