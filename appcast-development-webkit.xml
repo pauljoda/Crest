@@ -6,35 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.94</title>
-            <pubDate>Mon, 16 Nov 2026 03:31:02 +0000</pubDate>
+            <title>0.10.0</title>
+            <pubDate>Mon, 16 Nov 2026 04:08:54 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1625</sparkle:version>
-            <sparkle:shortVersionString>0.9.94</sparkle:shortVersionString>
+            <sparkle:version>1626</sparkle:version>
+            <sparkle:shortVersionString>0.10.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### New
 
-- A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it.
-- A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back.
-- On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space.
-
-### Fixed
-
-- On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window.
+- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/0d5e0936f9878ea72d8593af677f0b14b219064c...4c42c86e7df1b420aa3610a73dbe966d0ca26d69) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.94-2026-11-16-1625-r625.1/Installer-Crest-0.9.94-development-2026-11-16-4c42c86-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/4c42c86e7df1b420aa3610a73dbe966d0ca26d69...f2b2e4eaf55dbba895bca7fc382098a0f35a238e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.0-2026-11-16-1626-r626.1/Installer-Crest-0.10.0-development-2026-11-16-f2b2e4e-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.94-2026-11-16-1625-r625.1/Installer-Crest-0.9.94-development-2026-11-16-4c42c86-arm64.dmg" length="221477508" type="application/octet-stream" sparkle:edSignature="bfdL8ivut06N+5s8ND/z43LPALgdVZr2LYMIEK6D4n3jHx9xrNSDmf/SrRrC6q3RCJzPJ4nK2T6fK9FAbYltAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.0-2026-11-16-1626-r626.1/Installer-Crest-0.10.0-development-2026-11-16-f2b2e4e-arm64.dmg" length="221464197" type="application/octet-stream" sparkle:edSignature="Uun/Jd5FZIVF8GLLKhXETnCc0fJ2wTUo5et+1hBd2k7jRo3/e2CNZhzwgITr5DanXijEmtO8hX8TbSyuWkfACA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -66,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Rbj3GSnVrIo2YFr71WNWuU9q0GEVvF/c+Fh7Z7pNwx1wnUQUqQHJyNuXwBEFiCLIS1cvvIgFC7ZD3s8UY94TBA==
-length: 4712
+edSignature: AJQFVaoKRWLjGUDm/Yd4IdxOQwtORRF/XiiyktDLaLtYJkJzXzWXw2abABhLvNyvAkxxaM/tpdKvWq55VdhHDQ==
+length: 4159
 -->
