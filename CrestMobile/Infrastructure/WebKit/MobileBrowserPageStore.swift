@@ -349,6 +349,18 @@ final class MobileBrowserPageStore:
             matching: BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
     }
 
+    /// The page a tab of another Space keeps in memory, for the page area to
+    /// slide in beside the shown Space's as the Space pager moves, or nil when
+    /// it keeps none. Never builds one: moving the pager does not load a tab.
+    /// Nil too for a page the window presents, as a pinned tab a group shares
+    /// is, which already has its host there.
+    func spacePreviewPage(for tabID: UUID, in space: SpaceModel) -> MobileBrowserPage? {
+        _ = residencyRevision
+        guard !presentedTabIDs.contains(tabID) else { return nil }
+        return host.page(
+            matching: BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
+    }
+
     /// Removes every rendered page from presentation without evicting their
     /// isolated WebKit runtimes. Selecting that tab again can reuse the resident
     /// page, but no previous Space can remain visible underneath the tab viewer
