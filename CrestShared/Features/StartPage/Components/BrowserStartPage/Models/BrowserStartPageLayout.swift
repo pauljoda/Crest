@@ -10,6 +10,9 @@ struct BrowserStartPageLayout: Equatable {
     let spacing: CGFloat
     let padding: CGFloat
     let maximumWidth: CGFloat
+    /// The side of the app icon over the title. A Mac icon keeps the system's
+    /// margin around its rounded square, so the Mac gives it more room to
+    /// draw the square as large as touch does.
     let markSize: CGFloat
     let privateNoticeSpacing: CGFloat
     /// Whether the stack scrolls, for a shell whose keyboard can cover it.
@@ -27,7 +30,7 @@ struct BrowserStartPageLayout: Equatable {
         spacing: 28,
         padding: 40,
         maximumWidth: 820,
-        markSize: 48,
+        markSize: 60,
         privateNoticeSpacing: 6,
         scrollsContent: false,
         showsSpaceBanner: false,

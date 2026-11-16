@@ -157,7 +157,8 @@ final class CoreState {
         get { observed(\.filterListsStorage, as: \.filterLists) }
         set { publish(newValue, into: \.filterListsStorage, as: \.filterLists) }
     }
-    @ObservationIgnored private var filterListsStorage = FilterLists(lists: [], customLists: [], customFilters: "")
+    @ObservationIgnored private var filterListsStorage = FilterLists(
+        level: .balanced, isCustomized: false, lists: [], customLists: [], customFilters: "")
     /// The content rule lists a page that blocks applies, as the core last
     /// published them. Nil until WebKit's binding first asks for them.
     var contentRuleLists: ContentRuleListSet? {

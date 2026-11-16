@@ -308,7 +308,8 @@ struct MobileBrowserDetailView: View {
                     focusRequest: addressFocusRequest,
                     headerColorScheme: startPageHeaderColorScheme,
                     emptySelectionActions: emptySelectionPaletteActions,
-                    commands: commands
+                    commands: commands,
+                    endEditing: endStartPageEditing
                 )
                 .onChange(of: isCompact, initial: true) { _, compact in
                     if compact { address = "" }
@@ -644,6 +645,16 @@ struct MobileBrowserDetailView: View {
             pages.selectAndNavigate(to: url.absoluteString)
         }
         return true
+    }
+
+    /// Puts away the keyboard the Start Page's field holds.
+    private func endStartPageEditing() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func selectStartPageTab(

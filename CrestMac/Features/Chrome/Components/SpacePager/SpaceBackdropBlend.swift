@@ -160,9 +160,7 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
                 hosts.removeValue(forKey: key)?.removeFromSuperview()
             }
         }
-        if !isResting {
-            for host in hosts.values where host.frame != bounds { host.frame = bounds }
-        }
+        sizeShownHosts()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for (index, space) in spaces.enumerated() {
@@ -187,8 +185,11 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         CATransaction.commit()
     }
 
-    /// Only the background on screen follows a live resize. The ones under it
-    /// and beyond it are sized when a slide is about to show them.
+    /// Every background a slide or a swipe shows, or else only the one at
+    /// rest. The ones under a resting background and beyond it are sized when
+    /// a slide is about to show them, so only the background on screen follows
+    /// a live resize, and a switch that lands at rest at once, as with Reduce
+    /// Motion, sizes the background it lands on.
     private func sizeShownHosts() {
         for (key, host) in hosts where host.frame != bounds && (restingKey == nil || key == restingKey) {
             host.frame = bounds

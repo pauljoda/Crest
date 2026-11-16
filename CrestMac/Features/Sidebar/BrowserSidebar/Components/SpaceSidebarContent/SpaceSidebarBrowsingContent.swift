@@ -43,8 +43,8 @@ struct SpaceSidebarBrowsingContent: View {
             .padding(.horizontal, BrowserSidebarMetrics.layerInset)
             // The selected pin's glow slides under the address field or the
             // extension strip above rather than holding space of its own.
-            .padding(.top, hasPinnedTabs ? BrowserSidebarMetrics.topSectionSpacing : 0)
-            .padding(.bottom, hasPinnedTabs ? BrowserSidebarMetrics.pinnedTabsBottomInset : 0)
+            .padding(.top, hasPinnedTabs ? BrowserSidebarMetrics.topSectionGap : 0)
+            .padding(.bottom, hasPinnedTabs ? BrowserSidebarMetrics.pinnedTabsBottomGap : 0)
             // A short window takes its height from the tab list below, never
             // from the pinned tabs, which would ride up into the address field.
             .fixedSize(horizontal: false, vertical: true)
@@ -203,10 +203,11 @@ private struct BrowserSidebarSelectionReconciler: View {
                 isExpanded: !folder.isCollapsed,
                 selectedTabID: folderTabIDs.first { context.window.shownTabIDs.contains($0) },
                 folderTabIDs: folderTabIDs,
-                residentFolderTabIDs: folderTabIDs.filter {
-                    context.pageAccess.containsResidentPageMatching(
-                        BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
-                })
+                residentFolderTabIDs: folder.kind.keepsLoadedTabsWhenClosed
+                    ? folderTabIDs.filter {
+                        context.pageAccess.containsResidentPageMatching(
+                            BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
+                    } : [])
         }
         guard browser.selectedSpaceID == space.id,
             !interaction.sidebarReorderState.hasLiftInFlight

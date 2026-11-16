@@ -25,6 +25,8 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(
@@ -62,14 +64,22 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
             // shadow, its glow and the content it covers every frame, on two
             // surfaces at every tab switch.
             .animation(accessibleSurfaceAnimation, value: isPressed)
+            // Content on the material reads in the material's scheme.
+            .environment(
+                \.colorScheme,
+                showsMaterial ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme
+            )
     }
+
+    /// Whether the surface draws the device's material under the content.
+    private var showsMaterial: Bool { isSelected || isPressed || showsRestingSurface }
 
     /// Selected, pressed and resting surfaces are layers of the device's
     /// material, wearing their accent tint; hover is only ever a tint, laid
     /// over that material or, on a plain row, alone.
     @ViewBuilder
     private func surface(in shape: RoundedRectangle) -> some View {
-        if isSelected || isPressed || showsRestingSurface {
+        if showsMaterial {
             CrestSurfaceLayer(
                 shape: shape,
                 tint: isSelected || isPressed ? customSelectedFill : customRestingFill,

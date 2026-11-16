@@ -14,6 +14,7 @@ import CoreGraphics
 enum BrowserDragPreviewWindowContent: Equatable {
     case sidebarLift(BrowserSidebarLiftPreviewContent)
     case splitCardLift(BrowserSplitCardLiftPreviewContent)
+    case extensionTileLift(BrowserExtensionTileLiftFloatingPreview.Content)
 
     /// A conservative envelope in the source window's top-left coordinates.
     /// Cover both ends of a morph so resizing the native panel cannot clip the
@@ -28,6 +29,8 @@ enum BrowserDragPreviewWindowContent: Equatable {
                 .insetBy(
                     dx: -card.size.width * (scale - 1) - 48,
                     dy: -card.size.height * (scale - 1) - 48)
+        case .extensionTileLift(let tile):
+            return tile.drawingBounds
         }
     }
 }

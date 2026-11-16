@@ -12,6 +12,7 @@ struct BrowserSpaceSwitcher: View {
     // MARK: - Variables
 
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let appearance = BrowserDeviceAppearanceStore.shared
 
     let browser: BrowserStore
@@ -27,6 +28,12 @@ struct BrowserSpaceSwitcher: View {
     // MARK: - Actions - Drawing
 
     var body: some View {
+        arrangement
+            // Icons and dots cross-fade, and the switcher eases to its new width.
+            .animation(CrestMotion.styleChange.unlessReducingMotion(reduceMotion), value: appearance.spaceIcons)
+    }
+
+    @ViewBuilder private var arrangement: some View {
         switch capabilities.spaceSwitcherArrangement {
         case .compactStrip:
             BrowserSpaceSwitcherCompactStrip(

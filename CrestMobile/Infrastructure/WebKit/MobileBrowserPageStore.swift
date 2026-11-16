@@ -48,6 +48,11 @@ final class MobileBrowserPageStore:
     var nativeTabs: BrowserNativeTabStore { host.nativeTabs }
     /// Every tab whose page this scene presents now.
     var presentedTabIDsAcrossWindows: Set<UUID> { Set(presentedTabIDs) }
+    /// Pictures of the tabs this scene's pages showed, which a held tab's
+    /// menu and the tab cards draw.
+    @ObservationIgnored private(set) lazy var tabPictures = BrowserTabPictures(pages: self) {
+        BrowserDeviceAppearanceStore.shared.previewsTabsOnHover
+    }
     var residencyRevision: Int { host.revision }
     /// The notice this window shows at its top, such as a zoom change or a
     /// copied link.
@@ -393,6 +398,7 @@ final class MobileBrowserPageStore:
         guard browsingMode.isPrivate else { return }
         activePage = nil
         presentedTabIDs = []
+        tabPictures.removeAll()
         releasePrivateBrowsingData(in: spaces)
     }
 
@@ -424,6 +430,7 @@ final class MobileBrowserPageStore:
         let transientTab = BrowserPageTab.transient(showing: url)
         return host.makeTransientPageLease(
             url: url, in: space, presentation: presentation, engineNavigation: engineNavigation,
+            contentBlockingPolicy: browser.core.state.contentBlockingPolicy,
             balancedContentRuleLists: contentBlocking.balancedRuleLists ?? [], onUserActivity: onUserActivity,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation
         ) { [weak self] in

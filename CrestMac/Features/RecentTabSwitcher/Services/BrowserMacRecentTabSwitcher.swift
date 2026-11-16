@@ -4,8 +4,8 @@ import SwiftUI
 /// The recent tabs while a Most Recent Tab shortcut is held: it begins on the
 /// shortcut's key, follows the keys and the release of its modifiers, shows
 /// the panel over the window once the hold lasts, and switches or cancels as
-/// the person ends it. It also keeps each window's small pictures of the tabs
-/// it leaves.
+/// the person ends it. It also starts each window's small pictures of its
+/// tabs once the window is in use.
 @MainActor
 final class BrowserMacRecentTabSwitcher {
     // MARK: - Types
@@ -31,7 +31,6 @@ final class BrowserMacRecentTabSwitcher {
 
     private weak var shell: BrowserMacShell?
     private var hold: Hold?
-    private var snapshots: [UUID: BrowserRecentTabSnapshots] = [:]
     private var monitors: [Any] = []
     private var observers: [NSObjectProtocol] = []
 
@@ -74,29 +73,12 @@ final class BrowserMacRecentTabSwitcher {
                 [weak self] note in
                 let window = (note.object as AnyObject?).map(ObjectIdentifier.init)
                 MainActor.assumeIsolated {
-                    guard let self else { return }
-                    if window == self.hold.map({ ObjectIdentifier($0.window) }) { self.end(.cancel) }
-                    self.forgetClosedWindows()
+                    guard let self, window == self.hold.map({ ObjectIdentifier($0.window) }) else { return }
+                    self.end(.cancel)
                 }
             },
         ]
         followKeyWindow()
-        followPreference()
-    }
-
-    /// Lets go of every picture once the preference goes off.
-    private func followPreference() {
-        withObservationTracking {
-            _ = BrowserAppPreferenceStore.shared.showsRecentTabs
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if !BrowserAppPreferenceStore.shared.showsRecentTabs {
-                    for pictures in snapshots.values { pictures.removeAll() }
-                }
-                followPreference()
-            }
-        }
     }
 
     // MARK: - Actions - Holding
@@ -122,7 +104,7 @@ final class BrowserMacRecentTabSwitcher {
                 rightToLeft: window.contentView?.userInterfaceLayoutDirection == .rightToLeft)
         else { return false }
         let model = RecentTabSwitcherModel(
-            session: session, browser: context.browser, snapshots: snapshots(for: context))
+            session: session, browser: context.browser, snapshots: pictures(for: context))
         model.commit = { [weak self] index in self?.commit(index: index) }
         model.announce = { [weak self] text in self?.announce(text) }
         hold = Hold(model: model, window: window, chrome: context.chrome, actions: actions)
@@ -235,29 +217,20 @@ final class BrowserMacRecentTabSwitcher {
             ])
     }
 
-    // MARK: - Actions - Snapshots
+    // MARK: - Actions - Pictures
 
     /// Starts keeping pictures for the key window, once it is a browser window.
     private func followKeyWindow() {
         guard let context = shell?.windows?.activeContext else { return }
-        _ = snapshots(for: context)
+        _ = pictures(for: context)
     }
 
-    private func snapshots(for context: BrowserMacWindowContext) -> BrowserRecentTabSnapshots {
-        if let existing = snapshots[context.windowID] { return existing }
+    /// The window's pictures, which follow what it shows from the first time
+    /// it is asked for them.
+    private func pictures(for context: BrowserMacWindowContext) -> BrowserTabPictures {
         let access = shell?.application?.spaceAccess
-        let created = BrowserRecentTabSnapshots(context: context) { access?.isLocked($0) ?? true }
-        snapshots[context.windowID] = created
-        created.followShownTabs()
-        return created
-    }
-
-    private func forgetClosedWindows() {
-        guard let windows = shell?.windows else { return }
-        // The closing window is still listed during its notification.
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            snapshots = snapshots.filter { id, _ in windows.window(for: id) != nil || windows.isPrivateWindow(id) }
-        }
+        let pictures = context.pages.tabPictures
+        pictures.follow { access?.isLocked($0) ?? true }
+        return pictures
     }
 }

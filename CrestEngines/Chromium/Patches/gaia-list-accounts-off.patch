@@ -3,7 +3,7 @@
 
 --- a/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
 +++ b/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
-@@ -525,21 +525,9 @@
+@@ -527,21 +527,9 @@
  }
  
  void GaiaCookieManagerService::TriggerListAccounts() {
@@ -18,9 +18,9 @@
 -  if (requests_.size() == 1) {
 -    fetcher_retries_ = 0;
 -    listAccountsUnexpectedServerResponseRetried_ = false;
--    signin_client_->DelayNetworkCall(
--        base::BindOnce(&GaiaCookieManagerService::StartFetchingListAccounts,
--                       weak_ptr_factory_.GetWeakPtr()));
+-    signin_client_->DelayNetworkCall(base::BindOnce(
+-        &GaiaCookieManagerService::MaybeStartFetchingListAccounts,
+-        weak_ptr_factory_.GetWeakPtr()));
 -  }
 +  // Crest: /ListAccounts sends the person's google.com cookies to Google for
 +  // a browser sign-in Crest doesn't have, on every change to those cookies.

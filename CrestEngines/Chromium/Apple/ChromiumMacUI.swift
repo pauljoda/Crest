@@ -19,6 +19,16 @@
             }
         }
 
+        private final class PopupAnchor: NSObject, CrestExtensionPopupAnchor {
+            let view: NSView
+            let rect: NSRect
+
+            init(view: NSView, rect: NSRect) {
+                self.view = view
+                self.rect = rect
+            }
+        }
+
         // MARK: - Variables
 
         private var shell: BrowserMacShell? { ChromiumComposition.shell }
@@ -102,6 +112,18 @@
 
         func beginLinkDrag(_ url: URL, title: String, page pageID: UUID) -> Bool {
             ChromiumComposition.chromiumEngine?.page(pageID)?.beginLinkDrag(url, title: title) == true
+        }
+
+        // MARK: - Actions - Extensions
+
+        /// The extension's pinned tile in the page's window, as a click on it
+        /// would use, or else the pointer, as a click in Site Controls would.
+        func extensionPopupAnchor(_ extensionID: String, page pageID: UUID) -> (any CrestExtensionPopupAnchor)? {
+            guard let window = ChromiumComposition.chromiumEngine?.page(pageID)?.surface.window else { return nil }
+            let anchor =
+                BrowserExtensionToolbarAnchorRegistry.anchor(for: extensionID, in: window)
+                ?? BrowserExtensionPopupAnchor(screenPoint: NSEvent.mouseLocation, sourceWindow: window)
+            return anchor.presentationSource(fallbackWindow: window).map { PopupAnchor(view: $0.view, rect: $0.rect) }
         }
     }
 

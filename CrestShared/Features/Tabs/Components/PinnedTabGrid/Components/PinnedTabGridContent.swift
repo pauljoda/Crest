@@ -140,7 +140,7 @@ struct PinnedTabGridContent: View {
         value.fillsLastRow = BrowserDeviceAppearanceStore.shared.pinsFillRow
         value.tabScale = tabScale
         value.tileHeight = BrowserSidebarDensity(tabScale).pinHeight(touch: capabilities.supportsTouch)
-        value.tileSpacing = BrowserSidebarDensity(tabScale).pinSpacing
+        value.tileSpacing = BrowserSidebarDensity.current.pinSpacing
         return value
     }
 

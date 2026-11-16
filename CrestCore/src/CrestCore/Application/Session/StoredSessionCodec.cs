@@ -82,6 +82,7 @@ internal static partial class StoredSessionCodec {
         public const string Id = "id";
         public const string IsCollapsed = "isCollapsed";
         public const string IsEnabled = "isEnabled";
+        public const string IsGroup = "isGroup";
         public const string IsSavedTabsExpanded = "isSavedTabsExpanded";
         public const string KeepsControlsReadable = "keepsControlsReadable";
         public const string KeepsPageLoaded = "keepsPageLoaded";
@@ -98,6 +99,8 @@ internal static partial class StoredSessionCodec {
         public const string MembershipModifiedAt = "membershipModifiedAt";
         public const string Name = "name";
         public const string NativeContent = "nativeContent";
+        public const string NewTabPosition = "newTabPosition";
+        public const string NewTabsJoinFolder = "newTabsJoinFolder";
         public const string OffersTranslation = "offersTranslation";
         public const string OperationId = "operationID";
         public const string OrderAnchorTabId = "orderAnchorTabID";
@@ -124,6 +127,10 @@ internal static partial class StoredSessionCodec {
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
         public const string CredentialsEnabledModifiedAt = "credentialsEnabledModifiedAt";
         public const string AccessPolicyModifiedAt = "accessPolicyModifiedAt";
+        public const string SavedFaviconUrl = "savedFaviconURL";
+        public const string SavedIconAccent = "savedIconAccent";
+        public const string SavedTitle = "savedTitle";
+        public const string SavedTitleUrl = "savedTitleURL";
         public const string SavedUrl = "savedURL";
         public const string SearchesSitesWithTab = "searchesSitesWithTab";
         public const string SearchFollowsDefault = "searchFollowsDefault";
@@ -162,6 +169,7 @@ internal static partial class StoredSessionCodec {
         public const string Tabs = "tabs";
         public const string TargetId = "targetID";
         public const string TextColorMode = "textColorMode";
+        public const string TextureStrength = "textureStrength";
         public const string ThemeMode = "themeMode";
         public const string Tint = "tint";
         public const string TintModifiedAt = "tintModifiedAt";
@@ -170,6 +178,7 @@ internal static partial class StoredSessionCodec {
         public const string TranslationRules = "translationRules";
         public const string Trim = "trim";
         public const string TrimColorIndex = "trimColorIndex";
+        public const string UnloadedSavedTabsStay = "unloadedSavedTabsStay";
         public const string Url = "url";
         public const string Value = "value";
         public const string VisitCount = "visitCount";

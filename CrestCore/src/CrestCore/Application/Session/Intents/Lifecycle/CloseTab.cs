@@ -6,18 +6,23 @@ namespace CrestCore.Contracts;
 /// Closes a tab the way its section closes one: an open tab is archived, and
 /// a saved or pinned tab keeps its place and only puts its page away, back at
 /// its saved address when the app's preferences say so. A window that showed
-/// the tab returns to the tab it showed before. Refused with `LastStartPage`
-/// for the Start Page when it is its Space's only tab, which leaves only the
-/// window to close.
-public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId) : SessionIntent(WorkspaceId) {
+/// the tab shows `ReturnTabId` next while the Space holds it, as a tab going
+/// back past its first page returns to the tab that opened it, and otherwise
+/// returns to the tab it showed before. Refused with `LastStartPage` for the
+/// Start Page when it is its Space's only tab, which leaves only the window
+/// to close.
+public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, Guid? ReturnTabId = null)
+    : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     /// Closes the tab the way its section closes one: a saved or pinned tab
     /// puts its page away, and an open tab is archived. A window that showed
-    /// the tab returns to the one it showed before; one that put a saved or
-    /// pinned tab away skips its split, whose other members would present it
-    /// again. A page put away keeps what brings it back unless the tab
-    /// returns to its saved address, and the window that asked lets it go.
+    /// the tab returns to `ReturnTabId` or to the one it showed before; one
+    /// that put a saved or pinned tab away skips its split, whose other
+    /// members would present it again. A page put away keeps what brings it
+    /// back unless the tab returns to its saved address, and the window that
+    /// asked lets it go. A tab returning from another page wears its saved
+    /// page's image again.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         var edited = BrowserTabCollection.Restore(space);
@@ -30,21 +35,36 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
         SessionTabEvents? events = null;
         if (action.KeepsTab) {
             var group = tab.SplitGroupId;
-            var fallback = followUp.FallbackAfterDismissing(space.Id, tab.Id, space.Tabs
+            var fallback = Fallback(followUp, space.Id, space.Tabs
                 .Where(candidate => candidate.Id != tab.Id && (group is null || candidate.SplitGroupId != group))
                 .Select(candidate => candidate.Id).ToHashSet());
             var returns = workspace.ClosePolicy(turn.Basis) == SavedTabClosePolicy.ReturnToSavedUrl
                 && (tab.SavedUrl ?? tab.Url) is not null;
+            var restoresImage = returns && tab.State.ReturnRestoresImage;
             selected = edited.CloseDurable(tab.Id, shown, fallback, returns);
-            events = SessionTabEvents.None with { PutAway = new(WindowId, space.Id, tab.Id, KeepsState: !returns) };
+            events = SessionTabEvents.None with {
+                PutAway = new(WindowId, space.Id, tab.Id, KeepsState: !returns),
+                SavedImage = restoresImage ? new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl) : null
+            };
         } else {
-            var fallback = followUp.FallbackAfterDismissing(space.Id, tab.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
+            var fallback = Fallback(followUp, space.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
             selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, deleting: false, ensureSelection: false,
                 resetArchivePlacement: false);
             edited.PruneSplitMetadata();
         }
         followUp.ShowTab(space.Id, selected);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp, events);
+    }
+
+    /// The tab a window that showed the closed tab shows next among
+    /// `available`: `ReturnTabId` when it is one, or else the one the window
+    /// showed before. None for a window that did not show it.
+    private Guid? Fallback(WindowFollowUp followUp, Guid spaceId, IReadOnlySet<Guid> available) {
+        var before = followUp.FallbackAfterDismissing(spaceId, TabId, available);
+        return followUp.Window?.Tab(spaceId) == TabId && ReturnTabId is { } returning && returning != TabId
+            && available.Contains(returning)
+                ? returning
+                : before;
     }
 
     #endregion

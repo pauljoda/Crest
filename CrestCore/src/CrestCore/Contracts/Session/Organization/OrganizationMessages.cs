@@ -27,6 +27,13 @@ public sealed record InvalidFolderSymbol(int MaximumBytes) : Rejection;
 /// The Space holds no folder with this identity.
 public sealed record UnknownFolder(Guid FolderId) : Rejection;
 
+/// A group holds tabs alone: no folder goes inside it.
+public sealed record GroupHoldsOnlyTabs(Guid GroupId) : Rejection;
+
+/// Only a folder of open tabs at the top level that holds tabs and no folders
+/// becomes a group.
+public sealed record CannotBecomeGroup(Guid FolderId) : Rejection;
+
 #endregion
 
 #region Rejections - Splits

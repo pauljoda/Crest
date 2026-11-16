@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// What a Space blocks, and what it has already been told about individual sites.
+/// What a Space keeps and what it has already been told about individual
+/// sites. Ad blocking holds for every Space, so it has a pane of its own.
 struct BrowserPrivacySettingsPane: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let permissionCenter: BrowserSitePermissionCenter
-    let contentBlockingErrorDescription: String?
     /// The one Space whose privacy the pane shows, with its lock, or nil to
     /// pick one.
     var fixedSpaceID: UUID? = nil
@@ -38,18 +38,6 @@ struct BrowserPrivacySettingsPane: View {
                         browser: browser,
                         spaceID: selectedSpaceID
                     )
-                }
-
-                // Where blocking comes only from extensions, a toggle could reach
-                // no page, so the section is left out.
-                if supportsContentBlocking {
-                    BrowserContentBlockingSettingsSection(
-                        policy: contentBlockingPolicyBinding,
-                        errorDescription: contentBlockingErrorDescription,
-                        sitesWithoutBlocking: sitesWithoutBlocking,
-                        blockAgain: blockAgain
-                    )
-                    BrowserFilterListsSettingsSection(core: browser.core)
                 }
 
                 if browser.core.state.offers(.permissions) {
@@ -110,17 +98,6 @@ struct BrowserPrivacySettingsPane: View {
         }
     }
 
-    /// The sites where the shown Space turned blocking off.
-    private var sitesWithoutBlocking: [SiteOrigin] {
-        guard let selectedSpaceID, canRevealSelectedSpaceData else { return [] }
-        return browser.core.state.blockingSites.filter { $0.spaceID == selectedSpaceID }.map(\.origin)
-    }
-
-    private func blockAgain(_ site: SiteOrigin) {
-        guard let selectedSpaceID else { return }
-        _ = try? browser.core.send(SetSiteContentBlocking(spaceID: selectedSpaceID, origin: site, blocks: true))
-    }
-
     private var records: [SitePermissionRecordState] {
         guard let selectedSpaceID, canRevealSelectedSpaceData else { return [] }
         return permissionCenter.records(in: selectedSpaceID)
@@ -134,21 +111,6 @@ struct BrowserPrivacySettingsPane: View {
     private var canRevealSelectedSpaceData: Bool {
         guard let selectedSpace else { return false }
         return !spaceAccess.isLocked(selectedSpace)
-    }
-
-    /// Crest's own blocking is a WebKit content-rule list. An engine either
-    /// applies it or it does not, and a preference that cannot reach any page
-    /// is worse than an absent one.
-    private var supportsContentBlocking: Bool {
-        browser.core.state.offers(.contentBlocking)
-    }
-
-    private var contentBlockingPolicyBinding: Binding<ContentBlockingPolicy> {
-        browser.browsingPreferenceBinding(
-            \.contentBlocking,
-            in: selectedSpaceID,
-            default: .balanced
-        )
     }
 
     private func resetAll() {

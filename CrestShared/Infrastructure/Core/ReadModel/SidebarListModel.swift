@@ -49,6 +49,19 @@ final class SidebarListModel {
         if tabRowsChanged { withMutation(keyPath: \.holdsTabRows) {} }
     }
 
+    // MARK: - Actions - Placement
+
+    /// Where a tab goes to sit just after the row `id` names: before the next
+    /// row's first tab, or before the next folder, or at the end of the list
+    /// when that row is last or not in it.
+    func placement(after id: UUID) -> (beforeTab: UUID?, beforeFolder: UUID?) {
+        guard let index = rows.firstIndex(where: { $0.id == id }), rows.indices.contains(index + 1) else {
+            return (nil, nil)
+        }
+        let next = rows[index + 1]
+        return next.kind.opensList ? (nil, next.id) : (next.members.first ?? next.id, nil)
+    }
+
     private static func holdsTabRows(_ rows: [SidebarRow]) -> Bool {
         rows.contains { !$0.kind.opensList }
     }

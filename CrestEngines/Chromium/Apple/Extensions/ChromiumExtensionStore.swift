@@ -203,12 +203,13 @@ final class ChromiumExtensionStore {
         observeChanges(of: page.profileID)
         return page.extensions
     }
-    /// The pinned actions of a Space's own toolbar row.
+    /// The pinned actions of a Space's own toolbar row, in the order the
+    /// person left them.
     ///
     /// The row belongs to the Space, so the pinned list comes from the Space's
     /// profile and is present whether or not a page is open. Where a page is
-    /// open its per-tab state — badge, dynamic icon, whether a page action has
-    /// anything to act on — is overlaid on top of it.
+    /// open its per-tab state — badge, dynamic icon, whether the action can run
+    /// on the page and whether it opens a popup — is overlaid on top of it.
     func pinnedActions(
         for space: BrowserSpaceIdentity, page: ChromiumNativePage?
     ) -> [BrowserExtensionActionPresentation] {
@@ -223,12 +224,19 @@ final class ChromiumExtensionStore {
             .map { action -> BrowserExtensionActionPresentation in
                 if let tab = live[action.id] {
                     return BrowserExtensionActionPresentation(
-                        id: tab.id, displayName: tab.displayName,
-                        badgeText: tab.badgeText, icon: tab.icon, isPinned: true)
+                        id: tab.id, displayName: tab.displayName, badgeText: tab.badgeText, icon: tab.icon,
+                        isEnabled: tab.isEnabled, isPinned: true, isLoading: tab.isLoading, hasPopup: tab.hasPopup)
                 }
                 return BrowserExtensionActionPresentation(action)
             }
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+    /// Moves the pinned action `extensionID` to just before the pinned action
+    /// `beforeID`, or to the end with none, in every Space of `space`'s
+    /// profile.
+    func movePin(_ extensionID: String, before beforeID: String?, space: BrowserSpaceIdentity) {
+        send(
+            MovePinnedExtension(
+                spaceID: space.id, engine: .chromium, extensionID: extensionID, beforeExtensionID: beforeID))
     }
     /// Runs a pinned action from a Space with no page open. Only an action with
     /// its own popup can run without one, so anything else states itself as
@@ -254,6 +262,51 @@ final class ChromiumExtensionStore {
                 String(localized: "This extension action needs an open page."),
                 icon: "puzzlepiece.extension")
             return
+        }
+    }
+
+    // MARK: - Actions - Popup Cycle
+
+    /// The extensions Open Next Extension steps through in `space` with
+    /// `page` in front: the pinned ones in the strip's order, then the others
+    /// the page offers, each only while running it opens its popup. A pin a
+    /// policy keeps is not in the strip, so it comes with the others.
+    func popupCycle(for space: BrowserSpaceIdentity, page: ChromiumNativePage?) -> BrowserExtensionPopupCycle {
+        let opensPopup: (BrowserExtensionActionPresentation) -> Bool = { $0.isEnabled && $0.hasPopup && !$0.isLoading }
+        return BrowserExtensionPopupCycle(
+            pinned: pinnedActions(for: space, page: page).filter(opensPopup).map(\.id),
+            others: page.map { actions(for: $0).filter(opensPopup).map(\.id) } ?? [])
+    }
+
+    /// Opens the popup of the action after the one whose popup shows in
+    /// `window`, or of the first when none shows, from its pinned tile or the
+    /// control that lists the window's extensions. After the last, it closes
+    /// the popup.
+    ///
+    /// It runs a turn later: a key the popup's document left reaches Crest
+    /// from inside the popup, which must not go while it hands the key on.
+    func openNextPopup(in space: BrowserSpaceIdentity, page: ChromiumNativePage?, window: NSWindow) {
+        DispatchQueue.main.async { [weak self, weak window] in
+            MainActor.assumeIsolated {
+                guard let self, let window, let host = ChromiumComposition.engineHost,
+                    let windowID = window.identifier.flatMap({ UUID(uuidString: $0.rawValue) })
+                else { return }
+                switch self.popupCycle(for: space, page: page).step(showing: host.extensionPopup(inWindow: windowID)) {
+                case nil:
+                    return
+                case .close:
+                    host.closeExtensionPopup(inWindow: windowID)
+                case .open(let extensionID):
+                    let anchor = BrowserExtensionToolbarAnchorRegistry.anchor(for: extensionID, in: window)
+                    if let page {
+                        page.runExtension(extensionID, anchor: anchor)
+                    } else if let action = self.pinnedActions(for: space, page: nil).first(where: {
+                        $0.id == extensionID
+                    }) {
+                        self.runPinned(action, space: space, anchor: anchor)
+                    }
+                }
+            }
         }
     }
 

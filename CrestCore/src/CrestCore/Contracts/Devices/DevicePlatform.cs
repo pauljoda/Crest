@@ -25,10 +25,11 @@ public sealed class DevicePlatform {
     /// processes itself, as it does for Safari, and a reclaimed page comes
     /// back through crash recovery when it is shown. An unfinished manual setup
     /// waits for the next launch, since the system may end the app while it is
-    /// in the background. First-run setup covers the browser, which opens
-    /// beneath it as the person chose. No agent uses it.
+    /// in the background. Setup asks which look its Spaces wear. First-run
+    /// setup covers the browser, which opens beneath it as the person chose. No
+    /// agent uses it.
     public static readonly DevicePlatform Mobile = new(name: "mobile", warningReleaseLimit: _ => 0,
-        criticalReleaseLimit: _ => 1, keepsSetupDraft: true, choosesLook: false, importsBrowsers: false,
+        criticalReleaseLimit: _ => 1, keepsSetupDraft: true, choosesLook: true, importsBrowsers: false,
         sharesPagesAcrossWindows: false,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesMobileSetup,
         setupHoldsFirstWindow: false, showcaseOpensStartPage: true, offersAgents: false, filterConditions: ["env_mobile"],
@@ -42,9 +43,8 @@ public sealed class DevicePlatform {
     /// launch.
     public bool KeepsSetupDraft { get; }
 
-    /// Whether setup asks which look the Spaces it makes wear, as the Mac's
-    /// does on its way from the welcome. The core's own rule, which no
-    /// platform reads.
+    /// Whether setup asks which look the Spaces it makes wear, on its way
+    /// from the welcome. The core's own rule, which no platform reads.
     internal bool ChoosesLook { get; }
 
     /// Whether setup offers to import from other browsers installed here.

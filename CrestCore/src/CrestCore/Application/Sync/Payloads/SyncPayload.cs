@@ -23,6 +23,12 @@ internal abstract record SyncPayload {
         public const string Value = "value";
         /// A value's fractional position among its siblings.
         public const string OrderToken = "orderToken";
+        /// When a folder of the open tabs went because an edit left it holding
+        /// nothing, which every device shows it again for once a tab sits in it.
+        public const string EmptiedAt = "emptiedAt";
+        /// When a device last wrote a folder of the open tabs that had emptied
+        /// while it held a tab that syncs there, which shows it again.
+        public const string HeldAt = "heldAt";
         /// Whether a Space offers saved passwords, which the stored session
         /// keeps in its credential preferences.
         public const string CredentialsEnabled = "credentialsEnabled";

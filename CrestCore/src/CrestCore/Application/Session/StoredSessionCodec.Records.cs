@@ -17,7 +17,8 @@ internal static partial class StoredSessionCodec {
 
     /// A tab. A native view keeps no address, a missing symbol is the one its
     /// content shows, and a placement or icon mode this build cannot name reads
-    /// as saved and as unchosen, exactly as the native reader decides them.
+    /// as saved and as unchosen, exactly as the native reader decides them. A
+    /// tab written before saved pages kept their title and favicon has neither.
     internal static TabState DecodeTab(JsonNode? node) {
         var value = Object(node);
         var native = value[Key.NativeContent] is JsonObject content
@@ -33,7 +34,9 @@ internal static partial class StoredSessionCodec {
             OptionalIdentity(value[Key.FolderId]), OptionalIdentity(value[Key.SplitGroupId]),
             Date(value[Key.LastActivatedAt]), OptionalDate(value[Key.PositionModifiedAt]),
             Text(value[Key.CustomTitle]), OptionalDate(value[Key.TitleModifiedAt]),
-            Flag(value[Key.KeepsPageLoaded]) ?? false);
+            Flag(value[Key.KeepsPageLoaded]) ?? false,
+            native is null ? Text(value[Key.SavedTitle]) : null, native is null ? Text(value[Key.SavedFaviconUrl]) : null,
+            native is null && value[Key.SavedIconAccent] is JsonObject savedAccent ? DecodeIconAccent(savedAccent) : null);
     }
 
     internal static JsonObject Encode(TabState tab) {
@@ -45,6 +48,9 @@ internal static partial class StoredSessionCodec {
             value[Key.NativeContent] = content;
         }
         Put(value, Key.SavedUrl, tab.SavedUrl);
+        Put(value, Key.SavedTitle, tab.SavedTitle);
+        Put(value, Key.SavedFaviconUrl, tab.SavedFaviconUrl);
+        if (tab.SavedIconAccent is { } savedAccent) value[Key.SavedIconAccent] = Encode(savedAccent);
         value[Key.Symbol] = tab.Symbol;
         Put(value, Key.FaviconUrl, tab.FaviconUrl);
         if (tab.IconAccent is { } accent) value[Key.IconAccent] = Encode(accent);
@@ -103,7 +109,7 @@ internal static partial class StoredSessionCodec {
             Text(value[Key.Title]) ?? UntitledFolder, Text(value[Key.Symbol]),
             value[Key.Color] is JsonObject color ? DecodeColor(color) : null, OptionalIdentity(value[Key.ParentId]),
             Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]),
-            OptionalIdentity(value[Key.OrderAnchorTabId]));
+            OptionalIdentity(value[Key.OrderAnchorTabId]), Flag(value[Key.IsGroup]) ?? false);
     }
 
     internal static JsonObject Encode(FolderState folder) {
@@ -118,6 +124,7 @@ internal static partial class StoredSessionCodec {
         value[Key.IsCollapsed] = folder.IsCollapsed;
         Put(value, Key.CollapseModifiedAt, folder.CollapseModifiedAt);
         if (folder.OrderAnchorTabId is { } anchor) value[Key.OrderAnchorTabId] = WrappedIdentity(anchor);
+        if (folder.IsGroup) value[Key.IsGroup] = true;
         return value;
     }
 
@@ -125,7 +132,8 @@ internal static partial class StoredSessionCodec {
         var value = Object(node);
         return new(Identity(value[Key.Id]), Text(value[Key.CustomTitle]), OptionalDate(value[Key.TitleModifiedAt]),
             Text(value[Key.CustomIconSymbol]), OptionalDate(value[Key.IconModifiedAt]),
-            value[Key.Tint] is JsonObject tint ? DecodeColor(tint) : null, OptionalDate(value[Key.TintModifiedAt]));
+            value[Key.Tint] is JsonObject tint ? DecodeColor(tint) : null, OptionalDate(value[Key.TintModifiedAt]),
+            Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]));
     }
 
     internal static JsonObject Encode(SplitGroupState group) {
@@ -136,6 +144,10 @@ internal static partial class StoredSessionCodec {
         PutEdit(value, Key.IconModifiedAt, group.IconModifiedAt);
         if (group.Tint is { } tint) value[Key.Tint] = Encode(tint);
         PutEdit(value, Key.TintModifiedAt, group.TintModifiedAt);
+        // An expanded split writes no flag, so a session from before splits
+        // collapsed writes back as it was.
+        if (group.IsCollapsed) value[Key.IsCollapsed] = true;
+        PutEdit(value, Key.CollapseModifiedAt, group.CollapseModifiedAt);
         return value;
     }
 

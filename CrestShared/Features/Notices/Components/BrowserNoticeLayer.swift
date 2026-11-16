@@ -5,17 +5,20 @@ import SwiftUI
 /// still showing.
 struct BrowserNoticeLayer: View {
     let notices: BrowserNotices
+    /// Where in the area the notice stands: its top trailing corner, or, on a
+    /// phone, the middle of its top.
+    var alignment = Alignment.topTrailing
     /// How far the notice stands below the top of the area.
-    var topInset = BrowserRootMetrics.noticeTopInset
+    var topInset = BrowserRootMetrics.noticeInset
     /// How far the notice keeps from each side of the area.
-    var sideInset: CGFloat = 0
+    var sideInset = BrowserRootMetrics.noticeInset
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             if let notice = notices.shown {
-                BrowserNoticeView(notice: notice, topInset: topInset, sideInset: sideInset)
+                BrowserNoticeView(notice: notice, alignment: alignment, topInset: topInset, sideInset: sideInset)
                     .id(notice)
             }
         }

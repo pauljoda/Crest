@@ -14,10 +14,9 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
     /// How much air the seam keeps above and below itself.
     let dividerVerticalInset: CGFloat
 
-    /// How much of the divider's trailing end is given up while the clear
-    /// control is showing, so the line stops short of it rather than running
-    /// underneath.
-    let clearActionOcclusionWidth: CGFloat
+    /// How far short of the clear control the divider stops while the control
+    /// is showing, rather than running underneath it.
+    let clearActionGap: CGFloat
 
     /// The height of the band a run keeps for the drop it cannot otherwise
     /// show.
@@ -40,7 +39,7 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
     static let pointer = BrowserSidebarTabListMetrics(
         dividerHorizontalInset: 12,
         dividerVerticalInset: 3,
-        clearActionOcclusionWidth: 92,
+        clearActionGap: CrestSpacing.small,
         sectionEndBandHeight: CrestSpacing.medium
     )
 
@@ -48,7 +47,7 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
     static let touch = BrowserSidebarTabListMetrics(
         dividerHorizontalInset: 16,
         dividerVerticalInset: 22,
-        clearActionOcclusionWidth: 52,
+        clearActionGap: CrestSpacing.small,
         sectionEndBandHeight: 28
     )
 }

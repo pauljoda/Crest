@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// The lock on a Space, and the one toggle that puts it there.
+/// The lock on a Space, and the one toggle that puts it there, named for the
+/// biometry this device has. A private window's Space never locks, so it
+/// offers no lock.
 ///
 /// Both shells had written this section, its in-flight flag, and the same
 /// three-step change — unlock before opening a locked Space, write the policy,
@@ -15,23 +17,24 @@ struct BrowserSpaceAccessPolicySection: View {
     @State private var isUpdating = false
 
     var body: some View {
-        Section {
-            Toggle(
-                "Require Touch ID or password",
-                isOn: requiresAuthentication
-            )
-            .disabled(isUpdating)
-            .accessibilityIdentifier("private-space-toggle")
+        if browser.family.workspace?.kind.locksSpaces == true {
+            Section {
+                Toggle(isOn: requiresAuthentication) {
+                    Text(BrowserSpaceLockMethod.current.toggleTitle)
+                }
+                .disabled(isUpdating)
+                .accessibilityIdentifier("private-space-toggle")
 
-            if isUpdating {
-                ProgressView("Updating Space protection…")
-                    .controlSize(.small)
+                if isUpdating {
+                    ProgressView("Updating Space protection…")
+                        .controlSize(.small)
+                }
+
+            } header: {
+                Text("Lock")
+            } footer: {
+                CrestFormFootnote("Locks again when Crest goes to the background.")
             }
-
-        } header: {
-            Text("Lock")
-        } footer: {
-            CrestFormFootnote("Locks again when Crest goes to the background.")
         }
     }
 

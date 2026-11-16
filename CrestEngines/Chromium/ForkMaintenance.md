@@ -91,7 +91,14 @@ archive checksum, resolves the CIPD tools and the PGO profile the new source
 names, refreshes host hashes only after every Crest patch applies without fuzz,
 and restores the source lock and host hashes if preparation fails. Build
 failures leave the candidate available for inspection. New milestones need
-`--allow-major` here, and each needs the request review below. The schedule
+`--allow-major` here, and each needs the request review below. A new Chromium
+may add helper apps: packaging and publishing refuse any helper missing from
+`ENGINE_HELPER_KINDS` in `chromium_engine.py`, so give each the entitlements
+`chrome/installer/mac/signing/parts.py` gives it. Distribution packaging also
+runs the signed package's own helpers and refuses a package that can't load a
+page, because an unsigned build passes everything a hardened signature can break.
+That check runs the engine without Crest's interface, so before publishing an
+engine, also load real pages in Crest packaged with `--distribution`. The schedule
 builds a new milestone for review once the pinned one has no newer fix, but it
 ships only when its PR is merged. `fork.json.automaticMajorUpdates` can also let
 milestone updates release automatically.
@@ -107,7 +114,7 @@ after the last. Every patch states its reason in its header.
 | --- | --- |
 | `native-host.patch` | Crest's native window, pages, engine binding and the integrations the README describes. |
 | `google-request-allowlist.patch` | Hooks the network service so the browser's own requests reach Google only for the services below. |
-| `component-updater-services.patch` | Registers only the CRLSet, PKI metadata (Certificate Transparency logs, pins and Chrome Root Store), file types for download warnings, and Widevine. |
+| `component-updater-services.patch` | Registers only the CRLSet, PKI metadata (Certificate Transparency logs, pins and Chrome Root Store), and file types for download warnings. |
 | `update-pings-off.patch` | Removes the active-day and roll-call counters from component and extension update checks, and the install and update event pings. |
 | `autofill-crowdsourcing-off.patch` | Autofill sends no form signatures or field votes to content-autofill.googleapis.com. |
 | `gaia-list-accounts-off.patch` | The browser never sends google.com cookies to `/ListAccounts` on a cookie change. |
@@ -199,14 +206,14 @@ annotations (`safe_browsing_v4_update` or `safe_browsing_v5_update`) only.
 
 ## Protected video
 
-The component updater installs Google's Widevine module, so Chromium plays
-protected video that uses Widevine. Some services require Widevine's verified
-media path, which only Google Chrome's signature carries, and refuse Chromium's
-module: the core's `ProtectedMediaService` names Netflix, Disney+, Max and Prime
-Video, and their sites open in WebKit, which plays FairPlay, unless the person
-chose an engine for the site. A page that asks for a key system Chromium lacks,
-such as PlayReady or Widevine before its module has arrived, still moves to
-WebKit through `ProtectedMediaUnavailable`.
+Chromium is built without Widevine (`enable_widevine = false`), and the
+component updater doesn't fetch Google's module. Most video services require
+Widevine's verified media path, which only Google Chrome's signature carries,
+so Chromium's own module failed inside the page instead of letting it move. A
+page that asks for Widevine or PlayReady now moves to WebKit, which plays
+FairPlay, through `ProtectedMediaUnavailable`, unless the person chose an
+engine for the site. The core's `ProtectedMediaService` names Netflix,
+Disney+, Max and Prime Video, whose sites open in WebKit from the start.
 
 ## GitHub Actions
 

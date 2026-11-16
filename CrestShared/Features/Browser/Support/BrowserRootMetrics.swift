@@ -14,7 +14,7 @@ enum BrowserRootMetrics {
     static let noticeHeight: CGFloat = 40
     static let noticeShadowRadius: CGFloat = 16
     static let noticeShadowYOffset: CGFloat = 8
-    static let noticeTopInset: CGFloat = 18
+    static let noticeInset: CGFloat = 18
     static let noticeDuration: Duration = .milliseconds(1_400)
     static let noticeLongestDuration: Duration = .seconds(6)
     static let noticeMaximumWidth: CGFloat = 520

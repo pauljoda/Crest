@@ -24,9 +24,9 @@ struct BrowserFolderGroup: View {
     /// How many folders hold this one.
     let depth: Int
     let context: BrowserSidebarListContext
-    /// The tab a collapsed folder around this one keeps on screen, which this
-    /// folder shows in place of its contents.
-    var inheritedKeptTabID: UUID? = nil
+    /// The tabs a collapsed folder around this one keeps on screen, which this
+    /// folder shows the way to in place of its contents.
+    var inheritedKeptTabIDs: Set<UUID>? = nil
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -53,14 +53,19 @@ struct BrowserFolderGroup: View {
     private var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
             sidebarInteraction: sidebarInteraction, folder: folder, depth: depth, context: context,
-            spacePresentation: spacePresentation, inheritedKeptTabID: inheritedKeptTabID)
+            spacePresentation: spacePresentation, inheritedKeptTabIDs: inheritedKeptTabIDs,
+            isOpenInClosedFolder: collapsedTabVisibility.isOpenInClosedFolder)
     }
 
+    /// Whether the folder shows as open. Inside a closed folder that draws it
+    /// as the way to its kept tabs, opening it also shows everything it holds
+    /// there, and the folder stays open once the folder around it opens.
     private var isExpanded: Binding<Bool> {
         Binding {
-            !folder.isCollapsed
+            configuration.isShownOpen
         } set: { isExpanded in
             guard configuration.isCurrentAndUnlocked else { return }
+            if inheritedKeptTabIDs != nil { collapsedTabVisibility.openInClosedFolder(isExpanded) }
             context.browser.setFolderCollapsed(
                 folder.id, matching: configuration.assignment, isCollapsed: !isExpanded)
         }
@@ -93,19 +98,22 @@ struct BrowserFolderGroup: View {
             beginTitleEditingIfNeeded: beginTitleEditingIfNeeded,
             commitTitle: commitTitle,
             cancelTitleEditing: cancelTitleEditing,
-            deleteFolder: deleteFolder,
-            unloadKeptCollapsedTab: unloadKeptCollapsedTab
+            deleteFolder: deleteFolder
         )
     }
 
     var body: some View {
         let configuration = self.configuration
         let interaction = self.interaction
-        let showsContents = configuration.showsContents
+        let showsAllContents = configuration.showsAllContents
+        let keptTabIDs = configuration.keptTabIDs(for: collapsedTabVisibility)
         VStack(spacing: 0) {
             BrowserFolderGroupSurface(configuration: configuration, interaction: interaction)
-            if showsContents {
-                folderContents(configuration: configuration)
+            if showsAllContents || !keptTabIDs.isEmpty {
+                // One list for both: closing keeps the rows of the tabs it
+                // keeps, which move up as the rest go, rather than drawing
+                // them again apart from the folder's own.
+                folderContents(configuration: configuration, keptTabIDs: showsAllContents ? nil : keptTabIDs)
                     .transition(
                         .modifier(
                             active: BrowserFolderContentsReveal(progress: 0),
@@ -116,6 +124,7 @@ struct BrowserFolderGroup: View {
         .modifier(
             BrowserFolderSectionSurface(
                 color: folder.displayColor,
+                kind: folder.kind,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
                 depth: depth,
@@ -130,7 +139,7 @@ struct BrowserFolderGroup: View {
         .browserSidebarReorderZone(
             .folder(folder.id),
             state: sidebarInteraction.sidebarReorderState,
-            isActive: !showsContents
+            isActive: !showsAllContents
         )
         .modifier(
             BrowserFolderReorderReservation(configuration: configuration)
@@ -146,6 +155,12 @@ struct BrowserFolderGroup: View {
             )
         )
         .keepsSidebarFolderDrawn(hasPendingActions)
+        // Opened inside a closed folder only lasts while that folder stays
+        // closed around it, including when the folder draws itself again
+        // after leaving the screen.
+        .onChange(of: inheritedKeptTabIDs == nil, initial: true) { _, drawsItself in
+            if drawsItself { collapsedTabVisibility.closedFolderAroundOpened() }
+        }
         .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
     }
 
@@ -158,8 +173,9 @@ struct BrowserFolderGroup: View {
 
     /// Nested folders are children of the section they move with, so a parent's
     /// measurement, hover surface and lift include the entire expanded subtree.
-    private func folderContents(configuration: BrowserFolderGroupConfiguration) -> some View {
-        BrowserSidebarListRows(list: configuration.inside, context: context) { items in
+    /// A closed folder lists only the rows on the way to `keptTabIDs`.
+    private func folderContents(configuration: BrowserFolderGroupConfiguration, keptTabIDs: Set<UUID>?) -> some View {
+        BrowserSidebarListRows(list: configuration.inside, context: context, keptTabIDs: keptTabIDs) { items in
             if items.isEmpty { BrowserFolderEmptyRunBand(configuration: configuration) }
         }
         .equatable()
@@ -170,6 +186,9 @@ struct BrowserFolderGroup: View {
         // Each row says its own depth; this is for what the run draws between
         // them, such as the slot a lift leaves.
         .environment(\.sidebarLayerDepth, depth + 1)
+        // Rows come and go in place as the folder closes around the tabs it
+        // keeps and opens again, rather than sliding up through its title.
+        .environment(\.sidebarFolderRowTransition, .opacity)
     }
 
     private func beginCreatingChild() {
@@ -182,7 +201,7 @@ struct BrowserFolderGroup: View {
         else {
             return
         }
-        if inheritedKeptTabID != nil { expandFoldersAround() }
+        if inheritedKeptTabIDs != nil { expandFoldersAround() }
         isExpanded.wrappedValue = true
         sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
             folderID: childID,
@@ -192,7 +211,7 @@ struct BrowserFolderGroup: View {
     }
 
     /// Opens every collapsed folder that holds this one. A folder drawn on a
-    /// collapsed folder's way to its kept tab shows only that way, so a child
+    /// collapsed folder's way to its kept tabs shows only that way, so a child
     /// made here would stay hidden, and its title could never start editing,
     /// until the folders around it open.
     private func expandFoldersAround() {
@@ -204,12 +223,6 @@ struct BrowserFolderGroup: View {
             }
             parentID = parent.parentID
         }
-    }
-
-    private func unloadKeptCollapsedTab(_ tabID: UUID) {
-        guard configuration.isCurrentAndUnlocked else { return }
-        collapsedTabVisibility.tabDidUnload(tabID)
-        context.unload(tabID)
     }
 
     private func beginRenaming() {
@@ -227,11 +240,12 @@ struct BrowserFolderGroup: View {
         withAnimation(
             CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
         ) {
-            let nextExpansion = folder.isCollapsed
+            let nextExpansion = !configuration.isShownOpen
             collapsedTabVisibility.expansionDidChange(
                 isExpanded: nextExpansion,
                 selectedTabID: configuration.shownFolderTabID,
-                folderTabIDs: configuration.folderTabIDs
+                folderTabIDs: configuration.folderTabIDs,
+                residentFolderTabIDs: configuration.residentFolderTabIDs
             )
             isExpanded.wrappedValue = nextExpansion
         }
@@ -277,7 +291,7 @@ struct BrowserFolderGroup: View {
         guard let request = deletionRequest else { return }
         deletionRequest = nil
         guard isDeferredAssignmentAvailable(request) else { return }
-        context.browser.deleteFolder(request.folderID, matching: request.spaceAssignment)
+        context.browser.deleteFolderAndContents(request.folderID, matching: request.spaceAssignment)
     }
 
     private var folderColorBinding: Binding<BrandColor> {
@@ -388,7 +402,7 @@ extension BrowserFolderGroup: @MainActor Equatable {
     /// as SwiftUI compares a view's inputs: a list that redraws leaves them be.
     static func == (lhs: BrowserFolderGroup, rhs: BrowserFolderGroup) -> Bool {
         lhs.folder === rhs.folder && lhs.depth == rhs.depth && lhs.context == rhs.context
-            && lhs.inheritedKeptTabID == rhs.inheritedKeptTabID
+            && lhs.inheritedKeptTabIDs == rhs.inheritedKeptTabIDs
     }
 }
 

@@ -1,35 +1,29 @@
 import SwiftUI
 
-/// Measures the split as one insertion slot; its header owns the group drag.
+/// Wears a folder's surface in the split's own color, shown as a folder's is,
+/// and measures the split as one insertion slot; its header owns the group
+/// drag.
 struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.sidebarLayerDepth) private var depth
 
     func body(content: Content) -> some View {
         content
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
-            .background {
-                CrestSurfaceLayer(
-                    shape: containerShape,
-                    hoverTint: configuration.isPresented ? CrestColor.hover : nil
-                )
-                .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
-                .overlay {
-                    if let tint = configuration.tint {
-                        containerShape.fill(
-                            tint.color.opacity(
-                                configuration.isPresented ? 0.16 : 0.10
-                            )
-                        )
-                    }
-                }
-            }
-            .animation(surfaceAnimation, value: configuration.isPresented)
-            .animation(surfaceAnimation, value: isMultiSelected)
+            .modifier(
+                BrowserFolderSectionSurface(
+                    color: configuration.tint ?? .folderDefault,
+                    intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
+                    textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
+                    depth: depth,
+                    isSelected: isMultiSelected,
+                    folderID: nil,
+                    reorder: configuration.sidebarInteraction.sidebarReorderState,
+                    insetsSurface: false)
+            )
             // In the same column as every other layer, with the space it keeps
             // from its neighbours inside the row, so drag geometry includes the
             // resting separation.
@@ -61,11 +55,4 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
         }
     }
 
-    private var containerShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
-    }
-
-    private var surfaceAnimation: Animation? {
-        CrestMotion.surface.unlessReducingMotion(reduceMotion)
-    }
 }

@@ -59,6 +59,8 @@ final class BrowserRootModel {
     }
     @ObservationIgnored private var isSidebarApproachingDockStorage = false
     private(set) var isSidebarSurfaceHovered = false
+    /// The chrome this window draws over its Split View cards.
+    let splitCoveringChrome = BrowserSplitCoveringChrome()
     /// Whether the floating sidebar came out because the pointer reached the
     /// window edge, rather than from a click, command or page request.
     private(set) var isFloatingSidebarRevealedByPointer = false
@@ -96,9 +98,14 @@ final class BrowserRootModel {
     )
     /// The window owns the lift so its preview can outlive the source surface.
     let splitCardLift = BrowserSplitCardLiftState()
+    /// The window owns a carried extension tile for the same reason.
+    let extensionTileLift = BrowserExtensionTileLiftState()
     /// This window's extension side panel, if one is open. Transient by
     /// construction: nothing about it reaches the session, disk or sync.
     let extensionSidePanel = BrowserExtensionSidePanelHost()
+    /// Where each page card's address field lies, while the address bar is
+    /// on top, for the palette to drop out of.
+    let pageBarFieldFrames = BrowserPageBarFieldFrames()
 
     init(
         browser: BrowserStore,
@@ -362,7 +369,8 @@ extension BrowserRootModel {
     func hideSidebar(reduceMotion: Bool) {
         chrome.utilityPresentation.dismiss()
         isFloatingSidebarRevealedByPointer = false
-        guard !reduceMotion else {
+        let slide = BrowserSidebarSlide.chosen
+        guard !reduceMotion, !slide.snaps else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = isSidebarSurfaceHovered
             chrome.hideSidebar()
@@ -376,14 +384,12 @@ extension BrowserRootModel {
                 !Task.isCancelled,
                 self.sidebarMorphRevision == revision
             else { return }
-            withAnimation(
-                self.accessibleAnimation(CrestMotion.sidebarMorph, reduceMotion)
-            ) {
+            withAnimation(slide.animation(CrestMotion.sidebarMorph)) {
                 self.isFloatingSidebarPresented = true
                 self.chrome.hideSidebar()
             }
             try? await self.sidebarMorphWait(
-                CrestMotion.sidebarMorphCompletionDelay
+                slide.delay(CrestMotion.sidebarMorphCompletionDelay)
             )
             guard !Task.isCancelled,
                 self.finishSidebarMorph(revision),
@@ -401,7 +407,8 @@ extension BrowserRootModel {
 
     func dockSidebar(reduceMotion: Bool) {
         isFloatingSidebarRevealedByPointer = false
-        guard !reduceMotion else {
+        let slide = BrowserSidebarSlide.chosen
+        guard !reduceMotion, !slide.snaps else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = false
             chrome.showSidebar()
@@ -414,31 +421,21 @@ extension BrowserRootModel {
                 !Task.isCancelled,
                 self.sidebarMorphRevision == revision
             else { return }
-            withAnimation(
-                self.accessibleAnimation(
-                    CrestMotion.sidebarDockApproach,
-                    reduceMotion
-                )
-            ) {
+            withAnimation(slide.animation(CrestMotion.sidebarDockApproach)) {
                 self.isSidebarApproachingDock = true
             }
             try? await self.sidebarMorphWait(
-                CrestMotion.sidebarDockApproachCompletionDelay
+                slide.delay(CrestMotion.sidebarDockApproachCompletionDelay)
             )
             guard !Task.isCancelled,
                 self.sidebarMorphRevision == revision
             else { return }
-            withAnimation(
-                self.accessibleAnimation(
-                    CrestMotion.sidebarDockAttachment,
-                    reduceMotion
-                )
-            ) {
+            withAnimation(slide.animation(CrestMotion.sidebarDockAttachment)) {
                 self.isFloatingSidebarPresented = false
                 self.chrome.showSidebar()
             }
             try? await self.sidebarMorphWait(
-                CrestMotion.sidebarDockAttachmentCompletionDelay
+                slide.delay(CrestMotion.sidebarDockAttachmentCompletionDelay)
             )
             guard !Task.isCancelled,
                 self.sidebarMorphRevision == revision
@@ -453,9 +450,7 @@ extension BrowserRootModel {
     func presentFloatingSidebar(reduceMotion: Bool) {
         guard sidebarPresentation != .docked else { return }
         cancelSidebarMorph()
-        withAnimation(
-            accessibleAnimation(CrestMotion.floatingPane, reduceMotion)
-        ) {
+        withAnimation(sidebarAnimation(CrestMotion.floatingPane, reduceMotion: reduceMotion)) {
             isFloatingSidebarPresented = true
         }
     }
@@ -475,9 +470,7 @@ extension BrowserRootModel {
         if sidebarPresentation == .floating {
             chrome.utilityPresentation.dismiss()
         }
-        withAnimation(
-            accessibleAnimation(CrestMotion.sidebarRetreat, reduceMotion)
-        ) {
+        withAnimation(sidebarAnimation(CrestMotion.sidebarRetreat, reduceMotion: reduceMotion)) {
             isFloatingSidebarPresented = false
         }
         isSidebarSurfaceHovered = false
@@ -543,9 +536,13 @@ extension BrowserRootModel {
     private func dismissFloatingSidebarIfInteractionAllows(
         reduceMotion: Bool
     ) {
+        // A pointer that jumped from a row into the row's preview card leaves
+        // the sidebar before the card reports it, and the card keeps the
+        // sidebar out as it would once it does.
         guard !isSidebarMorphing,
             !isSidebarSurfaceHovered,
-            !chrome.utilityPresentation.isSidebarInteractionActive
+            !chrome.utilityPresentation.isSidebarInteractionActive,
+            !sidebarInteraction.tabPreview.isPointerOnShownCard
         else { return }
         dismissFloatingSidebar(reduceMotion: reduceMotion)
     }
@@ -643,11 +640,12 @@ extension BrowserRootModel {
     }
 
     /// Which side of the field-to-palette morph holds the shared identity. The
-    /// field is on screen whenever the sidebar is, docked or floating.
+    /// sidebar's field is on screen whenever the sidebar is, docked or
+    /// floating, unless the address bar is on top and the sidebar has none.
     func commandPaletteHandoff(reduceMotion: Bool) -> BrowserCommandPaletteHandoff {
         .resolve(
             isPaletteShown: isCommandPaletteShown,
-            isFieldOnScreen: sidebarPresentation.showsSidebar,
+            isFieldOnScreen: showsPageCardBars ? showsWindowTopBar : sidebarPresentation.showsSidebar,
             animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
         )
     }
@@ -750,8 +748,10 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
     }
 
     func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
-        guard selecting else { return model.browser.openBackgroundTab(url: url, in: source.spaceID) != nil }
-        guard model.browser.openAddress(url, in: source.spaceID) else { return false }
+        guard selecting else {
+            return model.browser.openBackgroundTab(url: url, in: source.spaceID, savesInSavedFolder: true) != nil
+        }
+        guard model.browser.openAddress(url, in: source.spaceID, placesAsNewTab: true) else { return false }
         model.showLoading(url)
         return true
     }
@@ -775,11 +775,10 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
 // MARK: - Animation
 
 extension BrowserRootModel {
-    func accessibleAnimation(
-        _ animation: Animation,
-        _ reduceMotion: Bool
-    ) -> Animation? {
-        animation.unlessReducingMotion(reduceMotion)
+    /// `motion`, one of the sidebar's, at the length the person chose for its
+    /// slides, or nil where they chose to have it snap or Reduce Motion is on.
+    func sidebarAnimation(_ motion: Animation, reduceMotion: Bool) -> Animation? {
+        BrowserSidebarSlide.chosen.animation(motion)?.unlessReducingMotion(reduceMotion)
     }
 }
 

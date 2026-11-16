@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The lock before a secure page's address; nothing for any other.
+/// The lock before a secure page's address; nothing for any other. It takes
+/// no click of its own, so a click on it is the address field's.
 struct BrowserQuickWindowAddressSecurityIcon: View {
     let isSecure: Bool
 
@@ -10,6 +11,7 @@ struct BrowserQuickWindowAddressSecurityIcon: View {
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+                .allowsHitTesting(false)
         }
     }
 }

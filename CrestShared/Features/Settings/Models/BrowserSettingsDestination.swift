@@ -27,6 +27,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         case spaces
         case sync
         case privacy
+        case adBlocking
         case passwords
         case extensions
         case featureFlags
@@ -58,7 +59,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let lookAndFeel = BrowserSettingsDestination(
         kind: .lookAndFeel, name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
         searchTerms:
-            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons space size fit automatic",
+            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder groups highlights counts borders preview density spacing padding scale icons space size fit automatic",
         symbol: "paintpalette", tincture: .lionGules)
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
@@ -86,9 +87,13 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let privacy = BrowserSettingsDestination(
         kind: .privacy, name: "privacy", title: "Privacy & Permissions", navigationTitle: "Privacy",
         subtitle: "Site access and data",
-        searchTerms:
-            "content blocking ads trackers filter lists EasyList uBlock AdGuard my filters camera microphone site access history cookies data website cache clear browsing",
+        searchTerms: "camera microphone site access history cookies data website cache clear browsing",
         symbol: "hand.raised", tincture: .dragonFire)
+    static let adBlocking = BrowserSettingsDestination(
+        kind: .adBlocking, name: "adBlocking", title: "Ad Blocking", subtitle: "Filter lists, your rules and sites",
+        searchTerms:
+            "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced",
+        symbol: "shield.lefthalf.filled", tincture: .riverGules, requiredCapability: .contentBlocking)
     static let passwords = BrowserSettingsDestination(
         kind: .passwords, name: "passwords", title: "Passwords", subtitle: "Credentials and autofill",
         searchTerms: "credentials autofill iCloud Keychain passkeys synchronization", symbol: "key",
@@ -120,8 +125,8 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     /// Every destination, in catalog order.
     static let all: [BrowserSettingsDestination] = [
-        general, tabs, search, engines, lookAndFeel, links, shortcuts, spaces, sync, privacy, passwords, extensions,
-        featureFlags, agents, advanced, about,
+        general, tabs, search, engines, lookAndFeel, links, shortcuts, spaces, sync, privacy, adBlocking, passwords,
+        extensions, featureFlags, agents, advanced, about,
     ]
 
     // MARK: - Variables

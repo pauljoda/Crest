@@ -2,10 +2,10 @@
   "schemaVersion": 2,
   "status": "source-preparation",
   "chromium": {
-    "version": "156.0.8078.80",
-    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-156.0.8078.80-lite.tar.xz",
-    "hashManifest": "md5  831563a77c448aadbb6ae2eee9d0c4e1  chromium-156.0.8078.80-lite.tar.xz\nsha1  e59c7eee5f75afe6519b211c83c7829cc7d1cb86  chromium-156.0.8078.80-lite.tar.xz\nsha224  4e9174a16fa32fea97e2a9170545196c6a05d332730802c21554df08  chromium-156.0.8078.80-lite.tar.xz\nsha256  6c4dc0a9e809ed3ad44b69a9d4622f147f3b3f9b34740ec8fc9735a78bbde80b  chromium-156.0.8078.80-lite.tar.xz\nsha384  f3c3ae064a589a1de13a2b0a8f20d082139d5ea7cc1c96c36eb2020c343564b41ddcf85af318861e0923134f86619383  chromium-156.0.8078.80-lite.tar.xz\nsha512  94f6ee6ac157cc248af3de9587e430cacd949a03a6280f39800bba4d9cdfdc5abad6a215fbed5a812ea2d4f96a9072e3f2b762e731381503f2e65bc88dcf3a51  chromium-156.0.8078.80-lite.tar.xz\n",
-    "sourceArchiveSha256": "6c4dc0a9e809ed3ad44b69a9d4622f147f3b3f9b34740ec8fc9735a78bbde80b"
+    "version": "157.0.8103.51",
+    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-157.0.8103.51-lite.tar.xz",
+    "hashManifest": "md5  3c2544c5ef54a1805ced176d0a821e3f  chromium-157.0.8103.51-lite.tar.xz\nsha1  2d843bba488c4403157da9877fc463b4c311966c  chromium-157.0.8103.51-lite.tar.xz\nsha224  2b4a7b95ab9f901d39e325e7352e1c880b554430498c28464608434b  chromium-157.0.8103.51-lite.tar.xz\nsha256  c66efa0eb499713d018493e1973155a057576435a7e5d5ed0e5ca131b2ae3019  chromium-157.0.8103.51-lite.tar.xz\nsha384  fc60dbe7596c338d04b90f0d65947717f9e4ab5037022f3a630a1acae43f5e0ea14a3678134b338369843e307daf7599  chromium-157.0.8103.51-lite.tar.xz\nsha512  9bb7b933a0d2536438df8b9b17ee2c7172ff9ec7878931aae22374e70700b1ce5777bc54649c2b291bb17207313abcc29a4bbdfe5a1e0cd4d6289ba1f152b37a  chromium-157.0.8103.51-lite.tar.xz\n",
+    "sourceArchiveSha256": "c66efa0eb499713d018493e1973155a057576435a7e5d5ed0e5ca131b2ae3019"
   },
   "dependencies": [
     "src/third_party/llvm-build/Release+Asserts",
@@ -55,7 +55,7 @@
     "enable_reporting": false,
     "enable_service_discovery": false,
     "enable_updater": false,
-    "enable_widevine": true,
+    "enable_widevine": false,
     "exclude_unwind_tables": true,
     "fatal_linker_warnings": false,
     "ffmpeg_branding": "Chrome",
@@ -99,7 +99,7 @@
   },
   "performanceInputs": {
     "macSDKVersion": "26.5",
-    "pgoProfile": "chrome-mac-arm-8078-1793210039-70a79c5304368db0122ec98c91db5c4c6851ed9a-2bf76a0407535d2fe700f41a1ec47590d03948c0.profdata",
-    "pgoSHA256": "1acb662d07e224d2c38f2f8cb80b63c06b5b4c927ec90b79adde5843a26c5b88"
+    "pgoProfile": "chrome-mac-arm-8103-1793136895-c311c42d236e301c0c283cc2416d5ad35f954db1-26b6d4dad87976f1f950a3cdb2a31900c772e172.profdata",
+    "pgoSHA256": "ca33a8fc58bd326fb60bef9b64dd76f5b1bafdbc9b180bc082813e4c231294bd"
   }
 }

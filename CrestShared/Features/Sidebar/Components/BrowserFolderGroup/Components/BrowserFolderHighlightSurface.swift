@@ -17,11 +17,15 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     /// container padding and rounds it one padding tighter, concentric with
     /// the folder around it.
     var depth = 0
+    /// Whether the surface steps itself in from the sidebar's edges by its
+    /// depth, or fills content that already stands in place.
+    var insetsSurface = true
     var isSelected = false
     var emphasisOpacity: Double = 0
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.folderBackgroundColor) private var parentBackgroundColor
 
     private var foregroundScheme: ColorScheme {
@@ -33,7 +37,9 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     }
 
     private var compositedColor: BrandColor {
-        let channel = colorScheme == .dark ? 0.0 : 1.0
+        // The tint lies over the material, which reads in its material color.
+        let surfaceScheme = CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
+        let channel = surfaceScheme == .dark ? 0.0 : 1.0
         return color.composited(
             opacity: fillOpacity,
             over: parentBackgroundColor ?? BrandColor(red: channel, green: channel, blue: channel))
@@ -65,8 +71,8 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                                 shape.strokeBorder(color.color.opacity(0.5), lineWidth: 1)
                             }
                         }
-                        .padding(.leading, BrowserFolderLayout.surfaceLeadingInset(depth: depth))
-                        .padding(.trailing, BrowserSidebarMetrics.layerInset)
+                        .padding(.leading, insetsSurface ? BrowserFolderLayout.surfaceLeadingInset(depth: depth) : 0)
+                        .padding(.trailing, insetsSurface ? BrowserSidebarMetrics.layerInset : 0)
                         .allowsHitTesting(false)
                 }
             }

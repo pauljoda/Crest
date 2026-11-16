@@ -50,7 +50,9 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
 
     var body: some View {
         cardSurface
-            .padding(surfaceInset)
+            .padding(.horizontal, surfaceInset)
+            .padding(.bottom, surfaceInset)
+            .padding(.top, surfaceTopInset)
             .frame(width: surfaceRegionWidth)
             .frame(maxHeight: .infinity)
             #if os(macOS)
@@ -158,6 +160,16 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         usesFloatingCardAppearance
             ? BrowserSidebarPresentation.floatingCardInset
             : 0
+    }
+
+    /// How far a floating card hangs from the window's top: below the
+    /// window's top section while the address bar is on top, so back, forward
+    /// and the field stay in reach.
+    private var surfaceTopInset: CGFloat {
+        guard usesFloatingCardAppearance,
+            BrowserDeviceAppearanceStore.shared.addressBarPlacement.showsBarInPageCards
+        else { return surfaceInset }
+        return BrowserPageBarMetrics.topSectionHeight
     }
 
     private var surfaceCornerRadius: CGFloat {

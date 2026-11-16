@@ -33,11 +33,15 @@ internal sealed class SyncedText {
     /// A tab's rename; a blank one is none, and the tab shows its page title.
     public static readonly SyncedText TabCustomTitle = new(field: StoredSessionCodec.Key.CustomTitle, limit: 2_048, standIn: _ => null);
     public static readonly SyncedText TabSymbol = new(field: StoredSessionCodec.Key.Symbol, limit: 128, standIn: _ => TabIconMode.WebSymbol);
+    /// The title of the page a saved tab belongs to; a tab without one keeps the
+    /// title it shows when it returns there.
+    public static readonly SyncedText TabSavedTitle = new(field: StoredSessionCodec.Key.SavedTitle, limit: 2_048, standIn: _ => null);
     /// A visit's page title. A page that named itself nothing is shown by its host.
     public static readonly SyncedText HistoryTitle = new(field: StoredSessionCodec.Key.Title, limit: 2_048, standIn: Host);
 
     public static IReadOnlyList<SyncedText> All { get; } = [
-        SpaceName, SpaceSymbol, SplitTitle, SplitIcon, FolderTitle, FolderSymbol, TabTitle, TabCustomTitle, TabSymbol, HistoryTitle
+        SpaceName, SpaceSymbol, SplitTitle, SplitIcon, FolderTitle, FolderSymbol, TabTitle, TabCustomTitle, TabSymbol, TabSavedTitle,
+        HistoryTitle
     ];
 
     #endregion

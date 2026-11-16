@@ -48,7 +48,22 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
             accepted.Add(repaired);
             parents[folder.Id] = (parent is { } id ? parents[id].Depth + 1 : 0, repaired.Location);
         }
-        return new FolderTree(accepted).DisplayOrder();
+        return SettledGroups(new FolderTree(accepted).DisplayOrder());
+    }
+
+    /// Whether a group may sit in `location` under `parent`: only at the top
+    /// level of the open tabs.
+    public static bool PlacesGroup(TabPlacement location, Guid? parent) => location == TabPlacement.Current && parent is null;
+
+    /// `source` with every group that breaks a group's shape made a folder: one
+    /// inside a folder, one holding a folder, or one outside the open tabs, as
+    /// a client that knows no groups can leave it. Every device settles them
+    /// alike, so none needs to write the change back.
+    public static IReadOnlyList<FolderState> SettledGroups(IReadOnlyList<FolderState> source) {
+        var parents = source.Select(folder => folder.ParentId).OfType<Guid>().ToHashSet();
+        bool Misshapen(FolderState folder) => folder.IsGroup
+            && (!PlacesGroup(folder.Location, folder.ParentId) || parents.Contains(folder.Id));
+        return source.Any(Misshapen) ? [.. source.Select(folder => Misshapen(folder) ? folder with { IsGroup = false } : folder)] : source;
     }
 
     /// Throws `BrowserRuleException` with `InvalidFolderTree` unless the
@@ -138,6 +153,45 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         return depth;
     }
 
+    /// The folders that hold one of `tabs` anywhere inside them.
+    public HashSet<Guid> Holding(IEnumerable<TabState> tabs) {
+        ArgumentNullException.ThrowIfNull(tabs);
+        return Holding(tabs.Select(tab => tab.FolderId));
+    }
+
+    /// The folders that hold, anywhere inside them, a tab sitting in one of
+    /// `places`, the folders tabs sit in.
+    public HashSet<Guid> Holding(IEnumerable<Guid?> places) {
+        ArgumentNullException.ThrowIfNull(places);
+        HashSet<Guid> holding = [];
+        foreach (var place in places) {
+            HashSet<Guid> seen = [];
+            for (var next = place; next is { } id && seen.Add(id) && byId.TryGetValue(id, out var folder);
+                next = folder.ParentId)
+                if (!holding.Add(id)) break;
+        }
+        return holding;
+    }
+
+    /// The folders `leaves` names that hold nothing: none of `holding`, the
+    /// folders that hold a tab, and no folder but one that leaves as well.
+    public HashSet<Guid> Empty(IReadOnlySet<Guid> holding, Func<FolderState, bool> leaves) {
+        ArgumentNullException.ThrowIfNull(holding);
+        ArgumentNullException.ThrowIfNull(leaves);
+        var children = byId.Values.Where(folder => folder.ParentId is not null)
+            .GroupBy(folder => folder.ParentId!.Value).ToDictionary(group => group.Key, group => group.Select(folder => folder.Id).ToArray());
+        HashSet<Guid> empty = [];
+        bool grew;
+        do {
+            grew = false;
+            foreach (var folder in byId.Values)
+                if (!empty.Contains(folder.Id) && !holding.Contains(folder.Id) && leaves(folder)
+                    && children.GetValueOrDefault(folder.Id, []).All(empty.Contains))
+                    grew |= empty.Add(folder.Id);
+        } while (grew);
+        return empty;
+    }
+
     /// The titles from the outermost folder down to `id`, joined as a path, as
     /// the palette names where a saved tab lives.
     public string PathTitle(Guid id) {
@@ -164,7 +218,8 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     /// Promotes a folder whose parent `missing` a partial delivery left out to
     /// the nearest ancestor still delivered, through parents this device holds
     /// and knows deleted, without confusing an unknown parent with a deleted
-    /// one.
+    /// one. A deleted parent this device never held, or no longer holds, has
+    /// no ancestors it knows, so what sat in it moves to the top level.
     public static bool TryPromote(Guid missing, HashSet<Guid> active,
         IReadOnlyDictionary<Guid, FolderState> local, HashSet<Guid> deleted,
         out Guid? parent) {
@@ -172,8 +227,8 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         HashSet<Guid> seen = [];
         while (parent is { } candidate) {
             if (active.Contains(candidate)) return true;
-            if (!deleted.Contains(candidate) || !seen.Add(candidate) || !local.TryGetValue(candidate, out var folder)) return false;
-            parent = folder.ParentId;
+            if (!deleted.Contains(candidate) || !seen.Add(candidate)) return false;
+            parent = local.TryGetValue(candidate, out var folder) ? folder.ParentId : null;
         }
         return true;
     }

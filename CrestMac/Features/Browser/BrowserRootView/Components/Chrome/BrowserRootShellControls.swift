@@ -26,15 +26,19 @@ struct BrowserRootShellControls: View {
             )
             // Shows the strip while its width changes in Settings.
             .background { BrowserSidebarRevealZonePreview() }
+            .frame(maxWidth: .infinity, alignment: sidebarEdge == .leading ? .leading : .trailing)
             // The Mac shell reveals for a resting pointer through AppKit alone.
             // Live WKWebView content cannot swallow the edge transition before
             // AppKit sees it, and AppKit reports only in the key window. The
             // strip's own hover reads focus a moment late, and reopened the
             // sidebar under a pointer parked at the screen edge just after the
-            // window lost focus, where nothing would close it again.
+            // window lost focus, where nothing would close it again. The
+            // tracker spans the window, so it sees the pointer leave it
+            // through the sidebar's edge however fast it went.
             .overlay {
                 if revealMetrics.revealsOnHover {
                     BrowserCollapsedSidebarHoverTracker(
+                        stripWidth: revealPointerWidth, edge: sidebarEdge,
                         onHoverChange: collapsedSidebarHoverChanged
                     )
                 }

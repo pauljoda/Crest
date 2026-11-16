@@ -73,6 +73,12 @@ public sealed record SessionState(
         return Replacing([edited, .. others.Select(member => member.Configured(setting.Copied(edited.Settings, member.Settings)))]);
     }
 
+    /// The session with every Space opening freely, as a workspace that never
+    /// locks its Spaces holds it, whatever policy each arrived with.
+    internal SessionState OpeningFreely() => this with {
+        Spaces = [.. Spaces.Select(space => space.Configured(space.Settings with { AccessPolicy = SpaceAccessPolicy.Open }))]
+    };
+
     /// Whether the Space `spaceId` names leads a Sub-Space that stays.
     internal bool Leads(Guid spaceId) => Spaces.Any(space => space.PrimaryId == spaceId && PendingDeletion(space.Id) is null);
 
@@ -178,6 +184,47 @@ public sealed record SessionState(
     /// Spaces leave one behind when one goes.
     internal static void RequireRemovable(int spaceCount) {
         if (spaceCount <= 1) throw new Rejected(new CannotDeleteLastSpace());
+    }
+
+    #endregion
+
+    #region Actions - Folders
+
+    /// This session without the folders of the open tabs that `previous`
+    /// showed holding something and that hold nothing here: a folder of the
+    /// open tabs, a group among them, goes once its last tab closed, was
+    /// archived or moved out, or its last folder went, and a folder it held
+    /// that goes leaves it the same way. A folder that still holds a folder
+    /// stays, and so does that folder. A saved folder stays empty, and so does
+    /// one that held nothing before, since its tabs may not have arrived from
+    /// another device yet.
+    internal SessionState ClearingEmptiedFolders(SessionState previous) {
+        var cleared = false;
+        var spaces = Spaces.Select(space => {
+            if (previous.Space(space.Id) is not { } before
+                || (ReferenceEquals(space.Tabs, before.Tabs) && ReferenceEquals(space.Folders, before.Folders))
+                || !space.Folders.Any(folder => folder.GoesWhenEmptied)) return space;
+            var filled = new FolderTree(before.Folders).Holding(before.Tabs);
+            filled.UnionWith(before.Folders.Select(folder => folder.ParentId).OfType<Guid>());
+            var tree = new FolderTree(space.Folders);
+            var removed = tree.Empty(tree.Holding(space.Tabs), folder => folder.GoesWhenEmptied && filled.Contains(folder.Id));
+            if (removed.Count == 0) return space;
+            cleared = true;
+            return space with { Folders = [.. space.Folders.Where(folder => !removed.Contains(folder.Id))] };
+        }).ToArray();
+        return cleared ? this with { Spaces = spaces } : this;
+    }
+
+    /// The folders of the open tabs `previous` held that this session holds
+    /// no more, from Spaces it still holds: emptied, deleted or ungrouped on
+    /// the person's behalf. A folder that left with its Space keeps the reason
+    /// the Space went for.
+    internal IReadOnlyList<Guid> FoldersGoneSince(SessionState previous) {
+        var gone = previous.Spaces.Where(before => Space(before.Id) is { } space && !ReferenceEquals(space.Folders, before.Folders))
+            .SelectMany(before => before.Folders.Where(folder => folder.GoesWhenEmptied)).Select(folder => folder.Id).ToList();
+        if (gone.Count == 0) return [];
+        var kept = Spaces.SelectMany(space => space.Folders).Select(folder => folder.Id).ToHashSet();
+        return [.. gone.Where(id => !kept.Contains(id))];
     }
 
     #endregion

@@ -92,6 +92,14 @@ struct BrowserChromeAppearance: Equatable {
         )
     }
 
+    /// Where to lay out a view so it lands on `frame`, a frame read from
+    /// geometry in a container `width` wide. Geometry reads stay physical in
+    /// a right-to-left layout, while placement there is mirrored.
+    static func placementFrame(for frame: CGRect, in width: CGFloat, direction: LayoutDirection) -> CGRect {
+        guard direction == .rightToLeft else { return frame }
+        return CGRect(x: width - frame.maxX, y: frame.minY, width: frame.width, height: frame.height)
+    }
+
     func pageInsets(docked: Bool, direction: LayoutDirection) -> EdgeInsets {
         guard !borderless else { return EdgeInsets() }
         let edge = sidebarEdge(in: direction)
@@ -107,6 +115,7 @@ struct BrowserChromeAppearance: Equatable {
 @MainActor
 enum BrowserChromeAppearancePreference {
     static let sidebarOnRightKey = "crest.appearance.sidebar-on-right"
+    static let addressBarPlacementKey = "crest.appearance.address-bar-placement"
     static let borderWidthKey = "crest.appearance.window-border-width"
     static let borderlessKey = "crest.appearance.borderless"
     static let defaults = defaults(for: .current)

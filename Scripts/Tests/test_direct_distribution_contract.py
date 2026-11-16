@@ -49,6 +49,17 @@ class DirectDistributionContractTests(unittest.TestCase):
         )
 
 
+    def test_every_renderer_and_gpu_helper_flavor_gets_jit_and_unknown_helpers_are_refused(self) -> None:
+        for name, expected in (("Chromium Helper (Renderer).app", True), ("Chromium Helper (GPU).app", True),
+                               ("Chromium Helper (Aperitif Renderer).app", True),
+                               ("Chromium Helper (Aperitif GPU).app", True), ("Chromium Helper.app", False),
+                               ("Chromium Helper (Aperitif).app", False), ("Updater.app", False)):
+            with self.subTest(name=name):
+                self.assertEqual(PACKAGING.needs_jit(pathlib.Path(name)), expected)
+        self.assertEqual(PACKAGING.unknown_engine_helpers([
+            pathlib.Path("Chromium Helper (Renderer).app"), pathlib.Path("Chromium Helper (Plugin).app"),
+            pathlib.Path("Updater.app")]), ["Chromium Helper (Plugin).app"])
+
     def test_release_workflow_preserves_production_entitlements(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
 

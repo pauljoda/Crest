@@ -14,19 +14,36 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Organization
 
-    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null) {
+    /// Adds a folder, or a group when `isGroup`: a group sits at the top level
+    /// of the open tabs, and no folder goes inside one.
+    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null, bool isGroup = false) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new Rejected(new FolderLimitReached(FolderTree.MaximumCount));
         if (folders.Any(f => f.Id == id)) throw new Rejected(new FolderAlreadyExists(id));
         location ??= TabPlacement.Saved;
-        if (!location.HoldsFolders) throw new Rejected(new InvalidFolderPlacement());
+        if (!location.HoldsFolders || isGroup && !FolderTree.PlacesGroup(location, parent))
+            throw new Rejected(new InvalidFolderPlacement());
         int insertion = folders.Count;
         if (parent is { } p) {
+            if (KnownFolder(p).IsGroup) throw new Rejected(new GroupHoldsOnlyTabs(p));
             location = KnownFolder(p).Location;
             if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new Rejected(new FolderDepthLimitReached(FolderTree.MaximumDepth));
             var subtree = tree.Subtree(p); insertion = folders.FindLastIndex(f => subtree.Contains(f.Id)) + 1;
         }
-        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent));
+        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent, IsGroup: isGroup));
+    }
+
+    /// Whether the folder turned into a group, or back into a folder. Only a
+    /// folder of open tabs at the top level that holds tabs and no folders
+    /// becomes a group; refused with `CannotBecomeGroup` for any other.
+    public bool SetFolderGroup(Guid id, bool isGroup) {
+        var folder = KnownFolder(id);
+        if (folder.IsGroup == isGroup) return false;
+        if (isGroup && (!FolderTree.PlacesGroup(folder.Location, folder.ParentId)
+            || folders.Any(f => f.ParentId == id) || !tabs.Any(t => t.FolderId == id)))
+            throw new Rejected(new CannotBecomeGroup(id));
+        folders[folders.IndexOf(folder)] = folder with { IsGroup = isGroup };
+        return true;
     }
 
     public void RenameFolder(Guid id, string name) {
@@ -68,6 +85,22 @@ public sealed partial class BrowserTabCollection {
         folders.Clear(); folders.AddRange(ordered);
     }
 
+    /// Deletes the folder `id` with every folder inside it, and each tab they
+    /// hold, split members included, into the archive as open tabs. Answers
+    /// the tab the window shows next: `fallback` in place of `shown` when it
+    /// went, or none, and `shown` itself otherwise. Refused with
+    /// `UnknownFolder` for a folder the Space does not hold.
+    public Guid? DeleteFolderAndContents(Guid id, Guid? shown, Guid? fallback, DateTimeOffset now) {
+        var subtree = new FolderTree(folders).Subtree(id);
+        var deleting = TabsInFolder(id);
+        // Only a window that showed one of the folder's tabs moves; one on
+        // another tab, or on no tab at all, stays where it is.
+        var deletesShown = shown is { } active && deleting.Contains(active);
+        var next = DeleteIntoArchive(deleting, shown, fallback, now, ensureSelection: deletesShown);
+        folders.RemoveAll(folder => subtree.Contains(folder.Id));
+        return deletesShown ? next : shown;
+    }
+
     private static void ValidateInsertion(IReadOnlyList<BrowserTab> remaining, int insertion) {
         if (insertion > 0 && insertion < remaining.Count && remaining[insertion].SplitGroupId is { } split
             && remaining[insertion - 1].SplitGroupId == split) throw new Rejected(new SplitBoundary());
@@ -82,6 +115,18 @@ public sealed partial class BrowserTabCollection {
         RepairSplitMembership();
         foreach (var group in tabs.Where(t => t.SplitGroupId is not null).GroupBy(t => t.SplitGroupId))
             if (group.Count() < 2) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
+    }
+
+    /// Files `tabId`, a tab just opened from `origin`, at the end of the folder
+    /// `origin` sits in, when it sits in one: among the open tabs for a folder
+    /// of the open tabs or a group, and, when `savesInSavedFolder`, as for a
+    /// new tab the person asked for, saved with a saved folder. A tab opened
+    /// from a saved folder's tab otherwise stays among the open tabs.
+    public void JoinFolderOf(Guid origin, Guid tabId, DateTimeOffset now, bool savesInSavedFolder = false) {
+        if (tabs.FirstOrDefault(tab => tab.Id == origin)?.FolderId is not { } folder || folders.All(f => f.Id != folder)) return;
+        var location = KnownFolder(folder).Location;
+        if (location.IsDurable && !savesInSavedFolder) return;
+        FileTabs([tabId], location, folder, now);
     }
 
     public void FileTabs(IReadOnlyCollection<Guid> requested, TabPlacement location, Guid? folder,
@@ -106,7 +151,8 @@ public sealed partial class BrowserTabCollection {
         var predecessors = remainingTree.EmptyPredecessors(beforeFolder, anchor, folder, location, remaining);
         int insertion;
         if (anchor is { } actual) insertion = remaining.FindIndex(t => t.Id == actual);
-        else if (folder is not null && remaining.FindLastIndex(t => t.FolderId == folder) is var last && last >= 0) insertion = last + 1;
+        else if (folder is { } destination && tree.Subtree(destination) is var within
+            && remaining.FindLastIndex(t => t.FolderId is { } owner && within.Contains(owner)) is var last && last >= 0) insertion = last + 1;
         else insertion = folder is null ? SectionEnd(remaining, location) : Math.Min(tabs.FindIndex(t => memberIds.Contains(t.Id)), remaining.Count);
         if (detachSplitMembers && anchor is null && insertion > 0 && insertion < remaining.Count
             && remaining[insertion].SplitGroupId is { } crossing && remaining[insertion - 1].SplitGroupId == crossing)
@@ -127,7 +173,7 @@ public sealed partial class BrowserTabCollection {
     public void MoveFolder(Guid id, TabPlacement? location, Guid? parent, DateTimeOffset now,
         Guid? beforeFolder = null, Guid? beforeTab = null) {
         var tree = new FolderTree(folders); var source = KnownFolder(id);
-        if (parent is { } named) _ = KnownFolder(named);
+        if (parent is { } named && KnownFolder(named).IsGroup) throw new Rejected(new GroupHoldsOnlyTabs(named));
         var movingIds = tree.Subtree(id);
         if (parent is { } p && movingIds.Contains(p)) throw new Rejected(new FolderCycle(id));
         int destinationDepth = parent is { } parentId ? tree.Depth(parentId) + 1 : 0;
@@ -146,7 +192,9 @@ public sealed partial class BrowserTabCollection {
         var remainingTree = new FolderTree(nextFolders);
         var anchor = beforeFolder is { } target ? remainingTree.TabAnchor(target, remaining) : beforeTab;
         var predecessors = remainingTree.EmptyPredecessors(beforeFolder, anchor, parent, destination, remaining);
-        var moving = nextFolders.Where(f => movingIds.Contains(f.Id)).Select(f => f with { Location = destination, ParentId = f.Id == id ? parent : f.ParentId, OrderAnchorTabId = f.Id == id ? anchor : f.OrderAnchorTabId }).ToArray();
+        // A group moved into a folder or out of the open tabs becomes a folder.
+        var moving = nextFolders.Where(f => movingIds.Contains(f.Id)).Select(f => f with { Location = destination, ParentId = f.Id == id ? parent : f.ParentId, OrderAnchorTabId = f.Id == id ? anchor : f.OrderAnchorTabId })
+            .Select(f => f with { IsGroup = f.IsGroup && FolderTree.PlacesGroup(f.Location, f.ParentId) }).ToArray();
         nextFolders.RemoveAll(f => movingIds.Contains(f.Id));
         int folderInsertion = beforeFolder is { } bf ? nextFolders.FindIndex(f => f.Id == bf)
             : parent is { } parentFolder ? nextFolders.FindLastIndex(f => tree.Subtree(parentFolder).Contains(f.Id)) + 1 : nextFolders.Count;
@@ -168,6 +216,13 @@ public sealed partial class BrowserTabCollection {
     #endregion
 
     #region Mutators
+
+    /// The tabs the folder holds, however deep, in the Space's order. Refused
+    /// with `UnknownFolder` for a folder the Space does not hold.
+    public IReadOnlyList<Guid> TabsInFolder(Guid id) {
+        var subtree = new FolderTree(folders).Subtree(id);
+        return [.. tabs.Where(tab => tab.FolderId is { } folder && subtree.Contains(folder)).Select(tab => tab.Id)];
+    }
 
     /// A folder's name: its trimmed title, or "Untitled Folder" for a blank one.
     private static string FolderName(string name) {

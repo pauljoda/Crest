@@ -1,8 +1,10 @@
 namespace CrestCore.Contracts;
 
-/// How a Space blocks ads and trackers. Balanced applies the filter lists the
-/// device subscribes to, except on the sites the Space turned blocking off for;
-/// Off blocks nothing.
+/// How a Space blocked ads and trackers before blocking held for every Space
+/// alike: Balanced or Off. Spaces still carry it, so older builds and other
+/// devices read their sessions as before, but `ContentBlockingLevel` decides
+/// what blocks; a device that never chose a level starts Off only if every
+/// one of its Spaces was Off.
 ///
 /// The stored session spells a policy as its `Name`, so a name never changes.
 /// A policy travels as its index in `All`, so `All` is append-only.

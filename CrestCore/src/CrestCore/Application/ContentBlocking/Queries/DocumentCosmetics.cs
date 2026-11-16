@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// once as the document starts (`First`), for the site's hiding rules and
 /// procedural filters, and again as elements appear: for the generic rules
 /// for their `Classes` and `Ids`, and whether the filter blocks the
-/// `Resources` they load. A page whose Space does not block on the site gets
+/// `Resources` they load. A page on a site where Crest does not block gets
 /// `CosmeticFilters.None`.
 public sealed record DocumentCosmetics(Guid SpaceId, string SiteUrl, string DocumentUrl, bool First,
     IReadOnlyList<string> Classes, IReadOnlyList<string> Ids, IReadOnlyList<PageResource> Resources) : Query<CosmeticFilters> {

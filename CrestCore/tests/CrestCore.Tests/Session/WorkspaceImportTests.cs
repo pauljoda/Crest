@@ -106,6 +106,28 @@ public sealed partial class BrowserContractsTests {
             device.Authority.Current.DisposableSeedMarker));
     }
 
+    /// An import whose work breaks on what it brings is refused, naming what
+    /// broke and where but nothing it brings, and changes nothing, so the app
+    /// shows the refusal rather than quitting. A reviewed import and its
+    /// preview do the same work.
+    [Fact]
+    public void AnImportThatBreaksOnWhatItBringsIsRefusedAndChangesNothing() {
+        var session = SavedSession().Document["session"]!;
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var before = device.Authority.Current;
+        // The file holds this session's own Space, whose records take new identities, and drawing one breaks.
+        device.Ids.Failure = new InvalidOperationException("https://private.example/");
+
+        var refusal = Assert.IsType<UnpreparedImport>(Assert.Throws<Rejected>(() =>
+            device.Send(new ImportSpaces(device.Workspace, window, ReadSpaces(session["spaces"]![0]!)))).Rejection);
+
+        Assert.StartsWith($"{nameof(InvalidOperationException)} < ", refusal.Cause);
+        Assert.Contains($"{nameof(NativeWorkspaceImport)}.", refusal.Cause);
+        Assert.DoesNotContain("private.example", refusal.Cause);
+        Assert.Same(before, device.Authority.Current);
+    }
+
     /// Spaces that shared one session where they came from come in as one
     /// group: the first brought leads, a Sub-Space leaves the pinned tabs the
     /// primary holds to it and keeps its own as saved tabs, and one the review
@@ -143,6 +165,43 @@ public sealed partial class BrowserContractsTests {
         Assert.Null(alone.Membership);
         Assert.NotEqual(leader.ProfileId, alone.ProfileId);
         Assert.Equal(TabPlacement.Pinned, alone.Tabs[0].Placement);
+    }
+
+    /// Spaces that shared a session but were not side by side where they came
+    /// from, as Arc lists them, come in gathered behind the first of them, and
+    /// every tab still says which imported Space and tab it came from, in the
+    /// preview and the import alike.
+    [Fact]
+    public void SpacesThatSharedASessionApartComeInGatheredWithEachTabsOwnOrigin() {
+        var session = SavedSession().Document["session"]!;
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var work = ImportedSpace("Work", ImportedTab("https://work.example/"));
+        var client = ImportedSpace("Client", ImportedTab("https://client.example/"));
+        var personal = ImportedSpace("Personal", ImportedTab("https://personal.example/one"),
+            ImportedTab("https://personal.example/two"), ImportedTab("https://personal.example/three"));
+        var school = ImportedSpace("School", ImportedTab("https://school.example/"));
+        foreach (var joined in new[] { client, school }) {
+            joined["primarySpaceID"] = work["id"]!.DeepClone();
+            joined["sharedProfileID"] = work["profile"]!["id"]!.DeepClone();
+            joined["membershipModifiedAt"] = 800000000.0;
+        }
+        JsonObject[] brought = [work, client, personal, school];
+        Reviewing(device, brought);
+        device.Send(new BeginImportCommit());
+        var intent = new ImportReviewedSpaces(device.Workspace, window);
+
+        var preview = device.Query(new ImportPreview(intent));
+        var changes = device.Send(intent);
+
+        var current = device.Authority.Current;
+        Assert.Equal(["Work", "Client", "School", "Personal"], current.Spaces.Select(space => space.Settings.Name));
+        Assert.Equal(current.Spaces.Select(space => space.Settings.Name), preview.Session.Spaces.Select(space => space.Settings.Name));
+        var origins = brought.SelectMany((space, index) => space["tabs"]!.AsArray().Select(tab => new ImportedTab(TabId(tab!), index, TabId(tab!))))
+            .ToHashSet();
+        Assert.Equal(origins, changes.OfType<TabsImported>().Single().Tabs.ToHashSet());
+        Assert.Equal(origins, preview.Imported.ToHashSet());
+        Assert.Equal((SpaceId(work), (Guid?)TabId(personal["tabs"]![0]!)), (device.Space(window), device.Tab(window, SpaceId(personal))));
     }
 
     /// When the review brings one of the Spaces that shared a session where

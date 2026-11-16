@@ -4,6 +4,8 @@ namespace CrestCore.Contracts;
 /// How a Space's sidebar and icon look. <see cref="RenderingVersion"/> is the newest
 /// vocabulary the branding uses, which older readers need to read it faithfully.
 /// <see cref="HasCustomAppearance"/> is null for branding stored before it was recorded.
+/// <see cref="TextureStrength"/> is how strongly a grain lies over the sidebar, whatever its
+/// mode, from none at 0 to full at 1.
 /// </summary>
 public sealed partial record SpaceBranding(
     ColorPalette Colors,
@@ -13,7 +15,7 @@ public sealed partial record SpaceBranding(
     bool KeepsControlsReadable,
     SpaceThemeMode ThemeMode,
     double GradientAngle,
-    bool ShowsTexture,
+    double TextureStrength,
     SpaceIconStyle IconStyle,
     BrandColor? SymbolColor,
     SpaceCrest Crest,
@@ -34,7 +36,7 @@ public sealed partial record SpaceBranding(
     /// gave it no colors: a gray solid banner that keeps controls readable, with a
     /// plain mountain crest.</summary>
     public static SpaceBranding Neutral { get; } = new(new([new(0.24, 0.25, 0.27)]), SpaceBannerPattern.Solid, BannerStrength: 1,
-        ReadabilityFade: 0.34, KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, ShowsTexture: false,
+        ReadabilityFade: 0.34, KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, TextureStrength: 0,
         SpaceIconStyle.SimpleSymbol, SymbolColor: null,
         SpaceCrest.PlainField(CrestBackplate.Shield, CrestSymbol.Mountain, CrestTrim.None, layers: [1, 1, 2, 1, 2, 1], trimWeight: 1,
             chargeScale: 1),
@@ -60,7 +62,7 @@ public sealed partial record SpaceBranding(
         var crest = SpaceCrest.PlainField(CrestBackplate.Shield, LegacyFigure(symbol), CrestTrim.None, layers: [1, 1, 2, 1, 2, 1],
             trimWeight: 1, chargeScale: 1);
         return new(new(accent.LegacyColors), SpaceBannerPattern.Diagonal, BannerStrength: 1, LegacyReadabilityFade,
-            KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, ShowsTexture: false, SpaceIconStyle.SimpleSymbol,
+            KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, TextureStrength: 0, SpaceIconStyle.SimpleSymbol,
             SymbolColor: null, crest, BaselineRenderingVersion, FolderColorIntensity: 0, SpaceTextColorMode.Automatic,
             HasCustomAppearance: null);
     }

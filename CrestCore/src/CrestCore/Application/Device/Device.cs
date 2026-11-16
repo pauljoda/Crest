@@ -347,6 +347,7 @@ internal sealed partial class Device {
         SearchCatalog = searchCatalog,
         Agents = agents,
         ReopeningPages = reopeningPages,
+        ContentBlockingLevel = contentBlockingLevel,
         FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
         BlockingSites = [.. keptBlockingSites],
         CustomFilterLists = [.. customFilterLists],

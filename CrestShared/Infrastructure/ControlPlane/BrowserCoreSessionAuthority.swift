@@ -80,22 +80,30 @@ final class BrowserCoreSessionAuthority {
     }
 
     /// Opens the session `core` keeps in its file, as it loaded and repaired
-    /// it. Each tab wears the image `favicons` keeps for it, and a tab the
-    /// repair gave a new identity wears its source's. Throws `NoStoredSession`
-    /// while the file holds no session yet.
+    /// it. Each tab wears the image `favicons` keeps for it and keeps the one
+    /// kept for its saved page, and a tab the repair gave a new identity takes
+    /// its source's. Throws `NoStoredSession` while the file holds no session
+    /// yet.
     static func openStored(in core: CrestCore, favicons: any BrowserFaviconStoring) throws(Rejection)
         -> BrowserCoreSessionAuthority
     {
         let changes = try core.send(OpenWorkspace(kind: .persistent, seed: nil))
         let opened = Self.opened(by: changes)
         var images: [UUID: Data] = [:]
+        var saved: [UUID: BrowserSavedFavicon] = [:]
+        var repaired: Set<UUID> = []
         for space in opened.session.spaces {
-            for tab in space.tabs { images[tab.id] = favicons.favicon(tabID: tab.id) }
+            for tab in space.tabs {
+                images[tab.id] = favicons.favicon(tabID: tab.id)
+                if tab.savedURL != nil { saved[tab.id] = favicons.savedFavicon(tabID: tab.id) }
+            }
         }
         for case .tabCopied(let copied) in changes where copied.workspaceID == opened.workspaceID {
             images[copied.copyTabID] = favicons.favicon(tabID: copied.sourceTabID)
+            saved[copied.copyTabID] = favicons.savedFavicon(tabID: copied.sourceTabID)
+            repaired.insert(copied.copyTabID)
         }
-        core.state.adoptImages(images, in: opened.workspaceID)
+        core.state.adoptImages(images, saved: saved, unkept: repaired, in: opened.workspaceID)
         return BrowserCoreSessionAuthority(opened: opened, core: core)
     }
 

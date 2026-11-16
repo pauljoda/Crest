@@ -12,7 +12,8 @@ internal sealed record SessionFolder(string SourceId, string Title, string? Pare
     TabGroupColor? Color = null);
 
 /// A tab of another browser's session: the page it shows, where it sits, the
-/// folder it sits in, when it was last active, where the browser knows, and
-/// the split view it shows in, by the identity the browser spells for it.
+/// folder it sits in, when it was last active, where the browser knows, the
+/// split view it shows in, by the identity the browser spells for it, and the
+/// name the person gave it there, where the browser keeps one.
 internal sealed record SessionTab(string Title, ImportAddress Address, TabPlacement Placement, string? FolderSourceId,
-    DateTimeOffset? LastActivatedAt, string? SplitSourceId = null);
+    DateTimeOffset? LastActivatedAt, string? SplitSourceId = null, string? CustomTitle = null);

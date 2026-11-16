@@ -23,6 +23,18 @@ struct CrestSettingSliderReadout: Sendable {
         }
     }
 
+    /// A percentage where some stops have names of their own, as the tab
+    /// size's Thin and Large do. A value within half a percent of a named
+    /// stop reads as its name.
+    static func percent(naming names: [Double: LocalizedStringResource]) -> Self {
+        CrestSettingSliderReadout { value in
+            if let name = names.first(where: { abs($0.key - value) < 0.005 })?.value {
+                return String(localized: name)
+            }
+            return value.formatted(.percent.precision(.fractionLength(0)))
+        }
+    }
+
     /// A point measurement.
     static let points = CrestSettingSliderReadout { String(localized: "\(Int($0.rounded())) pt") }
 
@@ -30,6 +42,18 @@ struct CrestSettingSliderReadout: Sendable {
     static func points(zero: LocalizedStringResource) -> Self {
         CrestSettingSliderReadout { value in
             value <= 0 ? String(localized: zero) : String(localized: "\(Int(value.rounded())) pt")
+        }
+    }
+
+    /// A length of time in steps of ten milliseconds, such as how long a
+    /// sidebar waits or slides, whose zero is a word. A stored value that is
+    /// not a number or past any length a slider offers reads as its nearest
+    /// end rather than stopping the page.
+    static func milliseconds(zero: LocalizedStringResource) -> Self {
+        CrestSettingSliderReadout { value in
+            let length = value.isFinite ? min(max(value, 0), 3_600_000) : 0
+            let milliseconds = Int((length / 10).rounded()) * 10
+            return milliseconds <= 0 ? String(localized: zero) : String(localized: "\(milliseconds) ms")
         }
     }
 }

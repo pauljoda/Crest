@@ -20,7 +20,7 @@
  // static
 --- a/chrome/browser/chrome_browser_main.cc
 +++ b/chrome/browser/chrome_browser_main.cc
-@@ -2024,19 +2024,6 @@
+@@ -2022,19 +2022,6 @@
    net::NetModule::SetResourceProvider(ChromeNetResourceProvider);
    media::SetLocalizedStringProvider(ChromeMediaLocalizedStringProvider);
  

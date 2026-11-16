@@ -544,7 +544,10 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   if (!navigation->IsInPrimaryMainFrame()) {
     return;
   }
-  if (navigation->HasCommitted()) {
+  // Only a new document counts. A page that updates its own address, as one
+  // does with pushState as it opens a link, still shows the document the link
+  // was followed in, so the link still applies.
+  if (navigation->HasCommitted() && !navigation->IsSameDocument()) {
     ++navigation_revision_;
   }
   // The core's load takes its identity with it, whether it commits, fails or

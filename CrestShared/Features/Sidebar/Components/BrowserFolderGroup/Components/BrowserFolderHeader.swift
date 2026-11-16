@@ -10,23 +10,11 @@ struct BrowserFolderHeader: View {
     let interaction: BrowserFolderGroupInteractionContext
 
     private var folder: FolderStateModel { configuration.folder }
-    private var tabScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     var body: some View {
         BrowserFolderHeaderControl(
             configuration: configuration,
             interaction: interaction
-        )
-        .accessibilityLabel("\(folder.shownTitle) folder")
-        .accessibilityValue(
-            BrowserChromeAccessibility.folderValue(
-                isExpanded: interaction.isExpanded.wrappedValue
-            )
-        )
-        .accessibilityHint(
-            interaction.isExpanded.wrappedValue
-                ? "Collapses this folder"
-                : "Expands this folder"
         )
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         // Inside the folder's padding, as a Split View's header is inside its own.
@@ -34,7 +22,7 @@ struct BrowserFolderHeader: View {
         // The separation a tab row keeps, so the two stand alike.
         .padding(
             .vertical,
-            BrowserSidebarDensity(tabScale).rowSeparation(
+            BrowserSidebarDensity.current.rowSeparation(
                 hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
         )
         .modifier(

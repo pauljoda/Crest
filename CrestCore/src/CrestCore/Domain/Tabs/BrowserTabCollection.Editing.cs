@@ -108,7 +108,7 @@ public sealed partial class BrowserTabCollection {
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
         foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
             var value = tab.State with { SplitGroupId = null };
-            if (resetArchivePlacement) value = value with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null };
+            if (resetArchivePlacement) value = value.SavedAt(null) with { Placement = TabPlacement.Current, FolderId = null };
             archive.Add(new(value, now, deleting ? ArchiveReason.Deleted : ArchiveReason.Closed));
         }
         tabs.RemoveAll(t => removing.Contains(t.Id));
@@ -119,6 +119,18 @@ public sealed partial class BrowserTabCollection {
             selected = FallbackSelection();
         NormalizeSplits(now);
         return selected;
+    }
+
+    /// Deletes the `requested` tabs into the archive as open tabs, and answers
+    /// the tab the window shows next: `fallback` in place of `shown` when it
+    /// went, or none. Unless `ensureSelection` is false, a window that showed
+    /// no tab is given one too.
+    private Guid? DeleteIntoArchive(IReadOnlyCollection<Guid> requested, Guid? shown, Guid? fallback, DateTimeOffset now,
+        bool ensureSelection = true) {
+        var next = DismissTabs(requested, shown, fallback, now, deleting: true, ensureSelection, resetArchivePlacement: true);
+        return shown is { } removed && requested.Contains(removed)
+            ? fallback is { } other && tabs.Any(tab => tab.Id == other) ? other : null
+            : next;
     }
 
     /// Refuses a section that cannot hold `count` tabs.

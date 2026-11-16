@@ -10,20 +10,22 @@ internal readonly record struct LinkRoutingDecision(bool OpensQuickWindow, Guid 
 #endregion
 
 /// How links behave on this device: where a link from another app opens, what
-/// a clicked link does, how long a Quick Window lives, and the routes that send
+/// a clicked link does, how long a Quick Window lives, whether a copied link
+/// leaves out what only tracks who followed it, and the routes that send
 /// matching links to a Space. The device store keeps them and never syncs
 /// them. Each edit answers the revised preferences, or throws the rule that
 /// refuses it.
 public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? DestinationSpaceId, bool FocusesNewTabs,
     bool FollowsMovedTabs, bool OpensPeekAutomatically, LinkPeekModifier PeekModifier, bool DragsLinksToPeek, bool DimsPageBehindPeek,
-    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, IReadOnlyList<LinkRoute> Routes,
+    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, bool CleansCopiedLinks, IReadOnlyList<LinkRoute> Routes,
     IReadOnlyList<RememberedSite> RememberedSites) {
     #region Static Variables
 
     /// The preferences of a device that never chose any.
     internal static readonly LinkPreferences Default = new(ExternalLinkDestination.QuickWindow, DestinationSpaceId: null,
         FocusesNewTabs: false, FollowsMovedTabs: true, OpensPeekAutomatically: true, LinkPeekModifier.Option,
-        DragsLinksToPeek: true, DimsPageBehindPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true, [], []);
+        DragsLinksToPeek: true, DimsPageBehindPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true,
+        CleansCopiedLinks: true, [], []);
 
     #endregion
 
@@ -150,7 +152,8 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
         && OpensPeekAutomatically == other.OpensPeekAutomatically && PeekModifier == other.PeekModifier
         && DragsLinksToPeek == other.DragsLinksToPeek && DimsPageBehindPeek == other.DimsPageBehindPeek
         && ArchivePolicy == other.ArchivePolicy
-        && RemembersSpaceBySite == other.RemembersSpaceBySite && Routes.SequenceEqual(other.Routes)
+        && RemembersSpaceBySite == other.RemembersSpaceBySite && CleansCopiedLinks == other.CleansCopiedLinks
+        && Routes.SequenceEqual(other.Routes)
         && RememberedSites.SequenceEqual(other.RememberedSites);
 
     public override int GetHashCode() => HashCode.Combine(Destination, DestinationSpaceId, Routes.Count, RememberedSites.Count);

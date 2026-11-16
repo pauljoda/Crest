@@ -6,8 +6,7 @@ namespace CrestCore.Contracts;
 public sealed class KeySystem {
     #region Variables
 
-    /// Google's Widevine, which Crest's Chromium plays once its module has
-    /// downloaded.
+    /// Google's Widevine, which Crest's Chromium does not carry.
     public static readonly KeySystem Widevine = new(name: "widevine");
 
     /// Microsoft's PlayReady, which Crest's Chromium does not carry.

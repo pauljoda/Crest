@@ -20,7 +20,7 @@ struct BrowserSpaceEditorView: View {
     var body: some View {
         Group {
             if usesLiveSidebar {
-                BrowserCrestForge(branding: branding, symbol: symbol, step: forgeStep)
+                BrowserCrestForge(branding: branding, symbol: symbol, step: forgeStep, spaceID: space.id)
             } else {
                 appearanceEditor
             }

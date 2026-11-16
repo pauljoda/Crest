@@ -14,7 +14,9 @@ namespace CrestCore.Application;
 /// recovery checkpoint; a core without a storage directory keeps them in
 /// memory. Converting lists into content rules runs on a worker, never under
 /// the app's lock, and announces `ContentRuleListsChanged` when the new rules
-/// are ready. Until a list arrives, Crest's own baseline rules block.
+/// are ready. Until a list arrives, Crest's own baseline rules block. The
+/// library also keeps the link-tracking list up to date, which only cleans
+/// copied links.
 internal sealed class FilterLibrary {
     #region Types
 
@@ -46,7 +48,7 @@ internal sealed class FilterLibrary {
     /// Names the converter: change it whenever the content filter's crate
     /// changes what lists convert to, so devices convert theirs again. The
     /// keys also hold the baseline rules' digest, so changing those does too.
-    private const string RulesRevision = "adblock-0.13.5+css-validation;site-hiding-only;trusted-chosen";
+    private const string RulesRevision = "adblock-0.13.5+css-validation;own-hiding-only;trusted-chosen";
 
     private static readonly string BaselineDigest =
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(BaselineRules)));
@@ -68,6 +70,16 @@ internal sealed class FilterLibrary {
     internal static readonly Guid ResourcesId = new("6f0b8c52-3d1e-4f7a-9a51-7c2d4e8b1f30");
     public const string PublishedResourcesUrl =
         "https://github.com/pauljoda/Crest/releases/download/" + ResourcesRelease + "/ublock-resources.json";
+
+    /// AdGuard's URL Tracking filter, in its build for uBlock Origin, and how
+    /// it is named on the device and on the wire. The device keeps it while
+    /// it cleans copied links, whatever level ad blocking blocks at, and reads
+    /// only its `$removeparam` filters, beside Crest's own baseline: it never
+    /// shows among the lists, nor reaches the content rules or the engine
+    /// filter.
+    private const string LinkTrackingName = "link-tracking";
+    internal static readonly Guid LinkTrackingId = new("d637b5d3-f321-4f63-98ce-9632840b1af8");
+    public const string LinkTrackingUrl = FilterList.AdGuard + "17.txt";
 
     private static readonly TimeSpan ShortestRefresh = TimeSpan.FromHours(12);
     private static readonly TimeSpan LongestRefresh = TimeSpan.FromDays(7);
@@ -119,6 +131,7 @@ internal sealed class FilterLibrary {
     /// they must have.
     private readonly Download resourcesDownload;
     private readonly string resourcesDigest;
+    private readonly Download linkTrackingDownload = new(LinkTrackingName, LinkTrackingId, LinkTrackingUrl);
     private readonly Func<Device.FilterPreferences> preferences;
     private readonly Action<Change> announce;
     private readonly IClock clock;
@@ -127,8 +140,14 @@ internal sealed class FilterLibrary {
     private readonly Dictionary<string, string> heldTexts = [];
     private readonly Dictionary<string, string> heldSources = [];
     private readonly Dictionary<string, DateTimeOffset> leases = [];
+    /// The link-tracking list's filters, with the digest of the copy they
+    /// were read from, so each copy is read once.
+    private (string Digest, ParameterFilterList Filters)? linkTracking;
     private ContentRuleListSet published = new([]);
     private string? publishedKey;
+    /// The set in force before the published one, whose rules the device
+    /// keeps for a switch back.
+    private (string Key, ContentRuleListSet Set)? previous;
     /// The rules being converted, and whether the inputs changed meanwhile.
     private string? buildingKey;
     private bool rebuildWanted;
@@ -180,9 +199,10 @@ internal sealed class FilterLibrary {
 
     #region Actions - Lists
 
-    /// Whether the device subscribes to `list`.
-    private bool IsOn(FilterList list, IReadOnlyDictionary<FilterList, bool> chosen) =>
-        chosen.TryGetValue(list, out bool isOn) ? isOn : list.IsOnByDefault(languages);
+    /// Whether the device subscribes to `list`: as the person turned it, or as
+    /// the level they chose turns it.
+    private bool IsOn(FilterList list, Device.FilterPreferences chosen) =>
+        chosen.Choices.TryGetValue(list, out bool isOn) ? isOn : list.IsOnByDefault(chosen.Level, languages);
 
     /// How a catalog list is named on the wire: the same on every device.
     internal static Guid IdOf(FilterList list) =>
@@ -197,34 +217,45 @@ internal sealed class FilterLibrary {
 
     /// The lists the device subscribes to: the catalog's, then the person's.
     private IEnumerable<Download> Lists(Device.FilterPreferences chosen) =>
-        FilterList.All.Where(list => IsOn(list, chosen.Choices)).Select(list => new Download(list.Name, IdOf(list), list.Source))
+        FilterList.All.Where(list => IsOn(list, chosen)).Select(list => new Download(list.Name, IdOf(list), list.Source))
             .Concat(chosen.CustomLists.Where(list => list.IsOn).Select(list => new Download(NameOf(list), list.Id, list.Url)));
 
-    /// Every list as the settings show it, and the person's own filters.
+    /// Every download in force: the lists the device subscribes to, the
+    /// resources, and the link-tracking list while the device cleans copied
+    /// links.
+    private IEnumerable<Download> Downloads(Device.FilterPreferences chosen) {
+        var downloads = Lists(chosen).Append(resourcesDownload);
+        return chosen.CleansCopiedLinks ? downloads.Append(linkTrackingDownload) : downloads;
+    }
+
+    /// Ad blocking as the settings show it: the level, whether the person
+    /// turned any catalog list against it, every list, and their own filters.
     public FilterLists States() {
         var chosen = preferences();
+        bool customized = chosen.Level.BlocksContent
+            && FilterList.All.Any(list => IsOn(list, chosen) != list.IsOnByDefault(chosen.Level, languages));
         lock (gate) {
             var catalog = FilterList.All.Select(list => copies.TryGetValue(list.Name, out var copy)
-                ? new FilterListState(list, IsOn(list, chosen.Choices), copy.UpdatedAt, copy.Failures > 0)
-                : new FilterListState(list, IsOn(list, chosen.Choices), null, false));
+                ? new FilterListState(list, IsOn(list, chosen), copy.UpdatedAt, copy.Failures > 0)
+                : new FilterListState(list, IsOn(list, chosen), null, false));
             var custom = chosen.CustomLists.Select(list => {
                 copies.TryGetValue(NameOf(list), out var copy);
                 return new CustomFilterListState(list, copy?.Title ?? HostOf(list.Url), copy?.UpdatedAt, copy?.Failures > 0,
                     copy?.TooLarge == true);
             });
-            return new([.. catalog], [.. custom], chosen.CustomFilters);
+            return new(chosen.Level, customized, [.. catalog], [.. custom], chosen.CustomFilters);
         }
     }
 
-    /// The downloads due now: each list the device subscribes to whose copy is
-    /// missing or due, unless one was handed out moments ago. Handing them
-    /// out keeps them from being handed out again for a while.
+    /// The downloads due now: each one in force whose copy is missing or due,
+    /// unless one was handed out moments ago. Handing them out keeps them
+    /// from being handed out again for a while.
     public IReadOnlyList<FilterDownload> Due() {
         var chosen = preferences();
         var now = clock.Now;
         lock (gate) {
             var due = new List<FilterDownload>();
-            foreach (var source in Lists(chosen).Append(resourcesDownload)) {
+            foreach (var source in Downloads(chosen)) {
                 copies.TryGetValue(source.Name, out var copy);
                 // Resources other than the pinned ones, as an earlier release
                 // pinned, are replaced at once.
@@ -240,11 +271,28 @@ internal sealed class FilterLibrary {
         }
     }
 
-    /// What `id` names among the downloads in force, the resources included,
-    /// or null for one the
+    /// Makes every download in force due now, as the person asked to update
+    /// the lists, so the platform downloads each again on its next ask.
+    /// Answers whether any was held.
+    public bool RefreshAll() {
+        var chosen = preferences();
+        var now = clock.Now;
+        lock (gate) {
+            bool any = false;
+            foreach (var source in Downloads(chosen)) {
+                leases.Remove(source.Name);
+                if (!copies.TryGetValue(source.Name, out var copy) || copy.DueAt <= now) continue;
+                copies[source.Name] = copy with { DueAt = now };
+                any = true;
+            }
+            if (any) SaveState();
+            return any;
+        }
+    }
+
+    /// What `id` names among the downloads in force, or null for one the
     /// person turned off or removed since it was handed out.
-    private Download? DownloadOf(Guid id) =>
-        Lists(preferences()).Append(resourcesDownload).FirstOrDefault(source => source.Id == id);
+    private Download? DownloadOf(Guid id) => Downloads(preferences()).FirstOrDefault(source => source.Id == id);
 
     /// Keeps the copy a download of `id` brought, due again when the list says
     /// it expires, and converts the lists again if its rules changed. Answers
@@ -275,7 +323,8 @@ internal sealed class FilterLibrary {
             leases.Remove(source.Name);
             SaveState();
         }
-        RebuildWhenSettled(changed);
+        // The link-tracking list has no content rules to convert.
+        RebuildWhenSettled(changed && source != linkTrackingDownload);
         return true;
     }
 
@@ -350,7 +399,9 @@ internal sealed class FilterLibrary {
         var now = clock.Now;
         lock (gate) {
             rebuildDeferred |= changed;
-            if (!rebuildDeferred || leases.Values.Any(leased => now - leased < FetchLease)) return;
+            // The link-tracking list feeds no rules, so a download of it in
+            // flight holds no rebuild back.
+            if (!rebuildDeferred || leases.Any(lease => lease.Key != LinkTrackingName && now - lease.Value < FetchLease)) return;
             rebuildDeferred = false;
         }
         Rebuild();
@@ -367,6 +418,27 @@ internal sealed class FilterLibrary {
     /// its refresh so devices do not all ask at once.
     private static DateTimeOffset Next(DateTimeOffset now, TimeSpan refresh) =>
         now + refresh + TimeSpan.FromTicks((long)(refresh.Ticks * 0.1 * Random.Shared.NextDouble()));
+
+    #endregion
+
+    #region Actions - Link tracking
+
+    /// The `$removeparam` filters of the link-tracking list's latest copy,
+    /// read once per copy, or null before one arrived. The first ask after a
+    /// copy arrives reads it holding no lock.
+    public ParameterFilterList? LinkTrackingFilters() {
+        string digest;
+        lock (gate) {
+            if (copies.GetValueOrDefault(LinkTrackingName)?.Digest is not { } held) return null;
+            if (linkTracking is { } read && read.Digest == held) return read.Filters;
+            digest = held;
+        }
+        if (ReadText(LinkTrackingName) is not { } text) return null;
+        var filters = ParameterFilterList.Read(new FilterListText(text).Resolved(engineConditions));
+        // A copy that arrived meanwhile is read on the next ask.
+        lock (gate) linkTracking = (digest, filters);
+        return filters;
+    }
 
     #endregion
 
@@ -448,12 +520,23 @@ internal sealed class FilterLibrary {
         bool again;
         try {
             var texts = new List<string> { BaselineRules };
-            foreach (var (name, _) in inputs)
-                if (TextOf(name, customFilters) is { } text) texts.Add(new FilterListText(text).Resolved(conditions));
+            string? own = null;
+            foreach (var (name, _) in inputs) {
+                if (TextOf(name, customFilters) is not { } text) continue;
+                var resolved = new FilterListText(text).Resolved(conditions);
+                texts.Add(resolved);
+                if (name == CustomFiltersName) own = resolved;
+            }
             var rules = ContentFilter.ContentRulesFor(texts);
-            // Generic hiding goes through the cosmetic bridge, as elements
-            // appear, on every engine; the site's own hiding stays here.
-            rules = rules with { Rules = [.. rules.Rules.Where(rule => !HidesGenerically(rule))] };
+            // The lists' hiding goes through the cosmetic bridge on every
+            // engine: the generic rules as elements appear, and the sites' own
+            // from its first answer. In the lists, a site's hiding rule matches
+            // every address and is weighed on every load the page makes. The
+            // person's own hiding, which Block Element writes, stays here: few
+            // rules, which WebKit applies before a page first renders and in a
+            // sheet the page can neither reach nor outrank.
+            var ownHiding = own is null ? [] : ContentFilter.ContentRulesFor([own]).Rules.Where(Hides);
+            rules = rules with { Rules = [.. rules.Rules.Where(rule => !Hides(rule)).Concat(ownHiding)] };
             built = new([.. Split(rules).Select((source, index) => Keep(Identifier(key, index), source))]);
         } catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException
             or DllNotFoundException or EntryPointNotFoundException) {
@@ -479,10 +562,8 @@ internal sealed class FilterLibrary {
         if (again) RebuildRules();
     }
 
-    /// Whether a converted rule hides elements on every site: a hiding rule
-    /// with no site it is limited to.
-    private static bool HidesGenerically(string rule) =>
-        rule.Contains("\"css-display-none\"", StringComparison.Ordinal) && !rule.Contains("\"if-domain\"", StringComparison.Ordinal);
+    /// Whether a converted rule hides elements rather than blocking a load.
+    private static bool Hides(string rule) => rule.Contains("\"css-display-none\"", StringComparison.Ordinal);
 
     /// The compiled lists for `rules`: as many rules as fit beside every
     /// exception, the exceptions after them in each list, since an exception
@@ -512,6 +593,7 @@ internal sealed class FilterLibrary {
 
     /// Puts the set converted for `key` in force. The caller holds the lock.
     private void Publish(string key, ContentRuleListSet set) {
+        if (publishedKey is not null && publishedKey != key) previous = (publishedKey, published);
         published = set;
         publishedKey = key;
         if (folder is null) {
@@ -519,11 +601,15 @@ internal sealed class FilterLibrary {
                 heldSources.Remove(stale);
             return;
         }
-        // A rules file no set names any more is never asked for again.
+        // A rules file neither this set nor the one before it names is never
+        // asked for again. The one before stays, so switching back, as
+        // between Balanced and Strict, restores it at once.
         try {
             foreach (var path in Directory.EnumerateFiles(Path.Combine(folder, "rules"))) {
                 string name = Path.GetFileNameWithoutExtension(path);
-                if (!set.Identifiers.Contains(name) && name != key) File.Delete(path);
+                bool named = set.Identifiers.Contains(name) || name == key
+                    || (previous is { } before && (before.Set.Identifiers.Contains(name) || name == before.Key));
+                if (!named) File.Delete(path);
             }
         } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
             // Stale files are left for the next set to remove.
@@ -815,7 +901,7 @@ internal sealed class FilterLibrary {
             return;
         }
         foreach (var (name, value) in lists ?? []) {
-            bool known = FilterList.Named(name) is not null || name == ResourcesName
+            bool known = FilterList.Named(name) is not null || name == ResourcesName || name == LinkTrackingName
                 || name.StartsWith("custom-", StringComparison.Ordinal);
             if (!known || value is not JsonObject state) continue;
             string? digest = state["digest"]?.GetValue<string>();

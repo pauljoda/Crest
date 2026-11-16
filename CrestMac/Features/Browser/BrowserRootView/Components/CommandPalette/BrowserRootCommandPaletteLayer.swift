@@ -7,9 +7,16 @@ struct BrowserRootCommandPaletteLayer: View {
     var spaceSettingsPresentation: BrowserSpaceSettingsPresentationState? = nil
     let commandSurfaceNamespace: Namespace.ID
     var contentInsets = EdgeInsets()
+    /// Where this layer begins in the window, so the field the palette drops
+    /// out of, which the window's fields report in its coordinates, can be
+    /// placed here.
+    var fieldOrigin = CGPoint.zero
 
     @Environment(\.browserMacWindows) private var windows
     @Environment(\.layoutDirection) private var layoutDirection
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ViewBuilder
     var body: some View {
@@ -30,8 +37,10 @@ struct BrowserRootCommandPaletteLayer: View {
                     model.openPaletteURL(url, mode: mode, from: source, opening: opening, windows: windows)
                 },
                 dismiss: model.chrome.dismissCommandPalette,
+                presentation: fieldFrame == nil ? .overlay : .dropping,
                 morphNamespace: commandSurfaceNamespace,
                 overlayContentInsets: contentInsets,
+                fieldFrame: fieldFrame,
                 destination: model.emptySelectionPaletteActions,
                 openings: BrowserCommandPaletteOpening.all,
                 readPasteboard: { NSPasteboard.general.string(forType: .string) }
@@ -43,9 +52,56 @@ struct BrowserRootCommandPaletteLayer: View {
                     source: model.selectedTabAssignment
                 )
             )
+            // The same scheme as the address field it grows out of.
+            .environment(\.colorScheme, paletteColorScheme)
             .transition(.browserCommandPaletteOverlay)
             .zIndex(BrowserRootMetrics.commandPaletteZIndex)
+        } else if BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion),
+            model.paletteFieldIsCard, let fieldFrame, let paletteSpace
+        {
+            fieldAnchor(fieldFrame, spaceID: paletteSpace.id)
         }
+    }
+
+    /// The field the palette drops out of while the address bar is on top, in
+    /// this layer's coordinates, or nil to centre it over the window. Read
+    /// here rather than handed down, so the window's shell never depends on
+    /// the shown tab.
+    private var fieldFrame: CGRect? {
+        model.paletteFieldFrame?.offsetBy(dx: -fieldOrigin.x, dy: -fieldOrigin.y)
+    }
+
+    /// A split card's field frame, carrying the palette's identity while the
+    /// palette is closed.
+    ///
+    /// The field itself lives in its card's own hosting view, out of reach of
+    /// this layer's namespace, so a clear stand-in over the same frame holds
+    /// the identity in its place, as the window's own field does. Removing it in
+    /// the transaction that inserts the palette grows the palette out of the
+    /// field, and putting it back as the palette leaves shrinks it in again.
+    private func fieldAnchor(_ frame: CGRect, spaceID: UUID) -> some View {
+        GeometryReader { proxy in
+            let placement = BrowserChromeAppearance.placementFrame(
+                for: frame, in: proxy.size.width, direction: layoutDirection)
+            Color.clear
+                .frame(width: frame.width, height: frame.height)
+                .matchedGeometryEffect(
+                    id: BrowserCommandSurfaceMorph.commandPalette(spaceID: spaceID),
+                    in: commandSurfaceNamespace,
+                    properties: .frame,
+                    anchor: .center,
+                    isSource: true
+                )
+                .position(x: placement.midX, y: placement.midY)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// The palette's scheme: the material color's, over the Space it searches.
+    private var paletteColorScheme: ColorScheme {
+        let spaceScheme = paletteSpace?.settings.look.shown.colorScheme(over: colorScheme) ?? colorScheme
+        return CrestSurfaceTone.shownScheme(over: spaceScheme, window: colorScheme)
     }
 
     /// The Space the window shows, unless it is being deleted.

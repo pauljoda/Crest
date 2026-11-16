@@ -8,6 +8,8 @@ import SwiftUI
 /// its only wearer — the Quick Window dresses its own address row in the same
 /// surface without adopting the sidebar's anatomy.
 struct BrowserSidebarAddressFieldSurface: ViewModifier {
+    // MARK: - Variables
+
     var metrics = BrowserSidebarAddressFieldMetrics.pointer
     var leadingPadding: CGFloat? = nil
     let progress: Double
@@ -17,58 +19,15 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     /// Whether the field stands on Liquid Glass, as the command palette it
     /// grows into does, rather than the device's surface material.
     var isGlass = false
+    /// What a click on the surface means where nothing inside the field takes
+    /// it, such as the band above and below a one-line address. Nil leaves
+    /// the surface inert, as a picture of the field is.
+    var activate: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @Environment(\.spaceChromeAccent) private var spaceAccent
-
-    func body(content: Content) -> some View {
-        band(
-            content
-                .padding(.leading, leadingPadding ?? metrics.horizontalPadding)
-                .padding(.trailing, metrics.horizontalPadding)
-        )
-        .background {
-            ZStack(alignment: .leading) {
-                if !isGlass {
-                    CrestSurfaceLayer(shape: fieldShape)
-                }
-                if !reduceTransparency {
-                    fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
-                }
-                fieldShape
-                    .fill(accent.opacity(isLoading ? BrowserSidebarAddressFieldMetrics.loadingFillOpacity : 0))
-                    .scaleEffect(x: loadingProgress, anchor: .leading)
-                    .mask(fieldShape)
-                    .animation(
-                        CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
-                        value: loadingProgress
-                    )
-            }
-        }
-        .modifier(GlassLayer(isGlass: isGlass, shape: fieldShape, reduceTransparency: reduceTransparency))
-        .overlay {
-            fieldShape
-                .strokeBorder(
-                    isEditing
-                        ? (appearance.usesAccentWhenEditing ? accent : metrics.editingRingColor)
-                        : accent.opacity(BrowserTabAppearance.intensity(appearance.border)),
-                    lineWidth: appearance.border > 0 || appearance.usesAccentWhenEditing
-                        ? max(1, metrics.editingRingWidth) : metrics.editingRingWidth,
-                    antialiased: true
-                )
-        }
-    }
-
-    @ViewBuilder
-    private func band(_ content: some View) -> some View {
-        if metrics.growsWithContent {
-            content.frame(minHeight: metrics.height)
-        } else {
-            content.frame(height: metrics.height)
-        }
-    }
 
     private var loadingProgress: CGFloat {
         BrowserPageSurfacePresentation.loadingProgress(
@@ -84,6 +43,78 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
 
     private var fieldShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
+    }
+
+    // MARK: - Actions - Drawing
+
+    func body(content: Content) -> some View {
+        band(
+            content
+                .padding(.leading, leadingPadding ?? metrics.horizontalPadding)
+                .padding(.trailing, metrics.horizontalPadding)
+        )
+        .background {
+            activating(layers)
+        }
+        .modifier(GlassLayer(isGlass: isGlass, shape: fieldShape, reduceTransparency: reduceTransparency))
+        .overlay {
+            fieldShape
+                .strokeBorder(
+                    isEditing
+                        ? (appearance.usesAccentWhenEditing ? accent : metrics.editingRingColor)
+                        : accent.opacity(BrowserTabAppearance.intensity(appearance.border)),
+                    lineWidth: appearance.border > 0 || appearance.usesAccentWhenEditing
+                        ? max(1, metrics.editingRingWidth) : metrics.editingRingWidth,
+                    antialiased: true
+                )
+                // The ring is drawn over the field's edge; a click there is
+                // the surface's.
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// The material, the tint and the loading fill under the field's contents.
+    private var layers: some View {
+        ZStack(alignment: .leading) {
+            if !isGlass {
+                CrestSurfaceLayer(shape: fieldShape)
+            }
+            if !reduceTransparency {
+                fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
+            }
+            fieldShape
+                .fill(accent.opacity(isLoading ? BrowserSidebarAddressFieldMetrics.loadingFillOpacity : 0))
+                .scaleEffect(x: loadingProgress, anchor: .leading)
+                .mask(fieldShape)
+                .animation(
+                    CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
+                    value: loadingProgress
+                )
+        }
+    }
+
+    /// The layers under the field, taking the clicks its contents leave to
+    /// the surface. The contents stand in front, so a control inside the
+    /// field still takes its own.
+    @ViewBuilder
+    private func activating(_ layers: some View) -> some View {
+        if let activate {
+            layers
+                .contentShape(fieldShape)
+                .onTapGesture(perform: activate)
+                .accessibilityHidden(true)
+        } else {
+            layers
+        }
+    }
+
+    @ViewBuilder
+    private func band(_ content: some View) -> some View {
+        if metrics.growsWithContent {
+            content.frame(minHeight: metrics.height)
+        } else {
+            content.frame(height: metrics.height)
+        }
     }
 
     /// The command palette's own glass under a field that stands on it.
@@ -112,7 +143,8 @@ extension View {
         isLoading: Bool,
         isEditing: Bool,
         branding: SpaceBranding? = nil,
-        isGlass: Bool = false
+        isGlass: Bool = false,
+        activate: (() -> Void)? = nil
     ) -> some View {
         modifier(
             BrowserSidebarAddressFieldSurface(
@@ -122,7 +154,8 @@ extension View {
                 isLoading: isLoading,
                 isEditing: isEditing,
                 branding: branding,
-                isGlass: isGlass
+                isGlass: isGlass,
+                activate: activate
             )
         )
     }

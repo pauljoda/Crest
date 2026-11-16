@@ -3,6 +3,14 @@ import SwiftUI
 extension EnvironmentValues {
     @Entry var spaceChromeAccent: Color? = nil
     @Entry var spaceChromeForeground: Color? = nil
+    @Entry var spacePagerProgress: SpacePagerProgress? = nil
+}
+
+/// Where the Space pager stands among the Spaces, in the order its position
+/// runs along, for chrome that blends from one Space to the next with it.
+struct SpacePagerProgress: Equatable, Sendable {
+    let position: CGFloat
+    let order: [UUID]
 }
 
 /// Fixed chrome follows visible Space progress without observing it in tab rows.
@@ -51,7 +59,8 @@ struct SpaceForegroundBlend: ViewModifier {
             .modifier(
                 SpaceForegroundTone(
                     position: foreground.position ?? CGFloat(tones.firstIndex { $0.id == selectedSpaceID } ?? 0),
-                    tones: arrangement.map { tones[$0] }, accents: arrangement.map { accents[$0] })
+                    tones: arrangement.map { tones[$0] }, accents: arrangement.map { accents[$0] },
+                    order: arrangement.map { ids[$0] })
             )
             .onAppear { foreground.connect(presentation, tones: tones, selectedSpaceID: selectedSpaceID) }
             .onChange(of: tones) { _, _ in
@@ -71,6 +80,7 @@ private struct SpaceForegroundTone: ViewModifier, Animatable {
     nonisolated var position: CGFloat
     let tones: [SpaceForegroundPresentation.Tone]
     let accents: [Color]
+    let order: [UUID]
 
     nonisolated var animatableData: CGFloat {
         get { position }
@@ -83,6 +93,7 @@ private struct SpaceForegroundTone: ViewModifier, Animatable {
             .foregroundStyle(foreground)
             .environment(\.spaceChromeForeground, foreground)
             .environment(\.spaceChromeAccent, accent)
+            .environment(\.spacePagerProgress, SpacePagerProgress(position: position, order: order))
     }
 
     private var accent: Color? {

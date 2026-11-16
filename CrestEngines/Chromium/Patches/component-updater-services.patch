@@ -1,9 +1,9 @@
-# Crest: the component updater keeps only what certificate trust, download
-# warnings and protected media need current.
+# Crest: the component updater keeps only what certificate trust and download
+# warnings need current.
 
 --- a/chrome/browser/component_updater/registration.cc
 +++ b/chrome/browser/component_updater/registration.cc
-@@ -144,111 +144,23 @@
+@@ -144,111 +144,21 @@
  void RegisterComponentsForUpdate() {
    auto* const cus = g_browser_process->component_updater();
  
@@ -11,13 +11,9 @@
 -  RegisterRecoveryImprovedComponent(cus, g_browser_process->local_state());
 -#endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
 -
-+  // Crest updates the certificate revocation list, Certificate Transparency
-+  // logs and root store, the file types download warnings use, and the
-+  // Widevine module. The other components serve Google services, experiments
-+  // and features Crest doesn't offer.
- #if BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)
-   RegisterWidevineCdmComponent(cus);
- #endif  // BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)
+-#if BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)
+-  RegisterWidevineCdmComponent(cus);
+-#endif  // BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)
 -
 -  RegisterSubresourceFilterComponent(cus);
 -  RegisterOnDeviceHeadSuggestComponent(
@@ -35,6 +31,11 @@
 -
 -  RegisterIndigoComponent(cus);
 -
++  // Crest updates the certificate revocation list, Certificate Transparency
++  // logs and root store, and the file types download warnings use. The other
++  // components serve Google services, experiments and features Crest doesn't
++  // offer. Widevine is among them: sites that need protected video play it
++  // in WebKit, which carries the platform's FairPlay.
  #if BUILDFLAG(SAFE_BROWSING_AVAILABLE)
    RegisterFileTypePoliciesComponent(cus);
  #endif

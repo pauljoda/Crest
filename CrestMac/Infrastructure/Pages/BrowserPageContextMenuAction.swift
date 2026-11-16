@@ -142,14 +142,19 @@ struct BrowserPageContextMenuAction {
 /// the person picks.
 @MainActor
 protocol BrowserPageContextMenuHost: AnyObject {
+    /// Whether a link the engine opens in a new tab or window from this page
+    /// becomes a tab of the page's Space: the page is a tab's.
+    var opensLinksInCurrentSpace: Bool { get }
+
     func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction]
     @discardableResult func performContextMenuAction(_ action: BrowserPageContextMenuAction) -> Bool
 }
 
-/// Crest's rows in an engine's context menu for one page: the other Spaces a
-/// link opens in grouped under one row, a separator between their groups, then the page's own rows, ahead of the
-/// engine's rows. A row runs only while the page's view is still in the window
-/// the menu opened in.
+/// Crest's rows in an engine's context menu for one page: the engine's own row
+/// that opens a link in a new tab, then the other Spaces the link opens in
+/// grouped under one row, a separator between their groups, then the page's
+/// own rows, ahead of the engine's rows. A row runs only while the page's view
+/// is still in the window the menu opened in.
 @MainActor
 struct BrowserPageContextMenu {
     // MARK: - Types
@@ -193,10 +198,15 @@ struct BrowserPageContextMenu {
 
     // MARK: - Actions - Menu
 
-    /// Puts the rows ahead of what `menu` holds, with a separator between.
-    func insert(into menu: NSMenu) {
-        guard !actions.isEmpty else { return }
+    /// Puts the rows ahead of what `menu` holds, with a separator between,
+    /// after `newTab`, the engine's own row that opens the link in a new tab
+    /// of the page's Space, which leads the menu wherever the engine put it.
+    func insert(into menu: NSMenu, leading newTab: NSMenuItem? = nil) {
         var items: [NSMenuItem] = []
+        if let newTab, host.opensLinksInCurrentSpace, menu.index(of: newTab) >= 0 {
+            menu.removeItem(newTab)
+            items.append(newTab)
+        }
         let spaceActions = actions.filter(\.isSpaceDestination)
         if !spaceActions.isEmpty {
             let group = NSMenuItem(title: String(localized: "Open Link in"), action: nil, keyEquivalent: "")
@@ -219,6 +229,21 @@ struct BrowserPageContextMenu {
         let trailing = actions.filter(\.isTrailing).map(item(for:))
         if !trailing.isEmpty, menu.items.last?.isSeparatorItem == false { menu.addItem(.separator()) }
         for item in trailing { menu.addItem(item) }
+        removeStraySeparators(from: menu)
+    }
+
+    /// Drops the separators that no longer stand between two groups, as one
+    /// left where a row moved out of a group of its own.
+    private func removeStraySeparators(from menu: NSMenu) {
+        var previousIsSeparator = true
+        for item in menu.items {
+            if item.isSeparatorItem, previousIsSeparator {
+                menu.removeItem(item)
+                continue
+            }
+            previousIsSeparator = item.isSeparatorItem
+        }
+        if let last = menu.items.last, last.isSeparatorItem { menu.removeItem(last) }
     }
 
     private func item(for action: BrowserPageContextMenuAction) -> NSMenuItem {
@@ -265,10 +290,10 @@ extension BrowserPage: BrowserPageContextMenuHost {
         return actions
     }
 
-    /// Whether the page's bridge can start the element picker: its engine
-    /// blocks content and it shows a site on the web.
+    /// Whether the page's bridge can start the element picker: Crest blocks,
+    /// its engine blocks content and it shows a site on the web.
     private var canPickElementToBlock: Bool {
-        cosmeticFilters != nil && pageEngine.registration.supports(.contentBlocking)
+        cosmeticFilters?.blocksContent == true && pageEngine.registration.supports(.contentBlocking)
             && ["http", "https"].contains(live.displayURL?.scheme?.lowercased() ?? "")
     }
 

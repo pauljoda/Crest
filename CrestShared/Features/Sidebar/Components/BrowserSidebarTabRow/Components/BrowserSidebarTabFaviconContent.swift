@@ -17,12 +17,12 @@ struct BrowserSidebarTabFaviconContent: View {
     var body: some View {
         TabStateFaviconView(
             tab: tab, favicons: favicons, profileID: profileID,
-            size: TabFaviconMetrics.defaultSize * BrowserSidebarDensity(iconScale).scale
+            size: TabFaviconMetrics.defaultSize * BrowserSidebarDensity(iconScale).contentScale
         )
         .opacity(isReplaced ? 0 : 1)
         .browserTabResidency(isLoaded: isLoaded)
         .overlay(alignment: .bottomTrailing) {
-            TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensity(iconScale).scale)
+            TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensity(iconScale).contentScale)
         }
         .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
         .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))

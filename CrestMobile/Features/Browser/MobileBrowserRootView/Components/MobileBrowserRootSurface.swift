@@ -81,6 +81,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             if showsNotices, !presentation.presentsPageOverTabViewer || !navigation.compactShowsPage {
                 BrowserNoticeLayer(
                     notices: pages.notices,
+                    alignment: presentation.presentsPageOverTabViewer ? .top : .topTrailing,
                     topInset: presentation.overlayTopPadding,
                     sideInset: MobileBrowserRootLayout.displayEdgeMargin
                 )

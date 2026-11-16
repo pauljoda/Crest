@@ -52,8 +52,10 @@ final class BrowserPagePoolTests: XCTestCase {
                 BrowserLinkContextContentBridge.source,
                 BrowserBlockedPopupContentBridge.source,
                 BrowserGeolocationContentBridge.source,
+                BrowserCosmeticFilterContentBridge.source,
             ].sorted(),
-            "Private pages allow browsing bridges, including link pulls, without credential or extension scripts."
+            "Private pages allow browsing bridges, including link pulls and ad blocking, without credential or "
+                + "extension scripts."
         )
 
         present(pool, tab: secondTab.id, in: secondSpace.id)

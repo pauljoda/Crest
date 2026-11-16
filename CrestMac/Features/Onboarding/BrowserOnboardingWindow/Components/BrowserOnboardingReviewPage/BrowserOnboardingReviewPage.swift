@@ -10,6 +10,9 @@ struct BrowserOnboardingReviewPage: View {
     let flow: BrowserOnboardingFlow
     @Binding var customizationSpaceID: UUID?
     let back: BrowserOnboardingBackAction
+    /// Leaves the import for setting Spaces up by hand, as Skip does on the
+    /// browser choice.
+    let skip: () -> Void
 
     /// The Space the scroll shows. Setup learns it once the scroll settles,
     /// so moving through the review changes nothing setup holds mid-scroll.
@@ -63,9 +66,12 @@ struct BrowserOnboardingReviewPage: View {
                     if let shown, shown != scrolledSpaceID { scrolledSpaceID = shown }
                 }
 
+                // A review the core can't preview says why, and offers Skip
+                // beside Back rather than an import it would refuse.
+                let isPreviewRefused = flow.previewRefusal != nil
                 BrowserOnboardingFooter(back: back, isBackDisabled: flow.isCommittingImport) {
                     HStack(spacing: 22) {
-                        if let failure = flow.failure?.message {
+                        if let failure = failureMessage {
                             Label {
                                 BrowserOnboardingFailureMessage(message: failure)
                             } icon: {
@@ -80,11 +86,18 @@ struct BrowserOnboardingReviewPage: View {
                                 .font(CrestTypography.sans(13, weight: .medium))
                                 .foregroundStyle(CrestBrandTheme.textSecondary)
                         }
+                        if isPreviewRefused {
+                            Button("Skip", action: skip)
+                                .buttonStyle(.crestTertiary)
+                                .disabled(flow.isCommittingImport)
+                                .accessibilityIdentifier("onboarding-review-skip")
+                        }
                         let isLast = review.id == spaces.last?.id
+                        let canImport = setupReview.hasIncludedSpaces && !isPreviewRefused
                         BrowserOnboardingContinueButton(reviewActionTitle(isLast: isLast)) {
                             advanceReviewOrImport(from: review, in: spaces)
                         }
-                        .disabled(flow.isCommittingImport || (isLast && !setupReview.hasIncludedSpaces))
+                        .disabled(flow.isCommittingImport || (isLast && !canImport))
                         .accessibilityIdentifier(isLast ? "onboarding-confirm-import" : "onboarding-review-next-space")
                     }
                 }
@@ -96,6 +109,12 @@ struct BrowserOnboardingReviewPage: View {
                 description: Text("Choose a browser to build an import review.")
             )
         }
+    }
+
+    /// What went wrong, in the footer: why the core can't preview the review,
+    /// or else why importing it failed.
+    private var failureMessage: BrowserOnboardingFailureText? {
+        flow.previewRefusal.map { .verbatim($0.explanation) } ?? flow.failure?.message
     }
 
     private var sourceIcon: NSImage? {

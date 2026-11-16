@@ -4,16 +4,18 @@ Crest blocks ads and trackers with filter lists in EasyList and uBlock Origin
 syntax, matched by Brave's open-source engine,
 [adblock-rust](https://github.com/brave/adblock-rust), which the core links as
 its content filter (`CrestCore/native/ContentFilter`). The core owns the lists,
-their updates, each Space's choice and the sites where a Space turned blocking
-off, and it produces what each engine enforces.
+their updates, the level blocking runs at and the sites where it is off, all of
+them the same in every Space, and it produces what each engine enforces.
 
 ## Lists
 
 `FilterList` in the core is the catalog: EasyList, EasyPrivacy, uBlock Origin's
 own lists, regional lists, and opt-in lists for annoyances and cookie notices,
-some of them AdGuard's builds for uBlock Origin. A list is on by default, on by
-default for readers of its language, or off, and the person's own choices
-override that. The choices are device preferences and do not sync.
+some of them AdGuard's builds for uBlock Origin. Each list says which levels
+turn it on: every level that blocks, Strict alone (AdGuard Base and the
+annoyance lists), or the levels that block for readers of its language. The
+person's own choices override the level. The choices are device preferences and
+do not sync.
 
 The person can also add up to 30 lists by address (`AddCustomFilterList`), turn
 each on or off and remove it, and keep their own filters, in the lists' syntax
@@ -29,7 +31,8 @@ alone, redirects included, reads each list as it arrives and stops one that
 grows past 15 MB (`FilterDownloadTooLarge`); the core refuses a list over that
 size or 300,000 rules, keeps the copy it held, and Settings says so under the
 list. It asks when the app starts, every hour, and whenever the lists change,
-so a list the person adds or turns on arrives at once. The core hashes, counts
+so a list the person adds or turns on arrives at once. Settings' Update Now
+makes every list due (`RefreshFilterLists`) and asks at once. The core hashes, counts
 and writes a download before the turn that publishes it, never under the
 app's lock. The core keeps each copy as a file in a
 `ContentFilter` folder beside the session file, outside the session, its sync
@@ -52,16 +55,33 @@ Until the first list arrives, Crest's own baseline rules block third-party
 loads from well-known advertising and analytics hosts. They stay beside the
 lists afterwards.
 
-## Spaces and sites
+## Level and sites
 
-A Space's `ContentBlockingPolicy` decides whether it blocks at all: Balanced
-applies the lists, Off blocks nothing. The Space's privacy settings switch it.
+Blocking holds for every Space alike. `ContentBlockingLevel` decides how much
+Crest blocks: Off blocks nothing, Balanced turns on the lists that block ads and
+trackers without breaking sites, and Strict adds AdGuard Base and the annoyance
+lists. Choosing a level that blocks (`SetContentBlockingLevel`) sets every
+catalog list to what it turns on and forgets the person's own choices, from Off
+as from another level; Off blocks nothing and leaves the lists as they are.
+`FilterLists.IsCustomized` says the person turned a list against the level, and
+choosing the level again restores it. The device store keeps the level. A device
+that never chose one starts Off only if every persistent Space had blocking off,
+from when each Space chose for itself, and Balanced otherwise; that first answer
+is kept, and announced when the persistent session opens. Spaces still carry
+their old `ContentBlockingPolicy`, so older builds read their sessions, but it
+no longer decides anything.
 
-A page's actions turn blocking off, or on again, for the site it shows, in its
-Space (`SetSiteContentBlocking`). The device store keeps a persistent Space's
-sites; any other Space's, such as a private one's, last as long as the process.
-A deleted Space's sites go with it. `ContentBlockingApplies` answers whether a
-page of a Space blocks on a site.
+A page's actions turn blocking off, or on again, for the site it shows, in every
+Space (`SetSiteContentBlocking`). The device store keeps a site turned off from
+a persistent Space, even one a private Space turned off first; one turned off
+from any other Space, such as a private one, lasts as long as the process and
+goes with that Space. Turning a site on again removes it however it was kept,
+from any Space. `ContentBlockingApplies` answers whether a page blocks on a
+site.
+
+Settings has a page of its own for all of it: the level, the catalog's lists by
+group with Update Now, the lists the person added and the field that adds one,
+My Filters, and the sites with blocking off.
 
 ## WebKit
 
@@ -74,15 +94,23 @@ well under WebKit's 150,000, with every exception repeated at the end of each.
 Each list's identifier changes with its rules, so a rule-list store compiles
 it once and keeps it across launches; the core answers the source of one the
 store lacks (`ContentRuleListSource`), and the lists Crest compiled earlier are
-removed when no set names them.
+removed when no set names them. The set before the current one is kept, its
+converted rules in the core and its compiled lists in the store for the rest of
+the launch, so switching back, as between Balanced and Strict, applies at once.
+WebKit's store compiles on the main thread and parses a whole list first, so a
+set it has never seen still costs that parse once.
 
 Each page owns its user content controller. A main-frame navigation installs
 or removes Crest's lists for the site it goes to before the page loads it, so a
 site's switch costs no compilation. A list update takes effect on each page's
 next navigation; the page whose site the person switched reloads. The lists
-carry the sites' own hiding rules; generic hiding, and what WebKit cannot
-express, such as procedural element hiding, are left to the cosmetic bridge
-below. A main-frame navigation also installs the site's scriptlets
+carry the rules that block loads, and the person's own hiding rules, which
+Block Element writes. The filter lists' hiding, the sites' own included, is
+left to the cosmetic bridge below: in a list, a site's hiding rule matches every
+address and is weighed on every load a page makes, which slowed pages that load
+as they go several times over. The person's few rules stay, because WebKit
+applies them before a page first renders, in a sheet the page can neither
+reach nor outrank. A main-frame navigation also installs the site's scriptlets
 (`PageScriptlets`) as one user script in the page's own world, at document
 start, in place of the previous site's (`BrowserPageScriptletSession`).
 WebKit cannot replace a response, so a redirect filter is left out and its
@@ -142,6 +170,38 @@ its compiled filter for the page's Space and the site it shows:
   show, and whether the frames, images and objects they load are ones the
   filter blocks; those elements collapse.
 
+The bridge stays out of the page's own work, and keeps hiding for as long as
+the document lives:
+- **When it starts:** it watches what appears only once the first answer
+  says the page blocks. The first ask goes again if no answer comes, a couple
+  of times at most.
+- **The observer only queues:** the elements it queues are looked at while
+  the page is idle, a few milliseconds at a time. Each subtree's elements are
+  listed once and looked at a slice at a time, and an element the page removed
+  meanwhile is passed over.
+- **What can't wait:** two things are done in the observer callback itself:
+  - a collapsed slot that content fills shows again;
+  - on WebKit, the bridge's sheet goes back if the page took it away.
+- **No idle callbacks:** where an engine has none, the work runs just after
+  the next frame, never in a frame callback. A frame's document runs its frame
+  callbacks after the top document's, in the middle of that frame. A hidden
+  page is looked at on a timer.
+- **Asks:** they gather briefly before they go out, so a new ad is usually
+  hidden within a few tenths of a second.
+- **On a quiet page:** a page that keeps asking about new names without
+  anything to hide, for over a minute, is looked at less often and its asks
+  gather longer.
+  - **What still counts:** the survey still looks at everything, and the
+    procedural filters still run again.
+  - **Back to the normal pace:** anything hidden, or the page moving to
+    another entry of its own history.
+- **The empty-slot sweep** (below) runs in every document that blocks. It
+  reads layout, so it runs a while after the change that prompted it: while the
+  page is idle, or just after the next frame where the engine has no idle
+  callbacks.
+- **Odd elements:** an element the page made odd enough to throw, such as a
+  form whose inputs are named after its own properties, is passed over.
+
 The hiding rules, the site's and the generic ones alike, go where the page's
 scripts cannot reach them where the engine allows it:
 
@@ -153,16 +213,20 @@ scripts cannot reach them where the engine allows it:
   own included, and user `!important` rules win over the page's, inline styles
   included. The bridge parses each rule on its own first and passes the
   browser's own rewrite of it, so a malformed rule can't swallow the next.
-- WebKit has no user style sheet a page can't reach, and its content rules'
-  `css-display-none` applies before the first render, which is what bait checks
-  catch. There the rules go into one sheet the bridge adopts, which it puts back
-  as the document changes if the page removes it, turns it off or deletes its
-  rules.
+- WebKit has no user style sheet a page can't reach. There the rules go into
+  one sheet the bridge adopts, which it puts back as the document changes if the
+  page removes it, turns it off or deletes its rules. Only the person's own
+  rules also go into WebKit's content rules (see WebKit above).
+- **On the Mac,** the bridge answers WebKit pages from the filter compiled with
+  Chromium's conditions, which Chromium's pages check requests against. So a
+  list's hiding rule inside `!#if env_safari` doesn't apply on Mac WebKit pages.
+  iPhone and iPad compile theirs with Safari's.
 
-Generic rules apply as elements appear on both engines, rather than through
-WebKit's content rules before a page first renders: sites that check whether a
-bait element was hidden at once otherwise take the hiding for blocking and
-interrupt the page. An ad slot left with nothing to show also collapses: an
+The filter lists' hiding comes from the bridge on both engines: the sites'
+rules from its first answer, and the generic rules as elements appear. WebKit's
+content rules would apply the generic ones before a page first renders, and
+sites that check whether a bait element was hidden at once take that for
+blocking and interrupt the page. An ad slot left with nothing to show also collapses: an
 element named as one (`ad`, `advert`, `billboard`, `leaderboard`, `dfp` and the
 like) or holding only an ad label such as "Advertisement", that shows no text,
 image, video, frame or control, no image still to load and no background
@@ -170,7 +234,7 @@ image. A collapsed slot shows again when something it may show arrives inside
 it, and the next sweep looks at it afresh, a few times at most. Crest's
 baseline also hides a JW Player video while it floats over the page.
 
-A page whose Space does not block on the site gets nothing, and the bridge
+A page on a site where Crest does not block gets nothing, and the bridge
 stops. The compiled filter is built on every platform for this: with
 Chromium's `!#if` conditions on the Mac, where Chromium also checks requests
 against it, and with Safari's on iPhone and iPad.

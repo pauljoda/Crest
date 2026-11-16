@@ -81,7 +81,8 @@ public sealed class ShortcutCommand {
         ClearSiteCache,
         ToggleSelectedTabSaved,
         BlockElement,
-        ShowBlockedElements
+        ShowBlockedElements,
+        OpenNextExtension
     }
 
     #endregion
@@ -145,8 +146,13 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ClearUnpinnedTabs = new(Kinds.ClearUnpinnedTabs, name: "clearUnpinnedTabs",
         ShortcutSection.Tabs, title: "Clear Unpinned Tabs", symbol: "sparkles",
         shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned tabs");
+    // The Mac gives ⌘E to opening extensions and moves archiving a modifier up.
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
-        title: "Archive Tab", symbol: "archivebox", shortcuts: Everywhere(Character("e", Command)),
+        title: "Archive Tab", symbol: "archivebox",
+        shortcuts: [
+            new(DevicePlatform.Desktop, Character("e", Command | Shift), YieldsToOverrides: true),
+            new(DevicePlatform.Mobile, Character("e", Command), YieldsToOverrides: false)
+        ],
         availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && shown.Placement == TabPlacement.Current);
     public static readonly ShortcutCommand PreviousTab = new(Kinds.PreviousTab, name: "previousTab", ShortcutSection.Tabs,
         title: "Previous Tab", symbol: "chevron.up", shortcuts: Everywhere(Special(ShortcutSpecialKey.UpArrow, Command | Option)),
@@ -318,6 +324,14 @@ public sealed class ShortcutCommand {
         name: "toggleSelectedTabSaved", ShortcutSection.Tabs, title: "Save or Unsave Current Tab", symbol: "bookmark",
         searchTerms: "saved tabs keep bookmark unsave current", menuTitle: "Save or Unsave Tab",
         availableWhen: facts => facts.ShownTab is { IsStartPage: false }, whenPageUsesKeys: ShortcutPreference.UseBoth);
+    // Each press opens the next extension's popup, the pinned ones from left to
+    // right and then the others, and the press after the last closes it. It
+    // came after people could customize, so it yields to keys someone chose.
+    public static readonly ShortcutCommand OpenNextExtension = new(Kinds.OpenNextExtension, name: "openNextExtension",
+        ShortcutSection.Page, title: "Open Next Extension", symbol: "puzzlepiece.extension",
+        shortcuts: [new(DevicePlatform.Desktop, Character("e", Command), YieldsToOverrides: true)],
+        searchTerms: "extensions popup menu cycle pinned toolbar", requiredCapability: EngineCapability.Extensions,
+        availableWhen: ShowingSpace);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -329,7 +343,8 @@ public sealed class ShortcutCommand {
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved
+        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
+        OpenNextExtension
     ];
 
     public Kinds Kind { get; }

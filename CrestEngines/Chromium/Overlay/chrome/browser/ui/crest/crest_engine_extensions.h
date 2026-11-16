@@ -138,6 +138,18 @@ class EngineExtensions final {
   // Makes a change the core found the person may make. The engine's own
   // management policy still decides, and a change it refuses changes nothing.
   void Change(Profile* profile, const std::string& extension_id, engine::ExtensionChange change);
+  // Whether `extension`'s action can run on the tab `tab` of `contents`, as
+  // its toolbar button would.
+  static bool IsEnabled(content::WebContents* contents, const extensions::Extension& extension,
+                        const extensions::ExtensionAction& action, int tab);
+  // Whether running `extension`'s action on the tab `tab` of `contents` opens
+  // its popup, rather than toggling its side panel or running what it was
+  // blocked from.
+  static bool OpensPopup(content::WebContents* contents, const extensions::Extension& extension,
+                         const extensions::ExtensionAction& action, int tab);
+  // Moves a pinned action to just before the pinned action `before`, or to
+  // the end with none, in the order every Space of the profile shows.
+  void MovePin(Profile* profile, const std::string& extension_id, const std::optional<std::string>& before);
   // Whether `extension` runs in `profile`: a private profile runs only the
   // extensions the person allowed in private browsing.
   static bool RunsIn(Profile* profile, const extensions::Extension& extension);

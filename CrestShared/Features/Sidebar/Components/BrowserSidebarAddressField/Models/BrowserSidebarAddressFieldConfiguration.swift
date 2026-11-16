@@ -10,6 +10,8 @@ import SwiftUI
 /// are theirs.
 @MainActor
 struct BrowserSidebarAddressFieldConfiguration {
+    // MARK: - Variables
+
     let text: Binding<String>
     let isEditing: Binding<Bool>
     var focusRequest = 0
@@ -33,6 +35,10 @@ struct BrowserSidebarAddressFieldConfiguration {
     /// `morphNamespace`, so a window never morphs one Space's field into
     /// another Space's surface.
     let spaceID: UUID
+    /// Whether the Space the field shows has an address of its own rather
+    /// than the prompt, read from its shown tab, which a change of Space
+    /// updates before the field's text.
+    var spaceHasAddress = true
     /// Whether the field holds its identity for the command palette or has
     /// handed it to the open palette. A shell without an overlay palette
     /// leaves the field out of the hand-off.
@@ -45,6 +51,13 @@ struct BrowserSidebarAddressFieldConfiguration {
 
     var metrics: BrowserSidebarAddressFieldMetrics {
         capabilities.addressFieldMetrics
+    }
+
+    /// What the field's contents swap on: the Space shown, or none for a
+    /// Space showing only the prompt, so a change between two of those leaves
+    /// the prompt in place.
+    var swapID: UUID? {
+        spaceHasAddress ? spaceID : nil
     }
 
     /// Whether the live site's own control takes the leading slot.
@@ -67,5 +80,24 @@ struct BrowserSidebarAddressFieldConfiguration {
     /// something to undo, on every shell.
     var showsClearControl: Bool {
         isEditing.wrappedValue && !text.wrappedValue.isEmpty
+    }
+
+    /// What a click on a pointer shell's field surface means where nothing in
+    /// the field takes the click: what a click on its address means. Nil
+    /// leaves the surface inert. A touch shell's address already takes
+    /// touches across the whole field and keeps a long press on it for the
+    /// field's menu, and a field that opens nowhere has nothing to do.
+    var surfaceActivation: (() -> Void)? {
+        guard !capabilities.supportsTouch, activate != nil else { return nil }
+        return activateField
+    }
+
+    // MARK: - Actions - Activation
+
+    /// Does what a click on the resting address does. A field being edited
+    /// keeps its edit.
+    private func activateField() {
+        guard !isEditing.wrappedValue else { return }
+        activate?()
     }
 }

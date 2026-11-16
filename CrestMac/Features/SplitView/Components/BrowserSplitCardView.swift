@@ -16,10 +16,10 @@ import SwiftUI
 /// Three things ride along that the single-page path has no need for:
 ///
 /// - **Hover tracking**, as an AppKit tracking area rather than `.onHover`, which
-///   is unreliable over live web content. Whether entering the card is worth a
-///   focus change is `focusesOnHover`'s answer, evaluated at the moment the
-///   pointer arrives so nothing here has to observe the preference or the address
-///   field.
+///   is unreliable over live web content. Whether the pointer in the card is
+///   worth a focus change is `focusesOnHover`'s answer, evaluated as the pointer
+///   arrives and moves so nothing here has to observe the preference or the
+///   address field.
 /// - **Frame registration**, twice over. The surface's own registry, in its named
 ///   space, is how a single mouse-down monitor turns a point into a card — a tap
 ///   gesture cannot replace it, because web content consumes the clicks that
@@ -43,11 +43,24 @@ struct BrowserSplitCardView: View {
     let commands: BrowserCommandPaletteCommandRegistry
     /// Where this card records its bounds for the surface's click monitor.
     let cardFrames: BrowserSplitCardFrameRegistry
-    /// Asked when the pointer enters the card, never during layout, so the guards
-    /// it consults are read fresh and observing them costs no re-render here.
-    let focusesOnHover: @MainActor @Sendable () -> Bool
+    /// Asked with the pointer's location in the card-frame space as it enters
+    /// the card or moves off chrome drawn over it, never during layout, so the
+    /// guards it consults are read fresh and observing them costs no re-render
+    /// here.
+    let focusesOnHover: @MainActor @Sendable (CGPoint) -> Bool
+    /// Whether chrome drawn over the card, such as the floating sidebar or a
+    /// Peek, covers a location in the card-frame space.
+    let isCoveredByChrome: @MainActor @Sendable (CGPoint) -> Bool
     /// This card's request to become the focused one.
     let onFocusRequest: @MainActor @Sendable () -> Void
+    /// The window's part of the bar this card carries while the address bar
+    /// is on top, or nil while it is in the sidebar.
+    var cardBar: BrowserPageCardBarContext? = nil
+    /// Whether this card is the focused one, which its bar draws at full
+    /// strength.
+    var isFocused = false
+    /// Whether this card comes first in reading order.
+    var isLeadingCard = false
 
     private var isSelectedSpace: Bool {
         browser.selectedSpaceID == space.id && !spaceAccess.isLocked(space)
@@ -55,22 +68,33 @@ struct BrowserSplitCardView: View {
 
     var body: some View {
         let page = presentedPage
-        BrowserDetailContent(
-            page: page,
-            tab: tab,
-            space: space,
-            pagePresentation: .of(tab.surface, page: page),
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess,
-            tabPromotionNamespace: tabPromotionNamespace,
-            startPageFocusRequest: startPageFocusRequest,
-            isCommandPalettePresented: isCommandPalettePresented,
-            commands: commands
-        )
+        VStack(spacing: 0) {
+            if let cardBar {
+                BrowserPageCardBar(
+                    page: page, tab: tab, space: space, browser: browser, pages: pages, context: cardBar,
+                    isFocused: isFocused, isLeadingCard: isLeadingCard
+                )
+                .transition(BrowserPageCardBar.transition)
+            }
+            BrowserDetailContent(
+                page: page,
+                tab: tab,
+                space: space,
+                pagePresentation: .of(tab.surface, page: page),
+                browser: browser,
+                pages: pages,
+                spaceAccess: spaceAccess,
+                tabPromotionNamespace: tabPromotionNamespace,
+                startPageFocusRequest: startPageFocusRequest,
+                isCommandPalettePresented: isCommandPalettePresented,
+                commands: commands
+            )
+        }
         .overlay {
-            BrowserSplitCardHoverTracker { isHovering in
-                guard isSelectedSpace, isHovering, focusesOnHover() else { return }
+            BrowserSplitCardHoverTracker { location in
+                cardPoint(location).map(isCoveredByChrome) ?? false
+            } onPointerInside: { location in
+                guard isSelectedSpace, let point = cardPoint(location), focusesOnHover(point) else { return }
                 onFocusRequest()
             }
         }
@@ -78,6 +102,11 @@ struct BrowserSplitCardView: View {
             proxy.frame(in: BrowserSplitCardFrameRegistry.coordinateSpace)
         } action: { frame in
             cardFrames.register(frame, for: tab.id)
+        }
+        // A lone card shows another tab where it stands, at the same frame,
+        // so its entry follows the tab rather than waiting for the geometry.
+        .onChange(of: tab.id) { oldTabID, newTabID in
+            cardFrames.moveFrame(from: oldTabID, to: newTabID)
         }
         .onDisappear {
             cardFrames.removeFrame(for: tab.id)
@@ -91,5 +120,11 @@ struct BrowserSplitCardView: View {
 
     private var presentedPage: BrowserPage? {
         pages.surfacePage(for: tab.id, in: space, accessController: spaceAccess)
+    }
+
+    /// A location in the card's bounds, in the card-frame space, once the
+    /// card's frame is known.
+    private func cardPoint(_ location: CGPoint) -> CGPoint? {
+        cardFrames.frame(for: tab.id).map { CGPoint(x: $0.minX + location.x, y: $0.minY + location.y) }
     }
 }

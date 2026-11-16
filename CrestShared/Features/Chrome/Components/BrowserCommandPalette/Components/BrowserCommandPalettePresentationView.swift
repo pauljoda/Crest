@@ -11,6 +11,8 @@ struct BrowserCommandPalettePresentationView: View {
     var fieldFrame: CGRect? = nil
     let queryIsFocused: FocusState<Bool>.Binding
 
+    @Environment(\.layoutDirection) private var layoutDirection
+
     @ViewBuilder
     var body: some View {
         if presentation.centersOverWindow {
@@ -46,7 +48,9 @@ struct BrowserCommandPalettePresentationView: View {
             GeometryReader { proxy in
                 let region = BrowserCommandPaletteLayout.fieldRegion(
                     field: fieldFrame, in: proxy.size, safeAreaTop: proxy.safeAreaInsets.top,
-                    presentation: presentation)
+                    presentation: presentation, direction: layoutDirection)
+                let placement = BrowserChromeAppearance.placementFrame(
+                    for: region, in: proxy.size.width, direction: layoutDirection)
 
                 ZStack(alignment: .topLeading) {
                     // A click or tap anywhere but the palette closes it.
@@ -67,7 +71,7 @@ struct BrowserCommandPalettePresentationView: View {
                         width: region.width, height: region.height,
                         alignment: presentation.listsUpward ? .bottom : .top
                     )
-                    .offset(x: region.minX, y: region.minY)
+                    .offset(x: placement.minX, y: placement.minY)
                 }
             }
         } else {

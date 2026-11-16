@@ -93,6 +93,8 @@ struct BrowserOnboardingMakePage: View {
             BrowserOnboardingHeraldicSheet(branding: $branding, symbol: $symbol)
         case .modern:
             BrowserOnboardingModernSheet(branding: $branding, symbol: $symbol)
+        case .simple:
+            BrowserOnboardingSimpleSheet(branding: $branding, symbol: $symbol)
         }
     }
 }

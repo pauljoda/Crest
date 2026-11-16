@@ -55,9 +55,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // The window's chrome belongs to the window, not to the chrome a
             // fullscreen page hides: taking it down would restore the window's
             // style while AppKit is carrying it into fullscreen.
+            // With the address bar on top the buttons stay at the window's top
+            // left in every sidebar state, over the window's address bar or the
+            // leading card's when the sidebar does not hold them.
             BrowserNativeWindowControlsBridge(
-                isVisible: model.sidebarPresentation.showsWindowControls,
-                sidebarOnRight: sidebarOnRight,
+                isVisible: model.sidebarPresentation.showsWindowControls || model.showsPageCardBars,
+                sidebarOnRight: sidebarOnRight && !model.showsPageCardBars,
                 sidebarWidth: model.sidebarWidth
             )
             .frame(maxWidth: .infinity)
@@ -69,9 +72,18 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // window, fullscreen page or not.
             BrowserRecentTabsLayer(chrome: model.chrome)
 
-            // Notices show over a fullscreen page too, so one posted there
-            // is never lost.
-            BrowserNoticeLayer(notices: model.chrome.notices)
+            // The card of the tab the sidebar is rested on shows beside the
+            // sidebar and over the page, a floating sidebar's too.
+            BrowserMacTabPreviewLayer(model: model)
+        }
+        // Notices stand in the top trailing corner of the page, below the
+        // bars along its top, and over a fullscreen page too, so one posted
+        // there is never lost.
+        .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
+            GeometryReader { proxy in
+                BrowserNoticeLayer(notices: model.chrome.notices)
+                    .padding(noticeArea(page: anchor.map { proxy[$0] }, in: proxy.size))
+            }
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -83,7 +95,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     contentInsets: BrowserChromeAppearance.contentInsets(
                         for: rect, in: proxy.size, direction: layoutDirection
-                    )
+                    ),
+                    fieldOrigin: proxy.frame(in: .global).origin
                 )
             }
         }
@@ -91,28 +104,34 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // so the sidebar reads it from here rather than being handed a value
         // per tab through the tree between them.
         .environment(downloadFeedback)
+        .environment(model.extensionTileLift)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
+        // The address bar changing place carries the window's field between
+        // the sidebar and the top of the page.
+        .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: model.showsPageCardBars)
         .animation(
-            chromeAnimation(
+            model.sidebarAnimation(
                 model.isSidebarApproachingDock
                     ? CrestMotion.sidebarDockAttachment
-                    : CrestMotion.sidebarMorph
+                    : CrestMotion.sidebarMorph,
+                reduceMotion: reduceMotion
             ),
             value: model.chrome.columnVisibility
         )
         .animation(
-            chromeAnimation(
+            model.sidebarAnimation(
                 model.isSidebarApproachingDock
                     ? CrestMotion.sidebarDockAttachment
                     : model.isSidebarMorphing
                         ? CrestMotion.sidebarMorph
-                        : CrestMotion.floatingPane
+                        : CrestMotion.floatingPane,
+                reduceMotion: reduceMotion
             ),
             value: model.isFloatingSidebarPresented
         )
         .animation(
-            chromeAnimation(CrestMotion.sidebarDockApproach),
+            model.sidebarAnimation(CrestMotion.sidebarDockApproach, reduceMotion: reduceMotion),
             value: model.isSidebarApproachingDock
         )
         .animation(
@@ -169,6 +188,14 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             } controls: {
                 shellControls
             }
+            // Over the page and the sidebar alike, so the field it shares with
+            // the sidebar is never hidden under either while it moves between
+            // them.
+            .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
+                BrowserWindowAddressBarLayer(
+                    model: model, transientBrowsing: transientBrowsing, page: anchor,
+                    commandSurfaceNamespace: commandSurfaceNamespace)
+            }
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
 
@@ -183,6 +210,18 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 reduceMotion: reduceMotion
             )
         }
+    }
+
+    /// The insets, from the window's edges, of the area a notice stands in:
+    /// the page below the bars along its top, or the whole window while a
+    /// page fills it.
+    private func noticeArea(page: CGRect?, in size: CGSize) -> EdgeInsets {
+        guard let page, model.pages.activePage?.isContentFullscreen != true else { return EdgeInsets() }
+        var insets = BrowserChromeAppearance.contentInsets(for: page, in: size, direction: layoutDirection)
+        if model.showsPageCardBars || model.presentsSplitBars {
+            insets.top += BrowserPageBarMetrics.topSectionHeight
+        }
+        return insets
     }
 
     private var revealsSidebarOverFullscreenPage: Bool {
@@ -222,6 +261,13 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 navigationTargets: { [pages = model.pages] in pages.livePages },
                 activeTarget: { [pages = model.pages] in pages.activePage }
             )
+        }
+        // A floating sidebar keeps Split View from handing the pointer to
+        // the card beneath it.
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: {
+            model.splitCoveringChrome.sidebarFrame = $0
         }
     }
 
@@ -273,14 +319,35 @@ private struct BrowserRootFullscreenContent<Content: View, Sidebar: View, Contro
 }
 
 private struct BrowserRootPermissionObserver: ViewModifier {
+    // MARK: - Types
+
+    /// The active page's waiting request, and whether the sidebar's field is
+    /// where it asks.
+    private struct Prompt: Equatable {
+        let requestID: UUID?
+        let asksInSidebar: Bool
+    }
+
+    // MARK: - Variables
+
     let model: BrowserRootModel
     let reduceMotion: Bool
 
+    /// A page card's bar asks on its own card, as a split's cards always do,
+    /// so the sidebar comes out only while its field is where the request
+    /// asks: when a request arrives there, or when a request still waiting
+    /// moves there, as the address bar returns to the sidebar or a split ends.
     func body(content: Content) -> some View {
-        content.onChange(of: model.pages.activePage?.sitePermissionRequests.current?.id) {
-            if model.pages.activePage?.sitePermissionRequests.current != nil {
+        content.onChange(of: prompt) { _, prompt in
+            if prompt.requestID != nil, prompt.asksInSidebar {
                 model.presentFloatingSidebar(reduceMotion: reduceMotion)
             }
         }
+    }
+
+    private var prompt: Prompt {
+        Prompt(
+            requestID: model.pages.activePage?.sitePermissionRequests.current?.id,
+            asksInSidebar: !model.showsPageCardBars && !model.presentsSplitBars)
     }
 }

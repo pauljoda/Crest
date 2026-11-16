@@ -6,8 +6,16 @@ struct BrowserTabAppearanceGroup: View {
     var showsPreview = false
 
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
+    @Environment(\.browserAppearanceSettingFilter) private var filter
 
     var body: some View {
+        let settings = filter.settings(rows)
+        if !settings.isEmpty {
+            group(settings: settings)
+        }
+    }
+
+    private func group(settings: [CrestResettableSetting]) -> some View {
         CrestSettingsGroup(
             "Tabs and pins",
             settings: settings
@@ -23,13 +31,30 @@ struct BrowserTabAppearanceGroup: View {
                 tolerance: BrowserAppearancePresets.cornerRadiusTolerance,
                 identifier: "tab-corner-radius"
             )
-            BrowserAppearancePresetPicker(
-                "Tab scale",
+            .browserAppearanceSetting(.cornerRadius)
+            CrestSettingSlider(
+                "Tab size",
                 value: scale,
-                presets: BrowserAppearancePresets.tabScale,
-                tolerance: BrowserAppearancePresets.tabScaleTolerance,
+                range: BrowserSidebarDensity.scaleRange,
+                step: BrowserSidebarDensity.scaleStep,
+                readout: .percent(naming: [
+                    0.6: "Thin", 0.8: "Compact", 1: "Default", 1.2: "Comfortable", 1.4: "Large",
+                ]),
                 identifier: "tab-scale"
             )
+            .browserAppearanceSetting(.tabScale)
+            CrestSettingRow("Spacing", setting: spacing.resettable("Spacing")) {
+                Picker("Spacing", selection: spacing.binding) {
+                    ForEach(BrowserSidebarSpacing.all) { spacing in
+                        Text(spacing.title).tag(spacing)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("sidebar-spacing")
+            }
+            .browserAppearanceSetting(.sidebarSpacing)
             CrestSettingRow("Pin layout", setting: columns.resettable("Pin layout")) {
                 Picker("Pin layout", selection: columns.binding) {
                     Text("Balanced rows").tag(0)
@@ -40,12 +65,14 @@ struct BrowserTabAppearanceGroup: View {
                 .fixedSize()
                 .accessibilityLabel("Pin layout")
             }
+            .browserAppearanceSetting(.pinLayout)
             CrestSettingRow(
                 "Stretch pins to fill the row", setting: fillsRow.resettable("Stretch pins to fill the row")
             ) {
                 Toggle("Stretch pins to fill the row", isOn: fillsRow.binding)
                     .labelsHidden()
             }
+            .browserAppearanceSetting(.pinsFillRow)
             CrestSettingRow("Color borders", setting: borders.resettable("Color borders")) {
                 Picker("Color borders", selection: borders.binding) {
                     Text("Selected").tag(BrowserTabAppearance.Borders.selected)
@@ -57,23 +84,30 @@ struct BrowserTabAppearanceGroup: View {
                 .fixedSize()
                 .accessibilityLabel("Color borders")
             }
+            .browserAppearanceSetting(.colorBorders)
             CrestSettingRow(
                 "Accent outline on selected tabs", setting: outlines.resettable("Accent outline on selected tabs")
             ) {
                 Toggle("Accent outline on selected tabs", isOn: outlines.binding)
                     .labelsHidden()
             }
+            .browserAppearanceSetting(.selectedTabOutline)
             CrestSettingRow("Website colors for pins", setting: websiteColors.resettable("Website colors for pins")) {
                 Toggle("Website colors for pins", isOn: websiteColors.binding)
                     .labelsHidden()
             }
+            .browserAppearanceSetting(.websitePinColors)
             CrestSettingRow("Dim unloaded tabs", setting: dimming.resettable("Dim unloaded tabs")) {
                 Toggle("Dim unloaded tabs", isOn: dimming.binding)
                     .labelsHidden()
             }
+            .browserAppearanceSetting(.dimUnloadedTabs)
             CrestSettingSlider("Pinned fill", value: pinFill, readout: .percent(zero: "None", full: "Strong"))
+                .browserAppearanceSetting(.pinnedFill)
             CrestSettingSlider("Selected tab glow", value: pinGlow, readout: .percent(zero: "None", full: "Strong"))
+                .browserAppearanceSetting(.selectedTabGlow)
             CrestSettingSlider("Hover tint", value: hoverFill, readout: .percent(zero: "Neutral", full: "Accent"))
+                .browserAppearanceSetting(.hoverTint)
         }
     }
 
@@ -83,6 +117,10 @@ struct BrowserTabAppearanceGroup: View {
 
     private var scale: CrestSettingValue<Double> {
         CrestSettingValue($appearance.tabScale, default: BrowserLookAndFeelDefaults.tabScale)
+    }
+
+    private var spacing: CrestSettingValue<BrowserSidebarSpacing> {
+        CrestSettingValue($appearance.sidebarSpacing, default: BrowserLookAndFeelDefaults.sidebarSpacing)
     }
 
     private var columns: CrestSettingValue<Int> {
@@ -127,19 +165,20 @@ struct BrowserTabAppearanceGroup: View {
         CrestSettingValue($appearance.tabs.hoverFill, default: BrowserLookAndFeelDefaults.tabs.hoverFill)
     }
 
-    private var settings: [CrestResettableSetting] {
+    private var rows: [(BrowserAppearanceSetting, CrestResettableSetting)] {
         [
-            cornerRadius.resettable("Corner radius"),
-            scale.resettable("Tab scale"),
-            columns.resettable("Pin layout"),
-            fillsRow.resettable("Stretch pins to fill the row"),
-            borders.resettable("Color borders"),
-            outlines.resettable("Accent outline on selected tabs"),
-            websiteColors.resettable("Website colors for pins"),
-            dimming.resettable("Dim unloaded tabs"),
-            pinFill.resettable("Pinned fill"),
-            pinGlow.resettable("Selected tab glow"),
-            hoverFill.resettable("Hover tint"),
+            (.cornerRadius, cornerRadius.resettable("Corner radius")),
+            (.tabScale, scale.resettable("Tab size")),
+            (.sidebarSpacing, spacing.resettable("Spacing")),
+            (.pinLayout, columns.resettable("Pin layout")),
+            (.pinsFillRow, fillsRow.resettable("Stretch pins to fill the row")),
+            (.colorBorders, borders.resettable("Color borders")),
+            (.selectedTabOutline, outlines.resettable("Accent outline on selected tabs")),
+            (.websitePinColors, websiteColors.resettable("Website colors for pins")),
+            (.dimUnloadedTabs, dimming.resettable("Dim unloaded tabs")),
+            (.pinnedFill, pinFill.resettable("Pinned fill")),
+            (.selectedTabGlow, pinGlow.resettable("Selected tab glow")),
+            (.hoverTint, hoverFill.resettable("Hover tint")),
         ]
     }
 }

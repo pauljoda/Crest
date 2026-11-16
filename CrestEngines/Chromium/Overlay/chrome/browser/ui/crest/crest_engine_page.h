@@ -345,8 +345,8 @@ class EnginePage final : public content::WebContentsObserver,
   const bool is_private_;
   std::string window_;
   Phase phase_ = Phase::kCreating;
-  // Primary main-frame navigations to a new document started, and main-frame
-  // commits, since the page began.
+  // Primary main-frame navigations to a new document started, and new
+  // documents the main frame committed, since the page began.
   uint64_t navigation_generation_ = 0;
   uint64_t navigation_revision_ = 0;
 

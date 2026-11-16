@@ -30,6 +30,9 @@ final class BrowserCosmeticFilterSession {
     /// The top document that last posted, where the picker runs.
     private var mainFrame: BrowserContentFrame?
 
+    /// Whether Crest blocks at all, so a rule the picker writes would apply.
+    var blocksContent: Bool { core.state.filterLists.level.blocksContent }
+
     // MARK: - Initializers
 
     init(

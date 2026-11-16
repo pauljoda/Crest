@@ -66,6 +66,13 @@ final class BrowserAppPreferenceStore {
         }
     }
 
+    /// Whether a saved tab stays as it is once its page is unloaded. Off,
+    /// its row offers to delete it once it is unloaded.
+    var unloadedSavedTabsStay: Bool {
+        get { preferences.unloadedSavedTabsStay }
+        set { set { $0.unloadedSavedTabsStay = newValue } }
+    }
+
     var splitFocusFollowsMouse: Bool {
         get { preferences.splitFocusFollowsMouse }
         set { set { $0.splitFocusFollowsMouse = newValue } }
@@ -81,6 +88,19 @@ final class BrowserAppPreferenceStore {
     var showsRecentTabs: Bool {
         get { preferences.showsRecentTabs }
         set { set { $0.showsRecentTabs = newValue } }
+    }
+
+    /// Where among the open tabs a new tab the person opens goes.
+    var newTabPosition: NewTabPosition {
+        get { preferences.newTabPosition }
+        set { set { $0.newTabPosition = newValue } }
+    }
+
+    /// Whether a new tab opened from a tab in a folder opens at the end of
+    /// that folder; off, it opens at `newTabPosition`.
+    var newTabsJoinFolder: Bool {
+        get { preferences.newTabsJoinFolder }
+        set { set { $0.newTabsJoinFolder = newValue } }
     }
 
     /// How the command palette ranks and arranges what it offers.

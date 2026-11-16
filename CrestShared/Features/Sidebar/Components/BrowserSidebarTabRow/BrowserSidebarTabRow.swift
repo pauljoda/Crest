@@ -36,6 +36,7 @@ struct BrowserSidebarTabRow: View {
                 interaction: interaction
             )
         )
+        .browserTabPreviewSource(.tab(tab), in: context)
         .modifier(
             BrowserTabStatusBadgeHost(
                 tab: BrowserTabStatusSource(

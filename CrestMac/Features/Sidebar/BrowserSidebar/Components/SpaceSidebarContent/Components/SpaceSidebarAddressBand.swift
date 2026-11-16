@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Fixed address controls. The pager owns the changing extension-strip seam
 /// so semantic selection cannot resize the viewport during a Space transition.
+/// The same field stands along the top of a lone page while the address bar
+/// is on top (``BrowserWindowAddressBar``).
 struct SpaceSidebarAddressBand: View {
     let space: SpaceModel
     /// Whether the site controls act for `space`; they offer nothing while it
@@ -20,8 +22,17 @@ struct SpaceSidebarAddressBand: View {
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
+    /// How far the field stands in from the band's edges: the sidebar's
+    /// layer inset there, none along the top of a page.
+    var horizontalInset = BrowserSidebarMetrics.layerInset
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The field's width, which decides whether Copy URL fits beside Site
+    /// Controls.
+    @State private var fieldWidth: CGFloat = .infinity
+    /// Whether the pointer is over the field, which brings Copy URL back in a
+    /// field too narrow to keep it, in the address's room.
+    @State private var isHovering = false
 
     var body: some View {
         BrowserSidebarAddressField(configuration: addressConfiguration) {
@@ -44,7 +55,11 @@ struct SpaceSidebarAddressBand: View {
             SpacePagerSettlement.standardAnimation.unlessReducingMotion(reduceMotion),
             value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
         )
-        .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { fieldWidth = $0 }
+        .onHover { hovering in
+            withAnimation(CrestMotion.controlState.unlessReducingMotion(reduceMotion)) { isHovering = hovering }
+        }
+        .padding(.horizontal, horizontalInset)
 
     }
 
@@ -63,6 +78,7 @@ struct SpaceSidebarAddressBand: View {
             submit: submitAddress,
             morphNamespace: commandSurfaceNamespace,
             spaceID: space.id,
+            spaceHasAddress: selectedTab?.url?.isEmpty == false,
             commandPaletteHandoff: commandPaletteHandoff,
             branding: space.settings.look
         )
@@ -86,9 +102,11 @@ struct SpaceSidebarAddressBand: View {
     }
 
     /// The page the Copy URL button copies, while the person turned the
-    /// button on and the page has an address to copy.
+    /// button on, the field has room for it or the pointer is over it, and
+    /// the page has an address to copy.
     private var copyURLPage: BrowserPage? {
         guard BrowserDeviceAppearanceStore.shared.address.showsCopyURLButton,
+            isHovering || fieldWidth >= BrowserSidebarAddressFieldMetrics.copyURLButtonMinimumWidth,
             let page = displayedPage, page.live.documentURL != nil
         else { return nil }
         return page

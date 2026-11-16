@@ -7,16 +7,18 @@ namespace CrestCore.Contracts;
 /// the app sends in its own language, in the default folder color, holding
 /// that tab first. Refused with
 /// `InvalidFolderPlacement` when `TabId` is not an open tab at the top level,
-/// or is in a split or the selection, or is a Start Page.
+/// or is in a split or the selection, or is a Start Page. With `IsGroup` it
+/// makes a group.
 public sealed record FolderTabsAround(
-    Guid WorkspaceId, Guid WindowId, Guid SpaceId, TabSelection Selection, Guid TabId, string? Title = null)
+    Guid WorkspaceId, Guid WindowId, Guid SpaceId, TabSelection Selection, Guid TabId, string? Title = null,
+    bool IsGroup = false)
     : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var batch = workspace.Selecting(turn.Basis, WindowId, SpaceId, Selection);
         batch.Edited.FolderSelectedAround(batch.Selected, TabId, NativeSessionAuthority.FolderTitle(Title), FolderState.DefaultColor, turn.Ids,
-            turn.Now);
+            turn.Now, IsGroup);
         return batch.Result(turn.Basis, SyncStaging.Batch);
     }
 

@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Renames in place: Return or focus loss commits, and Escape cancels.
+/// Renames in place: Return or focus loss commits, and Escape cancels. A
+/// group's header shows its name alone, in small secondary text. Either kind
+/// keeps a `…` button at its trailing edge that opens the folder's menu: on
+/// hover where a pointer can reveal it, and always on a touch shell.
 struct BrowserFolderHeaderControl: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -10,9 +13,14 @@ struct BrowserFolderHeaderControl: View {
     private var folder: FolderStateModel { configuration.folder }
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var showsTabCounts: Bool { BrowserDeviceAppearanceStore.shared.foldersShowTabCounts }
-    private var alwaysVisible: Bool { BrowserDeviceAppearanceStore.shared.foldersAlwaysVisible }
-    private var tintsTitle: Bool { BrowserDeviceAppearanceStore.shared.foldersTintTitle }
+    @State private var isHovering = false
+    /// The rename field's selection, which takes the whole name as renaming
+    /// begins, so typing replaces it on every platform.
+    @State private var nameSelection: TextSelection?
+    private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
+    private var showsTabCounts: Bool { appearance[keyPath: folder.kind.showsTabCounts] }
+    private var alwaysVisible: Bool { appearance[keyPath: folder.kind.showsHighlights] }
+    private var tintsTitle: Bool { appearance[keyPath: folder.kind.tintsTitle] }
     private var textScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
     private var isEditing: Bool {
@@ -23,16 +31,22 @@ struct BrowserFolderHeaderControl: View {
     var body: some View {
         Group {
             if isEditing {
-                HStack(spacing: 7) {
-                    BrowserFolderIcon(
-                        folder: folder,
-                        isExpanded: interaction.isExpanded.wrappedValue,
-                        metrics: configuration.headerMetrics
-                    )
+                HStack(spacing: BrowserFolderLayout.headerSpacing) {
+                    if folder.kind.showsArtwork {
+                        BrowserFolderIcon(
+                            folder: folder,
+                            isExpanded: interaction.isExpanded.wrappedValue,
+                            metrics: configuration.headerMetrics
+                        )
+                    }
 
-                    TextField("Folder Name", text: interaction.draftTitle)
+                    TextField(folder.kind.namePrompt, text: interaction.draftTitle, selection: $nameSelection)
                         .textFieldStyle(.plain)
+                        .modifier(BrowserFolderNameFieldFont(kind: folder.kind))
                         .focused(interaction.isTitleFocused)
+                        .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
+                            if focused { selectWholeName() }
+                        }
                         .submitLabel(.done)
                         .onSubmit(interaction.commitTitle)
                         .onKeyPress(.escape) {
@@ -57,36 +71,165 @@ struct BrowserFolderHeaderControl: View {
                     }
                     interaction.toggleExpansion()
                 } label: {
-                    HStack(spacing: 7) {
-                        BrowserFolderIcon(
-                            folder: folder,
-                            isExpanded: interaction.isExpanded.wrappedValue,
-                            metrics: configuration.headerMetrics
-                        )
+                    HStack(spacing: BrowserFolderLayout.headerSpacing) {
+                        if folder.kind.showsArtwork {
+                            BrowserFolderIcon(
+                                folder: folder,
+                                isExpanded: interaction.isExpanded.wrappedValue,
+                                metrics: configuration.headerMetrics
+                            )
 
-                        BrowserFolderHeaderTitle(
-                            folder: folder, context: configuration.context, tintsTitle: tintsTitle,
-                            emphasizesShownTab: alwaysVisible
-                        )
-                        .equatable()
+                            BrowserFolderHeaderTitle(
+                                folder: folder, context: configuration.context, tintsTitle: tintsTitle,
+                                emphasizesShownTab: alwaysVisible
+                            )
+                            .equatable()
+                        } else {
+                            BrowserGroupHeaderTitle(folder: folder, tintsTitle: tintsTitle)
+                        }
 
                         Spacer(minLength: 8)
                         if showsTabCounts {
                             BrowserFolderTabCount(folder: folder, space: configuration.context.space).equatable()
+                                // Where the `…` button waits for hover, the count
+                                // holds its place and gives way to it.
+                                .frame(width: countSharesMenuSlot ? menuMetrics.controlSize.width : nil)
+                                .opacity(countSharesMenuSlot && isMenuRevealed ? 0 : 1)
+                        }
+                        if showsMenuButton, menuMetrics.isAlwaysVisible {
+                            // Room for the `…` button a touch shell always
+                            // draws over the header, so the count sits beside it.
+                            Color.clear.frame(width: menuMetrics.controlSize.width, height: 1)
                         }
                     }
+                    .modifier(
+                        BrowserFolderHeaderMenuClearance(
+                            width: menuMetrics.controlSize.width, isActive: titleMeetsMenuButton)
+                    )
                     .browserSavedFolderHeaderLayout(configuration: configuration)
                     // A finger gets the folder's padding too, so a header
                     // shorter than a tab row still takes a whole row's touch.
                     .contentShape(
                         Rectangle().inset(by: capabilities.supportsTouch ? -BrowserFolderLayout.headerTouchReach : 0))
                 }
-                .buttonStyle(BrowserFolderHeaderButtonStyle())
+                .buttonStyle(.crestDisclosure)
+                // On the disclosure alone, so the `…` button beside it keeps
+                // its own label.
+                .accessibilityLabel(accessibilityLabel)
+                .accessibilityValue(
+                    BrowserChromeAccessibility.folderValue(isExpanded: interaction.isExpanded.wrappedValue)
+                )
+                .accessibilityHint(accessibilityHint)
+                .overlay(alignment: .trailing) {
+                    if showsMenuButton {
+                        BrowserFolderMenuButton(
+                            configuration: configuration, interaction: interaction, metrics: menuMetrics,
+                            isRevealed: isMenuRevealed
+                        )
+                        .padding(.trailing, configuration.headerMetrics.contentTrailingInset)
+                    }
+                }
+                .onHover { isHovering = $0 }
+                // A folder being renamed shows no card.
+                .browserTabPreviewSource(.folder(folder), in: configuration.context)
             }
         }
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
     }
 
+    /// Selects the whole name once the field has it, which it takes as focus
+    /// arrives.
+    private func selectWholeName() {
+        Task { @MainActor in
+            await Task.yield()
+            let name = interaction.draftTitle.wrappedValue
+            guard !name.isEmpty else { return }
+            nameSelection = TextSelection(range: name.startIndex..<name.endIndex)
+        }
+    }
+
+    private var accessibilityLabel: LocalizedStringKey { folder.kind.spokenName(folder.shownTitle) }
+
+    private var accessibilityHint: LocalizedStringKey {
+        folder.kind.disclosureHint(isExpanded: interaction.isExpanded.wrappedValue)
+    }
+
+    /// Whether the header offers its menu as a button: wherever the shell
+    /// organizes folders, as the context menu does.
+    private var showsMenuButton: Bool { capabilities.supportsOrganization }
+
+    /// The size and reveal rule a tab row's trailing control follows, so the
+    /// header's matches it.
+    private var menuMetrics: BrowserTabTrailingControlMetrics { capabilities.trailingControlMetrics }
+
+    /// Whether the `…` button shows now.
+    private var isMenuRevealed: Bool { menuMetrics.isRevealed(isHovering: isHovering, isSelected: false) }
+
+    /// Whether the tab count stands where the `…` button appears on hover,
+    /// rather than beside a button that is always there.
+    private var countSharesMenuSlot: Bool { showsMenuButton && !menuMetrics.isAlwaysVisible }
+
+    /// Whether the `…` button shows now over the end of the title. A tab
+    /// count holds the button's place, and a button that is always there has
+    /// its own, but a hover-revealed button with no count beside it stands
+    /// over a long enough name.
+    private var titleMeetsMenuButton: Bool { countSharesMenuSlot && !showsTabCounts && isMenuRevealed }
+}
+
+/// Fades a folder header's title out under its `…` button while the button
+/// shows, so a name that reaches the button never runs under it.
+private struct BrowserFolderHeaderMenuClearance: ViewModifier {
+    /// How far the title fades before it reaches the button.
+    private static let fadeWidth: CGFloat = 12
+
+    /// The button's width at the header's trailing edge.
+    let width: CGFloat
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content.mask {
+            if isActive {
+                HStack(spacing: 0) {
+                    Rectangle()
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: Self.fadeWidth)
+                        .flipsForRightToLeftLayoutDirection(true)
+                    Color.clear.frame(width: width)
+                }
+            } else {
+                Rectangle()
+            }
+        }
+    }
+}
+
+/// The `…` button at a folder or group header's trailing edge, which opens
+/// the same menu its context menu does.
+private struct BrowserFolderMenuButton: View {
+    let configuration: BrowserFolderGroupConfiguration
+    let interaction: BrowserFolderGroupInteractionContext
+    let metrics: BrowserTabTrailingControlMetrics
+    let isRevealed: Bool
+
+    var body: some View {
+        Menu {
+            BrowserFolderOrganizationMenu(configuration: configuration, interaction: interaction)
+        } label: {
+            BrowserSidebarTabTrailingControlLabel(systemName: "ellipsis", metrics: metrics)
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
+        .tint(.primary)
+        .foregroundStyle(.secondary)
+        .opacity(isRevealed ? 1 : 0)
+        .allowsHitTesting(isRevealed)
+        .disabled(!configuration.isAvailableForDisplay)
+        .accessibilityLabel(title)
+        .help(title)
+    }
+
+    private var title: LocalizedStringKey { configuration.folder.kind.actionsTitle }
 }
 
 /// The folder's title, in its color where the person asked for it, and bold
@@ -110,7 +253,6 @@ private struct BrowserFolderHeaderTitle: View, @MainActor Equatable {
             )
             .fontWeight(tintsTitle || holdsShownTab ? .semibold : .regular)
             .lineLimit(1)
-            .modifier(BrowserFolderTitlePressFeedback())
     }
 
     private var holdsShownTab: Bool {
@@ -134,7 +276,6 @@ private struct BrowserFolderTabCount: View, Equatable {
         Text(space.tabIDs(inFolder: folder.id).count, format: .number)
             .font(.caption)
             .foregroundStyle(.secondary)
-            .modifier(BrowserFolderTitlePressFeedback())
     }
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
@@ -142,22 +283,16 @@ private struct BrowserFolderTabCount: View, Equatable {
     }
 }
 
-extension EnvironmentValues {
-    @Entry fileprivate var folderHeaderIsPressed = false
-}
-
-/// PlainButtonStyle fades its entire label. Only the title and count acknowledge
-/// a press here, keeping the animated artwork's color steady.
-private struct BrowserFolderHeaderButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label.environment(\.folderHeaderIsPressed, configuration.isPressed)
-    }
-}
-
-private struct BrowserFolderTitlePressFeedback: ViewModifier {
-    @Environment(\.folderHeaderIsPressed) private var isPressed
+/// A group's name keeps its own size while it is renamed; a folder's takes the
+/// sidebar's.
+private struct BrowserFolderNameFieldFont: ViewModifier {
+    let kind: BrowserFolderKind
 
     func body(content: Content) -> some View {
-        content.opacity(isPressed ? 0.55 : 1)
+        if kind.showsArtwork {
+            content
+        } else {
+            content.modifier(BrowserGroupNameFont())
+        }
     }
 }

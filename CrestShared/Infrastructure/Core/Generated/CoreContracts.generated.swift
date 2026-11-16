@@ -181,6 +181,7 @@ enum Change: Equatable, Sendable {
     case tabCopied(TabCopied)
     case tabFaviconAssigned(TabFaviconAssigned)
     case tabPagePutAway(TabPagePutAway)
+    case tabSavedImageChanged(TabSavedImageChanged)
     case tabsChanged(TabsChanged)
     case tabsImported(TabsImported)
     case transientPageClosed(TransientPageClosed)
@@ -216,6 +217,7 @@ enum Rejection: Equatable, Error, Sendable {
     case bookmarksUnrecognized(BookmarksUnrecognized)
     case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
     case borrowedWorkspaceRequiresSpace(BorrowedWorkspaceRequiresSpace)
+    case cannotBecomeGroup(CannotBecomeGroup)
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
@@ -244,6 +246,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
     case folderLimitReached(FolderLimitReached)
+    case groupHoldsOnlyTabs(GroupHoldsOnlyTabs)
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
     case invalidAgent(InvalidAgent)
@@ -307,6 +310,7 @@ enum Rejection: Equatable, Error, Sendable {
     case pinsOneTabAtATime(PinsOneTabAtATime)
     case primaryCannotJoin(PrimaryCannotJoin)
     case primaryCannotSeparate(PrimaryCannotSeparate)
+    case privateSpaceCannotLock(PrivateSpaceCannotLock)
     case privateSpaceCannotShare(PrivateSpaceCannotShare)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case profileInUse(ProfileInUse)
@@ -363,6 +367,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownSplitGroup(UnknownSplitGroup)
     case unknownTab(UnknownTab)
     case unknownWorkspace(UnknownWorkspace)
+    case unpreparedImport(UnpreparedImport)
     case unregisteredEngine(UnregisteredEngine)
     case unrelatedWorkspaces(UnrelatedWorkspaces)
     case unsavedWorkspace(UnsavedWorkspace)
@@ -416,6 +421,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .pinsOneTabAtATime(let value): value.message
         case .primaryCannotJoin(let value): value.message
         case .primaryCannotSeparate(let value): value.message
+        case .privateSpaceCannotLock(let value): value.message
         case .privateSpaceCannotShare(let value): value.message
         case .profileInUse(let value): value.message
         case .saveFailed(let value): value.message
@@ -441,6 +447,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .unknownAgentSession(let value): value.message
         case .unknownCloudMerge(let value): value.message
         case .unknownExtension(let value): value.message
+        case .unpreparedImport(let value): value.message
         case .unsuitableDefaultSearch(let value): value.message
         case .unsupportedArchiveVersion(let value): value.message
         case .webPagesOnly(let value): value.message
@@ -470,6 +477,7 @@ enum EngineCommand: Equatable, Sendable {
     case installExtensionPackage(InstallExtensionPackage)
     case listEngineExtensions(ListEngineExtensions)
     case loadPage(LoadPage)
+    case moveEngineExtensionPin(MoveEngineExtensionPin)
     case pauseEngineDownload(PauseEngineDownload)
     case readSiteData(ReadSiteData)
     case recoverPage(RecoverPage)
@@ -635,6 +643,7 @@ extension Change {
         case .tabCopied(let change): change.apply(to: state)
         case .tabFaviconAssigned(let change): change.apply(to: state)
         case .tabPagePutAway(let change): change.apply(to: state)
+        case .tabSavedImageChanged(let change): change.apply(to: state)
         case .tabsChanged(let change): change.apply(to: state)
         case .tabsImported(let change): change.apply(to: state)
         case .transientPageClosed(let change): change.apply(to: state)
@@ -713,6 +722,7 @@ extension Change {
         case .tabCopied(let change): change.apply(to: core, in: &batch)
         case .tabFaviconAssigned(let change): change.apply(to: core, in: &batch)
         case .tabPagePutAway(let change): change.apply(to: core, in: &batch)
+        case .tabSavedImageChanged(let change): change.apply(to: core, in: &batch)
         case .tabsChanged(let change): change.apply(to: core, in: &batch)
         case .tabsImported(let change): change.apply(to: core, in: &batch)
         case .transientPageClosed(let change): change.apply(to: core, in: &batch)
@@ -791,6 +801,7 @@ extension Change {
         case .tabCopied(let change): change.note(in: &receipts)
         case .tabFaviconAssigned(let change): change.note(in: &receipts)
         case .tabPagePutAway(let change): change.note(in: &receipts)
+        case .tabSavedImageChanged(let change): change.note(in: &receipts)
         case .tabsChanged(let change): change.note(in: &receipts)
         case .tabsImported(let change): change.note(in: &receipts)
         case .transientPageClosed(let change): change.note(in: &receipts)
@@ -1131,9 +1142,12 @@ struct AppPreferences: Equatable, Sendable {
         automaticallyEntersPictureInPicture: true,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
+        unloadedSavedTabsStay: true,
         splitFocusFollowsMouse: false,
         automaticallyShowsDeveloperToolbar: true,
         showsRecentTabs: true,
+        newTabPosition: NewTabPosition.top,
+        newTabsJoinFolder: false,
         palette: PalettePreferences(
             layout: PaletteLayout.sections,
             sources: [
@@ -1168,9 +1182,12 @@ struct AppPreferences: Equatable, Sendable {
     var automaticallyEntersPictureInPicture: Bool
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
+    var unloadedSavedTabsStay: Bool
     var splitFocusFollowsMouse: Bool
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
+    var newTabPosition: NewTabPosition
+    var newTabsJoinFolder: Bool
     var palette: PalettePreferences
 }
 
@@ -1505,6 +1522,10 @@ struct CancelExtensionInstall: Intent, ExtensionIntent, Equatable, Sendable {
 struct CancelImportRead: Intent, SetupFlowIntent, Equatable, Sendable {
 }
 
+struct CannotBecomeGroup: Equatable, Sendable {
+    let folderID: UUID
+}
+
 struct CannotDeleteLastSpace: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest needs at least one Space.")
@@ -1707,6 +1728,7 @@ struct CloseTab: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+    let returnTabID: UUID?
 }
 
 struct CloseTabs: Intent, SessionIntent, Equatable, Sendable {
@@ -1876,6 +1898,13 @@ struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let collapsed: Bool
 }
 
+struct CollapseSplit: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let isCollapsed: Bool
+}
+
 struct ColorPalette: Equatable, Sendable {
     var colors: [BrandColor]
 }
@@ -1969,6 +1998,7 @@ struct CreateFolder: Intent, SessionIntent, Equatable, Sendable {
     let symbol: String?
     let tabIDs: [UUID]
     let leavesSplits: Bool
+    let isGroup: Bool
 }
 
 struct CreatePage: Equatable, Sendable {
@@ -2270,6 +2300,13 @@ struct DeleteBrowsingData: Intent, DataDeletionIntent, Equatable, Sendable {
 
 struct DeleteFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
+struct DeleteFolderAndContents: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
     let spaceID: UUID
     let folderID: UUID
 }
@@ -2870,6 +2907,7 @@ struct ExtensionAction: Equatable, Sendable, Identifiable {
     let icon: Data?
     let pinned: Bool
     let enabled: Bool
+    let hasPopup: Bool
 }
 
 struct ExtensionActionList: Equatable, Sendable {
@@ -3081,6 +3119,8 @@ struct FilterListState: Equatable, Sendable {
 }
 
 struct FilterLists: Equatable, Sendable {
+    let level: ContentBlockingLevel
+    let isCustomized: Bool
     let lists: [FilterListState]
     let customLists: [CustomFilterListState]
     let customFilters: String
@@ -3190,6 +3230,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let isCollapsed: Bool
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
+    let isGroup: Bool
     let displaySymbol: String
     let displayColor: BrandColor
 
@@ -3205,6 +3246,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
         var isCollapsed: Bool
         var collapseModifiedAt: Date?
         var orderAnchorTabID: UUID?
+        var isGroup: Bool
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -3218,7 +3260,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
             parentID: parentID,
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
-            orderAnchorTabID: orderAnchorTabID
+            orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup
         )
     }
 }
@@ -3230,6 +3273,7 @@ struct FolderTabs: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
     let placement: TabPlacement
     let title: String?
+    let isGroup: Bool
 }
 
 struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
@@ -3239,6 +3283,7 @@ struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
     let tabID: UUID
     let title: String?
+    let isGroup: Bool
 }
 
 struct FoldersChanged: CoreChange, Equatable, Sendable {
@@ -3290,6 +3335,10 @@ struct GetSiteContentBlocking: Query, Equatable, Sendable {
 struct GoToHistoryEntry: Equatable, Sendable {
     let pageID: UUID
     let entryID: UUID
+}
+
+struct GroupHoldsOnlyTabs: Equatable, Sendable {
+    let groupID: UUID
 }
 
 struct GroupPages: Equatable, Sendable {
@@ -3959,6 +4008,7 @@ struct LinkPreferences: Equatable, Sendable {
     let dimsPageBehindPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
+    let cleansCopiedLinks: Bool
     let routes: [LinkRoute]
     let rememberedSites: [RememberedSite]
 }
@@ -3981,6 +4031,12 @@ struct LinkRouteExists: Equatable, Sendable {
 
 struct LinkRoutesFull: Equatable, Sendable {
     let maximum: Int
+}
+
+struct LinkToCopy: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let url: String
 }
 
 struct ListDropTarget: Equatable, Sendable {
@@ -4119,6 +4175,12 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
+struct MoveEngineExtensionPin: Equatable, Sendable {
+    let profileID: UUID
+    let extensionID: String
+    let beforeExtensionID: String?
+}
+
 struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -4127,6 +4189,14 @@ struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let parentID: UUID?
     let beforeFolderID: UUID?
     let beforeTabID: UUID?
+}
+
+struct MoveFolderToSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let destinationSpaceID: UUID
 }
 
 struct MoveLinkRoute: Intent, LinkIntent, Equatable, Sendable {
@@ -4147,6 +4217,13 @@ struct MovePageToWindow: PageRequest, Equatable, Sendable {
 
     let pageID: UUID
     let windowID: UUID
+}
+
+struct MovePinnedExtension: Intent, ExtensionIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let engine: EngineKind
+    let extensionID: String
+    let beforeExtensionID: String?
 }
 
 struct MoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
@@ -4419,6 +4496,7 @@ struct OpenAddress: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let address: String
+    let placesAsNewTab: Bool
 }
 
 struct OpenCloudTransport: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -4462,6 +4540,8 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement
     let afterTabID: UUID?
     let shows: Bool
+    let placesAsNewTab: Bool
+    let savesInSavedFolder: Bool
 }
 
 struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
@@ -5236,6 +5316,14 @@ struct PrimaryCannotSeparate: Equatable, Sendable {
     }
 }
 
+struct PrivateSpaceCannotLock: Equatable, Sendable {
+    let workspaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Private windows can't be locked.")
+    }
+}
+
 struct PrivateSpaceCannotShare: Equatable, Sendable {
     let workspaceID: UUID
 
@@ -5404,6 +5492,9 @@ struct RecoverPage: Equatable, Sendable {
 
 struct RecoveryCheckpointUnusable: Equatable, Sendable {
     let reason: StorageFailure
+}
+
+struct RefreshFilterLists: Intent, Equatable, Sendable {
 }
 
 struct RefreshPageIcon: PageRequest, Equatable, Sendable {
@@ -5611,6 +5702,12 @@ struct RestoreInteractionState: PageRequest, Equatable, Sendable {
     let expectedURL: String
 }
 
+struct RestoreLook: Query, Equatable, Sendable {
+    typealias Answer = RestoredLook
+
+    let text: String
+}
+
 struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
     let language: String?
     let region: String?
@@ -5621,6 +5718,10 @@ struct RestoreTabHistory: Intent, PageIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let archive: Data
+}
+
+struct RestoredLook: Equatable, Sendable {
+    let look: SpaceBranding?
 }
 
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -6024,6 +6125,10 @@ struct SetCloudSyncEnabled: Intent, CloudSyncControlIntent, Equatable, Sendable 
     let isEnabled: Bool
 }
 
+struct SetContentBlockingLevel: Intent, Equatable, Sendable {
+    let level: ContentBlockingLevel
+}
+
 struct SetCredentialPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6064,6 +6169,13 @@ struct SetFolderColor: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let folderID: UUID
     let color: BrandColor
+}
+
+struct SetFolderGroup: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let isGroup: Bool
 }
 
 struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
@@ -6411,6 +6523,7 @@ struct ShowStartPage: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let outsideSplits: Bool
+    let placesAsNewTab: Bool
 }
 
 struct ShowTab: Intent, WindowIntent, Equatable, Sendable {
@@ -6569,7 +6682,7 @@ struct SpaceBranding: Equatable, Sendable {
         keepsControlsReadable: true,
         themeMode: SpaceThemeMode.banner,
         gradientAngle: 0,
-        showsTexture: false,
+        textureStrength: 0,
         iconStyle: SpaceIconStyle.simpleSymbol,
         symbolColor: nil,
         crest: SpaceCrest(
@@ -6616,7 +6729,7 @@ struct SpaceBranding: Equatable, Sendable {
     var keepsControlsReadable: Bool
     var themeMode: SpaceThemeMode
     var gradientAngle: Double
-    var showsTexture: Bool
+    var textureStrength: Double
     var iconStyle: SpaceIconStyle
     var symbolColor: BrandColor?
     var crest: SpaceCrest
@@ -6907,6 +7020,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
     let iconModifiedAt: Date?
     let tint: BrandColor?
     let tintModifiedAt: Date?
+    let isCollapsed: Bool
+    let collapseModifiedAt: Date?
     let displayTitle: String?
     let displayEmojiIcon: String?
 
@@ -6924,6 +7039,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
         var iconModifiedAt: Date?
         var tint: BrandColor?
         var tintModifiedAt: Date?
+        var isCollapsed: Bool
+        var collapseModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6935,7 +7052,9 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
             customIconSymbol: customIconSymbol,
             iconModifiedAt: iconModifiedAt,
             tint: tint,
-            tintModifiedAt: tintModifiedAt
+            tintModifiedAt: tintModifiedAt,
+            isCollapsed: isCollapsed,
+            collapseModifiedAt: collapseModifiedAt
         )
     }
 }
@@ -7079,9 +7198,19 @@ struct StoreInstallRequested: Equatable, Sendable {
     let extensionID: String
 }
 
+struct StoreLook: Query, Equatable, Sendable {
+    typealias Answer = StoredLook
+
+    let look: SpaceBranding
+}
+
 struct StoreRemovalRequested: Equatable, Sendable {
     let pageID: UUID
     let extensionID: String
+}
+
+struct StoredLook: Equatable, Sendable {
+    let text: String
 }
 
 struct StoredSessionClosed: Equatable, Sendable {
@@ -7239,6 +7368,13 @@ struct TabPlacementChoice: Equatable, Sendable {
     let placement: TabPlacement
 }
 
+struct TabSavedImageChanged: CoreChange, Equatable, Sendable {
+    let workspaceID: UUID
+    let tabID: UUID
+    let change: TabSavedImageChange
+    let faviconURL: String?
+}
+
 struct TabSelection: Equatable, Sendable {
     var tabIDs: [UUID]
     var folderIDs: [UUID]
@@ -7269,6 +7405,9 @@ struct TabState: Equatable, Sendable, Identifiable {
     let customTitle: String?
     let titleModifiedAt: Date?
     let keepsPageLoaded: Bool
+    let savedTitle: String?
+    let savedFaviconURL: String?
+    let savedIconAccent: TabIconAccent?
     let iconMode: TabIconMode
     let displayTitle: String
     let isAwayFromSavedAddress: Bool
@@ -7296,6 +7435,9 @@ struct TabState: Equatable, Sendable, Identifiable {
         var customTitle: String?
         var titleModifiedAt: Date?
         var keepsPageLoaded: Bool
+        var savedTitle: String?
+        var savedFaviconURL: String?
+        var savedIconAccent: TabIconAccent?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -7317,7 +7459,10 @@ struct TabState: Equatable, Sendable, Identifiable {
             positionModifiedAt: positionModifiedAt,
             customTitle: customTitle,
             titleModifiedAt: titleModifiedAt,
-            keepsPageLoaded: keepsPageLoaded
+            keepsPageLoaded: keepsPageLoaded,
+            savedTitle: savedTitle,
+            savedFaviconURL: savedFaviconURL,
+            savedIconAccent: savedIconAccent
         )
     }
 }
@@ -7477,6 +7622,14 @@ struct UnknownTab: Equatable, Sendable {
 
 struct UnknownWorkspace: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct UnpreparedImport: Equatable, Sendable {
+    let cause: String
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t prepare this import.")
+    }
 }
 
 struct UnregisteredEngine: Equatable, Sendable {
@@ -8013,6 +8166,11 @@ enum SystemTint: Int, CaseIterable, Sendable {
     case teal = 5
     case pink = 6
     case green = 7
+}
+
+enum TabSavedImageChange: Int, CaseIterable, Sendable {
+    case keep = 0
+    case restore = 1
 }
 
 enum TearOffRefusal: Int, CaseIterable, Sendable {
@@ -9903,6 +10061,96 @@ struct CloudZoneLoss: Hashable, Sendable {
         init(name: String, restoresLocalRecords: Bool) {
             self.name = name
             self.restoresLocalRecords = restoresLocalRecords
+        }
+    }
+}
+
+/// The members of the core's `ContentBlockingLevel`. A member's wire tag is its index in `all`.
+struct ContentBlockingLevel: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var summary: LocalizedStringResource { facts.summary }
+    var blocksContent: Bool { facts.blocksContent }
+    var includesStrictLists: Bool { facts.includesStrictLists }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        summary: LocalizedStringResource,
+        blocksContent: Bool,
+        includesStrictLists: Bool
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            title: title,
+            summary: summary,
+            blocksContent: blocksContent,
+            includesStrictLists: includesStrictLists
+        )
+    }
+
+    static let off = ContentBlockingLevel(
+        tag: 0,
+        name: "off",
+        title: LocalizedStringResource("Off"),
+        summary: LocalizedStringResource("Crest doesn’t block ads or trackers."),
+        blocksContent: false,
+        includesStrictLists: false
+    )
+    static let balanced = ContentBlockingLevel(
+        tag: 1,
+        name: "balanced",
+        title: LocalizedStringResource("Balanced"),
+        summary: LocalizedStringResource("Blocks ads and trackers while keeping sites working."),
+        blocksContent: true,
+        includesStrictLists: false
+    )
+    static let strict = ContentBlockingLevel(
+        tag: 2,
+        name: "strict",
+        title: LocalizedStringResource("Strict"),
+        summary: LocalizedStringResource("Also hides cookie notices and other annoyances. A few sites may not work."),
+        blocksContent: true,
+        includesStrictLists: true
+    )
+
+    static let all: [ContentBlockingLevel] = [off, balanced, strict]
+
+    static func named(_ name: String?) -> ContentBlockingLevel? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ContentBlockingLevel, rhs: ContentBlockingLevel) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let summary: LocalizedStringResource
+        let blocksContent: Bool
+        let includesStrictLists: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            summary: LocalizedStringResource,
+            blocksContent: Bool,
+            includesStrictLists: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.summary = summary
+            self.blocksContent = blocksContent
+            self.includesStrictLists = includesStrictLists
         }
     }
 }
@@ -13859,6 +14107,7 @@ struct FilterList: Hashable, Sendable {
     var group: FilterListGroup { facts.group }
     var source: String { facts.source }
     var isDefault: Bool { facts.isDefault }
+    var isStrict: Bool { facts.isStrict }
     var languages: [String] { facts.languages }
     private let facts: Facts
 
@@ -13869,6 +14118,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup,
         source: String,
         isDefault: Bool,
+        isStrict: Bool,
         languages: [String]
     ) {
         self.tag = tag
@@ -13878,6 +14128,7 @@ struct FilterList: Hashable, Sendable {
             group: group,
             source: source,
             isDefault: isDefault,
+            isStrict: isStrict,
             languages: languages
         )
     }
@@ -13889,6 +14140,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://easylist.to/easylist/easylist.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let easyPrivacy = FilterList(
@@ -13898,6 +14150,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://easylist.to/easylist/easyprivacy.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let uBlockFilters = FilterList(
@@ -13907,6 +14160,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let uBlockPrivacy = FilterList(
@@ -13916,6 +14170,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let uBlockBadware = FilterList(
@@ -13925,6 +14180,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let uBlockQuickFixes = FilterList(
@@ -13934,6 +14190,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let uBlockUnbreak = FilterList(
@@ -13943,6 +14200,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt",
         isDefault: true,
+        isStrict: false,
         languages: []
     )
     static let adGuardBase = FilterList(
@@ -13952,6 +14210,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.ads,
         source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt",
         isDefault: false,
+        isStrict: true,
         languages: []
     )
     static let easyListGermany = FilterList(
@@ -13961,6 +14220,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist.to/easylistgermany/easylistgermany.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["de"]
     )
     static let listeFr = FilterList(
@@ -13970,6 +14230,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist-downloads.adblockplus.org/liste_fr.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["fr"]
     )
     static let easyListItaly = FilterList(
@@ -13979,6 +14240,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["it"]
     )
     static let easyListDutch = FilterList(
@@ -13988,6 +14250,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["nl"]
     )
     static let easyListSpanish = FilterList(
@@ -13997,6 +14260,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["es"]
     )
     static let easyListPolish = FilterList(
@@ -14006,6 +14270,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["pl"]
     )
     static let easyListChina = FilterList(
@@ -14015,6 +14280,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://easylist-downloads.adblockplus.org/easylistchina.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["zh"]
     )
     static let adGuardJapanese = FilterList(
@@ -14024,6 +14290,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://filters.adtidy.org/extension/ublock/filters/7.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["ja"]
     )
     static let adGuardRussian = FilterList(
@@ -14033,6 +14300,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://filters.adtidy.org/extension/ublock/filters/1.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["ru", "uk", "be"]
     )
     static let adGuardTurkish = FilterList(
@@ -14042,6 +14310,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.regional,
         source: "https://filters.adtidy.org/extension/ublock/filters/13.txt",
         isDefault: false,
+        isStrict: false,
         languages: ["tr"]
     )
     static let easyListCookie = FilterList(
@@ -14051,6 +14320,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.annoyances,
         source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt",
         isDefault: false,
+        isStrict: true,
         languages: []
     )
     static let adGuardAnnoyances = FilterList(
@@ -14060,6 +14330,7 @@ struct FilterList: Hashable, Sendable {
         group: FilterListGroup.annoyances,
         source: "https://filters.adtidy.org/extension/ublock/filters/14.txt",
         isDefault: false,
+        isStrict: true,
         languages: []
     )
 
@@ -14104,14 +14375,24 @@ struct FilterList: Hashable, Sendable {
         let group: FilterListGroup
         let source: String
         let isDefault: Bool
+        let isStrict: Bool
         let languages: [String]
 
-        init(name: String, title: String, group: FilterListGroup, source: String, isDefault: Bool, languages: [String]) {
+        init(
+            name: String,
+            title: String,
+            group: FilterListGroup,
+            source: String,
+            isDefault: Bool,
+            isStrict: Bool,
+            languages: [String]
+        ) {
             self.name = name
             self.title = title
             self.group = group
             self.source = source
             self.isDefault = isDefault
+            self.isStrict = isStrict
             self.languages = languages
         }
     }
@@ -14814,6 +15095,7 @@ struct LinkBehavior: Hashable, Sendable {
     static let dragsLinksToPeek = LinkBehavior(tag: 3, name: "dragsLinksToPeek")
     static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
     static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
+    static let cleansCopiedLinks = LinkBehavior(tag: 6, name: "cleansCopiedLinks")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
@@ -14821,7 +15103,8 @@ struct LinkBehavior: Hashable, Sendable {
         opensPeekAutomatically,
         dragsLinksToPeek,
         dimsPageBehindPeek,
-        remembersSpaceBySite
+        remembersSpaceBySite,
+        cleansCopiedLinks
     ]
 
     static func named(_ name: String?) -> LinkBehavior? {
@@ -15398,6 +15681,46 @@ struct NavigationError: Hashable, Sendable {
             self.primarySuggestion = primarySuggestion
             self.secondarySuggestion = secondarySuggestion
             self.symbol = symbol
+        }
+    }
+}
+
+/// The members of the core's `NewTabPosition`. A member's wire tag is its index in `all`.
+struct NewTabPosition: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let top = NewTabPosition(tag: 0, name: "top", title: LocalizedStringResource("Top"))
+    static let bottom = NewTabPosition(tag: 1, name: "bottom", title: LocalizedStringResource("Bottom"))
+
+    static let all: [NewTabPosition] = [top, bottom]
+
+    static func named(_ name: String?) -> NewTabPosition? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: NewTabPosition, rhs: NewTabPosition) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }
@@ -18423,6 +18746,7 @@ struct SetupLook: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
         case modern
+        case simple
     }
 
     let tag: Int
@@ -18432,6 +18756,7 @@ struct SetupLook: Hashable, Sendable {
     var themeMode: SpaceThemeMode { facts.themeMode }
     var iconStyle: SpaceIconStyle { facts.iconStyle }
     var gradientAngle: Double? { facts.gradientAngle }
+    var tint: Double? { facts.tint }
     private let facts: Facts
 
     private init(
@@ -18441,7 +18766,8 @@ struct SetupLook: Hashable, Sendable {
         title: LocalizedStringResource,
         themeMode: SpaceThemeMode,
         iconStyle: SpaceIconStyle,
-        gradientAngle: Double?
+        gradientAngle: Double?,
+        tint: Double?
     ) {
         self.tag = tag
         facts = Facts(
@@ -18450,7 +18776,8 @@ struct SetupLook: Hashable, Sendable {
             title: title,
             themeMode: themeMode,
             iconStyle: iconStyle,
-            gradientAngle: gradientAngle
+            gradientAngle: gradientAngle,
+            tint: tint
         )
     }
 
@@ -18458,10 +18785,11 @@ struct SetupLook: Hashable, Sendable {
         tag: 0,
         kind: .heraldic,
         name: "heraldic",
-        title: LocalizedStringResource("Heraldic"),
+        title: LocalizedStringResource("Heraldic (Full)"),
         themeMode: SpaceThemeMode.banner,
         iconStyle: SpaceIconStyle.layeredCrest,
-        gradientAngle: nil
+        gradientAngle: nil,
+        tint: nil
     )
     static let modern = SetupLook(
         tag: 1,
@@ -18470,10 +18798,21 @@ struct SetupLook: Hashable, Sendable {
         title: LocalizedStringResource("Modern"),
         themeMode: SpaceThemeMode.gradient,
         iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 90
+        gradientAngle: 90,
+        tint: nil
+    )
+    static let simple = SetupLook(
+        tag: 2,
+        kind: .simple,
+        name: "simple",
+        title: LocalizedStringResource("Simple"),
+        themeMode: SpaceThemeMode.gradient,
+        iconStyle: SpaceIconStyle.simpleSymbol,
+        gradientAngle: 0,
+        tint: 1
     )
 
-    static let all: [SetupLook] = [heraldic, modern]
+    static let all: [SetupLook] = [heraldic, modern, simple]
 
     static func named(_ name: String?) -> SetupLook? {
         all.first { $0.name == name }
@@ -18494,6 +18833,7 @@ struct SetupLook: Hashable, Sendable {
         let themeMode: SpaceThemeMode
         let iconStyle: SpaceIconStyle
         let gradientAngle: Double?
+        let tint: Double?
 
         init(
             kind: Kinds,
@@ -18501,7 +18841,8 @@ struct SetupLook: Hashable, Sendable {
             title: LocalizedStringResource,
             themeMode: SpaceThemeMode,
             iconStyle: SpaceIconStyle,
-            gradientAngle: Double?
+            gradientAngle: Double?,
+            tint: Double?
         ) {
             self.kind = kind
             self.name = name
@@ -18509,6 +18850,7 @@ struct SetupLook: Hashable, Sendable {
             self.themeMode = themeMode
             self.iconStyle = iconStyle
             self.gradientAngle = gradientAngle
+            self.tint = tint
         }
     }
 }
@@ -18694,6 +19036,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case toggleSelectedTabSaved
         case blockElement
         case showBlockedElements
+        case openNextExtension
     }
 
     let tag: Int
@@ -19244,8 +19587,8 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [
             ShortcutDefault(
                 platform: DevicePlatform.desktop,
-                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
-                yieldsToOverrides: false
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: true
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
@@ -20800,6 +21143,30 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
+    static let openNextExtension = ShortcutCommand(
+        tag: 77,
+        kind: .openNextExtension,
+        name: "openNextExtension",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Open Next Extension"),
+        searchTerms: LocalizedStringResource("extensions popup menu cycle pinned toolbar"),
+        menuTitle: nil,
+        symbol: "puzzlepiece.extension",
+        requiredCapability: EngineCapability.extensions,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: true
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -20878,7 +21245,8 @@ struct ShortcutCommand: Hashable, Sendable {
         mostRecentTabBackward,
         clearSiteCookies,
         clearSiteCache,
-        toggleSelectedTabSaved
+        toggleSelectedTabSaved,
+        openNextExtension
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -21071,6 +21439,7 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.blockElement,
                 ShortcutCommand.showBlockedElements
             ],
+            [ShortcutCommand.openNextExtension],
             [ShortcutCommand.findInPage, ShortcutCommand.findNext, ShortcutCommand.findPrevious],
             [ShortcutCommand.zoomIn, ShortcutCommand.zoomOut, ShortcutCommand.actualSize],
             [
@@ -22116,7 +22485,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22189,7 +22558,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 160,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22262,7 +22631,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22335,7 +22704,7 @@ struct SpaceAccent: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22578,7 +22947,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22646,7 +23015,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22714,7 +23083,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22782,7 +23151,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22850,7 +23219,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22918,7 +23287,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22986,7 +23355,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23054,7 +23423,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 160,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23122,7 +23491,7 @@ struct SpaceHouse: Hashable, Sendable {
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23285,7 +23654,7 @@ struct SpaceScheme: Hashable, Sendable {
             keepsControlsReadable: false,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 0,
-            showsTexture: true,
+            textureStrength: 1,
             iconStyle: SpaceIconStyle.simpleSymbol,
             symbolColor: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1),
             crest: SpaceCrest(
@@ -24763,6 +25132,7 @@ struct WorkspaceKind: Hashable, Sendable {
     var ownsSpaces: Bool { facts.ownsSpaces }
     var keepsAppPreferences: Bool { facts.keepsAppPreferences }
     var isPractice: Bool { facts.isPractice }
+    var locksSpaces: Bool { facts.locksSpaces }
     private let facts: Facts
 
     private init(
@@ -24773,7 +25143,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: Bool,
         ownsSpaces: Bool,
         keepsAppPreferences: Bool,
-        isPractice: Bool
+        isPractice: Bool,
+        locksSpaces: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -24783,7 +25154,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: isPrivate,
             ownsSpaces: ownsSpaces,
             keepsAppPreferences: keepsAppPreferences,
-            isPractice: isPractice
+            isPractice: isPractice,
+            locksSpaces: locksSpaces
         )
     }
 
@@ -24795,7 +25167,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: true,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let `private` = WorkspaceKind(
         tag: 1,
@@ -24805,7 +25178,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: true,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: false
     )
     static let borrowed = WorkspaceKind(
         tag: 2,
@@ -24815,7 +25189,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: false,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let practice = WorkspaceKind(
         tag: 3,
@@ -24825,7 +25200,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: true
+        isPractice: true,
+        locksSpaces: true
     )
 
     static let all: [WorkspaceKind] = [persistent, `private`, borrowed, practice]
@@ -24850,6 +25226,7 @@ struct WorkspaceKind: Hashable, Sendable {
         let ownsSpaces: Bool
         let keepsAppPreferences: Bool
         let isPractice: Bool
+        let locksSpaces: Bool
 
         init(
             name: String,
@@ -24858,7 +25235,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: Bool,
             ownsSpaces: Bool,
             keepsAppPreferences: Bool,
-            isPractice: Bool
+            isPractice: Bool,
+            locksSpaces: Bool
         ) {
             self.name = name
             self.opensDirectly = opensDirectly
@@ -24867,6 +25245,7 @@ struct WorkspaceKind: Hashable, Sendable {
             self.ownsSpaces = ownsSpaces
             self.keepsAppPreferences = keepsAppPreferences
             self.isPractice = isPractice
+            self.locksSpaces = locksSpaces
         }
     }
 }
@@ -24912,6 +25291,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.orderAnchorTabID)
         return orderAnchorTabIDStorage
     }
+    var isGroup: Bool {
+        access(keyPath: \.isGroup)
+        return isGroupStorage
+    }
     var displaySymbol: String {
         access(keyPath: \.displaySymbol)
         return displaySymbolStorage
@@ -24929,6 +25312,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var isCollapsedStorage: Bool
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
+    @ObservationIgnored private var isGroupStorage: Bool
     @ObservationIgnored private var displaySymbolStorage: String
     @ObservationIgnored private var displayColorStorage: BrandColor
 
@@ -24943,6 +25327,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup,
             displaySymbol: displaySymbol,
             displayColor: displayColor
         )
@@ -24958,6 +25343,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
         isCollapsedStorage = value.isCollapsed
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
+        isGroupStorage = value.isGroup
         displaySymbolStorage = value.displaySymbol
         displayColorStorage = value.displayColor
     }
@@ -24995,6 +25381,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if orderAnchorTabIDStorage != value.orderAnchorTabID {
             orderAnchorTabIDStorage = value.orderAnchorTabID
             withMutation(keyPath: \.orderAnchorTabID) {}
+        }
+        if isGroupStorage != value.isGroup {
+            isGroupStorage = value.isGroup
+            withMutation(keyPath: \.isGroup) {}
         }
         if displaySymbolStorage != value.displaySymbol {
             displaySymbolStorage = value.displaySymbol
@@ -25364,6 +25754,18 @@ final class TabStateModel: ObservedModel, Identifiable {
         access(keyPath: \.keepsPageLoaded)
         return keepsPageLoadedStorage
     }
+    var savedTitle: String? {
+        access(keyPath: \.savedTitle)
+        return savedTitleStorage
+    }
+    var savedFaviconURL: String? {
+        access(keyPath: \.savedFaviconURL)
+        return savedFaviconURLStorage
+    }
+    var savedIconAccent: TabIconAccent? {
+        access(keyPath: \.savedIconAccent)
+        return savedIconAccentStorage
+    }
     var iconMode: TabIconMode {
         access(keyPath: \.iconMode)
         return iconModeStorage
@@ -25405,6 +25807,9 @@ final class TabStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var customTitleStorage: String?
     @ObservationIgnored private var titleModifiedAtStorage: Date?
     @ObservationIgnored private var keepsPageLoadedStorage: Bool
+    @ObservationIgnored private var savedTitleStorage: String?
+    @ObservationIgnored private var savedFaviconURLStorage: String?
+    @ObservationIgnored private var savedIconAccentStorage: TabIconAccent?
     @ObservationIgnored private var iconModeStorage: TabIconMode
     @ObservationIgnored private var displayTitleStorage: String
     @ObservationIgnored private var isAwayFromSavedAddressStorage: Bool
@@ -25431,6 +25836,9 @@ final class TabStateModel: ObservedModel, Identifiable {
             customTitle: customTitle,
             titleModifiedAt: titleModifiedAt,
             keepsPageLoaded: keepsPageLoaded,
+            savedTitle: savedTitle,
+            savedFaviconURL: savedFaviconURL,
+            savedIconAccent: savedIconAccent,
             iconMode: iconMode,
             displayTitle: displayTitle,
             isAwayFromSavedAddress: isAwayFromSavedAddress,
@@ -25458,6 +25866,9 @@ final class TabStateModel: ObservedModel, Identifiable {
         customTitleStorage = value.customTitle
         titleModifiedAtStorage = value.titleModifiedAt
         keepsPageLoadedStorage = value.keepsPageLoaded
+        savedTitleStorage = value.savedTitle
+        savedFaviconURLStorage = value.savedFaviconURL
+        savedIconAccentStorage = value.savedIconAccent
         iconModeStorage = value.iconMode
         displayTitleStorage = value.displayTitle
         isAwayFromSavedAddressStorage = value.isAwayFromSavedAddress
@@ -25531,6 +25942,18 @@ final class TabStateModel: ObservedModel, Identifiable {
         if keepsPageLoadedStorage != value.keepsPageLoaded {
             keepsPageLoadedStorage = value.keepsPageLoaded
             withMutation(keyPath: \.keepsPageLoaded) {}
+        }
+        if savedTitleStorage != value.savedTitle {
+            savedTitleStorage = value.savedTitle
+            withMutation(keyPath: \.savedTitle) {}
+        }
+        if savedFaviconURLStorage != value.savedFaviconURL {
+            savedFaviconURLStorage = value.savedFaviconURL
+            withMutation(keyPath: \.savedFaviconURL) {}
+        }
+        if savedIconAccentStorage != value.savedIconAccent {
+            savedIconAccentStorage = value.savedIconAccent
+            withMutation(keyPath: \.savedIconAccent) {}
         }
         if iconModeStorage != value.iconMode {
             iconModeStorage = value.iconMode

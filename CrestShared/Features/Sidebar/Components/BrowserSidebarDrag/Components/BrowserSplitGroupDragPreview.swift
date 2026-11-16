@@ -42,6 +42,7 @@ struct BrowserSplitGroupDragPreview: View {
         .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Split View with \(members.count) tabs")
+        .modifier(SurfaceToneAppearance())
     }
 
     private var header: some View {

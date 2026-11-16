@@ -75,6 +75,9 @@ def publish(args):
         raise SystemExit("The engine build is not current; run build-chromium-baseline.py first")
 
     browser = source / args.output / "Chromium.app"
+    helpers = browser.glob("Contents/Frameworks/*.framework/Versions/*/Helpers/*.app")
+    if unknown := chromium_engine.unknown_engine_helpers(helpers):
+        raise SystemExit(f"Unknown engine helpers {unknown}: add each to ENGINE_HELPER_KINDS in chromium_engine.py")
     existing = subprocess.run(["gh", "release", "view", tag, "--repo", args.repository, "--json", "assets,isDraft,body"],
                               capture_output=True, text=True)
     release = json.loads(existing.stdout) if existing.returncode == 0 else None

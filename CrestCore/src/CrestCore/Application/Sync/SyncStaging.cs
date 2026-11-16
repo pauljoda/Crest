@@ -7,6 +7,8 @@ namespace CrestCore.Application;
 internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgency) {
     #region Static Variables
 
+    private static readonly IReadOnlySet<string> NoRecords = new HashSet<string>(StringComparer.Ordinal);
+
     /// A launch stages the session it loaded; what the file lost while the app
     /// was closed was removed by retention.
     public static SyncStaging Launch { get; } = new(SyncDeletionReason.Retention, SyncUrgency.Immediate);
@@ -25,9 +27,15 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// journal before the intent returns.
     public static SyncStaging Batch { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
 
-    /// A person deleted the tabs they selected together: saved with its
-    /// journal, as deletions, before the intent returns.
+    /// A person deleted tabs together, the ones they selected or a folder's:
+    /// saved with its journal, as deletions, before the intent returns.
     public static SyncStaging BatchDeletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.WithSave);
+
+    /// A person moved a folder to another Space, where its folders are made
+    /// anew and its tabs keep their records: saved with its journal before the
+    /// intent returns, the folders it left deleted, since only an explicit
+    /// removal deletes a folder on other devices.
+    public static SyncStaging FolderMove { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.WithSave);
 
     /// The person deleted records: history, or a folder.
     public static SyncStaging Deletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.Immediate);
@@ -57,6 +65,33 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// Spaces were imported, saved with their journal before the import
     /// returns, because an upload follows.
     public static SyncStaging Import { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
+
+    #endregion
+
+    #region Variables
+
+    /// The records the edit deleted on the person's behalf whatever its
+    /// reason, by record name: the folders of the open tabs the person removed.
+    /// A group or a folder marked emptied goes only when an edit names it,
+    /// since a device leaves one out of its session while it holds nothing.
+    public IReadOnlySet<string> Deleted { get; init; } = NoRecords;
+
+    /// The folders of the open tabs that went because the edit left them
+    /// holding nothing, by record name. Their records are marked emptied rather
+    /// than deleted, so a device that still holds a tab in one keeps it.
+    public IReadOnlySet<string> Emptied { get; init; } = NoRecords;
+
+    #endregion
+
+    #region Actions - Deletion
+
+    /// This staging, deleting the folders `folders` names explicitly as well.
+    public SyncStaging Deleting(IReadOnlyCollection<Guid> folders) => folders.Count == 0 ? this
+        : this with { Deleted = new HashSet<string>(Deleted.Concat(folders.Select(SyncRecordKind.Folder.RecordName)), StringComparer.Ordinal) };
+
+    /// This staging, marking the folders `folders` names emptied as well.
+    public SyncStaging Emptying(IReadOnlyCollection<Guid> folders) => folders.Count == 0 ? this
+        : this with { Emptied = new HashSet<string>(Emptied.Concat(folders.Select(SyncRecordKind.Folder.RecordName)), StringComparer.Ordinal) };
 
     #endregion
 }

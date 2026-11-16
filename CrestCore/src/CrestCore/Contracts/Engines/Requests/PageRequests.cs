@@ -153,12 +153,14 @@ public sealed record PageExtensions(Guid PageId) : PageRequest<ExtensionActionLi
 public sealed record ExtensionActionList(IReadOnlyList<ExtensionAction> Actions);
 
 /// One extension's action: its name, badge text and icon as a PNG, whether it
-/// is pinned, and whether it can run with no page to act on.
-public sealed record ExtensionAction(string Id, string Name, string Badge, byte[]? Icon, bool Pinned, bool Enabled);
+/// is pinned, whether it can run with no page to act on, and whether running
+/// it opens its popup rather than acting at once or toggling a side panel.
+public sealed record ExtensionAction(string Id, string Name, string Badge, byte[]? Icon, bool Pinned, bool Enabled,
+    bool HasPopup);
 
-/// The extension actions pinned in the profile `ProfileId` names, which its
-/// Space shows whether or not a page is open. A private profile offers only
-/// the extensions allowed in private windows.
+/// The extension actions pinned in the profile `ProfileId` names, in the order
+/// the person left them, which its Space shows whether or not a page is open.
+/// A private profile offers only the extensions allowed in private windows.
 public sealed record PinnedExtensions(Guid ProfileId) : PageRequest<ExtensionActionList>;
 
 /// The Chrome Web Store listing the page shows restates its install button

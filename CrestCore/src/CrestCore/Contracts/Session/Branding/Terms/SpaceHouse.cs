@@ -112,7 +112,7 @@ public sealed class SpaceHouse {
     private static SpaceBranding HouseLook(Tincture[] colors, SpaceThemeMode mode, SpaceBannerPattern pattern, SpaceCrest arms,
         double gradientAngle = 0) =>
         new(new([.. colors.Select(tincture => tincture.Color)]), pattern, BannerStrength: 1, ReadabilityFade: 0.45,
-            KeepsControlsReadable: true, mode, gradientAngle, ShowsTexture: false, SpaceIconStyle.LayeredCrest, SymbolColor: null,
+            KeepsControlsReadable: true, mode, gradientAngle, TextureStrength: 0, SpaceIconStyle.LayeredCrest, SymbolColor: null,
             arms, CrestVocabulary.Studio.Version, FolderColorIntensity: 0, SpaceTextColorMode.Automatic, HasCustomAppearance: false);
 
     /// A house's arms: its figure on its field, each part in a tincture of its

@@ -34,7 +34,7 @@ settings:
 packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle.git
-    exactVersion: 2.9.5
+    exactVersion: 2.9.6
 # App capabilities are declared by the entitlements files (iCloud, CloudKit,
 # push) and Info.plist UIBackgroundModes. The legacy TargetAttributes
 # SystemCapabilities blocks duplicated that, serialized in nondeterministic

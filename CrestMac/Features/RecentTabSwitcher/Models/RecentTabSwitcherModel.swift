@@ -15,7 +15,7 @@ final class RecentTabSwitcherModel {
         }
     }
     let browser: BrowserStore
-    let snapshots: BrowserRecentTabSnapshots
+    let snapshots: BrowserTabPictures
     /// Commits the item at an index, as a click does.
     @ObservationIgnored var commit: @MainActor (Int) -> Void = { _ in }
     /// Tells VoiceOver which item the highlight reached.
@@ -34,7 +34,7 @@ final class RecentTabSwitcherModel {
 
     // MARK: - Initializers
 
-    init(session: RecentTabSwitcherSession, browser: BrowserStore, snapshots: BrowserRecentTabSnapshots) {
+    init(session: RecentTabSwitcherSession, browser: BrowserStore, snapshots: BrowserTabPictures) {
         self.session = session
         self.browser = browser
         self.snapshots = snapshots

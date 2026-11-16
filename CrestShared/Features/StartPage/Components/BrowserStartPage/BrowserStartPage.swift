@@ -41,6 +41,10 @@ struct BrowserStartPage: View {
     /// The window's commands, the same the shell's overlay palette offers.
     /// The page's palette offers one only once what is typed matches it.
     var commands: BrowserCommandPaletteCommandRegistry? = nil
+    /// Puts the keyboard away, for a shell whose keyboard covers the page. A
+    /// tap on the page outside the palette calls it. Absent where the shell
+    /// has no such keyboard.
+    var endEditing: (@MainActor () -> Void)? = nil
 
     var body: some View {
         ZStack {
@@ -54,13 +58,31 @@ struct BrowserStartPage: View {
     @ViewBuilder
     private var content: some View {
         if layout.scrollsContent {
-            ScrollView {
-                BrowserStartPageStack(page: self)
-                    .frame(maxWidth: .infinity)
+            GeometryReader { viewport in
+                ScrollView {
+                    BrowserStartPageStack(page: self)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: viewport.size.height, alignment: .top)
+                        .background { editingDismissal }
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
         } else {
-            BrowserStartPageStack(page: self)
+            ZStack {
+                editingDismissal
+                BrowserStartPageStack(page: self)
+            }
+        }
+    }
+
+    /// Takes the taps that reach the page around its header and palette.
+    @ViewBuilder
+    private var editingDismissal: some View {
+        if let endEditing {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { endEditing() }
+                .accessibilityHidden(true)
         }
     }
 }

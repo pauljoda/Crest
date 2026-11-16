@@ -52,11 +52,13 @@ public sealed record CustomFilterList(Guid Id, string Url, bool IsOn);
 public sealed record CustomFilterListState(CustomFilterList List, string Title, DateTimeOffset? UpdatedAt, bool IsFailing,
     bool IsTooLarge);
 
-/// Every filter list as the settings show it: the catalog's, in
-/// `FilterList.All` order; the ones the person added, in the order added; and
-/// the person's own filters, in the lists' syntax.
-public sealed record FilterLists(IReadOnlyList<FilterListState> Lists, IReadOnlyList<CustomFilterListState> CustomLists,
-    string CustomFilters) {
+/// Ad blocking as the settings show it: the level Crest blocks at on every
+/// page, and whether the catalog's lists differ from what that level turns on
+/// (`IsCustomized`); every catalog list, in `FilterList.All` order; the ones
+/// the person added, in the order added; and the person's own filters, in the
+/// lists' syntax.
+public sealed record FilterLists(ContentBlockingLevel Level, bool IsCustomized, IReadOnlyList<FilterListState> Lists,
+    IReadOnlyList<CustomFilterListState> CustomLists, string CustomFilters) {
     #region Variables
 
     public IReadOnlyList<FilterListState> Lists {
@@ -73,15 +75,18 @@ public sealed record FilterLists(IReadOnlyList<FilterListState> Lists, IReadOnly
 
     #region Actions - Equality
 
-    public bool Equals(FilterLists? other) => other is not null && Lists.SequenceEqual(other.Lists)
-        && CustomLists.SequenceEqual(other.CustomLists) && CustomFilters == other.CustomFilters;
+    public bool Equals(FilterLists? other) => other is not null && Level == other.Level && IsCustomized == other.IsCustomized
+        && Lists.SequenceEqual(other.Lists) && CustomLists.SequenceEqual(other.CustomLists) && CustomFilters == other.CustomFilters;
 
-    public override int GetHashCode() => HashCode.Combine(Lists.Count, CustomLists.Count, CustomFilters.Length);
+    public override int GetHashCode() => HashCode.Combine(Level.Name, IsCustomized, Lists.Count, CustomLists.Count,
+        CustomFilters.Length);
 
     #endregion
 }
 
-/// A site where a Space blocks no ads or trackers.
+/// A site where Crest blocks no ads or trackers, in any Space. `SpaceId` names
+/// the Space it was turned off from, which decides whether the device keeps
+/// it: a private Space's site lasts as long as the process.
 public sealed record SiteContentBlocking(Guid SpaceId, SiteOrigin Origin);
 
 /// What an element of a document loads from its address.
@@ -141,8 +146,8 @@ public sealed record CosmeticFilters(bool Blocks, string Style, IReadOnlyList<st
 
 #region Changes
 
-/// The filter lists changed: one was turned on or off, added, removed or
-/// updated, or the person's own filters changed.
+/// Ad blocking changed: its level, a list turned on or off, added, removed or
+/// updated, or the person's own filters.
 public sealed record FilterListsChanged(FilterLists Lists) : Change;
 
 /// The content rule lists a page that blocks applies changed, after a list
@@ -150,7 +155,7 @@ public sealed record FilterListsChanged(FilterLists Lists) : Change;
 /// navigation.
 public sealed record ContentRuleListsChanged(ContentRuleListSet Lists) : Change;
 
-/// The sites where Spaces block nothing changed.
+/// The sites where Crest blocks nothing changed.
 public sealed record SiteContentBlockingChanged(IReadOnlyList<SiteContentBlocking> Sites) : Change;
 
 #endregion

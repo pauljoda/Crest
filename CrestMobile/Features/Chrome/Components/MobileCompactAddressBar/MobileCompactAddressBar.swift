@@ -71,6 +71,7 @@ struct MobileCompactAddressBar: View {
                 isEditing: $isEditing,
                 activate: openPalette,
                 longPressAction: beginNewTab,
+                display: BrowserDeviceAppearanceStore.shared.address.display,
                 submit: submit
             )
             .modifier(MobileTabStepActions(step: isEditing ? nil : stepTab))

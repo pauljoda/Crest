@@ -35,7 +35,6 @@ constexpr Annotation kDirected[] = {
     "devtools_network_resource",
     "dns_over_https",
     "dns_transaction",
-    "dom_distiller",
     "download_bubble_retry_download",
     "download_manager_resume",
     "download_web_contents_frame",
@@ -83,9 +82,9 @@ struct Service {
 
 constexpr Service kServices[] = {
     // Component updates: the certificate revocation list, Certificate
-    // Transparency logs and root store, file types for download warnings,
-    // and Widevine. The check names each component and its version and
-    // carries no client identifier; packages download from Google's CDN.
+    // Transparency logs and root store, and file types for download
+    // warnings. The check names each component and its version and carries
+    // no client identifier; packages download from Google's CDN.
     {"update_client", "update.googleapis.com"},
     {"update_client", "dl.google.com"},
     {"update_client", "gvt1.com"},

@@ -10,26 +10,42 @@ import SwiftUI
 struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     private let port: BrowserSidebarNavigationPort
     private let capabilities: BrowserInteractionCapabilities
+    /// Whether the strip shares its width with the window's own buttons, or
+    /// nil for the sidebar's rule: beside them unless the sidebar is on the
+    /// right. Along the top of a page the strip stands clear of them.
+    private let besideWindowControls: Bool?
     private let trailingAccessory: TrailingAccessory
 
-    /// Back and forward both stay in the strip, disabled while there is
-    /// nowhere to go, so each keeps the place the reader learned.
+    /// Back and forward both stay in the strip at every width, disabled
+    /// while there is nowhere to go, so each keeps the place the reader
+    /// learned. A narrow sidebar draws the strip narrower before it gives up
+    /// anything after them.
     init(
         port: BrowserSidebarNavigationPort,
         capabilities: BrowserInteractionCapabilities,
+        besideWindowControls: Bool? = nil,
         @ViewBuilder trailingAccessory: () -> TrailingAccessory = {
             EmptyView()
         }
     ) {
         self.port = port
         self.capabilities = capabilities
+        self.besideWindowControls = besideWindowControls
         self.trailingAccessory = trailingAccessory()
     }
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The strip's width, which decides how its controls fit.
+    @State private var width: CGFloat = .infinity
 
     var body: some View {
         strip
+            // Each control fades between enabled and disabled rather than
+            // flipping, on another tab or Space too. Reload fades to stop on
+            // its own.
+            .contentTransition(.opacity)
+            .animation(CrestMotion.controlState.unlessReducingMotion(reduceMotion), value: state)
             .labelStyle(.iconOnly)
             .buttonStyle(
                 CrestChromeButtonStyle(controlSize: metrics.controlSize)
@@ -43,6 +59,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                     growsWithContent: metrics.growsWithContent
                 )
             )
+            .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
     }
 
     private var strip: some View {
@@ -61,21 +78,41 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
                 metrics: metrics
             )
 
-            BrowserReloadControl(
-                isLoading: port.isLoading(),
-                isDeveloperMode: port.activeURL()?.isLocalDevelopmentAddress == true,
-                reloadOrStop: port.reloadOrStop,
-                reload: port.reload,
-                reloadFromOrigin: port.reloadFromOrigin,
-                clearCookiesAndReload: port.clearCookiesAndReload,
-                isEnabled: port.hasActivePage(),
-                reloadControlSize: metrics.controlSize,
-                menuControlSize: metrics.reloadMenuControlSize,
-                symbolPointSize: metrics.reloadSymbolPointSize
-            )
+            if fit.showsReload {
+                BrowserReloadControl(
+                    isLoading: port.isLoading(),
+                    isDeveloperMode: fit.showsDeveloperMenu,
+                    reloadOrStop: port.reloadOrStop,
+                    reload: port.reload,
+                    reloadFromOrigin: port.reloadFromOrigin,
+                    clearCookiesAndReload: port.clearCookiesAndReload,
+                    isEnabled: port.hasActivePage(),
+                    reloadControlSize: metrics.controlSize,
+                    menuControlSize: metrics.reloadMenuControlSize,
+                    symbolPointSize: metrics.reloadSymbolPointSize
+                )
+            }
 
             trailingAccessory
         }
+    }
+
+    /// How the controls fit the strip's width beside the window's own,
+    /// which sit beside the sidebar unless it is on the right.
+    private var fit: BrowserSidebarNavigationStripFit {
+        capabilities.navigationControlMetrics.fitting(
+            width: width, includesDeveloperMenu: isDeveloperMode,
+            besideWindowControls: besideWindowControls ?? !BrowserDeviceAppearanceStore.shared.sidebarOnRight)
+    }
+
+    private var isDeveloperMode: Bool {
+        port.activeURL()?.isLocalDevelopmentAddress == true
+    }
+
+    /// Which controls are enabled: where history goes, and whether there is
+    /// a page to reload.
+    private var state: [Bool] {
+        [port.canGoBack(), port.canGoForward(), port.hasActivePage()]
     }
 
     private var verticalPadding: CGFloat {
@@ -85,6 +122,6 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     }
 
     private var metrics: BrowserSidebarNavigationControlMetrics {
-        capabilities.navigationControlMetrics
+        fit.metrics
     }
 }

@@ -1,0 +1,58 @@
+import Foundation
+
+/// A row of Settings that a customization style can leave out of its page:
+/// for Advanced at the end of Appearance, or, on a page without Advanced, off
+/// the page.
+enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
+    case windowBorder
+    case material
+    case materialColor
+    case sidebarOnRight
+    /// Fitting Space icons to the sidebar, and their size when they are not.
+    case spaceIconSize
+    case followSpaceAccent
+    case appearanceMode
+    case darkSpaceDimming
+    case spacePageMotion
+    case sidebarRevealWidth
+    case sidebarRevealDelay
+    case sidebarSlideDuration
+    case fullScreenSidebarReveal
+    case defaultPageZoom
+    case cornerRadius
+    case tabScale
+    /// The room the sidebar keeps between its rows, bars and sections.
+    case sidebarSpacing
+    case pinLayout
+    case pinsFillRow
+    case colorBorders
+    case selectedTabOutline
+    case websitePinColors
+    case dimUnloadedTabs
+    case pinnedFill
+    case selectedTabGlow
+    case hoverTint
+    case tabStatus
+    case audioVisualizer
+    case addressFill
+    case addressBorder
+    case addressEditingOutline
+    case commandPaletteMotion
+    case addressDisplay
+    case copyURLButton
+    case superCopy
+    case folderIconOnly
+    case folderTintTitle
+    case folderHighlights
+    case folderTabCounts
+    case folderBorders
+    case groupTintTitle
+    case groupHighlights
+    case groupTabCounts
+    case groupBorders
+    case appIcon
+    case tabHoverPreview
+    case folderHoverPreview
+    /// Whether an unloaded saved tab stays as it is, in Settings › Tabs.
+    case unloadedSavedTabs
+}
