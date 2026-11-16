@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "crest-0-10-customization",
+    "development": "space-swipe-shortcut-pace",
     "nightly": "folder-menu-button-clears-name"
   }
 }
