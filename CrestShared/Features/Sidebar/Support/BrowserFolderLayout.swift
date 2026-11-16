@@ -48,16 +48,25 @@ enum BrowserFolderLayout {
     /// the space the folder's padding leaves.
     ///
     /// The base is the tab row's `contentLeadingInset` rather than a number of
-    /// its own, so a top-level folder's icon keeps the tab rows' column, the
-    /// same reason a split group's header reads its leading inset from the tab
-    /// row profile. Each folder around it moves it one `contentIndent` on,
-    /// into the column of the tabs beside it.
+    /// its own, less the padding the header already stands inside, so a
+    /// top-level folder's icon keeps the column of the top-level tab rows
+    /// beside it, which stand inside no folder's padding. Each folder around
+    /// it moves it one `contentIndent` on, into the column of the tabs beside
+    /// it.
     static func headerLeadingInset(
         depth: Int,
         tabRowMetrics: BrowserSidebarTabRowMetrics
     ) -> CGFloat {
-        tabRowMetrics.contentLeadingInset
+        tabRowMetrics.contentLeadingInset - nestingIndent
             + contentIndent * CGFloat(max(0, depth))
+    }
+
+    /// How far the folder header's trailing control, its `…` and −, stands
+    /// in from the trailing edge of the space the folder's padding leaves:
+    /// the tab row's `contentTrailingInset`, less that padding, so it stands
+    /// in the column of the top-level rows' own trailing controls.
+    static func headerTrailingInset(tabRowMetrics: BrowserSidebarTabRowMetrics) -> CGFloat {
+        max(0, tabRowMetrics.contentTrailingInset - nestingIndent)
     }
 
     /// The height of a folder's header beside rows of `rowHeight`: what is
@@ -79,13 +88,13 @@ enum BrowserFolderLayout {
 
     /// How far a row inside `depth` folders moves its icon and title in past
     /// where its surface puts them, so they stand one `contentIndent` past
-    /// the icon of the folder that holds the row.
+    /// the icon of the folder that holds the row, one column per folder from
+    /// the top-level rows'.
     ///
-    /// The row's surface already sits one `nestingIndent` in per folder, and
-    /// a folder's header sits one more inside its own surface; the content
-    /// makes up the rest.
+    /// The row's surface already sits one `nestingIndent` in per folder; the
+    /// content makes up the rest.
     static func rowContentIndent(depth: Int) -> CGFloat {
         guard depth > 0 else { return 0 }
-        return contentIndent * CGFloat(depth) - nestingIndent * CGFloat(depth - 1)
+        return (contentIndent - nestingIndent) * CGFloat(depth)
     }
 }

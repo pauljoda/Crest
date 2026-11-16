@@ -70,6 +70,12 @@ struct BrowserFolderGroupConfiguration {
         )
     }
 
+    /// How far the header's trailing controls stand from the trailing edge,
+    /// in the column the tab rows give theirs.
+    var headerTrailingInset: CGFloat {
+        BrowserFolderLayout.headerTrailingInset(tabRowMetrics: capabilities.tabRowMetrics)
+    }
+
     var folderRuntimeAssignment: BrowserFolderRuntimeAssignment {
         BrowserFolderRuntimeAssignment(
             folderID: folder.id,
