@@ -5633,6 +5633,18 @@
     "crest-0-10-customization": {
       "category": "new",
       "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
+    },
+    "folder-rows-align-with-tabs": {
+      "category": "fixed",
+      "message": "In the sidebar, a folder's icon, title and … button now line up with the icons, titles and buttons of the tabs beside it."
+    },
+    "peek-closes-into-link": {
+      "category": "improved",
+      "message": "On Mac, closing a Peek shrinks it back into the link it grew out of, instead of it vanishing."
+    },
+    "space-swipe-shortcut-pace": {
+      "category": "improved",
+      "message": "On Mac, a quick swipe between Spaces now finishes as fast as switching with the keyboard shortcut."
     }
   }
 }

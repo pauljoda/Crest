@@ -76,9 +76,10 @@ enum BrowserTransientMotion {
         guard let state, !reduceMotion else {
             return Pose(center: CGPoint(x: frame.midX, y: frame.midY), scale: 1, opacity: 1)
         }
-        let initial = CGPoint(
-            x: state.location.x * containerSize.width,
-            y: state.location.y * containerSize.height)
+        let initial =
+            state.startsAtRest
+            ? CGPoint(x: frame.midX, y: frame.midY)
+            : CGPoint(x: state.location.x * containerSize.width, y: state.location.y * containerSize.height)
         guard let releasedAt = state.releasedAt else {
             return Pose(center: initial, scale: state.scale, opacity: 1)
         }

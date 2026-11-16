@@ -18,6 +18,11 @@ struct BrowserFolderHeaderMetrics: Equatable, Sendable {
 
     let iconGlyphWeight: Font.Weight
 
+    /// Whether the icon's column grows with the tab size, as a pointer row's
+    /// favicon box does. A touch row's favicon slot keeps its width at every
+    /// size, so the folder's column keeps it too.
+    let scalesIconColumn: Bool
+
     /// The inset between the header's content and its trailing edge.
     let contentTrailingInset: CGFloat
 
@@ -34,6 +39,7 @@ struct BrowserFolderHeaderMetrics: Equatable, Sendable {
         iconWidth: 18,
         iconGlyphSize: nil,
         iconGlyphWeight: .regular,
+        scalesIconColumn: true,
         contentTrailingInset: 9,
         usesFixedRowHeight: true
     )
@@ -45,6 +51,7 @@ struct BrowserFolderHeaderMetrics: Equatable, Sendable {
         iconWidth: 20,
         iconGlyphSize: 17,
         iconGlyphWeight: .medium,
+        scalesIconColumn: false,
         contentTrailingInset: 18,
         usesFixedRowHeight: false
     )

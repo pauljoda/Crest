@@ -7,14 +7,26 @@ struct SpacePagerSettlement: Equatable {
     let startPosition: CGFloat
     let endPosition: CGFloat
     let generation: UInt
+    /// How fast, in pages per second, a released swipe was moving toward
+    /// `endPosition`. Zero for a slide nothing threw, such as the keyboard's.
+    var releaseSpeed: CGFloat = 0
 
     static let trackingPagesPerSecond: CGFloat = 4
     private static let firstControl = CGPoint(x: 0.27, y: 1)
     private static let secondControl = CGPoint(x: 0.18, y: 1)
 
-    // The measured Arc curve stays unchanged. Interrupted continuations can
-    // travel farther than one page and retain the same maximum speed.
-    var duration: TimeInterval { CrestMotion.spaceSwipeTransition * max(1, abs(endPosition - startPosition)) }
+    // The measured curve stays unchanged. Interrupted continuations can
+    // travel farther than one page and retain the same maximum speed. A
+    // slide takes at least one page's time, so a short one eases in as the
+    // keyboard's does, unless a swipe threw it faster: then it finishes at
+    // that speed, up to the keyboard's own pace over the same distance.
+    var duration: TimeInterval {
+        let distance = abs(endPosition - startPosition)
+        let resting = CrestMotion.spaceSwipeTransition * max(1, distance)
+        guard releaseSpeed > 0 else { return resting }
+        let shortcutPace = CrestMotion.spaceSwipeTransition * distance
+        return min(resting, max(shortcutPace, TimeInterval(distance / releaseSpeed)))
+    }
 
     var timingFunction: CAMediaTimingFunction {
         CAMediaTimingFunction(

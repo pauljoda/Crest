@@ -70,6 +70,18 @@ final class BrowserTransientBrowsingCoordinator {
         if state.releasedAt != nil && !state.returnsToSource { peeks[index].phase = .committed }
     }
 
+    /// Starts `request`'s card closing back into its link; the shell
+    /// dismisses it once the card has landed. A card already on its way
+    /// back keeps going rather than starting over. False when it is not
+    /// shown.
+    @discardableResult
+    func closePeekIntoSource(_ request: BrowserPeekRequest) -> Bool {
+        guard let index = peeks.firstIndex(where: { $0.request == request }) else { return false }
+        guard peeks[index].motion?.returnsToSource != true else { return true }
+        peeks[index].motion = .closing(from: request.sourcePresentation)
+        return true
+    }
+
     func isPresentingPeek(_ request: BrowserPeekRequest) -> Bool {
         peeks.contains { $0.request == request }
     }
