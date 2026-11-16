@@ -20,6 +20,7 @@ Ko-fi or Patreon membership level and ordered alphabetically within each level.
 - Chris F
 - Chris Youngers
 - mikepictor
+- Turbo51
 
 ## How recognition works
 
