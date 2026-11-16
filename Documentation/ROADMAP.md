@@ -26,7 +26,6 @@ the live status for each issue.
 - [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/pauljoda/Crest/issues/176)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
 - [ ] [bug: white flash between loading screen in dark mode](https://github.com/pauljoda/Crest/issues/246)
-- [ ] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
 - [ ] [feature: Double-click a tab to rename](https://github.com/pauljoda/Crest/issues/264)
 - [ ] [Keep find in page in step with what you type](https://github.com/pauljoda/Crest/issues/278)
 - [ ] [Pointer reappears during playback and the sidebar opens on its own](https://github.com/pauljoda/Crest/issues/304)
@@ -43,14 +42,15 @@ the live status for each issue.
 - [ ] [bug: Preserve sidebar state and page state when moving a tab to another window/display](https://github.com/pauljoda/Crest/issues/477)
 - [ ] [feature: Support multiple Private Browsing windows](https://github.com/pauljoda/Crest/issues/481)
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/pauljoda/Crest/issues/527)
-- [ ] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
 
 #### Completed
 
+- [x] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
 - [x] [Preview tabs and folders from the sidebar on hover and hold](https://github.com/pauljoda/Crest/issues/294)
 - [x] [Return to the previous app when a Quick Window from another app closes](https://github.com/pauljoda/Crest/issues/428)
+- [x] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
 - [x] [Choose a Heraldic, Modern or Simple style for customizing Crest, and show Spaces as dots](https://github.com/pauljoda/Crest/issues/1102)
 
 <!-- crest-roadmap-sync:end -->

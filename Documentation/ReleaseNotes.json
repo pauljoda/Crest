@@ -5629,6 +5629,10 @@
     "top-address-field-click-select": {
       "category": "fixed",
       "message": "On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window."
+    },
+    "crest-0-10-customization": {
+      "category": "new",
+      "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
     }
   }
 }

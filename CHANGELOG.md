@@ -7,6 +7,67 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-15
+
+Crest 0.10 is about customization. Three styles set how much Crest shows,
+the address bar can sit above the page on Mac, the sidebar gains spacing, tab
+size, hover previews and groups, and a Material color setting keeps glass
+surfaces and text readable over any Space.
+
+### Added
+
+- Choose a style, Heraldic, Modern or Simple, in Settings › Appearance or during setup, and give any Space its own. Modern and Simple show fewer, simpler controls and keep the rest under Advanced. Space icons in the switcher can be dots.
+- Put the address bar above the page on Mac with Address bar in Settings › Appearance. Each page in Split View gets its own bar with back, forward, its address, Site Controls and pinned extensions.
+- Choose how the address field shows a page's address: on two lines, on one line, or just the site.
+- Choose how much room the sidebar keeps between rows with Spacing, from None to Relaxed.
+- Choose how long the pointer rests on the window's edge before a hidden sidebar comes out, and how fast it slides, in Settings › Appearance.
+- Rest the pointer on a tab, pin or folder in the sidebar on Mac to preview it, or hold it on iPhone and iPad. A folder's preview lists its tabs with a search field.
+- Gather open tabs into groups under a simple header that syncs to every device, and turn a group into a folder and back.
+- Choose how the address field, pins, extensions, the selected tab and other glass surfaces read with Material color: Automatic follows each Space, or keep them Light, Dark or System.
+- Going back from the first page of a tab that a link, Command-click or the page itself opened closes that tab and returns to the tab that opened it. Tabs you open yourself, and saved or pinned tabs, work as before.
+- Copy and share links without known trackers with Super Copy, on by default.
+- Move a whole folder to another Space from its menu.
+- Save or unsave a tab from its menu, and delete unloaded saved tabs with an X when Keep saved tabs after unloading is off.
+- Drag pinned extensions into the order you want on Mac, and open them one at a time with Command-E. Archive Tab moves to Shift-Command-E.
+- On Mac, closing a Quick Window that opened over another app takes you back to that app.
+
+### Changed
+
+- Tab size is a nine-step slider from Thin to Large, and the sidebar narrows to 164 points.
+- Texture is its own setting for every Space and shows over banner and solid sidebars too.
+- The selected tab wears the same glass as the address field and pins, and text over a Space's colors is easier to read.
+- Notices, previews and the bars over a page draw on one solid surface, so their text stays readable on any Space and page. Notices are only as wide as their words.
+- Folders and groups have a … button for their actions, and a − on their header that closes everything in them, then closes the folder. In a saved folder the − unloads its tabs, which stay saved. Deleting a folder deletes what it holds, after asking, and an emptied folder of open tabs goes away.
+- A closed folder shows only its loaded tabs, and closing or unloading one takes it out of the closed folder right away.
+- On Mac, the recent tabs switcher lists only tabs whose page is loaded, including those of the other Spaces in a Sub-Space group, with each tab's Space on its preview.
+- Split Views look and work like folders in the sidebar, and pages slide into place as they join or leave Split View on Mac.
+- New tabs open at the top of your open tabs. Choose Bottom, or have new tabs join the current folder, in Settings › Tabs.
+- The sidebar slides a third faster by default on Mac, and comes out at once when the pointer leaves the window past its edge.
+- On Mac, Open Link in New Tab leads a link's right-click menu.
+- Quick Windows open over the app you're using and pop in where they stay.
+- Pages load and run faster with ad blocking on, and an open Peek no longer keeps Crest busy.
+
+### Fixed
+
+- Importing from Arc or another browser on Mac no longer quits Crest when Spaces share an Arc profile or some of the data is damaged. A failed import shows an error with Back and Skip, a denied Keychain still brings that browser's Spaces and tabs, and tab names you gave in Arc come along.
+- Crest no longer crashes while it checks which languages it can translate a page into, and on Mac no longer quits when the disk is almost full and a site saves data.
+- On Mac, extensions that open their own popup, such as a locked password manager, show it instead of doing nothing.
+- On Mac, a link from another app that opens Crest shows in front, Crest's windows reopen in the order you left them, a Peek from a web app that updates its own address loads, and Crest's Handoff icon opens the page.
+- Opening or closing a folder that holds the tab you're on no longer makes that tab jump, a folder inside a closed folder opens when you click it, and a tab filed into a folder stays with your open tabs if another device deletes the folder at the same time.
+- On Mac, Command-W closes every tab selected in the sidebar again and Command-D duplicates them.
+- A click anywhere in the address field opens it, in the sidebar on Mac and in Quick Windows.
+- In Split View, clicking or pointing at the floating sidebar or a Peek no longer moves focus to the pane underneath.
+- A saved or pinned tab that returns to its saved address shows that page's name and icon right away.
+- The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest quit.
+- With Reduce Motion on, switching Spaces shows the new Space's backdrop.
+- Going back in a tab Crest reopened after a relaunch shows the earlier page again on sites such as Reddit.
+- On Mac, right-clicking text selected in a password field no longer offers to search for it, and dragging across the developer toolbar's address field selects text.
+- Crest's updater includes two security fixes for how updates are installed.
+
+### Upgrading
+
+- Mac still requires Apple silicon and macOS 26.1 or later. iPhone and iPad require iOS or iPadOS 26.1 or later.
+
 ## [0.9.1] - 2026-11-10
 
 Crest 0.9.1 updates Chromium to fix a security flaw that is being exploited in
