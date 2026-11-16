@@ -5641,6 +5641,10 @@
     "peek-closes-into-link": {
       "category": "improved",
       "message": "On Mac, closing a Peek shrinks it back into the link it grew out of, instead of it vanishing."
+    },
+    "space-swipe-shortcut-pace": {
+      "category": "improved",
+      "message": "On Mac, a quick swipe between Spaces now finishes as fast as switching with the keyboard shortcut."
     }
   }
 }
