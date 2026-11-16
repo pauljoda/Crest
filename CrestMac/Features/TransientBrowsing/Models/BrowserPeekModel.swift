@@ -63,10 +63,20 @@ final class BrowserPeekModel {
         motionState != nil && coordinator.presentationPhase(for: request) == .staged
     }
 
+    /// Removes a card that has returned into its link: a pull let go short
+    /// of opening, or a Peek closing.
     func finishReturningPull() {
         guard motionState?.returnsToSource == true else { return }
         releaseLease()
-        coordinator.cancelStagedPeek(id: request.id)
+        coordinator.dismissPeek(request)
+    }
+
+    /// Closes the Peek back into the link it grew out of, handing focus back
+    /// at once; `finishReturningPull` removes it once the card has landed.
+    /// False when the card is not shown.
+    func closeIntoSource() -> Bool {
+        returnFocus()
+        return coordinator.closePeekIntoSource(request)
     }
 
     @discardableResult
