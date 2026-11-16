@@ -5455,6 +5455,7 @@ struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
 }
 
 struct RecentTabItem: Equatable, Sendable {
+    let spaceID: UUID
     let tabIDs: [UUID]
     let focusedTabID: UUID
 }

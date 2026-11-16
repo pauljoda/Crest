@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The recent tabs: one card for each item, the highlighted one ringed.
+/// The recent tabs: one card for each item, and one ring that slides to the
+/// highlighted card, as the Space switcher's selection slides between Spaces.
 struct RecentTabSwitcherView: View {
     let model: RecentTabSwitcherModel
     /// How far the cards shrink so the panel fits the display.
@@ -15,6 +16,13 @@ struct RecentTabSwitcherView: View {
             ForEach(Array(model.session.items.enumerated()), id: \.offset) { index, item in
                 RecentTabSwitcherCard(
                     model: model, item: item, index: index, isHighlighted: index == model.session.highlightedIndex)
+            }
+        }
+        .backgroundPreferenceValue(RecentTabSwitcherCardBounds.self) { cards in
+            GeometryReader { proxy in
+                if let card = cards[model.session.highlightedIndex] {
+                    RecentTabSwitcherHighlight(frame: proxy[card])
+                }
             }
         }
         .padding(RecentTabSwitcherMetrics.panelPadding)
@@ -38,6 +46,34 @@ struct RecentTabSwitcherView: View {
     }
 }
 
+/// Where each card stands, by its index, which the highlight follows.
+private struct RecentTabSwitcherCardBounds: PreferenceKey {
+    static let defaultValue: [Int: Anchor<CGRect>] = [:]
+
+    static func reduce(value: inout [Int: Anchor<CGRect>], nextValue: () -> [Int: Anchor<CGRect>]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+/// The highlighted card's selected surface, standing at `frame`; the panel's
+/// animation carries it from card to card, and Reduce Motion moves it at once.
+private struct RecentTabSwitcherHighlight: View {
+    let frame: CGRect
+
+    var body: some View {
+        Color.clear
+            .crestInteractiveSurface(
+                isSelected: true, isHovering: false, cornerRadius: CrestRadius.card,
+                selectedBorderColor: CrestColor.selectedBorder,
+                selectedBorderWidth: RecentTabSwitcherMetrics.highlightRingWidth
+            )
+            .frame(width: frame.width, height: frame.height)
+            .offset(x: frame.minX, y: frame.minY)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 /// One item: its page, or both pages of a split side by side.
 private struct RecentTabSwitcherCard: View {
     let model: RecentTabSwitcherModel
@@ -47,20 +83,24 @@ private struct RecentTabSwitcherCard: View {
 
     var body: some View {
         let tabs = model.tabs(of: item)
+        let space = model.space(of: item)
         let pageWidth = RecentTabSwitcherMetrics.pageWidth(pageCount: item.tabIDs.count)
         Button {
             model.commit(index)
         } label: {
             HStack(alignment: .top, spacing: CrestSpacing.small) {
                 ForEach(tabs) { tab in
-                    RecentTabSwitcherPage(model: model, tab: tab, width: pageWidth)
+                    RecentTabSwitcherPage(
+                        model: model, tab: tab, space: space, width: pageWidth,
+                        // One badge for a split, in its last page's corner.
+                        badgesSpace: model.mixesSpaces && tab.id == tabs.last?.id)
                 }
             }
             .padding(CrestSpacing.small)
-            .crestInteractiveSurface(
-                isSelected: isHighlighted, isHovering: false, cornerRadius: CrestRadius.card,
-                selectedBorderColor: CrestColor.selectedBorder,
-                selectedBorderWidth: RecentTabSwitcherMetrics.highlightRingWidth)
+            // The panel draws the highlight behind the cards, so it moves from
+            // one card to the next rather than leaving one and appearing on
+            // the other.
+            .anchorPreference(key: RecentTabSwitcherCardBounds.self, value: .bounds) { [index: $0] }
         }
         .buttonStyle(.plain)
         .onGeometryChange(for: CGRect.self) {
@@ -74,15 +114,18 @@ private struct RecentTabSwitcherCard: View {
 }
 
 /// A page's picture over its favicon and title, or its favicon large on the
-/// tab's colour while no picture exists.
+/// tab's colour while no picture exists, with its Space's icon in the
+/// picture's corner when the list mixes Spaces.
 private struct RecentTabSwitcherPage: View {
     let model: RecentTabSwitcherModel
     let tab: TabStateModel
+    let space: SpaceModel?
     let width: CGFloat
+    let badgesSpace: Bool
 
     var body: some View {
         let favicon = BrowserTabFaviconSubject(tab: tab, image: model.browser.core.state.favicons.icon(of: tab.id))
-        let profileID = model.browser.shownSpace?.profileID
+        let profileID = space?.profileID
         VStack(alignment: .leading, spacing: CrestSpacing.small) {
             thumbnail(favicon: favicon, profileID: profileID)
                 .frame(width: width, height: RecentTabSwitcherMetrics.thumbnailHeight)
@@ -90,6 +133,9 @@ private struct RecentTabSwitcherPage: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: CrestRadius.compact, style: .continuous)
                         .strokeBorder(CrestColor.subtleBorder, lineWidth: CrestLayout.hairline)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if badgesSpace, let space { RecentTabSwitcherSpaceBadge(space: space) }
                 }
             HStack(spacing: CrestSpacing.small) {
                 TabFaviconView(subject: favicon, profileID: profileID, size: RecentTabSwitcherMetrics.smallFaviconSize)
@@ -125,6 +171,21 @@ private struct RecentTabSwitcherPage: View {
     }
 }
 
+/// A Space's crest or symbol on the chrome's own surface, which keeps it
+/// readable over any picture.
+private struct RecentTabSwitcherSpaceBadge: View {
+    let space: SpaceModel
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: CrestRadius.compact, style: .continuous)
+        BrowserSpaceIdentityIcon(space: space, size: RecentTabSwitcherMetrics.spaceBadgeIconSize)
+            .padding(CrestSpacing.extraSmall)
+            .background(CrestColor.chromeSurface, in: shape)
+            .overlay { shape.strokeBorder(CrestColor.subtleBorder, lineWidth: CrestLayout.hairline) }
+            .padding(CrestSpacing.small)
+    }
+}
+
 /// Sizes of the panel's parts.
 enum RecentTabSwitcherMetrics {
     static let cardSpacing: CGFloat = CrestSpacing.small
@@ -134,6 +195,7 @@ enum RecentTabSwitcherMetrics {
     static let splitPageWidth: CGFloat = 136
     static let largeFaviconSize: CGFloat = 40
     static let smallFaviconSize: CGFloat = 16
+    static let spaceBadgeIconSize: CGFloat = 20
     static let coordinateSpace = "recent-tab-switcher-panel"
     static let highlightRingWidth: CGFloat = 2
     /// The room the panel keeps from the window's edges before it shrinks.

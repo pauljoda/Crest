@@ -141,15 +141,19 @@ final class BrowserStore {
     }
 
     /// Shows the tab or split `item` stands for, focusing the tab the core
-    /// named. False when the core showed nothing new.
+    /// named, in its own Space, which may be another Space of the shown
+    /// Space's Sub-Space group. False when the core showed nothing new.
     @discardableResult
     func showRecentTab(_ item: RecentTabItem) -> Bool {
-        guard let spaceID = shownSpace?.id else { return false }
         let shown = shownTab?.id
+        let space = selectedSpaceID
         guard
-            sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: item.focusedTabID)),
+            sendWindowIntent(ShowTab(windowID: windowID, spaceID: item.spaceID, tabID: item.focusedTabID)),
             shownTab?.id != shown
         else { return false }
+        // A selection belongs to the Space it was made in, as a Space switch
+        // drops it.
+        if item.spaceID != space { tabMultiSelection.clear() }
         windowRevision &+= 1
         return true
     }

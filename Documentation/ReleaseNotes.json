@@ -5621,6 +5621,10 @@
     "folder-header-close-all": {
       "category": "improved",
       "message": "A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back."
+    },
+    "recent-tabs-across-sub-spaces": {
+      "category": "improved",
+      "message": "On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space."
     }
   }
 }

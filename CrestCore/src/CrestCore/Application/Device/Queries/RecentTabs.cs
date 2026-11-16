@@ -6,7 +6,9 @@ namespace CrestCore.Contracts;
 /// there since it opened whose pages are loaded or that show a native view, a
 /// split as one item, the shown item first whether or not its page is (see
 /// `Device.RecentItems`). Items are in memory only, so a window that has shown
-/// nothing else lists its shown tab and the Space's loaded tab used last.
+/// nothing else lists its shown tab and the Space's loaded tab used last. A
+/// Space with Sub-Spaces lists the loaded tabs of its whole group, each item
+/// naming its Space.
 public sealed record RecentTabs(Guid WindowId) : Query<RecentTabList> {
     #region Actions - Answering
 
