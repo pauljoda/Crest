@@ -20,7 +20,7 @@ struct MobileOnboardingPageContext {
     let welcomeSetupWithoutCloudAction: () -> Void
     let advance: () -> Void
     let chooseLook: (SetupLook) -> Void
-    let adoptStyle: (BrowserCustomizationStyle) -> Void
+    let chooseStyle: (BrowserCustomizationStyle) -> Void
     let setupSecondaryAction: () -> Void
     let finish: () -> Void
     let close: () -> Void

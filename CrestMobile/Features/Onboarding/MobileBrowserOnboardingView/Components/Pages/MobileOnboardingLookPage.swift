@@ -1,13 +1,13 @@
 import SwiftUI
 
 /// The look the Spaces setup makes wear, as a preview button for each style.
-/// Choosing one restyles the Spaces setup makes, and going on gives Crest's
-/// customization that style.
+/// Choosing one restyles the Spaces setup makes, and going on chooses that
+/// style for Crest, as Settings does.
 struct MobileOnboardingLookPage: View {
     let look: SetupLook
     let choose: (SetupLook) -> Void
-    /// Makes the chosen look's style the one Crest's customization shows.
-    let adoptStyle: (BrowserCustomizationStyle) -> Void
+    /// Chooses the look's style for Crest, restyling the Spaces that follow it.
+    let chooseStyle: (BrowserCustomizationStyle) -> Void
     let back: () -> Void
     let continueSetup: () -> Void
 
@@ -60,9 +60,9 @@ struct MobileOnboardingLookPage: View {
             min(MobileOnboardingLookMetrics.largestFace, room / items, size.width))
     }
 
-    /// Goes on, giving Crest's customization the style of the chosen look.
+    /// Goes on, choosing the style of the chosen look for Crest.
     private func continueWithLook() {
-        adoptStyle(.matching(look))
+        chooseStyle(.matching(look))
         continueSetup()
     }
 }
@@ -78,7 +78,7 @@ private enum MobileOnboardingLookMetrics {
 #if DEBUG
     #Preview("Component") {
         @Previewable @State var look = SetupLook.heraldic
-        MobileOnboardingLookPage(look: look, choose: { look = $0 }, adoptStyle: { _ in }, back: {}, continueSetup: {})
+        MobileOnboardingLookPage(look: look, choose: { look = $0 }, chooseStyle: { _ in }, back: {}, continueSetup: {})
             .frame(width: 390, height: 844)
     }
 #endif

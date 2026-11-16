@@ -44,9 +44,7 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
             },
             back: back,
             continueSetup: {
-                // The look chosen here is the style Crest's customization
-                // shows from now on.
-                flow.browser.adoptCustomizationStyle(.matching(flow.look))
+                flow.chooseLookStyle()
                 continueSetup()
             }
         )

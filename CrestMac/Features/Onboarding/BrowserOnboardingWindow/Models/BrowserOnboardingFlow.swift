@@ -132,9 +132,12 @@ final class BrowserOnboardingFlow {
 
     // MARK: - Actions - Lifecycle
 
-    /// Opens setup in the core for the request, offering the browsers found.
+    /// Opens setup in the core for the request, on the look of the style
+    /// Crest shows, so the Spaces it makes or imports wear it, offering the
+    /// browsers found.
     func start() {
         send(StartSetup(workspaceID: browser.family.workspaceID, entry: request.entryPoint))
+        chooseLook(BrowserDeviceAppearanceStore.shared.customizationStyle.look)
         offerInstalledSources()
     }
 
@@ -231,6 +234,14 @@ final class BrowserOnboardingFlow {
     func chooseLook(_ look: SetupLook) {
         guard !isImportSelectionLocked else { return }
         send(ChooseSetupLook(look: look))
+    }
+
+    /// Makes the chosen look's style the one Crest shows, as choosing it in
+    /// Settings does, and has the manual setup held from earlier in setup
+    /// follow each Space it restyled.
+    func chooseLookStyle() {
+        let style = BrowserCustomizationStyle.matching(look)
+        manualSetup.follow(browser.chooseCustomizationStyle(style), into: style)
     }
 
     /// Sets Spaces up by hand, leaving any read that has not finished.
