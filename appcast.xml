@@ -6,48 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.71</title>
-            <pubDate>Sun, 15 Nov 2026 16:20:09 +0000</pubDate>
+            <title>0.10.7</title>
+            <pubDate>Mon, 16 Nov 2026 19:25:34 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1618</sparkle:version>
-            <sparkle:shortVersionString>0.9.71</sparkle:shortVersionString>
+            <sparkle:version>1632</sparkle:version>
+            <sparkle:shortVersionString>0.10.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 20 user-facing changes.
+Showing the 12 most recent highlights from 31 user-facing changes.
 
 ### New
 
-- On Mac, drag a pinned extension along the sidebar to put your extensions in the order you want, as you move tabs. Every Space with the same browsing profile shows them in that order. From the first launch after updating, the strip shows your extensions in the order you pinned them instead of by name.
-- On Mac, Command-E opens your extensions one at a time: the pinned ones from left to right, then the rest. Press it again for the next one, and once more after the last to close it. Archive Tab moves to Shift-Command-E.
-- On Mac, you can put the address bar on top: choose Top under Address bar in Settings › Appearance, and the address field with back, forward and reload moves above the page.
-- On Mac, each page in Split View carries its own bar with back, forward, its address, Site Controls and pinned extensions, wherever the address bar is.
+- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
 
 ### Improved
 
-- Remove from Folder and Remove from Group put the tab just below its folder or group instead of at the end of your open tabs.
-- On Mac, pages slide and resize into place as they join or leave Split View instead of jumping.
+- A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it.
+- A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back.
+- On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space.
+- On Mac, closing a Peek shrinks it back into the link it grew out of, instead of it vanishing.
+- On Mac, a quick swipe between Spaces now finishes as fast as switching with the keyboard shortcut.
+- The button on a group's or an open folder's header that archives all its tabs now shows an archive box instead of a −. Saved folders keep their −, which unloads their tabs.
+- On iPad and an unfolded iPhone, the page now slides with the sidebar as you switch Spaces, instead of changing all at once when the switch ends. With Reduce Motion on, the page stays still.
+- With “Animate pages when switching Spaces” off or Reduce Motion on, the page now fades into the next Space's as you switch, following your swipe and the sidebar, instead of jumping when the switch ends, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have the setting in Appearance too.
 
 ### Fixed
 
-- A tab you put in a folder on one device no longer disappears from every device when the folder is deleted on another at the same time. It stays with your open tabs.
-- On Mac, Crest no longer quits while it prepares an import from Arc or another browser when some of that browser's data is damaged.
-- On Mac, when Crest can't prepare an import from another browser, the review now shows an error with Back and Skip instead of quitting.
-- Importing from Arc keeps the names you gave tabs there, and the import review shows them. Clearing a name shows the page's title again.
-- On Mac, Command-W closes every tab you selected in the sidebar again, and Command-D duplicates them, instead of acting on the tab on screen.
-- On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button.
+- On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window.
+- In the sidebar, a folder's icon, title and … button now line up with the icons, titles and buttons of the tabs beside it.
+- Choosing Modern or Simple during setup now restyles your Spaces as choosing it in Settings does, including the Spaces you already had and the ones setup imports, instead of leaving them with crests. Setup also opens on the style you use, and imports from Settings bring Spaces in that style.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/049dc612e601a44ecb59e35f7d29d385f87fb04a...c44daae960ff67ca7ac8fffe8ab18c4dfdefe15f) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.9.71-2026-11-15-1618-r618.1/Installer-Crest-0.9.71-nightly-2026-11-15-c44daae-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/c44daae960ff67ca7ac8fffe8ab18c4dfdefe15f...a1a2e13b7fe1ff73de2c239d4140dea5d4cb4b6e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.10.7-2026-11-16-1632-r632.1/Installer-Crest-0.10.7-nightly-2026-11-16-a1a2e13-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.9.71-2026-11-15-1618-r618.1/Installer-Crest-0.9.71-nightly-2026-11-15-c44daae-arm64.dmg" length="221299324" type="application/octet-stream" sparkle:edSignature="bHepsvluNmVEXxP3SvhgDlmy5uHrTQ+m8QigVLbZKnz2YTTYrjiI7cUyMVhgaPlirZAl2kUJhF2GOx7A+JOoDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.10.7-2026-11-16-1632-r632.1/Installer-Crest-0.10.7-nightly-2026-11-16-a1a2e13-arm64.dmg" length="221463165" type="application/octet-stream" sparkle:edSignature="e5fo7rWyOHiGpF0J2J35fitzZNzmjKsKxaqsSk5HdqoaVKw9RvO21/8i00as+KQMUS4+N0VAhpVDZR82Lz3HDQ=="/>
         </item>
         <item>
             <title>0.9.1</title>
@@ -114,6 +114,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Mo+1ZDbmHCx2LnzKS2oNVPVpwGqdN/OnVOL74tEMw95be2tgS/v07UupOgORh9fpaKk/ku0oo+YcqVqw1WCDCg==
-length: 8328
+edSignature: iOTeZWQ5Hx3Gx0ElRrVa+j4qJPbnI5PT0NrGpqEp5M/smkfu5RKflbBmVvUqwOpg2F2zdi/0WMnTDwolC5yiAg==
+length: 8769
 -->

@@ -3,6 +3,6 @@
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
     "development": "open-folder-archive-icon",
-    "nightly": "folder-menu-button-clears-name"
+    "nightly": "space-switch-page-fades"
   }
 }
