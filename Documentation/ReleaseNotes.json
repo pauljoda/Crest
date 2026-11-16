@@ -5633,6 +5633,10 @@
     "crest-0-10-customization": {
       "category": "new",
       "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
+    },
+    "setup-style-applies-to-spaces": {
+      "category": "fixed",
+      "message": "Choosing Modern or Simple during setup now restyles your Spaces as choosing it in Settings does, including the Spaces you already had and the ones setup imports, instead of leaving them with crests. Setup also opens on the style you use, and imports from Settings bring Spaces in that style."
     }
   }
 }

@@ -56,7 +56,7 @@ struct MobileOnboardingCurrentPage: View, BrowserOnboardingPages {
 
     func lookPage() -> some View {
         MobileOnboardingLookPage(
-            look: context.look, choose: context.chooseLook, adoptStyle: context.adoptStyle,
+            look: context.look, choose: context.chooseLook, chooseStyle: context.chooseStyle,
             back: context.setupSecondaryAction,
             continueSetup: context.advance)
     }

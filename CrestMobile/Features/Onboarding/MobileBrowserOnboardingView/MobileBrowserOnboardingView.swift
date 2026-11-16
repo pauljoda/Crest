@@ -101,7 +101,7 @@ struct MobileBrowserOnboardingView: View {
             welcomeSetupWithoutCloudAction: setUpWithoutCloud,
             advance: advance,
             chooseLook: chooseLook,
-            adoptStyle: { browser.adoptCustomizationStyle($0) },
+            chooseStyle: { style in setup.follow(browser.chooseCustomizationStyle(style), into: style) },
             setupSecondaryAction: back,
             finish: completeSetup,
             close: close,
@@ -205,12 +205,14 @@ struct MobileBrowserOnboardingView: View {
         start(request)
     }
 
-    /// Opens setup in the core for `request`. The core goes on with the
+    /// Opens setup in the core for `request`, on the look of the style Crest
+    /// shows, so the Spaces it makes wear it. The core goes on with the
     /// manual setup it kept, following Spaces changed meanwhile; a rerun
     /// starts it over.
     private func start(_ request: BrowserOnboardingRequest) {
         finishingStep = nil
         _ = try? browser.core.send(StartSetup(workspaceID: browser.family.workspaceID, entry: request.entryPoint))
+        _ = try? browser.core.send(ChooseSetupLook(look: BrowserDeviceAppearanceStore.shared.customizationStyle.look))
         setup.repairSelection($selectedSpaceID)
     }
 

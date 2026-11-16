@@ -53,6 +53,22 @@ final class BrowserManualSetupModel {
         spaces.first { $0.spaceID == spaceID }
     }
 
+    /// Has each existing Space of the setup follow the restyle `restyled`
+    /// gave it into `style`, so finishing keeps its new look: one the person
+    /// left as it was takes that look, and one they changed here takes
+    /// `style`'s look made from their change.
+    func follow(_ restyled: [UUID: BrowserSpaceRestyle], into style: BrowserCustomizationStyle) {
+        for (spaceID, restyle) in restyled {
+            guard let space = space(spaceID), !space.isNew else { continue }
+            let branding = space.customization.branding
+            let next = branding == restyle.from ? restyle.to : style.look(for: branding, remembered: nil)
+            guard next != branding else { continue }
+            customize(spaceID) {
+                SpaceCustomization(name: $0.name, symbol: $0.symbol, accent: $0.accent, branding: next)
+            }
+        }
+    }
+
     /// `selectedSpaceID` when the setup holds it, otherwise its first Space.
     func repairSelection(_ selectedSpaceID: Binding<UUID?>) {
         guard space(selectedSpaceID.wrappedValue) == nil else { return }

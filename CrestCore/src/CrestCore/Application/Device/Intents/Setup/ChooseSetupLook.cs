@@ -4,7 +4,8 @@ namespace CrestCore.Contracts;
 
 /// Gives the Spaces setup makes from here on `Look`: the manual setup's new
 /// Spaces and the first launch's disposable Spaces, and each Space an import
-/// brings in new. A manual setup the device already holds takes it too.
+/// brings in new. A manual setup the device already holds, or kept from an
+/// earlier launch, takes it too.
 public sealed record ChooseSetupLook(SetupLook Look) : SetupFlowIntent {
     #region Actions - Device
 
