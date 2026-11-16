@@ -5630,10 +5630,6 @@
       "category": "fixed",
       "message": "On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window."
     },
-    "crest-0-10-customization": {
-      "category": "new",
-      "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
-    },
     "folder-rows-align-with-tabs": {
       "category": "fixed",
       "message": "In the sidebar, a folder's icon, title and … button now line up with the icons, titles and buttons of the tabs beside it."
@@ -5669,6 +5665,10 @@
     "chromium-update-planning": {
       "category": "internal",
       "message": "Chromium updates are planned before they build: the tooling reports how each of Crest's patches carries over and what upstream fixed, moves the built engine to a security fix in place, and opens scheduled updates as drafts for a maintainer to publish."
+    },
+    "crest-0-10-customization": {
+      "category": "new",
+      "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
     }
   }
 }

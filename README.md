@@ -149,7 +149,7 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-The [Crest 0.10 release notes](CHANGELOG.md#0100---2026-11-15) describe three
+The [Crest 0.10 release notes](CHANGELOG.md#0108---2026-11-16) describe three
 styles, the address bar above the page on Mac, and new sidebar and color
 settings. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone
 and iPad use WebKit.
