@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.4</title>
-            <pubDate>Mon, 16 Nov 2026 05:31:03 +0000</pubDate>
+            <title>0.10.5</title>
+            <pubDate>Mon, 16 Nov 2026 15:48:20 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1628</sparkle:version>
-            <sparkle:shortVersionString>0.10.4</sparkle:shortVersionString>
+            <sparkle:version>1630</sparkle:version>
+            <sparkle:shortVersionString>0.10.5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### Improved
 
-- Choosing Modern or Simple during setup now restyles your Spaces as choosing it in Settings does, including the Spaces you already had and the ones setup imports, instead of leaving them with crests. Setup also opens on the style you use, and imports from Settings bring Spaces in that style.
+- The button on a group's or an open folder's header that archives all its tabs now shows an archive box instead of a −. Saved folders keep their −, which unloads their tabs.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/58838a5753219457c0cc6ae6e189581c9ea99c1c...5ee5c92bb49711557f545dd64792b797f5cd952e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.4-2026-11-16-1628-r628.1/Installer-Crest-0.10.4-development-2026-11-16-5ee5c92-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/5ee5c92bb49711557f545dd64792b797f5cd952e...2880bf76ae31737acf138d76fa8809749af2b533) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.5-2026-11-16-1630-r630.1/Installer-Crest-0.10.5-development-2026-11-16-2880bf7-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.4-2026-11-16-1628-r628.1/Installer-Crest-0.10.4-development-2026-11-16-5ee5c92-arm64.dmg" length="221466756" type="application/octet-stream" sparkle:edSignature="1+84HYKZdAYX0+1zXk+I0YHKoWPuNjEvnEMcuynRq9sI2DszRZOoIeYB7imcmoa7rVtnYRXvsLWJRDtS/dVwAw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.5-2026-11-16-1630-r630.1/Installer-Crest-0.10.5-development-2026-11-16-2880bf7-arm64.dmg" length="221462660" type="application/octet-stream" sparkle:edSignature="gpVh+VlGliMZ+h6BOOZkIU8ImOipRFkv9SeQJT83yw7K+S8TUGi/qyEdPF9bvJwrcydsgwa1gbtr7bV36QBmAg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: +d/sJJSXYjCXQMOD8IutsHp397vv5IaZKJCRP4e7WUruPfaA9FoPfgCmOYKaygpqNM15qDqkkg/4WwbPII2pBg==
-length: 4184
+edSignature: ODef4GanHm7H1fdGdLZiBVw2T5ae6PRyyl4jEYD2Mp/1f5e6cAcjtIAU+dWSwaVKJLvvPYlyoWtn7ldRv1ZaCQ==
+length: 4072
 -->
