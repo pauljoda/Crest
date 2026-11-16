@@ -477,19 +477,21 @@ def check_renders_page(browser, scratch, timeout=30):
 
 
 def require_overlay_compiled(repo, source, ninja):
-    """Refuse a build whose graph compiles none of an overlay source.
+    """Refuse a build whose browser target compiles none of an overlay source.
 
     Chromium sometimes folds the target Crest's host sources sit in into
     another one, and a list GN accepts can still compile nothing. Every
-    overlay source must have an object file before hours are spent compiling.
+    overlay source must be an input of the `chrome` target the build makes,
+    not merely of some target in the graph, before hours are spent compiling.
     """
-    listing = run(ninja, "-C", source / "out/CrestBaseline", "-t", "targets", "all", capture=True)
-    objects = {Path(line.split(":", 1)[0]).stem for line in listing.splitlines() if line.split(":", 1)[0].endswith(".o")}
+    output = "out/CrestBaseline"
+    listing = run(ninja, "-C", source / output, "-t", "inputs", "chrome", capture=True)
+    inputs = {os.path.normpath(os.path.join(output, line)) for line in listing.splitlines() if line}
     overlay = repo / ENGINE / "Overlay"
-    missing = sorted(path.relative_to(overlay).as_posix() for path in overlay.rglob("*")
-                     if path.suffix in COMPILED and path.stem not in objects)
+    missing = sorted(relative for path in overlay.rglob("*")
+                     if path.suffix in COMPILED and (relative := path.relative_to(overlay).as_posix()) not in inputs)
     if missing:
-        raise ValueError("The build compiles no object for these overlay sources; check the target that lists them: "
+        raise ValueError("The browser target compiles none of these overlay sources; check the target that lists them: "
                          + ", ".join(missing))
 
 

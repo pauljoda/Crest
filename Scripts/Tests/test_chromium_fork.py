@@ -276,6 +276,24 @@ class UpdatePlanTests(unittest.TestCase):
                 prepare_update(repo, workspace, "157.0.8103.80")
             self.assertEqual(json.loads((repo / ENGINE / "source.lock.json").read_text()), lock)
 
+    def test_every_overlay_source_must_be_compiled_into_the_browser(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            overlay = root / "repo" / ENGINE / "Overlay/chrome/browser/ui/crest"
+            overlay.mkdir(parents=True)
+            (overlay / "crest_window.mm").write_text("")
+            (overlay / "crest_window.h").write_text("")
+            (root / "src/out/CrestBaseline").mkdir(parents=True)
+            # A stand-in for Ninja's inputs tool: what the browser target compiles.
+            ninja = root / "ninja"
+            ninja.write_text("#!/bin/sh\nprintf '../../chrome/browser/ui/crest/crest_window.mm\\n../../base/base.cc\\n'\n")
+            ninja.chmod(0o755)
+            chromium_fork.require_overlay_compiled(root / "repo", root / "src", ninja)
+            # A source whose object only some other target makes is not in the browser.
+            (overlay / "crest_elsewhere.cc").write_text("")
+            with self.assertRaises(ValueError):
+                chromium_fork.require_overlay_compiled(root / "repo", root / "src", ninja)
+
     def test_pruning_waits_for_a_running_build(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

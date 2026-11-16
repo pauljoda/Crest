@@ -139,8 +139,8 @@ patch already rebased for the release counts as applying. Once every patch
 applies, `update` pins the archive checksum, the CIPD tools and the PGO profile,
 advances or prepares the source, refreshes the host hashes, and builds and
 smoke-checks the engine. It restores the source lock and host hashes if anything
-fails before the build. Before compiling, the build checks that every overlay
-source compiles to an object file: Chromium sometimes folds the target the
+fails before the build. Before compiling, the build checks that the `chrome`
+target compiles every overlay source: Chromium sometimes folds the target the
 host's sources sit in into another one, and a list GN accepts can still compile
 nothing. `last-build.json` in the workspace records the path, whether the
 profile rolled and how long each step took. Only a source that a build installed
