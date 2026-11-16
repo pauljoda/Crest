@@ -137,6 +137,16 @@ def remove_path(path):
         path.unlink()
 
 
+def within_directories(root, path):
+    """Whether every directory between `root` and `path` is a real directory rather than a link."""
+    current = root
+    for part in path.relative_to(root).parts[:-1]:
+        current = current / part
+        if current.is_symlink() or not current.is_dir():
+            return False
+    return True
+
+
 def make_directory(root, path):
     """Make `path` a directory, replacing any file or link at it or above it within `root`."""
     current = root
@@ -354,15 +364,21 @@ class Workspace:
                 changed.append(name)
             elif member.isfile():
                 data = stream.extractfile(member).read()
+                # The mode preparation's "tar" extraction filter leaves a file.
+                mode = stat.S_IMODE(member.mode) & 0o755
                 if name in build_patched:
                     originals[name] = data
                     continue
                 if not path.is_symlink() and path.is_file() and path.stat().st_size == len(data) and path.read_bytes() == data:
+                    # Same contents: a new mode is applied, and the timestamp is kept.
+                    if stat.S_IMODE(path.stat().st_mode) != mode:
+                        path.chmod(mode)
+                        changed.append(name)
                     continue
                 if path.is_symlink() or path.is_dir():
                     remove_path(path)
                 path.write_bytes(data)
-                path.chmod(stat.S_IMODE(member.mode))
+                path.chmod(mode)
                 changed.append(name)
         # Crest's build adjustments, applied to the new release's copies of the files they change.
         with tempfile.TemporaryDirectory(prefix="crest-advance-") as temporary:
@@ -380,7 +396,10 @@ class Workspace:
         removed = []
         for name, member, _ in archive_members(previous_archive):
             path = self.source / name
-            if name not in names and not name.startswith(tools) and not member.isdir() and (path.exists() or path.is_symlink()):
+            # A directory the release replaced with a link leads elsewhere in the tree,
+            # possibly to a file the release just installed; nothing is removed through it.
+            if (name not in names and not name.startswith(tools) and not member.isdir()
+                    and within_directories(self.source, path) and (path.exists() or path.is_symlink())):
                 path.unlink()
                 removed.append(name)
         # Directories the release no longer has, as a fresh source wouldn't have
@@ -388,8 +407,8 @@ class Workspace:
         parents = {parent for name in removed for parent in Path(name).parents if parent != Path(".")}
         for parent in sorted(parents, key=lambda parent: len(parent.parts), reverse=True):
             directory = self.source / parent
-            if (parent.as_posix() not in names and directory.is_dir() and not directory.is_symlink()
-                    and not any(directory.iterdir())):
+            if (parent.as_posix() not in names and within_directories(self.source, directory) and directory.is_dir()
+                    and not directory.is_symlink() and not any(directory.iterdir())):
                 directory.rmdir()
         if any(name.startswith("tools/gn/") for name in changed + removed):
             output = self.source / "out/CrestBaseline"

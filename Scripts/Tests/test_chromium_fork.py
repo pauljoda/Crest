@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import stat
 import sys
 import subprocess
 import tarfile
@@ -145,6 +146,8 @@ class UpdatePlanTests(unittest.TestCase):
             self.assertNotIn("landed.cc", rebased)
 
     def test_advancing_rewrites_only_what_the_release_changed(self):
+        # Preparation extracts files with their archive mode; match it for every file written here.
+        self.addCleanup(os.umask, os.umask(0o022))
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             repo, workspace = root / "repo", root / "workspace"
@@ -154,7 +157,7 @@ class UpdatePlanTests(unittest.TestCase):
             downloads = workspace / "downloads"
             downloads.mkdir(parents=True)
 
-            def archive(version, files):
+            def archive(version, files, links=None, executables=()):
                 path = downloads / f"chromium-{version}-lite.tar.xz"
                 staging = root / f"staging-{version}"
                 for name, text in files.items():
@@ -162,6 +165,10 @@ class UpdatePlanTests(unittest.TestCase):
                         continue
                     (staging / f"chromium-{version}" / name).parent.mkdir(parents=True, exist_ok=True)
                     (staging / f"chromium-{version}" / name).write_text(text)
+                for name, target in (links or {}).items():
+                    (staging / f"chromium-{version}" / name).symlink_to(target)
+                for name in executables:
+                    (staging / f"chromium-{version}" / name).chmod(0o755)
                 with tarfile.open(path, "w:xz") as stream:
                     stream.add(staging / f"chromium-{version}", f"chromium-{version}")
                 return path
@@ -175,7 +182,8 @@ class UpdatePlanTests(unittest.TestCase):
 
             original = {"same.cc": "same\n", "changed.cc": "old\n", "dropped.cc": "dropped\n",
                         "docs/old/notes.md": "notes\n", "docs/old/more.md": "more\n",
-                        "turned": "a file\n", "was_dir/inner.cc": "inner\n",
+                        "turned": "a file\n", "was_dir/inner.cc": "inner\n", "legacy/api.h": "api\n",
+                        "tool.sh": "#!/bin/sh\n",
                         "patched.cc": "context\nold\n", "third_party/tool/linux": "linux build\n"}
             previous = archive("157.0.8103.51", original)
             release = archive("157.0.8103.80", {**original, "changed.cc": "new\n", "added.cc": "added\n",
@@ -183,7 +191,10 @@ class UpdatePlanTests(unittest.TestCase):
                               | {"dropped.cc": None, "docs/old/notes.md": None, "docs/old/more.md": None,
                                  # A file that becomes a directory, and a directory that becomes a file.
                                  "turned": None, "turned/child.cc": "child\n",
-                                 "was_dir/inner.cc": None, "was_dir": "a file now\n"})
+                                 "was_dir/inner.cc": None, "was_dir": "a file now\n",
+                                 # A directory moved and replaced by a link to its new place.
+                                 "legacy/api.h": None, "include/api.h": "api\n"},
+                              links={"legacy": "include"}, executables=("tool.sh",))
             pinned = pin("157.0.8103.51", previous)
             source = pinned.source
             source.mkdir(parents=True)
@@ -200,7 +211,7 @@ class UpdatePlanTests(unittest.TestCase):
                 "after": sha256(source / "patched.cc")}}}))
             os.utime(source / "same.cc", (1, 1))
             target = pin("157.0.8103.80", release)
-            self.assertEqual(pinned.advance(target, previous), {"changed": 5, "removed": 3})
+            self.assertEqual(pinned.advance(target, previous), {"changed": 9, "removed": 3})
             advanced = target.source
             self.assertFalse(pinned.directory.exists())
             self.assertFalse((target.directory / ADVANCING).exists())
@@ -211,6 +222,9 @@ class UpdatePlanTests(unittest.TestCase):
             self.assertFalse((advanced / "docs").exists())
             self.assertEqual((advanced / "turned/child.cc").read_text(), "child\n")
             self.assertEqual((advanced / "was_dir").read_text(), "a file now\n")
+            self.assertEqual((advanced / "include/api.h").read_text(), "api\n")
+            self.assertEqual(os.readlink(advanced / "legacy"), "include")
+            self.assertEqual(stat.S_IMODE((advanced / "tool.sh").stat().st_mode), 0o755)
             self.assertEqual((advanced / "patched.cc").read_text(), "context\nold\n")
             self.assertEqual((advanced / "same.cc").stat().st_mtime, 1)
             self.assertEqual((advanced / "third_party/tool/linux").read_text(), "mac toolchain\n")
