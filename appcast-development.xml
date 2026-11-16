@@ -6,38 +6,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.9.90</title>
-            <pubDate>Mon, 16 Nov 2026 00:04:15 +0000</pubDate>
+            <title>0.9.94</title>
+            <pubDate>Mon, 16 Nov 2026 03:30:55 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1624</sparkle:version>
-            <sparkle:shortVersionString>0.9.90</sparkle:shortVersionString>
+            <sparkle:version>1625</sparkle:version>
+            <sparkle:shortVersionString>0.9.94</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Going back from the first page of a tab that a link, Command-click or the page itself opened closes that tab and takes you back to the tab that opened it. Tabs you open yourself, and saved or pinned tabs, work as before.
-
 ### Improved
 
-- On Mac, Open Link in New Tab now leads a link's right-click menu, ahead of opening it in another Space, in Peek or in Split View.
+- A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it.
+- A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back.
+- On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space.
 
 ### Fixed
 
-- On Mac, Crest no longer quits when your disk is almost full and a site saves data.
-- On Mac, moving the pointer off the window's sidebar edge opens the hidden sidebar at once and keeps it open until you come back to the page.
+- On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/efa7a58309a2f60105c77ea1afa8f052f61dee15...0d5e0936f9878ea72d8593af677f0b14b219064c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.90-2026-11-15-1624-r624.1/Installer-Crest-0.9.90-development-2026-11-15-0d5e093-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/0d5e0936f9878ea72d8593af677f0b14b219064c...4c42c86e7df1b420aa3610a73dbe966d0ca26d69) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.9.94-2026-11-16-1625-r625.1/Installer-Crest-0.9.94-development-2026-11-16-4c42c86-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.90-2026-11-15-1624-r624.1/Installer-Crest-0.9.90-development-2026-11-15-0d5e093-arm64.dmg" length="221468292" type="application/octet-stream" sparkle:edSignature="vAmHkwJH/5iJbjNdDp3THZ0rZ+UROOisetCdjlS/KwDL2XG7ywQot205YQdNMsmP8zQrcCnzG9lgiU9wciKmAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.9.94-2026-11-16-1625-r625.1/Installer-Crest-0.9.94-development-2026-11-16-4c42c86-arm64.dmg" length="221477508" type="application/octet-stream" sparkle:edSignature="bfdL8ivut06N+5s8ND/z43LPALgdVZr2LYMIEK6D4n3jHx9xrNSDmf/SrRrC6q3RCJzPJ4nK2T6fK9FAbYltAg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -69,6 +66,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Tybyab+fENYb7XUAknrabPK3Lkn6ItzO4S9kl+ktyc8Z8EIY8ncbIS5wMv+rNGRS9+2EkbFXQFqke+ep4do/Bw==
-length: 4498
+edSignature: 1DW4y88BeUi+5NClW16kXFD236fTr++he/UH8LZuJF0T1O5FL58RFUAqNXtj93SzBsMwxxtKfGh8COXI+yf1DA==
+length: 4712
 -->

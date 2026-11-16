@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "link-menu-new-tab-first",
+    "development": "top-address-field-click-select",
     "nightly": "folder-menu-button-clears-name"
   }
 }
