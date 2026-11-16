@@ -149,12 +149,10 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-[Crest 0.9.1](CHANGELOG.md#091---2026-11-10) updates Chromium to
-157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in
-the wild. The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-10) describe
-Sub-Spaces, built-in ad blocking, and the Chromium engine now built from
-Chromium itself. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone and
-iPad use WebKit.
+The [Crest 0.10 release notes](CHANGELOG.md#0100---2026-11-15) describe three
+styles, the address bar above the page on Mac, and new sidebar and color
+settings. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone
+and iPad use WebKit.
 
 When updating from a WebKit-only release, your Spaces, tabs, history, and Crest
 Passwords carry over. Chromium has separate website storage, so sites may ask
