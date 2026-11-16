@@ -6,8 +6,10 @@ import SwiftUI
 /// web history gestures continue to belong to WebKit.
 ///
 /// The macOS host of the shared strip: `SpacePageStrip` decides where each
-/// page stands, which pages are kept and what each shows; this view hosts
-/// the pages and moves them with Core Animation.
+/// page stands, or how opaque it is where pages fade rather than slide, which
+/// pages are kept and what each shows; this view hosts the pages and moves
+/// them with Core Animation, along the pager's position as a finger moves it
+/// and along its release curve as it settles.
 @MainActor
 final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     /// The order the strip runs along: the pager's, which is every Space in
@@ -29,6 +31,10 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     private var makeRoot: ((SpaceModel, Bool) -> SpacePageRoot<Content>)?
     private var lastSize = CGSize.zero
     private var preparedDestination: UUID?
+    /// Whether the pages slide with the pager, or keep their place and fade.
+    private var slides = true
+    /// The Space the strip last came to rest on, which a fade leaves.
+    private var restingSpaceID: UUID?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -44,10 +50,11 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     }
 
     /// Shows `spaces`, where `shownPins` is the pinned tab each Space shows,
-    /// for the Spaces that show one.
+    /// for the Spaces that show one. The pages slide with `presentation`'s
+    /// pager when `slides`, and fade from one to the next with it otherwise.
     func update(
         spaces: [SpaceModel], selectedSpaceID: UUID, lockedSpaceIDs: Set<UUID>, shownPins: [UUID: UUID],
-        layoutDirection: LayoutDirection, presentation: SpacePagerPresentation?,
+        layoutDirection: LayoutDirection, presentation: SpacePagerPresentation?, slides: Bool,
         makeRoot: @escaping (SpaceModel, Bool) -> SpacePageRoot<Content>
     ) {
         let changedLocks = self.lockedSpaceIDs.symmetricDifference(lockedSpaceIDs)
@@ -66,6 +73,10 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         self.lockedSpaceIDs = lockedSpaceIDs
         self.layoutDirection = layoutDirection
         self.makeRoot = makeRoot
+        if self.slides != slides {
+            stopAnimations()
+            self.slides = slides
+        }
         if self.presentation !== presentation {
             disconnect()
             self.presentation = presentation
@@ -73,7 +84,9 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         }
         let current = matchingSnapshot ?? restingSnapshot(selectedSpaceID)
         arrange(current.order(of: allSpaces) ?? allSpaces)
+        if jumps(from: snapshot, to: current) { dissolve() }
         snapshot = current
+        if current.phase == .idle { restingSpaceID = current.destinationID }
         prepareHosts(
             at: current.position, destination: current.destinationID, refresh: current.phase == .idle,
             preparesNeighbors: current.phase == .idle)
@@ -98,7 +111,8 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         let moving = transition == nil ? [] : slidingHosts
         let began = transition == nil ? nil : slideBeginTime
         for host in hosts.values {
-            host.layer?.removeAllAnimations()
+            // A fade keeps going: the pages it fades stay where they are.
+            if slides { host.layer?.removeAllAnimations() }
             // Keep offscreen pages cached without reflowing their native content.
             if host.hostingView.rootView.contentPresentation != .inactive, host.frame.size != bounds.size {
                 host.setFrameSize(bounds.size)
@@ -110,7 +124,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 preparesNeighbors: snapshot.phase == .idle)
             positionHosts(at: snapshot.position)
         }
-        if let transition { resumeSlide(moving, along: transition, beganAt: began) }
+        if let transition, slides { resumeSlide(moving, along: transition, beganAt: began) }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -145,7 +159,9 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         // input. A settled slide supplies the latest roots, as the sidebar's
         // pager does.
         let settles = value.phase == .idle && snapshot?.phase != .idle
+        let jumps = jumps(from: snapshot, to: value)
         snapshot = value
+        if value.phase == .idle { restingSpaceID = value.destinationID }
         if let release = value.transition, value.phase == .settling, bounds.width > 0 {
             if transition == release {
                 // Admit the next neighbor once the common native animation has
@@ -163,11 +179,17 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
             stopAnimations()
             positionHosts(at: release.startPosition)
             transition = release
-            let moving = hosts.filter { key, host in
-                needsMotion(host, to: origin(for: key, at: release.endPosition, placedNear: release.startPosition))
+            if slides {
+                let moving = hosts.filter { key, host in
+                    needsMotion(
+                        host, to: origin(for: key, at: release.endPosition, placedNear: release.startPosition))
+                }
+                slide(Array(moving.keys), along: release)
+            } else {
+                fade(along: release)
             }
-            slide(Array(moving.keys), along: release)
         } else {
+            if jumps { dissolve() }
             stopAnimations()
             prepareHosts(
                 at: value.position, destination: value.destinationID, refresh: settles,
@@ -262,6 +284,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                     // Cached geometry may predate a sidebar resize. Restore
                     // the release origin before its native animation starts.
                     host.setFrameOrigin(origin(for: key, at: position))
+                    host.alphaValue = opacity(ofPageAt: index, at: position)
                 }
                 var root =
                     refresh || host.hostingView.rootView.assignment != key
@@ -288,6 +311,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 root.contentPresentation = contentPresentation
                 let host = SpacePageHost(root: root)
                 host.frame = CGRect(origin: origin(for: key, at: position), size: bounds.size)
+                host.alphaValue = opacity(ofPageAt: index, at: position)
                 host.hostingView.frame = host.bounds
                 host.isHidden = contentPresentation == .inactive || yieldsPlace(at: index)
                 hosts[key] = host
@@ -306,6 +330,8 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     private func origin(
         for key: BrowserSpaceRuntimeAssignment, at position: CGFloat, placedNear reference: CGFloat? = nil
     ) -> CGPoint {
+        // Pages that fade all stand in the one place.
+        guard slides else { return .zero }
         let index = spaces.firstIndex { $0.id == key.spaceID } ?? 0
         let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
         return CGPoint(
@@ -324,6 +350,13 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
 
     private func positionHosts(at position: CGFloat) {
         for (key, host) in hosts {
+            // A release's fade runs on its own; a finger's follows each sample.
+            if transition == nil, let index = spaces.firstIndex(where: { $0.id == key.spaceID }) {
+                let opacity = opacity(ofPageAt: index, at: position)
+                if host.alphaValue != opacity { host.alphaValue = opacity }
+                host.layer?.zPosition =
+                    slides ? 0 : strip.stacking(ofPageAt: index, at: position, leaving: restingIndex)
+            }
             var origin = origin(for: key, at: position)
             if host.hostingView.rootView.contentPresentation == .inactive {
                 guard host.frame.intersects(bounds) else { continue }
@@ -336,6 +369,78 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 if host.frame.origin != origin { host.setFrameOrigin(origin) }
             }
         }
+    }
+
+    // MARK: - Actions - Fading
+
+    /// How opaque the page at `index` is while the strip shows `position`:
+    /// whole where pages slide, and where they fade, as the strip says.
+    private func opacity(ofPageAt index: Int, at position: CGFloat) -> CGFloat {
+        slides ? 1 : strip.opacity(ofPageAt: index, at: position, leaving: restingIndex)
+    }
+
+    /// Where in the strip the Space it last rested on stands.
+    private var restingIndex: Int? {
+        restingSpaceID.flatMap { id in spaces.firstIndex { $0.id == id } }
+    }
+
+    /// Fades the pages along `release`, on the pager's native curve and clock:
+    /// each page's opacity follows the positions the release passes through,
+    /// halfway points and crossed Spaces included, as the slide's frames do.
+    private func fade(along release: SpacePagerSettlement) {
+        let start = release.startPosition
+        let end = release.endPosition
+        guard end != start else { return }
+        let stops = fadeStops(from: start, to: end)
+        for (key, host) in hosts where !host.isHidden {
+            guard let layer = host.layer, let index = spaces.firstIndex(where: { $0.id == key.spaceID }) else {
+                continue
+            }
+            let values = stops.map {
+                strip.opacity(ofPageAt: index, at: $0, leaving: restingIndex, placedNear: start)
+            }
+            let animation = CAKeyframeAnimation(keyPath: "opacity")
+            release.configure(animation)
+            animation.values = values.map { NSNumber(value: Double($0)) }
+            animation.keyTimes = stops.map { NSNumber(value: Double(($0 - start) / (end - start))) }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layer.zPosition = strip.stacking(
+                ofPageAt: index, at: (start + end) / 2, leaving: restingIndex, placedNear: start)
+            host.alphaValue = values.last ?? 0
+            layer.add(animation, forKey: "spaceTransition.opacity")
+            CATransaction.commit()
+        }
+    }
+
+    /// The positions from `start` to `end` a fade's keyframes stand at: both
+    /// ends and every half Space between, where a page's fade bends.
+    private func fadeStops(from start: CGFloat, to end: CGFloat) -> [CGFloat] {
+        let lower = min(start, end)
+        let upper = max(start, end)
+        let halves = stride(from: (lower * 2).rounded(.down) / 2, through: upper, by: 0.5).filter {
+            $0 > lower && $0 < upper
+        }
+        return [start] + (end > start ? halves : halves.reversed()) + [end]
+    }
+
+    /// Whether, where pages fade, the strip moves from `old` to `new` at once,
+    /// with no release to fade along, as a pager that doesn't move under
+    /// Reduce Motion does.
+    private func jumps(from old: SpacePagerPresentation.Snapshot?, to new: SpacePagerPresentation.Snapshot) -> Bool {
+        guard !slides, let old, old.phase == .idle, new.phase == .idle, new.transition == nil,
+            old.destinationID != new.destinationID
+        else { return false }
+        return window != nil && bounds.width > 0
+    }
+
+    /// Dissolves what the pages show now into what they show next, on the
+    /// pager's standard one-page settle.
+    private func dissolve() {
+        let transition = CATransition()
+        transition.type = .fade
+        SpacePagerSettlement.onePage.configure(transition)
+        layer?.add(transition, forKey: "spaceDissolve")
     }
 
     private func updateAccessibility() {

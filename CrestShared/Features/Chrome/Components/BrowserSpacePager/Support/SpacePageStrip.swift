@@ -16,12 +16,14 @@ extension EnvironmentValues {
 
 /// A window's Space pages side by side, as a Space pager moves them, on every
 /// platform: the order they run along, the places neighbouring Spaces that
-/// show one page share, where each page stands at a position, which pages the
-/// page area keeps, and what each of them shows.
+/// show one page share, where each page stands at a position, or how opaque
+/// it is where pages fade rather than slide, which pages the page area keeps,
+/// and what each of them shows.
 ///
 /// Each platform's page area only hosts the pages and moves them, the Mac's
 /// with Core Animation and a touch device's with SwiftUI; this decides where
-/// they go, so both move them alike.
+/// they go and how they look at every position the pager passes through, so
+/// both follow the pager alike, a finger and a release.
 struct SpacePageStrip: Equatable {
     // MARK: - Static Variables
 
@@ -76,6 +78,48 @@ struct SpacePageStrip: Equatable {
         let placed = SpacePagerInterpolation.index(index, near: reference ?? position, count: spaceIDs.count)
         return place(CGFloat(placed)) - place(position)
     }
+
+    // MARK: - Actions - Fading
+
+    /// How opaque the page at `index` is, where pages fade rather than slide,
+    /// while the strip shows `position` on its way from the page at `origin`,
+    /// where it last rested: the page at the position whole, and between two
+    /// pages, the one the strip moves toward fading in over the one it
+    /// leaves. The page it leaves stays whole until halfway, so the first
+    /// half is a true mix of the two, and then fades away under the other,
+    /// letting at most an eighth of what lies behind show through in the
+    /// second half. Kept whole to the end, it would show through a page with
+    /// clear parts, as a Start Page has, and then vanish at once. A move
+    /// either way looks the same. Neighbouring Spaces that show one page
+    /// count as one place, so moving between them fades nothing.
+    func opacity(
+        ofPageAt index: Int, at position: CGFloat, leaving origin: Int?, placedNear reference: CGFloat? = nil
+    ) -> CGFloat {
+        let distance = abs(offset(ofPageAt: index, at: position, placedNear: reference))
+        guard distance < 1 else { return 0 }
+        return leaves(index, from: origin, at: position, placedNear: reference)
+            ? min(1, 2 * (1 - distance)) : 1 - distance
+    }
+
+    /// Where the page at `index` stacks while pages fade from the page at
+    /// `origin`: the page the strip leaves beneath, and the others above it,
+    /// nearest on top.
+    func stacking(
+        ofPageAt index: Int, at position: CGFloat, leaving origin: Int?, placedNear reference: CGFloat? = nil
+    ) -> CGFloat {
+        guard !leaves(index, from: origin, at: position, placedNear: reference) else { return 0 }
+        return 2 - abs(offset(ofPageAt: index, at: position, placedNear: reference))
+    }
+
+    /// Whether the page at `index` is the one the strip leaves on its way
+    /// from `origin`: that page, or, with no origin known, the page behind
+    /// the position.
+    private func leaves(_ index: Int, from origin: Int?, at position: CGFloat, placedNear reference: CGFloat?) -> Bool {
+        guard let origin else { return offset(ofPageAt: index, at: position, placedNear: reference) < 0 }
+        return place(CGFloat(index)) == place(CGFloat(origin))
+    }
+
+    // MARK: - Actions - Sharing
 
     /// Whether the page at `index` shares its place with the selected
     /// Space's while the strip moves. Only the selected Space draws that page
