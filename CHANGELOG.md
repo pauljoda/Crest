@@ -7,7 +7,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.10.0] - 2026-11-15
+## [0.10.8] - 2026-11-16
 
 Crest 0.10 is about customization. Three styles set how much Crest shows,
 the address bar can sit above the page on Mac, the sidebar gains spacing, tab
@@ -16,7 +16,7 @@ surfaces and text readable over any Space.
 
 ### Added
 
-- Choose a style, Heraldic, Modern or Simple, in Settings › Appearance or during setup, and give any Space its own. Modern and Simple show fewer, simpler controls and keep the rest under Advanced. Space icons in the switcher can be dots.
+- Choose a style, Heraldic, Modern or Simple, in Settings › Appearance or during setup, and give any Space its own. Modern and Simple show fewer, simpler controls and keep the rest under Advanced. Space icons in the switcher can be dots. A style chosen during setup restyles the Spaces you already have and the ones setup imports.
 - Put the address bar above the page on Mac with Address bar in Settings › Appearance. Each page in Split View gets its own bar with back, forward, its address, Site Controls and pinned extensions.
 - Choose how the address field shows a page's address: on two lines, on one line, or just the site.
 - Choose how much room the sidebar keeps between rows with Spacing, from None to Relaxed.
@@ -37,12 +37,15 @@ surfaces and text readable over any Space.
 - Texture is its own setting for every Space and shows over banner and solid sidebars too.
 - The selected tab wears the same glass as the address field and pins, and text over a Space's colors is easier to read.
 - Notices, previews and the bars over a page draw on one solid surface, so their text stays readable on any Space and page. Notices are only as wide as their words.
-- Folders and groups have a … button for their actions, and a − on their header that closes everything in them, then closes the folder. In a saved folder the − unloads its tabs, which stay saved. Deleting a folder deletes what it holds, after asking, and an emptied folder of open tabs goes away.
+- Folders and groups have a … button for their actions. A group's or an open folder's header has an archive box that archives all its tabs, and a saved folder's has a − that unloads them while they stay saved. Deleting a folder deletes what it holds, after asking, and an emptied folder of open tabs goes away.
 - A closed folder shows only its loaded tabs, and closing or unloading one takes it out of the closed folder right away.
 - On Mac, the recent tabs switcher lists only tabs whose page is loaded, including those of the other Spaces in a Sub-Space group, with each tab's Space on its preview.
 - Split Views look and work like folders in the sidebar, and pages slide into place as they join or leave Split View on Mac.
 - New tabs open at the top of your open tabs. Choose Bottom, or have new tabs join the current folder, in Settings › Tabs.
 - The sidebar slides a third faster by default on Mac, and comes out at once when the pointer leaves the window past its edge.
+- On Mac, a quick swipe between Spaces finishes as fast as the keyboard shortcut. On iPad and an unfolded iPhone, the page slides with the sidebar as you switch Spaces.
+- With Animate pages when switching Spaces off or Reduce Motion on, the page fades into the next Space's as you switch, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have that setting in Appearance.
+- On Mac, closing a Peek shrinks it back into the link it grew out of.
 - On Mac, Open Link in New Tab leads a link's right-click menu.
 - Quick Windows open over the app you're using and pop in where they stay.
 - Pages load and run faster with ad blocking on, and an open Peek no longer keeps Crest busy.
@@ -53,6 +56,7 @@ surfaces and text readable over any Space.
 - Crest no longer crashes while it checks which languages it can translate a page into, and on Mac no longer quits when the disk is almost full and a site saves data.
 - On Mac, extensions that open their own popup, such as a locked password manager, show it instead of doing nothing.
 - On Mac, a link from another app that opens Crest shows in front, Crest's windows reopen in the order you left them, a Peek from a web app that updates its own address loads, and Crest's Handoff icon opens the page.
+- A folder's icon and title line up with the tabs beside them.
 - Opening or closing a folder that holds the tab you're on no longer makes that tab jump, a folder inside a closed folder opens when you click it, and a tab filed into a folder stays with your open tabs if another device deletes the folder at the same time.
 - On Mac, Command-W closes every tab selected in the sidebar again and Command-D duplicates them.
 - A click anywhere in the address field opens it, in the sidebar on Mac and in Quick Windows.
@@ -63,6 +67,10 @@ surfaces and text readable over any Space.
 - Going back in a tab Crest reopened after a relaunch shows the earlier page again on sites such as Reddit.
 - On Mac, right-clicking text selected in a password field no longer offers to search for it, and dragging across the developer toolbar's address field selects text.
 - Crest's updater includes two security fixes for how updates are installed.
+
+### Security
+
+- Chromium is updated to 157.0.8103.80, with 83 upstream security fixes, five of them critical. Pages in WebKit, and Crest on iPhone and iPad, don't use Chromium.
 
 ### Upgrading
 

@@ -14,9 +14,9 @@ behavior, and user confusion over which build supports extensions.
 The Homebrew cask fetches un-modified binaries from GitHub Releases, 
 thus it is still updated through Sparkle 2. 
 
-Crest 0.10 opens the release line with `MARKETING_VERSION = 0.10.0` and stable
-tag `v0.10.0`; later releases on the line, such as security updates, follow as
-`0.10.x` with tags such as `v0.10.1`. User-facing release copy calls it Crest 0.10. Mac requires Apple
+Crest 0.10 opened the release line with `MARKETING_VERSION = 0.10.0`, and its
+first stable tag is `v0.10.8`; later releases on the line, such as security
+updates, follow as `0.10.x` with tags such as `v0.10.9`. User-facing release copy calls it Crest 0.10. Mac requires Apple
 silicon and macOS 26.1 or later; iPhone and iPad remain WebKit apps with 26.1
 deployment targets. The packaged Mac app and Sparkle feed take the higher
 minimum macOS version required by the engine and the native UI framework.
