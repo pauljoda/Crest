@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "chromium-upstream-157-0-8103-51",
-    "development": "save-unsave-tab-menu",
+    "development": "link-menu-new-tab-first",
     "nightly": "folder-menu-button-clears-name"
   }
 }
