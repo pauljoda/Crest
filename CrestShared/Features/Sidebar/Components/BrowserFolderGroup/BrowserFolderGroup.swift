@@ -95,6 +95,7 @@ struct BrowserFolderGroup: View {
             beginCreatingChild: beginCreatingChild,
             beginRenaming: beginRenaming,
             toggleExpansion: toggleExpansion,
+            closeAllTabs: closeAllTabs,
             beginTitleEditingIfNeeded: beginTitleEditingIfNeeded,
             commitTitle: commitTitle,
             cancelTitleEditing: cancelTitleEditing,
@@ -248,6 +249,23 @@ struct BrowserFolderGroup: View {
                 residentFolderTabIDs: configuration.residentFolderTabIDs
             )
             isExpanded.wrappedValue = nextExpansion
+        }
+    }
+
+    /// Closes what the folder holds to close, then closes the folder: a
+    /// saved folder's loaded tabs unload as their rows' unload control does,
+    /// and stay saved, and a group's or an open folder's tabs close together,
+    /// as a selection of them does.
+    private func closeAllTabs() {
+        guard configuration.isCurrentAndUnlocked, configuration.hasTabsToClose else { return }
+        if configuration.isShownOpen { toggleExpansion() }
+        if folder.location.isDurable {
+            context.unload(configuration.loadedFolderTabIDs)
+        } else if let request = BrowserSidebarSelection.capture(
+            configuration.folderTabIDs.map { .tab($0) }, in: context.browser)
+        {
+            _ = BrowserTabBatchActions(browser: context.browser, spaceAccess: context.spaceAccess)
+                .perform(context.browser.closing(request), for: request)
         }
     }
 

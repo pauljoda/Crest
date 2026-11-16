@@ -5396,6 +5396,13 @@ struct ProtectedMediaUnavailable: EngineEvent, PageEvent, Equatable, Sendable {
     let keySystem: KeySystem
 }
 
+struct PutAwayTabs: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabIDs: [UUID]
+}
+
 struct QuitWithDownloadsAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let requestID: UUID
@@ -5448,6 +5455,7 @@ struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
 }
 
 struct RecentTabItem: Equatable, Sendable {
+    let spaceID: UUID
     let tabIDs: [UUID]
     let focusedTabID: UUID
 }

@@ -150,7 +150,7 @@ final class BrowserGettingStartedPractice {
         BrowserSidebarPageAccess(
             containsResidentPage: { _ in true }, containsResidentPageMatching: { _ in true },
             siteThemeIconAccent: { _ in nil }, residencyRevision: { 0 }, selectPages: {},
-            deactivatePagePresentation: {}, unloadPage: { _, _ in }, pullFavicon: { _, _ in nil },
+            deactivatePagePresentation: {}, unloadPages: { _, _ in }, pullFavicon: { _, _ in nil },
             downloadCenter: downloads)
     }
 

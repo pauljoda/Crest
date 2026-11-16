@@ -4,10 +4,12 @@ import Foundation
 ///
 /// Closing a folder keeps every tab it holds that is loaded then, and the one
 /// the window shows. While it stays closed, a tab of it the window shows or
-/// that loads joins them, and none leaves for unloading, so a person moving
-/// between a closed folder's tabs keeps them all at hand. Only opening the
-/// folder lets them go, for the next close to keep what is loaded then. A tab
-/// the folder no longer holds is read past rather than removed.
+/// that loads joins them, so a person moving between a closed folder's tabs
+/// keeps them at hand, and a tab that closes or unloads leaves at once unless
+/// the window still shows it: a closed folder shows only what is loaded.
+/// Opening the folder lets them all go, for the next close to keep what is
+/// loaded then. A tab the folder no longer holds is read past rather than
+/// removed.
 struct BrowserCollapsedFolderTabVisibilityState: Equatable {
     private(set) var keptTabIDs: Set<UUID> = []
     /// Whether the person opened this folder while a closed folder around it
@@ -53,11 +55,18 @@ struct BrowserCollapsedFolderTabVisibilityState: Equatable {
         isOpenInClosedFolder = false
     }
 
+    /// Keeps the folder's newly loaded tabs, `residentFolderTabIDs`, and lets
+    /// go of every kept tab outside `loadedFolderTabIDs` but the one the
+    /// window shows.
     mutating func residencyDidChange(
         isExpanded: Bool,
-        residentFolderTabIDs: [UUID]
+        selectedTabID: UUID?,
+        residentFolderTabIDs: [UUID],
+        loadedFolderTabIDs: [UUID]
     ) {
         guard !isExpanded else { return }
+        let loaded = Set(loadedFolderTabIDs)
         keptTabIDs.formUnion(residentFolderTabIDs)
+        keptTabIDs = keptTabIDs.filter { loaded.contains($0) || $0 == selectedTabID }
     }
 }

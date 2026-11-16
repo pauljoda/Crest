@@ -61,5 +61,15 @@ internal sealed class WindowFollowUp(Window? window) {
         return shown.DismissalFallback(spaceId, tabId, available);
     }
 
+    /// The tab to show in `spaceId` after the tabs `tabIds` leave it together:
+    /// see `Window.DismissalFallback`. Only a window that shows one of them
+    /// there has one, and every one of them is remembered as dismissed for
+    /// when the command commits, so none stays in the window's history.
+    public Guid? FallbackAfterDismissing(Guid spaceId, IReadOnlySet<Guid> tabIds, IReadOnlySet<Guid> available) {
+        if (Window is not { } shown || shown.Tab(spaceId) is not { } tabId || !tabIds.Contains(tabId)) return null;
+        foreach (var id in tabIds) Dismiss(spaceId, id);
+        return shown.DismissalFallback(spaceId, tabIds, available);
+    }
+
     #endregion
 }

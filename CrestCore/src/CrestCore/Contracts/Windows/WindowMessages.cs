@@ -27,10 +27,10 @@ public sealed record FallbackTabIndex(int? Index);
 /// when the window shows no tab there.
 public sealed record RecentTabList(IReadOnlyList<RecentTabItem> Items);
 
-/// One thing to switch to: a tab, or the tabs of a split, which are one item.
-/// `TabIds` are its tabs in the order they show side by side, and
-/// `FocusedTabId` is the one to show, the one of a split used last.
-public sealed record RecentTabItem(IReadOnlyList<Guid> TabIds, Guid FocusedTabId);
+/// One thing to switch to: a tab, or the tabs of a split, which are one item,
+/// in Space `SpaceId`. `TabIds` are its tabs in the order they show side by
+/// side, and `FocusedTabId` is the one to show, the one of a split used last.
+public sealed record RecentTabItem(Guid SpaceId, IReadOnlyList<Guid> TabIds, Guid FocusedTabId);
 
 /// The tab "Split With Next Tab" would add, or null when it would add none.
 public sealed record SplitJoinCandidateTab(Guid? TabId);

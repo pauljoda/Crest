@@ -217,13 +217,11 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                         selectedTabID: selectedTabID,
                         folderTabIDs: configuration.folderTabIDs
                     )
+                    // A tab closed while the window showed it leaves once
+                    // the window shows another.
+                    updateResidency()
                 }
-                .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
-                    interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
-                        isExpanded: interaction.isExpanded.wrappedValue,
-                        residentFolderTabIDs: configuration.residentFolderTabIDs
-                    )
-                }
+                .onChange(of: configuration.residencyRevision, initial: true) { _, _ in updateResidency() }
                 // A folder that turns into a group, or back, keeps the rows its
                 // new kind keeps when closed, as though it closed now.
                 .onChange(of: configuration.folder.isGroup) { _, _ in
@@ -245,7 +243,17 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
             configuration.sidebarInteraction.reconcileCollapsedFolder(
                 configuration.folderRuntimeAssignment, isExpanded: !configuration.folder.isCollapsed,
                 selectedTabID: configuration.shownFolderTabID, folderTabIDs: configuration.folderTabIDs,
-                residentFolderTabIDs: configuration.residentFolderTabIDs)
+                residentFolderTabIDs: configuration.residentFolderTabIDs,
+                loadedFolderTabIDs: configuration.loadedFolderTabIDs)
+        }
+    #else
+        private func updateResidency() {
+            interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
+                isExpanded: interaction.isExpanded.wrappedValue,
+                selectedTabID: configuration.shownFolderTabID,
+                residentFolderTabIDs: configuration.residentFolderTabIDs,
+                loadedFolderTabIDs: configuration.loadedFolderTabIDs
+            )
         }
     #endif
 }

@@ -81,7 +81,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
 
     func reconcileCollapsedFolder(
         _ assignment: BrowserFolderRuntimeAssignment, isExpanded: Bool, selectedTabID: UUID?,
-        folderTabIDs: [UUID], residentFolderTabIDs: [UUID]
+        folderTabIDs: [UUID], residentFolderTabIDs: [UUID], loadedFolderTabIDs: [UUID]
     ) {
         let visibility = collapsedFolderVisibility(for: assignment)
         var next = visibility.state
@@ -91,7 +91,9 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
                 residentFolderTabIDs: residentFolderTabIDs)
         }
         next.selectionDidChange(isExpanded: isExpanded, selectedTabID: selectedTabID, folderTabIDs: folderTabIDs)
-        next.residencyDidChange(isExpanded: isExpanded, residentFolderTabIDs: residentFolderTabIDs)
+        next.residencyDidChange(
+            isExpanded: isExpanded, selectedTabID: selectedTabID, residentFolderTabIDs: residentFolderTabIDs,
+            loadedFolderTabIDs: loadedFolderTabIDs)
         visibility.wasExpanded = isExpanded
         if next != visibility.state { visibility.state = next }
     }

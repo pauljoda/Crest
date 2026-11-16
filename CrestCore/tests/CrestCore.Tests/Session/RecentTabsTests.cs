@@ -218,4 +218,28 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ShowMostRecentTab(window));
         Assert.Equal(f.C2, device.Tab(window, f.Space));
     }
+    /// A Space with a Sub-Space lists the loaded tabs of its whole group, each
+    /// naming its Space, the one used most recently first, and the most
+    /// recent tab command switches the window to the other Space; a Space
+    /// outside the group stays out.
+    [Fact]
+    public void RecentTabsReachAcrossTheSubSpaceGroup() {
+        var f = new OrderSpace();
+        using var device = new TestDevice(f.Session);
+        device.Send(new JoinSpace(device.Workspace, f.Second, f.Space));
+        var window = device.Open(f.Space, (f.Space, f.C1));
+        ShowAll(device, window, f.Space, f.C2);
+        device.Send(new ShowSpace(window, f.Third));
+        ShowAll(device, window, f.Third, f.ThirdTab);
+        device.Send(new ShowSpace(window, f.Second));
+        ShowAll(device, window, f.Second, f.SecondTab);
+
+        var items = device.Query(new RecentTabs(window)).Items;
+        Assert.Equal([f.SecondTab, f.C2, f.C1], items.Select(item => item.FocusedTabId));
+        Assert.Equal([f.Second, f.Space, f.Space], items.Select(item => item.SpaceId));
+
+        device.Send(new ShowMostRecentTab(window));
+        Assert.Equal(f.Space, device.Space(window));
+        Assert.Equal(f.C2, device.Tab(window, f.Space));
+    }
 }

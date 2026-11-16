@@ -12,16 +12,32 @@ struct BrowserDurableTabCloseAction {
     /// False when the tab is not a saved or pinned tab of an unlocked Space
     /// this window shows, or its page may not go yet.
     func perform(_ assignment: BrowserTabRuntimeAssignment) -> Bool {
-        let space = BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID)
+        perform([assignment])
+    }
+
+    /// Puts several saved or pinned tabs' pages away together, asking their
+    /// pages once, as a batch of open tabs closes. An engine that answers for
+    /// its pages later takes one question at a time, so closing them one by
+    /// one would leave all but the first, and a window that showed one of
+    /// them returns to a tab outside them. False when any of them is not a
+    /// saved or pinned tab of the same unlocked Space this window shows, or
+    /// their pages may not go yet.
+    func perform(_ assignments: [BrowserTabRuntimeAssignment]) -> Bool {
+        guard let first = assignments.first else { return false }
+        let space = BrowserSpaceRuntimeAssignment(spaceID: first.spaceID, profileID: first.profileID)
         guard
             let unlocked = browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess),
-            unlocked.shownTab(assignment.tabID)?.placement.isDurable == true
+            assignments.allSatisfy({
+                $0.spaceID == space.spaceID && $0.profileID == space.profileID
+                    && unlocked.shownTab($0.tabID)?.placement.isDurable == true
+            })
         else { return false }
-        return browser.performPageDismissal(of: [assignment]) {
+        return browser.performPageDismissal(of: assignments) {
             guard
                 browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess) != nil
             else { return false }
-            return browser.closeDurableTab(assignment)
+            return assignments.count == 1
+                ? browser.closeDurableTab(first) : browser.closeDurableTabs(assignments)
         }
     }
 }
