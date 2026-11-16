@@ -2,9 +2,11 @@ import SwiftUI
 
 /// Renames in place: Return or focus loss commits, and Escape cancels. A
 /// group's header shows its name alone, in small secondary text. Either kind
-/// keeps a `…` button at its trailing edge that opens the folder's menu, and
-/// a − beside it, while the folder holds something to close, that closes it
-/// all: on hover where a pointer can reveal them, and always on a touch shell.
+/// keeps a `…` button at its trailing edge that opens the folder's menu and,
+/// while the folder holds something to close, a button beside it that
+/// closes it all: a − on a saved folder and an archive box on a group or an
+/// open folder. Both show on hover where a pointer can reveal them, and
+/// always on a touch shell.
 struct BrowserFolderHeaderControl: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -193,8 +195,8 @@ struct BrowserFolderHeaderControl: View {
     /// rather than beside a button that is always there.
     private var countSharesMenuSlot: Bool { showsMenuButton && !menuMetrics.isAlwaysVisible }
 
-    /// Whether the header offers its − now, which closes what the folder
-    /// holds to close. Reading it observes the folder's pages.
+    /// Whether the header offers its close-all button now, which closes what
+    /// the folder holds to close. Reading it observes the folder's pages.
     private var showsCloseAll: Bool {
         _ = configuration.residencyRevision
         return configuration.hasTabsToClose
@@ -209,17 +211,18 @@ struct BrowserFolderHeaderControl: View {
     /// Whether the trailing controls show now over the end of the title. A
     /// tab count holds the `…` button's place, and controls that are always
     /// there have their own, but hover-revealed controls reach past a count
-    /// when the − stands beside the button, and a button with no count beside
-    /// it stands over a long enough name.
+    /// when the close-all button stands beside the `…` button, and a button
+    /// with no count beside it stands over a long enough name.
     private var titleMeetsTrailingControls: Bool {
         guard !menuMetrics.isAlwaysVisible, isMenuRevealed else { return false }
         return showsCloseAll || (showsMenuButton && !showsTabCounts)
     }
 }
 
-/// The − at a folder or group header's trailing edge, which closes what the
-/// folder holds to close and then closes the folder, as a tab row's own −
-/// unloads its tab.
+/// The button at a folder or group header's trailing edge that closes what
+/// the folder holds to close and then closes the folder: a − on a saved
+/// folder, whose tabs unload as a tab row's own − unloads its tab, and an
+/// archive box on a group or an open folder, whose tabs go to the archive.
 private struct BrowserFolderCloseAllButton: View {
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
@@ -228,7 +231,7 @@ private struct BrowserFolderCloseAllButton: View {
 
     var body: some View {
         Button(action: interaction.closeAllTabs) {
-            BrowserSidebarTabTrailingControlLabel(systemName: "minus", metrics: metrics)
+            BrowserSidebarTabTrailingControlLabel(systemName: systemName, metrics: metrics)
         }
         .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
         .contentShape(.rect)
@@ -239,15 +242,17 @@ private struct BrowserFolderCloseAllButton: View {
         .help(title)
     }
 
-    /// Unload for a saved folder, whose tabs stay saved, and close for a
+    /// Unload for a saved folder, whose tabs stay saved, and archive for a
     /// group's or an open folder's.
     private var unloads: Bool { configuration.folder.location.isDurable }
 
-    private var title: LocalizedStringKey { unloads ? "Unload All Tabs" : "Close All Tabs" }
+    private var systemName: String { unloads ? "minus" : "archivebox" }
+
+    private var title: LocalizedStringKey { unloads ? "Unload All Tabs" : "Archive All Tabs" }
 
     private var accessibilityLabel: Text {
         let name = configuration.folder.shownTitle
-        return unloads ? Text("Unload All Tabs in \(name)") : Text("Close All Tabs in \(name)")
+        return unloads ? Text("Unload All Tabs in \(name)") : Text("Archive All Tabs in \(name)")
     }
 }
 
