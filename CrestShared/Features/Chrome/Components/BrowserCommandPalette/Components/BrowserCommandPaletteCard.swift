@@ -137,6 +137,10 @@ struct BrowserCommandPaletteCard: View {
         } action: {
             fieldExcessHeight = max(0, $0 - presentation.input.minimumHeight)
         }
+        // Over the results. A card resting under the window's title bar
+        // stretches the results' scroll view up into the title bar's safe
+        // area, over the field, where it would take the field's presses.
+        .zIndex(1)
     }
 
     @ViewBuilder

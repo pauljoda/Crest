@@ -40,6 +40,13 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         field.setAccessibilityLabel(String(localized: "Command Palette"))
         field.setAccessibilityIdentifier(identifier)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        // The palette opens in place of an address field under the window's
+        // title bar, in the top address bar or a Split View card's bar. A
+        // click there places the caret and a drag selects, while the bar
+        // around the field still moves the window.
+        let titleBarArea = BrowserWindowTitleBarControlAreaView(frame: field.bounds)
+        titleBarArea.autoresizingMask = [.width, .height]
+        field.addSubview(titleBarArea)
         coordinator.field = field
         model.applyCompletion = { [weak coordinator = coordinator] text, range in
             coordinator?.insert(text, replacementRange: range)
