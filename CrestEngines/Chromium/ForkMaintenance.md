@@ -199,6 +199,7 @@ after the last. Every patch states its reason in its header.
 | `certificate-transparency-enforced.patch` | Enforces Certificate Transparency, which Chromium does only in Google Chrome builds. |
 | `manifest-v2-extensions.patch` | Keeps Manifest V2 extensions loading, without deprecation warnings. |
 | `content-filter.patch` | Puts each Crest page's requests through the core's content filter, which blocks ads and trackers from the enabled filter lists, wires Chromium's `js_injection` renderer component in so each page runs the filter's scriptlets as its documents start, and gives Crest's content bridge user style sheets for its hiding rules, which the page can't read or override. |
+| `navigation-keeps-last-frame.patch` | A navigation that swaps renderer views keeps the old page on screen until the new one draws. Crest hosts each page's view without a parent `ui::Layer`, so every view draws with its own compositor; the hidden view now hands its compositor, still showing the old page, to the view that replaces it, instead of leaving a blank frame between the two. |
 
 `network-time-off`, `intranet-redirect-detector-off`, most of
 `privacy-defaults`, `certificate-transparency-enforced` and
