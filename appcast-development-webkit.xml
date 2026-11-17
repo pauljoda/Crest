@@ -6,34 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.8</title>
-            <pubDate>Mon, 16 Nov 2026 20:12:59 +0000</pubDate>
+            <title>0.10.9</title>
+            <pubDate>Tue, 17 Nov 2026 14:46:13 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1633</sparkle:version>
-            <sparkle:shortVersionString>0.10.8</sparkle:shortVersionString>
+            <sparkle:version>1636</sparkle:version>
+            <sparkle:shortVersionString>0.10.9</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### New
 
-- On iPad and an unfolded iPhone, the page now slides with the sidebar as you switch Spaces, instead of changing all at once when the switch ends. With Reduce Motion on, the page stays still.
-- With “Animate pages when switching Spaces” off or Reduce Motion on, the page now fades into the next Space's as you switch, following your swipe and the sidebar, instead of jumping when the switch ends, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have the setting in Appearance too.
+- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
 
 ### Fixed
 
-- Chromium is updated to 157.0.8103.80, with 83 upstream security fixes, five of them critical.
+- Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/2880bf76ae31737acf138d76fa8809749af2b533...2490559a636a0b22fac404ad1d49d2eb01d0e5d6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.8-2026-11-16-1633-r633.1/Installer-Crest-0.10.8-development-2026-11-16-2490559-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/2490559a636a0b22fac404ad1d49d2eb01d0e5d6...4d893632217a9caaba74c8c08ff50a1100b780a6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.9-2026-11-17-1636-r636.1/Installer-Crest-0.10.9-development-2026-11-17-4d89363-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.8-2026-11-16-1633-r633.1/Installer-Crest-0.10.8-development-2026-11-16-2490559-arm64.dmg" length="221542020" type="application/octet-stream" sparkle:edSignature="hHrtQUjrwaIb8qWt/uFxqLGOjm+6b7tRLJzmS8L81QFqaUwh1W/hU5v9nFb12cW5UtQAaSrcCrLR1vtHuT+SDQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.9-2026-11-17-1636-r636.1/Installer-Crest-0.10.9-development-2026-11-17-4d89363-arm64.dmg" length="221523589" type="application/octet-stream" sparkle:edSignature="fTE3a1HrWvK7LYb8xAsgJYLQvwsYG0F7FDsoLLEB9SsEXQeZgJ7/fYVsvTw1RbKCo55X0LDxDnye/bwqBVUNDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -65,6 +64,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 7YT9a3xom/C0m+/zpcIVgRRUjpEiruk19rKGOQb9AW7zHgPAKY0RbAcVOZSuzZPJtGyi39yJ0mNg0tmxRsV+Aw==
-length: 4495
+edSignature: zDso0t3aIMR3PGwlRLOJRcfBQPgr4Gzqf8FL6Mln/SxhWF98PAEMRk+l+rUy7jEbbnDOCHngaGGUje1gyOW/CQ==
+length: 4331
 -->

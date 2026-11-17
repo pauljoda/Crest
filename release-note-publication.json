@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-10-customization",
-    "development": "chromium-update-planning",
+    "development": "chromium-pages-load-without-flash",
     "nightly": "space-switch-page-fades"
   }
 }
