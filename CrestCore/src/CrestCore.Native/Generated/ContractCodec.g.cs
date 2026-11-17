@@ -14,12 +14,12 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xbe, 0x1f, 0xc0, 0xa8, 0xe0, 0x07, 0xcb, 0xfc, 0x04, 0x09, 0xb1, 0x05, 0xd5, 0xf6, 0x0f, 0x4d, 0x59, 0xd9, 0x40, 0x53, 0xe7, 0xac, 0xfc, 0x56, 0xfc, 0xd1, 0x54, 0xeb, 0x3d, 0x0a, 0xeb, 0x62
+        0x7d, 0xdd, 0x31, 0x05, 0x8f, 0xbc, 0x7d, 0xf4, 0x12, 0x81, 0x5a, 0x5e, 0xe5, 0x47, 0x69, 0xc5, 0xf2, 0x3c, 0xc6, 0xc0, 0x3f, 0xb3, 0xfe, 0x54, 0x09, 0x50, 0xd7, 0x15, 0x17, 0x33, 0x90, 0xc1
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
     public static ReadOnlySpan<byte> EngineFingerprint => [
-        0x24, 0x85, 0xab, 0xe7, 0x9b, 0x90, 0x38, 0xfd, 0xb2, 0xdb, 0xa8, 0x55, 0x75, 0x19, 0x5f, 0xd3, 0x08, 0x80, 0xf5, 0x00, 0x58, 0xae, 0xcc, 0x56, 0x7a, 0xae, 0x59, 0xdd, 0x0e, 0x8e, 0xb7, 0xfa
+        0x27, 0xe6, 0xdb, 0x79, 0xae, 0x8b, 0xf9, 0xe3, 0x48, 0x4d, 0xbb, 0xba, 0xa2, 0x6b, 0x39, 0x04, 0xeb, 0x82, 0xa0, 0xe7, 0x59, 0x9d, 0xd5, 0x68, 0x65, 0x04, 0x32, 0xfe, 0xf2, 0x24, 0x80, 0x0a
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -14517,7 +14517,8 @@ public static class ContractCodec {
             reader.ReadPresence() ? (SearchProvider?)ReadSearchProvider(reader) : null,
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (PaletteScope?)ReadPaletteScope(reader) : null,
-            reader.ReadPresence() ? (PaletteReason?)ReadPaletteReason(reader) : null);
+            reader.ReadPresence() ? (PaletteReason?)ReadPaletteReason(reader) : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
     public static void WritePaletteRow(WireWriter writer, PaletteRow value) {
@@ -14575,6 +14576,12 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        if (value.HttpFallback is { } presentHttpFallback) {
+            writer.WritePresence(true);
+            writer.WriteString(presentHttpFallback);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static PaletteRow ReadPaletteRowSeed(WireReader reader) {
@@ -14591,7 +14598,8 @@ public static class ContractCodec {
             reader.ReadPresence() ? (SearchProvider?)ReadSearchProviderSeed(reader) : null,
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (PaletteScope?)ReadPaletteScope(reader) : null,
-            reader.ReadPresence() ? (PaletteReason?)ReadPaletteReason(reader) : null);
+            reader.ReadPresence() ? (PaletteReason?)ReadPaletteReason(reader) : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
     public static void WritePaletteRowSeed(WireWriter writer, PaletteRow value) {
@@ -14646,6 +14654,12 @@ public static class ContractCodec {
         if (value.Reason is { } presentReason) {
             writer.WritePresence(true);
             WritePaletteReason(writer, presentReason);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.HttpFallback is { } presentHttpFallback) {
+            writer.WritePresence(true);
+            writer.WriteString(presentHttpFallback);
         } else {
             writer.WritePresence(false);
         }

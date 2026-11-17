@@ -19,21 +19,21 @@ public sealed class NavigationError {
         primarySuggestion: "Reconnect to Wi-Fi or Ethernet, then try again.", secondarySuggestion: ConnectedVpn, symbol: "wifi.slash");
     public static readonly NavigationError TimedOut = new(name: "timedOut", code: "CREST_TIMED_OUT",
         title: "This site took too long to respond", message: "%@ didn’t respond in time.", primarySuggestion: RetryConnection,
-        secondarySuggestion: ConnectedVpn, symbol: "clock.badge.exclamationmark");
+        secondarySuggestion: ConnectedVpn, symbol: "clock.badge.exclamationmark", fallsBackToHttp: true);
     public static readonly NavigationError CannotFindServer = new(name: "cannotFindServer", code: "CREST_NAME_NOT_RESOLVED",
         title: "Server not found", message: "Crest couldn’t find the server for %@.", primarySuggestion: CheckAddress,
         secondarySuggestion: "If the address is correct, check your DNS or VPN settings.", symbol: "network.slash");
     public static readonly NavigationError CannotConnect = new(name: "cannotConnect", code: "CREST_CONNECTION_REFUSED",
         title: "This site can’t be reached", message: "%@ refused the connection or isn’t accepting connections.",
-        primarySuggestion: CheckElsewhere, secondarySuggestion: RequiredNetwork, symbol: "exclamationmark.icloud");
+        primarySuggestion: CheckElsewhere, secondarySuggestion: RequiredNetwork, symbol: "exclamationmark.icloud", fallsBackToHttp: true);
     public static readonly NavigationError ConnectionLost = new(name: "connectionLost", code: "CREST_CONNECTION_RESET",
         title: "The connection was interrupted", message: "The connection to %@ ended before the page finished loading.",
-        primarySuggestion: RetryConnection, secondarySuggestion: ConnectedVpn, symbol: "bolt.horizontal.icloud");
+        primarySuggestion: RetryConnection, secondarySuggestion: ConnectedVpn, symbol: "bolt.horizontal.icloud", fallsBackToHttp: true);
     public static readonly NavigationError SecureConnectionFailed = new(name: "secureConnectionFailed", code: "CREST_CERTIFICATE_INVALID",
         title: "A secure connection couldn’t be made", message: "Crest couldn’t verify a private, secure connection to %@.",
         primarySuggestion: "Check that your device’s date and time are correct.",
         secondarySuggestion: "Avoid entering private information until the site fixes its certificate.",
-        symbol: "lock.trianglebadge.exclamationmark");
+        symbol: "lock.trianglebadge.exclamationmark", fallsBackToHttp: true);
     public static readonly NavigationError TooManyRedirects = new(name: "tooManyRedirects", code: "CREST_TOO_MANY_REDIRECTS",
         title: "This page is redirecting incorrectly", message: "%@ sent Crest through too many redirects.",
         primarySuggestion: "Try again later; the site may be temporarily misconfigured.",
@@ -60,10 +60,19 @@ public sealed class NavigationError {
         title: "This page couldn’t be opened", message: "Crest encountered an unexpected problem while opening %@.",
         primarySuggestion: "Try the address again or open a different page.",
         secondarySuggestion: "The technical details below can help identify the cause.", symbol: "doc.badge.ellipsis");
+    /// No route reached the address. On a Mac that is most often a device on
+    /// the local network that macOS keeps Crest from reaching until the person
+    /// allows it.
+    public static readonly NavigationError AddressUnreachable = new(name: "addressUnreachable",
+        code: "CREST_ADDRESS_UNREACHABLE", title: "This address can’t be reached",
+        message: "Crest can’t reach %@ from this network.",
+        primarySuggestion: "For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network.",
+        secondarySuggestion: "Check that the device is on and connected to your network, and that a VPN isn’t blocking local access.",
+        symbol: "wifi.exclamationmark", fallsBackToHttp: true);
 
     public static IReadOnlyList<NavigationError> All { get; } = [
         Offline, TimedOut, CannotFindServer, CannotConnect, ConnectionLost, SecureConnectionFailed, TooManyRedirects,
-        UnsupportedAddress, Blocked, Unavailable, WebContentProcessStopped, Unknown
+        UnsupportedAddress, Blocked, Unavailable, WebContentProcessStopped, Unknown, AddressUnreachable
     ];
 
     #endregion
@@ -94,12 +103,17 @@ public sealed class NavigationError {
     /// The SF Symbol the failure page shows.
     public string Symbol { get; }
 
+    /// Whether a site the person typed without a scheme, which Crest tried
+    /// over https, loads over http after this failure: https couldn't reach
+    /// it, where the site may still answer over http.
+    public bool FallsBackToHttp { get; }
+
     #endregion
 
     #region Constructors
 
     private NavigationError(string name, string code, string title, string message, string primarySuggestion,
-        string secondarySuggestion, string symbol) {
+        string secondarySuggestion, string symbol, bool fallsBackToHttp = false) {
         Name = name;
         Code = code;
         Title = title;
@@ -107,6 +121,7 @@ public sealed class NavigationError {
         PrimarySuggestion = primarySuggestion;
         SecondarySuggestion = secondarySuggestion;
         Symbol = symbol;
+        FallsBackToHttp = fallsBackToHttp;
     }
 
     #endregion

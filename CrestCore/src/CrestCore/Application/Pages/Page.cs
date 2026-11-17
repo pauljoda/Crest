@@ -19,6 +19,9 @@ internal sealed class Page {
     public static readonly TimeSpan HistoryTitleWindow = TimeSpan.FromSeconds(5);
     public const int HistoryTitleChanges = 5;
 
+    /// How many loads pages have been asked for, which orders them.
+    private static long loads;
+
     #endregion
 
     #region Variables
@@ -86,6 +89,15 @@ internal sealed class Page {
     /// Why the page's latest navigation failed, until another commits a new
     /// document or the page is asked to load or leave the failure.
     private PageFailure? failure;
+
+    /// When the page was last asked to load, among every page's loads.
+    private long loadedAt;
+
+    /// The https address Crest chose for a site the person typed without a
+    /// scheme, which the page's latest load heads to, with the http address
+    /// that loads instead when https can't reach it. Another load, a new
+    /// document or a failure forgets it.
+    private (Uri Https, string Http)? httpFallback;
 
     /// The address of the page the document shows, as it last committed or
     /// was recorded.
@@ -258,6 +270,7 @@ internal sealed class Page {
     public void Commit(string url, bool sameDocument) {
         if (!sameDocument) {
             failure = null;
+            httpFallback = null;
             stoppedUnseen = null;
             Documents++;
         }
@@ -303,6 +316,7 @@ internal sealed class Page {
         isRecorded = true;
         record = null;
         failure = reason;
+        httpFallback = null;
         shown = shown with { PendingUrl = null };
     }
 
@@ -310,9 +324,40 @@ internal sealed class Page {
     /// A load the person asks for starts crash recovery over.
     public void Load(string url) {
         failure = null;
+        httpFallback = null;
         crashes = 0;
         stoppedUnseen = null;
+        loadedAt = Interlocked.Increment(ref loads);
         shown = shown with { PendingUrl = url };
+    }
+
+    /// The load the page heads to now, of what the person typed as `typed`,
+    /// falls back to http when https can't reach it, when `typed` names a
+    /// site without a scheme and the page heads to its https address.
+    public void FallBackToHttp(AddressResolution typed) {
+        ArgumentNullException.ThrowIfNull(typed);
+        if (typed.HttpFallback is { } http && Uri.TryCreate(typed.Url, UriKind.Absolute, out var https) && IsHeadingTo(https))
+            httpFallback = (https, http);
+    }
+
+    /// Whether the page's latest load heads to `address`.
+    public bool IsHeadingTo(Uri address) =>
+        Uri.TryCreate(shown.PendingUrl, UriKind.Absolute, out var pending) && pending == address;
+
+    /// When the page was last asked to load, later loads ordering after
+    /// earlier ones across every page.
+    public long LoadedAt => loadedAt;
+
+    /// The http address to load instead of the navigation that failed as
+    /// `reported`: the one the page's typed https load falls back to, when
+    /// https couldn't reach that address. Taken once; null for any other
+    /// failure, which forgets it too.
+    public string? TakeHttpFallback(PageFailure reported) {
+        ArgumentNullException.ThrowIfNull(reported);
+        var fallback = httpFallback;
+        httpFallback = null;
+        return fallback is var (https, http) && reported.Error.FallsBackToHttp
+            && Uri.TryCreate(reported.Url, UriKind.Absolute, out var failed) && failed == https ? http : null;
     }
 
     /// The load the page was heading to will not happen, so it shows the

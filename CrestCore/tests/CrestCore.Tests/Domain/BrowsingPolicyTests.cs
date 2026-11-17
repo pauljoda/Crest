@@ -30,6 +30,24 @@ public sealed class BrowsingPolicyTests {
         Assert.Equal(url, resolved?.Url);
         Assert.Equal(query, resolved?.SearchQuery);
     }
+    /// A site typed without a scheme tries https and falls back to http; a
+    /// host only this network answers loads over http; a typed scheme is kept.
+    [Theory]
+    [InlineData("httpforever.com", "https://httpforever.com", "http://httpforever.com")]
+    [InlineData("example.org:8443/setup", "https://example.org:8443/setup", "http://example.org:8443/setup")]
+    [InlineData("nas.lan:5000", "http://nas.lan:5000", null)]
+    [InlineData("nas:5000/admin", "http://nas:5000/admin", null)]
+    [InlineData("router.local", "http://router.local", null)]
+    [InlineData("10.0.0.2:8080", "http://10.0.0.2:8080", null)]
+    [InlineData("169.254.1.1", "http://169.254.1.1", null)]
+    [InlineData("https://example.org", "https://example.org", null)]
+    [InlineData("http://example.org", "http://example.org", null)]
+    public void ASiteTypedWithoutASchemeTriesHttpsFirstAndALocalHostLoadsOverHttp(string input, string url, string? fallback) {
+        var resolved = AddressResolution.Resolve(input, Kagi());
+        Assert.Equal((url, fallback), (resolved?.Url, resolved?.HttpFallback));
+        Assert.Equal("nas", AddressResolution.Resolve("nas", Kagi())?.SearchQuery);
+    }
+
     [Fact]
     public void AnAddressCrestHoldsLoadsAsItIsWhereTypedTheSameWordsWouldSearch() {
         string page = "data:text/html;charset=utf-8," + string.Concat(Enumerable.Repeat("%3Cp%3EShowcase%3C%2Fp%3E", 400));

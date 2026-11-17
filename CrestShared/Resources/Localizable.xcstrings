@@ -3273,6 +3273,9 @@
     "Check Spelling While Typing" : {
 
     },
+    "Check that the device is on and connected to your network, and that a VPN isn’t blocking local access." : {
+
+    },
     "Check that your device’s date and time are correct." : {
       "localizations" : {
         "ar" : {
@@ -4575,6 +4578,9 @@
           }
         }
       }
+    },
+    "Crest can’t reach %@ from this network." : {
+
     },
     "Crest can’t reach %@ without a network connection." : {
       "localizations" : {
@@ -6713,6 +6719,9 @@
 
     },
     "Food & Drink" : {
+
+    },
+    "For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network." : {
 
     },
     "For an intranet site, confirm that you are on the required network." : {
@@ -14484,6 +14493,9 @@
 
     },
     "This action requires webpage tabs. Deselect built-in pages first." : {
+
+    },
+    "This address can’t be reached" : {
 
     },
     "This agent is no longer connected to Crest." : {

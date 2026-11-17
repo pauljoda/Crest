@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import pathlib
 import importlib.util
+import plistlib
+import tempfile
 import unittest
 
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -59,6 +61,29 @@ class DirectDistributionContractTests(unittest.TestCase):
         self.assertEqual(PACKAGING.unknown_engine_helpers([
             pathlib.Path("Chromium Helper (Renderer).app"), pathlib.Path("Chromium Helper (Plugin).app"),
             pathlib.Path("Updater.app")]), ["Chromium Helper (Plugin).app"])
+
+    def test_helpers_take_the_package_identity_so_local_network_access_is_never_shared(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            frameworks = pathlib.Path(temporary)
+            helpers = frameworks / "Chromium Framework.framework/Versions/157.0.0.0/Helpers"
+            built = {"Chromium Helper (Aperitif).app": "org.chromium.Chromium.helper",
+                     "Chromium Helper (Aperitif Renderer).app": "org.chromium.Chromium.helper.renderer"}
+            for name, identifier in built.items():
+                (helpers / name / "Contents").mkdir(parents=True)
+                (helpers / name / "Contents/Info.plist").write_bytes(
+                    plistlib.dumps({"CFBundleIdentifier": identifier}))
+
+            PACKAGING.identify_engine_helpers(frameworks, "org.chromium.Chromium", "com.pauldavis.crest")
+
+            identifiers = {name: plistlib.loads((helpers / name / "Contents/Info.plist").read_bytes())
+                           ["CFBundleIdentifier"] for name in built}
+            self.assertEqual(identifiers, {"Chromium Helper (Aperitif).app": "com.pauldavis.crest.helper",
+                                           "Chromium Helper (Aperitif Renderer).app":
+                                               "com.pauldavis.crest.helper.renderer"})
+            for name, identifier in {**built, "Chromium Helper (Aperitif).app": "org.example.helper"}.items():
+                (helpers / name / "Contents/Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": identifier}))
+            with self.assertRaisesRegex(SystemExit, "org.example.helper"):
+                PACKAGING.identify_engine_helpers(frameworks, "org.chromium.Chromium", "com.pauldavis.crest")
 
     def test_release_workflow_preserves_production_entitlements(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()

@@ -15,7 +15,9 @@ public sealed partial class Palette {
     /// names no address; none when nothing was typed or the text names nothing
     /// loadable. An address the Space knows under another spelling, such as
     /// with `www.`, opens the way the Space knows it, in the scheme the person
-    /// typed when they typed one.
+    /// typed when they typed one. Only a site typed without a scheme that the
+    /// Space doesn't know falls back to http when its https address can't be
+    /// reached.
     private IReadOnlyList<PaletteRow> Intents(PaletteQuery query) {
         if (query.IsEmpty) return [];
         AddressResolution? resolution;
@@ -27,9 +29,11 @@ public sealed partial class Palette {
         if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out var url)) return [];
         if (resolution.SearchQuery is { } searched) return [Searching(searched, resolution.Url)];
         bool typedScheme = Uri.TryCreate(query.Text, UriKind.Absolute, out var typed) && WebScheme.Named(typed.Scheme) is not null;
-        string address = Known(resolution.Url, typedScheme ? url.Scheme : null) ?? resolution.Url;
+        string? known = Known(resolution.Url, typedScheme ? url.Scheme : null);
+        string address = known ?? resolution.Url;
         string host = url.Host.Length > 0 ? PaletteMemory.WithoutWww(url.Host) : resolution.Url;
-        return [PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", address, address: address),
+        return [PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", address, address: address,
+                httpFallback: known is null ? resolution.HttpFallback : null),
             Searching(query.Text, context.Search.Search(query.Text))];
     }
 

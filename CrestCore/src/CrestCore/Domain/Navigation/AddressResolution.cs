@@ -3,8 +3,11 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 /// What a typed or chosen address loads, and the rules every Space applies to
-/// the addresses it holds.
-public sealed record AddressResolution(string Url, string? SearchQuery) {
+/// the addresses it holds. `HttpFallback` is the http address that loads
+/// instead when `Url` is an https address Crest chose for a site typed without
+/// a scheme and it can't be reached over https; an address typed with its
+/// scheme, or one Crest holds, has none.
+public sealed record AddressResolution(string Url, string? SearchQuery, string? HttpFallback = null) {
     #region Static Variables
 
     // Browser-owned URL spellings that are shared by address and tab rules.
@@ -17,9 +20,9 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
     public const string ChromeExtensionPrefix = ChromeExtensionScheme + "://";
 
     /// The endings of names reserved for one device or one local network:
-    /// loopback, multicast DNS, home networks and private use. No public
-    /// certificate can name them.
-    private static readonly string[] LocalNameEndings = [".localhost", ".local", ".home.arpa", ".internal"];
+    /// loopback, multicast DNS, home networks and private use, and the one
+    /// home routers give their devices. No public certificate can name them.
+    private static readonly string[] LocalNameEndings = [".localhost", ".local", ".home.arpa", ".internal", ".lan"];
 
     #endregion
 
@@ -30,13 +33,18 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
     /// or not: an address as it is, or a search with the provider. Throws
     /// `Rejected` with `UnsupportedAddress` when the input names nothing a
     /// page can load, as blank input does.
-    public static string Loading(string input, SearchProvider provider, bool allowsInternalPages) {
+    public static string Loading(string input, SearchProvider provider, bool allowsInternalPages) =>
+        Typed(input, provider, allowsInternalPages).Url;
+
+    /// What `input` loads, as `Loading` says, with the http address to load
+    /// instead when it names a site without a scheme that https can't reach.
+    public static AddressResolution Typed(string input, SearchProvider provider, bool allowsInternalPages) {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(provider);
         // The empty document is an address on every engine, whatever its fragment.
         var value = input.Trim();
         if (value == AboutBlank || value.StartsWith(AboutBlank + "#", StringComparison.Ordinal))
-            return value;
+            return new(value, null);
         AddressResolution? resolution;
         try {
             resolution = Resolve(input, provider, allowsInternalPages);
@@ -45,7 +53,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         }
         if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out _))
             throw new Rejected(new UnsupportedAddress(input));
-        return resolution.Url;
+        return resolution;
     }
 
     /// `url` as it is, when it is an absolute address an engine loads for
@@ -76,26 +84,41 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && WebScheme.Named(explicitUrl.Scheme) is not null
             && explicitUrl.Host.Length > 0) return new(value, null);
         if (LocalFile(value) is { } localFile) return new(localFile, null);
-        if (!value.Any(char.IsWhiteSpace) && Uri.TryCreate("http://" + value, UriKind.Absolute, out var typed) && typed.Host.Length > 0) {
-            // As other browsers do, a host that only this network answers loads
-            // over http, and any other dotted host over https.
-            if (IsLocal(typed, value)) return new("http://" + value, null);
-            if (value.Contains('.')) return new("https://" + value, null);
-        }
-        return new(provider.Search(value), value);
+        return SchemelessAddress(value) ?? new(provider.Search(value), value);
+    }
+
+    /// What `input`, typed without a scheme, loads when it names a host, as
+    /// `Resolve` reads it; null when it names none.
+    public static AddressResolution? Schemeless(string input) {
+        ArgumentNullException.ThrowIfNull(input);
+        return SchemelessAddress(input.Trim());
+    }
+
+    /// What `value`, typed without a scheme, loads when it names a host: one
+    /// that only this network answers over http, and any other dotted host
+    /// over https, falling back to http when https can't reach it. Null when
+    /// it names no host.
+    private static AddressResolution? SchemelessAddress(string value) {
+        if (value.Any(char.IsWhiteSpace) || !Uri.TryCreate("http://" + value, UriKind.Absolute, out var typed) || typed.Host.Length == 0)
+            return null;
+        if (IsLocal(typed, value)) return new("http://" + value, null);
+        return value.Contains('.') ? new("https://" + value, null, HttpFallback: "http://" + value) : null;
     }
 
     /// Whether `address`, read from `typed` without a scheme, names a host
     /// only this device or its network answers: an IPv6 address, which only
-    /// brackets spell; an IPv4 address written out in full; `localhost`; or a
-    /// name reserved for local networks. Short numbers such as `3.14` parse
-    /// as IPv4 addresses but are not written as one.
+    /// brackets spell; an IPv4 address written out in full; `localhost`; a
+    /// name reserved for local networks; or a single-label name typed with a
+    /// port, as a device on the network is. Short numbers such as `3.14`
+    /// parse as IPv4 addresses but are not written as one, and a single word
+    /// without a port is a search.
     private static bool IsLocal(Uri address, string typed) {
         if (address.HostNameType == UriHostNameType.IPv6) return true;
         if (address.HostNameType == UriHostNameType.IPv4) return typed.StartsWith(address.Host, StringComparison.Ordinal);
         string host = address.Host.TrimEnd('.');
         return host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-            || LocalNameEndings.Any(ending => host.EndsWith(ending, StringComparison.OrdinalIgnoreCase));
+            || LocalNameEndings.Any(ending => host.EndsWith(ending, StringComparison.OrdinalIgnoreCase))
+            || (!host.Contains('.') && typed.StartsWith(host + ":", StringComparison.OrdinalIgnoreCase));
     }
 
     /// Whether `value` names one of the browser's own pages.
