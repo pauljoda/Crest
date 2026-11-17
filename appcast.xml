@@ -6,6 +6,47 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.10.17</title>
+            <pubDate>Tue, 17 Nov 2026 18:42:23 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1639</sparkle:version>
+            <sparkle:shortVersionString>0.10.17</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### New
+
+- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
+- Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette.
+
+### Improved
+
+- Clear now keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it.
+- Large folders open about twice as fast, with the folders inside them filling in just after, and a folder's preview on Mac appears without a pause even when it holds hundreds of tabs.
+- Folders brought in from another browser now arrive closed, nested ones included, so a large import opens to a tidy sidebar. Folders from a Crest backup keep how you left them.
+- On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own.
+
+### Fixed
+
+- Chromium is updated to 157.0.8103.80, with 83 upstream security fixes, five of them critical.
+- Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws.
+- Crest no longer quits when you clear or close the last open pages of a Chromium Space with Chromium's Contextual Tasks flag turned on.
+- On iPhone and iPad, tapping a folder in the sidebar opens or closes it again instead of bringing up its preview. Holding a folder still shows the preview.
+- Folder icons wider than a folder, such as a computer or a group of people, now show whole in the sidebar instead of cut off at their edge.
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/a1a2e13b7fe1ff73de2c239d4140dea5d4cb4b6e...26e2d657baca82c131e8ced93285b2c965a0e430) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.10.17-2026-11-17-1639-r639.1/Installer-Crest-0.10.17-nightly-2026-11-17-26e2d65-arm64.dmg)
+
+[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.10.17-2026-11-17-1639-r639.1/Installer-Crest-0.10.17-nightly-2026-11-17-26e2d65-arm64.dmg" length="221623421" type="application/octet-stream" sparkle:edSignature="pnIzrUiFFoOuiAP+cdoK8D6HwZZjqB2yJBQ2PjX22pMP+Euqguftc6JbMSA+ToMuMd5vI0DPJ4Wes+zvMEw+Bg=="/>
+        </item>
+        <item>
             <title>0.10.8</title>
             <pubDate>Mon, 16 Nov 2026 20:49:48 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -49,74 +90,6 @@ Stable releases are signed, notarized, and ready for everyday use.
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.10.8/Installer-Crest-0.10.8-arm64.dmg" length="221549638" type="application/octet-stream" sparkle:edSignature="hPJaZgRrgbc1PopRn20xJTgJuFD7soiDr31HQYB5j/2gcJgoFITC4dm3NG/LA5cwj6C6sag1nVB/cMpEyNF8AA=="/>
         </item>
         <item>
-            <title>0.10.7</title>
-            <pubDate>Mon, 16 Nov 2026 19:25:34 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1632</sparkle:version>
-            <sparkle:shortVersionString>0.10.7</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 31 user-facing changes.
-
-### New
-
-- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
-
-### Improved
-
-- A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it.
-- A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back.
-- On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space.
-- On Mac, closing a Peek shrinks it back into the link it grew out of, instead of it vanishing.
-- On Mac, a quick swipe between Spaces now finishes as fast as switching with the keyboard shortcut.
-- The button on a group's or an open folder's header that archives all its tabs now shows an archive box instead of a −. Saved folders keep their −, which unloads their tabs.
-- On iPad and an unfolded iPhone, the page now slides with the sidebar as you switch Spaces, instead of changing all at once when the switch ends. With Reduce Motion on, the page stays still.
-- With “Animate pages when switching Spaces” off or Reduce Motion on, the page now fades into the next Space's as you switch, following your swipe and the sidebar, instead of jumping when the switch ends, on Mac, iPad and an unfolded iPhone. iPhone and iPad now have the setting in Appearance too.
-
-### Fixed
-
-- On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window.
-- In the sidebar, a folder's icon, title and … button now line up with the icons, titles and buttons of the tabs beside it.
-- Choosing Modern or Simple during setup now restyles your Spaces as choosing it in Settings does, including the Spaces you already had and the ones setup imports, instead of leaving them with crests. Setup also opens on the style you use, and imports from Settings bring Spaces in that style.
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/c44daae960ff67ca7ac8fffe8ab18c4dfdefe15f...a1a2e13b7fe1ff73de2c239d4140dea5d4cb4b6e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.10.7-2026-11-16-1632-r632.1/Installer-Crest-0.10.7-nightly-2026-11-16-a1a2e13-arm64.dmg)
-
-[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.10.7-2026-11-16-1632-r632.1/Installer-Crest-0.10.7-nightly-2026-11-16-a1a2e13-arm64.dmg" length="221463165" type="application/octet-stream" sparkle:edSignature="e5fo7rWyOHiGpF0J2J35fitzZNzmjKsKxaqsSk5HdqoaVKw9RvO21/8i00as+KQMUS4+N0VAhpVDZR82Lz3HDQ=="/>
-        </item>
-        <item>
-            <title>0.9.1</title>
-            <pubDate>Wed, 11 Nov 2026 06:33:40 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1581</sparkle:version>
-            <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### Fixed
-
-- Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws.
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/f3c50759172f8650a0eaf55057c20067034d08be...2a4fc3bfad799bc4d85266c00cc0d25e6ae85565) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.9.1/Installer-Crest-0.9.1-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.9.1/Installer-Crest-0.9.1-arm64.dmg" length="219741252" type="application/octet-stream" sparkle:edSignature="CGguGRBhMwzZn2+NBD63MwsQoCqejyQbflVRU1Tu22ilK6ZxGFEsU1wJNCH3eWqvpKwGi19HUhxAppqd4lYNCA=="/>
-        </item>
-        <item>
             <title>0.6.481</title>
             <pubDate>Fri, 02 Oct 2026 14:58:50 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -157,6 +130,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 6T5QPBk/5SfW8tBvIFOOhJkmB8FgZRy3sznMqDFnTMMfvEqeHOOc4u8013aQOol3Ys+y/gKXFRvlPBHqrtpABg==
-length: 12437
+edSignature: pD80XSU5dXJVSM1WzWo3pGKBnd33NNj3NNRPoKs7BZqgXS7zi/IlDP0U6HONb4V3ch8K7qlBGCJwogexJSrIBw==
+length: 10647
 -->

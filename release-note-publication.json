@@ -3,6 +3,6 @@
   "channels": {
     "stable": "crest-0-10-customization",
     "development": "clear-keeps-current-tab",
-    "nightly": "space-switch-page-fades"
+    "nightly": "split-view-bars-follow-address-bar"
   }
 }
