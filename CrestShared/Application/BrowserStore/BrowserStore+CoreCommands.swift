@@ -137,9 +137,10 @@ extension BrowserStore {
             from: self) != nil
     }
 
-    func clearSessionTabs(in spaceID: UUID) -> Bool {
+    func clearSessionTabs(in spaceID: UUID, keepingShownTab: Bool) -> Bool {
         family.perform(
-            ClearCurrentTabs(workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID),
+            ClearCurrentTabs(
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, keepsShownTab: keepingShownTab),
             from: self) != nil
     }
 

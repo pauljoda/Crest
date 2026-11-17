@@ -74,7 +74,8 @@ struct MobileBrowserSpacePage: View {
                     showPasswords: showPasswords,
                     closePrivateBrowsing: closePrivateBrowsing,
                     showSettings: showSettings,
-                    cleanup: { _ = tabActions.clearCurrentTabs() }
+                    clearOtherTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: true) },
+                    clearAllTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: false) }
                 )
             )
 

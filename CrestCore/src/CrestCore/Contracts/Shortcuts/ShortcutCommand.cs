@@ -38,7 +38,7 @@ public sealed class ShortcutCommand {
         ToggleSelectedTabPinned,
         DuplicateTab,
         ReopenClosedTab,
-        ClearUnpinnedTabs,
+        ClearOtherTabs,
         ArchiveTab,
         PreviousTab,
         NextTab,
@@ -83,6 +83,7 @@ public sealed class ShortcutCommand {
         BlockElement,
         ShowBlockedElements,
         OpenNextExtension,
+        ClearAllTabs,
         CollapseAllFolders
     }
 
@@ -144,9 +145,11 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Reopen Last Closed Tab", symbol: "arrow.uturn.backward",
         shortcuts: Everywhere(Character("t", Command | Shift)), menuTitle: "Reopen Closed Tab", paletteRest: 2,
         availableWhen: facts => facts.HasArchivedTabs, reservedFromPages: true);
-    public static readonly ShortcutCommand ClearUnpinnedTabs = new(Kinds.ClearUnpinnedTabs, name: "clearUnpinnedTabs",
-        ShortcutSection.Tabs, title: "Clear Unpinned Tabs", symbol: "sparkles",
-        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned tabs");
+    // Clear keeps the tab the window shows. It is still stored under the name
+    // it had when it cleared every open tab, since overrides are keyed by it.
+    public static readonly ShortcutCommand ClearOtherTabs = new(Kinds.ClearOtherTabs, name: "clearUnpinnedTabs",
+        ShortcutSection.Tabs, title: "Clear Other Tabs", symbol: "sparkles",
+        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned open tabs");
     // The Mac gives ⌘E to opening extensions and moves archiving a modifier up.
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
         title: "Archive Tab", symbol: "archivebox",
@@ -333,6 +336,13 @@ public sealed class ShortcutCommand {
         shortcuts: [new(DevicePlatform.Desktop, Character("e", Command), YieldsToOverrides: true)],
         searchTerms: "extensions popup menu cycle pinned toolbar", requiredCapability: EngineCapability.Extensions,
         availableWhen: ShowingSpace);
+    // Clear with Option: it archives the shown tab too. It came after people
+    // could customize, so it yields to keys someone already chose.
+    public static readonly ShortcutCommand ClearAllTabs = new(Kinds.ClearAllTabs, name: "clearAllTabs", ShortcutSection.Tabs,
+        title: "Clear All Tabs", symbol: "sparkles",
+        shortcuts: [.. DevicePlatform.All.Select(platform =>
+            new ShortcutDefault(platform, Character("k", Command | Shift | Option), YieldsToOverrides: true))],
+        searchTerms: "clean tidy archive unpinned open tabs every current", optionAlternate: true);
     // Closes every open folder of the shown Space, however deep. It came after
     // people could customize, so it waits for the keys a person chooses.
     public static readonly ShortcutCommand CollapseAllFolders = new(Kinds.CollapseAllFolders, name: "collapseAllFolders",
@@ -342,7 +352,7 @@ public sealed class ShortcutCommand {
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
         Forward, ReloadPage, StopLoading, ReloadFromOrigin, ToggleSelectedTabPinned, DuplicateTab, ReopenClosedTab,
-        ClearUnpinnedTabs, ArchiveTab, PreviousTab, NextTab, MostRecentTab, SelectTab1, SelectTab2, SelectTab3, SelectTab4,
+        ClearOtherTabs, ArchiveTab, PreviousTab, NextTab, MostRecentTab, SelectTab1, SelectTab2, SelectTab3, SelectTab4,
         SelectTab5, SelectTab6, SelectTab7, SelectTab8, SelectTab9, PreviousSpace, NextSpace, SelectSpace1, SelectSpace2,
         SelectSpace3, SelectSpace4, SelectSpace5, SelectSpace6, SelectSpace7, SelectSpace8, SelectSpace9, ToggleReaderMode,
         ToggleContentBlocking, BlockElement, ShowBlockedElements, FindInPage, ZoomIn, ZoomOut, ActualSize, CopyPageLink, CopyPageLinkAsMarkdown, SharePage,
@@ -350,7 +360,7 @@ public sealed class ShortcutCommand {
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
-        OpenNextExtension, CollapseAllFolders
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders
     ];
 
     public Kinds Kind { get; }
@@ -403,6 +413,11 @@ public sealed class ShortcutCommand {
     /// themselves.
     public bool OffersInPalette { get; }
 
+    /// Whether a menu that folds alternates shows the command in place of the
+    /// one before it in its group while Option is held. Its keys are that
+    /// command's with Option added, unless a person chose others.
+    public bool IsOptionAlternate { get; }
+
     /// Whether the command always runs before a page with focus sees its keys,
     /// whatever a person prefers. Opening, closing and switching tabs and
     /// windows stay the browser's, as in other browsers, so no page can keep a
@@ -429,7 +444,7 @@ public sealed class ShortcutCommand {
         IReadOnlyList<ShortcutDefault>? shortcuts = null, string? searchTerms = null, string? menuTitle = null,
         EngineCapability? requiredCapability = null, NumberedSelectionTarget? selects = null, int? number = null, int? paletteRest = null,
         bool offersInPalette = true, Func<WindowCommandFacts, bool>? availableWhen = null, bool reservedFromPages = false,
-        ShortcutPreference? whenPageUsesKeys = null) {
+        ShortcutPreference? whenPageUsesKeys = null, bool optionAlternate = false) {
         Kind = kind;
         Name = name;
         Section = section;
@@ -443,6 +458,7 @@ public sealed class ShortcutCommand {
         DefaultShortcuts = shortcuts ?? [];
         PaletteRest = paletteRest;
         OffersInPalette = offersInPalette;
+        IsOptionAlternate = optionAlternate;
         IsReservedFromPages = reservedFromPages;
         DefaultPreference = reservedFromPages ? ShortcutPreference.PreferCrest : whenPageUsesKeys ?? ShortcutPreference.PreferWebsite;
         this.availableWhen = availableWhen ?? (_ => true);

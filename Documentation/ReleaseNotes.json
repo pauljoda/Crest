@@ -5674,6 +5674,14 @@
       "category": "fixed",
       "message": "Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws."
     },
+    "chromium-clearing-tabs-no-crash": {
+      "category": "fixed",
+      "message": "Crest no longer quits when you clear or close the last open pages of a Chromium Space with Chromium's Contextual Tasks flag turned on."
+    },
+    "clear-keeps-current-tab": {
+      "category": "improved",
+      "message": "Clear now keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it."
+    },
     "folder-tap-skips-preview": {
       "category": "fixed",
       "message": "On iPhone and iPad, tapping a folder in the sidebar opens or closes it again instead of bringing up its preview. Holding a folder still shows the preview."

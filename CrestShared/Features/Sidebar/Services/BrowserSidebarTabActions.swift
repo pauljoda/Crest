@@ -69,12 +69,13 @@ struct BrowserSidebarTabActions {
         )
     }
 
-    /// Closes the Space's current tabs, leaving its pinned and saved tabs be.
+    /// Archives the Space's open tabs, leaving its pinned and saved tabs be,
+    /// and the tab the window shows there when `keepingShownTab`.
     @discardableResult
-    func clearCurrentTabs() -> Bool {
+    func clearCurrentTabs(keepingShownTab: Bool) -> Bool {
         guard
             browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil,
-            browser.clearCurrentTabs(matching: assignment)
+            browser.clearCurrentTabs(matching: assignment, keepingShownTab: keepingShownTab)
         else { return false }
         syncPagesAfterMutation()
         return true

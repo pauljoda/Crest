@@ -47,7 +47,8 @@ struct BrowserMacCommand {
     static let toggleSelectedTabSaved = BrowserMacCommand(.toggleSelectedTabSaved) { $0.toggleSelectedTabSaved() }
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
-    static let clearUnpinnedTabs = BrowserMacCommand(.clearUnpinnedTabs) { $0.clearCurrentTabs() }
+    static let clearOtherTabs = BrowserMacCommand(.clearOtherTabs) { $0.clearCurrentTabs(keepingShownTab: true) }
+    static let clearAllTabs = BrowserMacCommand(.clearAllTabs) { $0.clearCurrentTabs(keepingShownTab: false) }
     static let archiveTab = BrowserMacCommand(.archiveTab) { $0.archiveSelectedTab() }
     static let previousTab = BrowserMacCommand(.previousTab) { $0.selectPreviousTab() }
     static let nextTab = BrowserMacCommand(.nextTab) { $0.selectNextTab() }
@@ -176,7 +177,7 @@ struct BrowserMacCommand {
         back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, toggleSelectedTabSaved,
         duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,

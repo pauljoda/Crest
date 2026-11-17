@@ -2854,8 +2854,11 @@
         }
       }
     },
-    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put." : {
+    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends all but the tab you're on to Archive; hold Option to clear them all. Your pinned and saved tabs stay put." : {
 
+    },
+    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put." : {
+      "extractionState" : "stale"
     },
     "Bend" : {
       "extractionState" : "stale",
@@ -3515,7 +3518,14 @@
     "Claude Code" : {
 
     },
+    "clean tidy archive unpinned open tabs" : {
+
+    },
+    "clean tidy archive unpinned open tabs every current" : {
+
+    },
     "clean tidy archive unpinned tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3526,6 +3536,7 @@
       }
     },
     "Clean Up Current Tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3544,6 +3555,12 @@
           }
         }
       }
+    },
+    "Clear All" : {
+
+    },
+    "Clear All Tabs" : {
+
     },
     "Clear browsing data" : {
 
@@ -3628,6 +3645,9 @@
 
     },
     "Clear Open Tabs" : {
+      "extractionState" : "stale"
+    },
+    "Clear Other Tabs" : {
 
     },
     "Clear search" : {
@@ -3640,6 +3660,7 @@
 
     },
     "Clear Unpinned Tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8734,6 +8755,12 @@
       }
     },
     "Moves all current tabs to Archive" : {
+      "extractionState" : "stale"
+    },
+    "Moves all open tabs to Archive" : {
+
+    },
+    "Moves the other open tabs to Archive" : {
 
     },
     "Mute" : {
@@ -14109,8 +14136,11 @@
     "Tabs and pins" : {
 
     },
-    "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay." : {
+    "Tabs below the line close automatically on your Space’s cleanup schedule. Clear archives all but the tab you’re on, and Clear All Tabs in the Space’s ••• menu archives every one. Pinned and saved tabs stay." : {
 
+    },
+    "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay." : {
+      "extractionState" : "stale"
     },
     "Tap for options. Touch and hold to translate now." : {
 

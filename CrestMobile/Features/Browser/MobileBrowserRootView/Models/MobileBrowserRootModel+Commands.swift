@@ -80,8 +80,15 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
-            clearCurrentTabs: {
+            clearOtherTabs: {
                 _ = self.clearCurrentTabsFromCommand(
+                    keepingShownTab: true,
+                    beforeSynchronization: prepareForSelectionSynchronization
+                )
+            },
+            clearAllTabs: {
+                _ = self.clearCurrentTabsFromCommand(
+                    keepingShownTab: false,
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
@@ -244,9 +251,10 @@ extension MobileBrowserRootModel {
 
     @discardableResult
     func clearCurrentTabsFromCommand(
+        keepingShownTab: Bool,
         beforeSynchronization: () -> Void = {}
     ) -> Bool {
-        guard commandController.clearCurrentTabs() else { return false }
+        guard commandController.clearCurrentTabs(keepingShownTab: keepingShownTab) else { return false }
         beforeSynchronization()
         synchronizeAfterCommandSelection()
         return true

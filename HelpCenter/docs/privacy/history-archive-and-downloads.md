@@ -17,7 +17,7 @@ Open History with **Command-Y**, the menu, or the command palette. Search visits
 
 Archive contains manually closed or archived tabs, automatic Space cleanup, and expired Quick Windows. Filter by reason when you know how the item left the sidebar. Restoring an archived tab returns it to an appropriate live position in that Space.
 
-Use **Command-E** to archive the current tab, **Shift-Command-T** to reopen the last closed tab, and **Shift-Command-K** to clear unpinned current tabs into Archive.
+Use **Command-E** to archive the current tab, **Shift-Command-T** to reopen the last closed tab, and **Shift-Command-K** to clear your other open tabs into Archive, keeping the one you’re on and the rest of its Split View. **Option-Shift-Command-K** clears every open tab, the one you’re on included. Pinned and saved tabs stay either way.
 
 ## Downloads
 
