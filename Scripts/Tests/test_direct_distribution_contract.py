@@ -80,9 +80,9 @@ class DirectDistributionContractTests(unittest.TestCase):
             self.assertEqual(identifiers, {"Chromium Helper (Aperitif).app": "com.pauldavis.crest.helper",
                                            "Chromium Helper (Aperitif Renderer).app":
                                                "com.pauldavis.crest.helper.renderer"})
-            (helpers / "Chromium Helper (Aperitif).app/Contents/Info.plist").write_bytes(
-                plistlib.dumps({"CFBundleIdentifier": "org.example.helper"}))
-            with self.assertRaises(SystemExit):
+            for name, identifier in {**built, "Chromium Helper (Aperitif).app": "org.example.helper"}.items():
+                (helpers / name / "Contents/Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": identifier}))
+            with self.assertRaisesRegex(SystemExit, "org.example.helper"):
                 PACKAGING.identify_engine_helpers(frameworks, "org.chromium.Chromium", "com.pauldavis.crest")
 
     def test_release_workflow_preserves_production_entitlements(self) -> None:

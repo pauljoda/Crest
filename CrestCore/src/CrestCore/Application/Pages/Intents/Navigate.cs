@@ -13,7 +13,11 @@ public sealed record Navigate(Guid PageId, string Input) : PageIntent {
     #region Actions - Pages
 
     internal override void Apply(Pages pages, PageTurn turn) =>
-        Load(pages, turn, PageId, (provider, showsInternalPages) => AddressResolution.Loading(Input, provider, showsInternalPages));
+        Load(pages, turn, PageId, (provider, showsInternalPages) => {
+            var typed = AddressResolution.Typed(Input, provider, showsInternalPages);
+            pages.Device.HttpFallbacks.Opened(typed);
+            return typed.Url;
+        });
 
     /// Loads into page `pageId` the address `resolve` makes for what its Space
     /// searches with and whether its engine shows internal pages. A

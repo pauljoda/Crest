@@ -56,6 +56,49 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(PageSecurity.Named(expected), PageSecurity.Judging(facts, url));
     }
 
+    /// A site typed without a scheme that https can't reach loads over http,
+    /// once. An address typed with https://, one Crest holds, and a failure
+    /// http can't fix all stay failures.
+    [Fact]
+    public void OnlyASiteTypedWithoutASchemeFallsBackToHttp() {
+        var (app, engine, binding, page, _, window, _, _) = LivePage();
+        PageFailure Unreachable(string url) => new(NavigationError.SecureConnectionFailed, url, ReplacedDocument: true, "net", -113);
+
+        // The palette opens the address its row resolved, then records the pick.
+        app.Send(new LoadAddress(page, "https://httpforever.org"));
+        app.Send(new RecordPaletteChoice(window, "httpforever.org",
+            PaletteRow.Of(PaletteRowKind.OpenAddress, "Open httpforever.org", "https://httpforever.org", address: "https://httpforever.org")));
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.org/")));
+        Assert.Equal(new LoadPage(page, "http://httpforever.org"), binding.Commands[^1]);
+        app.Drain();
+
+        app.Send(new Navigate(page, "httpforever.com"));
+        Assert.Equal(new LoadPage(page, "https://httpforever.com"), binding.Commands[^1]);
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.com/")));
+        Assert.Equal(new LoadPage(page, "http://httpforever.com"), binding.Commands[^1]);
+        app.Drain();
+
+        // Each fallback is taken once.
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.com/")));
+        Assert.NotNull(Live(app.Drain()).Failure);
+
+        foreach (var load in new PageIntent[] { new Navigate(page, "https://example.org"), new LoadAddress(page, "https://example.net") }) {
+            app.Send(load);
+            var loaded = binding.Commands.Count;
+            app.Drain();
+            app.Report(engine, new NavigationFailed(page, Unreachable(((LoadPage)binding.Commands[^1]).Url)));
+            Assert.Equal(loaded, binding.Commands.Count);
+            Assert.NotNull(Live(app.Drain()).Failure);
+        }
+
+        app.Send(new Navigate(page, "nowhere.example"));
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page,
+            new PageFailure(NavigationError.CannotFindServer, "https://nowhere.example/", ReplacedDocument: true, "net", -105)));
+        Assert.Equal(new LoadPage(page, "https://nowhere.example"), binding.Commands[^1]);
+    }
+
     [Fact]
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;

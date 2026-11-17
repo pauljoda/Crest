@@ -76,6 +76,9 @@ internal sealed partial class Device {
     internal Guid? PersistentWorkspace => persistentWorkspace;
     private long lastUse;
     internal long LastUse { get => lastUse; set => lastUse = value; }
+    /// The sites just opened by typing them without a scheme, whose https
+    /// loads fall back to http.
+    internal HttpFallbacks HttpFallbacks { get; } = new();
 
     #endregion
 

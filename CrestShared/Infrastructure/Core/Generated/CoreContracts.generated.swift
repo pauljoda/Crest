@@ -15498,6 +15498,7 @@ struct NavigationError: Hashable, Sendable {
     var primarySuggestion: LocalizedStringResource { facts.primarySuggestion }
     var secondarySuggestion: LocalizedStringResource { facts.secondarySuggestion }
     var symbol: String { facts.symbol }
+    var fallsBackToHttp: Bool { facts.fallsBackToHttp }
     private let facts: Facts
 
     private init(
@@ -15508,7 +15509,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource,
         primarySuggestion: LocalizedStringResource,
         secondarySuggestion: LocalizedStringResource,
-        symbol: String
+        symbol: String,
+        fallsBackToHttp: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -15518,7 +15520,8 @@ struct NavigationError: Hashable, Sendable {
             message: message,
             primarySuggestion: primarySuggestion,
             secondarySuggestion: secondarySuggestion,
-            symbol: symbol
+            symbol: symbol,
+            fallsBackToHttp: fallsBackToHttp
         )
     }
 
@@ -15530,7 +15533,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest can’t reach %@ without a network connection."),
         primarySuggestion: LocalizedStringResource("Reconnect to Wi-Fi or Ethernet, then try again."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "wifi.slash"
+        symbol: "wifi.slash",
+        fallsBackToHttp: false
     )
     static let timedOut = NavigationError(
         tag: 1,
@@ -15540,7 +15544,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ didn’t respond in time."),
         primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "clock.badge.exclamationmark"
+        symbol: "clock.badge.exclamationmark",
+        fallsBackToHttp: true
     )
     static let cannotFindServer = NavigationError(
         tag: 2,
@@ -15550,7 +15555,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest couldn’t find the server for %@."),
         primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
         secondarySuggestion: LocalizedStringResource("If the address is correct, check your DNS or VPN settings."),
-        symbol: "network.slash"
+        symbol: "network.slash",
+        fallsBackToHttp: false
     )
     static let cannotConnect = NavigationError(
         tag: 3,
@@ -15560,7 +15566,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ refused the connection or isn’t accepting connections."),
         primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
         secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
-        symbol: "exclamationmark.icloud"
+        symbol: "exclamationmark.icloud",
+        fallsBackToHttp: true
     )
     static let connectionLost = NavigationError(
         tag: 4,
@@ -15570,7 +15577,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The connection to %@ ended before the page finished loading."),
         primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "bolt.horizontal.icloud"
+        symbol: "bolt.horizontal.icloud",
+        fallsBackToHttp: true
     )
     static let secureConnectionFailed = NavigationError(
         tag: 5,
@@ -15580,7 +15588,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest couldn’t verify a private, secure connection to %@."),
         primarySuggestion: LocalizedStringResource("Check that your device’s date and time are correct."),
         secondarySuggestion: LocalizedStringResource("Avoid entering private information until the site fixes its certificate."),
-        symbol: "lock.trianglebadge.exclamationmark"
+        symbol: "lock.trianglebadge.exclamationmark",
+        fallsBackToHttp: true
     )
     static let tooManyRedirects = NavigationError(
         tag: 6,
@@ -15590,7 +15599,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ sent Crest through too many redirects."),
         primarySuggestion: LocalizedStringResource("Try again later; the site may be temporarily misconfigured."),
         secondarySuggestion: LocalizedStringResource("Opening the site’s home page may avoid the redirect loop."),
-        symbol: "arrow.trianglehead.2.clockwise.rotate.90"
+        symbol: "arrow.trianglehead.2.clockwise.rotate.90",
+        fallsBackToHttp: false
     )
     static let unsupportedAddress = NavigationError(
         tag: 7,
@@ -15600,7 +15610,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The address uses a format or protocol Crest doesn’t support."),
         primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
         secondarySuggestion: LocalizedStringResource("Try an address beginning with http:// or https://."),
-        symbol: "link.badge.plus"
+        symbol: "link.badge.plus",
+        fallsBackToHttp: false
     )
     static let blocked = NavigationError(
         tag: 8,
@@ -15610,7 +15621,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("A security or content policy prevented this page from loading."),
         primarySuggestion: LocalizedStringResource("Review this Space’s content and network settings."),
         secondarySuggestion: LocalizedStringResource("A firewall, filter, or device policy may also be responsible."),
-        symbol: "hand.raised.slash"
+        symbol: "hand.raised.slash",
+        fallsBackToHttp: false
     )
     static let unavailable = NavigationError(
         tag: 9,
@@ -15620,7 +15632,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ returned a response Crest couldn’t load."),
         primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
         secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
-        symbol: "exclamationmark.icloud"
+        symbol: "exclamationmark.icloud",
+        fallsBackToHttp: false
     )
     static let webContentProcessStopped = NavigationError(
         tag: 10,
@@ -15630,7 +15643,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The web content process stopped repeatedly. Your tab and address are safe."),
         primarySuggestion: LocalizedStringResource("Try reloading the page in a fresh web content process."),
         secondarySuggestion: LocalizedStringResource("If it happens again, try closing and reopening the tab."),
-        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
+        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90",
+        fallsBackToHttp: false
     )
     static let unknown = NavigationError(
         tag: 11,
@@ -15640,7 +15654,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest encountered an unexpected problem while opening %@."),
         primarySuggestion: LocalizedStringResource("Try the address again or open a different page."),
         secondarySuggestion: LocalizedStringResource("The technical details below can help identify the cause."),
-        symbol: "doc.badge.ellipsis"
+        symbol: "doc.badge.ellipsis",
+        fallsBackToHttp: false
     )
     static let addressUnreachable = NavigationError(
         tag: 12,
@@ -15650,7 +15665,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest can’t reach %@ from this network."),
         primarySuggestion: LocalizedStringResource("For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network."),
         secondarySuggestion: LocalizedStringResource("Check that the device is on and connected to your network, and that a VPN isn’t blocking local access."),
-        symbol: "wifi.exclamationmark"
+        symbol: "wifi.exclamationmark",
+        fallsBackToHttp: true
     )
 
     static let all: [NavigationError] = [
@@ -15689,6 +15705,7 @@ struct NavigationError: Hashable, Sendable {
         let primarySuggestion: LocalizedStringResource
         let secondarySuggestion: LocalizedStringResource
         let symbol: String
+        let fallsBackToHttp: Bool
 
         init(
             name: String,
@@ -15697,7 +15714,8 @@ struct NavigationError: Hashable, Sendable {
             message: LocalizedStringResource,
             primarySuggestion: LocalizedStringResource,
             secondarySuggestion: LocalizedStringResource,
-            symbol: String
+            symbol: String,
+            fallsBackToHttp: Bool
         ) {
             self.name = name
             self.code = code
@@ -15706,6 +15724,7 @@ struct NavigationError: Hashable, Sendable {
             self.primarySuggestion = primarySuggestion
             self.secondarySuggestion = secondarySuggestion
             self.symbol = symbol
+            self.fallsBackToHttp = fallsBackToHttp
         }
     }
 }

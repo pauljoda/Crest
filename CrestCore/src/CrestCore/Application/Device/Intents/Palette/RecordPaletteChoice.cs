@@ -1,4 +1,5 @@
 using CrestCore.Application;
+using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -6,11 +7,19 @@ namespace CrestCore.Contracts;
 /// palette of the Space the window shows, or of `SpaceId` when the palette
 /// spoke for it, remembers the address as typed and, when the person lets it
 /// learn, the pick for that text. A private window, or a Space the persistent
-/// session does not hold, remembers nothing.
+/// session does not hold, remembers nothing. In any window, a site the row
+/// opens over https because `Text` named it without a scheme falls back to
+/// http when https can't reach it.
 public sealed record RecordPaletteChoice(Guid WindowId, string Text, PaletteRow Row, Guid? SpaceId = null) : PaletteIntent {
     #region Actions - Device
 
-    internal override void Apply(Device device, DeviceTurn turn) => device.RecordPaletteChoice(WindowId, SpaceId, Text, Row, turn.Now);
+    internal override void Apply(Device device, DeviceTurn turn) {
+        if (Row.Address is { } address && AddressResolution.Schemeless(Text) is { HttpFallback: not null } typed
+            && Uri.TryCreate(address, UriKind.Absolute, out var opened) && Uri.TryCreate(typed.Url, UriKind.Absolute, out var chosen)
+            && opened == chosen)
+            device.HttpFallbacks.Opened(typed);
+        device.RecordPaletteChoice(WindowId, SpaceId, Text, Row, turn.Now);
+    }
 
     #endregion
 }
