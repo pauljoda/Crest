@@ -2,8 +2,9 @@ import SwiftUI
 
 /// The shared Window group, plus the window choices only the desktop has:
 /// light or dark, how far dark dims Space colors, Space page motion, the
-/// sidebar hover area, how long it waits and how long the sidebar slides, and
-/// whether it stays live over a page in full screen.
+/// sidebar hover area, how long it waits and how long the sidebar slides,
+/// whether it stays live over a page in full screen, and whether a Space
+/// shortcut shows a hidden sidebar for a moment.
 struct BrowserPlatformAppearanceSettingsSection: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -13,6 +14,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
     @AppStorage(SidebarFullscreenRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
     private var revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
+    @AppStorage(SidebarSpaceShortcutRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
+    private var revealsSidebarOnSpaceShortcut = SidebarSpaceShortcutRevealPreference.defaultValue
 
     var body: some View {
         let mode = CrestSettingValue($appearance.mode, default: BrowserLookAndFeelDefaults.appearanceMode)
@@ -28,6 +31,8 @@ struct BrowserPlatformAppearanceSettingsSection: View {
         let slide = CrestSettingValue($appearance.sidebarSlideDuration, default: BrowserSidebarSlide.defaultValue)
         let fullscreenReveal = CrestSettingValue(
             $revealsSidebarInFullscreen, default: SidebarFullscreenRevealPreference.defaultValue)
+        let spaceShortcutReveal = CrestSettingValue(
+            $revealsSidebarOnSpaceShortcut, default: SidebarSpaceShortcutRevealPreference.defaultValue)
 
         return BrowserWindowAppearanceGroup(
             space: space,
@@ -40,6 +45,10 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 (.sidebarRevealDelay, revealDelay.resettable("Sidebar hover delay")),
                 (.sidebarSlideDuration, slide.resettable("Sidebar slide time")),
                 (.fullScreenSidebarReveal, fullscreenReveal.resettable("Show sidebar on hover in full screen")),
+                (
+                    .spaceShortcutSidebarReveal,
+                    spaceShortcutReveal.resettable("Show sidebar when switching Spaces with shortcuts")
+                ),
             ]
         ) {
             CrestSettingRow("Appearance", setting: mode.resettable("Appearance")) {
@@ -103,6 +112,16 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                     .accessibilityIdentifier("sidebar-fullscreen-reveal")
             }
             .browserAppearanceSetting(.fullScreenSidebarReveal)
+
+            CrestSettingRow(
+                "Show sidebar when switching Spaces with shortcuts",
+                setting: spaceShortcutReveal.resettable("Show sidebar when switching Spaces with shortcuts")
+            ) {
+                Toggle("Show sidebar when switching Spaces with shortcuts", isOn: spaceShortcutReveal.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("sidebar-space-shortcut-reveal")
+            }
+            .browserAppearanceSetting(.spaceShortcutSidebarReveal)
         }
     }
 }

@@ -58,6 +58,8 @@ enum CrestMotion {
     static let sidebarDockAttachmentCompletionDelay: Duration = .seconds(
         sidebarDockAttachmentTransition
     )
+    /// How long a hidden sidebar stays out after a shortcut changes Space.
+    static let spaceShortcutSidebarHold: Duration = .seconds(1.2)
     /// Showing or changing a secondary pane layered over browser chrome.
     static let floatingPaneTransition: TimeInterval = 0.24
     /// Showing or hiding compact toolbars within web content.

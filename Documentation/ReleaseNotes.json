@@ -5669,6 +5669,10 @@
     "crest-0-10-customization": {
       "category": "new",
       "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
+    },
+    "sidebar-shows-on-space-shortcut": {
+      "category": "new",
+      "message": "On Mac, turn on Show sidebar when switching Spaces with shortcuts in Appearance, and a hidden sidebar slides out for a moment when you change Space from the keyboard, so you can see where you landed."
     }
   }
 }
