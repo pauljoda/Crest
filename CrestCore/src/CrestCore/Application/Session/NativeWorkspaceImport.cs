@@ -297,6 +297,8 @@ internal sealed class NativeWorkspaceImport {
     /// A reviewed Space's included tabs, in the placements the review chose, with
     /// the folders they need where they stay in a folder's place, saved tabs or
     /// a tab group's open tabs, and the splits whose tabs still come together.
+    /// A folder it adds comes open or closed as its source has it, which for
+    /// another browser's data is closed; a folder it joins stays as it is.
     /// Pinned tabs past the limit become saved tabs in the overflow folder. New
     /// identities come from `ids`.
     private void Import(SetupReviewSpace review, Draft input, Draft destination, bool isNew, IIdSource ids) {
@@ -328,7 +330,6 @@ internal sealed class NativeWorkspaceImport {
             folders.Add(original with {
                 Id = identity,
                 ParentId = parent,
-                IsCollapsed = false,
                 CollapseModifiedAt = null,
                 OrderAnchorTabId = null
             });

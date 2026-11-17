@@ -219,10 +219,13 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         return ordered;
     }
 
-    /// A folder in the default color, among the saved tabs unless `placement` says otherwise.
+    /// A folder in the default color, among the saved tabs unless `placement`
+    /// says otherwise, and closed: another browser's session keeps no folder
+    /// open or closed for Crest to follow, and an imported sidebar reads more
+    /// easily with its folders shut.
     private static BrowserDataFolder Folder(Guid id, string title, string symbol, Guid? parent, TabPlacement? placement = null,
         BrandColor? color = null) =>
-        new(id, placement ?? TabPlacement.Saved, title, symbol, color ?? FolderState.DefaultColor, parent, IsCollapsed: false,
+        new(id, placement ?? TabPlacement.Saved, title, symbol, color ?? FolderState.DefaultColor, parent, IsCollapsed: true,
             OrderAnchorTabId: null);
 
     private static bool IsForest(IReadOnlyList<BrowserDataFolder> folders) {

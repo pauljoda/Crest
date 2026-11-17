@@ -5689,6 +5689,10 @@
     "collapse-all-folders": {
       "category": "new",
       "message": "Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette."
+    },
+    "imported-folders-start-closed": {
+      "category": "improved",
+      "message": "Folders brought in from another browser now arrive closed, nested ones included, so a large import opens to a tidy sidebar. Folders from a Crest backup keep how you left them."
     }
   }
 }
