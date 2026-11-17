@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-10-customization",
-    "development": "pinned-saved-close-choices",
+    "development": "palette-fallback-unknown-sites-only",
     "nightly": "split-view-bars-follow-address-bar"
   }
 }

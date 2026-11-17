@@ -6,41 +6,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.18</title>
-            <pubDate>Tue, 17 Nov 2026 21:08:40 +0000</pubDate>
+            <title>0.10.24</title>
+            <pubDate>Tue, 17 Nov 2026 22:00:26 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1640</sparkle:version>
-            <sparkle:shortVersionString>0.10.18</sparkle:shortVersionString>
+            <sparkle:version>1641</sparkle:version>
+            <sparkle:shortVersionString>0.10.24</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette.
-
-### Improved
-
-- Large folders open about twice as fast, with the folders inside them filling in just after, and a folder's preview on Mac appears without a pause even when it holds hundreds of tabs.
-- Folders brought in from another browser now arrive closed, nested ones included, so a large import opens to a tidy sidebar. Folders from a Crest backup keep how you left them.
-- On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own.
-- Settings › Tabs now lets you choose separately what pinned tabs and saved tabs do after you close them, so saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both.
-
 ### Fixed
 
-- On iPhone and iPad, tapping a folder in the sidebar opens or closes it again instead of bringing up its preview. Holding a folder still shows the preview.
-- Folder icons wider than a folder, such as a computer or a group of people, now show whole in the sidebar instead of cut off at their edge.
+- Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network, now Crest's own setting rather than one shared with other apps. A page that can't reach a local address says how to allow it instead of reporting a refused connection.
+- In Chromium Spaces, an http:// address you type or open now stays on HTTP, including when you reload it, instead of being switched to HTTPS. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it.
+- Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them, as it does for other risky downloads.
+- When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000 or a device name with a port, open over HTTP right away, and an address you type with https:// never falls back.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/78ef620b3141771fb5d358b53876f982dcd5a859...5d6e041bfbdb76845f1d5dcdc174b975f8fefdc6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.18-2026-11-17-1640-r640.1/Installer-Crest-0.10.18-development-2026-11-17-5d6e041-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/5d6e041bfbdb76845f1d5dcdc174b975f8fefdc6...ce9fecceff0a9e53ff319d8985ae06b2b2fba325) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-17-1641-r641.1/Installer-Crest-0.10.24-development-2026-11-17-ce9fecc-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.18-2026-11-17-1640-r640.1/Installer-Crest-0.10.18-development-2026-11-17-5d6e041-arm64.dmg" length="221619334" type="application/octet-stream" sparkle:edSignature="/NB1SD9tTdKZ2aar5vlJMmjsFjfU/re2dES9vAF580xiPdAKAmSNC4myyRWleF0qIGcAuDbGTfI3lPxQLynhDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-17-1641-r641.1/Installer-Crest-0.10.24-development-2026-11-17-ce9fecc-arm64.dmg" length="221643910" type="application/octet-stream" sparkle:edSignature="QRBr/ZjDdOLhSrLO8xP4qU/EtcpRtfI00Nwui0N23TmXL9bC+8gA6by6UHDtQMhbmFUJ5kEoZhqI7Cq4syIkDQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -72,6 +63,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: rwd1O5g+1ITzq9xkBsEF0g1BSM9jAkkuQ0v+TnjlA9cf3Psp//qwqpqOjjWlOBPIdweZnClzf44viDDvIPTZDA==
-length: 5288
+edSignature: o2EKirGx9V3KSfB9jQdst+XGyRaop4a+DOdwR2CtlPt2XzYOFevDHSOcVUvYvlLtm7/NeB3gwGAk9BInLO8aBw==
+length: 4926
 -->
