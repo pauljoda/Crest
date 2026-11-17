@@ -5,8 +5,8 @@ namespace CrestCore.Contracts;
 
 /// Closes saved or pinned tabs together, as a folder's header closes the
 /// loaded tabs it holds: each keeps its place and puts its page away, back at
-/// its saved address when the app's preferences say so, as `CloseTab` closes
-/// one. A window that showed one of them returns to the tab it showed before
+/// its saved address when the app's preferences say so for its section, as
+/// `CloseTab` closes one. A window that showed one of them returns to the tab it showed before
 /// outside them and their splits, so none of them comes back as the next
 /// closes. A tab that is not saved or pinned, or that the Space no longer
 /// holds, is passed over.
@@ -26,12 +26,12 @@ public sealed record PutAwayTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
             .Where(candidate => !ids.Contains(candidate.Id)
                 && (candidate.SplitGroupId is not { } split || !splits.Contains(split)))
             .Select(candidate => candidate.Id).ToHashSet());
-        var policy = workspace.ClosePolicy(turn.Basis);
         var selected = shown;
         List<SessionPagePutAway> putAways = [];
         List<SessionSavedImage> savedImages = [];
         foreach (var tab in closing) {
-            var returns = policy == SavedTabClosePolicy.ReturnToSavedUrl && (tab.SavedUrl ?? tab.Url) is not null;
+            var returns = workspace.ClosePolicy(turn.Basis, tab.Placement) == SavedTabClosePolicy.ReturnToSavedUrl
+                && (tab.SavedUrl ?? tab.Url) is not null;
             if (returns && tab.ReturnRestoresImage)
                 savedImages.Add(new(tab.Id, TabSavedImageChange.Restore, tab.SavedFaviconUrl));
             selected = edited.CloseDurable(tab.Id, selected, fallback, returns);

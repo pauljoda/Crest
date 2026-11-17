@@ -19,7 +19,7 @@ Make Crest your default browser, choose what happens when Crest opens, and pick 
 
 ## Tabs
 
-Choose whether tabs opened from links get focus with **Switch to tabs opened from links**, and whether to **Follow tabs moved to another Space**. Set what pinned and saved tabs do after you close them, and whether clicking the favicon returns to the saved URL. Tabs also holds sidebar widgets and, on Mac, Split View's **Focus follows pointer** and **Show recent tabs while switching**, which shows your recent tabs while you hold Control-Tab.
+Choose whether tabs opened from links get focus with **Switch to tabs opened from links**, and whether to **Follow tabs moved to another Space**. Under **Pinned and saved tabs**, choose separately whether pinned tabs and saved tabs resume their last location or return to their saved URL after you close them, and whether clicking the favicon returns to the saved URL. Tabs also holds sidebar widgets and, on Mac, Split View's **Focus follows pointer** and **Show recent tabs while switching**, which shows your recent tabs while you hold Control-Tab.
 
 ## Search
 

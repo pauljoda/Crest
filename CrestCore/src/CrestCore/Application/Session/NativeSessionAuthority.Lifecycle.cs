@@ -42,8 +42,11 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Closing
 
-    /// Where a saved or pinned tab's page returns when it is put away.
-    internal SavedTabClosePolicy ClosePolicy(SessionState basis) => Preferences(basis).SavedTabClose;
+    /// Where a tab in `placement`'s section returns when closing puts its page
+    /// away, as the app's preferences choose for that section; null for a
+    /// section whose tabs closing archives.
+    internal SavedTabClosePolicy? ClosePolicy(SessionState basis, TabPlacement placement) =>
+        placement.ClosePolicy(Preferences(basis));
 
     #endregion
 }

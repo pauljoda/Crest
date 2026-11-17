@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 
 /// Closes a tab the way its section closes one: an open tab is archived, and
 /// a saved or pinned tab keeps its place and only puts its page away, back at
-/// its saved address when the app's preferences say so. A window that showed
+/// its saved address when the app's preferences say so for its section. A window that showed
 /// the tab shows `ReturnTabId` next while the Space holds it, as a tab going
 /// back past its first page returns to the tab that opened it, and otherwise
 /// returns to the tab it showed before. Refused with `LastStartPage` for the
@@ -38,7 +38,7 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
             var fallback = Fallback(followUp, space.Id, space.Tabs
                 .Where(candidate => candidate.Id != tab.Id && (group is null || candidate.SplitGroupId != group))
                 .Select(candidate => candidate.Id).ToHashSet());
-            var returns = workspace.ClosePolicy(turn.Basis) == SavedTabClosePolicy.ReturnToSavedUrl
+            var returns = workspace.ClosePolicy(turn.Basis, tab.Placement) == SavedTabClosePolicy.ReturnToSavedUrl
                 && (tab.SavedUrl ?? tab.Url) is not null;
             var restoresImage = returns && tab.State.ReturnRestoresImage;
             selected = edited.CloseDurable(tab.Id, shown, fallback, returns);
