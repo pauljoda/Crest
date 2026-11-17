@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xe9, 0x44, 0xd0, 0x58, 0x5a, 0x71, 0xe7, 0x71, 0x05, 0x99, 0xc9, 0x54, 0xe1, 0x3b, 0x83, 0x38, 0x9e, 0xb7, 0x4f, 0xf4, 0xbe, 0x03, 0x1b, 0xab, 0x0b, 0x33, 0xab, 0x29, 0xd9, 0xfb, 0x42, 0xa3
+        0x7d, 0xdd, 0x31, 0x05, 0x8f, 0xbc, 0x7d, 0xf4, 0x12, 0x81, 0x5a, 0x5e, 0xe5, 0x47, 0x69, 0xc5, 0xf2, 0x3c, 0xc6, 0xc0, 0x3f, 0xb3, 0xfe, 0x54, 0x09, 0x50, 0xd7, 0x15, 0x17, 0x33, 0x90, 0xc1
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -17379,7 +17379,14 @@ extension PaletteRow {
         } else {
             reason = nil
         }
-        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason)
+        let httpFallback: String?
+        if try reader.readPresence() {
+            let httpFallbackValue = try reader.readString()
+            httpFallback = httpFallbackValue
+        } else {
+            httpFallback = nil
+        }
+        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason, httpFallback: httpFallback)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -17432,6 +17439,12 @@ extension PaletteRow {
         if let present0 = reason {
             writer.writePresence(true)
             present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = httpFallback {
+            writer.writePresence(true)
+            writer.writeString(present0)
         } else {
             writer.writePresence(false)
         }
@@ -17500,7 +17513,14 @@ extension PaletteRow.Seed {
         } else {
             reason = nil
         }
-        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason)
+        let httpFallback: String?
+        if try reader.readPresence() {
+            let httpFallbackValue = try reader.readString()
+            httpFallback = httpFallbackValue
+        } else {
+            httpFallback = nil
+        }
+        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason, httpFallback: httpFallback)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -17553,6 +17573,12 @@ extension PaletteRow.Seed {
         if let present0 = reason {
             writer.writePresence(true)
             present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = httpFallback {
+            writer.writePresence(true)
+            writer.writeString(present0)
         } else {
             writer.writePresence(false)
         }

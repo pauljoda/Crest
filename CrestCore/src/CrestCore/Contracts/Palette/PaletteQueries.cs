@@ -54,16 +54,20 @@ public sealed record PaletteGroup(PaletteSection Section, IReadOnlyList<PaletteR
 /// archived tab to reopen. A search row names the provider it searches with
 /// in `Provider`. `Symbol` is the SF Symbol the row wears when no tab icon or
 /// provider icon stands for it. `Reason` says why the row ranked where it did.
+/// `HttpFallback` is the http address that loads instead when `Address`, the
+/// https address Crest chose for a site typed without a scheme, can't be
+/// reached; a row that opens an address the Space holds has none.
 public sealed record PaletteRow(PaletteRowKind Kind, string Title, string Subtitle, string Symbol, Guid? SubjectId, Guid? TabId,
-    string? Address, ShortcutCommand? Command, SearchProvider? Provider, string? SettingsPage, PaletteScope? Scope, PaletteReason? Reason) {
+    string? Address, ShortcutCommand? Command, SearchProvider? Provider, string? SettingsPage, PaletteScope? Scope, PaletteReason? Reason,
+    string? HttpFallback = null) {
     #region Constructors
 
     /// A row of `kind` with only what it names, wearing its kind's symbol
     /// unless it names its own.
     internal static PaletteRow Of(PaletteRowKind kind, string title, string subtitle, string? symbol = null, Guid? subject = null,
         Guid? tab = null, string? address = null, ShortcutCommand? command = null, SearchProvider? provider = null, string? page = null,
-        PaletteScope? scope = null, PaletteReason? reason = null) =>
-        new(kind, title, subtitle, symbol ?? kind.Symbol, subject, tab, address, command, provider, page, scope, reason);
+        PaletteScope? scope = null, PaletteReason? reason = null, string? httpFallback = null) =>
+        new(kind, title, subtitle, symbol ?? kind.Symbol, subject, tab, address, command, provider, page, scope, reason, httpFallback);
 
     #endregion
 }

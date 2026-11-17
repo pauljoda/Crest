@@ -5077,6 +5077,7 @@ struct PaletteRow: Equatable, Sendable {
     let settingsPage: String?
     let scope: PaletteScope?
     let reason: PaletteReason?
+    let httpFallback: String?
 
     /// The fields of a `PaletteRow` alone, as a platform builds one to send. The
     /// core resolves the rest when it reads it.
@@ -5093,6 +5094,7 @@ struct PaletteRow: Equatable, Sendable {
         var settingsPage: String?
         var scope: PaletteScope?
         var reason: PaletteReason?
+        var httpFallback: String?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -5109,7 +5111,8 @@ struct PaletteRow: Equatable, Sendable {
             provider: provider?.seed,
             settingsPage: settingsPage,
             scope: scope,
-            reason: reason
+            reason: reason,
+            httpFallback: httpFallback
         )
     }
 }

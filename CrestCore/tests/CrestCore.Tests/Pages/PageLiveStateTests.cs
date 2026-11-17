@@ -66,12 +66,26 @@ public sealed partial class BrowserContractsTests {
 
         // The palette opens the address its row resolved, then records the pick.
         app.Send(new LoadAddress(page, "https://httpforever.org"));
-        app.Send(new RecordPaletteChoice(window, "httpforever.org",
-            PaletteRow.Of(PaletteRowKind.OpenAddress, "Open httpforever.org", "https://httpforever.org", address: "https://httpforever.org")));
+        app.Send(new RecordPaletteChoice(window, "httpforever.org", PaletteRow.Of(PaletteRowKind.OpenAddress, "Open httpforever.org",
+            "https://httpforever.org", address: "https://httpforever.org", httpFallback: "http://httpforever.org")));
         app.Drain();
         app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.org/")));
         Assert.Equal(new LoadPage(page, "http://httpforever.org"), binding.Commands[^1]);
         app.Drain();
+
+        // A history row, or the address row of a site the Space knows, opens
+        // an address Crest holds, even after the site was typed without a scheme.
+        foreach (var held in new[] {
+            PaletteRow.Of(PaletteRowKind.History, "Example", "https://example.org", address: "https://example.org"),
+            PaletteRow.Of(PaletteRowKind.OpenAddress, "Open example.org", "https://example.org", address: "https://example.org") }) {
+            app.Send(new LoadAddress(page, "https://example.org"));
+            app.Send(new RecordPaletteChoice(window, "example.org", held));
+            var opened = binding.Commands.Count;
+            app.Drain();
+            app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+            Assert.Equal(opened, binding.Commands.Count);
+            Assert.NotNull(Live(app.Drain()).Failure);
+        }
 
         app.Send(new Navigate(page, "httpforever.com"));
         Assert.Equal(new LoadPage(page, "https://httpforever.com"), binding.Commands[^1]);
