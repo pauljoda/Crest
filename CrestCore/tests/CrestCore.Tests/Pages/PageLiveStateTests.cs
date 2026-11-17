@@ -99,6 +99,42 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new LoadPage(page, "https://nowhere.example"), binding.Commands[^1]);
     }
 
+    /// A fallback belongs to the load that typed its site: a later load in
+    /// the same page, such as the same site typed with https://, or a new
+    /// document, ends it, and another page's typed load keeps its own.
+    [Fact]
+    public void AnHttpFallbackBelongsToItsOwnPagesTypedLoad() {
+        var (app, engine, binding, page, workspace, window, space, _) = LivePage();
+        PageFailure Unreachable(string url) => new(NavigationError.SecureConnectionFailed, url, ReplacedDocument: true, "net", -113);
+
+        app.Send(new Navigate(page, "example.org"));
+        app.Send(new Navigate(page, "https://example.org"));
+        var loaded = binding.Commands.Count;
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+        Assert.Equal(loaded, binding.Commands.Count);
+        Assert.NotNull(Live(app.Drain()).Failure);
+
+        app.Send(new Navigate(page, "example.org"));
+        app.Report(engine, new NavigationCommitted(page, "https://example.org/", SameDocument: false));
+        loaded = binding.Commands.Count;
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+        Assert.Equal(loaded, binding.Commands.Count);
+        app.Drain();
+
+        var other = Guid.NewGuid();
+        app.Send(new OpenPage(other, workspace, space, null, window));
+        app.Report(engine, new PageCreated(other));
+        app.Send(new Navigate(page, "example.org"));
+        app.Send(new Navigate(other, "example.org"));
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+        Assert.Equal(new LoadPage(page, "http://example.org"), binding.Commands[^1]);
+        app.Report(engine, new NavigationFailed(other, Unreachable("https://example.org/")));
+        Assert.Equal(new LoadPage(other, "http://example.org"), binding.Commands[^1]);
+    }
+
     [Fact]
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;

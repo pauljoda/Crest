@@ -10,7 +10,7 @@ public sealed record NavigationFailed(Guid PageId, PageFailure Failure) : PageEv
     #region Actions - Pages
 
     internal override void Apply(Pages pages, Page page, PageTurn turn) {
-        if (Failure.Error.FallsBackToHttp && page.Phase.HoldsEnginePage && pages.Device.HttpFallbacks.Take(Failure.Url) is { } http) {
+        if (page.TakeHttpFallback(Failure) is { } http && page.Phase.HoldsEnginePage) {
             try {
                 Navigate.Load(pages, turn, page.Id, (_, _) => http);
                 return;

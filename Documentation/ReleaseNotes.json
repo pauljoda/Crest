@@ -5721,6 +5721,10 @@
     "typed-sites-fall-back-to-http": {
       "category": "fixed",
       "message": "When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000 or a device name with a port, open over HTTP right away, and an address you type with https:// never falls back."
+    },
+    "typed-site-fallback-per-load": {
+      "category": "internal",
+      "message": "The HTTP fallback for a site typed without a scheme now belongs to the page and the load that typed it, so a later load in that page, a new document or another page's load never takes it."
     }
   }
 }
