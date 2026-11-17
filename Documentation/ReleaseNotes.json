@@ -5705,6 +5705,10 @@
     "split-view-bars-follow-address-bar": {
       "category": "improved",
       "message": "On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own."
+    },
+    "pinned-saved-close-choices": {
+      "category": "improved",
+      "message": "Settings › Tabs now lets you choose separately what pinned tabs and saved tabs do after you close them, so saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both."
     }
   }
 }

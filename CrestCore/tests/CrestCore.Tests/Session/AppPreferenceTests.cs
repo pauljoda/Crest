@@ -37,7 +37,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("en", stored["translationRules"]!["sources"]!["es"]!["targetID"]!.GetValue<string>());
         Assert.True(stored["checksSpelling"]!.GetValue<bool>());
         Assert.False(stored["automaticallyEntersPictureInPicture"]!.GetValue<bool>());
-        Assert.Equal("returnToSavedURL", stored["savedTabClosePolicy"]!.GetValue<string>());
+        Assert.Equal(("returnToSavedURL", "returnToSavedURL"),
+            (stored["pinnedTabsAfterClosing"]!.GetValue<string>(), stored["savedTabsAfterClosing"]!.GetValue<string>()));
         Assert.True(stored["savedTabFaviconReturnsToSavedURL"]!.GetValue<bool>());
         Assert.True(stored["splitFocusFollowsMouse"]!.GetValue<bool>());
 
@@ -50,6 +51,31 @@ public sealed partial class BrowserContractsTests {
         Assert.Same(kept, restored.Current.AppPreferences);
         relaunched.Send(new AdoptSetupCompletion(Completed: true));
         Assert.Equal(StartupBehavior.LastActiveTab, relaunched.Query(LaunchPlan(relaunched.Workspace)).Startup);
+    }
+
+    [Fact]
+    public void AStoredCloseChoiceFromBeforePinnedAndSavedTabsChoseApartSeedsBoth() {
+        var session = SavedSession().Document["session"]!;
+        session["appPreferences"] = new JsonObject { ["savedTabClosePolicy"] = "returnToSavedURL" };
+        byte[] saved;
+        using (var device = new TestDevice(session)) {
+            var preferences = device.Authority.Current.AppPreferences!;
+            Assert.Equal((SavedTabClosePolicy.ReturnToSavedUrl, SavedTabClosePolicy.ReturnToSavedUrl),
+                (preferences.PinnedTabClose, preferences.SavedTabClose));
+            device.Send(new SetAppPreferences(device.Workspace,
+                preferences with { PinnedTabClose = SavedTabClosePolicy.ResumeLastLocation }));
+            saved = device.Authority.Checkpoint().Read("core");
+        }
+
+        // The record is written back with a choice for each and without the
+        // shared one, so changing one choice never brings the other back.
+        var stored = JsonNode.Parse(saved)!["appPreferences"]!.AsObject();
+        Assert.Equal(("resumeLastLocation", "returnToSavedURL", false), (stored["pinnedTabsAfterClosing"]!.GetValue<string>(),
+            stored["savedTabsAfterClosing"]!.GetValue<string>(), stored.ContainsKey("savedTabClosePolicy")));
+        using var relaunched = new TestDevice(JsonNode.Parse(saved)!);
+        var restored = relaunched.Authority.Current.AppPreferences!;
+        Assert.Equal((SavedTabClosePolicy.ResumeLastLocation, SavedTabClosePolicy.ReturnToSavedUrl),
+            (restored.PinnedTabClose, restored.SavedTabClose));
     }
 
     [Fact]

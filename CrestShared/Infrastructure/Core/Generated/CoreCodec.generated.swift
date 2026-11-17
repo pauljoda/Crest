@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x5f, 0xa8, 0x76, 0x13, 0x8d, 0x34, 0xd3, 0x09, 0x52, 0x06, 0x30, 0xe7, 0x86, 0xb3, 0x73, 0x6b, 0xa9, 0xa0, 0x64, 0xf6, 0xb0, 0x00, 0x8b, 0x26, 0x87, 0x61, 0x2d, 0x00, 0x75, 0x82, 0xd8, 0xeb
+        0xbe, 0x1f, 0xc0, 0xa8, 0xe0, 0x07, 0xcb, 0xfc, 0x04, 0x09, 0xb1, 0x05, 0xd5, 0xf6, 0x0f, 0x4d, 0x59, 0xd9, 0x40, 0x53, 0xe7, 0xac, 0xfc, 0x56, 0xfc, 0xd1, 0x54, 0xeb, 0x3d, 0x0a, 0xeb, 0x62
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -3095,6 +3095,7 @@ extension AppPreferences {
         }
         let checksSpelling = try reader.readBool()
         let automaticallyEntersPictureInPicture = try reader.readBool()
+        let pinnedTabClose = try SavedTabClosePolicy(from: &reader)
         let savedTabClose = try SavedTabClosePolicy(from: &reader)
         let savedTabFaviconReturnsToSavedURL = try reader.readBool()
         let unloadedSavedTabsStay = try reader.readBool()
@@ -3104,7 +3105,7 @@ extension AppPreferences {
         let newTabPosition = try NewTabPosition(from: &reader)
         let newTabsJoinFolder = try reader.readBool()
         let palette = try PalettePreferences(from: &reader)
-        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, newTabPosition: newTabPosition, newTabsJoinFolder: newTabsJoinFolder, palette: palette)
+        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, pinnedTabClose: pinnedTabClose, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, newTabPosition: newTabPosition, newTabsJoinFolder: newTabsJoinFolder, palette: palette)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -3117,6 +3118,7 @@ extension AppPreferences {
         }
         writer.writeBool(checksSpelling)
         writer.writeBool(automaticallyEntersPictureInPicture)
+        pinnedTabClose.encode(into: &writer)
         savedTabClose.encode(into: &writer)
         writer.writeBool(savedTabFaviconReturnsToSavedURL)
         writer.writeBool(unloadedSavedTabsStay)

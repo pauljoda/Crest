@@ -54,6 +54,13 @@ final class BrowserAppPreferenceStore {
         }
     }
 
+    /// Where a pinned tab returns when closing puts its page away.
+    var pinnedTabClosePolicy: SavedTabClosePolicy {
+        get { preferences.pinnedTabClose }
+        set { set { $0.pinnedTabClose = newValue } }
+    }
+
+    /// Where a saved tab returns when closing puts its page away.
     var savedTabClosePolicy: SavedTabClosePolicy {
         get { preferences.savedTabClose }
         set { set { $0.savedTabClose = newValue } }
