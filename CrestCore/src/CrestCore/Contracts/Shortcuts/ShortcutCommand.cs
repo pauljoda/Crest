@@ -83,7 +83,8 @@ public sealed class ShortcutCommand {
         BlockElement,
         ShowBlockedElements,
         OpenNextExtension,
-        ClearAllTabs
+        ClearAllTabs,
+        CollapseAllFolders
     }
 
     #endregion
@@ -342,6 +343,11 @@ public sealed class ShortcutCommand {
         shortcuts: [.. DevicePlatform.All.Select(platform =>
             new ShortcutDefault(platform, Character("k", Command | Shift | Option), YieldsToOverrides: true))],
         searchTerms: "clean tidy archive unpinned open tabs every current", optionAlternate: true);
+    // Closes every open folder of the shown Space, however deep. It came after
+    // people could customize, so it waits for the keys a person chooses.
+    public static readonly ShortcutCommand CollapseAllFolders = new(Kinds.CollapseAllFolders, name: "collapseAllFolders",
+        ShortcutSection.View, title: "Collapse All Folders", symbol: "rectangle.compress.vertical",
+        searchTerms: "close fold folders sidebar tidy", availableWhen: facts => facts.HasOpenFolder);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -354,7 +360,7 @@ public sealed class ShortcutCommand {
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
-        OpenNextExtension, ClearAllTabs
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders
     ];
 
     public Kinds Kind { get; }

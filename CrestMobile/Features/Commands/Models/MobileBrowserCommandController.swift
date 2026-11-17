@@ -100,6 +100,19 @@ struct MobileBrowserCommandController {
         return true
     }
 
+    /// Whether the shown Space is unlocked and has a folder open.
+    var canCollapseAllFolders: Bool {
+        browser.canCollapseShownSpaceFolders(accessController: spaceAccess)
+    }
+
+    /// Collapses every open folder of the shown Space, with the sidebar's
+    /// disclosure motion.
+    func collapseAllFolders() {
+        withAnimation(CrestMotion.disclosure.unlessReducingMotion(UIAccessibility.isReduceMotionEnabled)) {
+            _ = browser.collapseShownSpaceFolders(accessController: spaceAccess)
+        }
+    }
+
     @discardableResult
     func selectPreviousTab() -> UUID? {
         selectAdjacentTab(.previous)

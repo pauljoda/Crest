@@ -13,6 +13,8 @@ struct MobileBrowserCommandContext {
     let canArchiveSelectedTab: Bool
     let canDuplicateSelectedTab: Bool
     let canReopenClosedTab: Bool
+    /// Whether the shown Space is unlocked and has a folder open to collapse.
+    let canCollapseAllFolders: Bool
     let tabCount: Int
     /// Whether the window has a second tab or split in its recent order.
     let canJumpToRecentTab: Bool
@@ -46,6 +48,7 @@ struct MobileBrowserCommandContext {
     let reopenClosedTab: () -> Void
     let clearOtherTabs: () -> Void
     let clearAllTabs: () -> Void
+    let collapseAllFolders: () -> Void
     let dismissSelectedTab: () -> Void
     let archiveSelectedTab: () -> Void
     let selectPreviousTab: () -> Void

@@ -1892,6 +1892,11 @@ struct CloudTransportSynced: Intent, CloudSyncControlIntent, Equatable, Sendable
     let localChangesUnsaved: Bool
 }
 
+struct CollapseAllFolders: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+}
+
 struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -19047,6 +19052,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case showBlockedElements
         case openNextExtension
         case clearAllTabs
+        case collapseAllFolders
     }
 
     let tag: Int
@@ -21288,6 +21294,25 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
+    static let collapseAllFolders = ShortcutCommand(
+        tag: 79,
+        kind: .collapseAllFolders,
+        name: "collapseAllFolders",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Collapse All Folders"),
+        searchTerms: LocalizedStringResource("close fold folders sidebar tidy"),
+        menuTitle: nil,
+        symbol: "rectangle.compress.vertical",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -21368,7 +21393,8 @@ struct ShortcutCommand: Hashable, Sendable {
         clearSiteCache,
         toggleSelectedTabSaved,
         openNextExtension,
-        clearAllTabs
+        clearAllTabs,
+        collapseAllFolders
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -21474,7 +21500,11 @@ struct ShortcutMenu: Hashable, Sendable {
         name: "view",
         title: LocalizedStringResource("View"),
         groups: [
-            [ShortcutCommand.toggleSidebar, ShortcutCommand.toggleTranslationToolbar],
+            [
+                ShortcutCommand.toggleSidebar,
+                ShortcutCommand.collapseAllFolders,
+                ShortcutCommand.toggleTranslationToolbar
+            ],
             [ShortcutCommand.showHistory, ShortcutCommand.showArchive, ShortcutCommand.showDownloads]
         ]
     )

@@ -22,7 +22,7 @@ public sealed class ShortcutCatalogTests {
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
         "toggleTranslationToolbar", "openFile", "findNext", "findPrevious", "capturePage",
         "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache", "toggleSelectedTabSaved", "openNextExtension",
-        "clearAllTabs"
+        "clearAllTabs", "collapseAllFolders"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;

@@ -68,6 +68,8 @@ struct MobileBrowserSpacePage: View {
                     openNewTab: openNewTab,
                     openNewWindow: { openWindow(value: MobileWindowRequest()) },
                     createFolder: beginCreatingFolder,
+                    collapseAllFolders: { _ = tabActions.collapseAllFolders() },
+                    canCollapseAllFolders: { tabActions.canCollapseAllFolders },
                     showHistory: showHistory,
                     showPasswords: showPasswords,
                     closePrivateBrowsing: closePrivateBrowsing,

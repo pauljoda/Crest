@@ -57,6 +57,14 @@ public sealed partial class BrowserTabCollection {
         folders[folders.IndexOf(folder)] = folder with { IsCollapsed = collapsed, CollapseModifiedAt = now };
     }
 
+    /// Collapses every open folder, however deep, as collapsing each one
+    /// would. Groups keep their own state.
+    public void CollapseAllFolders(DateTimeOffset now) {
+        for (int index = 0; index < folders.Count; index++)
+            if (folders[index].CollapsesWithAll)
+                folders[index] = folders[index] with { IsCollapsed = true, CollapseModifiedAt = now };
+    }
+
     /// Whether the folder's color changed.
     public bool SetFolderColor(Guid id, BrandColor color) {
         var folder = KnownFolder(id);

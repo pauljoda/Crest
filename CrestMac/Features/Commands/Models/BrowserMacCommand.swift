@@ -134,6 +134,8 @@ struct BrowserMacCommand {
         .clearSiteCache, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
         run: { $0.clearCommandPageSiteData(.cache) })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
+    static let collapseAllFolders = BrowserMacCommand(
+        .collapseAllFolders, isAvailable: { $0.canCollapseAllFolders }, run: { $0.collapseAllFolders() })
     static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
     static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
     static let showDownloads = BrowserMacCommand(
@@ -185,7 +187,7 @@ struct BrowserMacCommand {
         copyPageLink,
         copyPageLinkAsMarkdown,
         sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
-        toggleSidebar, showHistory, showArchive, showDownloads,
+        toggleSidebar, collapseAllFolders, showHistory, showArchive, showDownloads,
         showWebInspector,
         toggleTranslationToolbar, toggleDeveloperToolbar, openNextExtension, selectNumbered,
     ]

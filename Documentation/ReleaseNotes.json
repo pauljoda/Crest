@@ -5681,6 +5681,30 @@
     "clear-keeps-current-tab": {
       "category": "improved",
       "message": "Clear now keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it."
+    },
+    "folder-tap-skips-preview": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, tapping a folder in the sidebar opens or closes it again instead of bringing up its preview. Holding a folder still shows the preview."
+    },
+    "folder-icons-whole": {
+      "category": "fixed",
+      "message": "Folder icons wider than a folder, such as a computer or a group of people, now show whole in the sidebar instead of cut off at their edge."
+    },
+    "large-folders-open-faster": {
+      "category": "improved",
+      "message": "Large folders open about twice as fast, with the folders inside them filling in just after, and a folder's preview on Mac appears without a pause even when it holds hundreds of tabs."
+    },
+    "collapse-all-folders": {
+      "category": "new",
+      "message": "Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette."
+    },
+    "imported-folders-start-closed": {
+      "category": "improved",
+      "message": "Folders brought in from another browser now arrive closed, nested ones included, so a large import opens to a tidy sidebar. Folders from a Crest backup keep how you left them."
+    },
+    "split-view-bars-follow-address-bar": {
+      "category": "improved",
+      "message": "On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own."
     }
   }
 }

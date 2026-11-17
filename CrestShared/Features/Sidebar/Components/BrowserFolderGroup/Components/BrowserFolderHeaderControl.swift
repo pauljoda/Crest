@@ -257,10 +257,15 @@ private struct BrowserFolderCloseAllButton: View {
 }
 
 /// Fades a folder header's title out under its `…` button while the button
-/// shows, so a name that reaches the button never runs under it.
+/// shows, so a name that reaches the button never runs under it. Only the
+/// trailing edge fades: a symbol wider than the icon column reaches past the
+/// header's leading edge, and stays whole there.
 private struct BrowserFolderHeaderMenuClearance: ViewModifier {
     /// How far the title fades before it reaches the button.
     private static let fadeWidth: CGFloat = 12
+    /// How far past the header's edges the mask reaches, so it clips nothing
+    /// that overhangs them.
+    private static let overflow: CGFloat = 12
 
     /// The button's width at the header's trailing edge.
     let width: CGFloat
@@ -268,17 +273,23 @@ private struct BrowserFolderHeaderMenuClearance: ViewModifier {
 
     func body(content: Content) -> some View {
         content.mask {
-            if isActive {
-                HStack(spacing: 0) {
+            Group {
+                if isActive {
+                    HStack(spacing: 0) {
+                        Rectangle()
+                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: Self.fadeWidth)
+                            .flipsForRightToLeftLayoutDirection(true)
+                        Color.clear.frame(width: width)
+                    }
+                    // Back to the header's own trailing edge, where the
+                    // button stands.
+                    .padding(.trailing, Self.overflow)
+                } else {
                     Rectangle()
-                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: Self.fadeWidth)
-                        .flipsForRightToLeftLayoutDirection(true)
-                    Color.clear.frame(width: width)
                 }
-            } else {
-                Rectangle()
             }
+            .padding(-Self.overflow)
         }
     }
 }

@@ -100,10 +100,11 @@ struct BrowserSplitPageSurface: View {
                     focusesOnHover: { focusesOnHover(member.id, at: $0) },
                     isCoveredByChrome: { isCoveredByChrome($0) },
                     onFocusRequest: { if isSelectedSpace { model.focusSplitCard(member.id) } },
-                    // A split's cards carry their own bars in either
-                    // placement, as a Quick Window does; a lone card's address
-                    // bar is the window's.
-                    cardBar: displayMembers.count > 1
+                    // A split's cards carry their own bars while the address
+                    // bar is on top, as a Quick Window does; a lone card's
+                    // address bar is the window's, and in the sidebar
+                    // placement the sidebar's serves every card.
+                    cardBar: displayMembers.count > 1 && model.showsPageCardBars
                         ? model.pageCardBarContext(reduceMotion: reduceMotion, layoutDirection: layoutDirection) : nil,
                     isFocused: isFocused,
                     isLeadingCard: member.id == displayMembers.first?.id

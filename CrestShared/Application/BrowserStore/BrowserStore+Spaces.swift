@@ -376,6 +376,29 @@ extension BrowserStore {
         )
     }
 
+    /// Collapses every open folder of the Space, however deep, as the core's
+    /// rule says; groups keep their state and every tab stays where it is.
+    @discardableResult
+    func collapseAllFolders(matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
+        guard spaceModel(matching: assignment) != nil else { return false }
+        return collapseAllSessionFolders(in: assignment.spaceID)
+    }
+
+    /// Whether the Space this window shows is unlocked and has a folder open
+    /// to collapse, as the core's command rule says.
+    func canCollapseShownSpaceFolders(accessController: BrowserSpaceAccessController) -> Bool {
+        guard let space = shownSpace, !accessController.isLocked(space) else { return false }
+        return allows(.collapseAllFolders)
+    }
+
+    /// Collapses every open folder of the Space this window shows, unless it
+    /// is locked.
+    @discardableResult
+    func collapseShownSpaceFolders(accessController: BrowserSpaceAccessController) -> Bool {
+        guard let space = shownSpace, !accessController.isLocked(space) else { return false }
+        return collapseAllFolders(matching: BrowserSpaceRuntimeAssignment(space: space))
+    }
+
     /// Whether a folder may move under `parentID`. The core's folder rules
     /// answer (no cycles, the depth limit including the moving subtree).
     func canMoveFolder(

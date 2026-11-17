@@ -42,6 +42,7 @@ extension MobileBrowserRootModel {
                 && transientBrowsing.quickWindowRequest == nil,
             canDuplicateSelectedTab: controller.canDuplicateSelectedTab,
             canReopenClosedTab: controller.canReopenClosedTab,
+            canCollapseAllFolders: controller.canCollapseAllFolders,
             tabCount: controller.tabCount,
             canJumpToRecentTab: controller.canJumpToRecentTab,
             spaceCount: browser.spaceModels.count,
@@ -91,6 +92,7 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
+            collapseAllFolders: { controller.collapseAllFolders() },
             dismissSelectedTab: {
                 _ = self.dismissSelectedTabFromCommand(
                     beforeSynchronization: prepareForSelectionSynchronization
