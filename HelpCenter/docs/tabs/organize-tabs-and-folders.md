@@ -43,7 +43,7 @@ On iPhone and iPad, use the selection actions in a tab or folder’s context men
 
 ## Clear open tabs
 
-Use **Clear** on the sidebar divider to archive your open tabs except the one you’re on. Pinned and saved tabs stay. On Mac, hold Option to turn it into **Clear All**, which archives the one you’re on too. Both are also in the Tabs menu, the command palette and the Space’s ••• menu as **Clear Other Tabs** and **Clear All Tabs**; on iPhone and iPad, Clear All Tabs is in that ••• menu. Cleared tabs remain recoverable in Archive, subject to the Space’s retention settings.
+Use **Clear** on the sidebar divider to archive your open tabs except the one you’re on and, when it’s in a Split View, the tabs beside it. Pinned and saved tabs stay. On Mac, hold Option to turn it into **Clear All**, which archives the one you’re on too. Both are also in the Tabs menu, the command palette and the Space’s ••• menu as **Clear Other Tabs** and **Clear All Tabs**; on iPhone and iPad, Clear All Tabs is in that ••• menu. Cleared tabs remain recoverable in Archive, subject to the Space’s retention settings.
 
 ## Keep Loaded and unload
 
