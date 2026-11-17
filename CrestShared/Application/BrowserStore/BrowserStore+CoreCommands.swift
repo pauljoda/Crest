@@ -171,6 +171,10 @@ extension BrowserStore {
             from: self)
     }
 
+    func collapseAllSessionFolders(in spaceID: UUID) -> Bool {
+        family.send(CollapseAllFolders(workspaceID: family.workspaceID, spaceID: spaceID), from: self)
+    }
+
     func deleteSessionFolder(_ id: UUID, in spaceID: UUID) -> Bool {
         family.send(
             DeleteFolder(workspaceID: family.workspaceID, spaceID: spaceID, folderID: id),

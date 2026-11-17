@@ -80,6 +80,21 @@ struct BrowserSidebarTabActions {
         return true
     }
 
+    /// Whether the Space is the one shown, unlocked, and has a folder open to
+    /// collapse.
+    var canCollapseAllFolders: Bool {
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
+            && browser.allows(.collapseAllFolders)
+    }
+
+    /// Collapses every open folder of the Space, however deep, leaving its
+    /// tabs be.
+    @discardableResult
+    func collapseAllFolders() -> Bool {
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
+            && browser.collapseAllFolders(matching: assignment)
+    }
+
     /// Routes an empty-background gesture through the host's existing New Tab
     /// command. Recheck ownership when the gesture ends, after any Space change.
     @discardableResult

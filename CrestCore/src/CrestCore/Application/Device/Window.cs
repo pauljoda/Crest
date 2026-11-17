@@ -97,7 +97,8 @@ internal sealed class Window {
             .OfType<ShownCards>()];
         int shownCards = shown is null ? 0 : cards.First(candidate => candidate.SpaceId == ShownSpaceId).TabIds.Count;
         var facts = new WindowCommandFacts(space is not null, isPrivate, shown, space?.ArchivedTabs.Count > 0,
-            space is not null && shown is not null && space.SplitCandidate(shown.Id) is not null, shownCards);
+            space is not null && shown is not null && space.SplitCandidate(shown.Id) is not null, shownCards,
+            space?.Folders.Any(folder => folder.CollapsesWithAll) == true);
         return new(Id, WorkspaceId, ShownSpaceId,
             [.. tabs.OrderBy(entry => entry.Key).Select(entry => new ShownTab(entry.Key, entry.Value))],
             [.. shares.OrderBy(entry => entry.Key).Select(entry => new SplitColumnShares(entry.Key, entry.Value))],

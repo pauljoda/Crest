@@ -13,6 +13,7 @@ struct BrowserSpaceHeaderActionsMenu: View {
     let actions: BrowserSpaceHeaderActions
 
     @Environment(\.supportsMultipleWindows) private var supportsMultipleWindows
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         styledMenu
@@ -61,6 +62,14 @@ struct BrowserSpaceHeaderActionsMenu: View {
             systemImage: "folder.badge.plus",
             action: actions.createFolder
         )
+
+        if let collapseAllFolders = actions.collapseAllFolders {
+            Button(ShortcutCommand.collapseAllFolders) {
+                withAnimation(CrestMotion.disclosure.unlessReducingMotion(reduceMotion), collapseAllFolders)
+            }
+            .disabled(!actions.canCollapseAllFolders())
+            .accessibilityIdentifier("collapse-all-folders")
+        }
 
         Button(ShortcutCommand.showHistory, action: actions.showHistory)
 

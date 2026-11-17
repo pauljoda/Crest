@@ -164,6 +164,7 @@ struct MobileBrowserCommands: Commands {
             .disabled(context?.canToggleTranslationToolbar != true)
 
             button(.toggleSidebar)
+            button(.collapseAllFolders)
             button(.showHistory)
             button(.showArchive)
             button(.showDownloads)

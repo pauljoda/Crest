@@ -80,6 +80,8 @@ struct MobileBrowserCommand {
     static let clearSiteCache = MobileBrowserCommand(
         .clearSiteCache, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.cache) })
     static let toggleSidebar = MobileBrowserCommand(.toggleSidebar) { $0.toggleSidebar() }
+    static let collapseAllFolders = MobileBrowserCommand(
+        .collapseAllFolders, isEnabled: { $0.canCollapseAllFolders }, run: { $0.collapseAllFolders() })
     static let toggleTranslationToolbar = MobileBrowserCommand(
         .toggleTranslationToolbar, isAvailable: { $0.canToggleTranslationToolbar },
         isEnabled: { $0.canToggleTranslationToolbar },
@@ -101,7 +103,8 @@ struct MobileBrowserCommand {
         nextSpace, toggleReaderMode, toggleContentBlocking, blockElement, showBlockedElements,
         findInPage, zoomIn, zoomOut, actualSize,
         copyPageLink,
-        copyPageLinkAsMarkdown, printPage, clearSiteCookies, clearSiteCache, toggleSidebar, toggleTranslationToolbar,
+        copyPageLinkAsMarkdown, printPage, clearSiteCookies, clearSiteCache, toggleSidebar, collapseAllFolders,
+        toggleTranslationToolbar,
         showHistory, showArchive,
         showDownloads,
     ]

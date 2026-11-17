@@ -5673,6 +5673,22 @@
     "chromium-pages-load-without-flash": {
       "category": "fixed",
       "message": "Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws."
+    },
+    "folder-tap-skips-preview": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, tapping a folder in the sidebar opens or closes it again instead of bringing up its preview. Holding a folder still shows the preview."
+    },
+    "folder-icons-whole": {
+      "category": "fixed",
+      "message": "Folder icons wider than a folder, such as a computer or a group of people, now show whole in the sidebar instead of cut off at their edge."
+    },
+    "large-folders-open-faster": {
+      "category": "improved",
+      "message": "Large folders open about twice as fast, with the folders inside them filling in just after, and a folder's preview on Mac appears without a pause even when it holds hundreds of tabs."
+    },
+    "collapse-all-folders": {
+      "category": "new",
+      "message": "Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette."
     }
   }
 }

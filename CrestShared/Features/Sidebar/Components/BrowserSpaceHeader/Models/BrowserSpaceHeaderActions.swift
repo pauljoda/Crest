@@ -13,6 +13,14 @@ struct BrowserSpaceHeaderActions {
     /// Creates a folder in this Space's saved tabs.
     let createFolder: () -> Void
 
+    /// Collapses every open folder in this Space, however deep. Nil where the
+    /// shell offers it elsewhere.
+    var collapseAllFolders: (() -> Void)?
+
+    /// Whether the Space has a folder open to collapse, asked as the menu
+    /// opens.
+    var canCollapseAllFolders: () -> Bool = { true }
+
     /// Opens the history list.
     let showHistory: () -> Void
 

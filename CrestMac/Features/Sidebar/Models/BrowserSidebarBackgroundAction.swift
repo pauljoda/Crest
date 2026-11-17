@@ -7,6 +7,10 @@ struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
     static let editSpace = BrowserSidebarBackgroundAction(
         name: "editSpace", title: "Edit Space…", symbol: "pencil", requiresSpaceCreation: false
     ) { $0.editSpace() }
+    static let collapseAllFolders = BrowserSidebarBackgroundAction(
+        name: "collapseAllFolders", title: ShortcutCommand.collapseAllFolders.title,
+        symbol: ShortcutCommand.collapseAllFolders.symbol, requiresSpaceCreation: false,
+        isEnabled: { $0.canCollapseAllFolders() }, animatesSidebar: true, perform: { $0.collapseAllFolders() })
     static let newSpace = BrowserSidebarBackgroundAction(
         name: "newSpace", title: "New Space…", symbol: "plus", requiresSpaceCreation: true
     ) { $0.createSpace?() }
@@ -15,7 +19,7 @@ struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
     ) { $0.createSubSpace?() }
 
     /// Every action, in menu order.
-    static let all: [BrowserSidebarBackgroundAction] = [editSpace, newSpace, newSubSpace]
+    static let all: [BrowserSidebarBackgroundAction] = [editSpace, collapseAllFolders, newSpace, newSubSpace]
 
     // MARK: - Variables
 
@@ -26,6 +30,10 @@ struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
     /// Whether the menu offers the action only where the sidebar can create
     /// Spaces.
     let requiresSpaceCreation: Bool
+    /// Whether what it changes in the sidebar moves with the sidebar's
+    /// disclosure motion.
+    let animatesSidebar: Bool
+    private let enablement: @MainActor @Sendable (BrowserSidebarBackgroundInteractionView) -> Bool
     private let performance: @MainActor @Sendable (BrowserSidebarBackgroundInteractionView) -> Void
 
     var id: String { name }
@@ -34,16 +42,27 @@ struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
 
     private init(
         name: String, title: LocalizedStringResource, symbol: String, requiresSpaceCreation: Bool,
+        isEnabled: @escaping @MainActor @Sendable (BrowserSidebarBackgroundInteractionView) -> Bool = { _ in true },
+        animatesSidebar: Bool = false,
         perform: @escaping @MainActor @Sendable (BrowserSidebarBackgroundInteractionView) -> Void
     ) {
         self.name = name
         self.title = title
         self.symbol = symbol
         self.requiresSpaceCreation = requiresSpaceCreation
+        self.animatesSidebar = animatesSidebar
+        enablement = isEnabled
         performance = perform
     }
 
     // MARK: - Actions - Performing
+
+    /// Whether the action can run now through the sidebar background `view`,
+    /// asked as the menu opens.
+    @MainActor
+    func isEnabled(on view: BrowserSidebarBackgroundInteractionView) -> Bool {
+        enablement(view)
+    }
 
     /// Performs the action through the sidebar background `view` it was
     /// chosen on.

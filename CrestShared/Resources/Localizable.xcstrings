@@ -3744,6 +3744,9 @@
         }
       }
     },
+    "close fold folders sidebar tidy" : {
+
+    },
     "Close Peek" : {
       "localizations" : {
         "ar" : {
@@ -3890,6 +3893,9 @@
 
     },
     "Coding agents on this Mac can read and act on tabs and history in the Spaces you choose, and open windows. Crest asks before each new agent connects." : {
+
+    },
+    "Collapse All Folders" : {
 
     },
     "Collapsed" : {
