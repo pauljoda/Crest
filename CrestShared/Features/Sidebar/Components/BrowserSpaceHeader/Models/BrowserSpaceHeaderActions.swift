@@ -28,8 +28,12 @@ struct BrowserSpaceHeaderActions {
     /// Opens settings. Nil where the shell has its own settings entry point.
     var showSettings: (() -> Void)?
 
-    /// Closes the Space's current tabs, leaving the saved ones alone.
-    let cleanup: () -> Void
+    /// Archives the Space's open tabs but the one the window shows, leaving
+    /// the pinned and saved ones alone.
+    let clearOtherTabs: () -> Void
+
+    /// Archives every open tab of the Space, the shown one too.
+    let clearAllTabs: () -> Void
 
     /// Toggles live expansion when the header renders a retained page value.
     var toggleSavedTabs: (() -> Void)?

@@ -117,9 +117,9 @@ struct BrowserGettingStartedLesson: Hashable, Identifiable, Sendable {
     static let clear = BrowserGettingStartedLesson(
         kind: .clear, number: 4, name: "clear", title: "Clear open tabs",
         detail:
-            "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put.",
+            "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends all but the tab you're on to Archive; hold Option to clear them all. Your pinned and saved tabs stay put.",
         touchDetail:
-            "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay."
+            "Tabs below the line close automatically on your Space’s cleanup schedule. Clear archives all but the tab you’re on, and Clear All Tabs in the Space’s ••• menu archives every one. Pinned and saved tabs stay."
     )
 
     /// Every lesson, in the order the guide teaches them.

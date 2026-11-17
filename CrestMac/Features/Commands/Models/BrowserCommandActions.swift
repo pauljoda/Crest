@@ -460,8 +460,10 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
-    func clearCurrentTabs() {
-        guard browser.clearShownSpaceTabs(accessController: spaceAccess) else { return }
+    func clearCurrentTabs(keepingShownTab: Bool) {
+        guard browser.clearShownSpaceTabs(accessController: spaceAccess, keepingShownTab: keepingShownTab) else {
+            return
+        }
         pages.reconcile()
         pages.select()
     }

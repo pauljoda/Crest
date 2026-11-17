@@ -19,10 +19,11 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertTrue(context.browser.shownSpace!.archive.contains(tabID: context.tab.id))
     }
 
-    /// Clear Unpinned Tabs archives the shown Space's open tabs however recently
-    /// they were used, keeps its pinned and saved tabs, and leaves other Spaces
-    /// alone, even a tab there past its cleanup lifetime.
-    func testClearUnpinnedTabsCommandArchivesOnlyTheShownSpacesOpenTabs() throws {
+    /// Clear Other Tabs archives the shown Space's open tabs however recently
+    /// they were used, but the shown one, keeps its pinned and saved tabs, and
+    /// leaves other Spaces alone, even a tab there past its cleanup lifetime.
+    /// Clear All Tabs then archives the shown tab too.
+    func testClearCommandsArchiveOnlyTheShownSpacesOpenTabs() throws {
         let address = try XCTUnwrap(URL(string: "https://example.com"))
         let shown = TabState.Seed(title: "Shown", url: address, placement: .current)
         let recent = TabState.Seed(title: "Recent", url: address, placement: .current)
@@ -39,12 +40,18 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         let actions = BrowserCommandActions(
             browser: browser, pages: BrowserPagePool(browser: browser), chrome: BrowserChromeState(), windows: nil)
 
-        actions.perform(.clearUnpinnedTabs)
+        actions.perform(.clearOtherTabs)
 
         let cleared = try XCTUnwrap(browser.spaceModel(space.id))
-        XCTAssertEqual(Set(cleared.tabs.models.map(\.id)), [pinned.id, saved.id])
-        XCTAssertTrue(cleared.archive.contains(tabID: shown.id))
+        XCTAssertEqual(Set(cleared.tabs.models.map(\.id)), [shown.id, pinned.id, saved.id])
+        XCTAssertEqual(browser.selectedTabID(in: space.id), shown.id)
         XCTAssertTrue(cleared.archive.contains(tabID: recent.id))
+
+        actions.perform(.clearAllTabs)
+
+        let clearedAll = try XCTUnwrap(browser.spaceModel(space.id))
+        XCTAssertEqual(Set(clearedAll.tabs.models.map(\.id)), [pinned.id, saved.id])
+        XCTAssertTrue(clearedAll.archive.contains(tabID: shown.id))
         XCTAssertTrue(try XCTUnwrap(browser.spaceModel(other.id)).tabs.contains(elsewhere.id))
     }
 

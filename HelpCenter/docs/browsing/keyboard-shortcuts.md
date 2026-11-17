@@ -37,7 +37,8 @@ On Mac, **Command-L** opens the address editor while keeping a collapsed sidebar
 | Save or Unsave Current Tab | Unassigned |
 | Duplicate Tab | Unassigned |
 | Reopen Last Closed Tab | Shift-Command-T |
-| Clear Unpinned Tabs | Shift-Command-K |
+| Clear Other Tabs | Shift-Command-K |
+| Clear All Tabs | Option-Shift-Command-K |
 | Archive Tab | Command-E |
 | Previous Tab | Option-Command-Up Arrow |
 | Next Tab | Option-Command-Down Arrow |
