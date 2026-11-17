@@ -60,10 +60,19 @@ public sealed class NavigationError {
         title: "This page couldn’t be opened", message: "Crest encountered an unexpected problem while opening %@.",
         primarySuggestion: "Try the address again or open a different page.",
         secondarySuggestion: "The technical details below can help identify the cause.", symbol: "doc.badge.ellipsis");
+    /// No route reached the address. On a Mac that is most often a device on
+    /// the local network that macOS keeps Crest from reaching until the person
+    /// allows it.
+    public static readonly NavigationError AddressUnreachable = new(name: "addressUnreachable",
+        code: "CREST_ADDRESS_UNREACHABLE", title: "This address can’t be reached",
+        message: "Crest can’t reach %@ from this network.",
+        primarySuggestion: "For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network.",
+        secondarySuggestion: "Check that the device is on and connected to your network, and that a VPN isn’t blocking local access.",
+        symbol: "wifi.exclamationmark");
 
     public static IReadOnlyList<NavigationError> All { get; } = [
         Offline, TimedOut, CannotFindServer, CannotConnect, ConnectionLost, SecureConnectionFailed, TooManyRedirects,
-        UnsupportedAddress, Blocked, Unavailable, WebContentProcessStopped, Unknown
+        UnsupportedAddress, Blocked, Unavailable, WebContentProcessStopped, Unknown, AddressUnreachable
     ];
 
     #endregion

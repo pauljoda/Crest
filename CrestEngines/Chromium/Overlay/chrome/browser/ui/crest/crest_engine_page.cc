@@ -28,6 +28,7 @@
 #include "chrome/browser/ui/crest/crest_engine_store.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/browser/renderer_host/chrome_navigation_ui_data.h"
 #include "chrome/browser/ssl/chrome_security_state_util.h"
 #include "components/blocked_content/popup_blocker_tab_helper.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
@@ -66,6 +67,7 @@
 #include "ui/gfx/image/image_skia_rep.h"
 #include "ui/gfx/skia_util.h"
 #include "url/gurl.h"
+#include "url/url_constants.h"
 
 namespace crest {
 
@@ -165,8 +167,10 @@ engine::NavigationError NavigationErrorFor(int code) {
       return engine::NavigationError::kCannotFindServer;
     case net::ERR_CONNECTION_REFUSED:
     case net::ERR_CONNECTION_FAILED:
-    case net::ERR_ADDRESS_UNREACHABLE:
       return engine::NavigationError::kCannotConnect;
+    // What the engine sees when macOS keeps it from the local network.
+    case net::ERR_ADDRESS_UNREACHABLE:
+      return engine::NavigationError::kAddressUnreachable;
     case net::ERR_CONNECTION_CLOSED:
     case net::ERR_CONNECTION_RESET:
     case net::ERR_CONNECTION_ABORTED:
@@ -385,8 +389,19 @@ void EnginePage::Navigate(const std::string& url) {
     expected_entry_id_.reset();
     return;
   }
-  web_contents()->GetController().LoadURL(target, content::Referrer(), ui::PAGE_TRANSITION_TYPED,
-                                          std::string());
+  content::NavigationController::LoadURLParams load(target);
+  load.transition_type = ui::PAGE_TRANSITION_TYPED;
+  // An http:// address the core loads is one the person chose: typed in
+  // full, saved, or opened from another app. The core already loads what
+  // they type without a scheme over https. The engine keeps http for the
+  // address, and for its site's later loads, as it does for an http://
+  // address typed in its own address bar; the links a page follows are
+  // still tried over https first.
+  if (target.SchemeIs(url::kHttpScheme)) {
+    load.navigation_ui_data = ChromeNavigationUIData::CreateForMainFrameNavigation(
+        web_contents(), /*is_using_https_as_default_scheme=*/false, /*force_no_https_upgrade=*/true);
+  }
+  web_contents()->GetController().LoadURLWithParams(load);
 }
 
 // Navigation history.

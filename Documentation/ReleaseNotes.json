@@ -5705,6 +5705,18 @@
     "split-view-bars-follow-address-bar": {
       "category": "improved",
       "message": "On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own."
+    },
+    "chromium-local-network-helper": {
+      "category": "fixed",
+      "message": "Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network, now Crest's own setting rather than one shared with other apps. A page that can't reach a local address says how to allow it instead of reporting a refused connection."
+    },
+    "chromium-keeps-http-addresses": {
+      "category": "fixed",
+      "message": "In Chromium Spaces, an http:// address you type or open now stays on HTTP, including when you reload it, instead of being switched to HTTPS. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it."
+    },
+    "chromium-keep-http-downloads": {
+      "category": "fixed",
+      "message": "Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them, as it does for other risky downloads."
     }
   }
 }

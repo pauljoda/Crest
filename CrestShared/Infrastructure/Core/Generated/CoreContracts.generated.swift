@@ -15642,6 +15642,16 @@ struct NavigationError: Hashable, Sendable {
         secondarySuggestion: LocalizedStringResource("The technical details below can help identify the cause."),
         symbol: "doc.badge.ellipsis"
     )
+    static let addressUnreachable = NavigationError(
+        tag: 12,
+        name: "addressUnreachable",
+        code: "CREST_ADDRESS_UNREACHABLE",
+        title: LocalizedStringResource("This address can’t be reached"),
+        message: LocalizedStringResource("Crest can’t reach %@ from this network."),
+        primarySuggestion: LocalizedStringResource("For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network."),
+        secondarySuggestion: LocalizedStringResource("Check that the device is on and connected to your network, and that a VPN isn’t blocking local access."),
+        symbol: "wifi.exclamationmark"
+    )
 
     static let all: [NavigationError] = [
         offline,
@@ -15655,7 +15665,8 @@ struct NavigationError: Hashable, Sendable {
         blocked,
         unavailable,
         webContentProcessStopped,
-        unknown
+        unknown,
+        addressUnreachable
     ]
 
     static func named(_ name: String?) -> NavigationError? {
