@@ -29,9 +29,9 @@ struct BrowserPageCardBarContext {
     let showHistory: () -> Void
 }
 
-/// The bar along the top of each card of a split, in either placement, as a
-/// Quick Window has one: the shared page bar for this card's own page, inside
-/// the card's corners, on its Space's color.
+/// The bar along the top of each card of a split while the address bar is on
+/// top, as a Quick Window has one: the shared page bar for this card's own
+/// page, inside the card's corners, on its Space's color.
 ///
 /// The focused card's bar draws at full strength and the others dim; using a
 /// dimmed bar focuses its card before it acts, so nothing lands on the wrong

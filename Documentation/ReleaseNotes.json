@@ -5693,6 +5693,10 @@
     "imported-folders-start-closed": {
       "category": "improved",
       "message": "Folders brought in from another browser now arrive closed, nested ones included, so a large import opens to a tidy sidebar. Folders from a Crest backup keep how you left them."
+    },
+    "split-view-bars-follow-address-bar": {
+      "category": "improved",
+      "message": "On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own."
     }
   }
 }
