@@ -5733,6 +5733,10 @@
     "palette-fallback-unknown-sites-only": {
       "category": "internal",
       "message": "Only the palette's address row for a site typed without a scheme that the Space doesn't already know falls back to HTTP; a history, tab or known-site row opens its address as kept."
+    },
+    "return-to-saved-url-command": {
+      "category": "new",
+      "message": "Return to Saved URL sends a pinned or saved tab you've navigated away from back to its saved address, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
     }
   }
 }

@@ -45,6 +45,9 @@ struct BrowserMacCommand {
     static let reloadFromOrigin = BrowserMacCommand(.reloadFromOrigin, actsOnPage: true) { $0.reload(.fromOrigin) }
     static let toggleSelectedTabPinned = BrowserMacCommand(.toggleSelectedTabPinned) { $0.toggleSelectedTabPinned() }
     static let toggleSelectedTabSaved = BrowserMacCommand(.toggleSelectedTabSaved) { $0.toggleSelectedTabSaved() }
+    static let returnToSavedAddress = BrowserMacCommand(
+        .returnToSavedAddress, isAvailable: { $0.browser.shownTab?.isAwayFromSavedAddress == true },
+        waitsInPaletteUntilAvailable: true, run: { $0.returnSelectedTabToSavedAddress() })
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
     static let clearOtherTabs = BrowserMacCommand(.clearOtherTabs) { $0.clearCurrentTabs(keepingShownTab: true) }
@@ -175,7 +178,7 @@ struct BrowserMacCommand {
         newWindow, newBlankWindow, newTab, openLocation, openFile, newQuickWindow, newPrivateWindow, closeTabOrWindow,
         closeWindow,
         back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, toggleSelectedTabSaved,
-        duplicateTab,
+        returnToSavedAddress, duplicateTab,
         reopenClosedTab,
         clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
