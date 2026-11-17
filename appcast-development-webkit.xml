@@ -6,33 +6,41 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.11</title>
-            <pubDate>Tue, 17 Nov 2026 17:53:24 +0000</pubDate>
+            <title>0.10.18</title>
+            <pubDate>Tue, 17 Nov 2026 21:08:50 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1637</sparkle:version>
-            <sparkle:shortVersionString>0.10.11</sparkle:shortVersionString>
+            <sparkle:version>1640</sparkle:version>
+            <sparkle:shortVersionString>0.10.18</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette.
+
 ### Improved
 
-- Clear now keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it.
+- Large folders open about twice as fast, with the folders inside them filling in just after, and a folder's preview on Mac appears without a pause even when it holds hundreds of tabs.
+- Folders brought in from another browser now arrive closed, nested ones included, so a large import opens to a tidy sidebar. Folders from a Crest backup keep how you left them.
+- On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar along the top: the sidebar's serves the page you're on, as it does for a single page. With the address bar on top, each page keeps its own.
+- Settings › Tabs now lets you choose separately what pinned tabs and saved tabs do after you close them, so saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both.
 
 ### Fixed
 
-- Crest no longer quits when you clear or close the last open pages of a Chromium Space with Chromium's Contextual Tasks flag turned on.
+- On iPhone and iPad, tapping a folder in the sidebar opens or closes it again instead of bringing up its preview. Holding a folder still shows the preview.
+- Folder icons wider than a folder, such as a computer or a group of people, now show whole in the sidebar instead of cut off at their edge.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/4d893632217a9caaba74c8c08ff50a1100b780a6...78ef620b3141771fb5d358b53876f982dcd5a859) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.11-2026-11-17-1637-r637.1/Installer-Crest-0.10.11-development-2026-11-17-78ef620-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/78ef620b3141771fb5d358b53876f982dcd5a859...5d6e041bfbdb76845f1d5dcdc174b975f8fefdc6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.18-2026-11-17-1640-r640.1/Installer-Crest-0.10.18-development-2026-11-17-5d6e041-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.11-2026-11-17-1637-r637.1/Installer-Crest-0.10.11-development-2026-11-17-78ef620-arm64.dmg" length="221555845" type="application/octet-stream" sparkle:edSignature="6iOGYbpcdZuc2S3DJmWqrPKFHmmZBoZYZgfT+q1zCF3BM01wEOQ6IxZ4CYvVlCCJOaqp7T2702CCpZpLkjFjDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.18-2026-11-17-1640-r640.1/Installer-Crest-0.10.18-development-2026-11-17-5d6e041-arm64.dmg" length="221619334" type="application/octet-stream" sparkle:edSignature="/NB1SD9tTdKZ2aar5vlJMmjsFjfU/re2dES9vAF580xiPdAKAmSNC4myyRWleF0qIGcAuDbGTfI3lPxQLynhDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +72,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: SMBkaBChYaOGIndnK/JG+o0ZJDjpDdUP9lVsZAV+s7WfTQVLLeA5XHKNXK7/stYFslVWHTW6ZZOnArYWR7+qAA==
-length: 4324
+edSignature: kLgdGiDizqBojAj9/CW3/ZTivvfqfTfyhaDTSLgDqNpyYPxJ7RdzpXIchQS+pxSHkZOba2Vd4ibdLTxEgDuUCw==
+length: 5288
 -->
