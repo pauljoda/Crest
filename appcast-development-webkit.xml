@@ -6,33 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.9</title>
-            <pubDate>Tue, 17 Nov 2026 14:46:13 +0000</pubDate>
+            <title>0.10.11</title>
+            <pubDate>Tue, 17 Nov 2026 17:53:24 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1636</sparkle:version>
-            <sparkle:shortVersionString>0.10.9</sparkle:shortVersionString>
+            <sparkle:version>1637</sparkle:version>
+            <sparkle:shortVersionString>0.10.11</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Improved
 
-- Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space.
+- Clear now keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it.
 
 ### Fixed
 
-- Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws.
+- Crest no longer quits when you clear or close the last open pages of a Chromium Space with Chromium's Contextual Tasks flag turned on.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/2490559a636a0b22fac404ad1d49d2eb01d0e5d6...4d893632217a9caaba74c8c08ff50a1100b780a6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.9-2026-11-17-1636-r636.1/Installer-Crest-0.10.9-development-2026-11-17-4d89363-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/4d893632217a9caaba74c8c08ff50a1100b780a6...78ef620b3141771fb5d358b53876f982dcd5a859) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.11-2026-11-17-1637-r637.1/Installer-Crest-0.10.11-development-2026-11-17-78ef620-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.9-2026-11-17-1636-r636.1/Installer-Crest-0.10.9-development-2026-11-17-4d89363-arm64.dmg" length="221523589" type="application/octet-stream" sparkle:edSignature="fTE3a1HrWvK7LYb8xAsgJYLQvwsYG0F7FDsoLLEB9SsEXQeZgJ7/fYVsvTw1RbKCo55X0LDxDnye/bwqBVUNDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.11-2026-11-17-1637-r637.1/Installer-Crest-0.10.11-development-2026-11-17-78ef620-arm64.dmg" length="221555845" type="application/octet-stream" sparkle:edSignature="6iOGYbpcdZuc2S3DJmWqrPKFHmmZBoZYZgfT+q1zCF3BM01wEOQ6IxZ4CYvVlCCJOaqp7T2702CCpZpLkjFjDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +64,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: zDso0t3aIMR3PGwlRLOJRcfBQPgr4Gzqf8FL6Mln/SxhWF98PAEMRk+l+rUy7jEbbnDOCHngaGGUje1gyOW/CQ==
-length: 4331
+edSignature: SMBkaBChYaOGIndnK/JG+o0ZJDjpDdUP9lVsZAV+s7WfTQVLLeA5XHKNXK7/stYFslVWHTW6ZZOnArYWR7+qAA==
+length: 4324
 -->
