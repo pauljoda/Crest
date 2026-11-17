@@ -93,7 +93,8 @@ struct BrowserSpaceHeaderActionsMenu: View {
                 .accessibilityIdentifier("settings-button")
         }
 
-        Button(ShortcutCommand.clearUnpinnedTabs, action: actions.cleanup)
+        Button(ShortcutCommand.clearOtherTabs, action: actions.clearOtherTabs)
+        Button(ShortcutCommand.clearAllTabs, action: actions.clearAllTabs)
     }
 
     @ViewBuilder

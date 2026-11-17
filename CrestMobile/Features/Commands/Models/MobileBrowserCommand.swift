@@ -26,7 +26,8 @@ struct MobileBrowserCommand {
         .duplicateTab, isEnabled: { $0.canDuplicateSelectedTab }, run: { $0.duplicateSelectedTab() })
     static let reopenClosedTab = MobileBrowserCommand(
         .reopenClosedTab, isEnabled: { $0.canReopenClosedTab }, run: { $0.reopenClosedTab() })
-    static let clearUnpinnedTabs = MobileBrowserCommand(.clearUnpinnedTabs) { $0.clearCurrentTabs() }
+    static let clearOtherTabs = MobileBrowserCommand(.clearOtherTabs) { $0.clearOtherTabs() }
+    static let clearAllTabs = MobileBrowserCommand(.clearAllTabs) { $0.clearAllTabs() }
     static let archiveTab = MobileBrowserCommand(
         .archiveTab, isEnabled: { $0.canArchiveSelectedTab }, run: { $0.archiveSelectedTab() })
     static let previousTab = MobileBrowserCommand(
@@ -94,7 +95,8 @@ struct MobileBrowserCommand {
     static let all = [
         closeTabOrWindow, back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned,
         duplicateTab,
-        reopenClosedTab, clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        reopenClosedTab, clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab,
+        mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace,

@@ -67,7 +67,8 @@ struct MobileBrowserCommands: Commands {
             button(.toggleSelectedTabPinned)
             button(.duplicateTab)
             button(.reopenClosedTab)
-            button(.clearUnpinnedTabs)
+            button(.clearOtherTabs)
+            button(.clearAllTabs)
             button(.archiveTab)
 
             Divider()

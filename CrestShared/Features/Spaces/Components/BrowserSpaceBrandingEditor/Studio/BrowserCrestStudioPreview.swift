@@ -41,7 +41,7 @@ struct BrowserCrestStudioPreview: View {
                             supportsTouch: capabilities.supportsTouch,
                             pairsRowWithPromotedSurface: false, supportsOrganization: false),
                         actions: BrowserSpaceHeaderActions(
-                            openNewTab: {}, createFolder: {}, showHistory: {}, cleanup: {}))
+                            openNewTab: {}, createFolder: {}, showHistory: {}, clearOtherTabs: {}, clearAllTabs: {}))
                     BrowserSidebarCustomizationPreview(
                         space: preview, showsPins: false, showsCurrentTabs: false, showsBackground: false)
                 }
