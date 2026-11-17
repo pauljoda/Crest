@@ -7,6 +7,40 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.24] - 2026-11-17
+
+Crest 0.10.24 fixes local network and plain HTTP sites in Chromium Spaces, a
+crash when clearing tabs, and pages flashing while they load. It also makes big
+folders faster and lets Clear keep the tab you're on.
+
+### Added
+
+- Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette.
+- Choose separately what pinned tabs and saved tabs do after you close them, in Settings › Tabs. Saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both.
+
+### Changed
+
+- Clear keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it.
+- Large folders open about twice as fast, with the folders inside them filling in just after. A folder's preview on Mac appears without a pause, even when it holds hundreds of tabs.
+- Folders brought in from another browser arrive closed, nested ones included. Folders from a Crest backup keep how you left them.
+- On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar: the sidebar's serves the page you're on. With the address bar on top, each page keeps its own.
+
+### Fixed
+
+- Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network. That setting is now Crest's own, not one shared with other apps. A page that can't reach a local address says how to allow it, instead of reporting a refused connection.
+- In Chromium Spaces, an http:// address you type or open stays on HTTP, including when you reload it. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it.
+- When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000, open over HTTP right away, and an address typed with https:// never falls back.
+- Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them.
+- Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link.
+- Crest no longer quits when you clear or close the last open pages of a Chromium Space with Chromium's Contextual Tasks flag turned on.
+- On iPhone and iPad, tapping a folder opens or closes it instead of bringing up its preview. Holding a folder still shows the preview.
+- Folder icons wider than a folder, such as a computer or a group of people, show whole in the sidebar instead of cut off at their edge.
+
+### Upgrading
+
+- The first time a Chromium Space reaches a device on your local network, macOS asks once about Crest Helper.
+- Mac still requires Apple silicon and macOS 26.1 or later. iPhone and iPad require iOS or iPadOS 26.1 or later.
+
 ## [0.10.8] - 2026-11-16
 
 Crest 0.10 is about customization. Three styles set how much Crest shows,
