@@ -5669,6 +5669,10 @@
     "crest-0-10-customization": {
       "category": "new",
       "message": "Crest 0.10 is about customization. Three styles set how much Crest shows, the address bar can sit above the page on Mac, the sidebar gains spacing, tab size, hover previews and groups, and a Material color setting keeps glass surfaces and text readable over any Space."
+    },
+    "chromium-pages-load-without-flash": {
+      "category": "fixed",
+      "message": "Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws."
     }
   }
 }

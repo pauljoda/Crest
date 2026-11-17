@@ -17,3 +17,4 @@ safe-browsing-reports-off.patch
 certificate-transparency-enforced.patch
 manifest-v2-extensions.patch
 content-filter.patch
+navigation-keeps-last-frame.patch

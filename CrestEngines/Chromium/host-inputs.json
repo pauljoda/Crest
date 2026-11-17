@@ -526,5 +526,13 @@
   "chrome/renderer/chrome_content_renderer_client.cc": {
     "before": "5344bebff76601d605ad3b3cc96a8a507742ada486580b945a20a9515c338be6",
     "after": "c9b5a53898b6df6a1b260702329d8e82af93bca206ca700dca6617e5f76cea5e"
+  },
+  "content/browser/renderer_host/browser_compositor_view_mac.h": {
+    "before": "0fb0c587ec1ea931b609b47c0206706700c37f6cb0ecf69245a97d812547c3dd",
+    "after": "51fcf6504dddf82f767e273681ade3245f2f99deca30f81a3fe7ad9664267b33"
+  },
+  "content/browser/renderer_host/browser_compositor_view_mac.mm": {
+    "before": "1579b8073ab9c8682f11edd12227324048bbf7c5ae6b3d6b924cb285d0eca665",
+    "after": "710968c986105f73a0a01c95331c8049d007e1c9cffda35a21667118c3ecbdfd"
   }
 }
