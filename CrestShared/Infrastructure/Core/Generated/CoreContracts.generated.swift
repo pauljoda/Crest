@@ -1140,6 +1140,7 @@ struct AppPreferences: Equatable, Sendable {
         translationRules: [],
         checksSpelling: false,
         automaticallyEntersPictureInPicture: true,
+        pinnedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
         unloadedSavedTabsStay: true,
@@ -1180,6 +1181,7 @@ struct AppPreferences: Equatable, Sendable {
     var translationRules: [TranslationRule]
     var checksSpelling: Bool
     var automaticallyEntersPictureInPicture: Bool
+    var pinnedTabClose: SavedTabClosePolicy
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
     var unloadedSavedTabsStay: Bool
@@ -24538,6 +24540,7 @@ struct TabIconMode: Hashable, Sendable {
 }
 
 /// The members of the core's `TabPlacement`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `closePolicy`.
 struct TabPlacement: Hashable, Sendable {
     static let pinnedCapacity = 12
 

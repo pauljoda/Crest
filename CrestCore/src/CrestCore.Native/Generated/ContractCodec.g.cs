@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf0, 0x56, 0x13, 0xf9, 0x41, 0xd9, 0xf3, 0x66, 0x8b, 0xd5, 0x45, 0x7d, 0x61, 0xb0, 0x3a, 0xbe, 0x46, 0x07, 0x3a, 0xd1, 0x34, 0x5b, 0x30, 0xd9, 0x8f, 0xf3, 0xdb, 0xbb, 0x08, 0x8f, 0x7f, 0xb7
+        0xe9, 0x44, 0xd0, 0x58, 0x5a, 0x71, 0xe7, 0x71, 0x05, 0x99, 0xc9, 0x54, 0xe1, 0x3b, 0x83, 0x38, 0x9e, 0xb7, 0x4f, 0xf4, 0xbe, 0x03, 0x1b, 0xab, 0x0b, 0x33, 0xab, 0x29, 0xd9, 0xfb, 0x42, 0xa3
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -4914,6 +4914,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             ReadSavedTabClosePolicy(reader),
+            ReadSavedTabClosePolicy(reader),
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
@@ -4936,6 +4937,7 @@ public static class ContractCodec {
         }
         writer.WriteBool(value.ChecksSpelling);
         writer.WriteBool(value.AutomaticallyEntersPictureInPicture);
+        WriteSavedTabClosePolicy(writer, value.PinnedTabClose);
         WriteSavedTabClosePolicy(writer, value.SavedTabClose);
         writer.WriteBool(value.SavedTabFaviconReturnsToSavedUrl);
         writer.WriteBool(value.UnloadedSavedTabsStay);
