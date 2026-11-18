@@ -43,7 +43,7 @@ struct BrowserCommandPaletteResultRow: View {
         .accessibilityValue(model.engineBadge(for: item.row).map { Text($0.pageDescription) } ?? Text(verbatim: ""))
         .accessibilityHint(item.row.reason.map { Text($0.text) } ?? Text(verbatim: ""))
         .accessibilityIdentifier("command-palette-result-\(item.index)")
-        .browserCommandPaletteHoverSelection(model: model, index: item.index)
+        .browserCommandPaletteHoverSelection(model: model, item: item)
     }
 }
 

@@ -351,9 +351,11 @@ final class BrowserCommandPaletteModel {
         keyboardSelectionRevision &+= 1
     }
 
-    func selectResult(at index: Int) {
+    /// Accepts selection only from a row that still occupies its displayed position.
+    func selectResult(_ item: BrowserCommandPaletteItem) {
+        let index = item.index
+        guard shownSequence == sequence, items.indices.contains(index), items[index].id == item.id else { return }
         rejectURLCompletion()
-        guard shownSequence == sequence, items.indices.contains(index) else { return }
         selectedResultIndex = index
     }
 

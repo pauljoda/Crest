@@ -15,6 +15,7 @@ struct BrowserStartPageCommandPalette: View {
 
     var body: some View {
         promotedPalette
+            .disabled(page.isCommandPaletteObscured)
             .accessibilityIdentifier("start-page-command-palette")
             .accessibilityHidden(page.isCommandPaletteObscured)
     }
