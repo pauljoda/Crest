@@ -81,11 +81,47 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
         };
     }
 
-    /// The setup without the new Space `spaceId`. An existing Space stays.
+    /// The setup with a new Sub-Space of the Space `fromId`, sharing its
+    /// group's session, right after the group's last Space: named with the
+    /// next number of its Space's name, as "Work 2", and wearing that Space's
+    /// look. A setup that holds no such Space stays as it is. Throws `Rejected`
+    /// with `SpaceLimitReached` when the setup holds as many Spaces as a
+    /// workspace may.
+    internal SetupDraft AddingSubSpace(Guid fromId, Func<Guid> nextId) {
+        ArgumentNullException.ThrowIfNull(nextId);
+        if (Spaces.FirstOrDefault(space => space.SpaceId == fromId) is not { } from) return this;
+        if (Spaces.Count >= SessionState.MaximumSpaces) throw new Rejected(new SpaceLimitReached(SessionState.MaximumSpaces));
+        var primaryId = from.PrimaryId ?? from.SpaceId;
+        var primary = Spaces.FirstOrDefault(space => space.SpaceId == primaryId) ?? from;
+        var space = new SetupDraftSpace(nextId(), nextId(), IsNew: true,
+            from.Customization with { Name = NextName(primary.ShownName) }, primaryId);
+        var spaces = Spaces.ToList();
+        int last = spaces.FindLastIndex(candidate => candidate.SpaceId == primaryId || candidate.PrimaryId == primaryId);
+        spaces.Insert(last + 1, space);
+        return this with { Spaces = spaces };
+    }
+
+    /// The setup without the new Space `spaceId`, and without the new
+    /// Sub-Spaces that join it. An existing Space stays.
     internal SetupDraft Removing(Guid spaceId) =>
         Spaces.Any(space => space.SpaceId == spaceId && space.IsNew)
-            ? this with { Spaces = [.. Spaces.Where(space => space.SpaceId != spaceId)] }
+            ? this with {
+                Spaces = [.. Spaces.Where(space => space.SpaceId != spaceId && !(space.IsNew && space.PrimaryId == spaceId))]
+            }
             : this;
+
+    /// `name` with the next number no Space of the setup wears: "Work" and
+    /// "Work 2" both give "Work 2" while no Space is named that, else
+    /// "Work 3", and on.
+    private string NextName(string name) {
+        var trimmed = name.TrimEnd();
+        var gap = trimmed.LastIndexOf(' ');
+        var stem = gap > 0 && int.TryParse(trimmed.AsSpan(gap + 1), out _) ? trimmed[..gap] : trimmed;
+        var taken = Spaces.Select(space => space.ShownName.Trim()).ToHashSet(StringComparer.CurrentCultureIgnoreCase);
+        var number = 2;
+        while (taken.Contains($"{stem} {number}")) number++;
+        return $"{stem} {number}";
+    }
 
     /// The setup with `spaceId` where `targetId` stands, keeping its order.
     internal SetupDraft Moving(Guid spaceId, Guid targetId) {

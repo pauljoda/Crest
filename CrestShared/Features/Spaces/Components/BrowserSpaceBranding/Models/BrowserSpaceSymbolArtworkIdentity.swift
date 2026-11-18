@@ -2,8 +2,8 @@ import SwiftUI
 
 struct BrowserSpaceSymbolArtworkIdentity: Equatable, Sendable {
     private enum Artwork: Equatable, Sendable {
-        case crest(SpaceCrest, colors: ColorPalette)
-        case symbol(color: BrandColor)
+        case crest(SpaceCrest, colors: ColorPalette, gradients: PaletteGradients?)
+        case symbol(fill: CrestColorFill)
         case emoji
     }
 
@@ -27,11 +27,12 @@ struct BrowserSpaceSymbolArtworkIdentity: Equatable, Sendable {
         if branding.iconStyle == .layeredCrest {
             var crest = branding.crest
             crest.startingPresetID = nil
-            artwork = .crest(crest, colors: crest.layerColors(spaceColors: branding.colors))
+            artwork = .crest(
+                crest, colors: crest.layerColors(spaceColors: branding.colors), gradients: branding.colorGradients)
         } else if BrowserIconSymbol.emoji(from: symbol) != nil {
             artwork = .emoji
         } else {
-            artwork = .symbol(color: branding.resolvedSymbolColor)
+            artwork = .symbol(fill: branding.accentFill)
         }
         self.symbol = symbol
         self.requiresAuthentication = requiresAuthentication

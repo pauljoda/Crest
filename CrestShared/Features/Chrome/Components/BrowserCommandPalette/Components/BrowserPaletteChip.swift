@@ -18,14 +18,17 @@ struct BrowserPaletteScopeChip: View {
 }
 
 /// The capsule a palette chip draws its contents in: Liquid Glass tinted with
-/// `color`, which fills it, so the glass picks the foreground that reads best
-/// on it and the contents set none of their own. A chip a person can click
-/// is `isInteractive`, so the glass answers the pointer and presses.
+/// `color`, which fills it, under contents in white or black, whichever the
+/// text tone a Space's colors use reads better over `color`. A chip a person
+/// can click is `isInteractive`, so the glass answers the pointer and
+/// presses.
 struct BrowserPaletteChip<Content: View>: View {
     let color: Color
     let showsCloseControl: Bool
     var isInteractive = false
     @ViewBuilder let content: Content
+
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: CrestSpacing.extraSmall) {
@@ -35,6 +38,7 @@ struct BrowserPaletteChip<Content: View>: View {
                     .font(.caption2.weight(.semibold))
             }
         }
+        .foregroundStyle(color.perceptualForeground(in: colorScheme))
         .padding(.horizontal, CrestSpacing.small)
         .padding(.vertical, CrestSpacing.extraSmall)
         .glassEffect(.regular.tint(color).interactive(isInteractive), in: .capsule)

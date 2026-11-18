@@ -13,7 +13,8 @@ struct BrowserSpaceCrestIcon: View, Equatable {
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.branding.crest == rhs.branding.crest && lhs.branding.colors == rhs.branding.colors
-            && lhs.size == rhs.size && lhs.rasterizesLayers == rhs.rasterizesLayers
+            && lhs.branding.colorGradients == rhs.branding.colorGradients && lhs.size == rhs.size
+            && lhs.rasterizesLayers == rhs.rasterizesLayers
     }
 
     var body: some View {
@@ -85,9 +86,10 @@ struct BrowserSpaceCrestIcon: View, Equatable {
         .accessibilityHidden(true)
     }
 
-    private func color(at index: Int) -> Color {
-        let colors = branding.crest.layerColors(spaceColors: branding.colors)
-        return colors[(0..<colors.count).contains(index) ? index : 0].color
+    /// The fill of the crest's palette entry `index`: one color, or the
+    /// gradient the Space's color there runs into.
+    private func color(at index: Int) -> AnyShapeStyle {
+        branding.crestLayerFill(index).style
     }
 }
 

@@ -19,6 +19,8 @@ public sealed partial class BrowserContractsTests {
     private static readonly Guid CodecSpace = Guid.Parse("00000000-0000-4000-8000-00000000A001");
     private static readonly Guid CodecTab = Guid.Parse("00000000-0000-4000-8000-00000000A003");
 
+    public static TheoryData<string> HouseNames { get; } = [.. SpaceHouse.All.Select(house => house.Name)];
+
     #endregion
 
     #region Actions - Tests
@@ -145,6 +147,98 @@ public sealed partial class BrowserContractsTests {
         });
         Assert.Equal(kept, synced);
         Assert.Equal(kept, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(kept)).InTodaysUnits());
+    }
+
+    /// A radial or angular gradient keeps its kind through normalization, both
+    /// sync forms and the stored session, and a linear one is written as no
+    /// kind, which every build before kinds draws the same way. A kind this
+    /// build can't name reads as linear.
+    [Theory]
+    [InlineData("radial")]
+    [InlineData("angular")]
+    [InlineData("linear")]
+    public void AGradientKeepsItsKindWhereverItTravels(string name) {
+        var (_, _, value) = CodecValue("space");
+        var house = SpaceAccent.Indigo.House;
+        var look = SpaceBranding.Normalized(house with {
+            ThemeMode = SpaceThemeMode.Gradient,
+            GradientKind = SpaceGradientKind.Named(name)
+        });
+
+        value["branding"] = StoredSessionCodec.Encode(look);
+        var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
+            .Write(SyncPayloadForm.Cloud);
+        var synced = Assert.IsType<SpacePayload>(
+            SyncRecordBody.Read(Bytes(cloud), isTombstone: false, SyncPayloadForm.Cloud).Payload).Branding;
+
+        Assert.Equal(name == "linear" ? null : SpaceGradientKind.Named(name), look.GradientKind);
+        Assert.Equal(name != "linear", StoredSessionCodec.Encode(look).ContainsKey("gradientKind"));
+        Assert.Equal(look, synced);
+        Assert.Equal(look, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(look)).InTodaysUnits());
+
+        var unknown = StoredSessionCodec.Encode(look);
+        unknown["gradientKind"] = "spiral";
+        Assert.Null(SpaceBranding.Normalized(StoredSessionCodec.DecodeBranding(unknown)).GradientKind);
+    }
+
+    /// The gradients an icon's color, each palette color and each of the
+    /// crest's own palette colors run on into keep their colors, kind, angle
+    /// and slot through normalization, both sync forms and the stored session,
+    /// a plain color between two keeps its place, and an icon with no color of
+    /// its own, or a crest with no palette of its own, runs on into none.
+    [Fact]
+    public void AColorsGradientKeepsItsSlotWhereverItTravels() {
+        var (_, _, value) = CodecValue("space");
+        BrandGradient Run(double red, SpaceGradientKind? kind) => new(new([new(red, 0.4, 0.6), new(0.1, 0.2, red)]), kind, Angle: 450);
+        var house = SpaceAccent.Indigo.House;
+        var look = SpaceBranding.Normalized(house with {
+            Colors = new([new(0.2, 0.3, 0.4), new(0.5, 0.6, 0.7), new(0.8, 0.1, 0.3)]),
+            SymbolColor = new(0.9, 0.8, 0.1),
+            SymbolGradient = Run(0.3, SpaceGradientKind.Angular),
+            ColorGradients = new([Run(0.5, SpaceGradientKind.Linear), BrandGradient.Plain, Run(0.7, SpaceGradientKind.Radial), Run(0.9, null)]),
+            Crest = house.Crest with {
+                Palette = new([new(0.1, 0.2, 0.3), new(0.4, 0.5, 0.6), new(0.7, 0.8, 0.9), new(0.3, 0.6, 0.9)]),
+                PaletteGradients = new([BrandGradient.Plain, Run(0.4, SpaceGradientKind.Radial), BrandGradient.Plain,
+                    Run(0.6, null), Run(0.8, SpaceGradientKind.Angular)])
+            }
+        });
+
+        value["branding"] = StoredSessionCodec.Encode(look);
+        var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
+            .Write(SyncPayloadForm.Cloud);
+        var synced = Assert.IsType<SpacePayload>(
+            SyncRecordBody.Read(Bytes(cloud), isTombstone: false, SyncPayloadForm.Cloud).Payload).Branding;
+
+        Assert.Equal([2, 0, 2], look.ColorGradients!.Slots.Select(slot => slot.Colors.Colors.Count));
+        Assert.Equal([null, null, SpaceGradientKind.Radial], look.ColorGradients.Slots.Select(slot => slot.Kind));
+        Assert.Equal(90, look.SymbolGradient!.Angle);
+        Assert.Equal([0, 2, 0, 2], look.Crest.PaletteGradients!.Slots.Select(slot => slot.Colors.Colors.Count));
+        Assert.Equal(look, synced);
+        Assert.Equal(look, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(look)).InTodaysUnits());
+        Assert.Null(SpaceBranding.Normalized(look with { SymbolColor = null }).SymbolGradient);
+        Assert.Null(SpaceBranding.Normalized(look with { Crest = look.Crest with { Palette = null } }).Crest.PaletteGradients);
+    }
+
+    /// A house's look is already as every client writes it, so a Space that
+    /// starts from one reads it back unchanged from both sync forms and the
+    /// stored session: each well keeps the gradient it runs on into, and the
+    /// crest keeps no colors of its own, so it follows the Space's.
+    [Theory]
+    [MemberData(nameof(HouseNames))]
+    public void AHousesWellsKeepTheirGradientsAndItsCrestFollowsTheSpaceWhereverItTravels(string name) {
+        var (_, _, value) = CodecValue("space");
+        var look = SpaceHouse.Named(name)!.Look;
+
+        value["branding"] = StoredSessionCodec.Encode(look);
+        var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
+            .Write(SyncPayloadForm.Cloud);
+        var synced = Assert.IsType<SpacePayload>(
+            SyncRecordBody.Read(Bytes(cloud), isTombstone: false, SyncPayloadForm.Cloud).Payload).Branding;
+
+        Assert.Equal(look, SpaceBranding.Normalized(look));
+        Assert.Equal(look, synced);
+        Assert.Equal(look, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(look)).InTodaysUnits());
+        Assert.Null(look.Crest.Palette);
     }
 
     /// Members a newer build writes that this one does not know survive both

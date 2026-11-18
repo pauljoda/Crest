@@ -4,8 +4,9 @@ namespace CrestCore.Contracts;
 
 /// Gives the Spaces setup makes from here on `Look`: the manual setup's new
 /// Spaces and the first launch's disposable Spaces, and each Space an import
-/// brings in new. A manual setup the device already holds, or kept from an
-/// earlier launch, takes it too.
+/// brings in new, including the Spaces of the review setup holds. A manual
+/// setup the device already holds, or kept from an earlier launch, takes it
+/// too.
 public sealed record ChooseSetupLook(SetupLook Look) : SetupFlowIntent {
     #region Actions - Device
 
@@ -13,7 +14,7 @@ public sealed record ChooseSetupLook(SetupLook Look) : SetupFlowIntent {
         var idle = Device.Idle(flow);
         if (idle.Look == Look) return flow;
         device.RestyleSetup(flow.WorkspaceId, session, idle.Look, Look, turn.Changes);
-        return idle with { Look = Look };
+        return idle with { Look = Look, Review = idle.Review?.Restyled(idle.Look, Look) };
     });
 
     #endregion

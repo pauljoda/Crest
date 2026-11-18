@@ -5,23 +5,23 @@ struct BrowserCrestForgeLayer: Hashable, Identifiable, Sendable {
     // MARK: - Static Variables
 
     static let field = BrowserCrestForgeLayer(
-        slot: 0, title: "Field", index: \.backplateColorIndex, crestStep: .shape,
+        slot: 0, title: "Field", index: \.backplateColorIndex, role: .pattern, crestStep: .shape,
         crestHint: "Choose a shape to color its field", draws: { $0.backplate != .none })
     static let secondField = BrowserCrestForgeLayer(
-        slot: 1, title: "Second field", index: \.secondaryFieldColorIndex, crestStep: .field,
+        slot: 1, title: "Second field", index: \.secondaryFieldColorIndex, role: .background, crestStep: .field,
         crestHint: "Divide the field to use a second color",
         draws: { $0.backplate != .none && $0.fieldDivision != .plain })
     static let band = BrowserCrestForgeLayer(
-        slot: 2, title: "Band", index: \.ordinaryColorIndex, crestStep: .band,
+        slot: 2, title: "Band", index: \.ordinaryColorIndex, role: .accent, crestStep: .band,
         crestHint: "Choose a band to color it", draws: { $0.backplate != .none && $0.ordinary != .none })
     static let emblem = BrowserCrestForgeLayer(
-        slot: 3, title: "Emblem", index: \.symbolColorIndex, crestStep: .emblem,
+        slot: 3, title: "Emblem", index: \.symbolColorIndex, role: .accent, crestStep: .emblem,
         crestHint: "Choose an emblem to color it", draws: { $0.resolvedCharge.kind != .none }, isIconFigure: true)
     static let border = BrowserCrestForgeLayer(
-        slot: 4, title: "Border", index: \.trimColorIndex, crestStep: .border,
+        slot: 4, title: "Border", index: \.trimColorIndex, role: .accent, crestStep: .border,
         crestHint: "Choose a border to color it", draws: { $0.trim != .none })
     static let edge = BrowserCrestForgeLayer(
-        slot: 5, title: "Edge", index: \.edgeColorIndex, crestStep: .shape,
+        slot: 5, title: "Edge", index: \.edgeColorIndex, role: .background, crestStep: .shape,
         crestHint: "Give the shape an edge to color it",
         draws: { $0.backplate != .none && ($0.edgeWidth > 0 || $0.showsOutline) })
 
@@ -36,6 +36,10 @@ struct BrowserCrestForgeLayer: Hashable, Identifiable, Sendable {
 
     /// The crest's index into its colors for this layer.
     let index: WritableKeyPath<SpaceCrest, Int> & Sendable
+    /// The Space color the layer wears while the crest follows the Space:
+    /// the field a shade off the sidebar, the emblem, band and border the
+    /// Accent, and the second field and edge the Background.
+    let role: BrowserSpaceBrandColorRole
 
     /// The step that gives a crest this layer, and what to do there, for a
     /// crest that doesn't draw it.
@@ -54,10 +58,11 @@ struct BrowserCrestForgeLayer: Hashable, Identifiable, Sendable {
 
     private init(
         slot: Int, title: LocalizedStringResource, index: WritableKeyPath<SpaceCrest, Int> & Sendable,
-        crestStep: BrowserCrestStudioStep, crestHint: LocalizedStringResource,
+        role: BrowserSpaceBrandColorRole, crestStep: BrowserCrestStudioStep, crestHint: LocalizedStringResource,
         draws: @escaping @Sendable (SpaceCrest) -> Bool, isIconFigure: Bool = false
     ) {
         self.slot = slot
+        self.role = role
         self.title = title
         self.index = index
         self.crestStep = crestStep
@@ -110,11 +115,18 @@ struct BrowserCrestForgeLayer: Hashable, Identifiable, Sendable {
 extension SpaceBranding {
     // MARK: - Crest layers
 
-    func forgeColor(of layer: BrowserCrestForgeLayer) -> BrandColor {
-        if iconStyle == .simpleSymbol, layer.isIconFigure { return resolvedSymbolColor }
-        let colors = crest.layerColors(spaceColors: self.colors)
-        let index = crest[keyPath: layer.index]
-        return colors.indices.contains(index) ? colors[index] : colors[0]
+    /// Whether the crest wears the Space's colors, each layer its role's.
+    var crestFollowsSpace: Bool {
+        crest.palette == nil
+            && BrowserCrestForgeLayer.all.allSatisfy { crest[keyPath: $0.index] == $0.role.slot }
+    }
+
+    /// Gives the crest the Space's colors back, each layer its role's.
+    mutating func followSpaceColors() {
+        crest.palette = nil
+        crest.paletteGradients = nil
+        for layer in BrowserCrestForgeLayer.all { crest[keyPath: layer.index] = layer.role.slot }
+        hasCustomAppearance = true
     }
 
     /// Whether every layer already has a palette entry of its own.
@@ -144,90 +156,30 @@ extension SpaceBranding {
         crest.palette?[layer.slot] = color
     }
 
-    // MARK: - Sidebar colors
-
-    func forgeColor(of role: BrowserSpaceBrandColorRole) -> BrandColor {
-        colors.indices.contains(role.slot) ? colors[role.slot] : (colors.last ?? .indigo)
+    /// The fill one layer wears, with the gradient its palette entry runs
+    /// into; an icon's figure wears the icon's accent.
+    func forgeFill(of layer: BrowserCrestForgeLayer) -> CrestColorFill {
+        if iconStyle == .simpleSymbol, layer.isIconFigure { return accentFill }
+        return crestLayerFill(crest[keyPath: layer.index])
     }
 
-    /// Paints one sidebar color, giving the Space's palette every role up to
-    /// this one.
-    mutating func setForgeColor(_ color: BrandColor, of role: BrowserSpaceBrandColorRole) {
-        hasCustomAppearance = true
-        while colors.count <= role.slot { colors.append(colors.last ?? color) }
-        colors[role.slot] = color
-    }
-}
-
-/// The tinctures the templates are made of, in rows as wide as there are
-/// templates: the darkest row first, each row running from its neutrals
-/// through the hues.
-struct BrowserCrestForgePalette: View {
-    // MARK: - Static Variables
-
-    /// The templates hold different numbers of tinctures, so a column for
-    /// each left gaps and strays at the foot of the grid. Every tincture once,
-    /// in rows of one lightness, fills it.
-    private static let rows: [[BrandColor]] = {
-        var tinctures: [BrandColor] = []
-        for tincture in SpaceHouse.all.flatMap(\.tinctures)
-        where !tinctures.contains(where: { $0.matches(tincture) }) {
-            tinctures.append(tincture)
+    /// Paints one layer with `fill`, a color or a gradient. The first time,
+    /// the crest takes a palette of its own with an entry for each layer,
+    /// copied from what each layer wears, gradients too.
+    mutating func setForgeFill(_ fill: CrestColorFill, of layer: BrowserCrestForgeLayer) {
+        guard let color = fill.colors.first else { return }
+        if iconStyle == .simpleSymbol, layer.isIconFigure {
+            accentFill = fill
+            return
         }
-        let width = SpaceHouse.all.count
-        let byLightness = tinctures.sorted { $0.luminance < $1.luminance }
-        return stride(from: 0, to: byLightness.count, by: width).map { start in
-            byLightness[start..<min(start + width, byLightness.count)].sorted { $0.precedesInPalette($1) }
-        }
-    }()
-
-    // MARK: - Variables
-
-    let title: LocalizedStringResource
-    var caption: LocalizedStringResource? = nil
-    let color: BrandColor
-    let select: (BrandColor) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                if let caption {
-                    Text(caption).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            // Each swatch's ring already holds its color clear of the next, so
-            // the grid adds only a little room of its own.
-            Grid(horizontalSpacing: CrestSpacing.extraSmall, verticalSpacing: CrestSpacing.extraSmall) {
-                ForEach(Self.rows, id: \.self) { row in
-                    GridRow {
-                        ForEach(row, id: \.self) { tincture($0) }
-                    }
-                }
-            }
-            ColorPicker(
-                "Custom",
-                selection: Binding(get: { color.color }, set: { select(BrandColor(color: $0)) }),
-                supportsOpacity: false
-            )
-        }
-        .padding(14)
-        .fixedSize()
-    }
-
-    // MARK: - Actions - Drawing
-
-    private func tincture(_ tincture: BrandColor) -> some View {
-        CrestSelectableCard(
-            isSelected: tincture.matches(color), accessibilityLabel: Text(tincture.title), density: .swatch
-        ) {
-            select(tincture)
-        } content: {
-            Circle()
-                .fill(tincture.color)
-                .frame(width: 24, height: 24)
-                .overlay { Circle().strokeBorder(CrestColor.subtleBorder) }
-        }
-        .help(Text(tincture.title))
+        let worn =
+            hasLayeredCrestPalette
+            ? crest.paletteGradients
+            : PaletteGradients(
+                slots: BrowserCrestForgeLayer.all.map {
+                    Self.gradient(after: crestLayerFill(crest[keyPath: $0.index])) ?? Self.plainGradient
+                })
+        setForgeColor(color, of: layer)
+        crest.paletteGradients = Self.gradients(worn, setting: fill, at: layer.slot)
     }
 }

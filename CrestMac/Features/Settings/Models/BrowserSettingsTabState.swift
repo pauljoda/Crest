@@ -44,8 +44,6 @@ final class BrowserSettingsTabState {
         navigation.selection = .space(id)
         spaceTab = tab
         if intent != .none { renameSpaceID = id }
-        // A new Space starts by choosing the template it is made from.
-        if intent == .newSpace { forgeStep = .start }
     }
 
     func applyExternalRoute(

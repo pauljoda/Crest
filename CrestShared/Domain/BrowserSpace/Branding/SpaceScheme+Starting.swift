@@ -18,15 +18,18 @@ extension SpaceScheme {
     func applying(to branding: SpaceBranding) -> SpaceBranding {
         var updated = branding
         updated.colors = look.colors
+        updated.colorGradients = look.colorGradients
         updated.themeMode = look.themeMode
         updated.bannerPattern = look.bannerPattern
         updated.gradientAngle = look.gradientAngle
+        updated.gradientKind = look.gradientKind
         updated.bannerStrength = look.bannerStrength
         updated.readabilityFade = look.readabilityFade
         updated.textureStrength = look.textureStrength
         updated.textColorMode = look.textColorMode
         updated.iconStyle = look.iconStyle
         updated.symbolColor = look.symbolColor
+        updated.symbolGradient = look.symbolGradient
         updated.crest.startingPresetID = name
         updated.hasCustomAppearance = false
         return updated.normalized()

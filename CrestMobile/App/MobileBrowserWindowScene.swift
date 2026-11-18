@@ -150,22 +150,19 @@ struct MobileBrowserWindowScene: View {
         model.closeWindowRuntime()
     }
 
-    @ViewBuilder
+    /// The browser, held back while a first launch's setup gates it, with
+    /// setup over it while setup is presented. Setup keeps its place when the
+    /// gate lifts as setup finishes, so it can grow its copy of Crest into
+    /// the browser that comes up underneath before it goes.
     private var sceneSurface: some View {
-        if showsAutomaticLaunchGate {
-            onboardingSurface
-        } else {
-            browserSurfaceWithOnboardingOverlay
-        }
-    }
-
-    private var browserSurfaceWithOnboardingOverlay: some View {
         ZStack {
-            browserSurface
-                .allowsHitTesting(!onboardingCoordinator.isMobilePresented)
-                .accessibilityHidden(onboardingCoordinator.isMobilePresented)
+            if !showsAutomaticLaunchGate {
+                browserSurface
+                    .allowsHitTesting(!onboardingCoordinator.isMobilePresented)
+                    .accessibilityHidden(onboardingCoordinator.isMobilePresented)
+            }
 
-            if onboardingCoordinator.isMobilePresented {
+            if showsAutomaticLaunchGate || onboardingCoordinator.isMobilePresented {
                 onboardingSurface
                     .transition(.opacity.combined(with: .scale(scale: 0.985)))
                     .zIndex(10)

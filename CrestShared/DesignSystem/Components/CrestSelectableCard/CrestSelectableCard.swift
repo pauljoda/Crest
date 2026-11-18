@@ -9,6 +9,7 @@ struct CrestSelectableCard<Content: View>: View {
     let accessibilityLabel: Text
     let density: CrestSelectableCardDensity
     let tint: Color?
+    @Environment(\.crestControlAccent) private var controlAccent
     let action: () -> Void
     @ViewBuilder let content: () -> Content
 
@@ -55,7 +56,7 @@ struct CrestSelectableCard<Content: View>: View {
         Image(systemName: CrestSelectableCardMetrics.checkmarkSymbol)
             .font(.system(size: CrestSelectableCardMetrics.checkmarkSize))
             .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(tint ?? CrestBrandTheme.accent)
+            .foregroundStyle(tint ?? controlAccent ?? CrestBrandTheme.accent)
             .opacity(isSelected ? 1 : 0)
             .accessibilityHidden(true)
     }

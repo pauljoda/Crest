@@ -6,6 +6,8 @@ struct CrestButtonSurface: View {
     let configuration: ButtonStyleConfiguration
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.crestControlAccent) private var controlAccent
     @State private var isHovering = false
 
     var body: some View {
@@ -33,62 +35,65 @@ struct CrestButtonSurface: View {
         }
     }
 
+    /// The one action that leads on: a solid pill in the text's own color,
+    /// so it reads first over any room without a color of its own, under a
+    /// faint sheen along its top; a caller's tint fills it instead, under
+    /// white or black text as reads best.
     private var primary: some View {
-        configuration.label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.prominentLabelSize,
-                    weight: .bold
-                )
+        let fill = tint ?? Color.primary
+        return configuration.label
+            .font(CrestTypography.buttonTitle)
+            .foregroundStyle(
+                tint.map { AnyShapeStyle($0.perceptualForeground(in: colorScheme)) } ?? AnyShapeStyle(.background)
             )
-            .foregroundStyle(CrestBrandPalette.ink)
             .padding(.horizontal, CrestButtonMetrics.prominentHorizontalPadding)
             .frame(minHeight: CrestButtonMetrics.prominentHeight)
             .background {
-                Capsule().fill(
-                    (tint ?? CrestBrandPalette.butter)
-                        .opacity(
-                            configuration.isPressed
-                                ? CrestButtonMetrics.pressedFillOpacity
-                                : 1
-                        )
-                )
+                Capsule().fill(fill.opacity(primaryFillOpacity))
             }
             .overlay {
                 Capsule().strokeBorder(
-                    CrestBrandPalette.ink
-                        .opacity(CrestButtonMetrics.inkStrokeOpacity),
+                    LinearGradient(
+                        colors: [.white.opacity(CrestButtonMetrics.sheenOpacity), .white.opacity(0)],
+                        startPoint: .top, endPoint: .center),
+                    lineWidth: CrestButtonMetrics.strokeWidth
+                )
+            }
+            .shadow(
+                color: .black.opacity(CrestButtonMetrics.primaryShadowOpacity),
+                radius: CrestButtonMetrics.primaryShadowRadius, y: 1
+            )
+            .crestCapsuleInteractionShape()
+    }
+
+    /// A real alternative: a quiet pill of the text's own color, clear
+    /// enough to show the surface under it.
+    private var secondary: some View {
+        configuration.label
+            .font(CrestTypography.buttonTitle)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, CrestButtonMetrics.standardHorizontalPadding)
+            .frame(minHeight: CrestButtonMetrics.standardHeight)
+            .background {
+                Capsule().fill(Color.primary.opacity(secondaryFillOpacity))
+            }
+            .overlay {
+                Capsule().strokeBorder(
+                    Color.primary.opacity(CrestButtonMetrics.quietStrokeOpacity),
                     lineWidth: CrestButtonMetrics.strokeWidth
                 )
             }
             .crestCapsuleInteractionShape()
     }
 
-    private var secondary: some View {
-        configuration.label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: .semibold
-                )
-            )
-            .foregroundStyle(CrestBrandTheme.textDisplay)
-            .padding(.horizontal, CrestButtonMetrics.standardHorizontalPadding)
-            .frame(minHeight: CrestButtonMetrics.standardHeight)
-            .background {
-                Capsule().fill(
-                    configuration.isPressed || isHovering
-                        ? CrestBrandTheme.surface
-                        : CrestBrandTheme.canvas
-                )
-            }
-            .overlay {
-                Capsule().strokeBorder(
-                    CrestBrandTheme.line,
-                    lineWidth: CrestButtonMetrics.strokeWidth
-                )
-            }
-            .crestCapsuleInteractionShape()
+    private var primaryFillOpacity: Double {
+        if configuration.isPressed { return CrestButtonMetrics.pressedFillOpacity }
+        return isHovering ? 1 : CrestButtonMetrics.primaryRestFill
+    }
+
+    private var secondaryFillOpacity: Double {
+        if configuration.isPressed { return CrestButtonMetrics.quietPressedFill }
+        return isHovering ? CrestButtonMetrics.quietHoverFill : CrestButtonMetrics.quietRestFill
     }
 
     private var destructive: some View {
@@ -136,7 +141,7 @@ struct CrestButtonSurface: View {
     private func icon(diameter: CGFloat, isProminent: Bool) -> some View {
         // A quiet glyph is a neutral action and draws in the secondary text
         // colour; only a prominent one, or one given a tint, takes a colour.
-        let tint = tint ?? (isProminent ? CrestBrandTheme.accent : CrestColor.textSecondary)
+        let tint = tint ?? (isProminent ? controlAccent ?? CrestBrandTheme.accent : CrestColor.textSecondary)
         let hitTarget = max(diameter, CrestLayout.minimumHitTarget)
         return configuration.label
             .foregroundStyle(tint)
@@ -164,7 +169,7 @@ struct CrestButtonSurface: View {
     }
 
     private var resolvedTint: Color { tint ?? CrestBrandTheme.accent }
-    private var resolvedTextTint: Color { tint ?? CrestBrandTheme.accentText }
+    private var resolvedTextTint: Color { tint ?? controlAccent ?? CrestBrandTheme.accentText }
 
     private func tintedFillOpacity(isEmphasized: Bool) -> Double {
         switch (configuration.isPressed, isEmphasized || isHovering) {

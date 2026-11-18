@@ -20,7 +20,7 @@
         "windowTheme":{"primaryColorPalette":{"midTone":{"red":0.2,"green":0.4,"blue":0.7,"alpha":1}}}}},
     "space-two",{"id":"space-two","title":"Gradient","profile":{"custom":{"_0":{"machineID":"m","directoryBasename":"Profile 1"}}},
       "newContainerIDs":["unpinned","today-root"],
-      "customInfo":{"iconType":{"icon":"code"},
+      "customInfo":{"iconType":{"emoji":128640},
         "windowTheme":{"background":{"single":{"_0":{"style":{"color":{"_0":{"blendedGradient":{"_0":{"baseColors":[
           {"red":0.9,"green":0.1,"blue":0.1},{"red":0.1,"green":0.8,"blue":0.2,"alpha":0.5},{"red":1.4,"green":-1,"blue":0.5},{"red":0.1,"green":0.1,"blue":0.1}
         ]}}}}}}}}}}},

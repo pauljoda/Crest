@@ -10,7 +10,8 @@ namespace CrestCore.Application;
 /// a platform that keeps one: its Spaces and whether its order was edited,
 /// without the workspace, which a launch draws anew. The store keeps it as one
 /// JSON document, `Document`, whose Spaces spell their identities bare, their
-/// accent by `Name` and their look as the stored session does.
+/// accent by `Name` and their look as the stored session does; a Sub-Space
+/// also names its group's primary.
 internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, bool OrderWasEdited) {
     #region Static Variables
 
@@ -23,6 +24,7 @@ internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, boo
     private const string SymbolKey = "symbol";
     private const string AccentKey = "accent";
     private const string BrandingKey = "branding";
+    private const string PrimaryKey = "primary";
 
     private static readonly JsonDocumentOptions Options = new() { MaxDepth = 32 };
 
@@ -33,7 +35,15 @@ internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, boo
     /// The document the store keeps.
     public string Document => new JsonObject {
         [OrderWasEditedKey] = OrderWasEdited,
-        [SpacesKey] = new JsonArray([.. Spaces.Select(space => (JsonNode)new JsonObject {
+        [SpacesKey] = new JsonArray([.. Spaces.Select(Spelled)])
+    }.ToJsonString();
+
+    #endregion
+
+    #region Actions - Keeping
+
+    private static JsonNode Spelled(SetupDraftSpace space) {
+        var spelled = new JsonObject {
             [IdKey] = StoredSessionCodec.BareIdentity(space.SpaceId),
             [ProfileKey] = StoredSessionCodec.BareIdentity(space.ProfileId),
             [IsNewKey] = space.IsNew,
@@ -41,12 +51,10 @@ internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, boo
             [SymbolKey] = space.Customization.Symbol,
             [AccentKey] = space.Customization.Accent.Name,
             [BrandingKey] = StoredSessionCodec.Encode(space.Customization.Branding)
-        })])
-    }.ToJsonString();
-
-    #endregion
-
-    #region Actions - Keeping
+        };
+        if (space.PrimaryId is { } primaryId) spelled[PrimaryKey] = StoredSessionCodec.BareIdentity(primaryId);
+        return spelled;
+    }
 
     /// What the store keeps of `draft`.
     public static KeptSetupDraft From(SetupDraft draft) {
@@ -76,7 +84,8 @@ internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, boo
                 if (node is not JsonObject space || Flag(space[IsNewKey]) is not { } isNew || Text(space[NameKey]) is not { } name
                     || Text(space[SymbolKey]) is not { } symbol || SpaceAccent.Named(Text(space[AccentKey])) is not { } accent) return null;
                 read.Add(new(StoredSessionCodec.Identity(space[IdKey]), StoredSessionCodec.Identity(space[ProfileKey]), isNew,
-                    new(name, symbol, accent, SpaceBranding.Normalized(StoredSessionCodec.DecodeBranding(space[BrandingKey])))));
+                    new(name, symbol, accent, SpaceBranding.Normalized(StoredSessionCodec.DecodeBranding(space[BrandingKey]))),
+                    StoredSessionCodec.OptionalIdentity(space[PrimaryKey])));
             }
             return new(read, Flag(root[OrderWasEditedKey]) ?? false);
         } catch (Exception error) when (error is JsonException or InvalidOperationException or BrowserRuleException) {

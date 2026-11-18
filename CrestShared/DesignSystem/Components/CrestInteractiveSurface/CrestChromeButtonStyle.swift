@@ -14,6 +14,8 @@ struct CrestChromeButtonStyle: ButtonStyle {
     /// rather than the device's material because these tiles sit inside
     /// panels that already wear it, where material on material disappears.
     var showsRestingFill = false
+    /// Draws the surface of a control that is on, for a toggle.
+    var isSelected = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -22,7 +24,8 @@ struct CrestChromeButtonStyle: ButtonStyle {
                     isPressed: configuration.isPressed,
                     controlSize: controlSize,
                     cornerRadius: cornerRadius,
-                    showsRestingFill: showsRestingFill
+                    showsRestingFill: showsRestingFill,
+                    isSelected: isSelected
                 )
             )
     }
@@ -33,6 +36,7 @@ private struct CrestChromeButtonSurface: ViewModifier {
     let controlSize: CGSize?
     let cornerRadius: CGFloat
     let showsRestingFill: Bool
+    let isSelected: Bool
 
     @Environment(\.isEnabled) private var isEnabled
 
@@ -46,7 +50,7 @@ private struct CrestChromeButtonSurface: ViewModifier {
             .frame(width: controlSize?.width, height: controlSize?.height)
             .contentShape(.rect)
             .crestHoverSurface(
-                isSelected: false,
+                isSelected: isSelected,
                 cornerRadius: cornerRadius,
                 isPressed: isPressed
             )

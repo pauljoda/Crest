@@ -14,8 +14,10 @@ struct BrowserOnboardingWindow: View {
     @State private var flow: BrowserOnboardingFlow
     /// How long the welcome has waited on iCloud's check.
     @State private var cloudWait = BrowserOnboardingCloudWait()
-    @State private var selectedManualSpaceID: UUID?
-    @State private var customizationSpaceID: UUID?
+    /// Whether setup finished and its preview is growing into the window
+    /// Crest opens in its place.
+    @State private var isTakingOver = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         request: BrowserOnboardingRequest,
@@ -53,27 +55,45 @@ struct BrowserOnboardingWindow: View {
         self.closeWindow = closeWindow
         self.openBrowser = openBrowser
         _flow = State(initialValue: flow)
-        _selectedManualSpaceID = State(initialValue: flow.manualSetup.spaces.first?.spaceID)
-        _customizationSpaceID = State(initialValue: nil)
     }
 
     var body: some View {
-        BrowserOnboardingWindowContent(
+        BrowserSetupWindowContent(
             request: request,
             cloudSync: cloudSync,
             progress: progress,
             flow: flow,
             cloudWait: cloudWait,
-            selectedManualSpaceID: $selectedManualSpaceID,
-            customizationSpaceID: $customizationSpaceID,
+            isTakingOver: isTakingOver,
             close: closeWindow,
+            startBrowsing: startBrowsing,
             openCrest: openCrest
         )
         .environment(flow.browser.core)
     }
 
+    /// Applies the import setup holds, then finishes setup, carrying `edits`,
+    /// what the person changed in the preview's tabs and folders, and opens
+    /// Crest.
+    private func startBrowsing(_ edits: BrowserSetupCopyEdits?) {
+        flow.startBrowsing(progress: progress, spaceAccess: spaceAccess, carrying: edits, onCompleted: takeOver)
+    }
+
     private func openCrest() {
-        flow.completeSetup(progress: progress, spaceAccess: spaceAccess) {
+        flow.completeSetup(progress: progress, spaceAccess: spaceAccess, onCompleted: takeOver)
+    }
+
+    /// Grows the preview over the steps until it fills the window, then opens
+    /// Crest in the window's place and closes setup.
+    private func takeOver() {
+        guard !reduceMotion else {
+            openBrowser()
+            closeWindow()
+            return
+        }
+        withAnimation(CrestMotion.onboardingStep) { isTakingOver = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(CrestMotion.onboardingStepTransition))
             openBrowser()
             closeWindow()
         }

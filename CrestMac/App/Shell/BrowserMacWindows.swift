@@ -288,7 +288,10 @@ final class BrowserMacWindows {
     /// After a launch that ended while it reopened its pages, the person first
     /// chooses whether to reopen them; if not, every window opens on the Start
     /// Page, and its tabs wait in the sidebar.
-    private func open(_ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key) {
+    private func open(
+        _ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key,
+        placing place: ((BrowserMacWindow) -> Void)? = nil
+    ) {
         heldLaunch = nil
         application.startupWindowID = plan.startupWindowID
         if plan.quitWhileReopening, !Self.reopensPagesAfterQuit() {
@@ -296,7 +299,8 @@ final class BrowserMacWindows {
         }
         beginReopeningPages()
         for id in plan.windowIDs {
-            open(.reopening(id), activation: id == plan.startupWindowID ? activation : .background)
+            let isStartup = id == plan.startupWindowID
+            open(.reopening(id), activation: isStartup ? activation : .background, placing: isStartup ? place : nil)
         }
         application.startPageWindowIDs = []
     }
@@ -329,7 +333,10 @@ final class BrowserMacWindows {
 
     /// Opens the browser window `request` names, or brings forward the one
     /// open under its identity, as `activation` says.
-    func open(_ request: BrowserMacWindowRequest, activation: BrowserMacWindowActivation) {
+    func open(
+        _ request: BrowserMacWindowRequest, activation: BrowserMacWindowActivation,
+        placing place: ((BrowserMacWindow) -> Void)? = nil
+    ) {
         let kind = BrowserMacWindowKind.browsing(request)
         if let existing = controllers.first(where: { $0.kind.hasWindowModel && $0.windowID == request.id }) {
             existing.present(activation)
@@ -338,7 +345,7 @@ final class BrowserMacWindows {
         guard let model = application.windowCoordinator.model(for: request) else { return }
         show(
             kind, id: request.id, closeGate: model.closeGate,
-            cascadingFrom: NSApp.keyWindow.flatMap { browserWindowID(of: $0) == nil ? nil : $0 },
+            cascadingFrom: NSApp.keyWindow.flatMap { browserWindowID(of: $0) == nil ? nil : $0 }, placing: place,
             activation: activation, content: { _ in application.browserWindowContent(model) },
             closed: { [weak self] controller in
                 self?.forget(controller)
@@ -557,22 +564,27 @@ final class BrowserMacWindows {
                     cloudSync: application.cloudSync, progress: application.onboardingProgress,
                     spaceAccess: application.spaceAccess, extensionInstaller: engineHost.importedExtensionInstaller,
                     closeWindow: { [weak window] in window?.close() },
-                    openBrowser: { [weak self] in self?.openBrowser(after: source?.id) })
+                    openBrowser: { [weak self, weak window] in
+                        self?.openBrowser(after: source?.id, takingOver: window?.frame)
+                    })
             },
             closed: { [weak self] controller in self?.forget(controller) })
     }
 
     /// Setup finished: the window it was opened from comes forward, or the
-    /// launch it held back opens, or else a new browser window.
-    private func openBrowser(after sourceWindowID: UUID?) {
+    /// launch it held back opens, or else a new browser window. A window
+    /// that opens takes over setup's `frame`, where setup grew its preview
+    /// into it.
+    private func openBrowser(after sourceWindowID: UUID?, takingOver frame: NSRect?) {
+        let place: ((BrowserMacWindow) -> Void)? = frame.map { frame in { $0.setFrame(frame, display: false) } }
         if let sourceWindowID,
             let source = controllers.first(where: { $0.kind.hasWindowModel && $0.windowID == sourceWindowID })
         {
             source.present(.key)
         } else if let heldLaunch {
-            open(heldLaunch)
+            open(heldLaunch, placing: place)
         } else {
-            open(.normal(sourceWindowID: nil), activation: .key)
+            open(.normal(sourceWindowID: nil), activation: .key, placing: place)
         }
     }
 

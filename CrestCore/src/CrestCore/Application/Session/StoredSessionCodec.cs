@@ -28,6 +28,7 @@ internal static partial class StoredSessionCodec {
         public const string Accent = "accent";
         public const string AlsoOffersSaveToSystemPasswords = "alsoOffersSaveToSystemPasswords";
         public const string Alpha = "alpha";
+        public const string Angle = "angle";
         public const string AppPreferences = "appPreferences";
         public const string Archive = "archive";
         public const string ArchivedAt = "archivedAt";
@@ -48,6 +49,7 @@ internal static partial class StoredSessionCodec {
         public const string ChecksSpelling = "checksSpelling";
         public const string CollapseModifiedAt = "collapseModifiedAt";
         public const string Color = "color";
+        public const string ColorGradients = "colorGradients";
         public const string Colors = "colors";
         public const string CompletesInline = "completesInline";
         public const string ContentBlockingPolicy = "contentBlockingPolicy";
@@ -73,6 +75,7 @@ internal static partial class StoredSessionCodec {
         public const string FolderId = "folderID";
         public const string Folders = "folders";
         public const string GradientAngle = "gradientAngle";
+        public const string GradientKind = "gradientKind";
         public const string Green = "green";
         public const string HasCustomAppearance = "hasCustomAppearance";
         public const string History = "history";
@@ -108,6 +111,7 @@ internal static partial class StoredSessionCodec {
         public const string Ordinary = "ordinary";
         public const string OrdinaryColorIndex = "ordinaryColorIndex";
         public const string Palette = "palette";
+        public const string PaletteGradients = "paletteGradients";
         public const string ParentId = "parentID";
         public const string PinnedTabsAfterClosing = "pinnedTabsAfterClosing";
         public const string Placement = "placement";
@@ -166,6 +170,7 @@ internal static partial class StoredSessionCodec {
         public const string Symbol = "symbol";
         public const string SymbolColor = "symbolColor";
         public const string SymbolColorIndex = "symbolColorIndex";
+        public const string SymbolGradient = "symbolGradient";
         public const string SyncsCrestPasswordsWithICloud = "syncsCrestPasswordsWithICloud";
         public const string Tab = "tab";
         public const string Tabs = "tabs";

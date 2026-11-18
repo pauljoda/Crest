@@ -3,8 +3,8 @@ import SwiftUI
 /// How the Space switcher shows every Space, as a preview button for icons
 /// and one for dots, and how icons are sized where the page keeps that.
 ///
-/// In Advanced the group holds only the sizing rows, which show while Space
-/// icons are icons.
+/// In More Customization the group holds only the sizing rows, which show
+/// while Space icons are icons.
 struct BrowserSpaceIconsAppearanceGroup: View {
     // MARK: - Variables
 
@@ -17,9 +17,9 @@ struct BrowserSpaceIconsAppearanceGroup: View {
 
     var body: some View {
         let showsSizing = filter.shows(.spaceIconSize) && !appearance.spaceIcons.showsDots
-        if !filter.isAdvanced || showsSizing {
+        if !filter.isMore || showsSizing {
             CrestSettingsGroup("Space icons", settings: settings(showsSizing: showsSizing)) {
-                if !filter.isAdvanced {
+                if !filter.isMore {
                     choices
                 }
                 if showsSizing {
@@ -30,7 +30,7 @@ struct BrowserSpaceIconsAppearanceGroup: View {
     }
 
     private var choices: some View {
-        HStack(spacing: BrowserCustomizationStyleMetrics.spacing) {
+        HStack(spacing: BrowserAppearancePreviewMetrics.spacing) {
             ForEach(BrowserSpaceIconDisplay.all) { display in
                 CrestPreviewButton(
                     title: Text(display.title), isSelected: display == appearance.spaceIcons,
@@ -48,8 +48,8 @@ struct BrowserSpaceIconsAppearanceGroup: View {
                             EmptyView()
                         }
                         .frame(
-                            width: BrowserCustomizationStyleMetrics.previewSize.width,
-                            height: BrowserCustomizationStyleMetrics.previewSize.height
+                            width: BrowserAppearancePreviewMetrics.previewSize.width,
+                            height: BrowserAppearancePreviewMetrics.previewSize.height
                         )
                     }
                 }
@@ -78,8 +78,8 @@ struct BrowserSpaceIconsAppearanceGroup: View {
 
     // MARK: - Actions - Settings
 
-    /// The look the previews wear: the style's own.
-    private var look: SetupLook { appearance.customizationStyle.look }
+    /// The look the previews wear: a house's, as a new Space's is.
+    private var look: SetupLook { .heraldic }
 
     private var faceSize: CGFloat {
         sizeClass == .compact ? CrestPreviewButtonMetrics.compactFace : CrestPreviewButtonMetrics.regularFace
@@ -108,7 +108,7 @@ struct BrowserSpaceIconsAppearanceGroup: View {
     }
 
     private func settings(showsSizing: Bool) -> [CrestResettableSetting] {
-        (filter.isAdvanced ? [] : [display])
+        (filter.isMore ? [] : [display])
             + (showsSizing
                 ? [fits.resettable("Fit Space icons to sidebar"), scale.resettable("Space icon size")] : [])
     }

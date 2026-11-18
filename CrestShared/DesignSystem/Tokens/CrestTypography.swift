@@ -12,6 +12,8 @@ enum CrestTypography {
     static let sansFontName = "Avenir Next"
 
     static let controlTitle = Font.body.weight(.medium)
+    /// A button's title, in the system face.
+    static let buttonTitle = Font.body.weight(.semibold)
     static let metadata = Font.caption
     static let compactMetadata = Font.caption2
     static let badge = Font.caption2.monospaced().weight(.semibold)

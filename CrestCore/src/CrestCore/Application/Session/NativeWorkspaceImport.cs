@@ -198,8 +198,9 @@ internal sealed class NativeWorkspaceImport {
         return new(space.SpaceId, space.ProfileId, settings, Folders: [], Tabs: [], SplitGroups: [], ArchivedTabs: [], History: []);
     }
 
-    /// Applies a manual setup's Spaces in their order; see `ApplyManualSetup`.
-    internal void ApplySetup(SetupDraft setup) {
+    /// Applies a manual setup's Spaces in their order, a new Sub-Space joining
+    /// its group at `now`; see `ApplyManualSetup`.
+    internal void ApplySetup(SetupDraft setup, DateTimeOffset now) {
         var paired = Pair(setup.Spaces, draft => draft.SpaceId);
         SessionState.RequireSpaceCapacity(spaces.Count, setup.Spaces.Count(draft => draft.IsNew));
         foreach (var (input, draft) in paired) {
@@ -216,6 +217,13 @@ internal sealed class NativeWorkspaceImport {
             if (!created) continue;
             spaces.Add(destination);
             affected ??= destination;
+        }
+        foreach (var (input, draft) in paired) {
+            if (!draft.IsNew || draft.PrimaryId is not { } primaryId) continue;
+            if (spaces.FirstOrDefault(s => s.Id == input.Id) is not { } member
+                || spaces.FirstOrDefault(s => s.Id == primaryId) is not { } primary) continue;
+            var leader = primary.State.PrimaryId is { } leadId ? spaces.FirstOrDefault(s => s.Id == leadId) ?? primary : primary;
+            member.State = Joining(member.State, leader.State, now);
         }
         if (setup.OrderWasEdited) {
             var order = paired.Select(pair => pair.Input.Id).ToArray();
