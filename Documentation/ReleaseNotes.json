@@ -5741,6 +5741,10 @@
     "palette-selected-row-completion-dismissal": {
       "category": "internal",
       "message": "Moving the pointer over a selected command palette row dismisses inline URL completion while keeping the row selected."
+    },
+    "palette-pending-answer-completion-dismissal": {
+      "category": "internal",
+      "message": "Moving the pointer over the selected palette result while a new answer is pending dismisses the visible completion and lets the new answer offer its own."
     }
   }
 }
