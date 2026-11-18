@@ -460,10 +460,27 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
-    func clearCurrentTabs() {
-        guard browser.clearShownSpaceTabs(accessController: spaceAccess) else { return }
+    func clearCurrentTabs(keepingShownTab: Bool) {
+        guard browser.clearShownSpaceTabs(accessController: spaceAccess, keepingShownTab: keepingShownTab) else {
+            return
+        }
         pages.reconcile()
         pages.select()
+    }
+
+    /// Whether the Space this window shows is unlocked and has a folder open.
+    var canCollapseAllFolders: Bool {
+        browser.canCollapseShownSpaceFolders(accessController: spaceAccess)
+    }
+
+    /// Collapses every open folder of the Space this window shows, with the
+    /// sidebar's disclosure motion.
+    func collapseAllFolders() {
+        withAnimation(
+            CrestMotion.disclosure.unlessReducingMotion(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        ) {
+            _ = browser.collapseShownSpaceFolders(accessController: spaceAccess)
+        }
     }
 
     func archiveSelectedTab() {

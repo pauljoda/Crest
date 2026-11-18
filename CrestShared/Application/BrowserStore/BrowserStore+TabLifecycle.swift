@@ -153,9 +153,18 @@ extension BrowserStore {
 // MARK: - Metadata
 
 extension BrowserStore {
-    /// The open tabs of `space`, which clearing puts away.
-    private static func currentTabIDs(of space: SpaceModel) -> Set<UUID> {
-        Set(space.tabs.models.filter { $0.placement == .current }.map(\.id))
+    /// The open tabs of `space` that clearing puts away: all of them, or,
+    /// keeping the shown tab, all but the tab this window shows there and the
+    /// rest of its split, as the core keeps them.
+    func clearedTabIDs(of space: SpaceModel, keepingShownTab: Bool) -> Set<UUID> {
+        let open = space.tabs.models.filter { $0.placement == .current }
+        guard keepingShownTab, let shown = selectedTabID(in: space.id).flatMap({ space.tabs.model($0) }) else {
+            return Set(open.map(\.id))
+        }
+        let kept = { (tab: TabStateModel) in
+            tab.id == shown.id || (shown.splitGroupID != nil && tab.splitGroupID == shown.splitGroupID)
+        }
+        return Set(open.filter { !kept($0) }.map(\.id))
     }
 
     @discardableResult
@@ -178,27 +187,32 @@ extension BrowserStore {
         return closeTab(id, in: assignment.spaceID)
     }
 
+    /// Archives the Space's open tabs, but for the tab this window shows there
+    /// when `keepingShownTab`.
     @discardableResult
     func clearCurrentTabs(
-        matching assignment: BrowserSpaceRuntimeAssignment
+        matching assignment: BrowserSpaceRuntimeAssignment,
+        keepingShownTab: Bool
     ) -> Bool {
         guard let space = spaceModel(matching: assignment) else { return false }
-        let ids = Self.currentTabIDs(of: space)
+        let ids = clearedTabIDs(of: space, keepingShownTab: keepingShownTab)
         guard !ids.isEmpty else { return false }
         let tabs = ids.map { BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID) }
         return performPageDismissal(of: tabs) { [weak self] in
-            guard let self, let current = self.spaceModel(matching: assignment), Self.currentTabIDs(of: current) == ids,
-                self.clearSessionTabs(in: assignment.spaceID)
+            guard let self, let current = self.spaceModel(matching: assignment),
+                self.clearedTabIDs(of: current, keepingShownTab: keepingShownTab) == ids,
+                self.clearSessionTabs(in: assignment.spaceID, keepingShownTab: keepingShownTab)
             else { return false }
             return true
         }
     }
 
-    /// Clears the open tabs of the Space this window shows, unless it is locked.
+    /// Clears the open tabs of the Space this window shows, unless it is
+    /// locked, keeping the shown tab when `keepingShownTab`.
     @discardableResult
-    func clearShownSpaceTabs(accessController: BrowserSpaceAccessController) -> Bool {
+    func clearShownSpaceTabs(accessController: BrowserSpaceAccessController, keepingShownTab: Bool) -> Bool {
         guard let space = shownSpace, !accessController.isLocked(space) else { return false }
-        return clearCurrentTabs(matching: BrowserSpaceRuntimeAssignment(space: space))
+        return clearCurrentTabs(matching: BrowserSpaceRuntimeAssignment(space: space), keepingShownTab: keepingShownTab)
     }
 
     @discardableResult

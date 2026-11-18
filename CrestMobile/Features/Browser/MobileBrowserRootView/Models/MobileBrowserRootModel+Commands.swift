@@ -42,6 +42,7 @@ extension MobileBrowserRootModel {
                 && transientBrowsing.quickWindowRequest == nil,
             canDuplicateSelectedTab: controller.canDuplicateSelectedTab,
             canReopenClosedTab: controller.canReopenClosedTab,
+            canCollapseAllFolders: controller.canCollapseAllFolders,
             tabCount: controller.tabCount,
             canJumpToRecentTab: controller.canJumpToRecentTab,
             spaceCount: browser.spaceModels.count,
@@ -79,11 +80,19 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
-            clearCurrentTabs: {
+            clearOtherTabs: {
                 _ = self.clearCurrentTabsFromCommand(
+                    keepingShownTab: true,
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
+            clearAllTabs: {
+                _ = self.clearCurrentTabsFromCommand(
+                    keepingShownTab: false,
+                    beforeSynchronization: prepareForSelectionSynchronization
+                )
+            },
+            collapseAllFolders: { controller.collapseAllFolders() },
             dismissSelectedTab: {
                 _ = self.dismissSelectedTabFromCommand(
                     beforeSynchronization: prepareForSelectionSynchronization
@@ -242,9 +251,10 @@ extension MobileBrowserRootModel {
 
     @discardableResult
     func clearCurrentTabsFromCommand(
+        keepingShownTab: Bool,
         beforeSynchronization: () -> Void = {}
     ) -> Bool {
-        guard commandController.clearCurrentTabs() else { return false }
+        guard commandController.clearCurrentTabs(keepingShownTab: keepingShownTab) else { return false }
         beforeSynchronization()
         synchronizeAfterCommandSelection()
         return true

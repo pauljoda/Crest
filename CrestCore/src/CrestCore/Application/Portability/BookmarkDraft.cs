@@ -89,15 +89,15 @@ internal sealed class BookmarkDraft {
 
     /// The Space as many of the bookmarks as fit make for `source`, named
     /// after it, every record a new identity from `ids`: the first
-    /// `folderRoom` folders, and the first `tabRoom` links outside any folder
-    /// or in one of those. Null when no link fits. `cut` says whether a folder
+    /// `folderRoom` folders, closed, as every folder an import makes starts,
+    /// and the first `tabRoom` links outside any folder or in one of those. Null when no link fits. `cut` says whether a folder
     /// or link was left out, here or while reading. Throws `Rejected` with
     /// `BookmarksOverLimits` for folders a Space would not keep, and
     /// `BookmarksUnrecognized` for anything else a Space would not keep.
     public SpaceState? Space(ImportSource source, IIdSource ids, DateTimeOffset now, int tabRoom, int folderRoom, out bool cut) {
         ArgumentNullException.ThrowIfNull(source);
         var keptFolders = folders.Take(Math.Max(0, folderRoom)).Select(folder => new BrowserDataFolder(folder.Id, TabPlacement.Saved,
-            folder.Title, FolderState.DefaultSymbol, FolderState.DefaultColor, folder.Parent, IsCollapsed: false, OrderAnchorTabId: null)).ToArray();
+            folder.Title, FolderState.DefaultSymbol, FolderState.DefaultColor, folder.Parent, IsCollapsed: true, OrderAnchorTabId: null)).ToArray();
         var byId = keptFolders.ToDictionary(folder => folder.Id);
         var keptBookmarks = bookmarks.Where(bookmark => bookmark.Folder is not { } folder || byId.ContainsKey(folder))
             .Take(Math.Max(0, tabRoom)).ToArray();

@@ -9,10 +9,12 @@ extension BrowserRootModel {
         BrowserDeviceAppearanceStore.shared.addressBarPlacement.showsBarInPageCards
     }
 
-    /// Whether the window shows a split, whose cards carry bars of their own
-    /// in either placement, as a Quick Window does.
+    /// Whether the window shows a split whose cards carry bars of their own,
+    /// as a Quick Window does: while the address bar is on top. In the
+    /// sidebar placement the sidebar's bar serves the focused card, as it
+    /// serves a lone page.
     var presentsSplitBars: Bool {
-        guard let space = browser.shownSpace else { return false }
+        guard showsPageCardBars, let space = browser.shownSpace else { return false }
         return browser.cards(in: space).count > 1
     }
 

@@ -67,7 +67,8 @@ struct MobileBrowserCommands: Commands {
             button(.toggleSelectedTabPinned)
             button(.duplicateTab)
             button(.reopenClosedTab)
-            button(.clearUnpinnedTabs)
+            button(.clearOtherTabs)
+            button(.clearAllTabs)
             button(.archiveTab)
 
             Divider()
@@ -164,6 +165,7 @@ struct MobileBrowserCommands: Commands {
             .disabled(context?.canToggleTranslationToolbar != true)
 
             button(.toggleSidebar)
+            button(.collapseAllFolders)
             button(.showHistory)
             button(.showArchive)
             button(.showDownloads)

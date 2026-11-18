@@ -1141,6 +1141,7 @@ struct AppPreferences: Equatable, Sendable {
         translationRules: [],
         checksSpelling: false,
         automaticallyEntersPictureInPicture: true,
+        pinnedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
         unloadedSavedTabsStay: true,
@@ -1181,6 +1182,7 @@ struct AppPreferences: Equatable, Sendable {
     var translationRules: [TranslationRule]
     var checksSpelling: Bool
     var automaticallyEntersPictureInPicture: Bool
+    var pinnedTabClose: SavedTabClosePolicy
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
     var unloadedSavedTabsStay: Bool
@@ -1688,6 +1690,7 @@ struct ClearCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
+    let keepsShownTab: Bool
 }
 
 struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
@@ -1896,6 +1899,11 @@ struct CloudTransportState: Equatable, Sendable {
 struct CloudTransportSynced: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let attempt: Int64
     let localChangesUnsaved: Bool
+}
+
+struct CollapseAllFolders: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
 }
 
 struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
@@ -5080,6 +5088,7 @@ struct PaletteRow: Equatable, Sendable {
     let settingsPage: String?
     let scope: PaletteScope?
     let reason: PaletteReason?
+    let httpFallback: String?
 
     /// The fields of a `PaletteRow` alone, as a platform builds one to send. The
     /// core resolves the rest when it reads it.
@@ -5096,6 +5105,7 @@ struct PaletteRow: Equatable, Sendable {
         var settingsPage: String?
         var scope: PaletteScope?
         var reason: PaletteReason?
+        var httpFallback: String?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -5112,7 +5122,8 @@ struct PaletteRow: Equatable, Sendable {
             provider: provider?.seed,
             settingsPage: settingsPage,
             scope: scope,
-            reason: reason
+            reason: reason,
+            httpFallback: httpFallback
         )
     }
 }
@@ -15512,6 +15523,7 @@ struct NavigationError: Hashable, Sendable {
     var primarySuggestion: LocalizedStringResource { facts.primarySuggestion }
     var secondarySuggestion: LocalizedStringResource { facts.secondarySuggestion }
     var symbol: String { facts.symbol }
+    var fallsBackToHttp: Bool { facts.fallsBackToHttp }
     private let facts: Facts
 
     private init(
@@ -15522,7 +15534,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource,
         primarySuggestion: LocalizedStringResource,
         secondarySuggestion: LocalizedStringResource,
-        symbol: String
+        symbol: String,
+        fallsBackToHttp: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -15532,7 +15545,8 @@ struct NavigationError: Hashable, Sendable {
             message: message,
             primarySuggestion: primarySuggestion,
             secondarySuggestion: secondarySuggestion,
-            symbol: symbol
+            symbol: symbol,
+            fallsBackToHttp: fallsBackToHttp
         )
     }
 
@@ -15544,7 +15558,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest can’t reach %@ without a network connection."),
         primarySuggestion: LocalizedStringResource("Reconnect to Wi-Fi or Ethernet, then try again."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "wifi.slash"
+        symbol: "wifi.slash",
+        fallsBackToHttp: false
     )
     static let timedOut = NavigationError(
         tag: 1,
@@ -15554,7 +15569,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ didn’t respond in time."),
         primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "clock.badge.exclamationmark"
+        symbol: "clock.badge.exclamationmark",
+        fallsBackToHttp: true
     )
     static let cannotFindServer = NavigationError(
         tag: 2,
@@ -15564,7 +15580,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest couldn’t find the server for %@."),
         primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
         secondarySuggestion: LocalizedStringResource("If the address is correct, check your DNS or VPN settings."),
-        symbol: "network.slash"
+        symbol: "network.slash",
+        fallsBackToHttp: false
     )
     static let cannotConnect = NavigationError(
         tag: 3,
@@ -15574,7 +15591,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ refused the connection or isn’t accepting connections."),
         primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
         secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
-        symbol: "exclamationmark.icloud"
+        symbol: "exclamationmark.icloud",
+        fallsBackToHttp: true
     )
     static let connectionLost = NavigationError(
         tag: 4,
@@ -15584,7 +15602,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The connection to %@ ended before the page finished loading."),
         primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "bolt.horizontal.icloud"
+        symbol: "bolt.horizontal.icloud",
+        fallsBackToHttp: true
     )
     static let secureConnectionFailed = NavigationError(
         tag: 5,
@@ -15594,7 +15613,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest couldn’t verify a private, secure connection to %@."),
         primarySuggestion: LocalizedStringResource("Check that your device’s date and time are correct."),
         secondarySuggestion: LocalizedStringResource("Avoid entering private information until the site fixes its certificate."),
-        symbol: "lock.trianglebadge.exclamationmark"
+        symbol: "lock.trianglebadge.exclamationmark",
+        fallsBackToHttp: true
     )
     static let tooManyRedirects = NavigationError(
         tag: 6,
@@ -15604,7 +15624,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ sent Crest through too many redirects."),
         primarySuggestion: LocalizedStringResource("Try again later; the site may be temporarily misconfigured."),
         secondarySuggestion: LocalizedStringResource("Opening the site’s home page may avoid the redirect loop."),
-        symbol: "arrow.trianglehead.2.clockwise.rotate.90"
+        symbol: "arrow.trianglehead.2.clockwise.rotate.90",
+        fallsBackToHttp: false
     )
     static let unsupportedAddress = NavigationError(
         tag: 7,
@@ -15614,7 +15635,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The address uses a format or protocol Crest doesn’t support."),
         primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
         secondarySuggestion: LocalizedStringResource("Try an address beginning with http:// or https://."),
-        symbol: "link.badge.plus"
+        symbol: "link.badge.plus",
+        fallsBackToHttp: false
     )
     static let blocked = NavigationError(
         tag: 8,
@@ -15624,7 +15646,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("A security or content policy prevented this page from loading."),
         primarySuggestion: LocalizedStringResource("Review this Space’s content and network settings."),
         secondarySuggestion: LocalizedStringResource("A firewall, filter, or device policy may also be responsible."),
-        symbol: "hand.raised.slash"
+        symbol: "hand.raised.slash",
+        fallsBackToHttp: false
     )
     static let unavailable = NavigationError(
         tag: 9,
@@ -15634,7 +15657,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ returned a response Crest couldn’t load."),
         primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
         secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
-        symbol: "exclamationmark.icloud"
+        symbol: "exclamationmark.icloud",
+        fallsBackToHttp: false
     )
     static let webContentProcessStopped = NavigationError(
         tag: 10,
@@ -15644,7 +15668,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The web content process stopped repeatedly. Your tab and address are safe."),
         primarySuggestion: LocalizedStringResource("Try reloading the page in a fresh web content process."),
         secondarySuggestion: LocalizedStringResource("If it happens again, try closing and reopening the tab."),
-        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
+        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90",
+        fallsBackToHttp: false
     )
     static let unknown = NavigationError(
         tag: 11,
@@ -15654,7 +15679,19 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest encountered an unexpected problem while opening %@."),
         primarySuggestion: LocalizedStringResource("Try the address again or open a different page."),
         secondarySuggestion: LocalizedStringResource("The technical details below can help identify the cause."),
-        symbol: "doc.badge.ellipsis"
+        symbol: "doc.badge.ellipsis",
+        fallsBackToHttp: false
+    )
+    static let addressUnreachable = NavigationError(
+        tag: 12,
+        name: "addressUnreachable",
+        code: "CREST_ADDRESS_UNREACHABLE",
+        title: LocalizedStringResource("This address can’t be reached"),
+        message: LocalizedStringResource("Crest can’t reach %@ from this network."),
+        primarySuggestion: LocalizedStringResource("For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network."),
+        secondarySuggestion: LocalizedStringResource("Check that the device is on and connected to your network, and that a VPN isn’t blocking local access."),
+        symbol: "wifi.exclamationmark",
+        fallsBackToHttp: true
     )
 
     static let all: [NavigationError] = [
@@ -15669,7 +15706,8 @@ struct NavigationError: Hashable, Sendable {
         blocked,
         unavailable,
         webContentProcessStopped,
-        unknown
+        unknown,
+        addressUnreachable
     ]
 
     static func named(_ name: String?) -> NavigationError? {
@@ -15692,6 +15730,7 @@ struct NavigationError: Hashable, Sendable {
         let primarySuggestion: LocalizedStringResource
         let secondarySuggestion: LocalizedStringResource
         let symbol: String
+        let fallsBackToHttp: Bool
 
         init(
             name: String,
@@ -15700,7 +15739,8 @@ struct NavigationError: Hashable, Sendable {
             message: LocalizedStringResource,
             primarySuggestion: LocalizedStringResource,
             secondarySuggestion: LocalizedStringResource,
-            symbol: String
+            symbol: String,
+            fallsBackToHttp: Bool
         ) {
             self.name = name
             self.code = code
@@ -15709,6 +15749,7 @@ struct NavigationError: Hashable, Sendable {
             self.primarySuggestion = primarySuggestion
             self.secondarySuggestion = secondarySuggestion
             self.symbol = symbol
+            self.fallsBackToHttp = fallsBackToHttp
         }
     }
 }
@@ -19020,7 +19061,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case toggleSelectedTabPinned
         case duplicateTab
         case reopenClosedTab
-        case clearUnpinnedTabs
+        case clearOtherTabs
         case archiveTab
         case previousTab
         case nextTab
@@ -19065,6 +19106,8 @@ struct ShortcutCommand: Hashable, Sendable {
         case blockElement
         case showBlockedElements
         case openNextExtension
+        case clearAllTabs
+        case collapseAllFolders
     }
 
     let tag: Int
@@ -19081,6 +19124,7 @@ struct ShortcutCommand: Hashable, Sendable {
     var defaultShortcuts: [ShortcutDefault] { facts.defaultShortcuts }
     var paletteRest: Int? { facts.paletteRest }
     var offersInPalette: Bool { facts.offersInPalette }
+    var isOptionAlternate: Bool { facts.isOptionAlternate }
     var isReservedFromPages: Bool { facts.isReservedFromPages }
     var defaultPreference: ShortcutPreference { facts.defaultPreference }
     private let facts: Facts
@@ -19100,6 +19144,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [ShortcutDefault],
         paletteRest: Int?,
         offersInPalette: Bool,
+        isOptionAlternate: Bool,
         isReservedFromPages: Bool,
         defaultPreference: ShortcutPreference
     ) {
@@ -19118,6 +19163,7 @@ struct ShortcutCommand: Hashable, Sendable {
             defaultShortcuts: defaultShortcuts,
             paletteRest: paletteRest,
             offersInPalette: offersInPalette,
+            isOptionAlternate: isOptionAlternate,
             isReservedFromPages: isReservedFromPages,
             defaultPreference: defaultPreference
         )
@@ -19149,6 +19195,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 1,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19173,6 +19220,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19202,6 +19250,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19231,6 +19280,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19260,6 +19310,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19289,6 +19340,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19318,6 +19370,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19347,6 +19400,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19376,6 +19430,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19405,6 +19460,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19434,6 +19490,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19463,6 +19520,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19492,6 +19550,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19521,6 +19580,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19539,6 +19599,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19568,16 +19629,17 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 2,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
-    static let clearUnpinnedTabs = ShortcutCommand(
+    static let clearOtherTabs = ShortcutCommand(
         tag: 16,
-        kind: .clearUnpinnedTabs,
+        kind: .clearOtherTabs,
         name: "clearUnpinnedTabs",
         section: ShortcutSection.tabs,
-        title: LocalizedStringResource("Clear Unpinned Tabs"),
-        searchTerms: LocalizedStringResource("clean tidy archive unpinned tabs"),
+        title: LocalizedStringResource("Clear Other Tabs"),
+        searchTerms: LocalizedStringResource("clean tidy archive unpinned open tabs"),
         menuTitle: nil,
         symbol: "sparkles",
         requiredCapability: nil,
@@ -19597,6 +19659,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19626,6 +19689,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19655,6 +19719,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19684,6 +19749,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19713,6 +19779,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19742,6 +19809,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19771,6 +19839,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19800,6 +19869,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19829,6 +19899,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19858,6 +19929,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19887,6 +19959,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19916,6 +19989,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19945,6 +20019,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19974,6 +20049,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20003,6 +20079,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20032,6 +20109,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20061,6 +20139,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20090,6 +20169,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20119,6 +20199,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20148,6 +20229,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20177,6 +20259,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20206,6 +20289,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20235,6 +20319,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20264,6 +20349,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20293,6 +20379,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20311,6 +20398,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20329,6 +20417,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20347,6 +20436,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20365,6 +20455,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20394,6 +20485,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20423,6 +20515,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20452,6 +20545,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20481,6 +20575,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20510,6 +20605,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20539,6 +20635,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20557,6 +20654,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20575,6 +20673,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20593,6 +20692,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20622,6 +20722,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20651,6 +20752,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 5,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20680,6 +20782,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 3,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20698,6 +20801,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20727,6 +20831,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 4,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20756,6 +20861,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20774,6 +20880,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20803,6 +20910,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20832,6 +20940,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20850,6 +20959,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20879,6 +20989,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20908,6 +21019,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20937,6 +21049,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20966,6 +21079,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20995,6 +21109,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -21013,6 +21128,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -21037,6 +21153,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -21061,6 +21178,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -21085,6 +21203,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -21114,6 +21233,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -21132,6 +21252,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -21150,6 +21271,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -21168,6 +21290,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -21192,6 +21315,56 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let clearAllTabs = ShortcutCommand(
+        tag: 78,
+        kind: .clearAllTabs,
+        name: "clearAllTabs",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Clear All Tabs"),
+        searchTerms: LocalizedStringResource("clean tidy archive unpinned open tabs every current"),
+        menuTitle: nil,
+        symbol: "sparkles",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: true
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: true,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let collapseAllFolders = ShortcutCommand(
+        tag: 79,
+        kind: .collapseAllFolders,
+        name: "collapseAllFolders",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Collapse All Folders"),
+        searchTerms: LocalizedStringResource("close fold folders sidebar tidy"),
+        menuTitle: nil,
+        symbol: "rectangle.compress.vertical",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -21213,7 +21386,7 @@ struct ShortcutCommand: Hashable, Sendable {
         toggleSelectedTabPinned,
         duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs,
+        clearOtherTabs,
         archiveTab,
         previousTab,
         nextTab,
@@ -21274,7 +21447,9 @@ struct ShortcutCommand: Hashable, Sendable {
         clearSiteCookies,
         clearSiteCache,
         toggleSelectedTabSaved,
-        openNextExtension
+        openNextExtension,
+        clearAllTabs,
+        collapseAllFolders
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -21303,6 +21478,7 @@ struct ShortcutCommand: Hashable, Sendable {
         let defaultShortcuts: [ShortcutDefault]
         let paletteRest: Int?
         let offersInPalette: Bool
+        let isOptionAlternate: Bool
         let isReservedFromPages: Bool
         let defaultPreference: ShortcutPreference
 
@@ -21320,6 +21496,7 @@ struct ShortcutCommand: Hashable, Sendable {
             defaultShortcuts: [ShortcutDefault],
             paletteRest: Int?,
             offersInPalette: Bool,
+            isOptionAlternate: Bool,
             isReservedFromPages: Bool,
             defaultPreference: ShortcutPreference
         ) {
@@ -21336,6 +21513,7 @@ struct ShortcutCommand: Hashable, Sendable {
             self.defaultShortcuts = defaultShortcuts
             self.paletteRest = paletteRest
             self.offersInPalette = offersInPalette
+            self.isOptionAlternate = isOptionAlternate
             self.isReservedFromPages = isReservedFromPages
             self.defaultPreference = defaultPreference
         }
@@ -21377,7 +21555,11 @@ struct ShortcutMenu: Hashable, Sendable {
         name: "view",
         title: LocalizedStringResource("View"),
         groups: [
-            [ShortcutCommand.toggleSidebar, ShortcutCommand.toggleTranslationToolbar],
+            [
+                ShortcutCommand.toggleSidebar,
+                ShortcutCommand.collapseAllFolders,
+                ShortcutCommand.toggleTranslationToolbar
+            ],
             [ShortcutCommand.showHistory, ShortcutCommand.showArchive, ShortcutCommand.showDownloads]
         ]
     )
@@ -21406,7 +21588,8 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.toggleSelectedTabSaved,
                 ShortcutCommand.duplicateTab,
                 ShortcutCommand.reopenClosedTab,
-                ShortcutCommand.clearUnpinnedTabs,
+                ShortcutCommand.clearOtherTabs,
+                ShortcutCommand.clearAllTabs,
                 ShortcutCommand.archiveTab
             ],
             [
@@ -24494,6 +24677,7 @@ struct TabIconMode: Hashable, Sendable {
 }
 
 /// The members of the core's `TabPlacement`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `closePolicy`.
 struct TabPlacement: Hashable, Sendable {
     static let pinnedCapacity = 12
 

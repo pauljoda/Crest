@@ -21,7 +21,8 @@ public sealed class ShortcutCatalogTests {
         "showDownloads", "webInspectorInstructions", "splitWithNextTab", "focusNextSplitCard", "focusPreviousSplitCard",
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
         "toggleTranslationToolbar", "openFile", "findNext", "findPrevious", "capturePage",
-        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache", "toggleSelectedTabSaved", "openNextExtension"
+        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache", "toggleSelectedTabSaved", "openNextExtension",
+        "clearAllTabs", "collapseAllFolders"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;

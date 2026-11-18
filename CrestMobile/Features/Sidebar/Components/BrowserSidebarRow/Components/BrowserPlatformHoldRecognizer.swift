@@ -103,6 +103,9 @@ final class MobileHoldAnchorView: UIView {
 
 extension MobileHoldAnchorView: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        // A finger's tap meets any button mask, so only a pointer's click
+        // counts as a secondary click; a tap opens or closes the row instead.
+        if gestureRecognizer === secondaryClick, touch.type != .indirectPointer { return false }
         guard let window, !isHidden, alpha > 0, bounds.contains(touch.location(in: self)) else { return false }
         // The window's subtree that draws this row: a page presented over
         // the sidebar is drawn in another, so its touches fall outside.

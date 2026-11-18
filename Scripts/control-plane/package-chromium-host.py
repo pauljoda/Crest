@@ -114,11 +114,31 @@ def remove_engine_alerts_helper(frameworks):
             shutil.rmtree(helper)
 
 
+def identify_engine_helpers(frameworks, engine_identity, identity):
+    """Give the engine's helpers the package's identity, as the engine gives
+    them its own: `<app>.helper`, `<app>.helper.renderer`. macOS asks for and
+    records local network access for the helper that runs the network
+    service under the helper's own identifier, apart from the app's; with the
+    engine's identifier, that answer was shared with every build of the
+    engine, Chromium's own included. The engine finds its helpers by name and
+    checks them by signing team, never by identifier."""
+    for helper in engine_helpers(frameworks):
+        info_path = helper / "Contents/Info.plist"
+        with info_path.open("rb") as stream:
+            info = plistlib.load(stream)
+        built = info["CFBundleIdentifier"]
+        if not built.startswith(f"{engine_identity}.helper"):
+            raise SystemExit(f"{helper.name} has an identifier the engine doesn't give a helper: {built}")
+        info["CFBundleIdentifier"] = identity + built.removeprefix(engine_identity)
+        with info_path.open("wb") as stream:
+            plistlib.dump(info, stream)
+
+
 def name_engine_helpers(frameworks, product_name):
     """Show the engine's helpers as the product's wherever macOS names one
     from its bundle, the way Chromium names its own alert helper: a localized
-    display name. Bundle and executable names, identifiers and paths keep the
-    engine's built names, which the engine resolves at run time. The name is
+    display name. Bundle and executable names and paths keep the engine's
+    built names, which the engine resolves at run time. The name is
     localized for the helper's development region, the one localization
     Launch Services falls back to for every language, so the helper process
     keeps the language it runs in today."""
@@ -365,6 +385,7 @@ def main():
     info_path = output / "Contents/Info.plist"
     with info_path.open("rb") as stream:
         info = plistlib.load(stream)
+    engine_identity = info["CFBundleIdentifier"]
     info["CFBundleIdentifier"] = identity
     info["CFBundleDisplayName"] = (
         "Crest" if args.product
@@ -418,6 +439,7 @@ def main():
         # engine's: in Notifications, privacy prompts and process lists.
         require_known_engine_helpers(frameworks)
         remove_engine_alerts_helper(frameworks)
+        identify_engine_helpers(frameworks, engine_identity, identity)
         name_engine_helpers(frameworks, info["CFBundleDisplayName"])
         name_product_in_localized_info(resources, info["CFBundleDisplayName"])
     targets = [] if args.baseline else [frameworks / "CrestCore.Native.dylib", frameworks / ui.name,

@@ -2072,9 +2072,6 @@
     "After a shortcut" : {
 
     },
-    "After closing" : {
-
-    },
     "After content started loading" : {
       "localizations" : {
         "ar" : {
@@ -2854,8 +2851,11 @@
         }
       }
     },
-    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put." : {
+    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends all but the tab you're on to Archive; hold Option to clear them all. Your pinned and saved tabs stay put." : {
 
+    },
+    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put." : {
+      "extractionState" : "stale"
     },
     "Bend" : {
       "extractionState" : "stale",
@@ -3273,6 +3273,9 @@
     "Check Spelling While Typing" : {
 
     },
+    "Check that the device is on and connected to your network, and that a VPN isn’t blocking local access." : {
+
+    },
     "Check that your device’s date and time are correct." : {
       "localizations" : {
         "ar" : {
@@ -3515,7 +3518,14 @@
     "Claude Code" : {
 
     },
+    "clean tidy archive unpinned open tabs" : {
+
+    },
+    "clean tidy archive unpinned open tabs every current" : {
+
+    },
     "clean tidy archive unpinned tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3526,6 +3536,7 @@
       }
     },
     "Clean Up Current Tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3544,6 +3555,12 @@
           }
         }
       }
+    },
+    "Clear All" : {
+
+    },
+    "Clear All Tabs" : {
+
     },
     "Clear browsing data" : {
 
@@ -3628,6 +3645,9 @@
 
     },
     "Clear Open Tabs" : {
+      "extractionState" : "stale"
+    },
+    "Clear Other Tabs" : {
 
     },
     "Clear search" : {
@@ -3640,6 +3660,7 @@
 
     },
     "Clear Unpinned Tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3743,6 +3764,9 @@
           }
         }
       }
+    },
+    "close fold folders sidebar tidy" : {
+
     },
     "Close Peek" : {
       "localizations" : {
@@ -3890,6 +3914,9 @@
 
     },
     "Coding agents on this Mac can read and act on tabs and history in the Spaces you choose, and open windows. Crest asks before each new agent connects." : {
+
+    },
+    "Collapse All Folders" : {
 
     },
     "Collapsed" : {
@@ -4551,6 +4578,9 @@
           }
         }
       }
+    },
+    "Crest can’t reach %@ from this network." : {
+
     },
     "Crest can’t reach %@ without a network connection." : {
       "localizations" : {
@@ -6691,6 +6721,9 @@
     "Food & Drink" : {
 
     },
+    "For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network." : {
+
+    },
     "For an intranet site, confirm that you are on the required network." : {
       "localizations" : {
         "ar" : {
@@ -8728,6 +8761,12 @@
       }
     },
     "Moves all current tabs to Archive" : {
+      "extractionState" : "stale"
+    },
+    "Moves all open tabs to Archive" : {
+
+    },
+    "Moves the other open tabs to Archive" : {
 
     },
     "Mute" : {
@@ -10356,6 +10395,9 @@
 
     },
     "Pinned or saved" : {
+
+    },
+    "Pinned tabs after closing" : {
 
     },
     "Pinned tabs cannot join a drag with saved or current tabs. Start the drag again." : {
@@ -12080,6 +12122,9 @@
           }
         }
       }
+    },
+    "Saved tabs after closing" : {
+
     },
     "saved tabs keep bookmark unsave current" : {
 
@@ -14103,8 +14148,11 @@
     "Tabs and pins" : {
 
     },
-    "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay." : {
+    "Tabs below the line close automatically on your Space’s cleanup schedule. Clear archives all but the tab you’re on, and Clear All Tabs in the Space’s ••• menu archives every one. Pinned and saved tabs stay." : {
 
+    },
+    "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay." : {
+      "extractionState" : "stale"
     },
     "Tap for options. Touch and hold to translate now." : {
 
@@ -14445,6 +14493,9 @@
 
     },
     "This action requires webpage tabs. Deselect built-in pages first." : {
+
+    },
+    "This address can’t be reached" : {
 
     },
     "This agent is no longer connected to Crest." : {

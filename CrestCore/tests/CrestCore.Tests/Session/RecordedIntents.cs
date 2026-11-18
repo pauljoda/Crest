@@ -216,11 +216,15 @@ internal static class RecordedIntents {
     }
 
     /// `current` with the one preference a recorded `preferences.set` named
-    /// set to the value it recorded, in its stored spelling.
+    /// set to the value it recorded, in its stored spelling. The recorded
+    /// close choice predates separate pinned and saved choices, so it sets both.
     private static AppPreferences Preferred(AppPreferences current, string preference, JsonNode value) => preference switch {
         "checksSpelling" => current with { ChecksSpelling = value.GetValue<bool>() },
         "startupBehavior" => current with { Startup = StoredSessionCodec.ParseStartupBehavior(value)! },
-        "savedTabClosePolicy" => current with { SavedTabClose = StoredSessionCodec.ParseSavedTabClosePolicy(value)! },
+        "savedTabClosePolicy" => current with {
+            PinnedTabClose = StoredSessionCodec.ParseSavedTabClosePolicy(value)!,
+            SavedTabClose = StoredSessionCodec.ParseSavedTabClosePolicy(value)!
+        },
         _ => throw new ArgumentOutOfRangeException(nameof(preference), preference, "The recording sets no other preference.")
     };
 

@@ -137,9 +137,10 @@ extension BrowserStore {
             from: self) != nil
     }
 
-    func clearSessionTabs(in spaceID: UUID) -> Bool {
+    func clearSessionTabs(in spaceID: UUID, keepingShownTab: Bool) -> Bool {
         family.perform(
-            ClearCurrentTabs(workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID),
+            ClearCurrentTabs(
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, keepsShownTab: keepingShownTab),
             from: self) != nil
     }
 
@@ -169,6 +170,10 @@ extension BrowserStore {
                 workspaceID: family.workspaceID, spaceID: spaceID, folderID: id,
                 collapsed: isCollapsed),
             from: self)
+    }
+
+    func collapseAllSessionFolders(in spaceID: UUID) -> Bool {
+        family.send(CollapseAllFolders(workspaceID: family.workspaceID, spaceID: spaceID), from: self)
     }
 
     func deleteSessionFolder(_ id: UUID, in spaceID: UUID) -> Bool {

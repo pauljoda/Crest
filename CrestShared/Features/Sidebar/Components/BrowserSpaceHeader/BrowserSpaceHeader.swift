@@ -133,7 +133,8 @@ struct BrowserSpaceHeader: View {
         BrowserSpaceHeader(
             space: BrowserSpaceBrandingPreviewFixture.simpleSpace, isPrivateBrowsing: false,
             isSavedTabsExpanded: $expanded, capabilities: BrowserInteractionCapabilities(),
-            actions: BrowserSpaceHeaderActions(openNewTab: {}, createFolder: {}, showHistory: {}, cleanup: {})
+            actions: BrowserSpaceHeaderActions(
+                openNewTab: {}, createFolder: {}, showHistory: {}, clearOtherTabs: {}, clearAllTabs: {})
         )
         .padding().frame(width: 320)
     }

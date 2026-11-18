@@ -16,6 +16,11 @@ import SwiftUI
 /// in a lazy stack, each one it made moved the rows it had not, which moved
 /// what was on screen and what it had to make next, and the sidebar could lay
 /// itself out again and again without ever settling.
+///
+/// A folder's list can hold folders far below its first screen, each with all
+/// it holds made with the list. Where the list asks for it, a folder that
+/// many rows down draws what it holds only once the list has opened, one
+/// folder at a time, so opening a long folder makes what shows first.
 struct BrowserSidebarListRows<Trailing: View>: View {
     // MARK: - Types
 
@@ -55,6 +60,14 @@ struct BrowserSidebarListRows<Trailing: View>: View {
         }
     }
 
+    // MARK: - Static Variables
+
+    /// How many rows down a list a folder starts before it waits to draw what
+    /// it holds: past the first screen on every shell. Only the list's own
+    /// rows count, a folder as one, so a folder is never held back while it
+    /// could be on screen.
+    private static var deferredFolderDistance: Int { 40 }
+
     // MARK: - Variables
 
     let list: SidebarListModel
@@ -62,18 +75,22 @@ struct BrowserSidebarListRows<Trailing: View>: View {
     /// The tabs a collapsed folder around the list keeps on screen, which
     /// shows only the rows that hold one, or nil for every row.
     var keptTabIDs: Set<UUID>? = nil
+    /// Whether a folder far down the list waits to draw what it holds until
+    /// the list has opened, as a folder's own list does.
+    var defersDistantFolders = false
     /// What the list shows after its rows, given the rows it holds, such as
     /// the band an empty run keeps.
     @ViewBuilder var trailing: ([BrowserSidebarListItem]) -> Trailing
 
     var body: some View {
         let items = BrowserSidebarListItem.items(of: list, in: context.space).filter(isShown)
+        let deferrals = defersDistantFolders && keptTabIDs == nil ? Self.deferredFolders(of: items) : []
         VStack(spacing: 0) {
             ForEach(Run.runs(of: items)) { run in
                 if run.isLazy {
-                    LazyVStack(spacing: 0) { rows(run.items) }
+                    LazyVStack(spacing: 0) { rows(run.items, deferrals: deferrals) }
                 } else {
-                    rows(run.items)
+                    rows(run.items, deferrals: deferrals)
                 }
             }
             trailing(items)
@@ -83,10 +100,32 @@ struct BrowserSidebarListRows<Trailing: View>: View {
 
     // MARK: - Actions - Rows
 
-    private func rows(_ items: [BrowserSidebarListItem]) -> some View {
+    private func rows(
+        _ items: [BrowserSidebarListItem], deferrals: Set<BrowserSidebarReorderItemID>
+    ) -> some View {
         ForEach(items) { item in
-            BrowserSidebarListRow(item: item, context: context, keptTabIDs: keptTabIDs).equatable()
+            BrowserSidebarListRow(
+                item: item, context: context, keptTabIDs: keptTabIDs, defersContents: deferrals.contains(item.id)
+            )
+            .equatable()
         }
+    }
+
+    /// The folders at least `deferredFolderDistance` rows down `items`, which
+    /// draw what they hold only once the list has opened.
+    private static func deferredFolders(of items: [BrowserSidebarListItem]) -> Set<BrowserSidebarReorderItemID> {
+        var rows = 0
+        var deferred: Set<BrowserSidebarReorderItemID> = []
+        for item in items {
+            switch item.content {
+            case .tab: rows += 1
+            case .split(_, let members): rows += members.count + 1
+            case .folder:
+                if rows >= deferredFolderDistance { deferred.insert(item.id) }
+                rows += 1
+            }
+        }
+        return deferred
     }
 
     /// Whether `item` shows: every row of an open list, and of a kept one
@@ -104,6 +143,7 @@ extension BrowserSidebarListRows: @MainActor Equatable {
     /// leaves its list alone. What trails the rows depends only on those.
     static func == (lhs: BrowserSidebarListRows, rhs: BrowserSidebarListRows) -> Bool {
         lhs.list === rhs.list && lhs.context == rhs.context && lhs.keptTabIDs == rhs.keptTabIDs
+            && lhs.defersDistantFolders == rhs.defersDistantFolders
     }
 }
 
@@ -123,6 +163,9 @@ struct BrowserSidebarListRow: View {
     /// The tabs a collapsed folder around the row keeps on screen, which a
     /// folder row shows the way to in place of its contents.
     var keptTabIDs: Set<UUID>? = nil
+    /// Whether a folder far down a list that has just opened waits to draw
+    /// what it holds. A folder already drawn keeps what it shows.
+    var defersContents = false
 
     var body: some View {
         content.environment(\.sidebarLayerDepth, item.depth)
@@ -150,13 +193,16 @@ struct BrowserSidebarListRow: View {
                     .geometryGroup()
                 #endif
         case .folder(let folder):
-            BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabIDs: keptTabIDs)
-                .equatable()
-                .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.nestingIndent : 0)
-                .modifier(
-                    BrowserFolderOffscreenPlaceholder(folder: folder, context: context, isEnabled: keptTabIDs == nil)
-                )
-                .crestCollectionItemTransition()
+            BrowserFolderGroup(
+                folder: folder, depth: item.depth, context: context, inheritedKeptTabIDs: keptTabIDs,
+                defersContents: defersContents
+            )
+            .equatable()
+            .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.nestingIndent : 0)
+            .modifier(
+                BrowserFolderOffscreenPlaceholder(folder: folder, context: context, isEnabled: keptTabIDs == nil)
+            )
+            .crestCollectionItemTransition()
         }
     }
 }
@@ -164,7 +210,8 @@ struct BrowserSidebarListRow: View {
 extension BrowserSidebarListRow: @MainActor Equatable {
     /// Rows are equal when they stand for the same objects in the same place,
     /// as SwiftUI compares a view's inputs, so a list that redraws leaves every
-    /// unchanged row alone.
+    /// unchanged row alone. A folder's deferral counts only as it is first
+    /// drawn, so it leaves the row alone too.
     static func == (lhs: BrowserSidebarListRow, rhs: BrowserSidebarListRow) -> Bool {
         lhs.item == rhs.item && lhs.context == rhs.context && lhs.keptTabIDs == rhs.keptTabIDs
     }

@@ -65,8 +65,11 @@ struct SpaceSidebarBrowsingContent: View {
             actions: BrowserSpaceHeaderActions(
                 openNewTab: openNewTab,
                 createFolder: beginCreatingFolder,
+                collapseAllFolders: { _ = tabActions.collapseAllFolders() },
+                canCollapseAllFolders: { tabActions.canCollapseAllFolders },
                 showHistory: showHistory,
-                cleanup: { _ = tabActions.clearCurrentTabs() },
+                clearOtherTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: true) },
+                clearAllTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: false) },
                 toggleSavedTabs: toggleSavedTabs
             )
         )
@@ -74,6 +77,8 @@ struct SpaceSidebarBrowsingContent: View {
         SpaceSidebarTabListScroll(browser: browser) {
             BrowserSidebarBackgroundInteractionView(
                 editSpace: editSpace,
+                collapseAllFolders: { _ = tabActions.collapseAllFolders() },
+                canCollapseAllFolders: { tabActions.canCollapseAllFolders },
                 createSpace: createSpace,
                 createSubSpace: browser.isPrivateBrowsing
                     ? nil

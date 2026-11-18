@@ -74,19 +74,19 @@ enum BrowserCommandPalettePreviewFixture {
     static let intentRow = PaletteRow(
         kind: .search, title: "Search Google", subtitle: "swift", symbol: PaletteRowKind.search.symbol,
         subjectID: nil, tabID: nil, address: "https://www.google.com/search?q=swift", command: nil, provider: google,
-        settingsPage: nil, scope: nil, reason: nil)
+        settingsPage: nil, scope: nil, reason: nil, httpFallback: nil)
 
     static let tabRow = PaletteRow(
         kind: .tab, title: "Swift Evolution", subtitle: "www.swift.org", symbol: PaletteRowKind.tab.symbol,
         subjectID: nil,
         tabID: uuid(finalByte: 0x12), address: nil, command: nil, provider: nil,
-        settingsPage: nil, scope: nil, reason: .recentlyUsed)
+        settingsPage: nil, scope: nil, reason: .recentlyUsed, httpFallback: nil)
 
     static let commandRow = PaletteRow(
         kind: .command, title: "Show History", subtitle: "View", symbol: ShortcutCommand.showHistory.symbol,
         subjectID: nil,
         tabID: nil, address: nil, command: .showHistory, provider: nil,
-        settingsPage: nil, scope: nil, reason: nil)
+        settingsPage: nil, scope: nil, reason: nil, httpFallback: nil)
 
     static let intentItem = BrowserCommandPaletteItem(index: 0, row: intentRow)
     static let tabItem = BrowserCommandPaletteItem(index: 1, row: tabRow)

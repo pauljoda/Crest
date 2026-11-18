@@ -51,6 +51,10 @@ public sealed record FolderState(
     /// open tabs does, and a saved folder stays empty.
     internal bool GoesWhenEmptied => Location == TabPlacement.Current;
 
+    /// Whether collapsing every folder closes this one: an open folder, at
+    /// any depth. A group keeps its own state.
+    internal bool CollapsesWithAll => !IsGroup && !IsCollapsed;
+
     #endregion
 
     #region Actions - Imports

@@ -136,7 +136,11 @@ struct BrowserFolderPreviewCard: View {
         } else {
             let rowContext = self.rowContext
             ScrollView {
-                VStack(spacing: 0) {
+                // Made as they scroll into view: a folder can hold hundreds
+                // of tabs, and the card shows a few of them at a time. The
+                // rows share one height, so the stack's estimate of the rest
+                // is right.
+                LazyVStack(spacing: 0) {
                     ForEach(matches, id: \.id) { tab in
                         BrowserSidebarTabRow(tab: tab, context: rowContext)
                             .environment(\.browserSidebarRowJoinsReorder, isHiddenInSidebar(tab))

@@ -50,13 +50,14 @@ struct BrowserGettingStartedClearHint: View {
     }
 }
 
-/// Archives the practice Space's open tabs, as its ••• menu does.
+/// Archives the practice Space's open tabs but the shown one, as Clear on its
+/// line does.
 struct BrowserGettingStartedCleanUpAction: View {
     let practice: BrowserGettingStartedPractice
 
     var body: some View {
-        Button("Clean Up Current Tabs", systemImage: "sparkles") {
-            _ = practice.tabActions.clearCurrentTabs()
+        Button(ShortcutCommand.clearOtherTabs) {
+            _ = practice.tabActions.clearCurrentTabs(keepingShownTab: true)
         }
         .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
     }

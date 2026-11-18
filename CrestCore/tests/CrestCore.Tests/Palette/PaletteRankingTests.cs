@@ -30,6 +30,23 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain(answer.Groups.SelectMany(group => group.Rows), row => row.Reason == PaletteReason.Learned);
     }
 
+    /// The address row for a site typed without a scheme falls back to http
+    /// only when the Space doesn't know the site: one it knows opens the way
+    /// it knows it, and an address typed with https:// never falls back.
+    [Fact]
+    public void OnlyAnUnknownSiteTypedWithoutASchemeOffersAnHttpFallback() {
+        var (session, space) = PaletteSession([], ("https://example.org/", "Example", 3, 2, 1));
+        using var device = new TestDevice(session);
+        var window = device.Open(space);
+        PaletteRow Address(string text) =>
+            device.Query(Asking(window, text)).Groups.SelectMany(group => group.Rows).First(row => row.Kind == PaletteRowKind.OpenAddress);
+
+        Assert.Equal(("https://example.org/", (string?)null), (Address("example.org").Address, Address("example.org").HttpFallback));
+        Assert.Equal(("https://httpforever.com", "http://httpforever.com"),
+            (Address("httpforever.com").Address, Address("httpforever.com").HttpFallback));
+        Assert.Null(Address("https://httpforever.com").HttpFallback);
+    }
+
     [Fact]
     public void StoredPalettePreferencesNameEveryKindOnceAndKeepWhatTheyCannotRead() {
         var stored = JsonNode.Parse("""

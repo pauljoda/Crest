@@ -92,10 +92,25 @@ struct MobileBrowserCommandController {
     }
 
     @discardableResult
-    func clearCurrentTabs() -> Bool {
-        guard browser.clearShownSpaceTabs(accessController: spaceAccess) else { return false }
+    func clearCurrentTabs(keepingShownTab: Bool) -> Bool {
+        guard browser.clearShownSpaceTabs(accessController: spaceAccess, keepingShownTab: keepingShownTab) else {
+            return false
+        }
         synchronizePages()
         return true
+    }
+
+    /// Whether the shown Space is unlocked and has a folder open.
+    var canCollapseAllFolders: Bool {
+        browser.canCollapseShownSpaceFolders(accessController: spaceAccess)
+    }
+
+    /// Collapses every open folder of the shown Space, with the sidebar's
+    /// disclosure motion.
+    func collapseAllFolders() {
+        withAnimation(CrestMotion.disclosure.unlessReducingMotion(UIAccessibility.isReduceMotionEnabled)) {
+            _ = browser.collapseShownSpaceFolders(accessController: spaceAccess)
+        }
     }
 
     @discardableResult

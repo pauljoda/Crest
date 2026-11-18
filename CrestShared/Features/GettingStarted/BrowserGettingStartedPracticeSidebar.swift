@@ -23,8 +23,11 @@ struct BrowserGettingStartedPracticeSidebar: View {
                                 Button("New Folder", systemImage: "folder.badge.plus") {
                                     practice.addFolder(nested: false)
                                 }
-                                Button("Clean Up Current Tabs", systemImage: "sparkles") {
-                                    _ = practice.tabActions.clearCurrentTabs()
+                                Button(ShortcutCommand.clearOtherTabs) {
+                                    _ = practice.tabActions.clearCurrentTabs(keepingShownTab: true)
+                                }
+                                Button(ShortcutCommand.clearAllTabs) {
+                                    _ = practice.tabActions.clearCurrentTabs(keepingShownTab: false)
                                 }
                             }
                             .crestMenuActionLabelStyle()

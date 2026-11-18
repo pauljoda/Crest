@@ -47,7 +47,8 @@ struct BrowserMacCommand {
     static let toggleSelectedTabSaved = BrowserMacCommand(.toggleSelectedTabSaved) { $0.toggleSelectedTabSaved() }
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
-    static let clearUnpinnedTabs = BrowserMacCommand(.clearUnpinnedTabs) { $0.clearCurrentTabs() }
+    static let clearOtherTabs = BrowserMacCommand(.clearOtherTabs) { $0.clearCurrentTabs(keepingShownTab: true) }
+    static let clearAllTabs = BrowserMacCommand(.clearAllTabs) { $0.clearCurrentTabs(keepingShownTab: false) }
     static let archiveTab = BrowserMacCommand(.archiveTab) { $0.archiveSelectedTab() }
     static let previousTab = BrowserMacCommand(.previousTab) { $0.selectPreviousTab() }
     static let nextTab = BrowserMacCommand(.nextTab) { $0.selectNextTab() }
@@ -133,6 +134,8 @@ struct BrowserMacCommand {
         .clearSiteCache, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
         run: { $0.clearCommandPageSiteData(.cache) })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
+    static let collapseAllFolders = BrowserMacCommand(
+        .collapseAllFolders, isAvailable: { $0.canCollapseAllFolders }, run: { $0.collapseAllFolders() })
     static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
     static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
     static let showDownloads = BrowserMacCommand(
@@ -174,7 +177,7 @@ struct BrowserMacCommand {
         back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, toggleSelectedTabSaved,
         duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,
@@ -184,7 +187,7 @@ struct BrowserMacCommand {
         copyPageLink,
         copyPageLinkAsMarkdown,
         sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
-        toggleSidebar, showHistory, showArchive, showDownloads,
+        toggleSidebar, collapseAllFolders, showHistory, showArchive, showDownloads,
         showWebInspector,
         toggleTranslationToolbar, toggleDeveloperToolbar, openNextExtension, selectNumbered,
     ]

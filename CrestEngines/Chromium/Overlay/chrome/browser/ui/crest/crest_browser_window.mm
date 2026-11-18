@@ -685,6 +685,12 @@ void CrestExclusiveAccessContext::HideFullscreenDisclosure(
 }
 
 CrestBrowserWindow::~CrestBrowserWindow() {
+  // As Chromium's own windows do, the Browser's window features are torn down
+  // before the window goes, in the order their dependencies need. Left to
+  // ~Browser, they are destroyed in member order, and a feature can outlive
+  // one it observes, as the contextual tasks close button outlives the
+  // immersive mode controller.
+  browser_->GetFeatures().TearDownPreBrowserWindowDestruction();
   crest::OnBrowserWindowDestroyed(browser_);
 }
 
