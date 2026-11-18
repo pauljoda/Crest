@@ -5733,6 +5733,10 @@
     "palette-fallback-unknown-sites-only": {
       "category": "internal",
       "message": "Only the palette's address row for a site typed without a scheme that the Space doesn't already know falls back to HTTP; a history, tab or known-site row opens its address as kept."
+    },
+    "window-managers-read-crest-windows": {
+      "category": "fixed",
+      "message": "Window managers such as BetterStage can now set up rules for Crest windows, so a Quick Window opened from another app can stay floating instead of being tiled to full size."
     }
   }
 }

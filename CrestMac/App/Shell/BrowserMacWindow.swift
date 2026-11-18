@@ -14,11 +14,32 @@ final class BrowserMacWindow: NSWindow {
     weak var pointerNavigation: (any BrowserMacWindowPointerNavigation)?
     private var frameBeforeZoom: NSRect?
     private(set) var wasZoomedBeforeFullScreen = false
+    /// What the window reports itself as to accessibility and to the window
+    /// managers that read it.
+    var reportedAccessibilitySubrole: NSAccessibility.Subrole = .standardWindow
 
     /// The frame the window returns to after zoom or fullscreen. A normal
     /// window answers its current frame, including any extension-driven move.
     var restoredFrame: NSRect {
         isZoomed || styleMask.contains(.fullScreen) ? frameBeforeZoom ?? frame : frame
+    }
+
+    // MARK: - Actions - Accessibility
+
+    override func accessibilitySubrole() -> NSAccessibility.Subrole? {
+        reportedAccessibilitySubrole
+    }
+
+    /// Leaves out a toolbar with nothing in it: the browser chrome's toolbar
+    /// only holds the title bar's height, and window managers such as
+    /// BetterStage cannot read a window whose toolbar lists no items.
+    override func accessibilityChildren() -> [Any]? {
+        super.accessibilityChildren()?.filter { child in
+            guard let element = child as? NSAccessibilityProtocol, element.accessibilityRole() == .toolbar else {
+                return true
+            }
+            return element.accessibilityChildren()?.isEmpty == false
+        }
     }
 
     // MARK: - Actions - Window state

@@ -45,7 +45,7 @@ struct BrowserMacWindowKind: Hashable {
             width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight),
         minimumContentSize: CGSize(
             width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight),
-        collectionBehavior: .moveToActiveSpace)
+        collectionBehavior: .moveToActiveSpace, accessibilitySubrole: .floatingWindow)
     /// Crest Setup, which fills the screen it opens on. The setup content is
     /// fully flexible above its minimum, so the window keeps the size it opens
     /// at rather than the content's ideal one, which is that minimum.
@@ -105,6 +105,10 @@ struct BrowserMacWindowKind: Hashable {
     /// Window comes to the Space the person is on rather than taking them to
     /// the Space it opened on.
     let collectionBehavior: NSWindow.CollectionBehavior
+    /// What the window reports itself as to accessibility, which window
+    /// managers read: a Quick Window reports a floating window, so a window
+    /// manager's rule can tell it from a browser window.
+    let accessibilitySubrole: NSAccessibility.Subrole
 
     // MARK: - Initializers
 
@@ -113,7 +117,8 @@ struct BrowserMacWindowKind: Hashable {
         hidesTitleBarSeparator: Bool = false, contentSize: CGSize, minimumContentSize: CGSize? = nil,
         sizingOptions: NSHostingSizingOptions? = nil,
         savesFrame: Bool = false, fillsScreen: Bool = false, hasWindowModel: Bool = false, hasPageRow: Bool = false,
-        isSingleton: Bool = false, identifier: String? = nil, collectionBehavior: NSWindow.CollectionBehavior = []
+        isSingleton: Bool = false, identifier: String? = nil, collectionBehavior: NSWindow.CollectionBehavior = [],
+        accessibilitySubrole: NSAccessibility.Subrole = .standardWindow
     ) {
         self.name = name
         self.title = title
@@ -130,6 +135,7 @@ struct BrowserMacWindowKind: Hashable {
         self.isSingleton = isSingleton
         self.identifier = identifier
         self.collectionBehavior = collectionBehavior
+        self.accessibilitySubrole = accessibilitySubrole
     }
 
     // MARK: - Actions - Windows
@@ -153,6 +159,7 @@ struct BrowserMacWindowKind: Hashable {
         window.isRestorable = false
         window.tabbingMode = .disallowed
         window.collectionBehavior.formUnion(collectionBehavior)
+        window.reportedAccessibilitySubrole = accessibilitySubrole
         if let minimumContentSize { window.contentMinSize = minimumContentSize }
         if hidesTitle {
             // Set before the first layout, so the content never lays itself
