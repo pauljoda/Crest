@@ -128,6 +128,9 @@
         }
       }
     },
+    "%@ · %lld tabs" : {
+
+    },
     "%@ · %lld visits" : {
       "localizations" : {
         "ar" : {
@@ -447,6 +450,9 @@
     "%@ stopped using Crest" : {
 
     },
+    "%@ The Space was kept so you can try again." : {
+
+    },
     "%@ will use %@’s sign-ins, history and extensions. Its own sign-ins and website data stay on this device and come back if you separate it." : {
 
     },
@@ -462,6 +468,9 @@
           }
         }
       }
+    },
+    "%@, %@, %lld of %lld" : {
+
     },
     "%@, %lld of %lld" : {
 
@@ -484,6 +493,9 @@
     },
     "%@, Shared" : {
       "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
+    },
+    "%@, Sub-Space" : {
+
     },
     "%@: %@" : {
       "localizations" : {
@@ -931,6 +943,9 @@
           }
         }
       }
+    },
+    "%lld pinned tabs move to a saved folder" : {
+
     },
     "%lld points" : {
       "localizations" : {
@@ -1623,6 +1638,9 @@
         }
       }
     },
+    "^[%lld Space](inflect: true) · ^[%lld tab](inflect: true)" : {
+
+    },
     "⇧⌘← / → moves the focused card." : {
 
     },
@@ -1691,6 +1709,9 @@
     "A little room to read" : {
 
     },
+    "A Mac can read the browsers installed on it. Bring their Spaces and tabs into Crest there, and iCloud brings them here." : {
+
+    },
     "A patterned band behind the sidebar." : {
 
     },
@@ -1751,6 +1772,9 @@
 
     },
     "A Space’s profile changed." : {
+
+    },
+    "A Sub-Space shares its Space’s sign-ins and history, with tabs and a look of its own." : {
 
     },
     "A tab names a folder in another Space." : {
@@ -1860,6 +1884,9 @@
     "Add" : {
 
     },
+    "Add a Sub-Space to %@" : {
+
+    },
     "Add Accent Color" : {
 
     },
@@ -1884,6 +1911,9 @@
       }
     },
     "Add color" : {
+
+    },
+    "Add Color" : {
 
     },
     "Add Extension" : {
@@ -1930,6 +1960,9 @@
           }
         }
       }
+    },
+    "Add Sub-Space" : {
+
     },
     "Add to Current Tabs Folder" : {
 
@@ -2248,6 +2281,9 @@
         }
       }
     },
+    "Angular" : {
+
+    },
     "Animals & Nature" : {
 
     },
@@ -2334,6 +2370,12 @@
           }
         }
       }
+    },
+    "Archive All Tabs" : {
+
+    },
+    "Archive All Tabs in %@" : {
+
     },
     "Archive applies to current tabs. Use Unload Pages to close saved or pinned pages, or Delete Tabs to remove their saved entries." : {
 
@@ -2925,6 +2967,12 @@
     "Blood" : {
 
     },
+    "Blossom" : {
+
+    },
+    "Blue" : {
+
+    },
     "Boar" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3036,7 +3084,22 @@
     "Brass" : {
 
     },
+    "Brightness" : {
+
+    },
     "Bring All to Front" : {
+
+    },
+    "Bring Tabs" : {
+
+    },
+    "Bring tabs from %@" : {
+
+    },
+    "Bring tabs in with Crest on your Mac" : {
+
+    },
+    "Bring your tabs over, then set up your Spaces." : {
 
     },
     "Browse all emblems (%lld)" : {
@@ -3513,6 +3576,12 @@
 
     },
     "Chromium without Google’s data collection. Smooth browsing and extensions." : {
+
+    },
+    "Cinder" : {
+
+    },
+    "Citrus" : {
 
     },
     "Claude Code" : {
@@ -4320,6 +4389,9 @@
       }
     },
     "Couldn’t Delete Space" : {
+
+    },
+    "Couldn’t download this extension." : {
 
     },
     "Couldn’t Open Crest" : {
@@ -6329,6 +6401,9 @@
     "extensions add-ons Chrome Web Store install remove" : {
 
     },
+    "Extensions can’t be changed in a private window." : {
+
+    },
     "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
 
     },
@@ -6926,6 +7001,9 @@
     "Gray" : {
 
     },
+    "Green" : {
+
+    },
     "Grid" : {
       "localizations" : {
         "ar" : {
@@ -6979,6 +7057,9 @@
 
     },
     "Help" : {
+
+    },
+    "Heraldic" : {
 
     },
     "Heraldic (Full)" : {
@@ -7953,6 +8034,9 @@
     "Install in other Spaces…" : {
 
     },
+    "Installation canceled." : {
+
+    },
     "Installed" : {
 
     },
@@ -8024,6 +8108,9 @@
 
     },
     "Its tabs stay in this section, and any nested folders move up one level." : {
+
+    },
+    "Joins your %@ · %lld tabs" : {
 
     },
     "Jump to Selection" : {
@@ -8115,6 +8202,9 @@
       }
     },
     "Kraken Gold" : {
+
+    },
+    "Lagoon" : {
 
     },
     "Language" : {
@@ -8296,10 +8386,28 @@
         }
       }
     },
+    "Lilac" : {
+
+    },
+    "Lime" : {
+
+    },
     "Line" : {
       "extractionState" : "manual"
     },
+    "Linear" : {
+
+    },
+    "Linen" : {
+
+    },
+    "Link Colors" : {
+
+    },
     "Link destination" : {
+
+    },
+    "Linked" : {
 
     },
     "Links" : {
@@ -8422,7 +8530,13 @@
     "Long press to choose a skin tone variation." : {
 
     },
+    "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder groups highlights counts borders preview density spacing padding scale icons space size fit automatic" : {
+
+    },
     "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons" : {
+
+    },
+    "Look for Other Browsers" : {
 
     },
     "Looks through other browsers’ data on this Mac" : {
@@ -8603,10 +8717,16 @@
     "Minimize" : {
 
     },
+    "Mint" : {
+
+    },
     "Model" : {
 
     },
     "Moderate" : {
+
+    },
+    "Modern" : {
 
     },
     "Monogram" : {
@@ -8621,6 +8741,9 @@
       }
     },
     "More" : {
+
+    },
+    "More Customization" : {
 
     },
     "More Languages" : {
@@ -8930,6 +9053,9 @@
         }
       }
     },
+    "New Space · %lld tabs" : {
+
+    },
     "New Space…" : {
 
     },
@@ -9001,6 +9127,9 @@
           }
         }
       }
+    },
+    "next match search again" : {
+
     },
     "Next Space" : {
       "localizations" : {
@@ -9230,6 +9359,9 @@
         }
       }
     },
+    "No Space to Edit" : {
+
+    },
     "No Spaces" : {
       "localizations" : {
         "ar" : {
@@ -9324,6 +9456,9 @@
 
     },
     "Notes why each result is there, such as “Often visited” or “Already open”." : {
+
+    },
+    "Nothing" : {
 
     },
     "Nothing to Review" : {
@@ -9612,6 +9747,9 @@
         }
       }
     },
+    "Open Link in New Quick Window" : {
+
+    },
     "Open Link in New Tab" : {
 
     },
@@ -9855,6 +9993,12 @@
     "Or" : {
 
     },
+    "Orange" : {
+
+    },
+    "Orchid" : {
+
+    },
     "Order" : {
 
     },
@@ -9974,6 +10118,9 @@
     "Page zoom %@" : {
 
     },
+    "Pages open once you start browsing." : {
+
+    },
     "Pale" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10041,6 +10188,9 @@
       }
     },
     "Password Import Finished" : {
+
+    },
+    "Password import finished: %lld imported, %lld skipped, %lld rejected" : {
 
     },
     "Password to keep" : {
@@ -10151,6 +10301,9 @@
           }
         }
       }
+    },
+    "Pattern color" : {
+
     },
     "Pause" : {
 
@@ -10359,6 +10512,9 @@
         }
       }
     },
+    "Pink" : {
+
+    },
     "Pinned" : {
       "localizations" : {
         "ar" : {
@@ -10433,6 +10589,9 @@
       "comment" : "A tab's mark while its page plays sound."
     },
     "Playlists" : {
+
+    },
+    "Plum" : {
 
     },
     "Podcasts & Shows" : {
@@ -10531,6 +10690,12 @@
     "Preview hover" : {
 
     },
+    "Preview of %@ in a Crest window" : {
+
+    },
+    "Preview of Crest" : {
+
+    },
     "Preview open" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10572,6 +10737,9 @@
           }
         }
       }
+    },
+    "previous match search again back" : {
+
     },
     "Previous Space" : {
       "localizations" : {
@@ -10755,6 +10923,9 @@
     "Pull the Latest from iCloud?" : {
 
     },
+    "Purple" : {
+
+    },
     "Put new sites in" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10859,6 +11030,9 @@
     "Quit Crest" : {
 
     },
+    "Radial" : {
+
+    },
     "Ran a script" : {
 
     },
@@ -10936,6 +11110,9 @@
         }
       }
     },
+    "Reading…" : {
+
+    },
     "Ready" : {
 
     },
@@ -11000,6 +11177,9 @@
           }
         }
       }
+    },
+    "Red" : {
+
     },
     "Reddit is public. Leave out private details." : {
 
@@ -11171,6 +11351,9 @@
           }
         }
       }
+    },
+    "Remove Color" : {
+
     },
     "Remove data for %@" : {
 
@@ -11949,6 +12132,9 @@
         }
       }
     },
+    "Save %lld Tabs" : {
+
+    },
     "Save a tab" : {
 
     },
@@ -12005,6 +12191,9 @@
       }
     },
     "Save Setup" : {
+
+    },
+    "Save Tab" : {
 
     },
     "Save this tab" : {
@@ -13110,6 +13299,9 @@
     "Slate" : {
 
     },
+    "Slate Blue" : {
+
+    },
     "Smart Copy/Paste" : {
 
     },
@@ -13350,6 +13542,9 @@
         }
       }
     },
+    "Spectrum" : {
+
+    },
     "Speech" : {
 
     },
@@ -13579,6 +13774,15 @@
           }
         }
       }
+    },
+    "Start" : {
+
+    },
+    "Start Browsing" : {
+
+    },
+    "Start Crest with your Spaces from iCloud, without setting it up" : {
+
     },
     "Start from" : {
 
@@ -13821,6 +14025,9 @@
         }
       }
     },
+    "Sub-Space of %@ · %lld tabs" : {
+
+    },
     "Sub-Spaces" : {
 
     },
@@ -13857,6 +14064,9 @@
           }
         }
       }
+    },
+    "Sunset" : {
+
     },
     "Sunset Red" : {
 
@@ -14245,6 +14455,9 @@
         }
       }
     },
+    "That extension is no longer installed." : {
+
+    },
     "That Space already exists." : {
 
     },
@@ -14328,6 +14541,9 @@
           }
         }
       }
+    },
+    "The crest has colors of its own." : {
+
     },
     "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the %@." : {
 
@@ -14605,6 +14821,12 @@
 
     },
     "This download was blocked by a safety or organization policy." : {
+
+    },
+    "This extension couldn’t be verified or installed." : {
+
+    },
+    "This extension is managed for you and can’t be changed." : {
 
     },
     "This extension will be installed in %@. Select any additional Spaces below." : {
@@ -14906,6 +15128,9 @@
     "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
 
     },
+    "Tide" : {
+
+    },
     "Tight" : {
 
     },
@@ -14959,6 +15184,9 @@
           }
         }
       }
+    },
+    "toggle recent switch tabs oldest back" : {
+
     },
     "Toggle Sidebar" : {
       "localizations" : {
@@ -15407,6 +15635,12 @@
         }
       }
     },
+    "Unlink Colors" : {
+
+    },
+    "Unlinked" : {
+
+    },
     "Unload %@" : {
       "localizations" : {
         "ar" : {
@@ -15429,6 +15663,12 @@
       }
     },
     "Unload %lld Pages" : {
+
+    },
+    "Unload All Tabs" : {
+
+    },
+    "Unload All Tabs in %@" : {
 
     },
     "Unload Tab" : {
@@ -15495,6 +15735,12 @@
 
     },
     "Unpin Tab" : {
+
+    },
+    "Unsave %lld Tabs" : {
+
+    },
+    "Unsave Tab" : {
 
     },
     "Untitled Space" : {
@@ -15797,6 +16043,9 @@
     "Use Selection for Find" : {
 
     },
+    "Use Space Colors" : {
+
+    },
     "Use Stacked Icons" : {
 
     },
@@ -15963,6 +16212,9 @@
         }
       }
     },
+    "Violet" : {
+
+    },
     "visited pages history" : {
       "localizations" : {
         "ar" : {
@@ -16084,6 +16336,9 @@
 
     },
     "Weight" : {
+
+    },
+    "Welcome" : {
 
     },
     "Welcome to Crest" : {
@@ -16218,6 +16473,9 @@
         }
       }
     },
+    "Yellow" : {
+
+    },
     "You approve each destination in the Save dialog." : {
 
     },
@@ -16248,6 +16506,9 @@
           }
         }
       }
+    },
+    "You can still make and name Spaces on this device." : {
+
     },
     "You can still set up Spaces manually." : {
 
@@ -16300,6 +16561,9 @@
 
     },
     "Your Spaces are ready." : {
+
+    },
+    "Your Spaces came in from iCloud, ready to use." : {
 
     },
     "Yours on every device" : {
