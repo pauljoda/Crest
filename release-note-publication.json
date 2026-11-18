@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "palette-fallback-unknown-sites-only",
+    "development": "color-dragging-keeps-pace",
     "nightly": "palette-fallback-unknown-sites-only"
   }
 }

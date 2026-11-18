@@ -6,29 +6,39 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.24</title>
-            <pubDate>Wed, 18 Nov 2026 01:37:14 +0000</pubDate>
+            <title>0.10.29</title>
+            <pubDate>Wed, 18 Nov 2026 21:24:07 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1642</sparkle:version>
-            <sparkle:shortVersionString>0.10.24</sparkle:shortVersionString>
+            <sparkle:version>1645</sparkle:version>
+            <sparkle:shortVersionString>0.10.29</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### New
 
-- Reliability and internal improvements.
+- Setting up Crest is now a short walkthrough beside a live preview of the window you're building: bring tabs from another browser, choose your first Space's name, colors and icon, then add more Spaces. Close, move or file tabs in the preview and those changes carry into Crest when you start browsing.
+- Setup lists each Space with its Sub-Spaces and lets you add a Sub-Space to any Space before you start browsing.
+
+### Improved
+
+- A Space's look is now a Background and an Accent, each one color or a gradient of up to three, chosen on a color wheel with brightness and texture or taken from a palette. Crests and sidebar patterns sit under More Customization, replacing the Heraldic, Modern and Simple styles.
+- Dragging a Space's colors stays smooth while the window redraws to show them, in setup and in Settings.
+
+### Fixed
+
+- Search provider chips in the command palette now show their text in white or black, whichever reads better on the chip's color.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/ce9fecceff0a9e53ff319d8985ae06b2b2fba325...0f3dc204d036d202431b465eff60857a493a4092) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-18-1642-r642.1/Installer-Crest-0.10.24-development-2026-11-18-0f3dc20-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/0f3dc204d036d202431b465eff60857a493a4092...f6b0e4d45a0411c0a6845b5170b4dccb5dc51760) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.29-2026-11-18-1645-r645.1/Installer-Crest-0.10.29-development-2026-11-18-f6b0e4d-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-18-1642-r642.1/Installer-Crest-0.10.24-development-2026-11-18-0f3dc20-arm64.dmg" length="221630598" type="application/octet-stream" sparkle:edSignature="oQxC1NqIsCEgNBdKXlWCy50KNMnnDwEnsLFf9Qo6AUj13ov44Dsm6Pr+v1W9DD/Yrqo6W9jQxqXfSyv4hI9jAQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.29-2026-11-18-1645-r645.1/Installer-Crest-0.10.29-development-2026-11-18-f6b0e4d-arm64.dmg" length="221223046" type="application/octet-stream" sparkle:edSignature="ztaarT2WurgqdBDFwuV3/SmpU56bFNsk8m/GTNEKOxgsOryd2dLYztW9nA7pBA8JeGPYHiArP5ZH4Sei8YRsDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +70,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 0/P4brx2UQ/H9PwS6WK8BRz447tirSZG0y0LtCdvPDAyu1GY00dv8QWVpxiWdcqk3nv9AmaweKEqgqGqA0qpDA==
-length: 3943
+edSignature: 4MgegYDZDB/A5Zd3uP0HY5czUh0qRW9uRNb/+s5FvNsglZyLDhczNEFP0NKMCXYu21kN9nzdIAqSntGJawfLDg==
+length: 4856
 -->
