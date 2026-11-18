@@ -12,7 +12,7 @@ struct BrowserPlatformCommandPaletteHoverSelection: ViewModifier {
         content.background {
             if isEnabled && spaceContentIsInteractive {
                 PointerTracking {
-                    guard model.selectedResultIndex != item.index else { return }
+                    guard model.selectedResultIndex != item.index || model.urlCompletion != nil else { return }
                     model.selectResult(item)
                 }
                 .accessibilityHidden(true)

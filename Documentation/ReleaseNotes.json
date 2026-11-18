@@ -5737,6 +5737,10 @@
     "palette-stationary-pointer-selection": {
       "category": "fixed",
       "message": "On Mac, a pointer resting over a command palette result no longer changes what Return opens."
+    },
+    "palette-selected-row-completion-dismissal": {
+      "category": "internal",
+      "message": "Moving the pointer over a selected command palette row dismisses inline URL completion while keeping the row selected."
     }
   }
 }
