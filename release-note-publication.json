@@ -3,6 +3,6 @@
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
     "development": "palette-fallback-unknown-sites-only",
-    "nightly": "split-view-bars-follow-address-bar"
+    "nightly": "palette-fallback-unknown-sites-only"
   }
 }
