@@ -84,7 +84,8 @@ public sealed class ShortcutCommand {
         ShowBlockedElements,
         OpenNextExtension,
         ClearAllTabs,
-        CollapseAllFolders
+        CollapseAllFolders,
+        ReturnToSavedAddress
     }
 
     #endregion
@@ -348,6 +349,15 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand CollapseAllFolders = new(Kinds.CollapseAllFolders, name: "collapseAllFolders",
         ShortcutSection.View, title: "Collapse All Folders", symbol: "rectangle.compress.vertical",
         searchTerms: "close fold folders sidebar tidy", availableWhen: facts => facts.HasOpenFolder);
+    // A pinned or saved tab that has wandered goes back to its saved address, as
+    // the sidebar's Return to Saved URL does. Pages report navigations without
+    // republishing the window, so the Mac command checks the live tab. It came
+    // after people could customize, so it waits for the keys a person chooses.
+    public static readonly ShortcutCommand ReturnToSavedAddress = new(Kinds.ReturnToSavedAddress,
+        name: "returnToSavedAddress", ShortcutSection.Tabs, title: "Return to Saved URL", symbol: "arrow.uturn.backward",
+        searchTerms: "reset tab original pinned saved home address",
+        availableWhen: facts => facts.ShownTab is { SavedAddress: not null },
+        whenPageUsesKeys: ShortcutPreference.UseBoth);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -360,7 +370,7 @@ public sealed class ShortcutCommand {
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
-        OpenNextExtension, ClearAllTabs, CollapseAllFolders
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders, ReturnToSavedAddress
     ];
 
     public Kinds Kind { get; }
