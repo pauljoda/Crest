@@ -22,7 +22,9 @@ struct MobileSetupView: View {
     /// Whether setup finished and the copy grows to fill the screen.
     var isTakingOver = false
     let setUpWithoutCloud: () -> Void
-    let startBrowsing: () -> Void
+    /// Finishes setup, carrying what the person changed in the copy's tabs
+    /// and folders into Crest.
+    let startBrowsing: (BrowserSetupCopyEdits?) -> Void
     let openCrest: () -> Void
     let close: () -> Void
 
@@ -190,7 +192,7 @@ struct MobileSetupView: View {
                     Button("Continue") { withAnimation(motion) { path.append(next) } }
                         .accessibilityIdentifier("setup-continue")
                 } else {
-                    Button("Start Browsing", action: startBrowsing)
+                    Button("Start Browsing") { startBrowsing(live.edits) }
                         .accessibilityIdentifier("setup-start-browsing")
                 }
             } else {

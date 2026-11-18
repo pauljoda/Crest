@@ -5,7 +5,8 @@ import SwiftUI
 /// so nothing done in it reaches the person's Crest and no page in it keeps
 /// website data. Each change to setup reaches the copy: a new name or look as
 /// Crest applies one, and a Space or tab that comes or goes by opening the
-/// copy again.
+/// copy again, keeping what the person changed in the copy's tabs and
+/// folders.
 @MainActor
 @Observable
 final class MobileSetupLiveSession {
@@ -30,6 +31,14 @@ final class MobileSetupLiveSession {
     /// The session the copy shows now.
     @ObservationIgnored private var shown: SessionState.Seed?
 
+    /// What the person changed in the copy, against the session it opened on,
+    /// or nil when they changed nothing.
+    var edits: BrowserSetupCopyEdits? {
+        guard let copy, let shown else { return nil }
+        let edits = BrowserSetupCopyEdits(from: shown, to: copy.store.spaceModels.map(\.value))
+        return edits.isEmpty ? nil : edits
+    }
+
     // MARK: - Mutators
 
     /// Shows `seed`, whose tabs wear `images`, on Space `spaceID` when it
@@ -39,8 +48,11 @@ final class MobileSetupLiveSession {
         if let shown, let copy, shown.setupOutline == seed.setupOutline {
             copy.store.wearSetup(seed, over: shown)
         } else {
+            // What the person changed in this copy carries into the next.
+            let carried = edits
             copy?.store.close()
             let store = BrowserStore(seed: seed, images: images, showing: spaceID, core: core)
+            carried?.replay(into: store)
             let pages = MobileBrowserPageStore(browser: store, usesEphemeralWebsiteDataStores: true)
             store.tabLinkProvider = pages
             store.tabCopying = pages
