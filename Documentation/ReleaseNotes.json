@@ -5753,6 +5753,10 @@
     "color-dragging-keeps-pace": {
       "category": "improved",
       "message": "Dragging a Space's colors stays smooth while the window redraws to show them, in setup and in Settings."
+    },
+    "iphone-setup-carries-preview-edits": {
+      "category": "improved",
+      "message": "On iPhone and iPad, tabs and folders you close, move or file in setup's preview now stay that way in Crest when you start browsing, as they do on the Mac."
     }
   }
 }

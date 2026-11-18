@@ -29,6 +29,9 @@ struct MobileBrowserOnboardingView: View {
     /// Whether setup finished and its copy of Crest grows to fill the screen
     /// before Crest shows in its place.
     @State private var isTakingOver = false
+    /// What the person changed in the preview's tabs and folders, which
+    /// Crest takes once setup finishes.
+    @State private var carriedEdits: BrowserSetupCopyEdits?
 
     init(
         request: BrowserOnboardingRequest,
@@ -138,9 +141,11 @@ struct MobileBrowserOnboardingView: View {
             : MobileOnboardingLayout.compactPreviewWidth
     }
 
-    /// Finishes setup with the manual setup applied.
-    private func startBrowsing() {
+    /// Finishes setup with the manual setup applied, then makes `edits`,
+    /// what the person changed in the preview's tabs and folders, in Crest.
+    private func startBrowsing(_ edits: BrowserSetupCopyEdits?) {
         if step != .manualSetup { move(to: .manualSetup) }
+        carriedEdits = edits
         completeSetup()
     }
 
@@ -200,6 +205,8 @@ extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
 
     func setupCompleted(guide: BrowserTabRuntimeAssignment?) {
         errorMessage = nil
+        carriedEdits?.replay(into: browser)
+        carriedEdits = nil
         if let guide { didOpenGettingStarted(guide) }
         guard showsSetup, !reduceMotion else {
             finishPresentation()
