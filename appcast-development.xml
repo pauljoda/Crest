@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.29</title>
-            <pubDate>Wed, 18 Nov 2026 22:52:56 +0000</pubDate>
+            <title>0.10.30</title>
+            <pubDate>Wed, 18 Nov 2026 23:40:31 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1646</sparkle:version>
-            <sparkle:shortVersionString>0.10.29</sparkle:shortVersionString>
+            <sparkle:version>1647</sparkle:version>
+            <sparkle:shortVersionString>0.10.30</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### Improved
 
-- Reliability and internal improvements.
+- On iPhone and iPad, tabs and folders you close, move or file in setup's preview now stay that way in Crest when you start browsing, as they do on the Mac.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f6b0e4d45a0411c0a6845b5170b4dccb5dc51760...647f738164c3194f233d56d8cb734c4d6dedb11c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.29-2026-11-18-1646-r646.1/Installer-Crest-0.10.29-development-2026-11-18-647f738-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/647f738164c3194f233d56d8cb734c4d6dedb11c...5d6e90ca229f8debc0d1b37e77f4b9f65c169aa8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.30-2026-11-18-1647-r647.1/Installer-Crest-0.10.30-development-2026-11-18-5d6e90c-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.29-2026-11-18-1646-r646.1/Installer-Crest-0.10.29-development-2026-11-18-647f738-arm64.dmg" length="221236357" type="application/octet-stream" sparkle:edSignature="9ZUuF2lOjZ2di6j/amlwTzjrVp90e31SejVUwnI8TpYq53jJja4J6FX841QC1EwCKpGYDdkbFOwAvy+VtXe7Dw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.30-2026-11-18-1647-r647.1/Installer-Crest-0.10.30-development-2026-11-18-5d6e90c-arm64.dmg" length="221250693" type="application/octet-stream" sparkle:edSignature="c6jlUbILAQCq0/rKlakmTh+Hzq4ZLw/iUU8xRBdOsYyqNwdUYuNAUuKkMpbwT6ASzClwo/q1S6+K7xJf38rzCQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: S8TIOn3Z2bLJmhCHvxBHc6dNbgY3itM321KU4DoSkaRV8fREuo+tjGB9m4GJ3EDheZBs/Lk7VfNf/XhkyHBtAA==
-length: 3943
+edSignature: UI56s6C0fxrr6NSmo728B2JHsxSAOPQMIYDsdDoiPHtjokQAYKG7MOW6Gess3NMzijRcBz4BiLB6S+U9mMXIAw==
+length: 4056
 -->

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "color-dragging-keeps-pace",
+    "development": "iphone-setup-carries-preview-edits",
     "nightly": "palette-fallback-unknown-sites-only"
   }
 }
