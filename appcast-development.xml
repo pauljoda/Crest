@@ -7,31 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.10.24</title>
-            <pubDate>Tue, 17 Nov 2026 22:00:26 +0000</pubDate>
+            <pubDate>Wed, 18 Nov 2026 01:37:14 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1641</sparkle:version>
+            <sparkle:version>1642</sparkle:version>
             <sparkle:shortVersionString>0.10.24</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### Maintenance
 
-- Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network, now Crest's own setting rather than one shared with other apps. A page that can't reach a local address says how to allow it instead of reporting a refused connection.
-- In Chromium Spaces, an http:// address you type or open now stays on HTTP, including when you reload it, instead of being switched to HTTPS. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it.
-- Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them, as it does for other risky downloads.
-- When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000 or a device name with a port, open over HTTP right away, and an address you type with https:// never falls back.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/5d6e041bfbdb76845f1d5dcdc174b975f8fefdc6...ce9fecceff0a9e53ff319d8985ae06b2b2fba325) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-17-1641-r641.1/Installer-Crest-0.10.24-development-2026-11-17-ce9fecc-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/ce9fecceff0a9e53ff319d8985ae06b2b2fba325...0f3dc204d036d202431b465eff60857a493a4092) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-18-1642-r642.1/Installer-Crest-0.10.24-development-2026-11-18-0f3dc20-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-17-1641-r641.1/Installer-Crest-0.10.24-development-2026-11-17-ce9fecc-arm64.dmg" length="221643910" type="application/octet-stream" sparkle:edSignature="QRBr/ZjDdOLhSrLO8xP4qU/EtcpRtfI00Nwui0N23TmXL9bC+8gA6by6UHDtQMhbmFUJ5kEoZhqI7Cq4syIkDQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.24-2026-11-18-1642-r642.1/Installer-Crest-0.10.24-development-2026-11-18-0f3dc20-arm64.dmg" length="221630598" type="application/octet-stream" sparkle:edSignature="oQxC1NqIsCEgNBdKXlWCy50KNMnnDwEnsLFf9Qo6AUj13ov44Dsm6Pr+v1W9DD/Yrqo6W9jQxqXfSyv4hI9jAQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -63,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: o2EKirGx9V3KSfB9jQdst+XGyRaop4a+DOdwR2CtlPt2XzYOFevDHSOcVUvYvlLtm7/NeB3gwGAk9BInLO8aBw==
-length: 4926
+edSignature: 0/P4brx2UQ/H9PwS6WK8BRz447tirSZG0y0LtCdvPDAyu1GY00dv8QWVpxiWdcqk3nv9AmaweKEqgqGqA0qpDA==
+length: 3943
 -->
