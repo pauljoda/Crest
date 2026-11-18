@@ -13,16 +13,12 @@ final class BrowserOnboardingWindowConfigurationView: NSView {
             BrowserOnboardingWindowActivation.windowTitle,
             on: window
         )
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = false
-        window.isMovableByWindowBackground = true
-        window.styleMask.insert(.fullSizeContentView)
-        window.styleMask.insert(.resizable)
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
         window.toolbar = nil
+        // Setup ends with Start Browsing, or Cancel where it was opened for
+        // one step, never by closing a window that leaves Crest without one.
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true

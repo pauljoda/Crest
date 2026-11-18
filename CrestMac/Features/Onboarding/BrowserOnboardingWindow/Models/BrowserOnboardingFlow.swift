@@ -53,15 +53,17 @@ final class BrowserOnboardingFlow {
     /// its choices change.
     @ObservationIgnored private var previewCache:
         (choices: [SetupReviewSpace], outcome: Result<BrowserSessionPreview, Rejection>)?
+    /// The browser the manual setup would leave, which the live preview draws.
+    @ObservationIgnored let draftPreview = BrowserSetupDraftPreview()
+    /// What runs once the import being applied has finished, such as
+    /// finishing setup after Start Browsing applied the import first.
+    @ObservationIgnored var afterImport: (@MainActor () -> Void)?
     @ObservationIgnored private var operationGeneration = 0
 
     /// Setup as the core holds it, or nil before it opens.
     var state: SetupFlowState? { browser.core.state.setupFlow }
 
     var step: SetupStep { state?.step ?? request.entryPoint.firstStep }
-    /// The look the Spaces setup makes wear, which the stage and every
-    /// preview follow.
-    var look: SetupLook { state?.look ?? .heraldic }
     var failure: SetupFailure? { state?.failure }
     var review: SetupImportReview? { state?.review }
     var selectedImportApplications: Set<ImportSource> { Set(state?.selected ?? []) }
@@ -132,12 +134,9 @@ final class BrowserOnboardingFlow {
 
     // MARK: - Actions - Lifecycle
 
-    /// Opens setup in the core for the request, on the look of the style
-    /// Crest shows, so the Spaces it makes or imports wear it, offering the
-    /// browsers found.
+    /// Opens setup in the core for the request, offering the browsers found.
     func start() {
         send(StartSetup(workspaceID: browser.family.workspaceID, entry: request.entryPoint))
-        chooseLook(BrowserDeviceAppearanceStore.shared.customizationStyle.look)
         offerInstalledSources()
     }
 
@@ -228,20 +227,6 @@ final class BrowserOnboardingFlow {
     func show(_ step: SetupStep) {
         guard !isImportSelectionLocked else { return }
         send(ShowSetupStep(step: step))
-    }
-
-    /// Gives the Spaces setup makes from here on `look`.
-    func chooseLook(_ look: SetupLook) {
-        guard !isImportSelectionLocked else { return }
-        send(ChooseSetupLook(look: look))
-    }
-
-    /// Makes the chosen look's style the one Crest shows, as choosing it in
-    /// Settings does, and has the manual setup held from earlier in setup
-    /// follow each Space it restyled.
-    func chooseLookStyle() {
-        let style = BrowserCustomizationStyle.matching(look)
-        manualSetup.follow(browser.chooseCustomizationStyle(style), into: style)
     }
 
     /// Sets Spaces up by hand, leaving any read that has not finished.
@@ -479,7 +464,7 @@ final class BrowserOnboardingFlow {
     /// The session the review would leave, or the rule that refused it. The
     /// core answers once each time the review's choices change, and a review
     /// that brings no Space has nothing to preview.
-    private func reviewPreview() -> Result<BrowserSessionPreview, Rejection>? {
+    func reviewPreview() -> Result<BrowserSessionPreview, Rejection>? {
         guard let review, review.hasIncludedSpaces else { return nil }
         if let previewCache, previewCache.choices == review.spaces { return previewCache.outcome }
         let outcome: Result<BrowserSessionPreview, Rejection>
@@ -566,6 +551,7 @@ final class BrowserOnboardingFlow {
         do {
             _ = try browser.core.send(BeginImportCommit())
         } catch {
+            afterImport = nil
             send(FailImport(source: review.source, reason: .import, detail: error.explanation))
             return
         }
@@ -612,7 +598,12 @@ final class BrowserOnboardingFlow {
                     FinishImportCommit(
                         passwordCount: passwords.importedCount, unsavedPasswordCount: passwords.unsavedCount))
                 readCurrentSource()
+                if let afterImport, state?.phase.isBusy != true {
+                    self.afterImport = nil
+                    afterImport()
+                }
             case .failure(let error):
+                afterImport = nil
                 Self.logRefusal(error, of: "import", review)
                 send(FailImport(source: review.source, reason: .import, detail: error.personFacingDescription))
             }
@@ -620,6 +611,7 @@ final class BrowserOnboardingFlow {
             return
         } catch {
             guard operationGeneration == generation else { return }
+            afterImport = nil
             Self.logRefusal(error, of: "import", review)
             send(FailImport(source: review.source, reason: .import, detail: error.personFacingDescription))
         }

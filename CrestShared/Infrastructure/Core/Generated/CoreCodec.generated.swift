@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x71, 0x17, 0x22, 0xef, 0x94, 0x5b, 0xb2, 0x8e, 0x3a, 0xca, 0x2b, 0x18, 0x55, 0xd2, 0xc7, 0x79, 0xa2, 0xab, 0x7a, 0xe5, 0xb9, 0x25, 0x08, 0xa4, 0x8b, 0x80, 0x5e, 0x01, 0x21, 0x23, 0x7a, 0xf8
+        0xdf, 0xff, 0x27, 0xdb, 0x76, 0x78, 0x61, 0x0e, 0x9c, 0x33, 0x5c, 0x16, 0x27, 0x7a, 0x76, 0x81, 0x67, 0x17, 0x2f, 0x07, 0xe1, 0x7f, 0x90, 0xe9, 0x4b, 0x49, 0x6e, 0x0c, 0x1b, 0x2b, 0xa1, 0xb0
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -2008,10 +2008,23 @@ extension AddLinkRoute {
 
 extension AddSetupSpace {
     init(from reader: inout WireReader) throws(WireError) {
-        self.init()
+        let fromSpaceID: UUID?
+        if try reader.readPresence() {
+            let fromSpaceIDValue = try reader.readUUID()
+            fromSpaceID = fromSpaceIDValue
+        } else {
+            fromSpaceID = nil
+        }
+        self.init(fromSpaceID: fromSpaceID)
     }
 
     func encode(into writer: inout WireWriter) {
+        if let present0 = fromSpaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -4020,6 +4033,32 @@ extension BrandColor {
         writer.writeDouble(green)
         writer.writeDouble(blue)
         writer.writeDouble(alpha)
+    }
+}
+
+extension BrandGradient {
+    init(from reader: inout WireReader) throws(WireError) {
+        let colors = try ColorPalette(from: &reader)
+        let kind: SpaceGradientKind?
+        if try reader.readPresence() {
+            let kindValue = try SpaceGradientKind(from: &reader)
+            kind = kindValue
+        } else {
+            kind = nil
+        }
+        let angle = try reader.readDouble()
+        self.init(colors: colors, kind: kind, angle: angle)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        colors.encode(into: &writer)
+        if let present0 = kind {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeDouble(angle)
     }
 }
 
@@ -17236,6 +17275,26 @@ extension PaletteEntry {
     }
 }
 
+extension PaletteGradients {
+    init(from reader: inout WireReader) throws(WireError) {
+        let slotsCount = try reader.readCount()
+        var slots: [BrandGradient] = []
+        slots.reserveCapacity(slotsCount)
+        for _ in 0..<slotsCount {
+            let slotsElement = try BrandGradient(from: &reader)
+            slots.append(slotsElement)
+        }
+        self.init(slots: slots)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(slots.count)
+        for element0 in slots {
+            element0.encode(into: &writer)
+        }
+    }
+}
+
 extension PaletteGroup {
     init(from reader: inout WireReader) throws(WireError) {
         let section = try PaletteSection(from: &reader)
@@ -22123,8 +22182,15 @@ extension SetupDraftSpace {
         let profileID = try reader.readUUID()
         let isNew = try reader.readBool()
         let customization = try SpaceCustomization(from: &reader)
+        let primaryID: UUID?
+        if try reader.readPresence() {
+            let primaryIDValue = try reader.readUUID()
+            primaryID = primaryIDValue
+        } else {
+            primaryID = nil
+        }
         let shownName = try reader.readString()
-        self.init(spaceID: spaceID, profileID: profileID, isNew: isNew, customization: customization, shownName: shownName)
+        self.init(spaceID: spaceID, profileID: profileID, isNew: isNew, customization: customization, primaryID: primaryID, shownName: shownName)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -22132,6 +22198,12 @@ extension SetupDraftSpace {
         writer.writeUUID(profileID)
         writer.writeBool(isNew)
         customization.encode(into: &writer)
+        if let present0 = primaryID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
         writer.writeString(shownName)
     }
 }
@@ -23583,7 +23655,28 @@ extension SpaceBranding {
         } else {
             hasCustomAppearance = nil
         }
-        self.init(colors: colors, bannerPattern: bannerPattern, bannerStrength: bannerStrength, readabilityFade: readabilityFade, keepsControlsReadable: keepsControlsReadable, themeMode: themeMode, gradientAngle: gradientAngle, textureStrength: textureStrength, iconStyle: iconStyle, symbolColor: symbolColor, crest: crest, renderingVersion: renderingVersion, folderColorIntensity: folderColorIntensity, textColorMode: textColorMode, hasCustomAppearance: hasCustomAppearance)
+        let gradientKind: SpaceGradientKind?
+        if try reader.readPresence() {
+            let gradientKindValue = try SpaceGradientKind(from: &reader)
+            gradientKind = gradientKindValue
+        } else {
+            gradientKind = nil
+        }
+        let symbolGradient: BrandGradient?
+        if try reader.readPresence() {
+            let symbolGradientValue = try BrandGradient(from: &reader)
+            symbolGradient = symbolGradientValue
+        } else {
+            symbolGradient = nil
+        }
+        let colorGradients: PaletteGradients?
+        if try reader.readPresence() {
+            let colorGradientsValue = try PaletteGradients(from: &reader)
+            colorGradients = colorGradientsValue
+        } else {
+            colorGradients = nil
+        }
+        self.init(colors: colors, bannerPattern: bannerPattern, bannerStrength: bannerStrength, readabilityFade: readabilityFade, keepsControlsReadable: keepsControlsReadable, themeMode: themeMode, gradientAngle: gradientAngle, textureStrength: textureStrength, iconStyle: iconStyle, symbolColor: symbolColor, crest: crest, renderingVersion: renderingVersion, folderColorIntensity: folderColorIntensity, textColorMode: textColorMode, hasCustomAppearance: hasCustomAppearance, gradientKind: gradientKind, symbolGradient: symbolGradient, colorGradients: colorGradients)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -23609,6 +23702,24 @@ extension SpaceBranding {
         if let present0 = hasCustomAppearance {
             writer.writePresence(true)
             writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = gradientKind {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = symbolGradient {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = colorGradients {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
         } else {
             writer.writePresence(false)
         }
@@ -23664,7 +23775,14 @@ extension SpaceCrest {
         let sealTeeth = try reader.readInt()
         let showsOutline = try reader.readBool()
         let depth = try CrestDepth(from: &reader)
-        self.init(backplate: backplate, fieldDivision: fieldDivision, ordinary: ordinary, trim: trim, symbol: symbol, chargeLayout: chargeLayout, backplateColorIndex: backplateColorIndex, secondaryFieldColorIndex: secondaryFieldColorIndex, ordinaryColorIndex: ordinaryColorIndex, trimColorIndex: trimColorIndex, symbolColorIndex: symbolColorIndex, startingPresetID: startingPresetID, edgeColorIndex: edgeColorIndex, palette: palette, charge: charge, plateScale: plateScale, edgeWidth: edgeWidth, divisionCount: divisionCount, finish: finish, ordinaryWidth: ordinaryWidth, trimWeight: trimWeight, trimDetail: trimDetail, chargeScale: chargeScale, chargeOffset: chargeOffset, chargeWeight: chargeWeight, sheenAngle: sheenAngle, sealTeeth: sealTeeth, showsOutline: showsOutline, depth: depth)
+        let paletteGradients: PaletteGradients?
+        if try reader.readPresence() {
+            let paletteGradientsValue = try PaletteGradients(from: &reader)
+            paletteGradients = paletteGradientsValue
+        } else {
+            paletteGradients = nil
+        }
+        self.init(backplate: backplate, fieldDivision: fieldDivision, ordinary: ordinary, trim: trim, symbol: symbol, chargeLayout: chargeLayout, backplateColorIndex: backplateColorIndex, secondaryFieldColorIndex: secondaryFieldColorIndex, ordinaryColorIndex: ordinaryColorIndex, trimColorIndex: trimColorIndex, symbolColorIndex: symbolColorIndex, startingPresetID: startingPresetID, edgeColorIndex: edgeColorIndex, palette: palette, charge: charge, plateScale: plateScale, edgeWidth: edgeWidth, divisionCount: divisionCount, finish: finish, ordinaryWidth: ordinaryWidth, trimWeight: trimWeight, trimDetail: trimDetail, chargeScale: chargeScale, chargeOffset: chargeOffset, chargeWeight: chargeWeight, sheenAngle: sheenAngle, sealTeeth: sealTeeth, showsOutline: showsOutline, depth: depth, paletteGradients: paletteGradients)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -23712,6 +23830,12 @@ extension SpaceCrest {
         writer.writeInt(sealTeeth)
         writer.writeBool(showsOutline)
         depth.encode(into: &writer)
+        if let present0 = paletteGradients {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -29451,6 +29575,20 @@ extension SpaceBannerPattern {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown SpaceBannerPattern \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SpaceGradientKind {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SpaceGradientKind \(tag)")
         }
         self = Self.all[tag]
     }

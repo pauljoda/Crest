@@ -1,7 +1,11 @@
 import SwiftUI
 
+/// Crest's mark on its tile, as square as the space it is given allows,
+/// under a rim one device pixel wide, so the rim stays even at every size
+/// and display scale.
 struct CrestStartPageMark: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         GeometryReader { proxy in
@@ -31,19 +35,15 @@ struct CrestStartPageMark: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .clipShape(CrestBannerShape())
-            }
-            .frame(width: side, height: side)
-            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
-            .overlay {
+
                 RoundedRectangle(
                     cornerRadius: side * CrestStartPageMarkMetrics.cornerRadiusRatio,
                     style: .continuous
                 )
-                .strokeBorder(
-                    .primary.opacity(CrestStartPageMarkMetrics.borderOpacity),
-                    lineWidth: CrestStartPageMarkMetrics.borderWidth
-                )
+                .strokeBorder(.primary.opacity(CrestStartPageMarkMetrics.borderOpacity), lineWidth: 1 / displayScale)
             }
+            .frame(width: side, height: side)
+            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
     }
 }

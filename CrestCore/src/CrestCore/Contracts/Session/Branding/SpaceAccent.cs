@@ -38,9 +38,10 @@ public sealed class SpaceAccent {
     /// background, primary and secondary color.
     public IReadOnlyList<BrandColor> LegacyColors { get; }
 
-    /// The house look a new Space of this accent wears: a deep field, a related
-    /// tincture a step above it and one luminous charge, with the crest
-    /// composed for it. A Space keeps its copy when this changes.
+    /// The house look a new Space of this accent wears: a deep Background and a
+    /// luminous Accent, either of which may be a gradient, a Pattern a step
+    /// above the Background, and the house's arms, which follow those colors.
+    /// A Space keeps its copy when this changes.
     public SpaceBranding House { get; }
 
     /// The one color that stands for the accent, which a color from elsewhere,

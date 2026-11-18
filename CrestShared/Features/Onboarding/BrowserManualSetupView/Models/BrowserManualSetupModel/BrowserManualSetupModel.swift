@@ -22,9 +22,6 @@ final class BrowserManualSetupModel {
     /// The setup's Spaces in its order.
     var spaces: [SetupDraftSpace] { draft?.spaces ?? [] }
 
-    /// The setup's Spaces as the Space picker draws them.
-    var previewSpaces: [BrowserSpaceIdentity] { spaces.map(BrowserSpaceIdentity.init(draft:)) }
-
     // MARK: - Initializers
 
     init(core: CrestCore) {
@@ -36,14 +33,25 @@ final class BrowserManualSetupModel {
     /// Adds a new Space and answers it, or nil when the core refused it.
     @discardableResult
     func addSpace() -> UUID? {
-        guard send(AddSetupSpace()) else { return nil }
+        guard send(AddSetupSpace(fromSpaceID: nil)) else { return nil }
         return spaces.last?.spaceID
     }
 
+    /// Adds a Sub-Space of `spaceID`, sharing its group's session, and
+    /// answers it, or nil when the core refused it.
+    @discardableResult
+    func addSubSpace(to spaceID: UUID) -> UUID? {
+        let before = Set(spaces.map(\.spaceID))
+        guard send(AddSetupSpace(fromSpaceID: spaceID)) else { return nil }
+        return spaces.first { !before.contains($0.spaceID) }?.spaceID
+    }
+
+    /// Takes the new Space `spaceID` out of the setup.
     func removeSpace(_ spaceID: UUID) {
         send(RemoveSetupSpace(spaceID: spaceID))
     }
 
+    /// Moves `spaceID` to where `targetID` is in the setup's order.
     func moveSpace(_ spaceID: UUID, to targetID: UUID) {
         send(MoveSetupSpace(spaceID: spaceID, targetSpaceID: targetID))
     }
@@ -51,28 +59,6 @@ final class BrowserManualSetupModel {
     /// The setup's Space `spaceID`, or nil when the setup no longer holds it.
     func space(_ spaceID: UUID?) -> SetupDraftSpace? {
         spaces.first { $0.spaceID == spaceID }
-    }
-
-    /// Has each existing Space of the setup follow the restyle `restyled`
-    /// gave it into `style`, so finishing keeps its new look: one the person
-    /// left as it was takes that look, and one they changed here takes
-    /// `style`'s look made from their change.
-    func follow(_ restyled: [UUID: BrowserSpaceRestyle], into style: BrowserCustomizationStyle) {
-        for (spaceID, restyle) in restyled {
-            guard let space = space(spaceID), !space.isNew else { continue }
-            let branding = space.customization.branding
-            let next = branding == restyle.from ? restyle.to : style.look(for: branding, remembered: nil)
-            guard next != branding else { continue }
-            customize(spaceID) {
-                SpaceCustomization(name: $0.name, symbol: $0.symbol, accent: $0.accent, branding: next)
-            }
-        }
-    }
-
-    /// `selectedSpaceID` when the setup holds it, otherwise its first Space.
-    func repairSelection(_ selectedSpaceID: Binding<UUID?>) {
-        guard space(selectedSpaceID.wrappedValue) == nil else { return }
-        selectedSpaceID.wrappedValue = spaces.first?.spaceID
     }
 
     // MARK: - Actions - Bindings

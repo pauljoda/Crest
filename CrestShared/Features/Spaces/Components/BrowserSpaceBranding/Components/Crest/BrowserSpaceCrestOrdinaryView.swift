@@ -6,7 +6,7 @@ struct BrowserSpaceCrestOrdinaryView: View {
     let ordinary: CrestOrdinary
     var width: Double = 1
     let plate: BrowserSpaceCrestPlateShape
-    let color: Color
+    let color: AnyShapeStyle
     let size: CGFloat
 
     var body: some View {

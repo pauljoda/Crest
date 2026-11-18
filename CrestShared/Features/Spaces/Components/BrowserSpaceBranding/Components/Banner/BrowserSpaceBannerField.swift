@@ -1,32 +1,35 @@
 import SwiftUI
 
+/// A Heraldic sidebar's banner: its pattern laid out in the palette's
+/// fills, each one color or a gradient of its own.
 struct BrowserSpaceBannerField: View {
     let pattern: SpaceBannerPattern
-    let colors: [Color]
+    let fills: [AnyShapeStyle]
     let size: CGSize
 
     @ViewBuilder
     var body: some View {
-        let second = colors[min(1, colors.count - 1)]
-        let third = colors[min(2, colors.count - 1)]
+        let first = fills[0]
+        let second = fills[min(1, fills.count - 1)]
+        let third = fills[min(2, fills.count - 1)]
 
         switch pattern.kind {
         case .solid:
-            colors[0]
+            Rectangle().fill(first)
         case .split:
             HStack(spacing: 0) {
-                colors[0]
-                second
+                Rectangle().fill(first)
+                Rectangle().fill(second)
             }
         case .bands:
             VStack(spacing: 0) {
-                colors[0]
-                second
-                third
+                Rectangle().fill(first)
+                Rectangle().fill(second)
+                Rectangle().fill(third)
             }
         case .diagonal:
             ZStack {
-                colors[0]
+                Rectangle().fill(first)
                 BrowserSpaceDiagonalMiddleBannerShape(size: size)
                     .fill(second)
                 BrowserSpaceDiagonalLowerBannerShape(size: size)
@@ -34,7 +37,7 @@ struct BrowserSpaceBannerField: View {
             }
         case .chevron:
             ZStack {
-                colors[0]
+                Rectangle().fill(first)
                 BrowserSpaceChevronMiddleBannerShape(size: size)
                     .fill(second)
                 BrowserSpaceChevronLowerBannerShape(size: size)
@@ -42,7 +45,7 @@ struct BrowserSpaceBannerField: View {
             }
         case .stripes, .checkered, .lozenges:
             Canvas { context, canvasSize in
-                context.fill(Path(CGRect(origin: .zero, size: canvasSize)), with: .color(colors[0]))
+                context.fill(Path(CGRect(origin: .zero, size: canvasSize)), with: .style(first))
                 let cell = max(16, canvasSize.width / 5)
                 let rows = min(200, Int(ceil(canvasSize.height / cell)) + 1)
                 let columns = min(200, Int(ceil(canvasSize.width / cell)) + 1)
@@ -55,13 +58,13 @@ struct BrowserSpaceBannerField: View {
                             if column.isMultiple(of: 2) {
                                 context.fill(
                                     Path(CGRect(x: x, y: y, width: cell, height: cell)),
-                                    with: .color(second.opacity(0.35)))
+                                    with: .style(second.opacity(0.35)))
                             }
                         case .checkered:
                             if (row + column).isMultiple(of: 2) {
                                 context.fill(
                                     Path(CGRect(x: x, y: y, width: cell, height: cell)),
-                                    with: .color(second.opacity(0.35)))
+                                    with: .style(second.opacity(0.35)))
                             }
                         case .lozenges:
                             var diamond = Path()
@@ -71,7 +74,7 @@ struct BrowserSpaceBannerField: View {
                             diamond.addLine(to: CGPoint(x: x, y: y + cell / 2))
                             diamond.closeSubpath()
                             context.fill(
-                                diamond, with: .color(((row + column).isMultiple(of: 2) ? second : third).opacity(0.35))
+                                diamond, with: .style(((row + column).isMultiple(of: 2) ? second : third).opacity(0.35))
                             )
                         default: break
                         }
@@ -81,12 +84,12 @@ struct BrowserSpaceBannerField: View {
         case .quartered:
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    colors[0]
-                    second
+                    Rectangle().fill(first)
+                    Rectangle().fill(second)
                 }
                 HStack(spacing: 0) {
-                    third
-                    colors[0]
+                    Rectangle().fill(third)
+                    Rectangle().fill(first)
                 }
             }
         }
@@ -96,7 +99,8 @@ struct BrowserSpaceBannerField: View {
 #if DEBUG
     #Preview("Banner pattern") {
         BrowserSpaceBannerField(
-            pattern: .diagonal, colors: [.indigo, .cyan, .orange], size: CGSize(width: 320, height: 400)
+            pattern: .diagonal, fills: [Color.indigo, .cyan, .orange].map { AnyShapeStyle($0) },
+            size: CGSize(width: 320, height: 400)
         )
         .frame(width: 320, height: 400)
     }

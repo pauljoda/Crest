@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Where the windows show a page's address, as one preview button for each
-/// place: a Crest window in the current style with the field in its sidebar,
+/// place: a Crest window with the field in its sidebar,
 /// or with the bar along the top of its page card. The choice is this
 /// device's, for every Space and window.
 struct BrowserPlatformAddressBarSettingsSection: View {
@@ -17,18 +17,18 @@ struct BrowserPlatformAddressBarSettingsSection: View {
             choose(BrowserLookAndFeelDefaults.addressBarPlacement)
         }
         CrestSettingsGroup("Address bar", settings: [resettable]) {
-            HStack(alignment: .top, spacing: BrowserCustomizationStyleMetrics.spacing) {
+            HStack(alignment: .top, spacing: BrowserAppearancePreviewMetrics.spacing) {
                 ForEach(BrowserAddressBarPlacement.all) { candidate in
                     CrestPreviewButton(
                         title: Text(candidate.title), isSelected: candidate == appearance.addressBarPlacement,
-                        previewSize: BrowserCustomizationStyleMetrics.previewSize
+                        previewSize: BrowserAppearancePreviewMetrics.previewSize
                     ) {
                         choose(candidate)
                     } preview: {
                         BrowserOnboardingWindowPreview(
                             branding: look.previewBranding, symbol: look.previewSymbol,
                             name: String(localized: "Personal"),
-                            spaceIcons: appearance.chosenSpaceIcons ?? appearance.customizationStyle.spaceIcons,
+                            spaceIcons: appearance.spaceIcons,
                             companionLook: look,
                             addressBarPlacement: candidate
                         ) {
@@ -43,10 +43,8 @@ struct BrowserPlatformAddressBarSettingsSection: View {
         }
     }
 
-    /// The look of the style the page shows, which both previews wear.
-    private var look: SetupLook {
-        appearance.customizationStyle.look
-    }
+    /// The look both previews wear: a house's, as a new Space's is.
+    private var look: SetupLook { .heraldic }
 
     // MARK: - Actions - Choice
 

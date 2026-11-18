@@ -30,12 +30,25 @@ extension SpaceBranding {
 
     // MARK: - Actions - Text
 
-    /// The tone that reads best over the banner, unless the text color mode
-    /// names one or follows the device, whose appearance reads in `system`.
+    /// The tone that reads best over the colors the sidebar paints, unless
+    /// the text color mode names one or follows the device, whose appearance
+    /// reads in `system`.
     func foregroundTone(system: BrowserSpaceForegroundTone) -> BrowserSpaceForegroundTone {
         if let override = textColorMode.foregroundTone(system: system) { return override }
-        return (colors.isEmpty ? [.indigo] : colors).foregroundTone(
+        let painted = paintedColors
+        return ColorPalette(colors: painted.isEmpty ? [.indigo] : painted).foregroundTone(
             strength: bannerStrength, readabilityFade: readabilityFade, system: system)
+    }
+
+    /// The colors the sidebar paints: a solid sidebar its Background and the
+    /// colors its gradient runs into, a pattern every color and the colors
+    /// each runs into, and a sidebar that draws its colors as one gradient
+    /// those colors. A Space's Accent, which only its crest and highlights
+    /// wear on a solid sidebar, has no say in the sidebar's text.
+    var paintedColors: [BrandColor] {
+        if themeMode == .gradient { return Array(colors) }
+        if bannerPattern == .solid { return backgroundFill.colors }
+        return colors.indices.flatMap { slotFill($0).colors }
     }
 
     // MARK: - Actions - Colors

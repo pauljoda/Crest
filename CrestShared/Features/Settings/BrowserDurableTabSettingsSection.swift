@@ -11,10 +11,8 @@ struct BrowserDurableTabSettingsSection: View {
                 }
             }
             .accessibilityIdentifier("durable-tab-close-policy")
-            if BrowserDeviceAppearanceStore.shared.customizationStyle.shows(.unloadedSavedTabs) {
-                Toggle("Keep saved tabs after unloading", isOn: $preferences.unloadedSavedTabsStay)
-                    .accessibilityIdentifier("saved-tab-unload-keeps-tab")
-            }
+            Toggle("Keep saved tabs after unloading", isOn: $preferences.unloadedSavedTabsStay)
+                .accessibilityIdentifier("saved-tab-unload-keeps-tab")
             #if os(macOS)
                 Toggle(
                     "Click the favicon to return to the saved URL", isOn: $preferences.returnsToSavedURLOnFaviconClick

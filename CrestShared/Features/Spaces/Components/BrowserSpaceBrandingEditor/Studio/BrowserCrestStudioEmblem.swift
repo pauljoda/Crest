@@ -1,11 +1,10 @@
 import SwiftUI
 
+/// A crest's emblem: a heraldic figure, a symbol, an emoji or a monogram, and
+/// how many of it the crest carries. The stage paints it.
 struct BrowserCrestStudioEmblem: View {
     let context: BrowserCrestStudioContext
     let symbol: String
-    /// Shows the controls without their card or color row, for a studio
-    /// that frames them and paints the emblem elsewhere.
-    let isEmbedded: Bool
     @State private var source: CrestChargeKind
     // The fields each emblem source edits, kept while another source is shown.
     @State var search = ""
@@ -16,33 +15,24 @@ struct BrowserCrestStudioEmblem: View {
     @State var monogramStyle = CrestMonogramStyle.serif
     @State var choosesEmoji = false
 
-    init(context: BrowserCrestStudioContext, symbol: String, isEmbedded: Bool = false) {
+    init(context: BrowserCrestStudioContext, symbol: String) {
         self.context = context
         self.symbol = symbol
-        self.isEmbedded = isEmbedded
         _source = State(initialValue: context.value.crest.resolvedCharge.kind)
     }
 
     var body: some View {
-        Group {
-            if isEmbedded {
-                VStack(alignment: .leading, spacing: 16) { controls }
-            } else {
-                BrowserCrestStudioGroup(step: .emblem, preview: context.compact ? context.value : nil, symbol: symbol) {
-                    controls
-                }
+        VStack(alignment: .leading, spacing: 16) { controls }
+            .onAppear { load(context.value.crest.resolvedCharge) }
+            .onChange(of: source) { _, _ in commitSource() }
+            .onChange(of: context.value.crest.resolvedCharge) { _, charge in
+                // Empty in-progress text stays editable instead of removing its field.
+                if charge != CrestCharge.none { load(charge) }
             }
-        }
-        .onAppear { load(context.value.crest.resolvedCharge) }
-        .onChange(of: source) { _, _ in commitSource() }
-        .onChange(of: context.value.crest.resolvedCharge) { _, charge in
-            // Empty in-progress text stays editable instead of removing its field.
-            if charge != CrestCharge.none { load(charge) }
-        }
-        .onChange(of: systemName) { _, _ in if source == .system { commitSource() } }
-        .onChange(of: emoji) { _, _ in if source == .emoji { commitSource() } }
-        .onChange(of: monogram) { _, _ in if source == .monogram { commitSource() } }
-        .onChange(of: monogramStyle) { _, _ in if source == .monogram { commitSource() } }
+            .onChange(of: systemName) { _, _ in if source == .system { commitSource() } }
+            .onChange(of: emoji) { _, _ in if source == .emoji { commitSource() } }
+            .onChange(of: monogram) { _, _ in if source == .monogram { commitSource() } }
+            .onChange(of: monogramStyle) { _, _ in if source == .monogram { commitSource() } }
     }
 
     @ViewBuilder private var controls: some View {
@@ -54,15 +44,7 @@ struct BrowserCrestStudioEmblem: View {
         }
         sourceControls
         if source != .none {
-            if source.isTinted, !isEmbedded {
-                BrowserCrestStudioColorRow(context: context, title: "Emblem color", path: \.symbolColorIndex)
-            }
-            context.picker("Arrangement", \.chargeLayout, options: CrestChargeLayout.all)
-            context.slider("Size", \.chargeScale, range: CrestMeasure.chargeScale.range)
-            context.slider("Vertical offset", \.chargeOffset, range: CrestMeasure.chargeOffset.range)
-            if source.takesWeight, source != .heraldic || context.value.crest.symbol.assetName == nil {
-                context.picker("Weight", \.chargeWeight, options: CrestChargeWeight.all)
-            }
+            context.picker("Arrangement", \.chargeLayout, options: CrestChargeLayout.offered)
         }
     }
 

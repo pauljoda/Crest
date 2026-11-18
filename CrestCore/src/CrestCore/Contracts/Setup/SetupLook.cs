@@ -105,9 +105,9 @@ public sealed class SetupLook {
     }
 
     /// `branding` in this look: its sidebar mode, gradient angle and icon
-    /// style, keeping its colors, crest and texture, within the ranges every
-    /// device draws. A tinted look keeps only the Space's accent color, which
-    /// its icon wears too.
+    /// style, keeping its colors, the gradients they run on into, crest and
+    /// texture, within the ranges every device draws. A tinted look keeps only
+    /// the Space's accent color, plain, which its icon wears too.
     public SpaceBranding Applying(SpaceBranding branding) {
         ArgumentNullException.ThrowIfNull(branding);
         var look = branding with {
@@ -120,8 +120,8 @@ public sealed class SetupLook {
 
     /// `branding` in its one accent color at `tint`: the most vivid of its
     /// sidebar colors that is light enough to tint a sidebar and dark enough to
-    /// read as an icon, or else its first. Its text reads light or dark as
-    /// that color asks.
+    /// read as an icon, or else its first, and its icon in a shade of it, each
+    /// plain. Its text reads light or dark as that color asks.
     private static SpaceBranding Tinted(SpaceBranding branding, double tint) {
         var colors = branding.Colors.Colors;
         var accent = colors.Where(color => Lightness(color) is >= 0.3 and <= 0.75).MaxBy(Chroma)
@@ -132,6 +132,8 @@ public sealed class SetupLook {
             ReadabilityFade = 0,
             KeepsControlsReadable = false,
             SymbolColor = Contrasting(accent),
+            ColorGradients = null,
+            SymbolGradient = null,
             TextColorMode = SpaceTextColorMode.Automatic
         };
     }

@@ -11,7 +11,7 @@ struct BrowserSpaceCrestTrimView: View {
     let plate: BrowserSpaceCrestPlateShape
     /// The plate's own frame within the icon.
     let plateRect: CGRect
-    let color: Color
+    let color: AnyShapeStyle
     let size: CGFloat
 
     private var lineWidth: CGFloat { max(0.75, size * 0.032 * CGFloat(weight)) }

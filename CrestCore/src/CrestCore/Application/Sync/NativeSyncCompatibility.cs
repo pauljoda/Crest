@@ -29,14 +29,21 @@ internal static class NativeSyncCompatibility {
     private static readonly Shape Identity = new("rawValue");
     private static readonly Shape Color = new("red green blue alpha");
     private static readonly Shape Charge = new("kind value style");
+    private static readonly Shape Gradient = new("colors kind angle", new() { ["colors"] = List(Color) });
 
     private static readonly Shape Crest = new(
-        "backplate fieldDivision ordinary trim symbol chargeLayout backplateColorIndex secondaryFieldColorIndex ordinaryColorIndex trimColorIndex symbolColorIndex edgeColorIndex palette charge plateScale edgeWidth divisionCount finish ordinaryWidth trimWeight trimDetail chargeScale chargeOffset chargeWeight startingPresetID sheenAngle sealTeeth showsOutline depth",
-        new() { ["palette"] = List(Color), ["charge"] = Charge });
+        "backplate fieldDivision ordinary trim symbol chargeLayout backplateColorIndex secondaryFieldColorIndex ordinaryColorIndex trimColorIndex symbolColorIndex edgeColorIndex palette charge plateScale edgeWidth divisionCount finish ordinaryWidth trimWeight trimDetail chargeScale chargeOffset chargeWeight startingPresetID sheenAngle sealTeeth showsOutline depth paletteGradients",
+        new() { ["palette"] = List(Color), ["charge"] = Charge, ["paletteGradients"] = List(Gradient) });
 
     private static readonly Shape Branding = new(
-        "colors bannerPattern bannerStrength readabilityFade keepsControlsReadable themeMode gradientAngle showsTexture textureStrength iconStyle symbolColor crest renderingVersion folderColorIntensity textColorMode hasCustomAppearance",
-        new() { ["colors"] = List(Color), ["symbolColor"] = Color, ["crest"] = Crest });
+        "colors bannerPattern bannerStrength readabilityFade keepsControlsReadable themeMode gradientAngle showsTexture textureStrength iconStyle symbolColor crest renderingVersion folderColorIntensity textColorMode hasCustomAppearance gradientKind symbolGradient colorGradients",
+        new() {
+            ["colors"] = List(Color),
+            ["symbolColor"] = Color,
+            ["crest"] = Crest,
+            ["symbolGradient"] = Gradient,
+            ["colorGradients"] = List(Gradient)
+        });
 
     private static readonly Shape SearchProvider = new("id name searchURLTemplate suggestionURLTemplate");
 

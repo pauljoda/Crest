@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 using CrestCore.Contracts;
@@ -15,12 +16,71 @@ namespace CrestCore.Application;
 internal static class ArcSidebar {
     #region Static Variables
 
-    /// The SF Symbol each of Arc's built-in Space icons stands for.
+    /// The SF Symbol that draws each of Arc's own Space icons, which Arc names
+    /// after the Ionicons it draws, in camel case. An icon Zen draws from the
+    /// same Ionicon wears the symbol Zen's does. Arc's `linear` and `figma` are
+    /// app logos no symbol draws, so they wear Arc's own symbol.
     private static readonly IReadOnlyDictionary<string, string> IconSymbols = new Dictionary<string, string>(StringComparer.Ordinal) {
-        ["planet"] = "globe.americas.fill",
-        ["briefcase"] = "briefcase.fill",
+        ["airplane"] = "airplane",
+        ["albums"] = "rectangle.stack.fill",
+        ["apps"] = "square.grid.3x3.fill",
+        ["bag"] = "bag.fill",
+        ["bandage"] = "bandage.fill",
+        ["barbell"] = "dumbbell.fill",
+        ["baseball"] = "baseball.fill",
+        ["bed"] = "bed.double.fill",
+        ["bonfire"] = "flame.fill",
         ["book"] = "book.fill",
-        ["code"] = "chevron.left.forwardslash.chevron.right"
+        ["bookmark"] = "bookmark.fill",
+        ["briefcase"] = "briefcase.fill",
+        ["bulb"] = "lightbulb.fill",
+        ["calendar"] = "calendar",
+        ["chatBubbleEllipses"] = "ellipsis.bubble.fill",
+        ["checkbox"] = "checkmark.square.fill",
+        ["cloud"] = "cloud.fill",
+        ["cloudOutline"] = "cloud",
+        ["code"] = "chevron.left.forwardslash.chevron.right",
+        ["colorPallete"] = "paintpalette.fill",
+        ["construction"] = "wrench.and.screwdriver.fill",
+        ["copy"] = "square.fill.on.square.fill",
+        ["document"] = "document.fill",
+        ["egg"] = "frying.pan.fill",
+        ["ellipse"] = "circle.fill",
+        ["fileTrayFull"] = "tray.full.fill",
+        ["flag"] = "flag.fill",
+        ["flash"] = "bolt.fill",
+        ["folder"] = "folder.fill",
+        ["gift"] = "gift.fill",
+        ["github"] = "chevron.left.forwardslash.chevron.right",
+        ["grid"] = "square.grid.2x2.fill",
+        ["heart"] = "heart.fill",
+        ["layers"] = "square.stack.3d.up.fill",
+        ["leaf"] = "leaf.fill",
+        ["mail"] = "envelope.fill",
+        ["map"] = "map.fill",
+        ["medical"] = "staroflife.fill",
+        ["moon"] = "moon.fill",
+        ["musicalNote"] = "music.note",
+        ["notifications"] = "bell.fill",
+        ["paw"] = "pawprint.fill",
+        ["people"] = "person.2.fill",
+        ["pizza"] = "fork.knife.circle.fill",
+        ["planet"] = "globe.americas.fill",
+        ["receipt"] = "receipt.fill",
+        ["restaurant"] = "fork.knife",
+        ["rss"] = "dot.radiowaves.up.forward",
+        ["search"] = "magnifyingglass",
+        ["server"] = "cylinder.split.1x2.fill",
+        ["shapes"] = "square.fill.on.circle.fill",
+        ["skull"] = "exclamationmark.octagon.fill",
+        ["square"] = "square.fill",
+        ["star"] = "star.fill",
+        ["sunny"] = "sun.max.fill",
+        ["terminal"] = "apple.terminal.fill",
+        ["thumbsUp"] = "hand.thumbsup.fill",
+        ["train"] = "tram.fill",
+        ["triangle"] = "triangle.fill",
+        ["video"] = "video.fill"
     };
 
     private const string DefaultSymbol = "sidebar.left";
@@ -212,12 +272,21 @@ internal static class ArcSidebar {
 
     #region Actions - Looks
 
+    /// The Space's icon: the emoji the person chose, else the SF Symbol that
+    /// draws the Arc icon they chose, else Arc's own symbol.
     private static string Symbol(JsonElement? customInfo) {
         var icon = ImportJson.Member(customInfo, "iconType");
-        if (ImportJson.Text(ImportJson.Member(icon, "emoji_v2")) is { Length: > 0 } emoji) return EmojiIcon.Chosen(emoji)?.Symbol ?? emoji;
+        if (EmojiIcon.Chosen(Emoji(icon)) is { } emoji) return emoji.Symbol;
         return ImportJson.Text(ImportJson.Member(icon, "icon")) is { } name && IconSymbols.TryGetValue(name, out var symbol)
             ? symbol : DefaultSymbol;
     }
+
+    /// The emoji an icon holds, as text, or as the one code point an older
+    /// file keeps of it.
+    private static string? Emoji(JsonElement? icon) =>
+        ImportJson.Text(ImportJson.Member(icon, "emoji_v2")) is { Length: > 0 } text ? text
+            : ImportJson.Integer(ImportJson.Member(icon, "emoji")) is { } code and > 0 and <= int.MaxValue
+                && Rune.TryCreate((int)code, out var rune) ? rune.ToString() : null;
 
     /// The Space's colors: its gradient's base colors, else its single color,
     /// else its palette's mid tone, at most as many as a look keeps.

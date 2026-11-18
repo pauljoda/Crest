@@ -856,6 +856,7 @@ struct AddLinkRoute: Intent, LinkIntent, Equatable, Sendable {
 }
 
 struct AddSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
+    let fromSpaceID: UUID?
 }
 
 struct AddSubSpace: Intent, SessionIntent, Equatable, Sendable {
@@ -1459,6 +1460,12 @@ struct BrandColor: Equatable, Sendable {
     var green: Double
     var blue: Double
     var alpha: Double
+}
+
+struct BrandGradient: Equatable, Sendable {
+    var colors: ColorPalette
+    var kind: SpaceGradientKind?
+    var angle: Double
 }
 
 struct BrowsingPreferences: Equatable, Sendable {
@@ -5013,6 +5020,10 @@ struct PaletteEntry: Equatable, Sendable {
     let text: String
 }
 
+struct PaletteGradients: Equatable, Sendable {
+    var slots: [BrandGradient]
+}
+
 struct PaletteGroup: Equatable, Sendable {
     let section: PaletteSection
     let rows: [PaletteRow]
@@ -6339,6 +6350,7 @@ struct SetupDraftSpace: Equatable, Sendable {
     let profileID: UUID
     let isNew: Bool
     let customization: SpaceCustomization
+    let primaryID: UUID?
     let shownName: String
 }
 
@@ -6722,12 +6734,16 @@ struct SpaceBranding: Equatable, Sendable {
             sheenAngle: 45,
             sealTeeth: 12,
             showsOutline: false,
-            depth: CrestDepth.none
+            depth: CrestDepth.none,
+            paletteGradients: nil
         ),
         renderingVersion: 2,
         folderColorIntensity: 0,
         textColorMode: SpaceTextColorMode.automatic,
-        hasCustomAppearance: nil
+        hasCustomAppearance: nil,
+        gradientKind: nil,
+        symbolGradient: nil,
+        colorGradients: nil
     )
 
     var colors: ColorPalette
@@ -6745,6 +6761,9 @@ struct SpaceBranding: Equatable, Sendable {
     var folderColorIntensity: Double
     var textColorMode: SpaceTextColorMode
     var hasCustomAppearance: Bool?
+    var gradientKind: SpaceGradientKind?
+    var symbolGradient: BrandGradient?
+    var colorGradients: PaletteGradients?
 }
 
 struct SpaceCrest: Equatable, Sendable {
@@ -6780,6 +6799,7 @@ struct SpaceCrest: Equatable, Sendable {
     var sealTeeth: Int
     var showsOutline: Bool
     var depth: CrestDepth
+    var paletteGradients: PaletteGradients?
 }
 
 struct SpaceCustomization: Equatable, Sendable {
@@ -22482,12 +22502,12 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1),
-                    BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                    BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+                    BrandColor(red: 0.198, green: 0.257, blue: 0.309, alpha: 1),
+                    BrandColor(red: 0.725, green: 0.872, blue: 0.934, alpha: 1),
+                    BrandColor(red: 0.302, green: 0.364, blue: 0.419, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
@@ -22503,23 +22523,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.direwolf,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1),
-                        BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.35,
@@ -22534,12 +22545,16 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         ),
         swatch: BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1)
     )
@@ -22555,18 +22570,18 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1),
-                    BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                    BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+                    BrandColor(red: 0.655, green: 0.227, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.975, green: 0.83, blue: 0.42, alpha: 1),
+                    BrandColor(red: 0.789, green: 0.349, blue: 0.231, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: SpaceThemeMode.gradient,
-            gradientAngle: 160,
-            textureStrength: 0,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0.45,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22576,23 +22591,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.sunburst,
                 symbol: CrestSymbol.sun,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1),
-                        BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22607,12 +22613,29 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.751, green: 0.392, blue: 0.124, alpha: 1),
+                                BrandColor(red: 0.792, green: 0.533, blue: 0.245, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 160
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1)
     )
@@ -22628,18 +22651,18 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1),
-                    BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                    BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+                    BrandColor(red: 0.118, green: 0.356, blue: 0.202, alpha: 1),
+                    BrandColor(red: 0.965, green: 0.78, blue: 0.603, alpha: 1),
+                    BrandColor(red: 0.238, green: 0.469, blue: 0.308, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.lozenges,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            textureStrength: 0,
+            textureStrength: 0.2,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22649,23 +22672,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.laurel,
                 symbol: CrestSymbol.rose,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1),
-                        BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1),
-                        BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22680,12 +22694,24 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.271, green: 0.468, blue: 0.251, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1)
     )
@@ -22701,12 +22727,12 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1),
-                    BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                    BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+                    BrandColor(red: 0.433, green: 0.092, blue: 0.141, alpha: 1),
+                    BrandColor(red: 0.922, green: 0.776, blue: 0.411, alpha: 1),
+                    BrandColor(red: 0.56, green: 0.213, blue: 0.243, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.chevron,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
@@ -22722,23 +22748,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.doubleLine,
                 symbol: CrestSymbol.lion,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1),
-                        BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22753,12 +22770,29 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.lifted
+                depth: CrestDepth.lifted,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.306, green: 0.053, blue: 0.179, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    ),
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.88, green: 0.603, blue: 0.273, alpha: 1)]),
+                        kind: nil,
+                        angle: 45
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1)
     )
@@ -22923,6 +22957,71 @@ struct SpaceBannerPattern: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SpaceGradientKind`. A member's wire tag is its index in `all`.
+struct SpaceGradientKind: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case linear
+        case radial
+        case angular
+    }
+
+    let tag: Int
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(kind: kind, name: name, title: title)
+    }
+
+    static let linear = SpaceGradientKind(
+        tag: 0,
+        kind: .linear,
+        name: "linear",
+        title: LocalizedStringResource("Linear")
+    )
+    static let radial = SpaceGradientKind(
+        tag: 1,
+        kind: .radial,
+        name: "radial",
+        title: LocalizedStringResource("Radial")
+    )
+    static let angular = SpaceGradientKind(
+        tag: 2,
+        kind: .angular,
+        name: "angular",
+        title: LocalizedStringResource("Angular")
+    )
+
+    static let all: [SpaceGradientKind] = [linear, radial, angular]
+
+    static func named(_ name: String?) -> SpaceGradientKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceGradientKind, rhs: SpaceGradientKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SpaceHouse`. A member's wire tag is its index in `all`.
 struct SpaceHouse: Hashable, Sendable {
     let tag: Int
@@ -22944,12 +23043,12 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1),
-                    BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                    BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+                    BrandColor(red: 0.198, green: 0.257, blue: 0.309, alpha: 1),
+                    BrandColor(red: 0.725, green: 0.872, blue: 0.934, alpha: 1),
+                    BrandColor(red: 0.302, green: 0.364, blue: 0.419, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
@@ -22965,23 +23064,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.direwolf,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1),
-                        BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.35,
@@ -22996,12 +23086,16 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         ),
         appIconName: "CrestWinter"
     )
@@ -23012,12 +23106,12 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1),
-                    BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                    BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+                    BrandColor(red: 0.433, green: 0.092, blue: 0.141, alpha: 1),
+                    BrandColor(red: 0.922, green: 0.776, blue: 0.411, alpha: 1),
+                    BrandColor(red: 0.56, green: 0.213, blue: 0.243, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.chevron,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
@@ -23033,23 +23127,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.doubleLine,
                 symbol: CrestSymbol.lion,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1),
-                        BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -23064,12 +23149,29 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.lifted
+                depth: CrestDepth.lifted,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.306, green: 0.053, blue: 0.179, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    ),
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.88, green: 0.603, blue: 0.273, alpha: 1)]),
+                        kind: nil,
+                        angle: 45
+                    )
+                ]
+            )
         ),
         appIconName: "CrestLion"
     )
@@ -23080,18 +23182,18 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.082, green: 0.094, blue: 0.141, alpha: 1),
-                    BrandColor(red: 0.192, green: 0.22, blue: 0.282, alpha: 1),
-                    BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1)
+                    BrandColor(red: 0.12, green: 0.18, blue: 0.278, alpha: 1),
+                    BrandColor(red: 0.871, green: 0.723, blue: 0.401, alpha: 1),
+                    BrandColor(red: 0.219, green: 0.283, blue: 0.388, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.quartered,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            textureStrength: 0,
+            textureStrength: 0.35,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23101,23 +23203,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.doubleLine,
                 symbol: CrestSymbol.stag,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.835, green: 0.655, blue: 0.231, alpha: 1),
-                        BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.3,
@@ -23132,12 +23225,24 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.131, green: 0.303, blue: 0.386, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestStorm"
     )
@@ -23148,18 +23253,18 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1),
-                    BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1),
-                    BrandColor(red: 0.745, green: 0.267, blue: 0.22, alpha: 1)
+                    BrandColor(red: 0.214, green: 0.071, blue: 0.051, alpha: 1),
+                    BrandColor(red: 0.985, green: 0.825, blue: 0.42, alpha: 1),
+                    BrandColor(red: 0.324, green: 0.169, blue: 0.145, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.bands,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            textureStrength: 0,
+            textureStrength: 0.4,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23169,23 +23274,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.dragon,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.071, green: 0.059, blue: 0.063, alpha: 1),
-                        BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1),
-                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
-                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
-                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
-                        BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -23200,12 +23296,29 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.lifted
+                depth: CrestDepth.lifted,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.423, green: 0.043, blue: 0.016, alpha: 1),
+                                BrandColor(red: 0.651, green: 0.236, blue: 0, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestDragon"
     )
@@ -23216,18 +23329,18 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1),
-                    BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                    BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+                    BrandColor(red: 0.118, green: 0.356, blue: 0.202, alpha: 1),
+                    BrandColor(red: 0.965, green: 0.78, blue: 0.603, alpha: 1),
+                    BrandColor(red: 0.238, green: 0.469, blue: 0.308, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.lozenges,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            textureStrength: 0,
+            textureStrength: 0.2,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23237,23 +23350,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.laurel,
                 symbol: CrestSymbol.rose,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1),
-                        BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1),
-                        BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -23268,12 +23372,24 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.271, green: 0.468, blue: 0.251, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestMeadow"
     )
@@ -23284,18 +23400,18 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1),
-                    BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1),
-                    BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+                    BrandColor(red: 0.103, green: 0.126, blue: 0.143, alpha: 1),
+                    BrandColor(red: 0.883, green: 0.72, blue: 0.36, alpha: 1),
+                    BrandColor(red: 0.198, green: 0.223, blue: 0.242, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.stripes,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            textureStrength: 0,
+            textureStrength: 0.5,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23305,23 +23421,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.beaded,
                 symbol: CrestSymbol.kraken,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1),
-                        BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1),
-                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
-                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
-                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
-                        BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.5,
@@ -23336,12 +23443,29 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.114, green: 0.207, blue: 0.218, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    ),
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.411, green: 0.686, blue: 0.591, alpha: 1)]),
+                        kind: nil,
+                        angle: 45
+                    )
+                ]
+            )
         ),
         appIconName: "CrestIron"
     )
@@ -23352,12 +23476,12 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1),
-                    BrandColor(red: 0.133, green: 0.282, blue: 0.424, alpha: 1),
-                    BrandColor(red: 0.659, green: 0.361, blue: 0.255, alpha: 1)
+                    BrandColor(red: 0, green: 0.33, blue: 0.579, alpha: 1),
+                    BrandColor(red: 0.859, green: 0.921, blue: 0.952, alpha: 1),
+                    BrandColor(red: 0.149, green: 0.446, blue: 0.716, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.split,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
@@ -23373,23 +23497,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.fish,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.176, green: 0.369, blue: 0.616, alpha: 1),
-                        BrandColor(red: 0.643, green: 0.157, blue: 0.188, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
-                        BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.2,
@@ -23404,12 +23519,24 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0, green: 0.51, blue: 0.61, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestRiver"
     )
@@ -23420,18 +23547,18 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1),
-                    BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                    BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+                    BrandColor(red: 0.655, green: 0.227, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.975, green: 0.83, blue: 0.42, alpha: 1),
+                    BrandColor(red: 0.789, green: 0.349, blue: 0.231, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: SpaceThemeMode.gradient,
-            gradientAngle: 160,
-            textureStrength: 0,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0.45,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23441,23 +23568,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.sunburst,
                 symbol: CrestSymbol.sun,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1),
-                        BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -23472,12 +23590,29 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.751, green: 0.392, blue: 0.124, alpha: 1),
+                                BrandColor(red: 0.792, green: 0.533, blue: 0.245, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 160
+                    )
+                ]
+            )
         ),
         appIconName: "CrestSun"
     )
@@ -23488,18 +23623,18 @@ struct SpaceHouse: Hashable, Sendable {
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1),
-                    BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1),
-                    BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
+                    BrandColor(red: 0.091, green: 0.095, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.894, green: 0.868, blue: 0.814, alpha: 1),
+                    BrandColor(red: 0.184, green: 0.189, blue: 0.202, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.checkered,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            textureStrength: 0,
+            textureStrength: 0.3,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23509,23 +23644,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.doubleRing,
                 symbol: CrestSymbol.raven,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1),
-                        BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1),
-                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1),
-                        BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1),
-                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1),
-                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.45,
@@ -23540,12 +23666,16 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.none
+                depth: CrestDepth.none,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         ),
         appIconName: "CrestVigil"
     )
@@ -23694,12 +23824,16 @@ struct SpaceScheme: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.none
+                depth: CrestDepth.none,
+                paletteGradients: nil
             ),
             renderingVersion: 2,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.system,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         )
     )
 
@@ -24641,67 +24775,67 @@ struct Tincture: Hashable, Sendable {
         tag: 10,
         name: "winterSlate",
         title: LocalizedStringResource("Slate"),
-        color: BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
+        color: BrandColor(red: 0.198, green: 0.257, blue: 0.309, alpha: 1)
     )
     static let winterSteel = Tincture(
         tag: 11,
         name: "winterSteel",
         title: LocalizedStringResource("Steel"),
-        color: BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1)
+        color: BrandColor(red: 0.302, green: 0.364, blue: 0.419, alpha: 1)
     )
     static let winterIce = Tincture(
         tag: 12,
         name: "winterIce",
         title: LocalizedStringResource("Ice"),
-        color: BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+        color: BrandColor(red: 0.725, green: 0.872, blue: 0.934, alpha: 1)
     )
     static let lionOxblood = Tincture(
         tag: 13,
         name: "lionOxblood",
         title: LocalizedStringResource("Oxblood"),
-        color: BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
+        color: BrandColor(red: 0.306, green: 0.053, blue: 0.179, alpha: 1)
     )
     static let lionCrimson = Tincture(
         tag: 14,
         name: "lionCrimson",
         title: LocalizedStringResource("Crimson"),
-        color: BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1)
+        color: BrandColor(red: 0.56, green: 0.213, blue: 0.243, alpha: 1)
     )
     static let lionGold = Tincture(
         tag: 15,
         name: "lionGold",
         title: LocalizedStringResource("Antique Gold"),
-        color: BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+        color: BrandColor(red: 0.88, green: 0.603, blue: 0.273, alpha: 1)
     )
     static let stormMidnight = Tincture(
         tag: 16,
         name: "stormMidnight",
         title: LocalizedStringResource("Midnight"),
-        color: BrandColor(red: 0.082, green: 0.094, blue: 0.141, alpha: 1)
+        color: BrandColor(red: 0.12, green: 0.18, blue: 0.278, alpha: 1)
     )
     static let stormGunmetal = Tincture(
         tag: 17,
         name: "stormGunmetal",
         title: LocalizedStringResource("Gunmetal"),
-        color: BrandColor(red: 0.192, green: 0.22, blue: 0.282, alpha: 1)
+        color: BrandColor(red: 0.131, green: 0.303, blue: 0.386, alpha: 1)
     )
     static let stormBrass = Tincture(
         tag: 18,
         name: "stormBrass",
         title: LocalizedStringResource("Brass"),
-        color: BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1)
+        color: BrandColor(red: 0.871, green: 0.723, blue: 0.401, alpha: 1)
     )
     static let dragonChar = Tincture(
         tag: 19,
         name: "dragonChar",
         title: LocalizedStringResource("Char"),
-        color: BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1)
+        color: BrandColor(red: 0.214, green: 0.071, blue: 0.051, alpha: 1)
     )
     static let dragonBlood = Tincture(
         tag: 20,
         name: "dragonBlood",
         title: LocalizedStringResource("Blood"),
-        color: BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1)
+        color: BrandColor(red: 0.423, green: 0.043, blue: 0.016, alpha: 1)
     )
     static let dragonScarlet = Tincture(
         tag: 21,
@@ -24713,13 +24847,13 @@ struct Tincture: Hashable, Sendable {
         tag: 22,
         name: "meadowForest",
         title: LocalizedStringResource("Forest"),
-        color: BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
+        color: BrandColor(red: 0.118, green: 0.356, blue: 0.202, alpha: 1)
     )
     static let meadowMoss = Tincture(
         tag: 23,
         name: "meadowMoss",
         title: LocalizedStringResource("Moss"),
-        color: BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1)
+        color: BrandColor(red: 0.271, green: 0.468, blue: 0.251, alpha: 1)
     )
     static let meadowWheat = Tincture(
         tag: 24,
@@ -24731,31 +24865,31 @@ struct Tincture: Hashable, Sendable {
         tag: 25,
         name: "ironBlack",
         title: LocalizedStringResource("Iron"),
-        color: BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1)
+        color: BrandColor(red: 0.103, green: 0.126, blue: 0.143, alpha: 1)
     )
     static let ironPewter = Tincture(
         tag: 26,
         name: "ironPewter",
         title: LocalizedStringResource("Pewter"),
-        color: BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1)
+        color: BrandColor(red: 0.198, green: 0.223, blue: 0.242, alpha: 1)
     )
     static let ironPatina = Tincture(
         tag: 27,
         name: "ironPatina",
         title: LocalizedStringResource("Patina"),
-        color: BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+        color: BrandColor(red: 0.411, green: 0.686, blue: 0.591, alpha: 1)
     )
     static let riverNavy = Tincture(
         tag: 28,
         name: "riverNavy",
         title: LocalizedStringResource("Navy"),
-        color: BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1)
+        color: BrandColor(red: 0, green: 0.33, blue: 0.579, alpha: 1)
     )
     static let riverLapis = Tincture(
         tag: 29,
         name: "riverLapis",
         title: LocalizedStringResource("Lapis"),
-        color: BrandColor(red: 0.133, green: 0.282, blue: 0.424, alpha: 1)
+        color: BrandColor(red: 0, green: 0.51, blue: 0.61, alpha: 1)
     )
     static let riverRust = Tincture(
         tag: 30,
@@ -24773,25 +24907,25 @@ struct Tincture: Hashable, Sendable {
         tag: 32,
         name: "sunTerracotta",
         title: LocalizedStringResource("Terracotta"),
-        color: BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1)
+        color: BrandColor(red: 0.789, green: 0.349, blue: 0.231, alpha: 1)
     )
     static let sunDune = Tincture(
         tag: 33,
         name: "sunDune",
         title: LocalizedStringResource("Dune"),
-        color: BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+        color: BrandColor(red: 0.792, green: 0.533, blue: 0.245, alpha: 1)
     )
     static let vigilOnyx = Tincture(
         tag: 34,
         name: "vigilOnyx",
         title: LocalizedStringResource("Onyx"),
-        color: BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1)
+        color: BrandColor(red: 0.091, green: 0.095, blue: 0.106, alpha: 1)
     )
     static let vigilCharcoal = Tincture(
         tag: 35,
         name: "vigilCharcoal",
         title: LocalizedStringResource("Charcoal"),
-        color: BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1)
+        color: BrandColor(red: 0.184, green: 0.189, blue: 0.202, alpha: 1)
     )
     static let vigilAsh = Tincture(
         tag: 36,
@@ -24815,13 +24949,13 @@ struct Tincture: Hashable, Sendable {
         tag: 39,
         name: "lionGules",
         title: LocalizedStringResource("Gules"),
-        color: BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1)
+        color: BrandColor(red: 0.433, green: 0.092, blue: 0.141, alpha: 1)
     )
     static let lionOr = Tincture(
         tag: 40,
         name: "lionOr",
         title: LocalizedStringResource("Or"),
-        color: BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1)
+        color: BrandColor(red: 0.922, green: 0.776, blue: 0.411, alpha: 1)
     )
     static let stormOr = Tincture(
         tag: 41,
@@ -24845,31 +24979,31 @@ struct Tincture: Hashable, Sendable {
         tag: 44,
         name: "dragonFire",
         title: LocalizedStringResource("Fire"),
-        color: BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1)
+        color: BrandColor(red: 0.651, green: 0.236, blue: 0, alpha: 1)
     )
     static let meadowVert = Tincture(
         tag: 45,
         name: "meadowVert",
         title: LocalizedStringResource("Vert"),
-        color: BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1)
+        color: BrandColor(red: 0.238, green: 0.469, blue: 0.308, alpha: 1)
     )
     static let meadowRose = Tincture(
         tag: 46,
         name: "meadowRose",
         title: LocalizedStringResource("Rose Gold"),
-        color: BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1)
+        color: BrandColor(red: 0.965, green: 0.78, blue: 0.603, alpha: 1)
     )
     static let ironOr = Tincture(
         tag: 47,
         name: "ironOr",
         title: LocalizedStringResource("Kraken Gold"),
-        color: BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1)
+        color: BrandColor(red: 0.883, green: 0.72, blue: 0.36, alpha: 1)
     )
     static let riverAzure = Tincture(
         tag: 48,
         name: "riverAzure",
         title: LocalizedStringResource("Azure"),
-        color: BrandColor(red: 0.176, green: 0.369, blue: 0.616, alpha: 1)
+        color: BrandColor(red: 0.149, green: 0.446, blue: 0.716, alpha: 1)
     )
     static let riverGules = Tincture(
         tag: 49,
@@ -24881,31 +25015,31 @@ struct Tincture: Hashable, Sendable {
         tag: 50,
         name: "riverArgent",
         title: LocalizedStringResource("Silver"),
-        color: BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1)
+        color: BrandColor(red: 0.859, green: 0.921, blue: 0.952, alpha: 1)
     )
     static let sunTenne = Tincture(
         tag: 51,
         name: "sunTenne",
         title: LocalizedStringResource("Tenné"),
-        color: BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1)
+        color: BrandColor(red: 0.751, green: 0.392, blue: 0.124, alpha: 1)
     )
     static let sunGules = Tincture(
         tag: 52,
         name: "sunGules",
         title: LocalizedStringResource("Sunset Red"),
-        color: BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1)
+        color: BrandColor(red: 0.655, green: 0.227, blue: 0.106, alpha: 1)
     )
     static let sunOr = Tincture(
         tag: 53,
         name: "sunOr",
         title: LocalizedStringResource("Saffron"),
-        color: BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1)
+        color: BrandColor(red: 0.975, green: 0.83, blue: 0.42, alpha: 1)
     )
     static let vigilBone = Tincture(
         tag: 54,
         name: "vigilBone",
         title: LocalizedStringResource("Bone"),
-        color: BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1)
+        color: BrandColor(red: 0.894, green: 0.868, blue: 0.814, alpha: 1)
     )
     static let neutralSmoke = Tincture(
         tag: 55,
@@ -24918,6 +25052,30 @@ struct Tincture: Hashable, Sendable {
         name: "neutralGray",
         title: LocalizedStringResource("Gray"),
         color: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1)
+    )
+    static let dragonFlame = Tincture(
+        tag: 57,
+        name: "dragonFlame",
+        title: LocalizedStringResource("Flame"),
+        color: BrandColor(red: 0.985, green: 0.825, blue: 0.42, alpha: 1)
+    )
+    static let stormSlate = Tincture(
+        tag: 58,
+        name: "stormSlate",
+        title: LocalizedStringResource("Slate Blue"),
+        color: BrandColor(red: 0.219, green: 0.283, blue: 0.388, alpha: 1)
+    )
+    static let dragonCinder = Tincture(
+        tag: 59,
+        name: "dragonCinder",
+        title: LocalizedStringResource("Cinder"),
+        color: BrandColor(red: 0.324, green: 0.169, blue: 0.145, alpha: 1)
+    )
+    static let ironTide = Tincture(
+        tag: 60,
+        name: "ironTide",
+        title: LocalizedStringResource("Tide"),
+        color: BrandColor(red: 0.114, green: 0.207, blue: 0.218, alpha: 1)
     )
 
     static let all: [Tincture] = [
@@ -24977,7 +25135,11 @@ struct Tincture: Hashable, Sendable {
         sunOr,
         vigilBone,
         neutralSmoke,
-        neutralGray
+        neutralGray,
+        dragonFlame,
+        stormSlate,
+        dragonCinder,
+        ironTide
     ]
 
     static func named(_ name: String?) -> Tincture? {

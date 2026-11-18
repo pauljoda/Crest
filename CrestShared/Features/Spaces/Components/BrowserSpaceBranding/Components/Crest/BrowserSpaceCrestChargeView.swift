@@ -6,7 +6,7 @@ struct BrowserSpaceCrestChargeGlyph: View {
     let charge: CrestCharge
     let pointSize: CGFloat
     let weight: CrestChargeWeight
-    let color: Color
+    let color: AnyShapeStyle
 
     var body: some View {
         switch charge.kind.kind {
@@ -63,7 +63,7 @@ struct BrowserSpaceCrestChargeView: View {
     var scale: Double = 1
     var offset: Double = 0
     var weight: CrestChargeWeight = .bold
-    let color: Color
+    let color: AnyShapeStyle
     let size: CGFloat
 
     var body: some View {

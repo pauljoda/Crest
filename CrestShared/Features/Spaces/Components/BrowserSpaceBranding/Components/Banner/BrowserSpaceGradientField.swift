@@ -1,27 +1,12 @@
 import SwiftUI
 
+/// A Space's colors as its gradient: along a line, out from the middle, or
+/// around it, as its fill runs. One color fills it evenly.
 struct BrowserSpaceGradientField: View {
-    let colors: [Color]
-    let angle: Double
+    let fill: CrestColorFill
 
     var body: some View {
-        let axis = gradientAxis
-        let gradientColors = colors.count == 1 ? [colors[0], colors[0]] : colors
-        LinearGradient(
-            colors: gradientColors,
-            startPoint: axis.start,
-            endPoint: axis.end
-        )
-    }
-
-    private var gradientAxis: (start: UnitPoint, end: UnitPoint) {
-        let radians = angle * .pi / 180
-        let deltaX = cos(radians) * 0.5
-        let deltaY = sin(radians) * 0.5
-        return (
-            UnitPoint(x: 0.5 - deltaX, y: 0.5 - deltaY),
-            UnitPoint(x: 0.5 + deltaX, y: 0.5 + deltaY)
-        )
+        Rectangle().fill(fill.style)
     }
 }
 
@@ -29,7 +14,8 @@ struct BrowserSpaceGradientField: View {
     #Preview("Gradient angle") {
         @Previewable @State var angle = 45.0
         VStack {
-            BrowserSpaceGradientField(colors: [.indigo, .cyan, .orange], angle: angle).frame(height: 280)
+            BrowserSpaceGradientField(fill: CrestColorFill([.indigo, .sky, .sand], degrees: angle))
+                .frame(height: 280)
             Slider(value: $angle, in: 0...360)
         }.padding().frame(width: 360)
     }

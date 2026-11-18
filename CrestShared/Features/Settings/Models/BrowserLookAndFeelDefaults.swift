@@ -7,7 +7,7 @@ import Foundation
 /// seeds a control and the migration code that seeds the store.
 enum BrowserLookAndFeelDefaults {
     static let appearanceMode = BrowserAppearanceMode.standard
-    static let customizationStyle = BrowserCustomizationStyle.standard
+    static let spaceIcons = BrowserSpaceIconDisplay.icons
     static let darkSpaceDimming = 0.0
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
     static let sidebarOnRight = false

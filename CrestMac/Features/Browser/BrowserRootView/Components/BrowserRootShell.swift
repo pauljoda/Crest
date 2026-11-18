@@ -12,6 +12,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     let tabPromotionNamespace: Namespace.ID
 
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.browserRootStylesWindow) private var stylesWindow
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
@@ -58,15 +59,17 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // With the address bar on top the buttons stay at the window's top
             // left in every sidebar state, over the window's address bar or the
             // leading card's when the sidebar does not hold them.
-            BrowserNativeWindowControlsBridge(
-                isVisible: model.sidebarPresentation.showsWindowControls || model.showsPageCardBars,
-                sidebarOnRight: sidebarOnRight && !model.showsPageCardBars,
-                sidebarWidth: model.sidebarWidth
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+            if stylesWindow {
+                BrowserNativeWindowControlsBridge(
+                    isVisible: model.sidebarPresentation.showsWindowControls || model.showsPageCardBars,
+                    sidebarOnRight: sidebarOnRight && !model.showsPageCardBars,
+                    sidebarWidth: model.sidebarWidth
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
 
             // A held Most Recent Tab shortcut shows the recent tabs over the
             // window, fullscreen page or not.

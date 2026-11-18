@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x71, 0x17, 0x22, 0xef, 0x94, 0x5b, 0xb2, 0x8e, 0x3a, 0xca, 0x2b, 0x18, 0x55, 0xd2, 0xc7, 0x79, 0xa2, 0xab, 0x7a, 0xe5, 0xb9, 0x25, 0x08, 0xa4, 0x8b, 0x80, 0x5e, 0x01, 0x21, 0x23, 0x7a, 0xf8
+        0xdf, 0xff, 0x27, 0xdb, 0x76, 0x78, 0x61, 0x0e, 0x9c, 0x33, 0x5c, 0x16, 0x27, 0x7a, 0x76, 0x81, 0x67, 0x17, 0x2f, 0x07, 0xe1, 0x7f, 0x90, 0xe9, 0x4b, 0x49, 0x6e, 0x0c, 0x1b, 0x2b, 0xa1, 0xb0
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -4161,12 +4161,19 @@ public static class ContractCodec {
 
     public static AddSetupSpace ReadAddSetupSpace(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return new AddSetupSpace();
+        return new AddSetupSpace(
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
     }
 
     public static void WriteAddSetupSpace(WireWriter writer, AddSetupSpace value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
+        if (value.FromSpaceId is { } presentFromSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentFromSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static AddSubSpace ReadAddSubSpace(WireReader reader) {
@@ -5647,6 +5654,27 @@ public static class ContractCodec {
         writer.WriteDouble(value.Green);
         writer.WriteDouble(value.Blue);
         writer.WriteDouble(value.Alpha);
+    }
+
+    public static BrandGradient ReadBrandGradient(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new BrandGradient(
+            ReadColorPalette(reader),
+            reader.ReadPresence() ? (SpaceGradientKind?)ReadSpaceGradientKind(reader) : null,
+            reader.ReadDouble());
+    }
+
+    public static void WriteBrandGradient(WireWriter writer, BrandGradient value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteColorPalette(writer, value.Colors);
+        if (value.Kind is { } presentKind) {
+            writer.WritePresence(true);
+            WriteSpaceGradientKind(writer, presentKind);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteDouble(value.Angle);
     }
 
     public static BrowsingPreferences ReadBrowsingPreferences(WireReader reader) {
@@ -14432,6 +14460,21 @@ public static class ContractCodec {
         writer.WriteString(value.Text);
     }
 
+    public static PaletteGradients ReadPaletteGradients(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PaletteGradients(
+            reader.ReadList(() => ReadBrandGradient(reader)));
+    }
+
+    public static void WritePaletteGradients(WireWriter writer, PaletteGradients value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Slots.Count);
+        foreach (var itemSlots in value.Slots) {
+            WriteBrandGradient(writer, itemSlots);
+        }
+    }
+
     public static PaletteGroup ReadPaletteGroup(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new PaletteGroup(
@@ -17723,7 +17766,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadBool(),
-            ReadSpaceCustomization(reader));
+            ReadSpaceCustomization(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
         _ = reader.ReadString();
         return value;
     }
@@ -17735,6 +17779,12 @@ public static class ContractCodec {
         writer.WriteGuid(value.ProfileId);
         writer.WriteBool(value.IsNew);
         WriteSpaceCustomization(writer, value.Customization);
+        if (value.PrimaryId is { } presentPrimaryId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentPrimaryId);
+        } else {
+            writer.WritePresence(false);
+        }
         writer.WriteString(value.ShownName);
     }
 
@@ -18693,7 +18743,10 @@ public static class ContractCodec {
             reader.ReadInt32(),
             reader.ReadDouble(),
             ReadSpaceTextColorMode(reader),
-            reader.ReadPresence() ? (bool?)reader.ReadBool() : null);
+            reader.ReadPresence() ? (bool?)reader.ReadBool() : null,
+            reader.ReadPresence() ? (SpaceGradientKind?)ReadSpaceGradientKind(reader) : null,
+            reader.ReadPresence() ? (BrandGradient?)ReadBrandGradient(reader) : null,
+            reader.ReadPresence() ? (PaletteGradients?)ReadPaletteGradients(reader) : null);
     }
 
     public static void WriteSpaceBranding(WireWriter writer, SpaceBranding value) {
@@ -18721,6 +18774,24 @@ public static class ContractCodec {
         if (value.HasCustomAppearance is { } presentHasCustomAppearance) {
             writer.WritePresence(true);
             writer.WriteBool(presentHasCustomAppearance);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.GradientKind is { } presentGradientKind) {
+            writer.WritePresence(true);
+            WriteSpaceGradientKind(writer, presentGradientKind);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SymbolGradient is { } presentSymbolGradient) {
+            writer.WritePresence(true);
+            WriteBrandGradient(writer, presentSymbolGradient);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.ColorGradients is { } presentColorGradients) {
+            writer.WritePresence(true);
+            WritePaletteGradients(writer, presentColorGradients);
         } else {
             writer.WritePresence(false);
         }
@@ -18757,7 +18828,8 @@ public static class ContractCodec {
             reader.ReadDouble(),
             reader.ReadInt32(),
             reader.ReadBool(),
-            ReadCrestDepth(reader));
+            ReadCrestDepth(reader),
+            reader.ReadPresence() ? (PaletteGradients?)ReadPaletteGradients(reader) : null);
     }
 
     public static void WriteSpaceCrest(WireWriter writer, SpaceCrest value) {
@@ -18807,6 +18879,12 @@ public static class ContractCodec {
         writer.WriteInt32(value.SealTeeth);
         writer.WriteBool(value.ShowsOutline);
         WriteCrestDepth(writer, value.Depth);
+        if (value.PaletteGradients is { } presentPaletteGradients) {
+            writer.WritePresence(true);
+            WritePaletteGradients(writer, presentPaletteGradients);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static SpaceCustomization ReadSpaceCustomization(WireReader reader) {
@@ -22930,6 +23008,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SpaceBannerPattern.All, value));
+    }
+
+    public static SpaceGradientKind ReadSpaceGradientKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SpaceGradientKind.All[reader.ReadEnum(SpaceGradientKind.All.Count)];
+    }
+
+    public static void WriteSpaceGradientKind(WireWriter writer, SpaceGradientKind value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SpaceGradientKind.All, value));
     }
 
     public static SpaceHouse ReadSpaceHouse(WireReader reader) {

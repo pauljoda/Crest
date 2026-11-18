@@ -60,9 +60,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([("Reading", null), ("Untitled Folder", "Reading")], FoldersOf(work));
 
         // Another profile's favorites are its own; a gradient keeps its colors
-        // the way Crest can draw them.
+        // the way Crest can draw them, and an older file's emoji its code point.
         var gradient = spaces[1];
-        Assert.Equal(("chevron.left.forwardslash.chevron.right", SpaceAccent.Orange), (gradient.Settings.Symbol, gradient.Settings.Accent));
+        Assert.Equal(("crest.emoji:🚀", SpaceAccent.Orange), (gradient.Settings.Symbol, gradient.Settings.Accent));
         Assert.Equal([TabPlacement.Pinned, TabPlacement.Pinned], gradient.Tabs.Select(tab => tab.Placement));
         Assert.Equal((SpaceBannerPattern.Diagonal, SpaceThemeMode.Gradient, 3),
             (gradient.Settings.Branding!.BannerPattern, gradient.Settings.Branding.ThemeMode, gradient.Settings.Branding.Colors.Colors.Count));

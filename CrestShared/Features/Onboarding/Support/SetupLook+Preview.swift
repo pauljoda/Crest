@@ -35,10 +35,12 @@ extension SetupLook {
                 colors.filter { (0.3...0.75).contains($0.lightness) }.max { $0.chroma < $1.chroma }
                 ?? colors.first ?? SpaceBranding.neutral.colors.colors[0]
             look.colors = ColorPalette(colors: [accent])
+            look.colorGradients = nil
             look.bannerStrength = tint
             look.readabilityFade = 0
             look.keepsControlsReadable = false
             look.symbolColor = accent.contrasting
+            look.symbolGradient = nil
             look.textColorMode = .automatic
         }
         return look.normalized()

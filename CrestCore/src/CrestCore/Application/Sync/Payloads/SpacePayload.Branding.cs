@@ -36,12 +36,15 @@ internal sealed partial record SpacePayload {
             value.Value["symbolColor"] is { } symbolColor ? Color(symbolColor) : null,
             ReadCrest(value.Nested("crest")), version, value.TolerantNumber("folderColorIntensity") ?? 0,
             SpaceTextColorMode.Named(value.TolerantText("textColorMode")) ?? SpaceTextColorMode.Automatic,
-            value.OptionalFlag("hasCustomAppearance"));
+            value.OptionalFlag("hasCustomAppearance"),
+            SpaceGradientKind.Named(value.TolerantText("gradientKind")),
+            Gradient(value.Value["symbolGradient"]), Gradients(value.Value["colorGradients"]));
         return SpaceBranding.Normalized(branding);
     }
 
     /// A crest as every client reads it: each member it cannot read takes its
-    /// neutral value, and a figure it cannot read is none.
+    /// neutral value, a figure it cannot read is none, and a palette color's
+    /// gradient it cannot read is plain.
     private static SpaceCrest ReadCrest(SyncPayloadReader value) {
         int Index(string key, int fallback = 0) => Whole(value.TolerantInteger(key) ?? fallback);
         double Measure(CrestMeasure measure) => value.TolerantNumber(measure.Name) ?? measure.Default;
@@ -61,7 +64,7 @@ internal sealed partial record SpacePayload {
             Measure(CrestMeasure.ChargeScale), Measure(CrestMeasure.ChargeOffset),
             CrestChargeWeight.Named(value.TolerantText("chargeWeight")) ?? CrestChargeWeight.Bold,
             Measure(CrestMeasure.SheenAngle), Count(CrestMeasure.SealTeeth), value.TolerantFlag("showsOutline") ?? false,
-            CrestDepth.Named(value.TolerantText("depth")) ?? CrestDepth.None);
+            CrestDepth.Named(value.TolerantText("depth")) ?? CrestDepth.None, Gradients(value.Value["paletteGradients"]));
     }
 
     /// A crest's own palette, or null when it has none every client reads.
@@ -73,6 +76,21 @@ internal sealed partial record SpacePayload {
             return null;
         }
     }
+
+    /// The gradient a color runs on into, or null when it has none every client
+    /// reads: colors no client reads leave it plain, a kind no client knows
+    /// runs along a line, and the angle is none unless it says.
+    private static BrandGradient? Gradient(JsonNode? node) {
+        if (node is not JsonObject) return null;
+        var value = new SyncPayloadReader(node, SyncPayloadForm.Journal);
+        return new(Palette(value.Value["colors"]) ?? new([]), SpaceGradientKind.Named(value.TolerantText("kind")),
+            value.TolerantNumber("angle") ?? 0);
+    }
+
+    /// The gradients a palette's colors run on into, by index, or null when it
+    /// has none every client reads. A slot no client reads is plain.
+    private static PaletteGradients? Gradients(JsonNode? node) =>
+        node is JsonArray slots ? new([.. slots.Select(slot => Gradient(slot) ?? BrandGradient.Plain)]) : null;
 
     /// A crest's custom figure, or null when it has none every client reads. A
     /// kind no client knows draws nothing; a heraldic figure no client knows is

@@ -72,6 +72,9 @@ enum CrestMotion {
     static let loadingProgressTransition: TimeInterval = 0.22
     /// Selecting a choice within an onboarding flow.
     static let selectionTransition: TimeInterval = 0.20
+    /// A color popping into or out of a color well's gradient, and the
+    /// others moving to where harmony puts them beside it.
+    static let colorPopTransition: TimeInterval = 0.38
     /// Applying or removing the persistent visual state of a drag source.
     static let dragSourceTransition: TimeInterval = 0.20
     /// Aligning a programmatically selected item within a scrolling picker.
@@ -170,6 +173,7 @@ enum CrestMotion {
         .smooth(duration: loadingProgressTransition)
     }
     static var selection: Animation { .easeInOut(duration: selectionTransition) }
+    static var colorPop: Animation { .spring(duration: colorPopTransition, bounce: 0.3) }
     /// A change of customization style or Space icons, cross-fading the
     /// looks and marks it changes.
     static var styleChange: Animation { .easeInOut(duration: styleChangeTransition) }

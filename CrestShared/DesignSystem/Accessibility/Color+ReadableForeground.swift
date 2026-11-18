@@ -19,6 +19,17 @@ extension Color {
         return blackRatio >= whiteRatio ? .black : .white
     }
 
+    /// White or black, whichever reads better over this color in
+    /// `colorScheme` as APCA measures it, as every Space's text is measured.
+    func perceptualForeground(in colorScheme: ColorScheme) -> Color {
+        var environment = EnvironmentValues()
+        environment.colorScheme = colorScheme
+        let resolved = resolve(in: environment)
+        let color = BrandColor(
+            clampingRed: Double(resolved.red), green: Double(resolved.green), blue: Double(resolved.blue), alpha: 1)
+        return color.foregroundTone == .light ? .white : .black
+    }
+
     /// The contrast of this foreground, composited by its own opacity, over
     /// `background` as `environment` resolves both.
     func contrastRatio(over background: Color, environment: EnvironmentValues) -> Double {

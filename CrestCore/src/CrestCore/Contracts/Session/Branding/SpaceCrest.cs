@@ -4,6 +4,9 @@ namespace CrestCore.Contracts;
 /// The composition of a Space's crest. Layer color indices point into the crest's own
 /// <see cref="Palette"/> when it has one, else into the Space's colors. A
 /// <see cref="Charge"/> replaces the heraldic <see cref="Symbol"/> as the figure drawn.
+/// <see cref="PaletteGradients"/> are the gradients each of the crest's own palette colors runs
+/// on into, by index, so a crest without a palette of its own has none. Without them each
+/// color is plain, which is how every build before them draws it.
 /// </summary>
 public sealed record SpaceCrest(
     CrestBackplate Backplate,
@@ -34,7 +37,8 @@ public sealed record SpaceCrest(
     double SheenAngle,
     int SealTeeth,
     bool ShowsOutline,
-    CrestDepth Depth) {
+    CrestDepth Depth,
+    PaletteGradients? PaletteGradients = null) {
     #region Static Variables
 
     /// How many pieces a counted field division draws unless set.

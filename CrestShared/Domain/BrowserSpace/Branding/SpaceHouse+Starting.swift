@@ -9,23 +9,26 @@ extension SpaceHouse {
         return all.first { $0.name.caseInsensitiveCompare(recorded) == .orderedSame }
     }
 
-    /// `branding` starting over from the house's look, keeping the Space's
-    /// own strengths, folder and text choices. A look that started from a
-    /// scheme wore the scheme's strength, fade, texture, text and icon color
+    /// `branding` starting over from the house's look and texture, keeping the
+    /// Space's own strengths, folder and text choices. A look that started
+    /// from a scheme wore the scheme's strength, fade, text and icon color
     /// rather than the person's, so it takes the house's own instead.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
         var updated = branding
         if SpaceScheme.startingPoint(of: branding) != nil {
             updated.bannerStrength = look.bannerStrength
             updated.readabilityFade = look.readabilityFade
-            updated.textureStrength = look.textureStrength
             updated.textColorMode = look.textColorMode
             updated.symbolColor = look.symbolColor
+            updated.symbolGradient = look.symbolGradient
         }
         updated.colors = look.colors
+        updated.colorGradients = look.colorGradients
+        updated.textureStrength = look.textureStrength
         updated.themeMode = look.themeMode
         updated.bannerPattern = look.bannerPattern
         updated.gradientAngle = look.gradientAngle
+        updated.gradientKind = look.gradientKind
         updated.iconStyle = .layeredCrest
         updated.crest = look.crest
         updated.crest.startingPresetID = name
@@ -38,17 +41,8 @@ extension SpaceHouse {
         var crest = branding.crest
         crest.startingPresetID = nil
         return branding.hasCustomAppearance != true && branding.iconStyle == .layeredCrest
-            && branding.colors == look.colors && branding.themeMode == look.themeMode
+            && branding.colors == look.colors && branding.colorGradients == look.colorGradients
+            && branding.themeMode == look.themeMode
             && (look.themeMode == .gradient || branding.bannerPattern == look.bannerPattern) && crest == look.crest
-    }
-
-    /// The colors the house is made of, darkest first.
-    var tinctures: [BrandColor] {
-        var seen: [BrandColor] = []
-        for color in Array(look.colors) + Array(look.crest.palette ?? [])
-        where !seen.contains(where: { $0.matches(color) }) {
-            seen.append(color)
-        }
-        return seen.sorted { $0.luminance < $1.luminance }
     }
 }

@@ -1,78 +1,95 @@
 namespace CrestCore.Contracts;
 
-/// A look a Space can start from: a house's arms on a sidebar in the house's
-/// colors and its own background. Choosing one copies its look into the Space,
+/// A look a Space can start from: the house's two wells, a Background the
+/// plain sidebar wears and an Accent, each one color or a gradient, a Pattern
+/// color a sidebar pattern draws in, and the house's arms. The arms follow the
+/// Space's colors: they stand on a field of the Pattern, with the figure,
+/// border and band in the Accent and the edge in the Background, so they
+/// change with the Space's wells. Choosing one copies its look into the Space,
 /// so a Space keeps the look it was given when a house changes.
 public sealed class SpaceHouse {
-    #region Variables
+    #region Static Variables
 
-    /// A grey direwolf on a field of snow.
+    /// The Space's color the sidebar wears.
+    private const int Background = 0;
+
+    /// The Space's color its icon, selected tabs and controls wear.
+    private const int Accent = 1;
+
+    /// The Space's color a sidebar pattern draws in.
+    private const int Pattern = 2;
+
+    /// Where a well's gradient runs unless a house turns it: top to bottom,
+    /// as a color well starts one.
+    private const double DownAngle = 90;
+
+    /// An icy direwolf on steel, over slate.
     public static readonly SpaceHouse Winter = new("winter", "Winter", "CrestWinter", HouseLook(
-        [Tincture.WinterSlate, Tincture.WinterSteel, Tincture.WinterIce], SpaceThemeMode.Banner, SpaceBannerPattern.Diagonal,
-        Arms(CrestBackplate.FrenchShield, CrestSymbol.Direwolf, CrestTrim.Line, edgeWidth: 0.35,
-            [Tincture.WinterArgent, Tincture.WinterIce, Tincture.WinterSteel, Tincture.WinterWolf, Tincture.WinterSteel,
-                Tincture.WinterSlate])));
+        background: [Tincture.WinterSlate], accent: [Tincture.WinterIce], Tincture.WinterSteel,
+        Arms(CrestBackplate.FrenchShield, CrestSymbol.Direwolf, CrestTrim.Line, edgeWidth: 0.35)));
 
-    /// A golden lion on crimson, its double border and its sheen in gold.
+    /// A lion in burnished gold on crimson, its double border and its sheen in
+    /// gold, over red running down into oxblood.
     public static readonly SpaceHouse Lion = new("lion", "Lion", "CrestLion", HouseLook(
-        [Tincture.LionOxblood, Tincture.LionCrimson, Tincture.LionGold], SpaceThemeMode.Banner, SpaceBannerPattern.Chevron,
-        Arms(CrestBackplate.Shield, CrestSymbol.Lion, CrestTrim.DoubleLine, edgeWidth: 0.25,
-            [Tincture.LionGules, Tincture.LionCrimson, Tincture.LionOr, Tincture.LionOr, Tincture.LionOr, Tincture.LionOxblood],
-            chargeScale: 1.25, trimWeight: 0.85, finish: CrestFinish.Sheen, depth: CrestDepth.Lifted)));
+        background: [Tincture.LionGules, Tincture.LionOxblood], accent: [Tincture.LionOr, Tincture.LionGold],
+        Tincture.LionCrimson,
+        Arms(CrestBackplate.Shield, CrestSymbol.Lion, CrestTrim.DoubleLine, edgeWidth: 0.25, chargeScale: 1.25, trimWeight: 0.85,
+            finish: CrestFinish.Sheen, depth: CrestDepth.Lifted),
+        accentAngle: 45));
 
-    /// A black stag on a field of gold.
+    /// A brass stag on slate blue, over midnight running down into a stormy
+    /// sea.
     public static readonly SpaceHouse Storm = new("storm", "Storm", "CrestStorm", HouseLook(
-        [Tincture.StormMidnight, Tincture.StormGunmetal, Tincture.StormBrass], SpaceThemeMode.Banner, SpaceBannerPattern.Quartered,
-        Arms(CrestBackplate.Hexagon, CrestSymbol.Stag, CrestTrim.DoubleLine, edgeWidth: 0.3,
-            [Tincture.StormOr, Tincture.StormBrass, Tincture.StormSable, Tincture.StormSable, Tincture.StormSable,
-                Tincture.StormSable])));
+        background: [Tincture.StormMidnight, Tincture.StormGunmetal], accent: [Tincture.StormBrass], Tincture.StormSlate,
+        Arms(CrestBackplate.Hexagon, CrestSymbol.Stag, CrestTrim.DoubleLine, edgeWidth: 0.3), texture: 0.35));
 
-    /// A red dragon on black.
+    /// A flame-gold dragon on cinder, over a fire that burns up from the foot
+    /// of the sidebar through blood red into char.
     public static readonly SpaceHouse Dragon = new("dragon", "Dragon", "CrestDragon", HouseLook(
-        [Tincture.DragonChar, Tincture.DragonBlood, Tincture.DragonScarlet], SpaceThemeMode.Banner, SpaceBannerPattern.Bands,
-        Arms(CrestBackplate.Shield, CrestSymbol.Dragon, CrestTrim.Line, edgeWidth: 0.25,
-            [Tincture.DragonSable, Tincture.DragonChar, Tincture.DragonFire, Tincture.DragonFire, Tincture.DragonFire,
-                Tincture.DragonBlood],
-            chargeScale: 1.25, depth: CrestDepth.Lifted)));
+        background: [Tincture.DragonChar, Tincture.DragonBlood, Tincture.DragonFire], accent: [Tincture.DragonFlame],
+        Tincture.DragonCinder,
+        Arms(CrestBackplate.Shield, CrestSymbol.Dragon, CrestTrim.Line, edgeWidth: 0.25, chargeScale: 1.25, depth: CrestDepth.Lifted),
+        texture: 0.4));
 
-    /// A golden rose on green, in a wreath of laurel.
+    /// A rose-gold rose on fern in a wreath of laurel, over forest running
+    /// down into a sunlit green.
     public static readonly SpaceHouse Meadow = new("meadow", "Meadow", "CrestMeadow", HouseLook(
-        [Tincture.MeadowForest, Tincture.MeadowMoss, Tincture.MeadowWheat], SpaceThemeMode.Banner, SpaceBannerPattern.Lozenges,
-        Arms(CrestBackplate.Circle, CrestSymbol.Rose, CrestTrim.Laurel, edgeWidth: 0.25,
-            [Tincture.MeadowVert, Tincture.MeadowMoss, Tincture.MeadowRose, Tincture.MeadowRose, Tincture.MeadowWheat,
-                Tincture.MeadowForest])));
+        background: [Tincture.MeadowForest, Tincture.MeadowMoss], accent: [Tincture.MeadowRose], Tincture.MeadowVert,
+        Arms(CrestBackplate.Circle, CrestSymbol.Rose, CrestTrim.Laurel, edgeWidth: 0.25), texture: 0.2));
 
-    /// A golden kraken on iron black, riveted round in gold.
+    /// A kraken in gold weathering to patina on pewter, riveted round, over
+    /// iron black running down into the deep.
     public static readonly SpaceHouse Iron = new("iron", "Iron", "CrestIron", HouseLook(
-        [Tincture.IronBlack, Tincture.IronPewter, Tincture.IronPatina], SpaceThemeMode.Banner, SpaceBannerPattern.Stripes,
-        Arms(CrestBackplate.Octagon, CrestSymbol.Kraken, CrestTrim.Beaded, edgeWidth: 0.5,
-            [Tincture.IronBlack, Tincture.IronPewter, Tincture.IronOr, Tincture.IronOr, Tincture.IronOr, Tincture.IronPatina],
-            finish: CrestFinish.Embossed)));
+        background: [Tincture.IronBlack, Tincture.IronTide], accent: [Tincture.IronOr, Tincture.IronPatina],
+        Tincture.IronPewter,
+        Arms(CrestBackplate.Octagon, CrestSymbol.Kraken, CrestTrim.Beaded, edgeWidth: 0.5, finish: CrestFinish.Embossed),
+        accentAngle: 45, texture: 0.5));
 
-    /// A silver trout leaping over waves of blue and red.
+    /// A silver trout leaping over waves of azure and blue, over a bright blue
+    /// running down into teal.
     public static readonly SpaceHouse River = new("river", "River", "CrestRiver", HouseLook(
-        [Tincture.RiverNavy, Tincture.RiverLapis, Tincture.RiverRust], SpaceThemeMode.Banner, SpaceBannerPattern.Split,
-        Arms(CrestBackplate.Banner, CrestSymbol.Fish, CrestTrim.Line, edgeWidth: 0.2,
-            [Tincture.RiverAzure, Tincture.RiverGules, Tincture.RiverArgent, Tincture.RiverArgent, Tincture.RiverArgent,
-                Tincture.RiverNavy],
-            division: CrestFieldDivision.Barry, divisionCount: 6)));
+        background: [Tincture.RiverNavy, Tincture.RiverLapis], accent: [Tincture.RiverArgent], Tincture.RiverAzure,
+        Arms(CrestBackplate.Banner, CrestSymbol.Fish, CrestTrim.Line, edgeWidth: 0.2, division: CrestFieldDivision.Barry,
+            divisionCount: 6)));
 
-    /// A red sun on orange in a burst of gold, over Dorne's sands.
+    /// A saffron sun and its burst on terracotta, over a sunset of red
+    /// running through tenné into dune.
     public static readonly SpaceHouse Sun = new("sun", "Sun", "CrestSun", HouseLook(
-        [Tincture.SunUmber, Tincture.SunTerracotta, Tincture.SunDune], SpaceThemeMode.Gradient, SpaceBannerPattern.Diagonal,
-        Arms(CrestBackplate.Circle, CrestSymbol.Sun, CrestTrim.Sunburst, edgeWidth: 0.25,
-            [Tincture.SunTenne, Tincture.SunTerracotta, Tincture.SunOr, Tincture.SunGules, Tincture.SunOr, Tincture.SunUmber]),
-        gradientAngle: 160));
+        background: [Tincture.SunGules, Tincture.SunTenne, Tincture.SunDune], accent: [Tincture.SunOr], Tincture.SunTerracotta,
+        Arms(CrestBackplate.Circle, CrestSymbol.Sun, CrestTrim.Sunburst, edgeWidth: 0.25),
+        backgroundAngle: 160, texture: 0.45));
 
-    /// A pale raven on the black of the Watch, sealed in grey.
+    /// A bone raven on charcoal, sealed round, over the onyx of the Watch.
     public static readonly SpaceHouse Vigil = new("vigil", "Vigil", "CrestVigil", HouseLook(
-        [Tincture.VigilOnyx, Tincture.VigilCharcoal, Tincture.VigilAsh], SpaceThemeMode.Banner, SpaceBannerPattern.Checkered,
-        Arms(CrestBackplate.Seal, CrestSymbol.Raven, CrestTrim.DoubleRing, edgeWidth: 0.45,
-            [Tincture.VigilOnyx, Tincture.VigilCharcoal, Tincture.VigilAsh, Tincture.VigilBone, Tincture.VigilAsh,
-                Tincture.VigilAsh],
-            trimWeight: 0.9, depth: CrestDepth.None)));
+        background: [Tincture.VigilOnyx], accent: [Tincture.VigilBone], Tincture.VigilCharcoal,
+        Arms(CrestBackplate.Seal, CrestSymbol.Raven, CrestTrim.DoubleRing, edgeWidth: 0.45, trimWeight: 0.9, depth: CrestDepth.None),
+        texture: 0.3));
 
     public static IReadOnlyList<SpaceHouse> All { get; } = [Winter, Lion, Storm, Dragon, Meadow, Iron, River, Sun, Vigil];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 
@@ -107,24 +124,41 @@ public sealed class SpaceHouse {
 
     #region Actions - Looks
 
-    /// A house's look: its sidebar colors in its own background, which keeps
-    /// controls readable, and its arms.
-    private static SpaceBranding HouseLook(Tincture[] colors, SpaceThemeMode mode, SpaceBannerPattern pattern, SpaceCrest arms,
-        double gradientAngle = 0) =>
-        new(new([.. colors.Select(tincture => tincture.Color)]), pattern, BannerStrength: 1, ReadabilityFade: 0.45,
-            KeepsControlsReadable: true, mode, gradientAngle, TextureStrength: 0, SpaceIconStyle.LayeredCrest, SymbolColor: null,
-            arms, CrestVocabulary.Studio.Version, FolderColorIntensity: 0, SpaceTextColorMode.Automatic, HasCustomAppearance: false);
+    /// A house's look: a plain sidebar in its `background` that keeps controls
+    /// readable, under a grain of `texture` where the house's material has
+    /// one, its `accent` and `pattern`, and its arms. Each well is its
+    /// first color running on into the rest along a line toward its angle,
+    /// or that one color alone.
+    private static SpaceBranding HouseLook(Tincture[] background, Tincture[] accent, Tincture pattern, SpaceCrest arms,
+        double backgroundAngle = DownAngle, double accentAngle = DownAngle, double texture = 0) =>
+        new(new([background[0].Color, accent[0].Color, pattern.Color]), SpaceBannerPattern.Solid, BannerStrength: 1,
+            ReadabilityFade: 0.45, KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, TextureStrength: texture,
+            SpaceIconStyle.LayeredCrest, SymbolColor: null, arms, CrestVocabulary.Studio.Version, FolderColorIntensity: 0,
+            SpaceTextColorMode.Automatic, HasCustomAppearance: false,
+            ColorGradients: Gradients(Run(background, backgroundAngle), Run(accent, accentAngle)));
 
-    /// A house's arms: its figure on its field, each part in a tincture of its
-    /// own, `colors` holding the field, second field, band, emblem, border and
-    /// edge.
-    private static SpaceCrest Arms(CrestBackplate backplate, CrestSymbol figure, CrestTrim trim, double edgeWidth, Tincture[] colors,
+    /// The gradient a well of `colors` runs on into after its first, along a
+    /// line toward `angle`, or plain for a well of one color.
+    private static BrandGradient Run(Tincture[] colors, double angle) => colors.Length < 2 ? BrandGradient.Plain
+        : new(new([.. colors.Skip(1).Select(tincture => tincture.Color)]), Kind: null, angle);
+
+    /// The gradients the wells run on into, by slot, with none after the last
+    /// that runs on, or null when every well is one color.
+    private static PaletteGradients? Gradients(params BrandGradient[] slots) {
+        int count = Array.FindLastIndex(slots, slot => !slot.IsPlain) + 1;
+        return count == 0 ? null : new(slots[..count]);
+    }
+
+    /// A house's arms in the Space's colors: its figure, border and band in the
+    /// Accent on a field of the Pattern, which stands it off the sidebar, with
+    /// a second field and the edge in the Background.
+    private static SpaceCrest Arms(CrestBackplate backplate, CrestSymbol figure, CrestTrim trim, double edgeWidth,
         double chargeScale = 1.2, double trimWeight = 0.75, CrestFinish? finish = null, CrestDepth? depth = null,
         CrestFieldDivision? division = null, int divisionCount = SpaceCrest.DefaultDivisionCount) =>
-        SpaceCrest.PlainField(backplate, figure, trim, layers: [0, 1, 2, 4, 3, 5], trimWeight, chargeScale) with {
+        SpaceCrest.PlainField(backplate, figure, trim, layers: [Pattern, Background, Accent, Accent, Accent, Background], trimWeight,
+            chargeScale) with {
             FieldDivision = division ?? CrestFieldDivision.Plain,
             DivisionCount = divisionCount,
-            Palette = new([.. colors.Select(tincture => tincture.Color)]),
             EdgeWidth = edgeWidth,
             Finish = finish ?? CrestFinish.Flat,
             Depth = depth ?? CrestDepth.Soft

@@ -7,12 +7,12 @@ struct BrowserSpaceCrestField: View {
     var divisionCount = SpaceCrest.defaultDivisionCount
     var finish: CrestFinish = .flat
     var sheenAngle: Double = 45
-    let primaryColor: Color
-    let secondaryColor: Color
+    let primaryColor: AnyShapeStyle
+    let secondaryColor: AnyShapeStyle
 
     var body: some View {
         ZStack {
-            primaryColor
+            Rectangle().fill(primaryColor)
             BrowserSpaceCrestDivisionShape(division: division, count: divisionCount)
                 .fill(secondaryColor)
             finishOverlay
@@ -53,7 +53,9 @@ struct BrowserSpaceCrestField: View {
 
 #if DEBUG
     #Preview("Quartered field") {
-        BrowserSpaceCrestField(division: .quarterly, primaryColor: .indigo, secondaryColor: .orange)
-            .frame(width: 200, height: 240).padding()
+        BrowserSpaceCrestField(
+            division: .quarterly, primaryColor: AnyShapeStyle(Color.indigo), secondaryColor: AnyShapeStyle(Color.orange)
+        )
+        .frame(width: 200, height: 240).padding()
     }
 #endif
