@@ -76,7 +76,7 @@ struct BrowserCommandPaletteIntentRow: View {
         .accessibilityValue(Text(verbatim: item.row.subtitle))
         .accessibilityHint(item.row.reason.map { Text($0.text) } ?? Text(verbatim: ""))
         .accessibilityIdentifier("command-palette-primary-action")
-        .browserCommandPaletteHoverSelection(model: model, index: item.index)
+        .browserCommandPaletteHoverSelection(model: model, item: item)
     }
 }
 

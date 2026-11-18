@@ -4,11 +4,8 @@ extension View {
     @MainActor
     func browserCommandPaletteHoverSelection(
         model: BrowserCommandPaletteModel,
-        index: Int
+        item: BrowserCommandPaletteItem
     ) -> some View {
-        onHover { isHovering in
-            guard isHovering else { return }
-            model.selectResult(at: index)
-        }
+        modifier(BrowserPlatformCommandPaletteHoverSelection(model: model, item: item))
     }
 }

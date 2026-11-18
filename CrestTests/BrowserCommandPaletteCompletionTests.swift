@@ -5,6 +5,31 @@ import XCTest
 
 @MainActor
 final class BrowserCommandPaletteCompletionTests: XCTestCase {
+    func testPointerSelectionDismissesOnlyTheCompletionFromThePreviousAnswer() async throws {
+        let tab = TabState.Seed(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
+        let space = makeSpace(tab)
+        let browser = BrowserStore(
+            seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: tab.id])
+        let model = BrowserCommandPaletteModel(
+            browser: browser, space: browser.spaceModel(space.id), selectedTabID: tab.id, initialQuery: "",
+            commands: nil, suggestionDebounce: .zero, fetchSuggestions: { _ in [] },
+            isSourceAvailable: { _ in true }, selectTab: { _, _ in false },
+            openURL: { _, _, _ in false }, dismiss: {})
+        model.updateCompletionEditing(text: "exa", selection: NSRange(location: 3, length: 0), isComposing: false)
+        await model.waitForPendingResults()
+        XCTAssertEqual(model.urlCompletion?.suffix, "mple.com")
+        let row = try XCTUnwrap(model.items.first)
+
+        model.updateCompletionEditing(text: "exam", selection: NSRange(location: 4, length: 0), isComposing: false)
+        XCTAssertEqual(model.urlCompletion?.suffix, "ple.com")
+        model.selectResult(row)
+        XCTAssertNil(model.urlCompletion)
+        XCTAssertEqual(model.selectedResultIndex, row.index)
+
+        await model.waitForPendingResults()
+        XCTAssertEqual(model.urlCompletion?.suffix, "ple.com")
+    }
+
     func testLiveLockSelectionSpaceAndProfileChangesHideAndRejectCompletion() async {
         let tab = TabState.Seed(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
         let original = makeSpace(tab)

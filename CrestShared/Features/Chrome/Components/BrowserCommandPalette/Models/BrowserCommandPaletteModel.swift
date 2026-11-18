@@ -351,9 +351,18 @@ final class BrowserCommandPaletteModel {
         keyboardSelectionRevision &+= 1
     }
 
-    func selectResult(at index: Int) {
+    /// Accepts selection only from a row that still occupies its displayed position.
+    func selectResult(_ item: BrowserCommandPaletteItem) {
+        let index = item.index
+        guard items.indices.contains(index), items[index].id == item.id else { return }
+        guard shownSequence == sequence else {
+            // The pending answer can still offer its own completion.
+            if index == selectedResultIndex, urlCompletion != nil {
+                completionProposal = nil
+            }
+            return
+        }
         rejectURLCompletion()
-        guard shownSequence == sequence, items.indices.contains(index) else { return }
         selectedResultIndex = index
     }
 
