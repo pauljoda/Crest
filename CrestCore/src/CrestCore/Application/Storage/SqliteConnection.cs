@@ -156,6 +156,8 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_setup_draft (id INTEGER PRIMARY KEY CHECK (id = 0), document TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_palette (space TEXT PRIMARY KEY, document TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_search_catalog (id INTEGER PRIMARY KEY CHECK (id = 0), document TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_site_zoom (profile TEXT NOT NULL, host TEXT NOT NULL, factor REAL NOT NULL, "
+            + "PRIMARY KEY(profile, host))");
         Execute("CREATE TABLE IF NOT EXISTS device_setup (id INTEGER PRIMARY KEY CHECK (id = 0), completed INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_launch (id INTEGER PRIMARY KEY CHECK (id = 0), reopening_pages INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_tab_group (id TEXT PRIMARY KEY, space TEXT NOT NULL, engine TEXT NOT NULL, "
@@ -186,7 +188,8 @@ internal sealed class SqliteConnection : IDisposable {
         FilterListChoices = ReadFilterListChoices(),
         BlockingSites = ReadBlockingSites(),
         CustomFilterLists = ReadCustomFilterLists(),
-        CustomFilters = ReadCustomFilters()
+        CustomFilters = ReadCustomFilters(),
+        SiteZoom = ReadSiteZoom()
     };
 
     /// The lists the person turned on or off. A list this build does not know
@@ -237,6 +240,19 @@ internal sealed class SqliteConnection : IDisposable {
         string text = "";
         Rows("SELECT text FROM device_custom_filters", statement => text = Sqlite.ColumnText(statement, 0));
         return text;
+    }
+
+    private List<SiteZoomChoice> ReadSiteZoom() {
+        var choices = new List<SiteZoomChoice>();
+        Rows("SELECT profile, host, factor FROM device_site_zoom ORDER BY profile, host", statement => {
+            var host = Sqlite.ColumnText(statement, 1);
+            var factor = Sqlite.sqlite3_column_double(statement, 2);
+            if (Identity(statement, 0) is { } profile && host.Length is > 0 and <= SiteOrigin.MaximumHostLength
+                && Uri.CheckHostName(host) != UriHostNameType.Unknown && host == host.ToLowerInvariant().TrimEnd('.')
+                && Device.ValidSiteZoom(factor))
+                choices.Add(new(profile, host, factor));
+        });
+        return choices;
     }
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
@@ -454,6 +470,7 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !records.Reopening.SequenceEqual(written.Reopening)) WriteReopening(records.Reopening);
         if (written is null || !records.SitePermissions.SequenceEqual(written.SitePermissions)) WriteSitePermissions(records.SitePermissions);
         if (written is null || !records.SiteEngines.SequenceEqual(written.SiteEngines)) WriteSiteEngines(records.SiteEngines);
+        if (written is null || !records.SiteZoom.SequenceEqual(written.SiteZoom)) WriteSiteZoom(records.SiteZoom);
         if (written is null || records.DefaultEngine != written.DefaultEngine) WriteDefaultEngine(records.DefaultEngine);
         if (written is null || !records.Shortcuts.SameAs(written.Shortcuts)) WriteShortcuts(records.Shortcuts);
         if (written is null || !records.Links.Equals(written.Links)) WriteLinks(records.Links);
@@ -611,6 +628,17 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 4, choice.Engine.Name);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
             });
+    }
+
+    private void WriteSiteZoom(IReadOnlyList<SiteZoomChoice> choices) {
+        Execute("DELETE FROM device_site_zoom");
+        foreach (var choice in choices) {
+            Insert("INSERT INTO device_site_zoom(profile, host, factor) VALUES(?,?,?)", statement => {
+                Bind(statement, 1, Spelling(choice.ProfileId));
+                Bind(statement, 2, choice.Host);
+                Checked(Sqlite.sqlite3_bind_double(statement, 3, choice.Factor));
+            });
+        }
     }
 
     /// Each command's choices, with the modifier mask's every bit; a command

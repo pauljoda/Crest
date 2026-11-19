@@ -107,6 +107,7 @@ internal sealed partial class Device {
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         keptPermissions.Restore(records.SitePermissions);
         keptEngines.Restore(records.SiteEngines);
+        foreach (var choice in records.SiteZoom) keptSiteZoom[(choice.ProfileId, choice.Host)] = choice.Factor;
         defaultEngine = records.DefaultEngine;
         shortcuts = records.Shortcuts;
         links = records.Links;
@@ -172,6 +173,7 @@ internal sealed partial class Device {
             foreach (var window in closed) open.Remove(window.Id);
         }
         foreach (var window in closed) announce(new WindowClosed(window.Id));
+        PruneSiteZoom();
         announce(new WorkspaceClosed(workspaceId));
     }
 
@@ -247,6 +249,8 @@ internal sealed partial class Device {
         }
         foreach (var change in changes) announce(change);
         RememberPublished(workspaceId, previous, next);
+        if (!previous.Spaces.Select(space => (space.Id, space.ProfileId)).SequenceEqual(next.Spaces.Select(space => (space.Id, space.ProfileId)))
+            || !previous.SpaceDeletions.SequenceEqual(next.SpaceDeletions)) PruneSiteZoom(workspaceId);
         if (owner is not null) FollowOwner(owner);
     }
 
@@ -351,7 +355,9 @@ internal sealed partial class Device {
         FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
         BlockingSites = [.. keptBlockingSites],
         CustomFilterLists = [.. customFilterLists],
-        CustomFilters = customFilters
+        CustomFilters = customFilters,
+        SiteZoom = [.. keptSiteZoom.OrderBy(entry => entry.Key.ProfileId).ThenBy(entry => entry.Key.Host, StringComparer.Ordinal)
+            .Select(entry => new SiteZoomChoice(entry.Key.ProfileId, entry.Key.Host, entry.Value))]
     };
 
     #endregion
