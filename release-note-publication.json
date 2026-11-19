@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "iphone-setup-carries-preview-edits",
+    "development": "saved-addresses-keep-their-escapes",
     "nightly": "palette-fallback-unknown-sites-only"
   }
 }
