@@ -418,6 +418,7 @@ summary:focus-visible {
 }
 
 .help-search-results strong {
+  color: var(--crest-cream);
   font-family: var(--crest-display);
   font-weight: 800;
 }

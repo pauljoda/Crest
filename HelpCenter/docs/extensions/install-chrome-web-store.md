@@ -41,6 +41,6 @@ Chromium updates Chrome Web Store extensions on its own and checks each update's
 
 - Private windows keep the store's own behavior and do not offer **Add to Crest**.
 - A locked Space, or one that has been deleted, cannot receive an extension or a copy.
-- Crest installs extensions only from the Chrome Web Store. If an extension is made for another browser, look for its Chrome Web Store version.
+- Apart from unpacked extensions in developer mode, Crest installs extensions from the Chrome Web Store. If an extension is made for another browser, look for its Chrome Web Store version.
 
 Next: [Manage permissions and website access](./manage-permissions-site-access.md).

@@ -19,7 +19,7 @@ Extensions in Crest for Mac run on the Chromium engine. Chromium runs each exten
 | WebKit pages in Crest for Mac | None |
 | Crest on iPhone and iPad | None |
 
-Crest installs extensions only from the Chrome Web Store. Many extensions made for other browsers are also published there.
+Crest installs extensions from the Chrome Web Store, and unpacked ones in developer mode. Many extensions made for other browsers are also published on the store.
 
 ## Packages
 
@@ -43,7 +43,7 @@ Crest installs extensions only from the Chrome Web Store. Many extensions made f
 | Private windows | Private windows use separate profiles and do not run installed extensions. |
 | Tab sharing and debugging bars | Chromium's confirmation bars, such as the one `chrome.debugger` shows, appear inside the page. |
 | Updates | Chromium updates Chrome Web Store extensions and checks their signatures and permissions. |
-| Native companion apps | Supported through `nativeMessaging`. When a companion app registered its helper only for another browser, Crest also looks in that browser's folders. A helper still answers only the extensions it lists. See [Native companions](./native-companion-limits.md). |
+| Native companion apps | Supported through `nativeMessaging`. When Chromium's own lookup finds no helper, Crest also looks in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts` and `/Library/Google/Chrome/NativeMessagingHosts`, where most companion apps register. A helper still answers only the extensions it lists. See [Native companions](./native-companion-limits.md). |
 
 ## Known limits
 

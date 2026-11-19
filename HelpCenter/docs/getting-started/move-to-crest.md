@@ -16,7 +16,7 @@ Choose a detected browser, then review each source Space, profile, or window. De
 | Source | Crest can review |
 | --- | --- |
 | Arc | Spaces (each profile's as one Sub-Space group), tabs, folders, split views, colors, icons, extensions, and supported passwords |
-| Browsers built on Chromium | Profiles, bookmarks, open tabs, tab groups, split views, extensions, and supported passwords |
+| Browsers built on Chromium | Profiles, bookmarks, open tabs, tab groups, split views, extensions, and supported passwords (not from a browser found by **Scan for more**) |
 | Other browsers | Windows, open tabs, and pinned tabs, plus bookmarks, profiles, workspaces (each profile's as one Sub-Space group), folders, split views, tab groups, icons, and colors where Crest can read them |
 
 If your browser isn't listed, choose **Scan for more** and Crest looks for other browsers built on Chromium. Not every browser can be found this way; you can [request support for one](https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
@@ -27,7 +27,7 @@ For every source group, you can remove individual items, choose a new or existin
 
 ## Import later
 
-Open **Settings → Advanced**. The **Import & Export** section can import a Crest archive, bookmark HTML, browser history, or open tabs from supported sources. **Import from Another Browser…** opens the same review over your current Spaces, where a Space goes into the Space you already have with the same name unless you choose another destination. External-browser imports always create fresh isolated Crest Spaces unless the review explicitly routes content into an existing destination.
+Open **Settings → Advanced**. The **Import & Export** section can import a Crest archive, bookmark HTML, browser history, or open tabs from supported sources. **Import from Another Browser…** opens the same review over your current Spaces, where a Space goes into the Space you already have with the same name unless you choose another destination.
 
 ## Export a portable backup
 

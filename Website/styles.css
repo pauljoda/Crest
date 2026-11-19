@@ -352,6 +352,9 @@ pre code { padding: 0; color: inherit; background: none; }
 }
 @media (max-width: 820px) {
   .site-nav .nav-section { display: none; }
+}
+/* The download rows stack before the Homebrew command and button run out of room. */
+@media (max-width: 1000px) {
   .platform { grid-template-columns: 1fr; gap: 12px; }
   .platform .button { justify-self: start; }
 }
