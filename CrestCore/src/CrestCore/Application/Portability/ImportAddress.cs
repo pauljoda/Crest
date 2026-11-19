@@ -9,20 +9,20 @@ namespace CrestCore.Application;
 /// the Apple platforms' URL parser reads the spelling another browser stored,
 /// without credentials, and without its fragment where the import drops it.
 ///
-/// The reading follows that parser exactly, because a Crest browser-data file
-/// written by either side must read back identically on both. A component
-/// holding a character it does not allow, or a `%` that starts no escape, is
-/// escaped whole, `%` included; one that is already valid is kept as spelled.
-/// A host is read with its escapes undone, and one that is not ASCII is
-/// written in its IDNA form; one holding a character a host cannot hold reads
-/// as no address. A port loses its leading zeros, and an empty one is dropped.
+/// The reading follows that parser, because a Crest browser-data file written
+/// by either side must read back identically on both. Its path, query and
+/// fragment are escaped as `WebAddress.Escaped` escapes them: a character one
+/// cannot hold, or a `%` that starts no escape, is escaped where it stands,
+/// and every escape the page spelled is kept. A host is read with its escapes
+/// undone, and one that is not ASCII is written in its IDNA form; one holding
+/// a character a host cannot hold reads as no address. A port loses its
+/// leading zeros, and an empty one is dropped.
 internal readonly record struct ImportAddress {
     #region Static Variables
 
     /// The longest spelling an import keeps, in characters.
     public const int MaximumLength = 8_192;
 
-    private const string Hex = "0123456789ABCDEF";
     private const string SubDelimiters = "!$&'()*+,;=";
 
     private static readonly IdnMapping Idna = new() { AllowUnassigned = true, UseStd3AsciiRules = false };
@@ -137,10 +137,10 @@ internal readonly record struct ImportAddress {
         var spelling = new StringBuilder(source.Length + 16);
         spelling.Append(lowercasesScheme ? lowered : scheme).Append("://").Append(host);
         if (!string.IsNullOrEmpty(port)) spelling.Append(':').Append(port);
-        spelling.Append(Component(path, AllowsInPath));
-        if (query is not null) spelling.Append('?').Append(Component(query, AllowsInQuery));
-        if (fragment is not null && !removesFragment) spelling.Append('#').Append(Component(fragment, AllowsInQuery));
-        return new ImportAddress(spelling.ToString());
+        spelling.Append(path);
+        if (query is not null) spelling.Append('?').Append(query);
+        if (fragment is not null && !removesFragment) spelling.Append('#').Append(fragment);
+        return new ImportAddress(new WebAddress(spelling.ToString()).Escaped);
     }
 
     #endregion
@@ -220,38 +220,7 @@ internal readonly record struct ImportAddress {
         }
     }
 
-    /// The component as spelled when it is valid, else escaped whole.
-    private static string Component(string component, Func<char, bool> allows) {
-        if (IsValid(component, allows)) return component;
-        var escaped = new StringBuilder(component.Length * 3);
-        foreach (byte value in Encoding.UTF8.GetBytes(component)) {
-            if (value < 0x80 && value != '%' && allows((char)value)) escaped.Append((char)value);
-            else escaped.Append('%').Append(Hex[value >> 4]).Append(Hex[value & 0xF]);
-        }
-        return escaped.ToString();
-    }
-
-    private static bool IsValid(string component, Func<char, bool> allows) {
-        for (int index = 0; index < component.Length; index++) {
-            char character = component[index];
-            if (character == '%') {
-                if (index + 2 >= component.Length || !IsHex(component[index + 1]) || !IsHex(component[index + 2])) return false;
-                index += 2;
-            } else if (character >= 0x80 || !allows(character)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private static bool IsHex(char character) => char.IsAsciiHexDigit(character);
-
-    private static bool IsPathCharacter(char character) => char.IsAsciiLetterOrDigit(character)
-        || character is '-' or '.' or '_' or '~' or ':' or '@' || SubDelimiters.Contains(character, StringComparison.Ordinal);
-
-    private static bool AllowsInPath(char character) => character == '/' || IsPathCharacter(character);
-
-    private static bool AllowsInQuery(char character) => character is '/' or '?' || IsPathCharacter(character);
 
     #endregion
 }

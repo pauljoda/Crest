@@ -790,7 +790,7 @@ final class BrowserPagePool:
         guard adopted.workspaceID == browser.window.workspaceID, routesPopupWindow(of: adopted) else { return }
         guard let opened = browser.core.engines.host(adopted.pageID) else { return }
         guard let space = browser.spaceModel(adopted.spaceID), let present = popupWindowPresenter,
-            let url = URL(string: adopted.url),
+            let url = URL(address: adopted.url),
             let page = makePage(space: space, presentation: .quickWindow, opened: opened)
         else {
             DiagnosticLog.popups.notice("No Quick Window can show popup page \(adopted.pageID) over window \(windowID)")

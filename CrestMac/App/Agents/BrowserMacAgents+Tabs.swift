@@ -237,8 +237,8 @@ extension BrowserMacAgents {
 
     /// `text` as an address an agent may open: http or https, with a host.
     static func address(_ text: String) throws(BrowserAgentFailure) -> URL {
-        guard let url = URL(string: text), let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
-            url.host() != nil
+        guard let url = URL(address: text), let scheme = url.scheme?.lowercased(),
+            scheme == "http" || scheme == "https", url.host() != nil
         else { throw .unsupportedAddress }
         return url
     }

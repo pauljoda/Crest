@@ -12,7 +12,7 @@ struct BrowserPageTab: Equatable {
     var id: UUID { state.id }
 
     /// The address the tab shows, as the platform reads addresses.
-    var url: URL? { state.url.flatMap(URL.init(string:)) }
+    var url: URL? { state.url.flatMap(URL.init(address:)) }
 
     /// The native document the tab shows, if it shows one.
     var nativeContent: BrowserNativeTabContent? {

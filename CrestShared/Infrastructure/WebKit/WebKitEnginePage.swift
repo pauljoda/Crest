@@ -79,7 +79,7 @@ final class WebKitEnginePage: EngineHostedPage {
         self.host = host
         guard let restoring else { return }
         self.restoring = nil
-        guard let url = URL(string: restoring.url) else { return }
+        guard let url = URL(address: restoring.url) else { return }
         host.prepareToLoad(url)
         if !engine.restoreHistory(restoring.state) { engine.load(URLRequest(url: url)) }
     }

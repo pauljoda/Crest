@@ -425,7 +425,7 @@ final class BrowserCommandPaletteModel {
     /// Opens `address` where `opening` says, from the tab the palette opened
     /// over, or in its destination, which opens it in place.
     func open(_ address: String?, where opening: BrowserCommandPaletteOpening) -> Bool {
-        guard let url = address.flatMap(URL.init(string:)) else { return false }
+        guard let url = address.flatMap(URL.init(address:)) else { return false }
         if selectedTabID == nil { return availableDestination?.openURL(url) ?? false }
         guard let sourceAssignment = availableSourceAssignment else { return false }
         return openURLAction(sourceAssignment, url, opening)

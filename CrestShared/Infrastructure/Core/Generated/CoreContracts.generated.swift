@@ -2847,6 +2847,12 @@ struct EraseSiteData: Equatable, Sendable {
     let erasureID: UUID
 }
 
+struct EscapedAddress: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let spelling: String
+}
+
 struct EvaluateContentScript: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
