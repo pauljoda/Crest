@@ -517,6 +517,12 @@ summary:focus-visible {
 }
 
 @media (max-width: 700px) {
+  /* Other tables scroll sideways inside their rounded card instead of clipping. */
+  .theme-doc-markdown table:not(.guide-responsive-table) {
+    display: block;
+    overflow-x: auto;
+  }
+
   .guide-responsive-table,
   .guide-responsive-table tbody,
   .guide-responsive-table tr,
