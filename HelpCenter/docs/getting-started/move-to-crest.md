@@ -1,8 +1,8 @@
 ---
 title: Move your browser data to Crest
-description: Review imports from Arc, Zen, Chrome, Safari, Firefox, and other Chromium browsers, and export portable Crest data.
+description: Review imports from Arc and the other browsers on your Mac, and export portable Crest data.
 slug: /move-to-crest
-keywords: [import, migrate, Arc, Zen, Chrome, Safari, Firefox, Brave, Edge, Vivaldi, Opera, Dia, Comet, extensions, export]
+keywords: [import, migrate, Arc, profiles, bookmarks, extensions, passwords, export]
 ---
 
 # Move your browser data to Crest
@@ -16,21 +16,18 @@ Choose a detected browser, then review each source Space, profile, or window. De
 | Source | Crest can review |
 | --- | --- |
 | Arc | Spaces (each profile's as one Sub-Space group), tabs, folders, split views, colors, icons, extensions, and supported passwords |
-| Zen | Spaces from every profile (each profile's as one Sub-Space group, and those that share a container as a group of their own), Essentials, pinned tabs, folders, split views, open tabs, icons, and colors |
-| Chrome | Profiles, bookmarks, open tabs, tab groups, split views, extensions, and supported passwords |
-| Brave, Edge, Vivaldi, Opera, Dia, Comet, Aside, ego lite, Chromium, and Chrome Beta, Dev, and Canary | Profiles, bookmarks, open tabs, tab groups, split views, extensions, and supported passwords |
-| Safari | Bookmarks, windows, open tabs, and pinned tabs |
-| Firefox | Profiles, windows, open tabs, pinned tabs, and tab groups |
+| Browsers built on Chromium | Profiles, bookmarks, open tabs, tab groups, split views, extensions, and supported passwords (not from a browser found by **Scan for more**) |
+| Other browsers | Windows, open tabs, and pinned tabs, plus bookmarks, profiles, workspaces (each profile's as one Sub-Space group), folders, split views, tab groups, icons, and colors where Crest can read them |
 
-If your browser isn't listed, choose **Scan for more** and Crest looks for other Chromium-based browsers on your Mac. Not every browser can be found this way; you can [request support for one](https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
+If your browser isn't listed, choose **Scan for more** and Crest looks for other browsers built on Chromium. Not every browser can be found this way; you can [request support for one](https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
 
 In the review, each Space shows the Chrome Web Store extensions it brings under its address bar. Turn off any you don't want, and Crest installs the rest once the import finishes, without asking about each one.
 
-For every source group, you can remove individual items, choose a new or existing Crest Space, and customize that destination before importing. Spaces that share one Arc or Zen profile arrive as one [Sub-Space](../spaces/sub-spaces.md) group, so they keep sharing sign-ins; the review outlines each group and can bring a Space in on its own. If one Space of a group goes into a Space you already have, the rest of the group become Sub-Spaces of that Space's group. Imported passwords are saved once for each group. When an import holds more than Crest keeps, it brings what fits and lists what it left out.
+For every source group, you can remove individual items, choose a new or existing Crest Space, and customize that destination before importing. Spaces or workspaces that share one profile arrive as one [Sub-Space](../spaces/sub-spaces.md) group, so they keep sharing sign-ins; the review outlines each group and can bring a Space in on its own. If one Space of a group goes into a Space you already have, the rest of the group become Sub-Spaces of that Space's group. Imported passwords are saved once for each group. When an import holds more than Crest keeps, it brings what fits and lists what it left out.
 
 ## Import later
 
-Open **Settings → Advanced**. The **Import & Export** section can import a Crest archive, bookmark HTML, browser history, or open tabs from supported sources. **Import from Another Browser…** opens the same review over your current Spaces, where a Space goes into the Space you already have with the same name unless you choose another destination. External-browser imports always create fresh isolated Crest Spaces unless the review explicitly routes content into an existing destination.
+Open **Settings → Advanced**. The **Import & Export** section can import a Crest archive, bookmark HTML, browser history, or open tabs from supported sources. **Import from Another Browser…** opens the same review over your current Spaces, where a Space goes into the Space you already have with the same name unless you choose another destination.
 
 ## Export a portable backup
 

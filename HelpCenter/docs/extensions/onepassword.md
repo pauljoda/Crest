@@ -1,6 +1,6 @@
 ---
 title: Set up 1Password in Crest
-description: Install the 1Password Chrome extension in Crest for Mac and authorize Crest in the 1Password app.
+description: Install the 1Password extension in Crest for Mac and authorize Crest in the 1Password app.
 slug: /onepassword
 sidebar_label: 1Password setup
 sidebar_position: 10

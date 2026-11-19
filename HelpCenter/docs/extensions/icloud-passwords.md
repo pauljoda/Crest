@@ -13,7 +13,7 @@ The iCloud Passwords extension installs from the Chrome Web Store into Crest for
 
 ## How the extension finds Apple's helper
 
-Apple registers its helper for Google Chrome. Crest checks Chrome's native-messaging folders when Chromium's own lookup finds nothing, so the extension can reach it. Chromium still checks that the helper allows this extension. Crest does not read your passwords; Apple's helper controls authentication and access to them.
+Apple registers its helper in another browser's folder, not Crest's. When Chromium's own lookup finds nothing, Crest also checks `~/Library/Application Support/Google/Chrome/NativeMessagingHosts` and `/Library/Google/Chrome/NativeMessagingHosts`, so the extension can reach it. Chromium still checks that the helper allows this extension. Crest does not read your passwords; Apple's helper controls authentication and access to them.
 
 ## What Apple checks
 

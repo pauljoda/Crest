@@ -1,13 +1,13 @@
 {
   "name": "Crest Browser",
   "short_name": "Crest",
-  "description": "A native browser inspired by Arc and built around deeply isolated Spaces.",
+  "description": "An open source browser for Mac, iPhone and iPad, built around Spaces.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "browser",
-  "background_color": "#101827",
-  "theme_color": "#101827",
+  "background_color": "#FBF5E6",
+  "theme_color": "#FBF5E6",
   "icons": [
     {
       "src": "assets/crest-icon-192.png",
