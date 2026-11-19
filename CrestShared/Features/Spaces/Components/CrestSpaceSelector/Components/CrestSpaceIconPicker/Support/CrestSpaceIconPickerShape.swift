@@ -1,11 +1,10 @@
 import QuartzCore
 import SwiftUI
 
-/// The one shape a Space icon picker is drawn in: its track, the track's
-/// border and scroll clip, and its selection, whether SwiftUI draws it or a
-/// platform layer moves it with the pager. The track takes the selection's
-/// own corners rather than concentric ones, so the outline and the selection
-/// read as the same shape.
+/// The one shape a Space icon picker is drawn in: its well and scroll clip, a
+/// group's highlight and the selector, whether SwiftUI draws it or a platform
+/// layer moves it with the pager. Each part's corners follow its height, so
+/// the well, a group's highlight and the selector nest concentrically.
 struct CrestSpaceIconPickerShape: InsettableShape {
     // MARK: - Static Variables
 
@@ -30,9 +29,8 @@ struct CrestSpaceIconPickerShape: InsettableShape {
 
     // MARK: - Actions - Drawing
 
-    /// The corner radius of a part of the picker drawn in `rect`: the
-    /// style's radius, or for touch half the part's height, so it is a
-    /// capsule.
+    /// The corner radius of a part of the picker drawn in `rect`, concentric
+    /// with a segment's.
     func cornerRadius(in rect: CGRect) -> CGFloat {
         style.cornerRadius(forHeight: rect.height)
     }

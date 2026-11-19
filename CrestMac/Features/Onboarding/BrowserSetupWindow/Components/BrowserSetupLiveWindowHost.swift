@@ -4,15 +4,12 @@ import SwiftUI
 /// hierarchy: no safe area of setup's window reaches it, so the browser lays
 /// out from its own top as a window of its own would, and only what `content`
 /// carries of the environment reaches it. Its layer rounds its corners, which
-/// clips the browser's own AppKit views too. `hosted` receives the view, so
-/// the session can crossfade it.
+/// clips the browser's own AppKit views too.
 struct BrowserSetupLiveWindowHost<Content: View>: NSViewRepresentable {
     // MARK: - Variables
 
     let content: Content
     let cornerRadius: CGFloat
-    /// Receives the view the browser draws in, once it is made.
-    var hosted: ((NSView) -> Void)? = nil
 
     // MARK: - Actions - Hosting
 
@@ -24,7 +21,6 @@ struct BrowserSetupLiveWindowHost<Content: View>: NSViewRepresentable {
         view.layer?.masksToBounds = true
         view.layer?.cornerCurve = .continuous
         view.layer?.cornerRadius = cornerRadius
-        hosted?(view)
         return view
     }
 

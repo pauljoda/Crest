@@ -290,10 +290,12 @@ final class BrowserMacWindows {
     /// Page, and its tabs wait in the sidebar.
     private func open(
         _ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key,
-        placing place: ((BrowserMacWindow) -> Void)? = nil
+        placing place: ((BrowserMacWindow) -> Void)? = nil, onStartupChoice: Bool = true
     ) {
         heldLaunch = nil
-        application.startupWindowID = plan.startupWindowID
+        // A launch setup held back opens on the tabs setup left, such as the
+        // guide, rather than the startup choice.
+        application.startupWindowID = onStartupChoice ? plan.startupWindowID : nil
         if plan.quitWhileReopening, !Self.reopensPagesAfterQuit() {
             application.startPageWindowIDs = Set(plan.windowIDs)
         }
@@ -565,26 +567,55 @@ final class BrowserMacWindows {
                     spaceAccess: application.spaceAccess, extensionInstaller: engineHost.importedExtensionInstaller,
                     closeWindow: { [weak window] in window?.close() },
                     openBrowser: { [weak self, weak window] in
-                        self?.openBrowser(after: source?.id, takingOver: window?.frame)
+                        self?.handOff(from: window, after: source?.id)
                     })
             },
             closed: { [weak self] controller in self?.forget(controller) })
     }
 
-    /// Setup finished: the window it was opened from comes forward, or the
-    /// launch it held back opens, or else a new browser window. A window
-    /// that opens takes over setup's `frame`, where setup grew its preview
-    /// into it.
-    private func openBrowser(after sourceWindowID: UUID?, takingOver frame: NSRect?) {
-        let place: ((BrowserMacWindow) -> Void)? = frame.map { frame in { $0.setFrame(frame, display: false) } }
+    /// Setup finished and hands over to Crest: the window it was opened from
+    /// comes forward, or the launch it held back opens, or else a new browser
+    /// window. A window that opens takes over `setup`'s frame, where setup
+    /// grew its preview into it, on the tab setup left it on rather than the
+    /// startup choice: the guide. Crest comes in behind setup and draws
+    /// there first; once the guide is on screen in it, setup fades away over
+    /// it and closes, so the preview becomes the window without a flash or a
+    /// page arriving late.
+    private func handOff(from setup: NSWindow?, after sourceWindowID: UUID?) {
+        let guides = BrowserGettingStartedView.presentations
+        let place: ((BrowserMacWindow) -> Void)? = setup.map { setup in { $0.setFrame(setup.frame, display: false) } }
         if let sourceWindowID,
             let source = controllers.first(where: { $0.kind.hasWindowModel && $0.windowID == sourceWindowID })
         {
-            source.present(.key)
+            source.present(.background)
         } else if let heldLaunch {
-            open(heldLaunch, placing: place)
+            open(heldLaunch, activation: .background, placing: place, onStartupChoice: false)
         } else {
-            open(.normal(sourceWindowID: nil), activation: .key, placing: place)
+            open(.normal(sourceWindowID: nil), activation: .background, placing: place)
+        }
+        guard let setup else { return }
+        // Behind setup whichever window is key, so Crest draws out of sight.
+        frontmostBrowserWindow()?.order(.below, relativeTo: setup.windowNumber)
+        Task { @MainActor [weak self] in
+            let clock = ContinuousClock()
+            let deadline = clock.now + BrowserMacWindowsMetrics.handOffGuideWait
+            while BrowserGettingStartedView.presentations == guides, clock.now < deadline {
+                try? await Task.sleep(for: BrowserMacWindowsMetrics.handOffPoll)
+            }
+            try? await Task.sleep(for: BrowserMacWindowsMetrics.handOffDraw)
+            await NSAnimationContext.runAnimationGroup { context in
+                context.duration = BrowserMacWindowsMetrics.handOffFade
+                setup.animator().alphaValue = 0
+            }
+            setup.close()
+            self?.frontmostBrowserWindow()?.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    /// The browser window in front of the others, if any is open.
+    private func frontmostBrowserWindow() -> NSWindow? {
+        NSApp.orderedWindows.first { window in
+            window.isVisible && controllers.contains { $0.kind.hasWindowModel && $0.window === window }
         }
     }
 
@@ -631,4 +662,14 @@ final class BrowserMacWindows {
     private func forget(_ controller: BrowserMacWindowController) {
         controllers.removeAll { $0 === controller }
     }
+}
+
+enum BrowserMacWindowsMetrics {
+    /// How long setup waits at most for the guide to come on screen behind
+    /// it, how often it looks, the frames the guide takes to draw once it is
+    /// there, and how long setup takes to fade away over it.
+    static let handOffGuideWait = Duration.milliseconds(1500)
+    static let handOffPoll = Duration.milliseconds(30)
+    static let handOffDraw = Duration.milliseconds(80)
+    static let handOffFade: TimeInterval = 0.22
 }

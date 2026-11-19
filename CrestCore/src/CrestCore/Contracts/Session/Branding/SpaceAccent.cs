@@ -10,9 +10,9 @@ namespace CrestCore.Contracts;
 public sealed class SpaceAccent {
     #region Static Variables
 
-    /// Winter.
+    /// Crest, the look a first Space wears.
     public static readonly SpaceAccent Indigo = new(name: "indigo", tint: SystemTint.Indigo,
-        legacyColors: [Tincture.Ink, Tincture.Ocean, Tincture.Gold], house: SpaceHouse.Winter.Look, swatch: Tincture.Indigo);
+        legacyColors: [Tincture.Ink, Tincture.Ocean, Tincture.Gold], house: SpaceHouse.Crest.Look, swatch: Tincture.Indigo);
     /// Sun.
     public static readonly SpaceAccent Orange = new(name: "orange", tint: SystemTint.Orange,
         legacyColors: [Tincture.Ember, Tincture.Gold, Tincture.Ocean], house: SpaceHouse.Sun.Look, swatch: Tincture.Ember);

@@ -57,6 +57,7 @@ struct BrowserSettingsView: View {
         }
         .ignoresSafeArea(.container, edges: .top)
         .background(BrowserSettingsCanvas.background)
+        .tint(CrestBrandTheme.accent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(\.browserSettingsTabState, tabState)
         .environment(\.browserSettingsIsTab, true)

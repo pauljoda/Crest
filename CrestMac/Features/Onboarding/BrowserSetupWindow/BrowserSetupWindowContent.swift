@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Setup as one window, a room lit by the look it shows: the steps on a
-/// frosted panel on the left, the welcome and then each step in turn, and on
-/// the right the Crest window setup builds, Crest's own browser over a live
-/// copy of what setup would leave, which every choice changes and which the
-/// person can use. While the welcome shows, the window idles through looks.
+/// Setup as one window and a sheet of Crest's paper: the welcome fills the
+/// window as Crest's website opens, so the way in is the one thing to do.
+/// Continue slides the sheet to a third of the window, the steps on it in
+/// turn, and beside it comes the Crest window setup builds, Crest's own
+/// browser over a live copy of what setup would leave, which every choice
+/// changes and which the person can use, in a room of paper in the colors
+/// of the look it shows.
 struct BrowserSetupWindowContent: View {
     // MARK: - Variables
 
@@ -24,30 +26,40 @@ struct BrowserSetupWindowContent: View {
     @State private var path: [BrowserSetupDestination] = []
     @State private var shownSpaceID: UUID?
     @State private var live = BrowserSetupLiveSession()
-    /// The glass's scheme once a look has settled it.
-    @State private var heldScheme: ColorScheme?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Whether the welcome fills the window, before the steps or the
+    /// take-over.
+    private var isLanding: Bool {
+        path.isEmpty && !isTakingOver
+    }
 
     // MARK: - Actions - Drawing
 
     var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: 0) {
-                panel(width: BrowserSetupWindowMetrics.panelWidth(in: geometry.size.width))
+            let stepsWidth = BrowserSetupWindowMetrics.panelWidth(in: geometry.size.width)
+            ZStack(alignment: .leading) {
                 preview
+                    .padding(.leading, isTakingOver ? 0 : stepsWidth)
+                    .opacity(isLanding ? 0 : 1)
+                    // Off the trailing edge on the welcome, it comes in with
+                    // the sheet's edge, so the two never overlap.
+                    .offset(x: isLanding ? geometry.size.width - stepsWidth : 0)
+                    .allowsHitTesting(!isLanding)
+                    .accessibilityHidden(isLanding)
+                sheet(stepsWidth: stepsWidth, windowWidth: geometry.size.width)
             }
             .background {
-                BrowserSetupAmbientBackdrop(look: live.shownLook, isIdling: idles)
+                BrowserSetupPaperRoom(look: live.shownLook)
             }
+            .animation(CrestMotion.onboardingSheet.unlessReducingMotion(reduceMotion), value: isLanding)
         }
         .frame(minWidth: 1120, minHeight: 720)
         .ignoresSafeArea()
         .background(BrowserOnboardingWindowConfigurator())
         .task { await start() }
         .task { await cloudWait.run() }
-        .task(id: idles) { await idle() }
-        .task(id: BrowserSetupRoomSchemeKey(scheme: lookScheme, hasLook: live.shownLook != nil)) {
-            await settleRoomScheme()
-        }
         .onChange(of: request) { _, request in
             flow.reset(for: request)
             path = Self.firstPath(for: request)
@@ -61,18 +73,27 @@ struct BrowserSetupWindowContent: View {
             live.show(session.seed, images: session.images, spaceID: shownSpaceID)
         }
         .onChange(of: shownSpaceID) { _, spaceID in live.show(spaceID) }
+        // Crest opens on the guide once setup finishes, so the preview grows
+        // into the window showing it too.
+        .onChange(of: isTakingOver) { _, isTakingOver in
+            if isTakingOver { live.showGettingStarted() }
+        }
         .onDisappear {
             flow.cancelOperations()
             live.close()
         }
     }
 
-    /// The steps on a frosted panel floating in the room, light or dark as
-    /// the room is, which slides away as the preview takes over.
-    private func panel(width: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: BrowserSetupWindowMetrics.panelRadius, style: .continuous)
+    /// The sheet of paper setup lies on: the whole window on the welcome, a
+    /// third of it for the steps, attached to the window's leading edge,
+    /// its trailing edge casting a shadow on the room; it slides away as the
+    /// preview takes over. What it holds keeps its own width as it slides, so
+    /// nothing on it lays out again.
+    private func sheet(stepsWidth: CGFloat, windowWidth: CGFloat) -> some View {
+        let width = isTakingOver ? 0 : isLanding ? windowWidth : stepsWidth
         return BrowserSetupStepsPanel(
             flow: flow,
+            stepsWidth: stepsWidth,
             welcome: welcome,
             closes: !request.entryPoint.isGuided,
             path: $path,
@@ -82,22 +103,16 @@ struct BrowserSetupWindowContent: View {
             openCrest: openCrest,
             setUpWithoutCloud: cloudWait.setUpWithoutCloud
         )
-        .frame(width: width)
-        .padding(.top, BrowserSetupWindowMetrics.panelTop)
-        .background { BrowserSetupGlassPane(shape: shape, scheme: roomScheme) }
-        .clipShape(shape)
-        .overlay { BrowserSetupGlassEdge(shape: shape, scheme: roomScheme) }
-        .shadow(color: .black.opacity(BrowserSetupWindowMetrics.panelContactShadow), radius: 1.5, y: 1)
-        .shadow(color: .black.opacity(BrowserSetupWindowMetrics.panelShadow), radius: 34, y: 20)
-        .environment(\.crestControlAccent, .primary)
-        .environment(\.colorScheme, roomScheme)
-        .animation(
-            idles ? CrestMotion.onboardingBackdrop : CrestMotion.onboardingBackdropChange, value: roomScheme
+        .frame(width: windowWidth, alignment: .leading)
+        .frame(width: width, alignment: .leading)
+        .frame(maxHeight: .infinity)
+        .background { BrowserSetupPaper() }
+        .clipped()
+        .shadow(
+            color: CrestBrandPalette.ink.opacity(isLanding ? 0 : BrowserSetupWindowMetrics.sheetShadow),
+            radius: BrowserSetupWindowMetrics.sheetShadowRadius, x: BrowserSetupWindowMetrics.sheetShadowOffset
         )
-        .padding(BrowserSetupWindowMetrics.panelInset)
-        // Unclipped, so the panel's shadow falls on the room unbroken; it
-        // fades away as its room closes for the take-over.
-        .frame(width: isTakingOver ? 0 : nil, alignment: .trailing)
+        .tint(CrestBrandTheme.accent)
         .opacity(isTakingOver ? 0 : 1)
     }
 
@@ -111,75 +126,18 @@ struct BrowserSetupWindowContent: View {
                 ProgressView()
             }
         }
-        .shadow(color: .black.opacity(isTakingOver ? 0 : BrowserSetupWindowMetrics.previewShadow), radius: 40, y: 24)
-        .padding(isTakingOver ? 0 : BrowserSetupWindowMetrics.previewInset)
+        .shadow(
+            color: CrestBrandPalette.ink.opacity(isTakingOver ? 0 : BrowserSetupWindowMetrics.previewShadow),
+            radius: 30, y: 18
+        )
+        .padding(isTakingOver ? EdgeInsets() : BrowserSetupWindowMetrics.previewInsets)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// Light glass over a light room and dark glass over a dark one, as
-    /// the look the room shows reads now; `roomScheme` follows it once it
-    /// holds.
-    private var lookScheme: ColorScheme {
-        guard let look = live.shownLook else { return .dark }
-        return look.foregroundTone(over: .dark) == .light ? .dark : .light
-    }
-
-    /// Light glass over a light room and dark glass over a dark one: the
-    /// scheme a look settled, or the first look's own.
-    private var roomScheme: ColorScheme {
-        heldScheme ?? lookScheme
-    }
-
-    /// Turns the glass to `lookScheme` once it has held a moment, so a color
-    /// dragged back and forth across the turn between light and dark turns
-    /// the panel once, as it settles, rather than at every crossing.
-    private func settleRoomScheme() async {
-        guard let held = heldScheme else {
-            if live.shownLook != nil { heldScheme = lookScheme }
-            return
-        }
-        guard held != lookScheme else { return }
-        try? await Task.sleep(for: BrowserSetupWindowMetrics.roomSchemeHold)
-        guard !Task.isCancelled else { return }
-        heldScheme = lookScheme
-    }
-
-    // MARK: - Actions - Idling
-
-    /// Whether the window idles through looks: while the welcome shows,
-    /// before the take-over, unless iCloud brought Spaces, which the preview
-    /// shows as they are.
-    private var idles: Bool {
-        path.isEmpty && !isTakingOver && live.copy != nil && !welcome.opensCrest
     }
 
     /// What the welcome offers as iCloud answers.
     private var welcome: BrowserOnboardingWelcomeAction {
         BrowserOnboardingWelcomeAction(
             flow: flow.state, cloudPhase: cloudSync.phase, wait: cloudWait.stage, forcesSetup: progress.forcesSetup)
-    }
-
-    /// Dresses the window in one look after another while it idles, and puts
-    /// setup's own looks back once it stops.
-    private func idle() async {
-        guard idles else {
-            live.settle()
-            return
-        }
-        guard let base = live.shownLook else { return }
-        // Light looks, then dark ones, so the text and materials turn between
-        // light and dark twice a round rather than at every change.
-        let dressed = BrowserSetupIdleLooks.all.map { $0.wearing(on: base) }
-        let looks =
-            dressed.filter { $0.foregroundTone(over: .dark) == .dark }
-            + dressed.filter { $0.foregroundTone(over: .dark) != .dark }
-        var index = 0
-        while !Task.isCancelled {
-            try? await Task.sleep(for: BrowserSetupWindowMetrics.idleInterval)
-            guard !Task.isCancelled else { return }
-            live.idle(in: looks[index % looks.count])
-            index += 1
-        }
     }
 
     // MARK: - Actions - Starting
@@ -202,30 +160,16 @@ struct BrowserSetupWindowContent: View {
     }
 }
 
-/// What the glass's scheme settles from: the scheme the shown look reads in,
-/// and whether a look shows yet.
-private struct BrowserSetupRoomSchemeKey: Hashable {
-    let scheme: ColorScheme
-    let hasLook: Bool
-}
-
 enum BrowserSetupWindowMetrics {
     /// The steps take about a third of the window, within these widths.
-    static let panelWidths: ClosedRange<CGFloat> = 360...420
-    static let previewInset: CGFloat = 28
-    /// The panel floats this far in from the window's edges, below the
-    /// window buttons, with this much room above its own header.
-    static let panelInset: CGFloat = 28
-    static let panelTop: CGFloat = 10
-    static let panelRadius: CGFloat = 22
-    static let panelContactShadow = 0.18
-    static let panelShadow = 0.26
-    static let previewShadow = 0.38
-    /// How long a look must hold before the glass turns between light and
-    /// dark.
-    static let roomSchemeHold = Duration.milliseconds(250)
-    /// How long the welcome shows each look.
-    static let idleInterval = Duration.seconds(6)
+    static let panelWidths: ClosedRange<CGFloat> = 380...440
+    /// The room around the preview.
+    static let previewInsets = EdgeInsets(top: 44, leading: 44, bottom: 44, trailing: 44)
+    static let previewShadow = 0.3
+    /// The shadow the sheet's edge casts on the room.
+    static let sheetShadow = 0.2
+    static let sheetShadowRadius: CGFloat = 16
+    static let sheetShadowOffset: CGFloat = 4
 
     static func panelWidth(in windowWidth: CGFloat) -> CGFloat {
         min(max(windowWidth / 3, panelWidths.lowerBound), panelWidths.upperBound)

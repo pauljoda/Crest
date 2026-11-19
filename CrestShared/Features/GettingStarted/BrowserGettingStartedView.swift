@@ -2,6 +2,11 @@
     import SwiftUI
 
     struct BrowserGettingStartedView: View {
+        /// How many times the guide has come on screen in a browser window
+        /// of this process, which setup's hand-off watches so it gives way
+        /// only once the window it hands to shows the guide.
+        private(set) static var presentations = 0
+
         let openURL: (URL) -> Void
         @Bindable var state: BrowserGettingStartedState
         private var practice: BrowserGettingStartedPractice { state.practice }
@@ -19,6 +24,9 @@
             self.openURL = openURL
         }
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        /// Whether the guide shows in a browser window of its own, rather than
+        /// setup's preview of one.
+        @Environment(\.browserRootStylesWindow) private var isInBrowserWindow
 
         var body: some View {
             GeometryReader { geometry in
@@ -40,6 +48,9 @@
             }
             .environment(practice.sidebarInteraction)
             .onDisappear { practice.sidebarInteraction.cancel() }
+            .onAppear {
+                if isInBrowserWindow { Self.presentations += 1 }
+            }
             .font(CrestTypography.sans(14))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: chapter)
         }
@@ -124,8 +135,7 @@
         private var tabLesson: some View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("TRY IT").font(CrestTypography.sans(10, weight: .bold)).tracking(1.5).foregroundStyle(
-                        .secondary)
+                    Text("TRY IT").crestCapsLabel()
                     Spacer()
                     Text("\(lesson.number) / \(BrowserGettingStartedLesson.all.count)").font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)

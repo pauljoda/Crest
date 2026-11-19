@@ -65,8 +65,11 @@ struct MobileBrowserOnboardingView: View {
 
     var body: some View {
         ZStack {
+            // Clear as setup hands over, so Crest shows through as the steps
+            // slide away.
             Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
+                .opacity(isTakingOver ? 0 : 1)
 
             if showsSetup {
                 setupView
@@ -93,9 +96,11 @@ struct MobileBrowserOnboardingView: View {
         MobileSetupView(
             browser: browser, setup: setup, welcome: welcomeAction,
             firstPath: request.entryPoint.firstStep == .manualSetup ? [.spaces] : [],
-            closes: !request.entryPoint.isGuided, errorMessage: errorMessage, isFinishing: completionTask != nil,
+            closes: !request.entryPoint.isGuided, errorMessage: errorMessage,
+            isFinishing: completionTask != nil || coordinator.isHandingOver,
             isTakingOver: isTakingOver, setUpWithoutCloud: cloudWait.setUpWithoutCloud,
             startBrowsing: startBrowsing,
+            prepareCrest: { coordinator.preparesBrowser = true },
             openCrest: completeSetup, close: close)
     }
 
@@ -183,11 +188,15 @@ struct MobileBrowserOnboardingView: View {
     }
 
     /// Finishes setup: the core applies the manual setup and completes setup
-    /// on this device, and the guide opens where the core names it.
+    /// on this device, and the guide opens where the core names it. Setup
+    /// shows it is finishing at once, a frame before the work begins, and
+    /// Crest comes up behind it if it has not already.
     private func completeSetup() {
         guard completionTask == nil else { return }
         finishingStep = step
         completionTask = Task { @MainActor in
+            try? await Task.sleep(for: MobileBrowserOnboardingMetrics.feedbackFrame)
+            coordinator.preparesBrowser = true
             let result = await BrowserSetupFinish.finish(browser: browser, spaceAccess: spaceAccess)
             guard !Task.isCancelled else { return }
             completionTask = nil
@@ -196,7 +205,7 @@ struct MobileBrowserOnboardingView: View {
     }
 
     private func close() {
-        coordinator.isMobilePresented = false
+        coordinator.finishMobilePresentation()
     }
 }
 
@@ -207,17 +216,30 @@ extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
         errorMessage = nil
         carriedEdits?.replay(into: browser)
         carriedEdits = nil
+        // Crest shows the page it opens on behind setup, which waits for it,
+        // so setup goes over a finished page rather than one still coming up.
+        coordinator.isHandingOver = true
         if let guide { didOpenGettingStarted(guide) }
         guard showsSetup, !reduceMotion else {
             finishPresentation()
             return
         }
-        // Setup's copy of Crest grows to fill the screen first. Finishing
-        // setup swaps a first launch's setup screen for Crest at once, so it
-        // waits for the copy to fill it.
-        withAnimation(CrestMotion.onboardingStep) { isTakingOver = true }
+        // A phone's page covers the screen, rising over setup as it comes.
+        let pageRises = guide != nil && horizontalSizeClass == .compact
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(CrestMotion.onboardingStepTransition))
+            // These end once the main thread has built and drawn the page.
+            for _ in 0..<MobileBrowserOnboardingMetrics.handOverFrames {
+                try? await Task.sleep(for: MobileBrowserOnboardingMetrics.feedbackFrame)
+            }
+            if pageRises {
+                // Setup goes once the page has risen over it.
+                try? await Task.sleep(for: MobileBrowserOnboardingMetrics.pageRise)
+            } else {
+                // An iPad's copy of Crest grows to fill the screen, and steps
+                // standing alone slide away over Crest; setup then goes.
+                withAnimation(CrestMotion.onboardingHandOver) { isTakingOver = true }
+                try? await Task.sleep(for: .seconds(CrestMotion.onboardingHandOverTransition))
+            }
             finishPresentation()
         }
     }
@@ -225,7 +247,10 @@ extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
     /// Marks setup finished on this device and lets Crest show.
     private func finishPresentation() {
         progress.setupFinished()
-        coordinator.isMobilePresented = false
+        // Handing over, setup goes in the frame Crest takes its place.
+        var transaction = Transaction()
+        transaction.disablesAnimations = coordinator.isHandingOver
+        withTransaction(transaction) { coordinator.finishMobilePresentation() }
     }
 
     func setupCancelled() {
@@ -260,4 +285,14 @@ extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
         tutorialPersonalSpace: fixture.alternateSpace,
         tutorialWorkSpace: fixture.space
     )
+}
+
+enum MobileBrowserOnboardingMetrics {
+    /// About one frame: the wait for setup to show it is finishing before
+    /// the work begins, and each wait for Crest to draw behind setup.
+    static let feedbackFrame = Duration.milliseconds(20)
+    /// The frames setup waits, once Crest builds its page, before it goes.
+    static let handOverFrames = 3
+    /// How long a phone's page takes to rise over setup, which goes after.
+    static let pageRise = Duration.milliseconds(650)
 }

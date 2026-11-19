@@ -156,6 +156,10 @@ extension BrowserRootModel {
             browser.presentStartPageForLaunch()
             address = ""
         }
+        // Crest's own pages load no web content, so a window opening on one,
+        // such as Getting Started after setup, shows it without waiting for
+        // the rule lists to compile.
+        if !selectedSpaceIsLocked, pages.showsOnlyNativeContent { pages.select() }
         await pages.prepareContentBlocking()
         isPrepared = true
         // Pages opened while the rules compiled were built without them.

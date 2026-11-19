@@ -146,7 +146,7 @@ private final class BrowserAppearancePreviewState {
     }
 
     /// The look before the sample Space reaches the read model.
-    var fallbackBranding: SpaceBranding { SpaceHouse.winter.look }
+    var fallbackBranding: SpaceBranding { SpaceHouse.crest.look }
 
     var assignment: BrowserSpaceRuntimeAssignment {
         guard let space = browser.workspaceModel?.spaces.models.first else {

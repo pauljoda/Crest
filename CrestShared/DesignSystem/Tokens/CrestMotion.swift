@@ -136,14 +136,17 @@ enum CrestMotion {
     static var onboardingProgress: Animation { .snappy(duration: stepTransition) }
     /// Uses SwiftUI's native snappy curve for onboarding presentation state.
     static var onboardingPresentation: Animation { .snappy }
-    /// The slow cross-fade between the fields the welcome's stage drifts through.
-    static var onboardingBackdrop: Animation { .easeInOut(duration: onboardingBackdropFade) }
-    static let onboardingBackdropFade: TimeInterval = 1.6
     /// The cross-fade to a field the person's choice changed.
     static var onboardingBackdropChange: Animation { .easeInOut(duration: onboardingBackdropChangeFade) }
     static let onboardingBackdropChangeFade: TimeInterval = 0.35
-    /// How long the welcome holds each template's field before fading to the next.
-    static let onboardingWelcomeHold: Duration = .seconds(7)
+    /// The welcome's sheet giving way to the steps: sliding from the whole
+    /// window to a third of it as the window setup builds comes in beside it.
+    static var onboardingSheet: Animation { .smooth(duration: onboardingSheetTransition) }
+    static let onboardingSheetTransition: TimeInterval = 0.7
+    /// Setup handing over to Crest: a phone's steps sliding away, an iPad's
+    /// copy growing to fill the screen.
+    static var onboardingHandOver: Animation { .smooth(duration: onboardingHandOverTransition) }
+    static let onboardingHandOverTransition: TimeInterval = 0.45
     static var press: Animation { .easeOut(duration: pressFeedback) }
     static var compactPress: Animation { .easeOut(duration: compactPressFeedback) }
     static var developerPress: Animation { .snappy(duration: developerPressFeedback) }

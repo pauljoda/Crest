@@ -1,7 +1,6 @@
 import SwiftUI
-import UIKit
 
-/// Mobile Settings follows the system grouped-form canvas.
+/// Mobile Settings draws its grouped form on Crest's settings canvas.
 struct CrestPlatformSettingsFormModifier: ViewModifier {
     let maxWidth: CGFloat
 
@@ -9,7 +8,7 @@ struct CrestPlatformSettingsFormModifier: ViewModifier {
         content
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(BrowserSettingsCanvas.background)
             .frame(maxWidth: maxWidth)
     }
 }

@@ -4,6 +4,12 @@ struct MobileBrowserRootView: View {
     private let dataDeleter: any BrowserSpaceDataDeleting
     private let transientBrowsing: BrowserTransientBrowsingCoordinator
     private let suspendsCompactPagePresentation: Bool
+    /// Whether the browser holds back its launch, opening nothing, as it does
+    /// while it comes up behind a first launch's setup.
+    private let holdsStartup: Bool
+    /// Whether the page the browser opens on rises over setup as setup hands
+    /// over to it.
+    private let presentsPageOverSetup: Bool
     private let togglePrivateBrowsing: () -> Void
     private let closePrivateBrowsing: () -> Void
 
@@ -19,6 +25,8 @@ struct MobileBrowserRootView: View {
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController(),
         windowState: BrowserWindowStateStore? = nil,
         suspendsCompactPagePresentation: Bool = false,
+        holdsStartup: Bool = false,
+        presentsPageOverSetup: Bool = false,
         startupBehavior: StartupBehavior = .showStartPage,
         togglePrivateBrowsing: @escaping () -> Void,
         closePrivateBrowsing: @escaping () -> Void
@@ -26,6 +34,8 @@ struct MobileBrowserRootView: View {
         self.dataDeleter = dataDeleter
         self.transientBrowsing = transientBrowsing
         self.suspendsCompactPagePresentation = suspendsCompactPagePresentation
+        self.holdsStartup = holdsStartup
+        self.presentsPageOverSetup = presentsPageOverSetup
         self.togglePrivateBrowsing = togglePrivateBrowsing
         self.closePrivateBrowsing = closePrivateBrowsing
         let fallbackWidth =
@@ -55,6 +65,8 @@ struct MobileBrowserRootView: View {
             dataDeleter: dataDeleter,
             transientBrowsing: transientBrowsing,
             suspendsCompactPagePresentation: suspendsCompactPagePresentation,
+            holdsStartup: holdsStartup,
+            presentsPageOverSetup: presentsPageOverSetup,
             togglePrivateBrowsing: togglePrivateBrowsing,
             closePrivateBrowsing: closePrivateBrowsing
         )

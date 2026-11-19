@@ -71,13 +71,23 @@ public sealed class CrestSymbol {
     public static readonly CrestSymbol Crown = new("crown", "Crown", CrestVocabulary.ExpandedCharges, "crown.fill", null);
     public static readonly CrestSymbol Horn = new("horn", "Horn", CrestVocabulary.ExpandedCharges, "horn.fill", null);
     public static readonly CrestSymbol CrossedBanners = new("crossedBanners", "Banners", CrestVocabulary.ExpandedCharges, "flag.2.crossed.fill", null);
+    // The simple figures: bold, rounded and drawn to sit on a soft shape.
+    public static readonly CrestSymbol BrightStar = new("brightStar", "Bright Star", CrestVocabulary.Simple, "star.fill",
+        "CrestCharge-brightStar");
+    public static readonly CrestSymbol Moon = new("moon", "Moon", CrestVocabulary.Simple, "moon.fill", "CrestCharge-moon");
+    public static readonly CrestSymbol Chevrons = new("chevrons", "Chevrons", CrestVocabulary.Simple, "chevron.up",
+        "CrestCharge-chevrons");
+    public static readonly CrestSymbol Lens = new("lens", "Lens", CrestVocabulary.Simple, "smallcircle.filled.circle",
+        "CrestCharge-lens");
+    public static readonly CrestSymbol Spark = new("spark", "Spark", CrestVocabulary.Simple, "bolt.fill", "CrestCharge-spark");
+    public static readonly CrestSymbol Sprout = new("sprout", "Sprout", CrestVocabulary.Simple, "leaf.fill", "CrestCharge-sprout");
 
     public static IReadOnlyList<CrestSymbol> All { get; } = [
         Dragon, Direwolf, Lion, Stag, Raven, Griffin, Eagle, Bear, Boar, Fox, Horse, Unicorn, Wyvern, Hydra, Serpent,
         Kraken, Seahorse, Scorpion, Bat, Falcon, Rose, Lily, Pine, Willow, Swords, Axes, Sword, Trident, Anchor, Castle,
         Scales, DragonHead, Hound, Paw, Hare, Bird, Fish, Bee, Shell, Sun, RisingSun, Crescent, Star, Sparkles, Lightning,
         Flame, Snowflake, Drop, Mountain, Tree, Oak, Leaf, Fern, Flower, Waves, Tower, Book, Key, Hammer, Compass, Sailboat,
-        Crown, Horn, CrossedBanners
+        Crown, Horn, CrossedBanners, BrightStar, Moon, Chevrons, Lens, Spark, Sprout
     ];
 
     /// The figure a crest draws when it names none this build can read.

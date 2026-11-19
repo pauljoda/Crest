@@ -73,13 +73,45 @@ public sealed class Tincture {
     /// The deep sea teal an Iron sidebar runs down into.
     public static readonly Tincture IronTide = new("ironTide", "Tide", new(0.114, 0.207, 0.218));
 
+    /// The ink a Crest sidebar starts from at its head.
+    public static readonly Tincture CrestInk = new("crestInk", "Crest Ink", new(0.090, 0.133, 0.220));
+
+    /// The dusk a Crest sidebar passes through on its way into sky.
+    public static readonly Tincture CrestDusk = new("crestDusk", "Dusk", new(0.180, 0.294, 0.408));
+
+    /// The sky a Crest sidebar washes into at its foot.
+    public static readonly Tincture CrestSky = new("crestSky", "Crest Sky", new(0.353, 0.608, 0.784));
+
+    /// The butter of the front banner in Crest's mark, which a Crest Space's
+    /// figure and highlights wear.
+    public static readonly Tincture CrestButter = new("crestButter", "Butter", new(0.949, 0.757, 0.306));
+
+    /// The coral of the middle banner in Crest's mark, which a Crest crest's
+    /// field wears.
+    public static readonly Tincture CrestCoral = new("crestCoral", "Coral", new(0.914, 0.376, 0.294));
+
+    // The simple houses' colors, from Crest's brand.
+    public static readonly Tincture CrestCream = new("crestCream", "Cream", new(0.984, 0.961, 0.902));
+    public static readonly Tincture CrestSage = new("crestSage", "Soft Sage", new(0.553, 0.749, 0.604));
+    public static readonly Tincture MoonNight = new("moonNight", "Night", new(0.118, 0.161, 0.271));
+    public static readonly Tincture MoonTide = new("moonTide", "Moonlit Blue", new(0.184, 0.306, 0.494));
+    public static readonly Tincture SummitButter = new("summitButter", "Pale Butter", new(0.965, 0.878, 0.627));
+    public static readonly Tincture LensMist = new("lensMist", "Mist", new(0.933, 0.961, 0.918));
+    public static readonly Tincture LensFern = new("lensFern", "Fern", new(0.796, 0.886, 0.812));
+    public static readonly Tincture SparkTwilight = new("sparkTwilight", "Twilight", new(0.165, 0.118, 0.227));
+    public static readonly Tincture SparkMulberry = new("sparkMulberry", "Mulberry", new(0.349, 0.188, 0.31));
+    public static readonly Tincture GroveDeep = new("groveDeep", "Deep Forest", new(0.118, 0.169, 0.133));
+    public static readonly Tincture GroveMoss = new("groveMoss", "Grove Moss", new(0.243, 0.361, 0.263));
+
     public static IReadOnlyList<Tincture> All { get; } = [
         Ink, Indigo, Ocean, Sky, Teal, Sage, Gold, Ember, Rose, Sand, WinterSlate, WinterSteel, WinterIce, LionOxblood,
         LionCrimson, LionGold, StormMidnight, StormGunmetal, StormBrass, DragonChar, DragonBlood, DragonScarlet,
         MeadowForest, MeadowMoss, MeadowWheat, IronBlack, IronPewter, IronPatina, RiverNavy, RiverLapis, RiverRust,
         SunUmber, SunTerracotta, SunDune, VigilOnyx, VigilCharcoal, VigilAsh, WinterArgent, WinterWolf, LionGules, LionOr,
         StormOr, StormSable, DragonSable, DragonFire, MeadowVert, MeadowRose, IronOr, RiverAzure, RiverGules, RiverArgent,
-        SunTenne, SunGules, SunOr, VigilBone, NeutralSmoke, NeutralGray, DragonFlame, StormSlate, DragonCinder, IronTide
+        SunTenne, SunGules, SunOr, VigilBone, NeutralSmoke, NeutralGray, DragonFlame, StormSlate, DragonCinder, IronTide,
+        CrestInk, CrestDusk, CrestSky, CrestButter, CrestCoral, CrestCream, CrestSage, MoonNight, MoonTide, SummitButter, LensMist,
+        LensFern, SparkTwilight, SparkMulberry, GroveDeep, GroveMoss
     ];
 
     public string Name { get; }

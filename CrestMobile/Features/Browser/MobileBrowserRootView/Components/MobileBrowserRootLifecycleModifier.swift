@@ -7,6 +7,9 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
     /// Opens a new tab with its address field focused, for a launch that
     /// starts on one.
     let openNewTab: () -> Void
+    /// Whether the browser holds back its launch, opening nothing, until
+    /// the setup it comes up behind finishes.
+    let holdsStartup: Bool
 
     @Binding var isAddressEditing: Bool
     @Binding var storedSidebarWidth: Double
@@ -20,12 +23,14 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
         model: MobileBrowserRootModel,
         presentation: MobileBrowserPresentation,
         openNewTab: @escaping () -> Void,
+        holdsStartup: Bool = false,
         isAddressEditing: Binding<Bool>,
         storedSidebarWidth: Binding<Double>
     ) {
         self.model = model
         self.presentation = presentation
         self.openNewTab = openNewTab
+        self.holdsStartup = holdsStartup
         _isAddressEditing = isAddressEditing
         _storedSidebarWidth = storedSidebarWidth
         _runtimeSessionProjection = State(
@@ -39,7 +44,8 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
     func body(content: Content) -> some View {
         let preparedContent =
             content
-            .task {
+            .task(id: holdsStartup) {
+                guard !holdsStartup else { return }
                 if await model.prepareBrowser() {
                     openNewTab()
                 }

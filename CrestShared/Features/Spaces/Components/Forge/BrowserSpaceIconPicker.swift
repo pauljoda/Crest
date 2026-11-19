@@ -89,25 +89,38 @@ struct BrowserSpaceIconPicker: View {
         }
     }
 
-    /// The houses' crests, each in its own colors and nothing of the Space's,
-    /// so editing the Space never redraws them: choosing one gives the Space
-    /// its crest, Background and Accent.
+    /// The houses' crests, simple then heraldic, each in its own colors and
+    /// nothing of the Space's, so editing the Space never redraws them:
+    /// choosing one gives the Space its crest, Background and Accent.
     private var starterCrests: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
-            ForEach(SpaceHouse.all, id: \.self) { house in
-                BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding)) {
-                    branding = house.applying(to: branding)
-                } artwork: {
-                    BrowserSpaceCrestIcon(
-                        branding: Self.starterLook(of: house), size: BrowserCrestForgeMetrics.tileCrestSize,
-                        rasterizesLayers: false
-                    )
-                    .equatable()
+        VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.styleSpacing) {
+            ForEach(SpaceHouseStyle.all, id: \.self) { style in
+                VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.titleSpacing) {
+                    Text(style.title)
+                        .crestCapsLabel()
+                        .accessibilityAddTraits(.isHeader)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+                        ForEach(SpaceHouse.all.filter { $0.style == style }, id: \.self) { house in
+                            crest(of: house)
+                        }
+                    }
                 }
             }
         }
         .padding(.vertical, 4)
         .accessibilityIdentifier("space-starter-crests")
+    }
+
+    private func crest(of house: SpaceHouse) -> some View {
+        BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding)) {
+            branding = house.applying(to: branding)
+        } artwork: {
+            BrowserSpaceCrestIcon(
+                branding: Self.starterLook(of: house), size: BrowserCrestForgeMetrics.tileCrestSize,
+                rasterizesLayers: false
+            )
+            .equatable()
+        }
     }
 
     /// `house`'s own look wearing its crest.
@@ -172,6 +185,9 @@ struct BrowserSpaceIconPicker: View {
 enum BrowserSpaceIconPickerMetrics {
     /// The symbol a Space trading its emoji for a symbol starts from.
     static let symbol = "sparkles"
+    /// The room between the simple and heraldic crests, and under each name.
+    static let styleSpacing: CGFloat = 14
+    static let titleSpacing: CGFloat = 8
 }
 
 #if DEBUG

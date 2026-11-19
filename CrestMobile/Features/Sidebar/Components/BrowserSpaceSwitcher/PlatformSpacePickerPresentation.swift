@@ -9,7 +9,6 @@ struct PlatformSpacePickerPresentation: UIViewRepresentable {
     let spaces: [BrowserSpaceIdentity]
     let selectedSpaceID: UUID?
     let frames: [UUID: CGRect]
-    let selectionTint: Color?
     /// Whether the selection and a group's outline are drawn. Dots show both
     /// by their shade instead, while the lane still follows the pager.
     var drawsHighlight = true
@@ -19,7 +18,7 @@ struct PlatformSpacePickerPresentation: UIViewRepresentable {
     func updateUIView(_ view: SpacePickerPresentationView, context: Context) {
         view.update(
             presentation: presentation, style: style, spaces: spaces, selectedSpaceID: selectedSpaceID,
-            frames: frames, tint: selectionTint, drawsHighlight: drawsHighlight)
+            frames: frames, drawsHighlight: drawsHighlight)
     }
 
     static func dismantleUIView(_ view: SpacePickerPresentationView, coordinator: ()) { view.disconnect() }
@@ -27,7 +26,8 @@ struct PlatformSpacePickerPresentation: UIViewRepresentable {
 
 @MainActor
 final class SpacePickerPresentationView: UIView {
-    /// Wraps the group of the selected Space, behind the selection.
+    /// The soft highlight across the group of the selected Space, under the
+    /// selector.
     private let groupOutline = CALayer()
     private let highlight = CALayer()
     private var outline = SpacePickerGroupOutline(profileIDs: [])
@@ -35,7 +35,6 @@ final class SpacePickerPresentationView: UIView {
     private var style = CrestSpaceIconPickerStyle.touch
     private weak var scrollView: UIScrollView?
     private var ids: [UUID] = []
-    private var tint: UIColor?
     private var tones: [SpaceForegroundPresentation.Tone] = []
     private var frames: [UUID: CGRect] = [:]
     private var lastSnapshot: SpacePagerPresentation.Snapshot?
@@ -59,7 +58,7 @@ final class SpacePickerPresentationView: UIView {
 
     func update(
         presentation: SpacePagerPresentation, style: CrestSpaceIconPickerStyle, spaces: [BrowserSpaceIdentity],
-        selectedSpaceID: UUID?, frames: [UUID: CGRect], tint: Color?, drawsHighlight: Bool
+        selectedSpaceID: UUID?, frames: [UUID: CGRect], drawsHighlight: Bool
     ) {
         if self.presentation !== presentation {
             disconnect()
@@ -83,7 +82,6 @@ final class SpacePickerPresentationView: UIView {
                 white: $0.branding.foregroundTone(system: system) == .light ? 1 : 0)
         }
         self.frames = frames
-        self.tint = tint.map(UIColor.init)
         // The background representable joins its enclosing native scroll view
         // after SwiftUI attaches it. No scroll delegate or private view is replaced.
         DispatchQueue.main.async { [weak self] in
@@ -156,11 +154,13 @@ final class SpacePickerPresentationView: UIView {
             inset: CrestSpaceIconPickerMetrics.groupSelectionInset)
         let inset = group?.selectionInset ?? 0
         let frame = interpolation.frame(from: start, to: end).insetBy(dx: inset, dy: inset)
-        let color = tint ?? UIColor(white: SpaceForegroundPresentation.white(at: position, tones: tones), alpha: 1)
-        // The outline wears its primary's tone whichever member is selected.
+        // The selector takes the tone of the sidebar under it; the group's
+        // highlight its primary's, whichever member is selected.
+        let tone = CrestSpaceIconPickerTone.between(
+            darkness: SpaceForegroundPresentation.white(at: position, tones: tones))
         let primaryTones = tones.indices.map { tones[outline.primary(of: $0)] }
-        let outlineColor =
-            tint ?? UIColor(white: SpaceForegroundPresentation.white(at: position, tones: primaryTones), alpha: 1)
+        let groupTone = CrestSpaceIconPickerTone.between(
+            darkness: SpaceForegroundPresentation.white(at: position, tones: primaryTones))
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         highlight.frame = frame
@@ -169,18 +169,17 @@ final class SpacePickerPresentationView: UIView {
         highlight.cornerRadius = max(
             0, CrestSpaceIconPickerShape(style: style).cornerRadius(in: frame.insetBy(dx: -inset, dy: -inset)) - inset)
         highlight.cornerCurve = CrestSpaceIconPickerShape.layerCornerCurve
-        highlight.backgroundColor = color.withAlphaComponent(0.22).cgColor
-        // The outline grows into a group, holds within one and shrinks back
-        // as the selection leaves.
+        highlight.backgroundColor = UIColor(white: 1, alpha: tone.selector).cgColor
+        // The group's highlight grows into a group, holds within one and
+        // shrinks back as the selection leaves.
         groupOutline.isHidden = group == nil
         if let group {
             groupOutline.frame = group.rect
             groupOutline.opacity = Float(group.opacity)
             groupOutline.cornerRadius = CrestSpaceIconPickerShape(style: style).cornerRadius(in: group.rect)
             groupOutline.cornerCurve = CrestSpaceIconPickerShape.layerCornerCurve
-            groupOutline.backgroundColor = outlineColor.withAlphaComponent(0.11).cgColor
-            groupOutline.borderColor = outlineColor.cgColor
-            groupOutline.borderWidth = CrestSpaceIconPickerMetrics.groupOutlineStroke
+            groupOutline.backgroundColor = UIColor(white: 1, alpha: groupTone.group).cgColor
+            groupOutline.borderWidth = 0
         }
         CATransaction.commit()
         defer { lastPosition = position }

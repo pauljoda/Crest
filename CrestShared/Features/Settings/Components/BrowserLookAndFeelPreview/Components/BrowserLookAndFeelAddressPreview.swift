@@ -53,6 +53,6 @@ struct BrowserLookAndFeelAddressPreview: View {
     }
 
     private var branding: SpaceBranding {
-        space?.branding ?? SpaceHouse.winter.look
+        space?.branding ?? SpaceHouse.crest.look
     }
 }
