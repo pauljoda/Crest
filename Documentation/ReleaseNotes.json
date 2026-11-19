@@ -5822,6 +5822,10 @@
       "category": "fixed",
       "message": "Search engine icons in pickers are now sized to their name, with clear room between the two."
     },
+    "app-icon-paper-tile": {
+      "category": "improved",
+      "message": "The default app icon sits on a warm paper tile in light mode, so its butter banner stands out instead of fading into a near-white background."
+    },
     "core-close-waits-for-filter-conversions": {
       "category": "internal",
       "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."
