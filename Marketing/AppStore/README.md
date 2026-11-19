@@ -12,9 +12,9 @@ Copy the version-specific fields into the iOS version in App Store Connect. The 
 
 Keep raw captures, artwork generation tools, and exported images outside the repository. Use real app screens from the showcase session (`CREST_SHOWCASE_SESSION=1`): Work with Lion and Personal with Winter. Where the address shows, load the hosted demo pages at `crestbrowser.com/demos/source/` and `/demos/trail/` instead of the showcase's `data:` pages.
 
-The iPhone order is Spaces, Crest Studio, the tab archive, Appearance, and Private Browsing. The iPad order is Spaces, Split View as columns beside each other, Crest Studio, Appearance, and Private Browsing.
+The iPhone order is the Work sidebar, the Personal sidebar, Crest Studio, Peek, and Private Browsing. The iPad order is Work with crestbrowser.com open beside the sidebar, Split View as columns with the sidebar hidden, Crest Studio, and Private Browsing. The iPhone Duo follows the iPad on its inner display.
 
-Export opaque PNGs at 1320 × 2868 for the iPhone 6.9-inch slot and 2064 × 2752 for the iPad 13-inch slot (portrait, because the simulator can't be rotated without the pointer). Check the order after uploading, since concurrent uploads may finish out of order. Check Media Manager for older custom sets that would override the new images on smaller displays.
+Export opaque PNGs at 1320 × 2868 for the iPhone 6.9-inch slot, which the required medium iPhone slot borrows, 2064 × 2752 for the iPad 13-inch slot (portrait, because the simulator can't be rotated without the pointer), and 2853 × 2007 for the iPhone Duo's inner display. Check the order after uploading, since concurrent uploads may finish out of order. Check Media Manager for older custom sets that would override the new images on smaller displays.
 
 ## Header and search results
 
