@@ -2,21 +2,15 @@ import SwiftUI
 
 struct BrowserCommandPaletteRowButtonStyle: ButtonStyle {
     let isSelected: Bool
+    /// The color the selected row is tinted in, or nil for the lift the
+    /// sidebar's selected tab takes.
+    var accent: Color? = nil
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding(.horizontal, BrowserCommandPaletteMetrics.rowHorizontalPadding)
             .frame(minHeight: BrowserCommandPaletteMetrics.resultRowHeight)
             .contentShape(.rect)
-            .background(
-                isSelected
-                    ? CrestBrandTheme.accent.opacity(
-                        BrowserCommandPaletteMetrics.selectedRowOpacity
-                    )
-                    : Color.primary.opacity(
-                        BrowserCommandPaletteMetrics.restingRowOpacity
-                    ),
-                in: .rect(cornerRadius: BrowserCommandPaletteMetrics.rowCornerRadius)
-            )
+            .modifier(BrowserCommandPaletteRowSurface(isSelected: isSelected, accent: accent))
     }
 }

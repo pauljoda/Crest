@@ -20,10 +20,22 @@ struct MobileSetupLiveWindow: View {
                         .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
                         .allowsHitTesting(false)
                 }
-                .shadow(color: .black.opacity(cornerRadius > 0 ? 0.22 : 0), radius: 20, y: 10)
+                .background { shadow }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(Text("Preview of Crest"))
         }
+    }
+
+    /// The copy's shadow, cast by a plain shape behind it rather than by the
+    /// browser it hosts, which would be worked out again from the browser's
+    /// views on every frame the copy moves or grows. It goes once the copy
+    /// fills the screen.
+    private var shadow: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(CrestBrandPalette.ink)
+            .shadow(
+                color: CrestBrandPalette.ink.opacity(cornerRadius > 0 ? MobileSetupLiveWindowMetrics.shadow : 0),
+                radius: MobileSetupLiveWindowMetrics.shadowRadius, y: MobileSetupLiveWindowMetrics.shadowOffset)
     }
 
     /// Crest's browser over the copy, with the copy's own core.
@@ -50,4 +62,7 @@ struct MobileSetupLiveWindow: View {
 
 enum MobileSetupLiveWindowMetrics {
     static let cornerRadius: CGFloat = 22
+    static let shadow = 0.36
+    static let shadowRadius: CGFloat = 26
+    static let shadowOffset: CGFloat = 14
 }

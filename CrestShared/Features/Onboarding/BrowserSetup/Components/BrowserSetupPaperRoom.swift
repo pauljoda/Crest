@@ -23,7 +23,7 @@ struct BrowserSetupPaperRoom: View {
         ZStack {
             Rectangle()
                 .fill(CrestColorFill(tones.colors, degrees: tones.degrees).style)
-            CrestGrain()
+            CrestGrain(density: BrowserSetupPaperRoomMetrics.grainDensity)
                 .blendMode(.softLight)
                 .opacity(BrowserSetupPaperRoomMetrics.grain)
         }
@@ -57,4 +57,7 @@ enum BrowserSetupPaperRoomMetrics {
     /// How far the look's colors soften toward the ground.
     static let softening = 0.35
     static let grain = 0.45
+    /// The room's grain is sparser than a sidebar's, as it always drew it
+    /// across a whole window.
+    static let grainDensity = 1.0 / 60
 }

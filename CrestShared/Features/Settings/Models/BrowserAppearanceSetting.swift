@@ -38,6 +38,7 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case addressBorder
     case addressEditingOutline
     case commandPaletteMotion
+    case commandPaletteAccent
     case addressDisplay
     case copyURLButton
     case superCopy
@@ -60,7 +61,8 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     static let onPage: Set<BrowserAppearanceSetting> = [
         .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .sidebarRevealDelay,
         .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale, .sidebarSpacing,
-        .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .copyURLButton, .superCopy,
+        .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .commandPaletteAccent,
+        .copyURLButton, .superCopy,
         .folderIconOnly, .folderTabCounts, .groupTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview,
     ]
 

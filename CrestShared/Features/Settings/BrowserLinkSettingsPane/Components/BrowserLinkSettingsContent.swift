@@ -28,6 +28,7 @@ struct BrowserLinkSettingsContent: View {
             dragsLinksToPeek: dragsLinksToPeekBinding,
             dimsPageBehindPeek: dimsPageBehindPeekBinding,
             peekSize: peekSizeSetting,
+            peekSpeed: CrestSettingValue($appearance.peekOpenDuration, default: BrowserPeekPace.defaultValue),
             testPeek: testPeek
         )
 
