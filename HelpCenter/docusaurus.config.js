@@ -111,6 +111,7 @@ const config = {
             {label: 'Discord', href: 'https://discord.gg/gjrM5qMB6x'},
             {label: 'Donate', href: 'https://ko-fi.com/pauljoda/tiers'},
             {label: 'Privacy', href: 'https://crestbrowser.com/privacy/'},
+            {label: 'Press kit', href: 'https://crestbrowser.com/press/'},
           ],
         },
       ],

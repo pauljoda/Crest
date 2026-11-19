@@ -20,7 +20,25 @@ soft shadow. The mark is drawn on a 64-unit grid with a tile radius of 15.
 
 - `og-card.jpg` (1200 × 630) — the card for `og:image` and `twitter:image` on
   every page, the Help Center included: the mark, "Spaces for your browsing."
-  and the section chips on cream.
+  and the section chips on cream. Its SVG source is `press/og-card.svg`.
+
+## Press kit
+
+`press/` holds everything the press kit page (`/press/`) offers, and
+`press/crest-press-kit.zip` bundles it:
+
+- `crest-mark.svg`, `crest-mark-1024.png`, `crest-mark-small.svg` — the mark.
+- `crest-lockup.svg`, `crest-lockup-light.svg`, `crest-wordmark.svg` and their
+  PNGs — the mark beside the wordmark, for light and dark backgrounds.
+- `crest-app-icon.png`, `crest-app-icon-dark.png` — the app icon, exported from
+  its Icon Composer document.
+- `crest-avatar.png`, `crest-avatar-cream.png` (1024) — profile pictures that
+  survive a round crop.
+- `header-1500x500`, `header-1600x400`, `header-1920x384`, `header-960x540`,
+  `header-2560x1440` — banners and headers for social accounts.
+- `github-social-preview.png` (1280 × 640) — the repository's social preview.
+
+Text in these files is Nunito outlined to paths, so the SVGs need no fonts.
 
 ## Colors and type
 
