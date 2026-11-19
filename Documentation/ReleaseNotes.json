@@ -5785,6 +5785,10 @@
     "mobile-zoom-before-first-page-load": {
       "category": "fixed",
       "message": "On iPhone and iPad, zoom chosen while a website first loads is remembered for that site."
+    },
+    "site-zoom-follows-first-navigation": {
+      "category": "fixed",
+      "message": "When you switch sites while a new tab is loading, zoom changes apply to the site the tab is opening."
     }
   }
 }

@@ -18,6 +18,7 @@ final class BrowserPageZoomSession {
     @ObservationIgnored private var url: URL?
     @ObservationIgnored private var preference = SiteZoomPreference(host: nil, factor: nil)
     @ObservationIgnored private var temporaryOverride: CGFloat?
+    @ObservationIgnored private var hasCommittedDocument = false
 
     // MARK: - Initializers
 
@@ -36,15 +37,16 @@ final class BrowserPageZoomSession {
 
     // MARK: - Actions - Navigation
 
-    /// Gives a page that has no document yet its first destination's zoom.
-    /// Later provisional loads leave the current document's preference alone.
+    /// Resolves the latest destination until a document commits. After that,
+    /// provisional loads keep the displayed document's zoom.
     func prepareForNavigation(to url: URL?) {
-        guard self.url == nil, temporaryOverride == nil, let url else { return }
+        guard !hasCommittedDocument, self.url != url else { return }
         self.url = url
         synchronize()
     }
 
     func committed(_ url: URL?) {
+        hasCommittedDocument = true
         self.url = url
         synchronize()
         // Engines may restore a history entry's own zoom at document commit.
