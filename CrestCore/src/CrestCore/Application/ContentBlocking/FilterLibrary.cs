@@ -166,6 +166,11 @@ internal sealed class FilterLibrary {
     private string? engineKey;
     private string? buildingEngineKey;
     private bool engineRebuildWanted;
+    /// The latest worker converting the rules and the latest compiling the
+    /// engine filter, and whether the library stopped, after which none starts.
+    private Task rulesWorker = Task.CompletedTask;
+    private Task engineWorker = Task.CompletedTask;
+    private bool stopped;
 
     #endregion
 
@@ -477,13 +482,15 @@ internal sealed class FilterLibrary {
     }
 
     /// Converts the lists again unless their rules are the ones in force: at
-    /// once from what an earlier conversion stored, or on a worker.
+    /// once from what an earlier conversion stored, or on a worker. A stopped
+    /// library converts nothing.
     private void RebuildRules() {
         var chosen = preferences();
         string key;
         List<(string Name, string Digest)> inputs;
         ContentRuleListSet? restored = null;
         lock (gate) {
+            if (stopped) return;
             inputs = Inputs(chosen);
             key = RulesKey(inputs);
             if (key == publishedKey) return;
@@ -495,10 +502,10 @@ internal sealed class FilterLibrary {
                 return;
             } else {
                 buildingKey = key;
+                rulesWorker = Task.Run(() => Build(key, inputs, chosen.CustomFilters));
             }
         }
         if (restored is not null) announce(new ContentRuleListsChanged(restored));
-        else _ = Task.Run(() => Build(key, inputs, chosen.CustomFilters));
     }
 
     /// The lists in force that the device holds a copy of, with their digests,
@@ -722,12 +729,14 @@ internal sealed class FilterLibrary {
     };
 
     /// Compiles the engine filter again unless the one in force matches the
-    /// lists: at once from what an earlier compile saved, or on a worker.
+    /// lists: at once from what an earlier compile saved, or on a worker. A
+    /// stopped library compiles nothing.
     private void RebuildEngine() {
         var chosen = preferences();
         string key;
         List<(string Name, string Digest)> inputs;
         lock (gate) {
+            if (stopped) return;
             inputs = Inputs(chosen);
             if (copies.GetValueOrDefault(ResourcesName)?.Digest is { } resources && resources == resourcesDigest)
                 inputs.Add((ResourcesName, resources));
@@ -738,8 +747,8 @@ internal sealed class FilterLibrary {
                 return;
             }
             buildingEngineKey = key;
+            engineWorker = Task.Run(() => BuildEngine(key, inputs, chosen.CustomFilters));
         }
-        _ = Task.Run(() => BuildEngine(key, inputs, chosen.CustomFilters));
     }
 
     /// The key the lists in force compile to, with the pinned resources and
@@ -914,6 +923,22 @@ internal sealed class FilterLibrary {
                 state["failures"]?.GetValue<int>() ?? 0, state["title"]?.GetValue<string>(),
                 state["tooLarge"]?.GetValue<bool>() ?? false);
         }
+    }
+
+    #endregion
+
+    #region Actions - Lifetime
+
+    /// Starts no worker from now on and waits for those still converting or
+    /// compiling, so none writes in the folder once this returns. A worker
+    /// that failed stays unreported, as it was while the library ran.
+    public void Stop() {
+        Task rules, filter;
+        lock (gate) {
+            stopped = true;
+            (rules, filter) = (rulesWorker, engineWorker);
+        }
+        Task.WhenAll(rules, filter).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
     }
 
     #endregion

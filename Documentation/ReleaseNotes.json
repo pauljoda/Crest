@@ -5773,6 +5773,10 @@
     "palette-history-site-icons": {
       "category": "improved",
       "message": "History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart."
+    },
+    "core-close-waits-for-filter-conversions": {
+      "category": "internal",
+      "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."
     }
   }
 }
