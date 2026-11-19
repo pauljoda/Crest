@@ -167,10 +167,12 @@ internal sealed class FilterLibrary {
     private string? buildingEngineKey;
     private bool engineRebuildWanted;
     /// The latest worker converting the rules and the latest compiling the
-    /// engine filter, and whether the library stopped, after which none starts.
+    /// engine filter; whether the library stopped, after which none starts;
+    /// and whether it closed, after which nothing writes in the folder.
     private Task rulesWorker = Task.CompletedTask;
     private Task engineWorker = Task.CompletedTask;
     private bool stopped;
+    private bool closed;
 
     #endregion
 
@@ -390,7 +392,7 @@ internal sealed class FilterLibrary {
                 copies.Remove(gone);
                 leases.Remove(gone);
                 heldTexts.Remove(gone);
-                if (folder is not null) File.Delete(Path.Combine(folder, "lists", gone + ".txt"));
+                if (folder is not null && !closed) File.Delete(Path.Combine(folder, "lists", gone + ".txt"));
             }
             SaveState();
         }
@@ -860,10 +862,11 @@ internal sealed class FilterLibrary {
         }
     }
 
-    /// Keeps a download's text. The caller holds the lock.
+    /// Keeps a download's text, unless the library closed. The caller holds
+    /// the lock.
     private void WriteText(string name, byte[] bytes, string text) {
         if (folder is null) heldTexts[name] = text;
-        else WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
+        else if (!closed) WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
     }
 
     private static void WriteAtomically(string path, byte[] bytes) {
@@ -873,9 +876,10 @@ internal sealed class FilterLibrary {
         File.Move(pending, path, overwrite: true);
     }
 
-    /// Writes every copy's state, and the rules in force. The caller holds the lock.
+    /// Writes every copy's state, and the rules in force, unless the library
+    /// closed. The caller holds the lock.
     private void SaveState() {
-        if (folder is null) return;
+        if (folder is null || closed) return;
         var lists = new JsonObject();
         foreach (var (name, copy) in copies)
             lists[name] = new JsonObject {
@@ -929,9 +933,11 @@ internal sealed class FilterLibrary {
 
     #region Actions - Lifetime
 
-    /// Starts no worker from now on and waits for those still converting or
-    /// compiling, so none writes in the folder once this returns. A worker
-    /// that failed stays unreported, as it was while the library ran.
+    /// Starts no worker from now on, waits for those still converting or
+    /// compiling so they keep what they made, and then closes: a download
+    /// reported or a list changed afterwards writes nothing, so nothing writes
+    /// in the folder once this returns. A worker that failed stays unreported,
+    /// as it was while the library ran.
     public void Stop() {
         Task rules, filter;
         lock (gate) {
@@ -939,6 +945,7 @@ internal sealed class FilterLibrary {
             (rules, filter) = (rulesWorker, engineWorker);
         }
         Task.WhenAll(rules, filter).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
+        lock (gate) closed = true;
     }
 
     #endregion
