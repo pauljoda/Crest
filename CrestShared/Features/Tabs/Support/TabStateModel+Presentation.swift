@@ -17,7 +17,7 @@ extension TabStateModel {
 
     /// The address the tab shows, as the platform reads addresses.
     var address: URL? {
-        url.flatMap(URL.init(string:))
+        url.flatMap(URL.init(address:))
     }
 
     /// The name the tab surfaces show, in the person's language: the

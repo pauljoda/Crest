@@ -6,7 +6,7 @@ extension LoadPage {
     /// request, as its document made it. The entry the load commits takes
     /// the core's `entryID` when it names one.
     @MainActor func perform(on binding: WebKitEngineBinding) {
-        guard let address = URL(string: url), let page = binding.page(pageID) else { return }
+        guard let address = URL(address: url), let page = binding.page(pageID) else { return }
         page.engine.history.expectEntry(entryID)
         if let offer = binding.offers.values.first(where: { $0.sourcePageID == pageID && $0.request.url == address }) {
             page.load(offer.request)

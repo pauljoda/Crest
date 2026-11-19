@@ -22,7 +22,7 @@ struct BrowserNavigationHistoryItem: Identifiable, Equatable, Sendable {
     /// The item for `entry`, titled by its host when the page gave it no
     /// title; nil for an entry whose address is not a URL.
     init?(_ entry: PageHistoryEntry) {
-        guard let url = URL(string: entry.url) else { return nil }
+        guard let url = URL(address: entry.url) else { return nil }
         let title = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
         id = entry.id
         self.title = title.isEmpty ? url.host() ?? url.absoluteString : title

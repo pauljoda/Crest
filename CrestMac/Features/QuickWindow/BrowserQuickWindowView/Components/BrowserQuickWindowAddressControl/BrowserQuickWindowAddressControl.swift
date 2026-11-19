@@ -138,7 +138,7 @@ struct BrowserQuickWindowAddressControl: View {
         guard let space = model.spaceModel,
             let resolved = try? model.browser.core.query(
                 ResolveAddress(workspaceID: model.browser.family.workspaceID, spaceID: space.id, input: addressText)),
-            let url = resolved.url.flatMap(URL.init(string:))
+            let url = resolved.url.flatMap(URL.init(address:))
         else { return }
         addressText = url.absoluteString
         model.open(url, isActive: scenePhase == .active)

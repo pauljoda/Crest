@@ -26,7 +26,7 @@ struct BrowserPageNavigationContext: Equatable, Sendable {
         title = tab.displayTitle
         customTitle = BrowserShownTitle.resolve(tab.customTitle)
         placement = tab.placement
-        savedURL = (tab.savedURL ?? (tab.placement.isDurable ? tab.url : nil)).flatMap(URL.init(string:))
+        savedURL = (tab.savedURL ?? (tab.placement.isDurable ? tab.url : nil)).flatMap(URL.init(address:))
         iconMode = tab.iconMode
         spaceAssignment = BrowserSpaceRuntimeAssignment(
             spaceID: spaceID,

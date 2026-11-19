@@ -3,7 +3,7 @@
 
     extension PopupBlocked {
         @MainActor func present(on engine: ChromiumEngine) {
-            guard let page = engine.presentedPage(pageID), let url = URL(string: pageURL) else { return }
+            guard let page = engine.presentedPage(pageID), let url = URL(address: pageURL) else { return }
             page.observer(BrowserPagePopupBlocked(pageURL: url))
         }
     }
