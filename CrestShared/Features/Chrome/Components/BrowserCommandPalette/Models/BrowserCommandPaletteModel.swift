@@ -455,6 +455,13 @@ final class BrowserCommandPaletteModel {
         row.tabID.flatMap { space?.shownTab($0) }
     }
 
+    /// The icon a row wears for its site: that of the first tab the core names
+    /// for it that wears one, or nil. The palette never fetches one.
+    func siteIcon(for row: PaletteRow) -> FaviconAssets.Image? {
+        let favicons = browser.core.state.favicons
+        return row.iconTabIDs.lazy.compactMap { favicons.icon(of: $0) }.first
+    }
+
     /// The engine a row's tab runs on, when its icon wears that engine's
     /// badge, for what the row says to VoiceOver.
     func engineBadge(for row: PaletteRow) -> EngineKind? {

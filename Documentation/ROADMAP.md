@@ -7,6 +7,7 @@ status; release milestones hold the actionable issue descriptions.
 
 ## Published releases
 
+- [Crest 0.10.24](https://github.com/pauljoda/Crest/releases/tag/v0.10.24) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/6?closed=1).
 - [Crest 0.9.1](https://github.com/pauljoda/Crest/releases/tag/v0.9.1) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/5?closed=1).
 - [Crest 0.8.50](https://github.com/pauljoda/Crest/releases/tag/v0.8.50) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/4?closed=1).
 - [Crest 0.7.2](https://github.com/pauljoda/Crest/releases/tag/v0.7.2) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/3?closed=1).
@@ -19,7 +20,7 @@ status; release milestones hold the actionable issue descriptions.
 Release milestones are shown from earliest to latest. The project board holds
 the live status for each issue.
 
-### [0.10](https://github.com/pauljoda/Crest/milestone/6)
+### [0.11](https://github.com/pauljoda/Crest/milestone/7)
 
 #### Planned and in progress
 
@@ -44,14 +45,8 @@ the live status for each issue.
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/pauljoda/Crest/issues/527)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
-
-#### Completed
-
-- [x] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
-- [x] [Preview tabs and folders from the sidebar on hover and hold](https://github.com/pauljoda/Crest/issues/294)
-- [x] [Return to the previous app when a Quick Window from another app closes](https://github.com/pauljoda/Crest/issues/428)
-- [x] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
-- [x] [Choose a Heraldic, Modern or Simple style for customizing Crest, and show Spaces as dots](https://github.com/pauljoda/Crest/issues/1102)
+- [ ] [feature: Show site favicons in address bar suggestions](https://github.com/pauljoda/Crest/issues/1079)
+- [ ] [Make Search the command palette's top row for text that isn't an address](https://github.com/pauljoda/Crest/issues/1236)
 
 <!-- crest-roadmap-sync:end -->
 

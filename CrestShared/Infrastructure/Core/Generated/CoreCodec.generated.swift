@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x03, 0x39, 0xb5, 0x7b, 0xe4, 0x26, 0x09, 0x21, 0x36, 0x43, 0x28, 0xd3, 0x76, 0x45, 0x73, 0x03, 0x1e, 0x57, 0x1e, 0x06, 0xf0, 0x8c, 0x11, 0x9c, 0x43, 0xaa, 0x14, 0x21, 0x31, 0xab, 0x5e, 0x32
+        0xef, 0xff, 0x7c, 0xeb, 0x71, 0xfe, 0x5d, 0x4f, 0x58, 0xb8, 0x48, 0x97, 0x88, 0xfd, 0xd0, 0xcd, 0x0f, 0x90, 0xe5, 0x49, 0x30, 0x6f, 0x54, 0x19, 0x26, 0xa3, 0xfe, 0xc7, 0xbd, 0xdf, 0x08, 0x8c
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -17460,6 +17460,13 @@ extension PaletteRow {
         } else {
             reason = nil
         }
+        let iconTabIDsCount = try reader.readCount()
+        var iconTabIDs: [UUID] = []
+        iconTabIDs.reserveCapacity(iconTabIDsCount)
+        for _ in 0..<iconTabIDsCount {
+            let iconTabIDsElement = try reader.readUUID()
+            iconTabIDs.append(iconTabIDsElement)
+        }
         let httpFallback: String?
         if try reader.readPresence() {
             let httpFallbackValue = try reader.readString()
@@ -17467,7 +17474,7 @@ extension PaletteRow {
         } else {
             httpFallback = nil
         }
-        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason, httpFallback: httpFallback)
+        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason, iconTabIDs: iconTabIDs, httpFallback: httpFallback)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -17522,6 +17529,10 @@ extension PaletteRow {
             present0.encode(into: &writer)
         } else {
             writer.writePresence(false)
+        }
+        writer.writeCount(iconTabIDs.count)
+        for element0 in iconTabIDs {
+            writer.writeUUID(element0)
         }
         if let present0 = httpFallback {
             writer.writePresence(true)
@@ -17594,6 +17605,13 @@ extension PaletteRow.Seed {
         } else {
             reason = nil
         }
+        let iconTabIDsCount = try reader.readCount()
+        var iconTabIDs: [UUID] = []
+        iconTabIDs.reserveCapacity(iconTabIDsCount)
+        for _ in 0..<iconTabIDsCount {
+            let iconTabIDsElement = try reader.readUUID()
+            iconTabIDs.append(iconTabIDsElement)
+        }
         let httpFallback: String?
         if try reader.readPresence() {
             let httpFallbackValue = try reader.readString()
@@ -17601,7 +17619,7 @@ extension PaletteRow.Seed {
         } else {
             httpFallback = nil
         }
-        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason, httpFallback: httpFallback)
+        self.init(kind: kind, title: title, subtitle: subtitle, symbol: symbol, subjectID: subjectID, tabID: tabID, address: address, command: command, provider: provider, settingsPage: settingsPage, scope: scope, reason: reason, iconTabIDs: iconTabIDs, httpFallback: httpFallback)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -17656,6 +17674,10 @@ extension PaletteRow.Seed {
             present0.encode(into: &writer)
         } else {
             writer.writePresence(false)
+        }
+        writer.writeCount(iconTabIDs.count)
+        for element0 in iconTabIDs {
+            writer.writeUUID(element0)
         }
         if let present0 = httpFallback {
             writer.writePresence(true)

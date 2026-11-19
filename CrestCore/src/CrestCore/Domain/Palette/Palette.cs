@@ -118,14 +118,17 @@ public sealed partial class Palette {
 
     /// Typed text: the best match, the address or search, the offers Tab
     /// enters, and every kind ranked, with a completion and suggestions.
+    /// Text that names no address runs its search: the field completes none
+    /// of it, so only a calculation may lead above the search, and Return
+    /// does what the field shows.
     private PaletteAnswer Typed(PaletteQuery query, PaletteSuggestions question) {
-        var habit = Preferences.LearnsChoices ? context.Memory.Habit(query.Text, context.Now) : null;
-        var completion = Completion(question);
-        if (completion is not null && habit is not null && habit != PaletteDestination.Address(completion.Opens)) completion = null;
         var found = Intents(query);
+        bool completes = question.AllowsCompletion && found.FirstOrDefault()?.Kind != PaletteRowKind.Search;
+        var habit = Preferences.LearnsChoices ? context.Memory.Habit(query.Text, context.Now) : null;
+        var completion = completes ? Completion(question) : null;
+        if (completion is not null && habit is not null && habit != PaletteDestination.Address(completion.Opens)) completion = null;
         var ranked = Rank(query, question, found.FirstOrDefault());
-        var lead = PaletteLeadRule.First(context,
-            new(query, completion, question.AllowsCompletion ? habit : null, ranked, question.AllowsCompletion));
+        var lead = PaletteLeadRule.First(context, new(query, completion, completes ? habit : null, ranked, completes));
         if (lead is not null) ranked.RemoveAll(entry => entry.Row with { Reason = lead.Row.Reason } == lead.Row);
         List<PaletteGroup> groups = [];
         List<PaletteRow> intents = [];
