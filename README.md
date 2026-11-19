@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="Website/assets/crest-logo.svg" width="128" alt="Crest app icon">
+  <img src="Website/assets/crest-logo.svg" width="128" alt="The Crest mark: three stacked banners on a navy tile">
   <h1>Crest</h1>
   <p><strong>An open source browser for Mac, iPhone, and iPad.</strong></p>
   <p>Built with SwiftUI, running Chromium and WebKit on Mac, with separate Spaces for different parts of your life.</p>
   <p>
     <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
     <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver&filter=v*"></a>
-    <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-315f93"></a>
+    <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-2B6CC4"></a>
   </p>
   <p>
     <a href="https://crestbrowser.com/"><strong>Visit the product site</strong></a>

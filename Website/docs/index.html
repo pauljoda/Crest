@@ -17,26 +17,25 @@
   <meta property="og:url" content="https://crestbrowser.com/docs/">
   <meta property="og:title" content="Crest Field Guide — Spaces, Peek, Privacy, and Sync">
   <meta property="og:description" content="A practical guide to Crest's isolated Spaces and native browsing tools across Mac, iPad, and iPhone.">
-  <meta property="og:image" content="https://crestbrowser.com/assets/og-card-brand.jpg">
+  <meta property="og:image" content="https://crestbrowser.com/assets/og-card.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Crest app icon beside the words Your internet, under your colors">
+  <meta property="og:image:alt" content="The Crest mark, three stacked banners, beside the words Spaces for your browsing">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Crest Field Guide — Spaces, Peek, Privacy, and Sync">
   <meta name="twitter:description" content="A practical guide to Crest's isolated Spaces and native browsing tools across Mac, iPad, and iPhone.">
-  <meta name="twitter:image" content="https://crestbrowser.com/assets/og-card-brand.jpg">
-  <meta name="twitter:image:alt" content="Crest app icon beside the words Your internet, under your colors">
+  <meta name="twitter:image" content="https://crestbrowser.com/assets/og-card.jpg">
+  <meta name="twitter:image:alt" content="The Crest mark, three stacked banners, beside the words Spaces for your browsing">
 
   <title>Crest Field Guide — Spaces, Peek, Privacy, and Sync</title>
-  <link rel="icon" href="../favicon.ico" sizes="32x32">
-  <link rel="icon" type="image/svg+xml" href="../assets/crest-logo.svg">
+  <link rel="icon" href="../favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/svg+xml" href="../assets/crest-favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/crest-icon-32.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png">
-  <link rel="mask-icon" href="../assets/crest-logo.svg" color="#101827">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
   <link rel="manifest" href="../site.webmanifest">
-  <link rel="stylesheet" href="../styles.css?v=20261106-nav-guides">
+  <link rel="stylesheet" href="../styles.css?v=20261119-modern">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -68,15 +67,22 @@
     }
   </script>
 </head>
-<body class="docs-body">
+<body>
   <a class="skip-link" href="#docs-content">Skip to documentation</a>
-  <header class="site-header scrolled">
-    <a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a>
-    <nav aria-label="Primary navigation"><a href="../guides/">Help &amp; guides</a><a href="../#tour">Split View</a><a href="../#more">Features</a><a class="nav-cta" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer">Download for Mac</a></nav>
+  <header class="site-header">
+    <a class="brand" href="../"><img src="../assets/crest-logo.svg" alt="" width="38" height="38">Crest</a>
+    <span class="spacer"></span>
+    <nav class="site-nav" aria-label="Site">
+      <a class="nav-section" href="../#spaces">Spaces</a>
+      <a class="nav-section" href="../#studio">Studio</a>
+      <a class="nav-section" href="../#privacy">Privacy</a>
+      <a href="../guides/">Guides</a>
+      <a class="button button-primary button-small" href="../#get">Download</a>
+    </nav>
   </header>
-  <main class="docs-shell">
-    <aside class="docs-nav" aria-label="Field guide sections">
-      <p>Field guide</p>
+  <main class="page-layout docs-shell">
+    <aside class="page-nav" aria-label="Field guide sections">
+      <p class="label">Field guide</p>
       <a href="#overview">Overview</a>
       <a href="#spaces">Spaces</a>
       <a href="#tabs">Tabs &amp; archive</a>
@@ -93,12 +99,11 @@
       <a href="#platforms">Mac, iPad &amp; iPhone</a>
     </aside>
     <article class="docs-content" id="docs-content">
-      <p class="eyebrow">Crest field guide</p>
       <h1 id="overview">A browser made of Spaces.</h1>
       <p class="docs-lede">Crest gives work, home, research, and private browsing separate places to live. Switching Spaces changes the browsing context—not just the color of the window.</p>
 
-      <div class="docs-callout"><strong>The short version:</strong> each Space keeps its own signed-in sessions, cookies, history, tabs, pinned sites, passwords, permissions, website data, appearance, and sync identity. A Sub-Space shares its group's sign-ins, website data, history, passwords, site permissions, and extensions, and its pinned tabs unless the group separates them.</div>
-      <div class="docs-callout"><strong>Looking for step-by-step help?</strong> The new <a href="../guides/">Crest Help Center</a> has searchable installation, settings, and troubleshooting guides. This field guide remains the compact product overview.</div>
+      <div class="callout"><strong>The short version:</strong> each Space keeps its own signed-in sessions, cookies, history, tabs, pinned sites, passwords, permissions, website data, appearance, and sync identity. A Sub-Space shares its group's sign-ins, website data, history, passwords, site permissions, and extensions, and its pinned tabs unless the group separates them.</div>
+      <div class="callout"><strong>Looking for step-by-step help?</strong> The new <a href="../guides/">Crest Help Center</a> has searchable installation, settings, and troubleshooting guides. This field guide remains the compact product overview.</div>
 
       <h2 id="spaces">Spaces</h2>
       <p>A Space is both an identity and a boundary. Use the Space switcher to move between them; Crest restores the tabs and session that belong to the destination Space.</p>
@@ -162,13 +167,13 @@
       <p>Keep or remove individual tabs and folders, choose whether a source becomes a new Space or joins an existing one, and include supported passwords only when you want them. Each Space shows the Chrome Web Store extensions it brings under its address bar; Crest installs the ones you keep once the import finishes. The before-and-after preview updates as you make decisions.</p>
       <h3>Customize during setup</h3>
       <p>Open <strong>Customize Space</strong> from the review to rename the destination and edit its colors, crest, and Banner or Gradient presentation before importing.</p>
-      <div class="docs-callout"><strong>Mac first, then everywhere:</strong> direct browser migration happens in Crest for Mac. Once imported, your Spaces and tabs can sync to iPad and iPhone with iCloud.</div>
+      <div class="callout"><strong>Mac first, then everywhere:</strong> direct browser migration happens in Crest for Mac. Once imported, your Spaces and tabs can sync to iPad and iPhone with iCloud.</div>
 
       <h2 id="engines">Chromium and WebKit</h2>
       <p>Crest for Mac requires Apple silicon and macOS 26.1 or later. Updating keeps your Spaces, tabs, history, and Crest Passwords. Chromium starts with separate website sign-ins; older WebKit extensions need to be reinstalled from the Chrome Web Store. Read the <a href="../guides/engines/">engine and upgrade guide</a> for feature differences and current limits.</p>
       <p><strong>Crest for Mac includes two web engines.</strong> Pages open in Chromium, with Google&rsquo;s data collection removed. Any website or page can open in WebKit instead, which adds Reader, built-in content blocking, and FairPlay video. Crest on iPhone and iPad uses WebKit.</p>
       <p>Choose the default engine and website rules in <strong>Settings &rarr; Engines</strong>. Change <strong>Opens in</strong> in Site Controls to send a website to the other engine, or use <strong>Page &rarr; Open Page in WebKit</strong> for one page. When a page asks for Widevine or PlayReady protected video, Crest automatically switches to WebKit unless you have chosen an engine for that website. A player embedded from another website does not switch the page. It checks for unsaved work first; staying on the page cancels the switch and leaves the website rule unchanged.</p>
-      <div class="docs-callout"><strong>Website data stays per engine:</strong> your Spaces, tabs, history, and Crest Passwords are shared, but each engine keeps its own cookies for a Space. Signing in to a site in Chromium does not sign you in to it in WebKit.</div>
+      <div class="callout"><strong>Website data stays per engine:</strong> your Spaces, tabs, history, and Crest Passwords are shared, but each engine keeps its own cookies for a Space. Signing in to a site in Chromium does not sign you in to it in WebKit.</div>
       <p><a href="../guides/engines/">Read the engine guide.</a></p>
 
       <h2 id="extensions">Extensions</h2>
@@ -183,12 +188,12 @@
       <p>Installed extensions can expose pinned actions, popups, side panels, settings pages, and keyboard commands. These controls stay with the Space and device that owns the installation.</p>
       <h3>Password managers and companion apps</h3>
       <p>Extensions that talk to a Mac app, such as 1Password or iCloud Passwords, depend on that app trusting Crest&rsquo;s signature. Use the signed, notarized release installed in Applications. See <a href="../guides/onepassword/">1Password</a>, <a href="../guides/icloud-passwords/">iCloud Passwords</a>, and <a href="../guides/native-companion-limits/">native companions</a>.</p>
-      <p><a href="../#more">See the extension overview on the product page.</a> For setup and troubleshooting, open <a href="../guides/">Crest Help &amp; Guides</a>, including <a href="../guides/install-chrome-web-store/">Chrome Web Store setup</a>, <a href="../guides/extension-api-compatibility/">extension compatibility</a>, and <a href="../guides/troubleshoot-extension-compatibility/">troubleshooting</a>.</p>
+      <p><a href="../#engines">See the extension overview on the product page.</a> For setup and troubleshooting, open <a href="../guides/">Crest Help &amp; Guides</a>, including <a href="../guides/install-chrome-web-store/">Chrome Web Store setup</a>, <a href="../guides/extension-api-compatibility/">extension compatibility</a>, and <a href="../guides/troubleshoot-extension-compatibility/">troubleshooting</a>.</p>
 
       <h2 id="passwords">Passwords and privacy</h2>
       <p>Crest Passwords are saved in the system Keychain and suggested only for matching websites. Viewing, copying, or exporting sensitive information can require device authentication.</p>
       <p>Website permissions are handled per site and remain tied to their Space. Private Spaces use temporary website storage and do not join your ordinary browsing record.</p>
-      <div class="docs-callout"><strong>Deletion is explicit:</strong> clearing a site's data, removing saved credentials, and deleting an entire Space are separate actions, each showing the scope before it proceeds.</div>
+      <div class="callout"><strong>Deletion is explicit:</strong> clearing a site's data, removing saved credentials, and deleting an entire Space are separate actions, each showing the scope before it proceeds.</div>
 
       <h2 id="data">History, data, and sync</h2>
       <h3>History that respects context</h3>
@@ -223,6 +228,20 @@
       </table>
     </article>
   </main>
-  <footer><a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a><p>A native browser for Mac, iPad, and iPhone.</p><div><a href="../#crests">Spaces</a><a href="../#tour">Split View</a><a href="../#more">Features</a><a href="../guides/">Help</a><a href="../support/">Support</a><a href="../privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer">Download for Mac</a><a href="https://ko-fi.com/pauljoda/tiers" target="_blank" rel="noopener noreferrer">Support open source software</a><a href="../">Product site</a></div></footer>
+  <div class="page-footer">
+    <footer class="site-footer">
+      <p>Crest is in early access, and its security has not been independently audited.</p>
+      <nav aria-label="Footer">
+        <a href="../guides/">Guides</a>
+        <a href="../docs/">Field guide</a>
+        <a href="../support/">Support</a>
+        <a href="../privacy/">Privacy</a>
+        <a href="https://github.com/pauljoda/Crest">GitHub</a>
+        <a href="https://www.reddit.com/r/CrestBrowser">Reddit</a>
+        <a href="https://discord.gg/gjrM5qMB6x">Discord</a>
+        <a href="https://ko-fi.com/pauljoda/tiers">Donate</a>
+      </nav>
+    </footer>
+  </div>
 </body>
 </html>

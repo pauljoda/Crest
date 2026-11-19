@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs><path id="b" d="M17 13.8Q17 11 19.8 11L44.2 11Q47 11 47 13.8L47 32.2Q47 35 44.78 33.3L34.22 25.2Q32 23.5 29.78 25.2L19.22 33.3Q17 35 17 32.2Z"/></defs>
+  <rect width="64" height="64" rx="15" fill="#172238"/>
+  <use href="#b" transform="translate(0 18)" fill="#62A9D8"/>
+  <use href="#b" transform="translate(0 9)" fill="#E9604B" stroke="#172238" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke"/>
+  <use href="#b" fill="#F2C14E" stroke="#172238" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke"/>
+</svg>
