@@ -1,13 +1,13 @@
 ---
 title: Route links to the right Space
-description: Build Air Traffic Control-style URL rules that send external links to a chosen Crest Space.
+description: Build URL rules that send external links to a chosen Crest Space.
 slug: /link-routing
-keywords: [link routing, Air Traffic Control, URL rules, external links, Space]
+keywords: [link routing, URL rules, external links, Space]
 ---
 
 # Route links to the right Space
 
-Link Routing is Crest’s equivalent of Arc’s Air Traffic Control: matching links opened from other apps can go to a specific Space before the normal external-link destination is considered.
+Link Routing sends matching links opened from other apps to a specific Space before the normal external-link destination is considered.
 
 ## Create a route
 

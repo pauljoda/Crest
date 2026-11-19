@@ -114,7 +114,7 @@ const config = {
           ],
         },
       ],
-      copyright: `Crest is not affiliated with Arc. © ${new Date().getFullYear()} Paul Davis.`,
+      copyright: `© ${new Date().getFullYear()} Paul Davis.`,
     },
     prism: {
       theme: prismThemes.github,

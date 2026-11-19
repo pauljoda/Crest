@@ -2,7 +2,7 @@
 title: Use Peek and Quick Window
 description: Preview links without losing your place and handle links opened from other apps.
 slug: /peek-and-quick-window
-keywords: [Peek, Quick Window, Little Arc, preview, external links, transient browsing]
+keywords: [Peek, Quick Window, preview, external links, transient browsing]
 ---
 
 # Use Peek and Quick Window

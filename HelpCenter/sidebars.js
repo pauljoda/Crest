@@ -59,8 +59,6 @@ const sidebars = {
       collapsed: false,
       items: [
         'extensions/install-chrome-web-store',
-        'extensions/install-firefox-add-ons',
-        'extensions/scan-safari-web-extensions',
       ],
     },
     {

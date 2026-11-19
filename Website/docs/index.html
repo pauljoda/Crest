@@ -118,11 +118,11 @@
         </tbody>
       </table>
       <h3>Sub-Spaces</h3>
-      <p>A Sub-Space shares another Space's sign-ins, history, passwords, and extensions while keeping its own tabs and look, like Spaces on one Arc profile. <a href="../guides/sub-spaces/">Share sign-ins across Spaces with Sub-Spaces</a>.</p>
+      <p>A Sub-Space shares another Space's sign-ins, history, passwords, and extensions while keeping its own tabs and look. <a href="../guides/sub-spaces/">Share sign-ins across Spaces with Sub-Spaces</a>.</p>
       <h3>Make a Space recognizable</h3>
       <p>Think of every Space as a banner. Open the Space editor to choose its colors and crest; the full sidebar wears that identity and carries it into the Space switcher, making a context change visible before you read its name.</p>
       <h3>Banner or Gradient</h3>
-      <p><strong>Banner mode</strong> uses distinct color fields and heraldic patterns for an expressive, unmistakable Space. <strong>Gradient</strong>, the last choice in Crest Studio's Sidebar step, preserves the familiar Arc-style theme: blend one to three colors into a smooth atmosphere, then adjust its direction, strength, readability, and optional texture.</p>
+      <p><strong>Banner mode</strong> uses distinct color fields and heraldic patterns for an expressive, unmistakable Space. <strong>Gradient</strong>, the last choice in Crest Studio's Sidebar step, blends one to three colors into a smooth atmosphere; then adjust its direction, strength, readability, and optional texture.</p>
       <h3>Private Spaces</h3>
       <p>A Private Space is temporary. Its website data is non-persistent and it stays out of normal history, restoration, archive, and synchronization.</p>
 
@@ -142,25 +142,22 @@
 
       <h2 id="quick-and-peek">Quick Window and Peek</h2>
       <h3>Quick Window</h3>
-      <p>Quick Window carries forward the idea behind Arc's Little Arc. On Mac, links opened from other apps can arrive in a lightweight browser instead of immediately joining your durable tabs. Choose the right Space and it uses that Space's signed-in session and Crest Passwords; close it when you are done, or keep it by opening it as a full tab.</p>
+      <p>On Mac, links opened from other apps can arrive in Quick Window, a lightweight browser, instead of immediately joining your durable tabs. Choose the right Space and it uses that Space's signed-in session and Crest Passwords; close it when you are done, or keep it by opening it as a full tab.</p>
       <h3>Peek</h3>
       <p>Peek opens a link above the page you are reading. Close it to return immediately, or open it in the current or another Space when it earns a permanent place.</p>
 
       <h2 id="routing">Link Routing</h2>
-      <p>Crest carries Arc&rsquo;s Air Traffic Control idea forward as Link Routing. Add exact or contains rules in <strong>Settings → Links</strong>, choose a destination Space, and order narrow rules before broad ones. Matching external links route before Crest applies the normal Quick Window, Most Recent Space, or Chosen Space default.</p>
+      <p>Link Routing sends links opened from other apps to the right Space. Add exact or contains rules in <strong>Settings → Links</strong>, choose a destination Space, and order narrow rules before broad ones. Matching external links route before Crest applies the normal Quick Window, Most Recent Space, or Chosen Space default.</p>
       <p><a href="../guides/link-routing/">Build and test a Link Routing rule.</a></p>
 
       <h2 id="migration">Moving to Crest</h2>
-      <p>On Mac, Crest can discover Arc, Zen, Chrome, Safari, Firefox, and other Chromium browsers and turn their browsing data into a visual import review. Choose one or more sources, then work through every Space or profile before anything is committed. If your browser isn&rsquo;t listed, choose <strong>Scan for more</strong> and Crest looks for other Chromium-based browsers on your Mac.</p>
+      <p>On Mac, Crest finds Arc and the other browsers on your Mac and turns their browsing data into a visual import review. Choose one or more sources, then work through every Space or profile before anything is committed. If your browser isn&rsquo;t listed, choose <strong>Scan for more</strong> and Crest looks for other browsers built on Chromium.</p>
       <table class="docs-table">
         <thead><tr><th>Source</th><th>What Crest can bring over</th></tr></thead>
         <tbody>
           <tr><td>Arc</td><td>Spaces (each profile's as one Sub-Space group), tabs, folders, split views, colors, icons, extensions, and passwords.</td></tr>
-          <tr><td>Zen</td><td>Spaces from every profile (each profile's as one Sub-Space group), Essentials, pinned tabs, folders, split views, open tabs, icons, and colors.</td></tr>
-          <tr><td>Chrome</td><td>Profiles, bookmarks, open tabs, tab groups, split views, extensions, and passwords.</td></tr>
-          <tr><td>Brave, Edge, Vivaldi, Opera, Dia, Comet, Aside, ego lite, Chromium, and Chrome Beta, Dev, and Canary</td><td>Profiles, bookmarks, open tabs, tab groups, split views, extensions, and passwords.</td></tr>
-          <tr><td>Safari</td><td>Bookmarks, windows, open tabs, and pinned tabs.</td></tr>
-          <tr><td>Firefox</td><td>Profiles, windows, open tabs, pinned tabs, and tab groups.</td></tr>
+          <tr><td>Browsers built on Chromium</td><td>Profiles, bookmarks, open tabs, tab groups, split views, extensions, and passwords.</td></tr>
+          <tr><td>Other browsers</td><td>Windows, open tabs, and pinned tabs, plus bookmarks, profiles, workspaces, folders, split views, tab groups, icons, and colors where Crest can read them.</td></tr>
         </tbody>
       </table>
       <h3>Review before anything moves</h3>
@@ -177,14 +174,14 @@
       <p><a href="../guides/engines/">Read the engine guide.</a></p>
 
       <h2 id="extensions">Extensions</h2>
-      <p><strong>Install Chrome Web Store extensions on Mac.</strong> Extensions run on Chromium pages. Pages you open in WebKit, and Crest on iPhone and iPad, run no extensions. Compatibility varies when an extension relies on part of Chrome&rsquo;s window that Crest draws differently, or on a companion Mac app.</p>
+      <p><strong>Install Chrome Web Store extensions on Mac.</strong> Extensions run on Chromium pages. Pages you open in WebKit, and Crest on iPhone and iPad, run no extensions. Compatibility varies when an extension relies on a part of the browser window that Crest draws its own way, or on a companion Mac app.</p>
       <p>Extensions belong to a Space and a device. Each installation keeps independent permissions, storage, enablement, pinning, and site access, so configuring a tool in Work does not silently change Personal or another device. The Spaces of a Sub-Space group share one installation.</p>
       <h3>Ways to install on Mac</h3>
       <ul>
         <li><strong>Chrome Web Store:</strong> open the extension&rsquo;s store page and select <strong>Add to Crest</strong>. Chromium checks the publisher&rsquo;s signature and the extension&rsquo;s ID, then Crest shows its permissions and website access for review before installing it in the current Space.</li>
         <li><strong>Unpacked extensions:</strong> for development, load them from Chromium&rsquo;s extension manager in developer mode.</li>
       </ul>
-      <p>Firefox add-ons, Safari Web Extensions, Safari content blockers, and Safari App Extensions are not supported. Many of them publish a Chrome version.</p>
+      <p>Extensions in other browsers&rsquo; formats, including ones that ship inside a Mac app, are not supported. Many are also on the Chrome Web Store.</p>
       <p>Installed extensions can expose pinned actions, popups, side panels, settings pages, and keyboard commands. These controls stay with the Space and device that owns the installation.</p>
       <h3>Password managers and companion apps</h3>
       <p>Extensions that talk to a Mac app, such as 1Password or iCloud Passwords, depend on that app trusting Crest&rsquo;s signature. Use the signed, notarized release installed in Applications. See <a href="../guides/onepassword/">1Password</a>, <a href="../guides/icloud-passwords/">iCloud Passwords</a>, and <a href="../guides/native-companion-limits/">native companions</a>.</p>

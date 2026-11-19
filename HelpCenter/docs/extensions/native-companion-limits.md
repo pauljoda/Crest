@@ -13,9 +13,9 @@ Most extensions need no desktop helper. A smaller group, with password managers 
 
 ## How Crest finds the helper
 
-Extensions run on Chromium, which handles `nativeMessaging` as Chrome does. Each companion app registers a small manifest that names its helper and the extension IDs it will answer.
+Extensions run on Chromium, which handles `nativeMessaging` itself. Each companion app registers a small manifest that names its helper and the extension IDs it will answer.
 
-Most companion apps register only with Google Chrome. When Chromium's own lookup finds no manifest, Crest also checks Chrome's per-user and system `NativeMessagingHosts` folders. Chromium still checks the manifest's `allowed_origins`, so a helper answers only the extensions its app lists.
+Most companion apps register only in another browser's folders. When Chromium's own lookup finds no manifest, Crest also checks the per-user and system `NativeMessagingHosts` folders those apps use. Chromium still checks the manifest's `allowed_origins`, so a helper answers only the extensions its app lists.
 
 ## The app decides whether to trust Crest
 
@@ -28,8 +28,8 @@ Use the signed and notarized Crest release in `/Applications`. A development bui
 
 ## What Crest does not do
 
-- Crest does not copy Chrome's profile or read a companion app's data.
-- Safari app extensions and their native handlers do not work in Crest.
+- Crest does not copy another browser's profile or read a companion app's data.
+- App extensions made for other browsers, and their native handlers, do not work in Crest.
 
 ## Availability
 
