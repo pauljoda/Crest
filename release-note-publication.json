@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "palette-history-site-icons",
+    "development": "search-icons-spacing",
     "nightly": "palette-history-site-icons"
   }
 }
