@@ -175,7 +175,8 @@ code { font-family: var(--mono); font-size: .88em; padding: .1em .4em; border-ra
   position: relative;
   z-index: var(--z, 2);
   margin: -48px 16px 0;
-  min-height: 820px;
+  /* Shorter windows get shorter cards, so each still shows the edge of the one behind it. */
+  min-height: min(820px, calc(100svh - 140px));
   padding: 120px 32px 150px;
   border-radius: 52px;
   color: var(--ink);
@@ -200,14 +201,16 @@ code { font-family: var(--mono); font-size: .88em; padding: .1em .4em; border-ra
 .stack-copy h2 { font-size: clamp(54px, 6.4vw, 104px); line-height: .95; letter-spacing: -.035em; }
 .stack-copy p { max-width: 470px; font-size: 21px; line-height: 1.55; font-weight: 600; }
 .stack-slate .stack-copy p, .stack-ink .stack-copy p { color: var(--on-dark); }
-.stack-copy .more { align-self: flex-start; color: inherit; font-family: var(--display); font-size: 17px; font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .25em; }
-.stack-copy .more:hover { color: inherit; text-decoration-thickness: 3px; }
+.stack-copy .button { align-self: flex-start; margin-top: 4px; }
+.stack-copy .button-secondary { box-shadow: 0 8px 22px rgba(23, 34, 56, .14); }
+.stack-copy .button-secondary:hover { box-shadow: 0 10px 26px rgba(23, 34, 56, .2); }
 .stack-art { flex: 1 1 440px; min-width: 0; display: flex; justify-content: center; }
 .accent { color: var(--butter); }
 .nowrap { white-space: nowrap; }
 .phones { width: 100%; display: flex; justify-content: center; gap: 22px; }
 .phones .fit { flex: 1 1 0; margin: 0; }
 .fit-split { margin-bottom: 26px; }
+.fit-tilted { margin-block: 8px; }
 
 .center-head { display: flex; flex-direction: column; align-items: center; gap: 26px; text-align: center; }
 .center-head h2 { font-size: clamp(52px, 6vw, 96px); line-height: .95; letter-spacing: -.035em; }
@@ -237,6 +240,7 @@ code { font-family: var(--mono); font-size: .88em; padding: .1em .4em; border-ra
 .platform small { display: block; margin-top: 4px; color: var(--text-3); font-size: 13px; }
 .platform p { color: var(--text-2); font-size: 16px; line-height: 1.5; }
 .platform p a { font-weight: 600; }
+.platform p code { display: inline-block; margin-top: 4px; white-space: nowrap; }
 .rule { width: min(260px, 100%); height: 20px; margin: 0 auto; }
 
 /* ------------------------------------------------------------ footer */
