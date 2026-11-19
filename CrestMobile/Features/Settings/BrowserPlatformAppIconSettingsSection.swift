@@ -12,7 +12,8 @@ struct BrowserPlatformAppIconSettingsSection: View {
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 12)], spacing: 16) {
                 iconChoice(name: nil, title: "Crest")
-                ForEach(SpaceHouse.all, id: \.self) { house in
+                // A house that wears Crest's own icon is the choice above.
+                ForEach(SpaceHouse.all.filter { $0.appIconName != nil }, id: \.self) { house in
                     iconChoice(name: house.appIconName, title: house.title)
                 }
             }

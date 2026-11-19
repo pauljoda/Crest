@@ -2,36 +2,65 @@ import SwiftUI
 
 /// Dynamic Type-aware roles for Crest-authored content.
 ///
-/// Crest pairs a serif display face with a humanist sans for body and controls.
-/// Both faces ship with macOS and iOS, so nothing is embedded in the bundle.
+/// Crest sets its voice in SF Pro Rounded, heavy, for hero lines, titles,
+/// buttons and small caps labels, over SF Pro for body and supporting copy.
+/// Both ship with macOS and iOS, so nothing is embedded in the bundle.
 enum CrestTypography {
-    /// The serif display face used for brand voice: hero lines, page titles, and
-    /// section headings in Crest-authored surfaces.
-    static let displayFontName = "Iowan Old Style"
-    /// The humanist sans used for supporting copy and control labels.
-    static let sansFontName = "Avenir Next"
-
     static let controlTitle = Font.body.weight(.medium)
-    /// A button's title, in the system face.
-    static let buttonTitle = Font.body.weight(.semibold)
+    /// A button's title: rounded and bold.
+    static let buttonTitle = Font.system(.body, design: .rounded, weight: .bold)
+    /// A page's one large call to action: rounded and heavy.
+    static let largeButtonTitle = Font.system(.title3, design: .rounded, weight: .heavy)
+    /// A small caps label over a section or a group, in rounded heavy; set
+    /// with `crestCapsLabel()`, which adds its tracking and color.
+    static let capsLabel = Font.system(size: 12, weight: .heavy, design: .rounded)
+    /// A settings or setup section's title: rounded heavy, at the size the
+    /// platform gives section headers.
+    static let sectionHeading = Font.system(.headline, design: .rounded, weight: .heavy)
     static let metadata = Font.caption
     static let compactMetadata = Font.caption2
     static let badge = Font.caption2.monospaced().weight(.semibold)
 
-    /// Display serif that scales with Dynamic Type against `style`.
+    /// Display type, rounded and heavy, at `size`, scaling with Dynamic Type
+    /// as `style` does where the platform has it.
     static func display(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-        .custom(displayFontName, size: size, relativeTo: style)
+        #if os(iOS)
+            let scaled = UIFontMetrics(forTextStyle: platformStyle(of: style)).scaledValue(for: size)
+            return .system(size: scaled, weight: .heavy, design: .rounded)
+        #else
+            return .system(size: size, weight: .heavy, design: .rounded)
+        #endif
     }
 
-    /// Display serif at a fixed optical size. Retained for hand-tuned editorial
-    /// layouts (the onboarding wizard) whose line breaks are composed by hand.
+    /// Display type, rounded and heavy, at a fixed size, for layouts whose
+    /// line breaks are composed by hand.
     static func display(_ size: CGFloat) -> Font {
-        .custom(displayFontName, size: size)
+        .system(size: size, weight: .heavy, design: .rounded)
     }
 
+    /// Body and supporting type in the system face.
     static func sans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .custom(sansFontName, size: size).weight(weight)
+        .system(size: size, weight: weight)
     }
+
+    #if os(iOS)
+        /// The UIKit text style matching `style`, for scaling a size by it.
+        private static func platformStyle(of style: Font.TextStyle) -> UIFont.TextStyle {
+            switch style {
+            case .largeTitle: .largeTitle
+            case .title: .title1
+            case .title2: .title2
+            case .title3: .title3
+            case .headline: .headline
+            case .subheadline: .subheadline
+            case .callout: .callout
+            case .footnote: .footnote
+            case .caption: .caption1
+            case .caption2: .caption2
+            default: .body
+            }
+        }
+    #endif
 
     // MARK: - Named display roles
 

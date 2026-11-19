@@ -5,7 +5,7 @@ public sealed class CrestDepth {
     #region Types
 
     /// Each platform casts each depth's shadow, so its renderer switches over the kind.
-    public enum Kinds { None, Soft, Lifted }
+    public enum Kinds { None, Soft, Lifted, Figure }
 
     #endregion
 
@@ -14,8 +14,10 @@ public sealed class CrestDepth {
     public static readonly CrestDepth None = new(Kinds.None, "none", "None", CrestVocabulary.Baseline);
     public static readonly CrestDepth Soft = new(Kinds.Soft, "soft", "Soft", CrestVocabulary.Studio);
     public static readonly CrestDepth Lifted = new(Kinds.Lifted, "lifted", "Lifted", CrestVocabulary.Studio);
+    /// The figure alone lifted off a flat field, as paper cut and laid on it.
+    public static readonly CrestDepth Figure = new(Kinds.Figure, "figure", "Raised Figure", CrestVocabulary.Simple);
 
-    public static IReadOnlyList<CrestDepth> All { get; } = [None, Soft, Lifted];
+    public static IReadOnlyList<CrestDepth> All { get; } = [None, Soft, Lifted, Figure];
 
     public Kinds Kind { get; }
     public string Name { get; }

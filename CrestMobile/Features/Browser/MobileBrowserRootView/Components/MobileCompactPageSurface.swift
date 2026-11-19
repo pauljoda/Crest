@@ -14,10 +14,17 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
     let notices: BrowserNotices
     let showsNotices: Bool
     let reduceMotion: Bool
+    /// Whether the page rises over setup as setup hands over, where the tab
+    /// it would grow from lies hidden under setup.
+    let risesOverSetup: Bool
     let tabPromotionNamespace: Namespace.ID
     let completePagePresentation: () -> Void
     let backdrop: Backdrop
     let detail: Detail
+
+    /// Whether this page rose over setup, kept as it was when the page came
+    /// up, so the page stays the same view once setup goes from under it.
+    @State private var roseOverSetup: Bool?
 
     @ViewBuilder
     var body: some View {
@@ -28,7 +35,10 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
         .interactiveDismissDisabled(
             !Self.allowsInteractiveDismissal
         )
-        .onAppear(perform: completePagePresentation)
+        .onAppear {
+            if roseOverSetup == nil { roseOverSetup = risesOverSetup }
+            completePagePresentation()
+        }
         .overlay(alignment: .top) {
             if showsNotices {
                 BrowserNoticeLayer(
@@ -43,7 +53,7 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
         // zoom below stays on the presentation's outermost view.
         .modifier(MobileBrowserSideToolbarHost())
 
-        if reduceMotion {
+        if reduceMotion || (roseOverSetup ?? risesOverSetup) {
             page
         } else if let selectedTab,
             selectedTab.isPromotionSource(isSelected: true)

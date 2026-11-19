@@ -2,12 +2,18 @@ import SwiftUI
 
 /// A palette a Space can take in one tap: a Background, a gradient of colors
 /// at one lightness turned a little round the wheel, and an Accent set well
-/// off it, so the crest and highlights read. The palettes come in three
-/// families: light pastels, clear brights and deep tones. Taking one keeps
-/// the Space's crest, which then wears the Space's colors.
+/// off it, so the crest and highlights read. Crest's own look comes first,
+/// then three families: light pastels, clear brights and deep tones. Taking
+/// one keeps the Space's crest, which then wears the Space's colors.
 struct BrowserSpacePalette: Hashable, Identifiable, Sendable {
     // MARK: - Static Variables
 
+    /// Crest's own look, the colors of the Crest house: ink washing into sky
+    /// toward the foot, with a butter Accent.
+    static let crest = BrowserSpacePalette(
+        name: "crest", title: "Crest",
+        background: [Tincture.crestInk.color, Tincture.crestDusk.color, Tincture.crestSky.color],
+        accent: [Tincture.crestButter.color], degrees: 75)
     /// A light pastel blossom.
     static let blossom = BrowserSpacePalette(
         name: "blossom", title: "Blossom",
@@ -94,7 +100,7 @@ struct BrowserSpacePalette: Hashable, Identifiable, Sendable {
         accent: [BrandColor(red: 0.923, green: 0.801, blue: 0.908)])
 
     static let all: [BrowserSpacePalette] = [
-        blossom, lagoon, lilac, linen, sunset, ocean, orchid, citrus, midnight, forest, ember, plum,
+        crest, blossom, lagoon, lilac, linen, sunset, ocean, orchid, citrus, midnight, forest, ember, plum,
     ]
 
     // MARK: - Variables
@@ -105,25 +111,28 @@ struct BrowserSpacePalette: Hashable, Identifiable, Sendable {
     let background: [BrandColor]
     /// The Accent's colors.
     let accent: [BrandColor]
+    /// Where the Background runs: 0 left to right, 90 top to bottom.
+    let degrees: Double
     /// How strongly grain lies over the Background, for a palette whose
     /// colors have a material, such as linen.
     let texture: Double
 
     var id: String { name }
 
-    var backgroundFill: CrestColorFill { CrestColorFill(background) }
+    var backgroundFill: CrestColorFill { CrestColorFill(background, degrees: degrees) }
     var accentFill: CrestColorFill { CrestColorFill(accent) }
 
     // MARK: - Initializers
 
     private init(
         name: String, title: LocalizedStringResource, background: [BrandColor], accent: [BrandColor],
-        texture: Double = 0
+        degrees: Double = 90, texture: Double = 0
     ) {
         self.name = name
         self.title = title
         self.background = background
         self.accent = accent
+        self.degrees = degrees
         self.texture = texture
     }
 

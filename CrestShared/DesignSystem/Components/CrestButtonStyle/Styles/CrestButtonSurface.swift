@@ -7,8 +7,12 @@ struct CrestButtonSurface: View {
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.crestControlAccent) private var controlAccent
+    @Environment(\.controlSize) private var controlSize
     @State private var isHovering = false
+
+    /// Whether the button is the one large call to action of a page, as
+    /// `controlSize(.extraLarge)` asks.
+    private var isLarge: Bool { controlSize == .extraLarge }
 
     var body: some View {
         rendered
@@ -35,19 +39,19 @@ struct CrestButtonSurface: View {
         }
     }
 
-    /// The one action that leads on: a solid pill in the text's own color,
-    /// so it reads first over any room without a color of its own, under a
-    /// faint sheen along its top; a caller's tint fills it instead, under
-    /// white or black text as reads best.
+    /// The one action that leads on: a solid pill in Crest blue, the color of
+    /// what a person can press, under a faint sheen along its top, or in a
+    /// caller's tint, with white or black text as reads best.
     private var primary: some View {
-        let fill = tint ?? Color.primary
+        let fill = tint ?? CrestBrandTheme.action
         return configuration.label
-            .font(CrestTypography.buttonTitle)
-            .foregroundStyle(
-                tint.map { AnyShapeStyle($0.perceptualForeground(in: colorScheme)) } ?? AnyShapeStyle(.background)
+            .font(isLarge ? CrestTypography.largeButtonTitle : CrestTypography.buttonTitle)
+            .foregroundStyle(fill.perceptualForeground(in: colorScheme))
+            .padding(
+                .horizontal,
+                isLarge ? CrestButtonMetrics.largeHorizontalPadding : CrestButtonMetrics.prominentHorizontalPadding
             )
-            .padding(.horizontal, CrestButtonMetrics.prominentHorizontalPadding)
-            .frame(minHeight: CrestButtonMetrics.prominentHeight)
+            .frame(minHeight: isLarge ? CrestButtonMetrics.largeHeight : CrestButtonMetrics.prominentHeight)
             .background {
                 Capsule().fill(fill.opacity(primaryFillOpacity))
             }
@@ -70,10 +74,13 @@ struct CrestButtonSurface: View {
     /// enough to show the surface under it.
     private var secondary: some View {
         configuration.label
-            .font(CrestTypography.buttonTitle)
+            .font(isLarge ? CrestTypography.largeButtonTitle : CrestTypography.buttonTitle)
             .foregroundStyle(.primary)
-            .padding(.horizontal, CrestButtonMetrics.standardHorizontalPadding)
-            .frame(minHeight: CrestButtonMetrics.standardHeight)
+            .padding(
+                .horizontal,
+                isLarge ? CrestButtonMetrics.largeHorizontalPadding : CrestButtonMetrics.standardHorizontalPadding
+            )
+            .frame(minHeight: isLarge ? CrestButtonMetrics.largeHeight : CrestButtonMetrics.standardHeight)
             .background {
                 Capsule().fill(Color.primary.opacity(secondaryFillOpacity))
             }
@@ -141,7 +148,7 @@ struct CrestButtonSurface: View {
     private func icon(diameter: CGFloat, isProminent: Bool) -> some View {
         // A quiet glyph is a neutral action and draws in the secondary text
         // colour; only a prominent one, or one given a tint, takes a colour.
-        let tint = tint ?? (isProminent ? controlAccent ?? CrestBrandTheme.accent : CrestColor.textSecondary)
+        let tint = tint ?? (isProminent ? CrestBrandTheme.accent : CrestColor.textSecondary)
         let hitTarget = max(diameter, CrestLayout.minimumHitTarget)
         return configuration.label
             .foregroundStyle(tint)
@@ -169,7 +176,7 @@ struct CrestButtonSurface: View {
     }
 
     private var resolvedTint: Color { tint ?? CrestBrandTheme.accent }
-    private var resolvedTextTint: Color { tint ?? controlAccent ?? CrestBrandTheme.accentText }
+    private var resolvedTextTint: Color { tint ?? CrestBrandTheme.accentText }
 
     private func tintedFillOpacity(isEmphasized: Bool) -> Double {
         switch (configuration.isPressed, isEmphasized || isHovering) {

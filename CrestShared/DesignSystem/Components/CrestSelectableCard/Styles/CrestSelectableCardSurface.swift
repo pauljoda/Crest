@@ -11,11 +11,10 @@ struct CrestSelectableCardSurface: View {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.crestControlAccent) private var controlAccent
     @State private var isHovering = false
 
     var body: some View {
-        let tint = tint ?? controlAccent ?? CrestBrandTheme.accent
+        let tint = tint ?? CrestBrandTheme.accent
         let shape = CrestSelectableCardShape(cornerRadius: density.cornerRadius)
 
         configuration.label

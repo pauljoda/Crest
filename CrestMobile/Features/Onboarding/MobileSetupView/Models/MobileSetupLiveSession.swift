@@ -39,6 +39,12 @@ final class MobileSetupLiveSession {
         return edits.isEmpty ? nil : edits
     }
 
+    /// The look of the Space the copy shows now, which the room around the
+    /// copy wears.
+    var shownLook: SpaceBranding? {
+        copy?.store.shownSpace?.settings.look
+    }
+
     // MARK: - Mutators
 
     /// Shows `seed`, whose tabs wear `images`, on Space `spaceID` when it
@@ -66,6 +72,15 @@ final class MobileSetupLiveSession {
     func show(_ spaceID: UUID?) {
         guard let spaceID else { return }
         copy?.store.showSetupSpace(spaceID)
+    }
+
+    /// Shows the Getting Started guide in the copy's first Space, as Crest
+    /// opens on it once setup finishes, so the copy grows into the browser
+    /// showing the same page.
+    func showGettingStarted() {
+        guard let store = copy?.store, let first = store.spaceModels.first else { return }
+        store.showSetupSpace(first.id)
+        store.openGettingStarted()
     }
 
     /// Lets the copy go.

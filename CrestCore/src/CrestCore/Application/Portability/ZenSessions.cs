@@ -177,8 +177,9 @@ internal static class ZenSessions {
             // The workspaces of one profile share its session, and those that
             // open their tabs in one container share that container's.
             var container = ImportJson.Integer(ImportJson.Member(space, "containerTabId"));
-            drafts.Add(new SessionDraft(index + 1, name, spaceFolders, spaceTabs, Icon(ImportJson.Text(ImportJson.Member(space, "icon"))),
-                colors.Count == 0 ? SpaceAccent.Indigo : SpaceAccent.Nearest(colors[0]), Look(colors, theme),
+            string icon = Icon(ImportJson.Text(ImportJson.Member(space, "icon")));
+            drafts.Add(new SessionDraft(index + 1, name, spaceFolders, spaceTabs, icon,
+                colors.Count == 0 ? SpaceAccent.Indigo : SpaceAccent.Nearest(colors[0]), Look(colors, theme, icon),
                 Group: container is > 0 ? ContainerSession + container.Value.ToString(CultureInfo.InvariantCulture) : SharedSession));
         }
         return drafts;
@@ -273,12 +274,13 @@ internal static class ZenSessions {
     }
 
     /// A gradient banner in bands of several colors, or a solid banner of
-    /// one, as strong as the theme's opacity and textured as it is.
-    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, JsonElement? theme) => colors.Count == 0 ? null
+    /// one, as strong as the theme's opacity and textured as it is, with the
+    /// workspace's icon `symbol` on its crest.
+    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, JsonElement? theme, string symbol) => colors.Count == 0 ? null
         : SpaceBranding.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Bands : SpaceBannerPattern.Solid,
             Math.Clamp(ImportJson.Number(ImportJson.Member(theme, "opacity")) ?? DefaultOpacity, 0, 1), SpaceBranding.LegacyReadabilityFade,
             SpaceThemeMode.Gradient, gradientAngle: 45,
-            textureStrength: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0 ? 1 : 0);
+            textureStrength: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0 ? 1 : 0, symbol: symbol);
 
     #endregion
 }

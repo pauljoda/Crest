@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xef, 0xff, 0x7c, 0xeb, 0x71, 0xfe, 0x5d, 0x4f, 0x58, 0xb8, 0x48, 0x97, 0x88, 0xfd, 0xd0, 0xcd, 0x0f, 0x90, 0xe5, 0x49, 0x30, 0x6f, 0x54, 0x19, 0x26, 0xa3, 0xfe, 0xc7, 0xbd, 0xdf, 0x08, 0x8c
+        0x30, 0x97, 0xd8, 0x15, 0xb2, 0xf6, 0x9d, 0x11, 0x2c, 0x26, 0x8f, 0x0d, 0x5e, 0x6d, 0xa9, 0x46, 0xff, 0x2d, 0xbf, 0xcc, 0x25, 0x3c, 0xfb, 0x46, 0xc5, 0x1f, 0x83, 0x8c, 0x32, 0x8a, 0xc7, 0xee
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -23098,6 +23098,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SpaceHouse.All, value));
+    }
+
+    public static SpaceHouseStyle ReadSpaceHouseStyle(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SpaceHouseStyle.All[reader.ReadEnum(SpaceHouseStyle.All.Count)];
+    }
+
+    public static void WriteSpaceHouseStyle(WireWriter writer, SpaceHouseStyle value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SpaceHouseStyle.All, value));
     }
 
     public static SpaceIconStyle ReadSpaceIconStyle(WireReader reader) {

@@ -64,7 +64,7 @@ struct BrowserSetupBringPage: View {
             } label: {
                 Image(systemName: isChosen ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(isChosen ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+                    .foregroundStyle(isChosen ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
             }
             .buttonStyle(CrestChromeButtonStyle())
             .disabled(flow.isImportSelectionLocked)

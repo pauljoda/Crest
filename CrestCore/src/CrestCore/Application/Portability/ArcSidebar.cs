@@ -152,7 +152,7 @@ internal static class ArcSidebar {
                 string symbol = Symbol(space.CustomInfo);
                 var colors = Colors(space.CustomInfo);
                 drafts.Add(new SessionDraft(drafts.Count + 1, name, draft.Folders, draft.Tabs,
-                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors), space.ProfileFolder,
+                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors, symbol), space.ProfileFolder,
                     Group: space.ProfileKey));
             }
         }
@@ -319,9 +319,10 @@ internal static class ArcSidebar {
     private static double Unit(double value) => Math.Clamp(value, 0, 1);
 
     /// A diagonal gradient banner of several colors, or a solid banner of one.
-    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors) => colors.Count == 0 ? null : SpaceBranding.Painted(colors,
-        colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1, SpaceBranding.LegacyReadabilityFade,
-        colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45, textureStrength: 0);
+    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, string symbol) => colors.Count == 0 ? null
+        : SpaceBranding.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1,
+            SpaceBranding.LegacyReadabilityFade, colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45,
+            textureStrength: 0, symbol: symbol);
 
     #endregion
 }

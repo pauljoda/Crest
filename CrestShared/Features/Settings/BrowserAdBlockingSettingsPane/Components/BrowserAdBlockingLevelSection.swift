@@ -8,6 +8,9 @@ import SwiftUI
 struct BrowserAdBlockingLevelSection: View {
     let core: CrestCore
     let errorDescription: String?
+    /// The section's heading, where a page shows it apart from other
+    /// settings, as setup does.
+    var title: LocalizedStringKey? = nil
 
     var body: some View {
         let lists = core.state.filterLists
@@ -38,6 +41,10 @@ struct BrowserAdBlockingLevelSection: View {
                 Label(errorDescription, systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(CrestColor.warning)
+            }
+        } header: {
+            if let title {
+                CrestSettingsSectionHeading(title: title)
             }
         } footer: {
             Text(lists.level.summary)

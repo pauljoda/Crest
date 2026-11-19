@@ -11,8 +11,12 @@ struct BrowserSetupStep: Hashable, Identifiable, Sendable {
         name: "yourSpace", title: "Your Space", symbol: "square.fill", color: CrestBrandPalette.coral)
     static let spaces = BrowserSetupStep(
         name: "spaces", title: "Spaces", symbol: "square.grid.2x2.fill", color: CrestBrandPalette.sage)
+    /// The choices made once, last, before Crest starts: the default
+    /// browser, the search and ad blocking.
+    static let home = BrowserSetupStep(
+        name: "home", title: "Make It Home", symbol: "house.fill", color: CrestBrandPalette.butter)
 
-    static let all = [bring, yourSpace, spaces]
+    static let all = [bring, yourSpace, spaces, home]
 
     // MARK: - Variables
 
@@ -20,7 +24,7 @@ struct BrowserSetupStep: Hashable, Identifiable, Sendable {
     let title: LocalizedStringResource
     /// The symbol the step shows with.
     let symbol: String
-    /// The color of the tile behind the step's symbol.
+    /// The step's brand color, which its chip wears.
     let color: Color
 
     var id: String { name }

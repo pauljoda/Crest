@@ -24,7 +24,7 @@ struct BrowserSetupPageHeading: View {
     var body: some View {
         if showsHeadings {
             title
-                .font(.title2.weight(.bold))
+                .font(CrestTypography.display(22, relativeTo: .title2))
                 .foregroundStyle(.primary)
                 .textCase(nil)
                 .accessibilityAddTraits(.isHeader)

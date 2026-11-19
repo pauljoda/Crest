@@ -11,9 +11,11 @@ struct BrowserSetupDestination: Hashable, Sendable {
     /// The person's first Space, made here when no other browser brings any.
     static let yourSpace = BrowserSetupDestination(kind: .yourSpace, step: .yourSpace)
     static let spaces = BrowserSetupDestination(kind: .spaces, step: .spaces)
+    /// The default browser, the search and ad blocking, last.
+    static let home = BrowserSetupDestination(kind: .home, step: .home)
 
     /// Each step's own page, in the steps' order.
-    static let stepPages = [bring, yourSpace, spaces]
+    static let stepPages = [bring, yourSpace, spaces, home]
 
     // MARK: - Types
 
@@ -24,6 +26,7 @@ struct BrowserSetupDestination: Hashable, Sendable {
         case yourSpace
         case spaces
         case space
+        case home
     }
 
     // MARK: - Variables

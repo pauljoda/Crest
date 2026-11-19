@@ -10658,6 +10658,9 @@ struct CrestBackplate: Hashable, Sendable {
         case oval
         case banner
         case badge
+        case softShield
+        case softHexagon
+        case ribbon
     }
 
     let tag: Int
@@ -10776,6 +10779,30 @@ struct CrestBackplate: Hashable, Sendable {
         drawnSince: CrestVocabulary.studio,
         hasTeeth: false
     )
+    static let softShield = CrestBackplate(
+        tag: 12,
+        kind: .softShield,
+        name: "softShield",
+        title: LocalizedStringResource("Soft Shield"),
+        drawnSince: CrestVocabulary.simple,
+        hasTeeth: false
+    )
+    static let softHexagon = CrestBackplate(
+        tag: 13,
+        kind: .softHexagon,
+        name: "softHexagon",
+        title: LocalizedStringResource("Soft Hexagon"),
+        drawnSince: CrestVocabulary.simple,
+        hasTeeth: false
+    )
+    static let ribbon = CrestBackplate(
+        tag: 14,
+        kind: .ribbon,
+        name: "ribbon",
+        title: LocalizedStringResource("Ribbon"),
+        drawnSince: CrestVocabulary.simple,
+        hasTeeth: false
+    )
 
     static let all: [CrestBackplate] = [
         none,
@@ -10789,7 +10816,10 @@ struct CrestBackplate: Hashable, Sendable {
         roundedSquare,
         oval,
         banner,
-        badge
+        badge,
+        softShield,
+        softHexagon,
+        ribbon
     ]
 
     static func named(_ name: String?) -> CrestBackplate? {
@@ -11081,6 +11111,7 @@ struct CrestDepth: Hashable, Sendable {
         case none
         case soft
         case lifted
+        case figure
     }
 
     let tag: Int
@@ -11116,8 +11147,15 @@ struct CrestDepth: Hashable, Sendable {
         title: LocalizedStringResource("Lifted"),
         drawnSince: CrestVocabulary.studio
     )
+    static let figure = CrestDepth(
+        tag: 3,
+        kind: .figure,
+        name: "figure",
+        title: LocalizedStringResource("Raised Figure"),
+        drawnSince: CrestVocabulary.simple
+    )
 
-    static let all: [CrestDepth] = [none, soft, lifted]
+    static let all: [CrestDepth] = [none, soft, lifted, figure]
 
     static func named(_ name: String?) -> CrestDepth? {
         all.first { $0.name == name }
@@ -12365,6 +12403,60 @@ struct CrestSymbol: Hashable, Sendable {
         assetName: nil,
         isOffered: true
     )
+    static let brightStar = CrestSymbol(
+        tag: 64,
+        name: "brightStar",
+        title: LocalizedStringResource("Bright Star"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "star.fill",
+        assetName: "CrestCharge-brightStar",
+        isOffered: true
+    )
+    static let moon = CrestSymbol(
+        tag: 65,
+        name: "moon",
+        title: LocalizedStringResource("Moon"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "moon.fill",
+        assetName: "CrestCharge-moon",
+        isOffered: true
+    )
+    static let chevrons = CrestSymbol(
+        tag: 66,
+        name: "chevrons",
+        title: LocalizedStringResource("Chevrons"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "chevron.up",
+        assetName: "CrestCharge-chevrons",
+        isOffered: true
+    )
+    static let lens = CrestSymbol(
+        tag: 67,
+        name: "lens",
+        title: LocalizedStringResource("Lens"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "smallcircle.filled.circle",
+        assetName: "CrestCharge-lens",
+        isOffered: true
+    )
+    static let spark = CrestSymbol(
+        tag: 68,
+        name: "spark",
+        title: LocalizedStringResource("Spark"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "bolt.fill",
+        assetName: "CrestCharge-spark",
+        isOffered: true
+    )
+    static let sprout = CrestSymbol(
+        tag: 69,
+        name: "sprout",
+        title: LocalizedStringResource("Sprout"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "leaf.fill",
+        assetName: "CrestCharge-sprout",
+        isOffered: true
+    )
 
     static let all: [CrestSymbol] = [
         dragon,
@@ -12430,7 +12522,13 @@ struct CrestSymbol: Hashable, Sendable {
         sailboat,
         crown,
         horn,
-        crossedBanners
+        crossedBanners,
+        brightStar,
+        moon,
+        chevrons,
+        lens,
+        spark,
+        sprout
     ]
 
     static func named(_ name: String?) -> CrestSymbol? {
@@ -12625,8 +12723,9 @@ struct CrestVocabulary: Hashable, Sendable {
     static let expandedCharges = CrestVocabulary(tag: 1, name: "expandedCharges", version: 3)
     static let customization = CrestVocabulary(tag: 2, name: "customization", version: 4)
     static let studio = CrestVocabulary(tag: 3, name: "studio", version: 5)
+    static let simple = CrestVocabulary(tag: 4, name: "simple", version: 6)
 
-    static let all: [CrestVocabulary] = [baseline, expandedCharges, customization, studio]
+    static let all: [CrestVocabulary] = [baseline, expandedCharges, customization, studio, simple]
 
     static func named(_ name: String?) -> CrestVocabulary? {
         all.first { $0.name == name }
@@ -22694,9 +22793,9 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.198, green: 0.257, blue: 0.309, alpha: 1),
-                    BrandColor(red: 0.725, green: 0.872, blue: 0.934, alpha: 1),
-                    BrandColor(red: 0.302, green: 0.364, blue: 0.419, alpha: 1)
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1),
+                    BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
                 ]
             ),
             bannerPattern: SpaceBannerPattern.solid,
@@ -22709,11 +22808,11 @@ struct SpaceAccent: Hashable, Sendable {
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
-                backplate: CrestBackplate.frenchShield,
+                backplate: CrestBackplate.softShield,
                 fieldDivision: CrestFieldDivision.plain,
                 ordinary: CrestOrdinary.none,
-                trim: CrestTrim.line,
-                symbol: CrestSymbol.direwolf,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.brightStar,
                 chargeLayout: CrestChargeLayout.single,
                 backplateColorIndex: 2,
                 secondaryFieldColorIndex: 0,
@@ -22725,28 +22824,41 @@ struct SpaceAccent: Hashable, Sendable {
                 palette: nil,
                 charge: nil,
                 plateScale: 1,
-                edgeWidth: 0.35,
+                edgeWidth: 0,
                 divisionCount: 4,
                 finish: CrestFinish.flat,
                 ordinaryWidth: 1,
                 trimWeight: 0.75,
                 trimDetail: 12,
-                chargeScale: 1.2,
+                chargeScale: 1.21,
                 chargeOffset: 0,
                 chargeWeight: CrestChargeWeight.bold,
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft,
+                depth: CrestDepth.figure,
                 paletteGradients: nil
             ),
-            renderingVersion: 5,
+            renderingVersion: 6,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
             hasCustomAppearance: false,
             gradientKind: nil,
             symbolGradient: nil,
-            colorGradients: nil
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.18, green: 0.294, blue: 0.408, alpha: 1),
+                                BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 75
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1)
     )
@@ -23219,19 +23331,465 @@ struct SpaceHouse: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
+    var style: SpaceHouseStyle { facts.style }
     var look: SpaceBranding { facts.look }
-    var appIconName: String { facts.appIconName }
+    var appIconName: String? { facts.appIconName }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        style: SpaceHouseStyle,
+        look: SpaceBranding,
+        appIconName: String?
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, look: look, appIconName: appIconName)
+        facts = Facts(name: name, title: title, style: style, look: look, appIconName: appIconName)
     }
 
-    static let winter = SpaceHouse(
+    static let crest = SpaceHouse(
         tag: 0,
+        name: "crest",
+        title: LocalizedStringResource("Crest"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1),
+                    BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.softShield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.brightStar,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.18, green: 0.294, blue: 0.408, alpha: 1),
+                                BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 75
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let moon = SpaceHouse(
+        tag: 1,
+        name: "moon",
+        title: LocalizedStringResource("Moon"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.118, green: 0.161, blue: 0.271, alpha: 1),
+                    BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1),
+                    BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.moon,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.184, green: 0.306, blue: 0.494, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let summit = SpaceHouse(
+        tag: 2,
+        name: "summit",
+        title: LocalizedStringResource("Summit"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1),
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.softHexagon,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.chevrons,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.965, green: 0.878, blue: 0.627, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let lens = SpaceHouse(
+        tag: 3,
+        name: "lens",
+        title: LocalizedStringResource("Lens"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.933, green: 0.961, blue: 0.918, alpha: 1),
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.553, green: 0.749, blue: 0.604, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.ribbon,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.lens,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.796, green: 0.886, blue: 0.812, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let spark = SpaceHouse(
+        tag: 4,
+        name: "spark",
+        title: LocalizedStringResource("Spark"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.165, green: 0.118, blue: 0.227, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1),
+                    BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.spark,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.349, green: 0.188, blue: 0.31, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let grove = SpaceHouse(
+        tag: 5,
+        name: "grove",
+        title: LocalizedStringResource("Grove"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.118, green: 0.169, blue: 0.133, alpha: 1),
+                    BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1),
+                    BrandColor(red: 0.553, green: 0.749, blue: 0.604, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.softShield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.sprout,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.243, green: 0.361, blue: 0.263, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let winter = SpaceHouse(
+        tag: 6,
         name: "winter",
         title: LocalizedStringResource("Winter"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23292,9 +23850,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestWinter"
     )
     static let lion = SpaceHouse(
-        tag: 1,
+        tag: 7,
         name: "lion",
         title: LocalizedStringResource("Lion"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23368,9 +23927,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestLion"
     )
     static let storm = SpaceHouse(
-        tag: 2,
+        tag: 8,
         name: "storm",
         title: LocalizedStringResource("Storm"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23439,9 +23999,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestStorm"
     )
     static let dragon = SpaceHouse(
-        tag: 3,
+        tag: 9,
         name: "dragon",
         title: LocalizedStringResource("Dragon"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23515,9 +24076,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestDragon"
     )
     static let meadow = SpaceHouse(
-        tag: 4,
+        tag: 10,
         name: "meadow",
         title: LocalizedStringResource("Meadow"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23586,9 +24148,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestMeadow"
     )
     static let iron = SpaceHouse(
-        tag: 5,
+        tag: 11,
         name: "iron",
         title: LocalizedStringResource("Iron"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23662,9 +24225,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestIron"
     )
     static let river = SpaceHouse(
-        tag: 6,
+        tag: 12,
         name: "river",
         title: LocalizedStringResource("River"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23733,9 +24297,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestRiver"
     )
     static let sun = SpaceHouse(
-        tag: 7,
+        tag: 13,
         name: "sun",
         title: LocalizedStringResource("Sun"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23809,9 +24374,10 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestSun"
     )
     static let vigil = SpaceHouse(
-        tag: 8,
+        tag: 14,
         name: "vigil",
         title: LocalizedStringResource("Vigil"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
@@ -23872,7 +24438,23 @@ struct SpaceHouse: Hashable, Sendable {
         appIconName: "CrestVigil"
     )
 
-    static let all: [SpaceHouse] = [winter, lion, storm, dragon, meadow, iron, river, sun, vigil]
+    static let all: [SpaceHouse] = [
+        crest,
+        moon,
+        summit,
+        lens,
+        spark,
+        grove,
+        winter,
+        lion,
+        storm,
+        dragon,
+        meadow,
+        iron,
+        river,
+        sun,
+        vigil
+    ]
 
     static func named(_ name: String?) -> SpaceHouse? {
         all.first { $0.name == name }
@@ -23889,14 +24471,62 @@ struct SpaceHouse: Hashable, Sendable {
     private final class Facts: Sendable {
         let name: String
         let title: LocalizedStringResource
+        let style: SpaceHouseStyle
         let look: SpaceBranding
-        let appIconName: String
+        let appIconName: String?
 
-        init(name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            style: SpaceHouseStyle,
+            look: SpaceBranding,
+            appIconName: String?
+        ) {
             self.name = name
             self.title = title
+            self.style = style
             self.look = look
             self.appIconName = appIconName
+        }
+    }
+}
+
+/// The members of the core's `SpaceHouseStyle`. A member's wire tag is its index in `all`.
+struct SpaceHouseStyle: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let simple = SpaceHouseStyle(tag: 0, name: "simple", title: LocalizedStringResource("Simple"))
+    static let heraldic = SpaceHouseStyle(tag: 1, name: "heraldic", title: LocalizedStringResource("Heraldic"))
+
+    static let all: [SpaceHouseStyle] = [simple, heraldic]
+
+    static func named(_ name: String?) -> SpaceHouseStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceHouseStyle, rhs: SpaceHouseStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }
@@ -25270,6 +25900,102 @@ struct Tincture: Hashable, Sendable {
         title: LocalizedStringResource("Tide"),
         color: BrandColor(red: 0.114, green: 0.207, blue: 0.218, alpha: 1)
     )
+    static let crestInk = Tincture(
+        tag: 61,
+        name: "crestInk",
+        title: LocalizedStringResource("Crest Ink"),
+        color: BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1)
+    )
+    static let crestDusk = Tincture(
+        tag: 62,
+        name: "crestDusk",
+        title: LocalizedStringResource("Dusk"),
+        color: BrandColor(red: 0.18, green: 0.294, blue: 0.408, alpha: 1)
+    )
+    static let crestSky = Tincture(
+        tag: 63,
+        name: "crestSky",
+        title: LocalizedStringResource("Crest Sky"),
+        color: BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+    )
+    static let crestButter = Tincture(
+        tag: 64,
+        name: "crestButter",
+        title: LocalizedStringResource("Butter"),
+        color: BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1)
+    )
+    static let crestCoral = Tincture(
+        tag: 65,
+        name: "crestCoral",
+        title: LocalizedStringResource("Coral"),
+        color: BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
+    )
+    static let crestCream = Tincture(
+        tag: 66,
+        name: "crestCream",
+        title: LocalizedStringResource("Cream"),
+        color: BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1)
+    )
+    static let crestSage = Tincture(
+        tag: 67,
+        name: "crestSage",
+        title: LocalizedStringResource("Soft Sage"),
+        color: BrandColor(red: 0.553, green: 0.749, blue: 0.604, alpha: 1)
+    )
+    static let moonNight = Tincture(
+        tag: 68,
+        name: "moonNight",
+        title: LocalizedStringResource("Night"),
+        color: BrandColor(red: 0.118, green: 0.161, blue: 0.271, alpha: 1)
+    )
+    static let moonTide = Tincture(
+        tag: 69,
+        name: "moonTide",
+        title: LocalizedStringResource("Moonlit Blue"),
+        color: BrandColor(red: 0.184, green: 0.306, blue: 0.494, alpha: 1)
+    )
+    static let summitButter = Tincture(
+        tag: 70,
+        name: "summitButter",
+        title: LocalizedStringResource("Pale Butter"),
+        color: BrandColor(red: 0.965, green: 0.878, blue: 0.627, alpha: 1)
+    )
+    static let lensMist = Tincture(
+        tag: 71,
+        name: "lensMist",
+        title: LocalizedStringResource("Mist"),
+        color: BrandColor(red: 0.933, green: 0.961, blue: 0.918, alpha: 1)
+    )
+    static let lensFern = Tincture(
+        tag: 72,
+        name: "lensFern",
+        title: LocalizedStringResource("Fern"),
+        color: BrandColor(red: 0.796, green: 0.886, blue: 0.812, alpha: 1)
+    )
+    static let sparkTwilight = Tincture(
+        tag: 73,
+        name: "sparkTwilight",
+        title: LocalizedStringResource("Twilight"),
+        color: BrandColor(red: 0.165, green: 0.118, blue: 0.227, alpha: 1)
+    )
+    static let sparkMulberry = Tincture(
+        tag: 74,
+        name: "sparkMulberry",
+        title: LocalizedStringResource("Mulberry"),
+        color: BrandColor(red: 0.349, green: 0.188, blue: 0.31, alpha: 1)
+    )
+    static let groveDeep = Tincture(
+        tag: 75,
+        name: "groveDeep",
+        title: LocalizedStringResource("Deep Forest"),
+        color: BrandColor(red: 0.118, green: 0.169, blue: 0.133, alpha: 1)
+    )
+    static let groveMoss = Tincture(
+        tag: 76,
+        name: "groveMoss",
+        title: LocalizedStringResource("Grove Moss"),
+        color: BrandColor(red: 0.243, green: 0.361, blue: 0.263, alpha: 1)
+    )
 
     static let all: [Tincture] = [
         ink,
@@ -25332,7 +26058,23 @@ struct Tincture: Hashable, Sendable {
         dragonFlame,
         stormSlate,
         dragonCinder,
-        ironTide
+        ironTide,
+        crestInk,
+        crestDusk,
+        crestSky,
+        crestButter,
+        crestCoral,
+        crestCream,
+        crestSage,
+        moonNight,
+        moonTide,
+        summitButter,
+        lensMist,
+        lensFern,
+        sparkTwilight,
+        sparkMulberry,
+        groveDeep,
+        groveMoss
     ]
 
     static func named(_ name: String?) -> Tincture? {

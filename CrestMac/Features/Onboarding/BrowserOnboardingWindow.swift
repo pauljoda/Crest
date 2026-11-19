@@ -7,8 +7,9 @@ struct BrowserOnboardingWindow: View {
     let spaceAccess: BrowserSpaceAccessController
     /// Closes the window setup shows in.
     private let closeWindow: () -> Void
-    /// Brings the browser forward once setup finished: the window setup was
-    /// opened from, or the launch it held back.
+    /// Hands setup over to Crest once it finished: the window setup was
+    /// opened from, or the launch it held back, comes in behind setup, which
+    /// then fades away over it and closes.
     private let openBrowser: () -> Void
 
     @State private var flow: BrowserOnboardingFlow
@@ -83,19 +84,18 @@ struct BrowserOnboardingWindow: View {
         flow.completeSetup(progress: progress, spaceAccess: spaceAccess, onCompleted: takeOver)
     }
 
-    /// Grows the preview over the steps until it fills the window, then opens
-    /// Crest in the window's place and closes setup.
+    /// Grows the preview over the steps until it fills the window, then hands
+    /// over to Crest, which opens in the window's place as setup fades away.
     private func takeOver() {
         guard !reduceMotion else {
+            isTakingOver = true
             openBrowser()
-            closeWindow()
             return
         }
         withAnimation(CrestMotion.onboardingStep) { isTakingOver = true }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(CrestMotion.onboardingStepTransition))
             openBrowser()
-            closeWindow()
         }
     }
 }
