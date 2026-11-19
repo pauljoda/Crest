@@ -3,6 +3,6 @@
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
     "development": "palette-history-site-icons",
-    "nightly": "palette-fallback-unknown-sites-only"
+    "nightly": "palette-history-site-icons"
   }
 }

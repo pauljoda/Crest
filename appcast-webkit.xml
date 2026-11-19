@@ -6,36 +6,44 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.24</title>
-            <pubDate>Wed, 18 Nov 2026 17:56:28 +0000</pubDate>
+            <title>0.10.34</title>
+            <pubDate>Thu, 19 Nov 2026 18:53:07 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1644</sparkle:version>
-            <sparkle:shortVersionString>0.10.24</sparkle:shortVersionString>
+            <sparkle:version>1652</sparkle:version>
+            <sparkle:shortVersionString>0.10.34</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Setting up Crest is now a short walkthrough beside a live preview of the window you're building: bring tabs from another browser, choose your first Space's name, colors and icon, then add more Spaces. Close, move or file tabs in the preview and those changes carry into Crest when you start browsing.
+- Setup lists each Space with its Sub-Spaces and lets you add a Sub-Space to any Space before you start browsing.
+
 ### Improved
 
-- Settings › Tabs now lets you choose separately what pinned tabs and saved tabs do after you close them, so saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both.
+- A Space's look is now a Background and an Accent, each one color or a gradient of up to three, chosen on a color wheel with brightness and texture or taken from a palette. Crests and sidebar patterns sit under More Customization, replacing the Heraldic, Modern and Simple styles.
+- Dragging a Space's colors stays smooth while the window redraws to show them, in setup and in Settings.
+- On iPhone and iPad, tabs and folders you close, move or file in setup's preview now stay that way in Crest when you start browsing, as they do on the Mac.
+- Return in the command palette now searches anything that isn't an address, such as crest browser or a single word, with matching tabs, sites and history still listed below. An address such as github.com or localhost:3000 still opens, and the field completes one as you type it.
+- History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart.
 
 ### Fixed
 
-- Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network, now Crest's own setting rather than one shared with other apps. A page that can't reach a local address says how to allow it instead of reporting a refused connection.
-- In Chromium Spaces, an http:// address you type or open now stays on HTTP, including when you reload it, instead of being switched to HTTPS. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it.
-- Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them, as it does for other risky downloads.
-- When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000 or a device name with a port, open over HTTP right away, and an address you type with https:// never falls back.
+- Search provider chips in the command palette now show their text in white or black, whichever reads better on the chip's color.
+- Saved, pinned, reopened and imported tabs whose address holds characters such as { or [ return to the exact page they were saved at, instead of a broken search, and no longer show as moved away from their saved address.
+- An address you type or paste in the command palette now opens at the #section you gave it, even on a page you've visited before, and changing only the #section of the page you're on moves within that page.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/26e2d657baca82c131e8ced93285b2c965a0e430...0f3dc204d036d202431b465eff60857a493a4092) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.10.24-2026-11-18-1644-r644.1/Installer-Crest-0.10.24-nightly-2026-11-18-0f3dc20-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/0f3dc204d036d202431b465eff60857a493a4092...9762b7554ba2ca2709321785e53980d3859d970e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.10.34-2026-11-19-1652-r652.1/Installer-Crest-0.10.34-nightly-2026-11-19-9762b75-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.10.24-2026-11-18-1644-r644.1/Installer-Crest-0.10.24-nightly-2026-11-18-0f3dc20-arm64.dmg" length="221664893" type="application/octet-stream" sparkle:edSignature="CvuLUrhP2dEHnF+57NpoRg0HppDLfGRI7z8LSWZEIalTyoMhHXjDXzognVoxcg0kCo3ad1hJGb790YIe6VljAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.10.34-2026-11-19-1652-r652.1/Installer-Crest-0.10.34-nightly-2026-11-19-9762b75-arm64.dmg" length="221300862" type="application/octet-stream" sparkle:edSignature="NpUgHqRh4V0uMFa0r8LuJJW3GXQ0dl+ojRW1Ghi0tl24EcqeyJc/Qh8pX40FGyQAYdfZVFRShYKMXQKqV6JkAQ=="/>
         </item>
         <item>
             <title>0.10.24</title>
@@ -121,6 +129,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: cWrpXWRFuz8vMgpqa9WVi1MvA8aUlQ98r1uY+dQHURjS4kGthjCSCEctchmS4O1+nqXMUUNX0Sc9Px+i2JoXDg==
-length: 10231
+edSignature: dovXlwTv82JqjQTudjLG/yFOR/oURDCiwMplIvlwXg0TPSONwY77bfLQNT75FTF6UBPrirq2kdmUje/AJ7aVBg==
+length: 10923
 -->
