@@ -4,7 +4,8 @@ namespace CrestCore.Domain;
 
 /// The Space's newest history entries that match, ranked by how well they
 /// match and how often and recently their page was visited. One that starts
-/// with the text and was used enough may lead.
+/// with the text and was used enough may lead. Each names the tabs whose icon
+/// it may wear for its site.
 internal sealed class HistoryFinder : PaletteFinder {
     #region Static Variables
 
@@ -30,7 +31,8 @@ internal sealed class HistoryFinder : PaletteFinder {
             string title = entry.Title.Length > 0 ? entry.Title : PaletteContext.Host(entry.Url) ?? entry.Url;
             var row = PaletteRow.Of(PaletteRowKind.History, title, entry.Url, subject: entry.Id, address: entry.Url);
             if (context.Evidence(query, row, title, entry.Url, entry: entry) is not { } evidence) continue;
-            yield return Scored(context, source, row, evidence, PaletteMemory.Place(entry.Url), Matching(evidence));
+            yield return Scored(context, source, row with { IconTabIds = context.IconTabs(entry.Url) }, evidence,
+                PaletteMemory.Place(entry.Url), Matching(evidence));
         }
     }
 

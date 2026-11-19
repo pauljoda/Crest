@@ -22,7 +22,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
             },
             selectTab: { _, _ in false }, openURL: { _, _, _ in false }, dismiss: {})
         model.applyCompletion = { _, _ in XCTFail("Stale proposal was accepted") }
-        model.updateCompletionEditing(text: "exa", selection: NSRange(location: 3, length: 0), isComposing: false)
+        model.updateCompletionEditing(text: "example.c", selection: NSRange(location: 9, length: 0), isComposing: false)
         await model.waitForPendingResults()
         XCTAssertNotNil(model.urlCompletion)
         browser.selectPresentedSpace(other.id)

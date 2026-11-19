@@ -5094,6 +5094,7 @@ struct PaletteRow: Equatable, Sendable {
     let settingsPage: String?
     let scope: PaletteScope?
     let reason: PaletteReason?
+    let iconTabIDs: [UUID]
     let httpFallback: String?
 
     /// The fields of a `PaletteRow` alone, as a platform builds one to send. The
@@ -5111,6 +5112,7 @@ struct PaletteRow: Equatable, Sendable {
         var settingsPage: String?
         var scope: PaletteScope?
         var reason: PaletteReason?
+        var iconTabIDs: [UUID]
         var httpFallback: String?
     }
 
@@ -5129,6 +5131,7 @@ struct PaletteRow: Equatable, Sendable {
             settingsPage: settingsPage,
             scope: scope,
             reason: reason,
+            iconTabIDs: iconTabIDs,
             httpFallback: httpFallback
         )
     }

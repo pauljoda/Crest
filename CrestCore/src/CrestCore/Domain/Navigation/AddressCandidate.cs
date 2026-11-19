@@ -35,7 +35,8 @@ public sealed class AddressCandidate {
     public bool HasPort { get; }
     /// The path as spelled, which may be empty.
     public string Path { get; }
-    /// The query and fragment as spelled, each with its leading `?` or `#`.
+    /// The query as spelled, with its leading `?`. A fragment only points
+    /// within the page, so a completion never adds one the person didn't type.
     public string Suffix { get; }
 
     #endregion
@@ -81,7 +82,7 @@ public sealed class AddressCandidate {
         string remainder = authorityEnd < 0 ? "" : rest[authorityEnd..];
         int suffixStart = remainder.IndexOfAny(['?', '#']);
         string path = suffixStart < 0 ? remainder : remainder[..suffixStart];
-        string suffix = suffixStart < 0 ? "" : remainder[suffixStart..];
+        string suffix = suffixStart < 0 ? "" : remainder[suffixStart..].Split('#', 2)[0];
         return new(url, source, date, visits, firstVisited, scheme, hasPort ? authority : host, hasPort, path, suffix);
     }
 
@@ -92,7 +93,8 @@ public sealed class AddressCandidate {
     /// What completing `typed` with this address would leave, or null when it
     /// does not complete it. The host completes whole, without a `www.` the
     /// person did not type; once they type a path, it completes to the next
-    /// `/`, or to the end of the address when no `/` follows.
+    /// `/`, or to the end of the address without its fragment when no `/`
+    /// follows.
     public AddressMatch? Completing(TypedAddress typed) {
         ArgumentNullException.ThrowIfNull(typed);
         if (typed.SchemePrefix.Length > 0 && typed.SchemePrefix != Scheme + "://") return null;

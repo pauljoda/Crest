@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x03, 0x39, 0xb5, 0x7b, 0xe4, 0x26, 0x09, 0x21, 0x36, 0x43, 0x28, 0xd3, 0x76, 0x45, 0x73, 0x03, 0x1e, 0x57, 0x1e, 0x06, 0xf0, 0x8c, 0x11, 0x9c, 0x43, 0xaa, 0x14, 0x21, 0x31, 0xab, 0x5e, 0x32
+        0xef, 0xff, 0x7c, 0xeb, 0x71, 0xfe, 0x5d, 0x4f, 0x58, 0xb8, 0x48, 0x97, 0x88, 0xfd, 0xd0, 0xcd, 0x0f, 0x90, 0xe5, 0x49, 0x30, 0x6f, 0x54, 0x19, 0x26, 0xa3, 0xfe, 0xc7, 0xbd, 0xdf, 0x08, 0x8c
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -14582,6 +14582,7 @@ public static class ContractCodec {
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (PaletteScope?)ReadPaletteScope(reader) : null,
             reader.ReadPresence() ? (PaletteReason?)ReadPaletteReason(reader) : null,
+            reader.ReadList(() => reader.ReadGuid()),
             reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
@@ -14640,6 +14641,10 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        writer.WriteCount(value.IconTabIds.Count);
+        foreach (var itemIconTabIds in value.IconTabIds) {
+            writer.WriteGuid(itemIconTabIds);
+        }
         if (value.HttpFallback is { } presentHttpFallback) {
             writer.WritePresence(true);
             writer.WriteString(presentHttpFallback);
@@ -14663,6 +14668,7 @@ public static class ContractCodec {
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (PaletteScope?)ReadPaletteScope(reader) : null,
             reader.ReadPresence() ? (PaletteReason?)ReadPaletteReason(reader) : null,
+            reader.ReadList(() => reader.ReadGuid()),
             reader.ReadPresence() ? (string?)reader.ReadString() : null);
     }
 
@@ -14720,6 +14726,10 @@ public static class ContractCodec {
             WritePaletteReason(writer, presentReason);
         } else {
             writer.WritePresence(false);
+        }
+        writer.WriteCount(value.IconTabIds.Count);
+        foreach (var itemIconTabIds in value.IconTabIds) {
+            writer.WriteGuid(itemIconTabIds);
         }
         if (value.HttpFallback is { } presentHttpFallback) {
             writer.WritePresence(true);

@@ -24,15 +24,10 @@ struct BrowserCommandPaletteRowIcon: View {
                     profileID: model.space?.profileID,
                     size: BrowserCommandPaletteMetrics.rowFaviconSize
                 )
+            } else if let icon = model.siteIcon(for: row) {
+                BrowserCommandPaletteSiteIcon(icon: icon, badge: row.symbol) { symbol }
             } else {
-                Image(systemName: row.symbol)
-                    .font(
-                        .system(
-                            size: BrowserCommandPaletteMetrics.rowSymbolPointSize,
-                            weight: .semibold
-                        )
-                    )
-                    .foregroundStyle(.secondary)
+                symbol
             }
         }
         .frame(
@@ -43,6 +38,18 @@ struct BrowserCommandPaletteRowIcon: View {
             .primary.opacity(BrowserCommandPaletteMetrics.rowIconBackgroundOpacity),
             in: .rect(cornerRadius: BrowserCommandPaletteMetrics.rowIconCornerRadius)
         )
+    }
+
+    /// The row's own symbol, which it wears when nothing else stands for it.
+    private var symbol: some View {
+        Image(systemName: row.symbol)
+            .font(
+                .system(
+                    size: BrowserCommandPaletteMetrics.rowSymbolPointSize,
+                    weight: .semibold
+                )
+            )
+            .foregroundStyle(.secondary)
     }
 }
 
