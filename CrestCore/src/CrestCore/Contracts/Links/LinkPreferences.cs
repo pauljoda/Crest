@@ -11,13 +11,14 @@ internal readonly record struct LinkRoutingDecision(bool OpensQuickWindow, Guid 
 
 /// How links behave on this device: where a link from another app opens, what
 /// a clicked link does, how long a Quick Window lives, whether a copied link
-/// leaves out what only tracks who followed it, and the routes that send
-/// matching links to a Space. The device store keeps them and never syncs
-/// them. Each edit answers the revised preferences, or throws the rule that
-/// refuses it.
+/// leaves out what only tracks who followed it, whether a Quick Window opens
+/// over another app's full-screen Space, and the routes that send matching
+/// links to a Space. The device store keeps them and never syncs them. Each
+/// edit answers the revised preferences, or throws the rule that refuses it.
 public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? DestinationSpaceId, bool FocusesNewTabs,
     bool FollowsMovedTabs, bool OpensPeekAutomatically, LinkPeekModifier PeekModifier, bool DragsLinksToPeek, bool DimsPageBehindPeek,
-    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, bool CleansCopiedLinks, IReadOnlyList<LinkRoute> Routes,
+    QuickWindowArchivePolicy ArchivePolicy, bool RemembersSpaceBySite, bool CleansCopiedLinks,
+    bool OpensQuickWindowsOverFullScreenApps, IReadOnlyList<LinkRoute> Routes,
     IReadOnlyList<RememberedSite> RememberedSites) {
     #region Static Variables
 
@@ -25,7 +26,7 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
     internal static readonly LinkPreferences Default = new(ExternalLinkDestination.QuickWindow, DestinationSpaceId: null,
         FocusesNewTabs: false, FollowsMovedTabs: true, OpensPeekAutomatically: true, LinkPeekModifier.Option,
         DragsLinksToPeek: true, DimsPageBehindPeek: true, QuickWindowArchivePolicy.After6Hours, RemembersSpaceBySite: true,
-        CleansCopiedLinks: true, [], []);
+        CleansCopiedLinks: true, OpensQuickWindowsOverFullScreenApps: false, [], []);
 
     #endregion
 
@@ -146,6 +147,8 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
 
     #region Actions - Equality
 
+    /// Compares the routes and remembered sites item by item, where a record
+    /// would compare the lists by reference.
     public bool Equals(LinkPreferences? other) => other is not null
         && Destination == other.Destination && DestinationSpaceId == other.DestinationSpaceId
         && FocusesNewTabs == other.FocusesNewTabs && FollowsMovedTabs == other.FollowsMovedTabs
@@ -153,6 +156,7 @@ public sealed record LinkPreferences(ExternalLinkDestination Destination, Guid? 
         && DragsLinksToPeek == other.DragsLinksToPeek && DimsPageBehindPeek == other.DimsPageBehindPeek
         && ArchivePolicy == other.ArchivePolicy
         && RemembersSpaceBySite == other.RemembersSpaceBySite && CleansCopiedLinks == other.CleansCopiedLinks
+        && OpensQuickWindowsOverFullScreenApps == other.OpensQuickWindowsOverFullScreenApps
         && Routes.SequenceEqual(other.Routes)
         && RememberedSites.SequenceEqual(other.RememberedSites);
 

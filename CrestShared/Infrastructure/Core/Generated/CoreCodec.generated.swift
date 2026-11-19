@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xef, 0xff, 0x7c, 0xeb, 0x71, 0xfe, 0x5d, 0x4f, 0x58, 0xb8, 0x48, 0x97, 0x88, 0xfd, 0xd0, 0xcd, 0x0f, 0x90, 0xe5, 0x49, 0x30, 0x6f, 0x54, 0x19, 0x26, 0xa3, 0xfe, 0xc7, 0xbd, 0xdf, 0x08, 0x8c
+        0x10, 0xb9, 0x32, 0x3f, 0x1f, 0x00, 0x03, 0x57, 0x0a, 0xc1, 0x4b, 0x8d, 0x04, 0x57, 0x43, 0xc2, 0x2f, 0xa8, 0xff, 0xab, 0xfa, 0x24, 0x06, 0x78, 0x8f, 0xb8, 0x7d, 0x4f, 0x63, 0xf2, 0x08, 0xbb
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -13558,6 +13558,7 @@ extension LinkPreferences {
         let archivePolicy = try QuickWindowArchivePolicy(from: &reader)
         let remembersSpaceBySite = try reader.readBool()
         let cleansCopiedLinks = try reader.readBool()
+        let opensQuickWindowsOverFullScreenApps = try reader.readBool()
         let routesCount = try reader.readCount()
         var routes: [LinkRoute] = []
         routes.reserveCapacity(routesCount)
@@ -13572,7 +13573,7 @@ extension LinkPreferences {
             let rememberedSitesElement = try RememberedSite(from: &reader)
             rememberedSites.append(rememberedSitesElement)
         }
-        self.init(destination: destination, destinationSpaceID: destinationSpaceID, focusesNewTabs: focusesNewTabs, followsMovedTabs: followsMovedTabs, opensPeekAutomatically: opensPeekAutomatically, peekModifier: peekModifier, dragsLinksToPeek: dragsLinksToPeek, dimsPageBehindPeek: dimsPageBehindPeek, archivePolicy: archivePolicy, remembersSpaceBySite: remembersSpaceBySite, cleansCopiedLinks: cleansCopiedLinks, routes: routes, rememberedSites: rememberedSites)
+        self.init(destination: destination, destinationSpaceID: destinationSpaceID, focusesNewTabs: focusesNewTabs, followsMovedTabs: followsMovedTabs, opensPeekAutomatically: opensPeekAutomatically, peekModifier: peekModifier, dragsLinksToPeek: dragsLinksToPeek, dimsPageBehindPeek: dimsPageBehindPeek, archivePolicy: archivePolicy, remembersSpaceBySite: remembersSpaceBySite, cleansCopiedLinks: cleansCopiedLinks, opensQuickWindowsOverFullScreenApps: opensQuickWindowsOverFullScreenApps, routes: routes, rememberedSites: rememberedSites)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -13592,6 +13593,7 @@ extension LinkPreferences {
         archivePolicy.encode(into: &writer)
         writer.writeBool(remembersSpaceBySite)
         writer.writeBool(cleansCopiedLinks)
+        writer.writeBool(opensQuickWindowsOverFullScreenApps)
         writer.writeCount(routes.count)
         for element0 in routes {
             element0.encode(into: &writer)

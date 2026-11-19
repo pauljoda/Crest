@@ -5773,6 +5773,10 @@
     "palette-history-site-icons": {
       "category": "improved",
       "message": "History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart."
+    },
+    "quick-window-over-full-screen": {
+      "category": "new",
+      "message": "On Mac, turn on Open over full-screen apps in Links settings to open a link from an app in full screen in a Quick Window over that app, instead of switching to another desktop."
     }
   }
 }

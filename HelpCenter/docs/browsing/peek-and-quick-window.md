@@ -37,6 +37,8 @@ On Mac, a Quick Window has a browser window's controls: Back and Forward, Site C
 
 Open a blank Quick Window with **Option-Shift-Command-N** on Mac, including from another Quick Window, and from any app while Crest is open, where it opens over the window you're in. While Crest is in the background, that shortcut opens a Quick Window instead of acting in the app in front; change or clear it in **Settings → Shortcuts**. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
+On Mac, a link from an app in full screen opens its Quick Window on a desktop by default. With Quick Window chosen, turn on **Open over full-screen apps** to open it over that app instead. If you turn the setting off, a Quick Window that is already open over a full-screen app stays there until you close it.
+
 ### Sign-in and other popup windows
 
 When a page opens a popup window, like a **Sign in with Google** or **Sign in with Apple** window, Crest for Mac shows it in a Quick Window in the same Space. The popup stays connected to the page that opened it, uses the same engine as that page, and closes itself when the sign-in finishes. Choose **Open in** and the Space to keep it as a tab instead, or close the Quick Window to drop it. A page that opens a new tab, rather than a popup window, still opens a tab beside it. On iPhone and iPad, a popup opens as a tab.

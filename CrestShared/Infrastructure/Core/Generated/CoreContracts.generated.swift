@@ -4030,6 +4030,7 @@ struct LinkPreferences: Equatable, Sendable {
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
     let cleansCopiedLinks: Bool
+    let opensQuickWindowsOverFullScreenApps: Bool
     let routes: [LinkRoute]
     let rememberedSites: [RememberedSite]
 }
@@ -15144,6 +15145,7 @@ struct LinkBehavior: Hashable, Sendable {
     static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
     static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
     static let cleansCopiedLinks = LinkBehavior(tag: 6, name: "cleansCopiedLinks")
+    static let opensQuickWindowsOverFullScreenApps = LinkBehavior(tag: 7, name: "opensQuickWindowsOverFullScreenApps")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
@@ -15152,7 +15154,8 @@ struct LinkBehavior: Hashable, Sendable {
         dragsLinksToPeek,
         dimsPageBehindPeek,
         remembersSpaceBySite,
-        cleansCopiedLinks
+        cleansCopiedLinks,
+        opensQuickWindowsOverFullScreenApps
     ]
 
     static func named(_ name: String?) -> LinkBehavior? {

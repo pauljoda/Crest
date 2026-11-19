@@ -393,9 +393,13 @@ final class BrowserMacWindows {
     func openQuickWindow(_ request: BrowserQuickWindowRequest, over source: BrowserQuickWindowSourceApp? = nil)
         -> UUID?
     {
+        let kind = BrowserMacWindowKind.quick(
+            overFullScreenApps: application.browser.linkPreferences.preferences.opensQuickWindowsOverFullScreenApps)
         if let existing = quickWindows.first(where: { $0.value.request.value == request }),
             let controller = controller(.quick, id: existing.key)
         {
+            // The setting may have changed since the window opened.
+            kind.reconfigure(controller.window)
             // A link another app hands Crest again opens where the person is
             // now, which may be another display or another app.
             if let source { BrowserQuickWindowGeometryHostView.move(controller.window, over: source) }
@@ -437,7 +441,7 @@ final class BrowserMacWindows {
             self?.quickWindow(request.id)?.isKeyWindow == true
         }
         show(
-            .quick, id: request.id, closeGate: model.closeGate,
+            kind, id: request.id, closeGate: model.closeGate,
             // Over the page it came from, or where the person is in the app
             // `source`, before it shows: a Quick Window placed once it showed
             // appeared at the screen's centre and jumped there.
