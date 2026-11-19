@@ -7,33 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.10.34</title>
-            <pubDate>Thu, 19 Nov 2026 05:39:51 +0000</pubDate>
+            <pubDate>Thu, 19 Nov 2026 18:08:03 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1649</sparkle:version>
+            <sparkle:version>1651</sparkle:version>
             <sparkle:shortVersionString>0.10.34</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### Maintenance
 
-- Return in the command palette now searches anything that isn't an address, such as crest browser or a single word, with matching tabs, sites and history still listed below. An address such as github.com or localhost:3000 still opens, and the field completes one as you type it.
-- History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart.
-
-### Fixed
-
-- An address you type or paste in the command palette now opens at the #section you gave it, even on a page you've visited before, and changing only the #section of the page you're on moves within that page.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/8d4c203d8db8acd638647eb1f82d20da68899dab...35a9bfb397cd2178a6dc60cfebbfe63aa5e4b4f8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.34-2026-11-19-1649-r649.1/Installer-Crest-0.10.34-development-2026-11-19-35a9bfb-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/35a9bfb397cd2178a6dc60cfebbfe63aa5e4b4f8...5a3d978d3fd5d79a80dd358445c19608a67ba32b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.34-2026-11-19-1651-r651.1/Installer-Crest-0.10.34-development-2026-11-19-5a3d978-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.34-2026-11-19-1649-r649.1/Installer-Crest-0.10.34-development-2026-11-19-35a9bfb-arm64.dmg" length="221324421" type="application/octet-stream" sparkle:edSignature="cac6dcXzwfXoSeeMyc2xX3Yr3d9S9XxUDyRXf5/Zxsc1ISCQOHjmufDriB8TOzIDcp71PHKVVdKD7YYh+PaYDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.34-2026-11-19-1651-r651.1/Installer-Crest-0.10.34-development-2026-11-19-5a3d978-arm64.dmg" length="221339781" type="application/octet-stream" sparkle:edSignature="oFYObMneCy+2gHGQrUgCJAZJN1SYiLhCLVQdZGEOMr5aZCJfdQZ4chFVY3nnqqThsqQgkcPWXsOu5quc+OeJDQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -65,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: PB+gQWfhqg7kX/kOzAcM4qIl3jRtZpsH8YHJRorTQDxV9zmAWrtrx2ZD5TQyF8kxrCJGPwcGMY11QYYmGESQBQ==
-length: 4549
+edSignature: Jf874XdzDxdvDC0/HWbhbg4zaffLVrGJo1CSvmkhvWkCLtzf+lzbOIGHPdMKXXSwYiB5NvaeBobBrVHCyQRZCg==
+length: 3943
 -->
