@@ -40,15 +40,15 @@ enum BrowserSetupRootPageMetrics {
         /// The welcome sits in the middle of the panel.
         static let alignment = Alignment.leading
         static let spacing: CGFloat = 20
-        static let markSize: CGFloat = 52
-        static let titleFont = Font.largeTitle.weight(.bold)
+        static let markSize: CGFloat = 60
+        static let titleFont = CrestTypography.display(32, relativeTo: .largeTitle)
         static let bodyFont = Font.title3
         static let inset = EdgeInsets(top: 0, leading: 30, bottom: 40, trailing: 30)
     #else
         static let alignment = Alignment.topLeading
         static let spacing: CGFloat = 16
-        static let markSize: CGFloat = 44
-        static let titleFont = Font.largeTitle.weight(.bold)
+        static let markSize: CGFloat = 52
+        static let titleFont = CrestTypography.display(32, relativeTo: .largeTitle)
         static let bodyFont = Font.body
         static let inset = EdgeInsets(top: 16, leading: 20, bottom: 12, trailing: 20)
     #endif

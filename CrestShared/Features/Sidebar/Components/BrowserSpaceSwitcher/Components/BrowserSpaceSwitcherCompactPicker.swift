@@ -9,6 +9,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     let selectSpace: (UUID) -> Void
     let allocation: BrowserSpaceSwitcherCompactAllocation
     var moveSpace: ((UUID, UUID) -> Void)? = nil
+    /// The picker's style, before its corners take the tabs' radius.
     var style: CrestSpaceIconPickerStyle = .compact
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -16,6 +17,11 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     private let appearance = BrowserDeviceAppearanceStore.shared
     @State private var overflow = BrowserSpacePickerOverflow()
     @State private var viewport = CGRect.zero
+
+    /// The picker's style with corners as round as the tabs' and pins'.
+    private var shapedStyle: CrestSpaceIconPickerStyle {
+        style.rounded(CGFloat(appearance.sidebarCornerRadius))
+    }
 
     var body: some View {
         ScrollViewReader { reader in
@@ -48,6 +54,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     }
 
     private var track: some View {
+        let style = shapedStyle
         let showsDots = appearance.spaceIcons.showsDots
         let dots =
             showsDots

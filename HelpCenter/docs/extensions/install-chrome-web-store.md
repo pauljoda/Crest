@@ -1,6 +1,6 @@
 ---
 title: Install from the Chrome Web Store
-description: Add a Chrome extension from its store page to the current Crest Space.
+description: Add an extension from its Chrome Web Store page to the current Crest Space.
 slug: /install-chrome-web-store
 sidebar_label: Chrome Web Store
 sidebar_position: 1
@@ -9,7 +9,7 @@ keywords: [Chrome Web Store, Add to Crest, CRX3, install extension, Space]
 
 # Install from the Chrome Web Store
 
-Crest for Mac installs Chrome extensions from the Chrome Web Store. Extensions run on Chromium pages. Pages you open in WebKit, and Crest on iPhone and iPad, run no extensions.
+Crest for Mac installs extensions from the Chrome Web Store. Extensions run on Chromium pages. Pages you open in WebKit, and Crest on iPhone and iPad, run no extensions.
 
 ## Before you add it
 
@@ -35,12 +35,12 @@ Once installed, the listing's button reads **Added to Crest**, and it offers **R
 
 ## Updates
 
-Chromium updates Chrome Web Store extensions on its own and checks each update's signature and permissions, as Chrome does.
+Chromium updates Chrome Web Store extensions on its own and checks each update's signature and permissions.
 
 ## When you can't install
 
 - Private windows keep the store's own behavior and do not offer **Add to Crest**.
 - A locked Space, or one that has been deleted, cannot receive an extension or a copy.
-- Crest does not install Firefox add-ons or Safari Web Extensions. Look for the extension's Chrome version.
+- Apart from unpacked extensions in developer mode, Crest installs extensions from the Chrome Web Store. If an extension is made for another browser, look for its Chrome Web Store version.
 
 Next: [Manage permissions and website access](./manage-permissions-site-access.md).

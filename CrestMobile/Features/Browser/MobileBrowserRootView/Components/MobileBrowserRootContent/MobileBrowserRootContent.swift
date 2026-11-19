@@ -8,6 +8,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     let dataDeleter: any BrowserSpaceDataDeleting
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let suspendsCompactPagePresentation: Bool
+    /// Whether the browser holds back its launch, opening nothing yet.
+    let holdsStartup: Bool
+    /// Whether the page the browser opens on rises over setup as setup hands
+    /// over to it.
+    let presentsPageOverSetup: Bool
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
 
@@ -37,6 +42,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         dataDeleter: any BrowserSpaceDataDeleting,
         transientBrowsing: BrowserTransientBrowsingCoordinator,
         suspendsCompactPagePresentation: Bool,
+        holdsStartup: Bool = false,
+        presentsPageOverSetup: Bool = false,
         togglePrivateBrowsing: @escaping () -> Void,
         closePrivateBrowsing: @escaping () -> Void
     ) {
@@ -44,6 +51,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         self.dataDeleter = dataDeleter
         self.transientBrowsing = transientBrowsing
         self.suspendsCompactPagePresentation = suspendsCompactPagePresentation
+        self.holdsStartup = holdsStartup
+        self.presentsPageOverSetup = presentsPageOverSetup
         self.togglePrivateBrowsing = togglePrivateBrowsing
         self.closePrivateBrowsing = closePrivateBrowsing
         _storedRegularSidebarWidth = State(
@@ -189,6 +198,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     notices: pages.notices,
                     showsNotices: !model.showsSettings,
                     reduceMotion: reduceMotion,
+                    risesOverSetup: presentsPageOverSetup,
                     tabPromotionNamespace: tabPromotionNamespace,
                     completePagePresentation:
                         navigation.completePagePresentation,
@@ -404,6 +414,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 model: model,
                 presentation: presentation,
                 openNewTab: beginNewTab,
+                holdsStartup: holdsStartup,
                 isAddressEditing: $isAddressEditing,
                 storedSidebarWidth: $storedRegularSidebarWidth
             )

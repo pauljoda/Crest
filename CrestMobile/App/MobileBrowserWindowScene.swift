@@ -150,21 +150,31 @@ struct MobileBrowserWindowScene: View {
         model.closeWindowRuntime()
     }
 
-    /// The browser, held back while a first launch's setup gates it, with
-    /// setup over it while setup is presented. Setup keeps its place when the
-    /// gate lifts as setup finishes, so it can grow its copy of Crest into
-    /// the browser that comes up underneath before it goes.
+    /// The browser, held back while a first launch's setup gates it until
+    /// setup nears its end, when it comes up behind setup, holding its own
+    /// launch, so it is ready when setup hands over; with setup over it while
+    /// setup is presented. Setup keeps its place when the gate lifts as setup
+    /// finishes, and goes once the browser shows its page underneath.
     private var sceneSurface: some View {
         ZStack {
-            if !showsAutomaticLaunchGate {
+            if !showsAutomaticLaunchGate || onboardingCoordinator.preparesBrowser {
                 browserSurface
                     .allowsHitTesting(!onboardingCoordinator.isMobilePresented)
                     .accessibilityHidden(onboardingCoordinator.isMobilePresented)
+                    // Under setup, the Start Page's search leaves the keyboard
+                    // to setup.
+                    .environment(\.commandPaletteFocusesOnShow, !onboardingCoordinator.isMobilePresented)
             }
 
             if showsAutomaticLaunchGate || onboardingCoordinator.isMobilePresented {
                 onboardingSurface
-                    .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                    // Handing over, setup goes at once: Crest's page already
+                    // covers it on a phone, and an iPad's copy has grown into
+                    // the same page Crest shows.
+                    .transition(
+                        onboardingCoordinator.isHandingOver
+                            ? .identity : .opacity.combined(with: .scale(scale: 0.985))
+                    )
                     .zIndex(10)
             }
         }
@@ -180,7 +190,7 @@ struct MobileBrowserWindowScene: View {
                 navigation: model.privateNavigation,
                 transientBrowsing: model.privateTransientBrowsing,
                 windowState: model.windowState,
-                suspendsCompactPagePresentation: onboardingCoordinator.isMobilePresented,
+                suspendsCompactPagePresentation: suspendsPagePresentation,
                 startupBehavior: .lastActiveTab,
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
@@ -195,7 +205,9 @@ struct MobileBrowserWindowScene: View {
                 transientBrowsing: model.transientBrowsing,
                 spaceAccess: model.spaceAccess,
                 windowState: model.windowState,
-                suspendsCompactPagePresentation: onboardingCoordinator.isMobilePresented,
+                suspendsCompactPagePresentation: suspendsPagePresentation,
+                holdsStartup: showsAutomaticLaunchGate,
+                presentsPageOverSetup: onboardingCoordinator.isMobilePresented && onboardingCoordinator.isHandingOver,
                 startupBehavior: model.startupBehavior,
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
@@ -219,6 +231,12 @@ struct MobileBrowserWindowScene: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+    }
+
+    /// Whether the browser holds its page back while setup is over it: until
+    /// setup hands over, when the page it opens on comes up behind setup.
+    private var suspendsPagePresentation: Bool {
+        onboardingCoordinator.isMobilePresented && !onboardingCoordinator.isHandingOver
     }
 
     private var showsAutomaticLaunchGate: Bool {

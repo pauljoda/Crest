@@ -13,6 +13,12 @@ struct BrowserSetupSpacePage: View {
     let spaceID: UUID
     /// The page's name, or nil to name it after the Space.
     var title: LocalizedStringResource?
+    /// The Space as its icon shows it, large above its name, for a page with
+    /// no preview beside it to show it.
+    var icon: BrowserSpaceIdentity?
+    /// Shows the Space as Crest will, beside its icon, for a page with no
+    /// preview beside it.
+    var preview: (() -> Void)?
 
     // MARK: - Actions - Drawing
 
@@ -25,13 +31,17 @@ struct BrowserSetupSpacePage: View {
                 } header: {
                     heading(editor)
                 }
-                Section("Colors") {
+                Section {
                     BrowserSpaceColorWells(branding: editor.branding)
                         .padding(.vertical, CrestSpacing.small)
                     BrowserSpacePalettePicker(branding: editor.branding)
+                } header: {
+                    CrestSettingsSectionHeading(title: "Colors")
                 }
-                Section("Icon") {
+                Section {
                     BrowserSpaceIconPicker(branding: editor.branding, symbol: editor.symbol)
+                } header: {
+                    CrestSettingsSectionHeading(title: "Icon")
                 }
             }
             .formStyle(.grouped)
@@ -43,6 +53,27 @@ struct BrowserSetupSpacePage: View {
 
     @ViewBuilder
     private func heading(_ editor: BrowserSetupSpaceEditor) -> some View {
+        if let icon {
+            VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+                HStack(alignment: .center) {
+                    BrowserSpaceIdentityIcon(identity: icon, size: BrowserSetupSpacePageMetrics.iconSize)
+                    Spacer(minLength: CrestSpacing.small)
+                    if let preview {
+                        Button("Preview", systemImage: "eye", action: preview)
+                            .buttonStyle(.crestSecondary)
+                            .accessibilityIdentifier("setup-preview")
+                    }
+                }
+                name(editor)
+            }
+        } else {
+            name(editor)
+        }
+    }
+
+    /// The page's name over the Space's name field.
+    @ViewBuilder
+    private func name(_ editor: BrowserSetupSpaceEditor) -> some View {
         if let title {
             BrowserSetupPageHeading(title)
         } else {
@@ -51,4 +82,8 @@ struct BrowserSetupSpacePage: View {
                     ? String(localized: "Untitled Space") : editor.name.wrappedValue)
         }
     }
+}
+
+enum BrowserSetupSpacePageMetrics {
+    static let iconSize: CGFloat = 76
 }

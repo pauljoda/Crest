@@ -551,6 +551,13 @@ final class BrowserPagePool:
         return members.contains { $0.id == tab.id } ? members : [tab]
     }
 
+    /// Whether every card the window shows is one of Crest's own pages,
+    /// which have no web page and so need no content blocking to present.
+    var showsOnlyNativeContent: Bool {
+        guard let space = browser.shownSpace, let tab = browser.shownTab else { return false }
+        return presentedMembers(for: tab, in: space).allSatisfy { $0.nativeContent != nil }
+    }
+
     /// An unlocked empty Space or start page is an ordinary departure. Keep
     /// the same PiP lifecycle as switching between loaded tabs; security
     /// teardown uses deactivatePagePresentation instead.

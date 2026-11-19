@@ -32,7 +32,7 @@ struct BrowserStartPageHeader: View {
             .frame(width: layout.markSize, height: layout.markSize)
             .accessibilityHidden(true)
         Text("Start Page")
-            .font(.largeTitle.weight(.semibold))
+            .font(CrestTypography.display(30, relativeTo: .largeTitle))
             .foregroundStyle(.primary)
             .multilineTextAlignment(.center)
 

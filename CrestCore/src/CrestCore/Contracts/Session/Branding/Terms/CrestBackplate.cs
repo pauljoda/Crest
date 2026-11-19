@@ -5,7 +5,10 @@ public sealed class CrestBackplate {
     #region Types
 
     /// Each platform draws each shape's outline, so its renderer switches over the kind.
-    public enum Kinds { None, Circle, Shield, FrenchShield, Diamond, Seal, Hexagon, Octagon, RoundedSquare, Oval, Banner, Badge }
+    public enum Kinds {
+        None, Circle, Shield, FrenchShield, Diamond, Seal, Hexagon, Octagon, RoundedSquare, Oval, Banner, Badge, SoftShield,
+        SoftHexagon, Ribbon
+    }
 
     #endregion
 
@@ -24,9 +27,17 @@ public sealed class CrestBackplate {
     public static readonly CrestBackplate Oval = new(Kinds.Oval, "oval", "Oval", CrestVocabulary.Studio);
     public static readonly CrestBackplate Banner = new(Kinds.Banner, "banner", "Banner", CrestVocabulary.Studio);
     public static readonly CrestBackplate Badge = new(Kinds.Badge, "badge", "Badge", CrestVocabulary.Studio);
+    /// A shield with rounded shoulders and a full curve down to its point.
+    public static readonly CrestBackplate SoftShield = new(Kinds.SoftShield, "softShield", "Soft Shield", CrestVocabulary.Simple);
+    /// A hexagon standing on a point, its corners rounded.
+    public static readonly CrestBackplate SoftHexagon = new(Kinds.SoftHexagon, "softHexagon", "Soft Hexagon",
+        CrestVocabulary.Simple);
+    /// A ribbon hanging from rounded shoulders, notched at its foot.
+    public static readonly CrestBackplate Ribbon = new(Kinds.Ribbon, "ribbon", "Ribbon", CrestVocabulary.Simple);
 
     public static IReadOnlyList<CrestBackplate> All { get; } =
-        [None, Circle, Shield, FrenchShield, Diamond, Seal, Hexagon, Octagon, RoundedSquare, Oval, Banner, Badge];
+        [None, Circle, Shield, FrenchShield, Diamond, Seal, Hexagon, Octagon, RoundedSquare, Oval, Banner, Badge, SoftShield, SoftHexagon,
+            Ribbon];
 
     public Kinds Kind { get; }
     public string Name { get; }

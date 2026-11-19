@@ -37,22 +37,6 @@ extension BrowserStore {
         }
     }
 
-    /// Dresses Space `spaceID` in `look` for a moment, as setup's welcome
-    /// shows what Crest can look like.
-    func wearLook(_ look: SpaceBranding, on spaceID: UUID) {
-        _ = try? core.send(SetSpaceBranding(workspaceID: family.workspaceID, spaceID: spaceID, branding: look))
-    }
-
-    /// Gives every Space of the copy the look `seed` gives it, putting back
-    /// any look the welcome dressed it in.
-    func wearLooks(of seed: SessionState.Seed) {
-        for space in seed.spaces {
-            guard let branding = space.settings.branding else { continue }
-            _ = try? core.send(
-                SetSpaceBranding(workspaceID: family.workspaceID, spaceID: space.id, branding: branding))
-        }
-    }
-
     /// Shows Space `spaceID` on a Start Page, as Crest enters a Space whose
     /// pages are not loaded, so no page in the copy loads.
     func showSetupSpace(_ spaceID: UUID) {

@@ -4,7 +4,7 @@ const {themes: prismThemes} = require('prism-react-renderer');
 const config = {
   title: 'Crest Help',
   tagline: 'Help articles for Crest.',
-  favicon: 'img/crest-logo.svg',
+  favicon: 'img/crest-favicon.svg',
   url: 'https://crestbrowser.com',
   baseUrl: '/guides/',
   organizationName: 'pauljoda',
@@ -21,6 +21,10 @@ const config = {
     locales: ['en'],
   },
   plugins: [require.resolve('./plugins/help-search-index')],
+  headTags: [
+    {tagName: 'link', attributes: {rel: 'icon', href: '/favicon.ico', sizes: '48x48'}},
+    {tagName: 'link', attributes: {rel: 'apple-touch-icon', href: '/assets/apple-touch-icon.png'}},
+  ],
   presets: [
     [
       'classic',
@@ -44,12 +48,13 @@ const config = {
     ],
   ],
   themeConfig: {
-    image: 'https://crestbrowser.com/assets/og-card-brand.jpg',
+    image: 'https://crestbrowser.com/assets/og-card.jpg',
     metadata: [
       {
         name: 'description',
         content: 'Help articles for Crest on Mac, iPad, and iPhone.',
       },
+      {name: 'theme-color', content: '#FBF5E6'},
     ],
     colorMode: {
       defaultMode: 'light',
@@ -66,9 +71,9 @@ const config = {
         {type: 'docSidebar', sidebarId: 'helpSidebar', position: 'left', label: 'Articles'},
         {to: '/keyboard-shortcuts/', label: 'Shortcuts', position: 'left'},
         {to: '/extension-api-compatibility/', label: 'Compatibility', position: 'left'},
-        {href: 'https://github.com/pauljoda/Crest/releases/latest', label: 'Download for Mac', position: 'right'},
-        {href: 'https://crestbrowser.com/support/', label: 'Support', position: 'right'},
         {href: 'https://crestbrowser.com/', label: 'Product site', position: 'right'},
+        {href: 'https://crestbrowser.com/support/', label: 'Support', position: 'right'},
+        {href: 'https://github.com/pauljoda/Crest/releases/latest', label: 'Download for Mac', position: 'right', className: 'navbar-download'},
       ],
     },
     docs: {
@@ -78,7 +83,7 @@ const config = {
       },
     },
     footer: {
-      style: 'dark',
+      style: 'light',
       links: [
         {
           title: 'Crest',
@@ -104,12 +109,13 @@ const config = {
             {label: 'GitHub Issues', href: 'https://github.com/pauljoda/Crest/issues/new/choose'},
             {label: 'r/CrestBrowser', href: 'https://www.reddit.com/r/CrestBrowser'},
             {label: 'Discord', href: 'https://discord.gg/gjrM5qMB6x'},
-            {label: 'Support open source software', href: 'https://ko-fi.com/pauljoda/tiers'},
+            {label: 'Donate', href: 'https://ko-fi.com/pauljoda/tiers'},
             {label: 'Privacy', href: 'https://crestbrowser.com/privacy/'},
+            {label: 'Press kit', href: 'https://crestbrowser.com/press/'},
           ],
         },
       ],
-      copyright: `Crest is not affiliated with Arc. © ${new Date().getFullYear()} Paul Davis.`,
+      copyright: `© ${new Date().getFullYear()} Paul Davis.`,
     },
     prism: {
       theme: prismThemes.github,

@@ -7,7 +7,7 @@ keywords: [gestures, swipe, drag, drop, middle click, right click, long press, i
 
 # Gestures and pointer actions
 
-Many Crest actions stay out of the permanent chrome. This is the practical map for touch, trackpad, mouse, and drag and drop.
+Many Crest actions stay out of the toolbar and sidebar. This is the practical map for touch, trackpad, mouse, and drag and drop.
 
 ## iPhone
 

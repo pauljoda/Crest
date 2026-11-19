@@ -51,8 +51,9 @@ final class BrowserMacApplication {
     let systemNowPlaying: BrowserSystemNowPlayingCoordinator?
     let startupBehavior: StartupBehavior
     /// The window that opens on `startupBehavior`: the frontmost of the
-    /// windows the launch opened. Every other window opens on the tab it left.
-    var startupWindowID = BrowserMacWindowRequest.initial.id
+    /// windows the launch opened, or none when setup handed the launch the
+    /// tabs to show. Every other window opens on the tab it left.
+    var startupWindowID: UUID? = BrowserMacWindowRequest.initial.id
     /// The windows the launch opens on the Start Page instead, while it opens
     /// them, when the person chose not to reopen pages after a launch that
     /// ended while it reopened them.

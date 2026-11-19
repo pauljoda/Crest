@@ -2,7 +2,7 @@
 title: Share sign-ins across Spaces with Sub-Spaces
 description: Group Spaces so they share one set of sign-ins, history, passwords and extensions, while each keeps its own tabs and look.
 slug: /sub-spaces
-keywords: [Sub-Spaces, groups, shared profile, shared sign-ins, cookies, Separate Pinned Tabs, primary, Arc profiles, Zen workspaces]
+keywords: [Sub-Spaces, groups, shared profile, shared sign-ins, cookies, Separate Pinned Tabs, primary, Arc profiles, workspaces]
 ---
 
 import GuideScreenshot from '@site/src/components/GuideScreenshot';
@@ -113,9 +113,9 @@ To open a link with another Space's sign-ins on Mac, right-click it and choose a
 
 Devices that run an earlier version of Crest keep syncing. They show each Sub-Space as a Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices.
 
-## Import groups from Arc and Zen
+## Import groups from other browsers
 
-Importing from Arc brings the Spaces of each Arc profile in as one group, led by the profile's first Space. Importing from Zen does the same for each profile's workspaces. Zen workspaces that open their tabs in one container share that container's sign-ins instead, so they come in as a group of their own.
+Importing from Arc brings the Spaces of each Arc profile in as one group, led by the profile's first Space. When another browser keeps several workspaces in one profile, they come in the same way. Workspaces that open their tabs in one container share that container's sign-ins instead, so they come in as a group of their own.
 
 If the review sends one Space of a group into a Space you already have, the rest of the group become Sub-Spaces of that Space's group, and its primary keeps leading it. They take the group's settings and its primary's pinned tabs. Imported passwords go to the group's primary.
 

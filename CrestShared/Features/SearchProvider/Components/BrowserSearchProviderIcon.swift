@@ -30,6 +30,9 @@ struct BrowserSearchProviderIcon: View {
     let provider: SearchProvider
     var profileID: UUID? = nil
     var size: CGFloat = 20
+    /// Clear room after the icon, drawn into its image, for a menu that sets
+    /// the image against text with nothing between.
+    var trailingRoom: CGFloat = 0
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
@@ -38,7 +41,8 @@ struct BrowserSearchProviderIcon: View {
     var body: some View {
         Group {
             if let artwork {
-                Image(decorative: artwork, scale: displayScale)
+                let image = Self.leavingRoom(trailingRoom, after: artwork, scale: displayScale)
+                Image(decorative: image, scale: displayScale)
                     .renderingMode(.original)
                     .interpolation(.high)
             } else {
@@ -47,7 +51,7 @@ struct BrowserSearchProviderIcon: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: size, height: size)
+        .frame(width: size + trailingRoom, height: size, alignment: .leading)
         .accessibilityHidden(true)
         .task(id: siteIconRequest) {
             await loadSiteIcon(siteIconRequest)
@@ -62,6 +66,19 @@ struct BrowserSearchProviderIcon: View {
         }
         return BrowserSearchProviderArtworkRenderer.shared.image(
             logo: logo, size: size, colorScheme: colorScheme, scale: displayScale)
+    }
+
+    /// `image` with `room` points of clear space after it, or `image` itself
+    /// when there is none to leave.
+    private static func leavingRoom(_ room: CGFloat, after image: CGImage, scale: CGFloat) -> CGImage {
+        let extra = Int((room * scale).rounded())
+        guard extra > 0,
+            let context = CGContext(
+                data: nil, width: image.width + extra, height: image.height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return image }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return context.makeImage() ?? image
     }
 
     private var siteIconRequest: SiteIconRequest {

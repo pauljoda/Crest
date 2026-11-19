@@ -16,17 +16,15 @@ struct BrowserSetupLiveWindow: View {
 
     var body: some View {
         if let copy = session.copy {
-            BrowserSetupLiveWindowHost(
-                content: browser(copy), cornerRadius: cornerRadius, hosted: { session.browserView = $0 }
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
-                    .allowsHitTesting(false)
-            }
-            .shadow(color: .black.opacity(cornerRadius > 0 ? 0.22 : 0), radius: 30, y: 16)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text("Preview of Crest"))
+            BrowserSetupLiveWindowHost(content: browser(copy), cornerRadius: cornerRadius)
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
+                        .allowsHitTesting(false)
+                }
+                .shadow(color: .black.opacity(cornerRadius > 0 ? 0.22 : 0), radius: 30, y: 16)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(Text("Preview of Crest"))
         }
     }
 
@@ -85,12 +83,12 @@ extension BrowserSetupLiveWindow {
     // MARK: - Actions - Reading
 
     /// Whether the copy shows a web page, which it never loads, rather than a
-    /// Start Page.
+    /// Start Page or one of Crest's own pages.
     private func showsWebPage(in store: BrowserStore) -> Bool {
         guard let space = store.shownSpace, let tabID = store.selectedTabID(in: space.id),
             let tab = space.tabs.model(tabID)
         else { return false }
-        return !tab.isStartPage
+        return !tab.isStartPage && tab.nativeTabContent == nil
     }
 }
 

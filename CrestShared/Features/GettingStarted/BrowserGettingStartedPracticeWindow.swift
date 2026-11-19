@@ -129,7 +129,7 @@
                 .font(CrestTypography.sans(14)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 Button("Add Packing list", systemImage: "plus.rectangle.on.rectangle") { practice.makeSplit() }
-                    .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+                    .buttonStyle(.crestPrimary)
             } else if tab.title == "Packing list" {
                 Image(systemName: "arrow.left.arrow.right")
                     .font(.system(size: 32, weight: .light)).foregroundStyle(CrestBrandPalette.sage)

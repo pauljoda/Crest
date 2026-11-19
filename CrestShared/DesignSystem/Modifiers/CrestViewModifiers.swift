@@ -76,3 +76,19 @@ extension View {
         #endif
     }
 }
+
+extension View {
+    /// Sets this text as a small caps label over a section or a group: rounded
+    /// heavy, tracked out, in the label color.
+    func crestCapsLabel() -> some View {
+        font(CrestTypography.capsLabel)
+            .tracking(CrestTypographyMetrics.capsLabelTracking)
+            .textCase(.uppercase)
+            .foregroundStyle(CrestBrandTheme.label)
+    }
+}
+
+enum CrestTypographyMetrics {
+    /// How far a caps label's letters are tracked apart, about 14% of its size.
+    static let capsLabelTracking: CGFloat = 1.7
+}

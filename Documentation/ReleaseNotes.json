@@ -5774,6 +5774,54 @@
       "category": "improved",
       "message": "History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart."
     },
+    "crest-modern-look": {
+      "category": "improved",
+      "message": "Crest has a fresh look: a new three-banner mark, warm paper surfaces, Crest blue for actions, and bold rounded headings across setup, Settings and the Start Page."
+    },
+    "app-icons-follow-system": {
+      "category": "improved",
+      "message": "The app icon and each alternative icon now follow your system's light, dark, tinted and clear icon styles, and sit at the right size in the Dock."
+    },
+    "simple-crests": {
+      "category": "new",
+      "message": "New Simple crests (Crest, Moon, Summit, Lens, Spark and Grove) sit beside the Heraldic ones when you choose a Space's icon, and new Spaces start in the Crest look."
+    },
+    "setup-paper-welcome": {
+      "category": "improved",
+      "message": "Setup opens on a full welcome, then lays its steps on a sheet of paper beside a live preview of Crest, with the steps as colored chips you can tap to go straight to one."
+    },
+    "setup-make-it-home": {
+      "category": "new",
+      "message": "Setup now ends with Make It Home, where you can make Crest your default browser and choose its search and how much ad blocking blocks."
+    },
+    "iphone-setup-steps": {
+      "category": "improved",
+      "message": "On iPhone, and on iPad held upright, setup walks the same steps as on a Mac: each Space's page wears that Space's colors, Preview shows it as Crest will, and the buttons float over the page."
+    },
+    "setup-hands-over-smoothly": {
+      "category": "fixed",
+      "message": "Finishing setup now responds the moment you tap Start Browsing and moves into Crest in one smooth motion, without a pause, a flash or a late page."
+    },
+    "own-pages-open-at-once": {
+      "category": "fixed",
+      "message": "A new window that opens on Getting Started or Settings shows it at once instead of after a blank pause."
+    },
+    "space-picker-well": {
+      "category": "improved",
+      "message": "The Space picker shows your Spaces in a well with a clear selector, a lighter mark for Sub-Spaces, and corners that follow your Corner radius setting."
+    },
+    "settings-solid-icons": {
+      "category": "improved",
+      "message": "Settings shows solid icons in Crest's colors."
+    },
+    "imported-space-icons": {
+      "category": "improved",
+      "message": "Spaces brought in from another browser keep their own icon, set on a round crest in the Space's color."
+    },
+    "search-icons-spacing": {
+      "category": "fixed",
+      "message": "Search engine icons in pickers are now sized to their name, with clear room between the two."
+    },
     "core-close-waits-for-filter-conversions": {
       "category": "internal",
       "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."

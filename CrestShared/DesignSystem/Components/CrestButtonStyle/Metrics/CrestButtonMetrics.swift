@@ -12,6 +12,13 @@ enum CrestButtonMetrics {
         static let prominentHeight: CGFloat = 44
         static let standardHeight: CGFloat = 44
     #endif
+    /// A page's one large call to action, as on Crest's website.
+    #if os(macOS)
+        static let largeHeight: CGFloat = 50
+    #else
+        static let largeHeight: CGFloat = 54
+    #endif
+    static let largeHorizontalPadding: CGFloat = 28
     static let prominentHorizontalPadding: CGFloat = 18
     static let standardHorizontalPadding: CGFloat = 16
     static let quietHorizontalPadding: CGFloat = CrestSpacing.small

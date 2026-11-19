@@ -11,7 +11,7 @@ struct BrowserGettingStartedPinAction: View {
         Button("Pin Gmail", systemImage: "pin.fill") {
             if let mail = practice.tabID(.mail) { practice.browser.pinTab(mail) }
         }
-        .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+        .buttonStyle(.crestPrimary)
     }
 }
 
@@ -25,7 +25,7 @@ struct BrowserGettingStartedSaveAction: View {
         Button(title, systemImage: systemImage) {
             if let trail = practice.tabID(.trail) { practice.browser.saveTab(trail) }
         }
-        .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+        .buttonStyle(.crestPrimary)
     }
 }
 
@@ -59,6 +59,6 @@ struct BrowserGettingStartedCleanUpAction: View {
         Button(ShortcutCommand.clearOtherTabs) {
             _ = practice.tabActions.clearCurrentTabs(keepingShownTab: true)
         }
-        .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+        .buttonStyle(.crestPrimary)
     }
 }
