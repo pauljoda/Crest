@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="Website/assets/crest-logo.svg" width="128" alt="The Crest mark: three stacked banners on a navy tile">
-  <h1>Crest</h1>
+  <img src="Website/assets/readme/banner.png" width="800" alt="Crest: Spaces for your browsing">
   <p><strong>An open source browser for Mac, iPhone, and iPad.</strong></p>
   <p>Built with SwiftUI, running Chromium and WebKit on Mac, with separate Spaces for different parts of your life.</p>
   <p>
@@ -26,7 +25,7 @@ Browse Mac releases by channel: [Stable](https://github.com/pauljoda/Crest/relea
 [Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
 
 <p align="center">
-  <a href="Website/assets/crest-work-mac.png"><img src="Website/assets/crest-work-mac.png" width="100%" alt="Crest on Mac with Lion Work first, Winter Personal second, and Audience research open beside the Launch Atlas folder"></a>
+  <img src="Website/assets/readme/hero.png" width="100%" alt="Crest on Mac: the Work Space with its pins and the Launch Atlas folder, and the command palette searching for launch">
 </p>
 
 ## A browser with boundaries
@@ -35,7 +34,15 @@ Most browsers put every login, tab, and distraction into one long-lived containe
 
 Switching Spaces changes more than the color of the window. It changes the browsing context.
 
+<p align="center">
+  <img src="Website/assets/readme/spaces.png" width="100%" alt="Two iPhones: the Work Space and the Personal Space, each with its own pins, folders and tabs">
+</p>
+
 When several Spaces should share one set of sign-ins, make them **Sub-Spaces**: each keeps its own tabs and look while the group shares cookies, history, passwords, and extensions. [Read the Sub-Spaces guide.](https://crestbrowser.com/guides/sub-spaces/)
+
+<p align="center">
+  <img src="Website/assets/readme/sub-spaces.png" width="100%" alt="Three Sub-Spaces, Work, Client A and Client B, each with its own tabs and look, sharing sign-ins and cookies, history, passwords, extensions and site permissions">
+</p>
 
 ## Two engines on Mac
 
@@ -52,15 +59,18 @@ per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine
 supports.
 
+<p align="center">
+  <img src="Website/assets/readme/engines.png" width="100%" alt="Chromium, the Mac default with Crest's privacy changes and Chrome Web Store extensions, and WebKit on Mac, iPhone and iPad, with Reader, whole-page translation and FairPlay video">
+</p>
+
 ## Crest Studio and Appearance
 
-**Crest Studio** puts each Space's crest on that Space's own sidebar background. Start from a template, then step through shape, field, band, emblem, border, finish and sidebar, choosing from previews of your own crest. Every part of the crest and the sidebar has its own color, named by what it paints. Use heraldic artwork, emoji, monograms, or a searchable SF Symbols picker, and Shuffle and Undo freely.
+**Crest Studio** gives each Space its own look. Pick one of thirteen color sets, or set your own Background and Accent, each one color or a gradient of up to three, chosen on a color wheel with brightness and texture. Then give the Space a crest, a symbol from a searchable SF Symbols picker, or an emoji, and Shuffle until it feels right. Crests and sidebar patterns sit under More Customization.
 
 **Appearance** lets you dock the sidebar on either edge, go borderless, adjust tab shape and scale, choose a pin layout, and tune tab and address-field colors, or let them follow each Space's accent. Start with a preset, see changes live, and reset individual settings. Choose an app icon palette, folder colors and icons, and a default page zoom from 50% to 300%.
 
 <p align="center">
-  <a href="Website/assets/crest-studio-mac.png"><img src="Website/assets/crest-studio-mac.png" width="49%" alt="Crest Studio with a Winter crest on its Space’s sidebar background, its colors, the shape step, and the live sidebar"></a>
-  <a href="Website/assets/crest-look-and-feel-mac.png"><img src="Website/assets/crest-look-and-feel-mac.png" width="49%" alt="Appearance settings with window, accent, tab, and pin controls"></a>
+  <img src="Website/assets/readme/studio.png" width="100%" alt="Crest Studio for the Work Space: its crest, Background and Accent, the color sets, and the crest picker">
 </p>
 
 ## Browsing features
@@ -73,7 +83,9 @@ supports.
 - **Search and commands.** Open a URL, search the web, find tabs and history in your Space, or run a command from one field. Choose custom search engines and optional suggestions. Mac shortcuts can be rebound.
 - **Getting Started.** Learn tabs, pins, and folders in an interactive browser tab, with Split View practice on Mac.
 
-![Two pages open side by side in a Split View group in Crest on Mac](Website/assets/crest-split-view-mac.png)
+<p align="center">
+  <img src="Website/assets/readme/split-view.png" width="100%" alt="Crest on Mac with two pages side by side in a Split View group">
+</p>
 
 ## Page tools
 
@@ -90,7 +102,11 @@ supports.
 
 **Private Spaces** use temporary website storage and stay out of normal history, restoration, and sync. They can require device authentication and relock when Crest leaves the foreground. **Crest Passwords** keeps origin- and Space-matched credentials in the system Keychain, with authentication for sensitive access.
 
-Site permissions and content blocking are controlled per Space. Built-in ad and tracker blocking covers iPhone, iPad, and WebKit pages; on Chromium pages, install a blocking extension. Closed and cleaned-up tabs go to a recoverable Archive, subject to your retention settings. **Keep Loaded** protects a page from ordinary unloading when its live state matters.
+Site permissions and content blocking are controlled per Space. Built-in ad and tracker blocking covers every page, in Chromium and WebKit: choose Off, Balanced, or Strict, and hide anything else with Block Element. Closed and cleaned-up tabs go to a recoverable Archive, subject to your retention settings. **Keep Loaded** protects a page from ordinary unloading when its live state matters.
+
+<p align="center">
+  <img src="Website/assets/readme/privacy.png" width="100%" alt="Content blocking at Off, Balanced or Strict, with EasyList, EasyPrivacy, uBlock Origin lists, your language and your own filters, and Block Element">
+</p>
 
 Optional **iCloud sync** carries durable Spaces, tabs, folders, Split View groups, appearance, history, and Archive between devices. Password values stay out of CloudKit; eligible passwords can use iCloud Keychain separately. Start a browser import on Mac, review each destination Space, or export a portable Crest archive.
 
@@ -101,8 +117,7 @@ Read the [privacy policy](https://crestbrowser.com/privacy/), [Space isolation g
 The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page; iPhone gives your tabs and folders their own view.
 
 <p align="center">
-  <a href="Website/assets/crest-work-ipad.png"><img src="Website/assets/crest-work-ipad.png" width="72%" alt="Lion Work first and Winter Personal second on iPad, with Audience research open"></a>
-  <a href="Website/assets/crest-work-iphone-sidebar.png"><img src="Website/assets/crest-work-iphone-sidebar.png" width="25%" alt="The same Spaces, Launch Atlas folder, and selected Audience research tab in the iPhone sidebar"></a>
+  <img src="Website/assets/readme/devices.png" width="100%" alt="Crest on iPad with the sidebar beside the page, and on iPhone with the page and the address field at the bottom">
 </p>
 
 | Platform | Install |
