@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "saved-addresses-keep-their-escapes",
+    "development": "palette-history-site-icons",
     "nightly": "palette-fallback-unknown-sites-only"
   }
 }
