@@ -235,7 +235,7 @@ function GradientField({ fill, id, width, height }: { fill: SpaceFill; id: strin
  * BrowserSpaceThemeTexture: the same grain the Mac lays over the banner, one
  * particle per 24 square points, light and dark in turn, from the same seed.
  */
-function Grain({ width, height, opacity }: { width: number; height: number; opacity: number }) {
+export function Grain({ width, height, opacity }: { width: number; height: number; opacity: number }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const element = canvas.current;

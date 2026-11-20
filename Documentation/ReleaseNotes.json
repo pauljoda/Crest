@@ -5905,6 +5905,10 @@
     "windows-space-appearance-page": {
       "category": "internal",
       "message": "A Space's Appearance page on Windows, opened by Edit Space: the Mac's thirteen palettes, starter crests, symbol and emoji icons, and the sidebar's pattern, strength, fade, folder colors, texture and text"
+    },
+    "windows-space-color-popover": {
+      "category": "internal",
+      "message": "A Space's colors on Windows open the Mac's color popover: a wheel with a handle for each color, Brightness and Texture, a spectrum, and up to three colors placed in harmony, moved together or apart, with their direction"
     }
   }
 }

@@ -1281,3 +1281,365 @@
   text-align: right;
   color: var(--settings-secondary);
 }
+
+/* The stage's swatches open their colors' popovers. */
+button.forge-swatch {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
+}
+
+button.forge-swatch:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+button.forge-swatch.selected {
+  background: rgb(255 255 255 / 0.13);
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 1px 4px rgb(0 0 0 / 0.08);
+}
+
+/* CrestColorWell: the fill in a ring, Crest's blue round it while its popover is open. */
+.color-well {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 100ms ease-out, box-shadow 100ms ease-out;
+}
+
+.color-well:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.color-well.selected {
+  background: color-mix(in srgb, var(--forge-tint) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--forge-tint);
+}
+
+.fill-dot-line {
+  stroke: var(--forge-line);
+}
+
+/* CrestColorPopover: 320 wide, dark whatever the window, over Crest's flyout surface. */
+.crest-popover.color-popover {
+  --prompt-surface: rgb(43 41 40);
+  --prompt-ink: rgb(255 255 255 / 0.9);
+  --color-quaternary: rgb(255 255 255 / 0.16);
+  --color-tertiary: rgb(255 255 255 / 0.35);
+  --color-secondary: rgb(255 255 255 / 0.55);
+  --color-line: rgb(255 253 247 / 0.22);
+  --color-accent: rgb(79 142 224);
+  width: 320px;
+  border-radius: 20px;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 10px 30px rgb(0 0 0 / 0.28);
+  color-scheme: dark;
+}
+
+.color-popover-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.color-popover-wheel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-wheel {
+  position: relative;
+  touch-action: none;
+}
+
+.color-wheel-place {
+  position: absolute;
+}
+
+/* crestColorInset: colors set into the popover, a recess round them lit from below, a dark edge where they begin. */
+.color-inset {
+  position: relative;
+  display: block;
+}
+
+.color-inset::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.32) 0%, rgb(0 0 0 / 0.112) 55%, rgb(255 255 255 / 0.22) 100%);
+  pointer-events: none;
+}
+
+.color-inset.slim::before {
+  inset: -2.5px;
+}
+
+.color-inset::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgb(0 0 0 / 0.35);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.color-wheel-surface {
+  border-radius: 50%;
+}
+
+.color-wheel-surface > canvas {
+  display: block;
+  border-radius: 50%;
+}
+
+.color-wheel-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.color-wheel-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 0.35);
+  transform: translate(-50%, -50%);
+  transition: width 150ms ease-in-out, height 150ms ease-in-out, border-width 150ms ease-in-out,
+    transform 100ms ease-out, box-shadow 100ms ease-out;
+  outline: none;
+}
+
+.color-wheel-dot.chosen {
+  width: 36px;
+  height: 36px;
+  border-width: 4px;
+}
+
+.color-wheel-dot.lifted {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.45);
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+/* The row under the wheel: minus and plus in the middle, the direction and the link at either end. */
+.color-popover-controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+}
+
+.color-popover-count {
+  display: flex;
+  gap: 12px;
+}
+
+.color-popover-leading,
+.color-popover-trailing {
+  position: absolute;
+  top: 0;
+}
+
+.color-popover-leading {
+  left: 0;
+}
+
+.color-popover-trailing {
+  right: 0;
+}
+
+.color-popover-button,
+.color-link {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background-color: var(--color-quaternary);
+  color: rgb(255 255 255 / 0.9);
+  transition: background-image 100ms ease-in-out;
+}
+
+.color-popover-button:hover:not(:disabled),
+.color-link:hover {
+  background-image: linear-gradient(rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.08));
+}
+
+.color-popover-button:active:not(:disabled),
+.color-link:active {
+  background-image: linear-gradient(rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.13));
+}
+
+.color-popover-button:disabled {
+  color: rgb(255 255 255 / 0.4);
+}
+
+.color-link {
+  color: var(--color-secondary);
+}
+
+.color-link.on {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+/* CrestAngleKnob at 32. */
+.angle-knob {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-quaternary);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  touch-action: none;
+  outline: none;
+}
+
+.angle-knob-tick {
+  position: absolute;
+  top: 14px;
+  left: 15.25px;
+  width: 1.5px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--color-tertiary);
+}
+
+.angle-knob-arrow {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-secondary);
+}
+
+.angle-knob-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+  transition: transform 100ms ease-out;
+  pointer-events: none;
+}
+
+.angle-knob-handle.turning {
+  transform: scale(1.3);
+}
+
+/* CrestColorSlider: a 14-point track set into the popover under a 22-point thumb. */
+.color-slider {
+  position: relative;
+  height: 28px;
+  touch-action: none;
+  outline: none;
+}
+
+.color-slider-track {
+  position: absolute;
+  top: 7px;
+  right: 0;
+  left: 0;
+  height: 14px;
+  border-radius: 7px;
+}
+
+.color-slider-grain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.color-slider-grain > canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, black);
+  mask-image: linear-gradient(to right, transparent, black);
+}
+
+.color-slider-thumb {
+  position: absolute;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  box-sizing: border-box;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.3);
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+  pointer-events: none;
+}
+
+.color-slider-thumb.lifted {
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.4);
+  transform: scale(1.12);
+}
+
+/* The spectrum: twelve hues, each a 16-point swatch in its ring. */
+.color-spectrum {
+  display: flex;
+}
+
+.color-spectrum-slot {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+}
+
+.color-spectrum-swatch {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 100ms ease-out, box-shadow 100ms ease-out;
+}
+
+.color-spectrum-swatch:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.color-spectrum-swatch.selected {
+  background: rgb(79 142 224 / 0.1);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.color-spectrum-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+.color-slider:focus-visible,
+.angle-knob:focus-visible,
+.color-wheel-dot:focus-visible {
+  box-shadow: 0 0 0 3px rgb(79 142 224 / 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .color-wheel-dot,
+  .color-slider-thumb,
+  .angle-knob-handle {
+    transition: none;
+  }
+}

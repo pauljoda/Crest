@@ -128,6 +128,10 @@ export const motion = Object.freeze({
   press: { duration: 0.1, ease: "easeOut" } as const,
   surface: { duration: 0.1, ease: "easeInOut" } as const,
   hover: { duration: 0.1, ease: "easeInOut" } as const,
+  /** Choosing one of a few, such as a color wheel's handle, and controls coming with it. */
+  selection: { duration: 0.15, ease: "easeInOut" } as const,
+  /** A color popping in or out, or springing to where it was put. */
+  colorPop: { type: "spring", visualDuration: 0.3, bounce: 0.3 } as const,
   step: snappy(0.22),
   collection: snappy(0.17),
   dragPreview: smooth(0.14),

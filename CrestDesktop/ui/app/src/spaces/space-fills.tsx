@@ -255,9 +255,10 @@ const cuspLightnesses = [
   0.717, 0.661, 0.574, 0.465, 0.489, 0.518, 0.552, 0.595, 0.648, 0.697, 0.675, 0.659,
 ];
 
-interface Lch { readonly lightness: number; readonly chroma: number; readonly degrees: number }
+export interface Lch { readonly lightness: number; readonly chroma: number; readonly degrees: number }
 
-function lch(color: BrandColor): Lch {
+/** A color in OKLCH: its lightness, chroma, and hue in degrees. */
+export function lch(color: BrandColor): Lch {
   const [l, a, b] = oklab(color);
   const hue = Math.atan2(b, a) / (2 * Math.PI);
   return { lightness: l, chroma: Math.hypot(a, b), degrees: (((hue % 1) + 1) % 1) * 360 };
@@ -281,14 +282,16 @@ function crossesMud(a: Lch, b: Lch, turn: number): boolean {
   return false;
 }
 
-function cuspLightness(degrees: number): number {
+/** The OKLCH lightness at which the hue at `degrees` is most vivid in sRGB. */
+export function cuspLightness(degrees: number): number {
   const position = ((((degrees % 360) + 360) % 360)) / 10;
   const below = Math.floor(position) % cuspLightnesses.length;
   const above = (below + 1) % cuspLightnesses.length;
   return cuspLightnesses[below] + (cuspLightnesses[above] - cuspLightnesses[below]) * (position - Math.floor(position));
 }
 
-function maximumChroma(lightness: number, hue: number): number {
+/** The most chroma sRGB holds at `lightness` and `hue`, a share of a turn. */
+export function maximumChroma(lightness: number, hue: number): number {
   let low = 0;
   let high: number = perceptual.chromaCeiling;
   for (let step = 0; step < perceptual.gamutSteps; step++) {
@@ -299,8 +302,8 @@ function maximumChroma(lightness: number, hue: number): number {
   return low;
 }
 
-/** The sRGB color of an OKLCH color, giving up chroma until sRGB holds it. */
-function fromLch(lightness: number, chroma: number, hue: number): BrandColor {
+/** The sRGB color of an OKLCH color, its hue a share of a turn, giving up chroma until sRGB holds it. */
+export function fromLch(lightness: number, chroma: number, hue: number): BrandColor {
   if (inGamut(lightness, chroma, hue)) return clamped(lightness, chroma, hue);
   let low = 0;
   let high = chroma;
@@ -360,6 +363,22 @@ function inGamut(lightness: number, chroma: number, hue: number): boolean {
 function clamped(lightness: number, chroma: number, hue: number): BrandColor {
   const [r, g, b] = linearRgb(lightness, chroma, hue);
   return { red: encoded(r), green: encoded(g), blue: encoded(b), alpha: 1 };
+}
+
+/** CrestPerceptualColor.isMuddy: a warm hue well below where it is most vivid, the dark oranges, yellows and olives. */
+export function isMuddy(color: Lch): boolean {
+  return color.chroma >= perceptual.mudChroma && color.degrees >= perceptual.mudHues[0] && color.degrees <= perceptual.mudHues[1]
+    && color.lightness < cuspLightness(color.degrees) - perceptual.mudDepth;
+}
+
+/** WCAG relative luminance. */
+export function luminance(color: BrandColor): number {
+  return 0.2126 * linear(color.red) + 0.7152 * linear(color.green) + 0.0722 * linear(color.blue);
+}
+
+/** WCAG contrast between two luminances. */
+export function contrast(first: number, second: number): number {
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
 function linear(channel: number): number {

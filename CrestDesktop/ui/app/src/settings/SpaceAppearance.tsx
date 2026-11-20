@@ -10,6 +10,7 @@ import {
   type SpaceState,
   SpaceTextColorMode,
   SpaceThemeModeKinds,
+  Tincture,
 } from "@crest/contracts";
 import { AnimatePresence } from "motion/react";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
@@ -18,6 +19,7 @@ import type { Session } from "../boot";
 import { emojiOf } from "../branding";
 import { EmojiPicker, Popover } from "../shell/pickers";
 import { BannerLayers } from "../shell/SpaceBanner";
+import { sameColor } from "../spaces/color-harmony";
 import { accentFill, backgroundFill, fillPaint, type SpaceFill } from "../spaces/space-fills";
 import {
   applyingHouse,
@@ -32,13 +34,38 @@ import {
   wearingPattern,
   wearsHouse,
   wearsPalette,
+  withAccentFill,
+  withBackgroundFill,
+  withPatternFill,
 } from "../spaces/space-look";
 import { SpaceCrestIcon, SpaceIdentityIcon } from "../spaces/SpaceIdentity";
 import { Symbol, symbolNames } from "../symbols";
+import { ColorPopoverContent } from "./ColorPopover";
 import { Group, Row, Segmented } from "./controls";
 
 /** BrowserCrestStudio's undo depth: the oldest look goes past it. */
 const historyLimit = 40;
+
+/** The Space's colors a well edits: its Background, its Accent, and the color its sidebar pattern wears. */
+type WellRole = "background" | "accent" | "pattern";
+
+const wellTitles: Record<WellRole, string> = { background: "Background", accent: "Accent", pattern: "Pattern" };
+
+function wellFill(role: WellRole, look: SpaceBranding): SpaceFill {
+  return role === "background" ? backgroundFill(look) : role === "accent" ? accentFill(look) : patternFill(look);
+}
+
+function withWellFill(role: WellRole, look: SpaceBranding, fill: SpaceFill): SpaceBranding {
+  return role === "background" ? withBackgroundFill(look, fill) : role === "accent" ? withAccentFill(look, fill) : withPatternFill(look, fill);
+}
+
+const sameLook = (left: SpaceBranding, right: SpaceBranding) => JSON.stringify(left) === JSON.stringify(right);
+
+/** A fill's name: Gradient, the tincture its color is, or Custom. */
+function colorName(fill: SpaceFill): string {
+  if (fill.colors.length > 1) return "Gradient";
+  return Tincture.all.find((tincture) => sameColor(tincture.color, fill.colors[0]))?.title ?? "Custom";
+}
 
 /**
  * A Space's Appearance page, as the Mac's BrowserSpaceEditorView draws its
@@ -51,13 +78,17 @@ const historyLimit = 40;
  * history is the Space's own.
  */
 export function SpaceAppearance({ session, space }: { session: Session; space: SpaceState }) {
-  // A drag's looks show at once and save as the core takes them; the page shows the drag's while it runs.
+  // A drag's looks show at once and save as the core takes them; the page shows the drag's while it runs,
+  // and its last until the core's look arrives.
   const [draft, setDraft] = useState<SpaceBranding | null>(null);
   const branding = draft ?? space.settings.look;
   const [history, setHistory] = useState<readonly SpaceBranding[]>([]);
   const [showsMore, setShowsMore] = useState(false);
   const dragStart = useRef<SpaceBranding | null>(null);
+  const dragLatest = useRef<SpaceBranding | null>(null);
   const pending = useRef<{ branding: SpaceBranding; frame: number } | null>(null);
+  const [well, setWell] = useState<{ role: WellRole; anchor: DOMRect; element: HTMLElement } | null>(null);
+  const flushWell = useRef<(() => void) | null>(null);
   const defaults = useRef(startingLook(space.settings.look) ?? space.settings.look);
 
   const send = useCallback((next: SpaceBranding) => {
@@ -70,9 +101,15 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
     send(next);
   };
 
-  /** A drag's look: shown at once, saved at most once a frame, and one undo step for the whole drag. */
-  const drag = (next: SpaceBranding) => {
-    dragStart.current ??= space.settings.look;
+  /**
+   * A drag's look, `change` made to the drag's newest: shown at once, saved
+   * at most once a frame, and one undo step for the whole drag. A color
+   * popover's whole session is one drag.
+   */
+  const drag = (change: (look: SpaceBranding) => SpaceBranding) => {
+    const next = change(dragLatest.current ?? branding);
+    dragStart.current ??= branding;
+    dragLatest.current = next;
     setDraft(next);
     if (pending.current) {
       pending.current.branding = next;
@@ -89,19 +126,38 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
   };
   const endDrag = () => {
     const start = dragStart.current;
+    const latest = dragLatest.current;
     dragStart.current = null;
+    dragLatest.current = null;
     if (!start) return;
     if (pending.current) {
       cancelAnimationFrame(pending.current.frame);
       send(pending.current.branding);
       pending.current = null;
     }
-    setHistory((past) => [...past, start].slice(-historyLimit));
-    setDraft(null);
+    if (!latest || !sameLook(start, latest)) setHistory((past) => [...past, start].slice(-historyLimit));
   };
+  useEffect(() => {
+    if (!dragStart.current) setDraft(null);
+  }, [space.settings.look]);
   useEffect(() => () => {
     if (pending.current) cancelAnimationFrame(pending.current.frame);
   }, []);
+
+  const closeWell = () => {
+    flushWell.current?.();
+    setWell(null);
+    endDrag();
+  };
+  /** Opens the popover for `role` under `element`, or closes it when it is that well's. */
+  const toggleWell = (role: WellRole, element: HTMLElement) => {
+    if (well?.element === element) {
+      closeWell();
+      return;
+    }
+    if (well) closeWell();
+    setWell({ role, anchor: element.getBoundingClientRect(), element });
+  };
 
   const undo = () => {
     const previous = history.at(-1);
@@ -123,7 +179,8 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
   return (
     <div className="space-appearance" data-testid="space-customization-controls">
       <section className="space-appearance-section">
-        <Stage branding={branding} symbol={space.settings.symbol} canUndo={history.length > 0} onUndo={undo} />
+        <Stage branding={branding} symbol={space.settings.symbol} canUndo={history.length > 0} onUndo={undo}
+          openWell={well?.element.closest(".forge-stage") ? well.role : null} onWell={toggleWell} />
         <div className="settings-card space-palettes" role="group" aria-label="Palettes" data-testid="space-palettes">
           {spacePalettes.map((palette) => {
             const worn = wearsPalette(palette, branding);
@@ -168,21 +225,23 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
           <Group>
             {showsPattern(branding) && (
               <Row title="Pattern color">
-                <FillDot fill={patternFill(branding)} size={22} />
+                <ColorWell title="Pattern color" fill={patternFill(branding)}
+                  selected={well?.role === "pattern" && !well.element.closest(".forge-stage")}
+                  onToggle={(element) => toggleWell("pattern", element)} />
               </Row>
             )}
             <SliderRow title="Intensity" value={branding.bannerStrength} defaultValue={defaults.current.bannerStrength}
-              onDrag={(bannerStrength) => drag({ ...branding, bannerStrength, hasCustomAppearance: true })} onEnd={endDrag}
+              onDrag={(bannerStrength) => drag((look) => ({ ...look, bannerStrength, hasCustomAppearance: true }))} onEnd={endDrag}
               onReset={(bannerStrength) => write({ ...branding, bannerStrength, hasCustomAppearance: true })} />
             <SliderRow title="Readability fade" value={branding.readabilityFade} defaultValue={defaults.current.readabilityFade}
-              onDrag={(readabilityFade) => drag({ ...branding, readabilityFade, hasCustomAppearance: true })} onEnd={endDrag}
+              onDrag={(readabilityFade) => drag((look) => ({ ...look, readabilityFade, hasCustomAppearance: true }))} onEnd={endDrag}
               onReset={(readabilityFade) => write({ ...branding, readabilityFade, hasCustomAppearance: true })} />
             <SliderRow title="Folder colors" value={branding.folderColorIntensity} defaultValue={defaults.current.folderColorIntensity}
-              onDrag={(folderColorIntensity) => drag({ ...branding, folderColorIntensity, hasCustomAppearance: true })} onEnd={endDrag}
+              onDrag={(folderColorIntensity) => drag((look) => ({ ...look, folderColorIntensity, hasCustomAppearance: true }))} onEnd={endDrag}
               onReset={(folderColorIntensity) => write({ ...branding, folderColorIntensity, hasCustomAppearance: true })} />
             <SliderRow title="Texture" value={branding.textureStrength} defaultValue={defaults.current.textureStrength}
               readout={(value) => (value <= 0 ? "None" : value >= 1 ? "Full" : `${Math.round(value * 100)}%`)}
-              onDrag={(textureStrength) => drag({ ...branding, textureStrength, hasCustomAppearance: true })} onEnd={endDrag}
+              onDrag={(textureStrength) => drag((look) => ({ ...look, textureStrength, hasCustomAppearance: true }))} onEnd={endDrag}
               onReset={(textureStrength) => write({ ...branding, textureStrength, hasCustomAppearance: true })} />
             <Row title="Text"
               onReset={branding.textColorMode !== defaults.current.textColorMode
@@ -194,6 +253,18 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
           </Group>
         </>
       )}
+      <AnimatePresence>
+        {well && (
+          <Popover key={`${well.role}-${well.anchor.x}-${well.anchor.y}`} anchor={well.anchor} label={wellTitles[well.role]} edge="bottom"
+            ignore={well.element} className="color-popover" onClose={closeWell}>
+            <ColorPopoverContent fill={wellFill(well.role, branding)} flush={flushWell}
+              onCommit={(fill) => drag((look) => withWellFill(well.role, look, fill))}
+              texture={well.role === "background"
+                ? { value: branding.textureStrength, onChange: (textureStrength) => drag((look) => ({ ...look, textureStrength, hasCustomAppearance: true })) }
+                : null} />
+          </Popover>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -203,11 +274,13 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
  * shaded toward the trailing edge, the colors beside it, and Undo at the
  * top. The stage reads dark whatever the Space.
  */
-function Stage({ branding, symbol, canUndo, onUndo }: {
+function Stage({ branding, symbol, canUndo, onUndo, openWell, onWell }: {
   branding: SpaceBranding;
   symbol: string;
   canUndo: boolean;
   onUndo: () => void;
+  openWell: WellRole | null;
+  onWell: (role: WellRole, element: HTMLElement) => void;
 }) {
   const stage = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 720, height: 284 });
@@ -232,9 +305,10 @@ function Stage({ branding, symbol, canUndo, onUndo }: {
         <div className="forge-swatch-group">
           <h4>Colors</h4>
           <div className="forge-swatches">
-            <Swatch title="Background" fill={backgroundFill(branding)} />
-            <Swatch title="Accent" fill={accentFill(branding)} />
-            {showsPattern(branding) && <Swatch title="Pattern" fill={patternFill(branding)} />}
+            {(["background", "accent", "pattern"] as const).filter((role) => role !== "pattern" || showsPattern(branding)).map((role) => (
+              <Swatch key={role} title={wellTitles[role]} fill={wellFill(role, branding)} selected={openWell === role}
+                onToggle={(element) => onWell(role, element)} />
+            ))}
           </div>
         </div>
       </div>
@@ -248,18 +322,40 @@ function Stage({ branding, symbol, canUndo, onUndo }: {
   );
 }
 
-/** BrowserCrestForgeSwatch: a 28-point circle of the fill over its title. */
-function Swatch({ title, fill }: { title: string; fill: SpaceFill }) {
+/** BrowserCrestForgeSwatch: a 28-point circle of the fill over its title, which opens its color popover. */
+function Swatch({ title, fill, selected, onToggle }: {
+  title: string;
+  fill: SpaceFill;
+  selected: boolean;
+  onToggle: (element: HTMLElement) => void;
+}) {
+  const name = colorName(fill);
   return (
-    <span className="forge-swatch" title={title} aria-label={title}>
+    <button type="button" className={`forge-swatch${selected ? " selected" : ""}`} title={name === "Gradient" ? title : name}
+      aria-label={title} aria-description={name} aria-expanded={selected} onClick={(event) => onToggle(event.currentTarget)}>
       <FillDot fill={fill} size={28} ring />
       <span className="forge-swatch-title">{title}</span>
-    </span>
+    </button>
   );
 }
 
-/** A circle filled with a color or a gradient, as the Mac blends one, with the stage's light inner ring where asked. */
-function FillDot({ fill, size, ring = false }: { fill: SpaceFill; size: number; ring?: boolean }) {
+/** CrestColorWell: a 30-point circle of the fill in a ring, which opens its color popover below it. */
+function ColorWell({ title, fill, selected, onToggle }: {
+  title: string;
+  fill: SpaceFill;
+  selected: boolean;
+  onToggle: (element: HTMLElement) => void;
+}) {
+  return (
+    <button type="button" className={`color-well${selected ? " selected" : ""}`} title={title} aria-label={title}
+      aria-description={fill.colors.length > 1 ? "Gradient" : "Color"} aria-expanded={selected} onClick={(event) => onToggle(event.currentTarget)}>
+      <FillDot fill={fill} size={30} line />
+    </button>
+  );
+}
+
+/** A circle filled with a color or a gradient, as the Mac blends one, with the stage's light inner ring or the brand's line where asked. */
+function FillDot({ fill, size, ring = false, line = false }: { fill: SpaceFill; size: number; ring?: boolean; line?: boolean }) {
   const id = `fill-dot-${useId().replace(/:/g, "")}`;
   const { paint, definition } = fillPaint(fill, id, { x: 0, y: 0, width: size, height: size });
   return (
@@ -267,6 +363,7 @@ function FillDot({ fill, size, ring = false }: { fill: SpaceFill; size: number; 
       <defs>{definition}</defs>
       <circle cx={size / 2} cy={size / 2} r={size / 2} fill={paint} />
       {ring && <circle cx={size / 2} cy={size / 2} r={size / 2 - 0.75} fill="none" stroke="rgb(255 255 255 / 0.35)" strokeWidth={1.5} />}
+      {line && <circle className="fill-dot-line" cx={size / 2} cy={size / 2} r={size / 2 - 0.5} fill="none" strokeWidth={1} />}
     </svg>
   );
 }

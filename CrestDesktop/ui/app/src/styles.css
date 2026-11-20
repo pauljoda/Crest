@@ -2039,6 +2039,13 @@ button {
   transform-origin: left center;
 }
 
+/* A hanging popover's arrow, pointing at what it hangs from; the popover places it. */
+.crest-popover-arrow {
+  position: absolute;
+  color: var(--prompt-surface);
+  pointer-events: none;
+}
+
 .color-picker,
 .emoji-picker {
   display: grid;
