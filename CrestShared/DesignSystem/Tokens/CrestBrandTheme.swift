@@ -90,6 +90,9 @@ enum CrestBrandTheme {
     static let canvas = dynamic(light: canvasLightComponents, dark: canvasDarkComponents)
     /// A raised card or panel on the canvas.
     static let surface = dynamic(light: surfaceLightComponents, dark: surfaceDarkComponents)
+    /// A flyout floating over a page or the window: paper in the light,
+    /// charcoal in the dark, opaque so nothing behind it shows through.
+    static let flyout = dynamic(light: surfaceLightComponents, dark: CrestBrandPalette.charcoalComponents)
     /// Display and body text on `canvas` or `surface`.
     static let textDisplay = dynamic(
         light: textDisplayLightComponents,

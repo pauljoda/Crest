@@ -136,7 +136,7 @@ struct MobileCompactAddressBar: View {
     }
 
     /// The bar's frame, carrying the palette's identity while the bar holds
-    /// it, so the palette's glass grows out of the bar's.
+    /// it, so the palette's surface grows out of the bar's glass.
     @ViewBuilder
     private var commandPaletteAnchor: some View {
         if commandPaletteHandoff.fieldHoldsMorph, let commandSurfaceNamespace, let space = browser.shownSpace {

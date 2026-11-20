@@ -77,7 +77,7 @@ struct BrowserPageCardAddressField: View {
             branding: space?.settings.look,
             activate: activate
         )
-        // Fades as the palette's glass grows out of it, and back as the
+        // Fades as the palette's surface grows out of it, and back as the
         // palette shrinks into it, at the sidebar field's pace.
         .animation(isUnderPalette ? BrowserCommandSurfaceMorph.leadingFade : BrowserCommandSurfaceMorph.trailingFade) {
             $0.opacity(isUnderPalette ? 0 : 1)

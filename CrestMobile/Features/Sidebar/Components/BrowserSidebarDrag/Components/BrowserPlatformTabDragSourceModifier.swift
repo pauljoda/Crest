@@ -10,6 +10,9 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
     var reorder: BrowserSidebarReorderContext?
     var parentSplitGroupID: UUID?
     var isEnabled = true
+    /// Whether the tab is the selected one, whose lift stays the sheet of
+    /// paper its row is.
+    var isTabSelected = false
 
     @State private var sessionToken: BrowserDragSessionToken?
     @State private var sourceSize = CGSize.zero
@@ -67,6 +70,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                         progress: shape == .row ? 0 : 1,
                         rowWidth: tab.placement.isGrid
                             ? BrowserTabDragPreviewLayout.defaultRowWidth : sourceWidth,
+                        isSelected: isTabSelected,
                         rowMetrics: .touch
                     )
                     .environment(\.colorScheme, colorScheme)
@@ -98,6 +102,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                     favicons: favicons,
                     profileID: profileID,
                     progress: BrowserTabDragPreviewLayout.progress(for: tab.placement),
+                    isSelected: isTabSelected,
                     rowMetrics: .touch
                 )
                 .environment(\.colorScheme, colorScheme)

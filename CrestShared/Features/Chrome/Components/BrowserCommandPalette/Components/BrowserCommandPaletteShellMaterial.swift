@@ -1,15 +1,12 @@
 import SwiftUI
 
+/// The palette's own surface: the device's surface material, as the address
+/// field it grows out of and the pins stand on, in the scheme the material
+/// color gives it. Reduce Transparency draws the material opaque.
 struct BrowserCommandPaletteShellMaterial: ViewModifier {
     let shape: RoundedRectangle
-    let reduceTransparency: Bool
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if reduceTransparency {
-            content.background(.background, in: shape)
-        } else {
-            content.glassEffect(.regular, in: shape)
-        }
+        content.background { CrestSurfaceLayer(shape: shape) }
     }
 }

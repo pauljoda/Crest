@@ -61,7 +61,6 @@ struct BrowserQuickWindowAddressControl: View {
             progress: model.page?.estimatedProgress ?? 0,
             isLoading: model.page?.live.isLoading == true,
             isEditing: isAddressEditing,
-            isGlass: true,
             activate: openFromSurface
         )
         .coordinateSpace(Self.field)
@@ -96,7 +95,7 @@ struct BrowserQuickWindowAddressControl: View {
     private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
 
     /// The field's frame, carrying the palette's identity while the field
-    /// holds it, so the palette's glass grows out of the field's, as the
+    /// holds it, so the palette's surface grows out of the field's, as the
     /// sidebar's field does with a browser window's palette.
     @ViewBuilder
     private var commandPaletteAnchor: some View {

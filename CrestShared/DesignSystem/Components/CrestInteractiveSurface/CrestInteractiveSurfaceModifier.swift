@@ -6,6 +6,10 @@ enum CrestInteractiveSurfaceMetrics {
     static let increasedContrastBorderWidth: CGFloat = 1.5
     static let selectedShadowRadius: CGFloat = 2
     static let selectedShadowYOffset: CGFloat = 1
+    /// The shadow a selection on paper casts, lying flat on the layer under
+    /// it, as setup's paper chips do.
+    static let paperShadowRadius: CGFloat = 1.5
+    static let paperShadowYOffset: CGFloat = 1
 }
 
 struct CrestInteractiveSurfaceModifier: ViewModifier {
@@ -21,6 +25,10 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     var customHoverFill: Color? = nil
     var customRestingFill: Color? = nil
     var restingBorderColor: Color = .clear
+    /// Whether a selected or pressed surface is a sheet of Crest's light
+    /// paper, casting the paper's shadow, rather than a layer of the
+    /// device's material.
+    var selectsOnPaper = false
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -49,13 +57,9 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
                     .allowsHitTesting(false)
             }
             .shadow(
-                color: .black.opacity(shadowOpacity),
-                radius: isEmphasized
-                    ? CrestInteractiveSurfaceMetrics.selectedShadowRadius
-                    : 0,
-                y: isEmphasized
-                    ? CrestInteractiveSurfaceMetrics.selectedShadowYOffset
-                    : 0
+                color: shadowColor.opacity(shadowOpacity),
+                radius: isEmphasized ? shadowRadius : 0,
+                y: isEmphasized ? shadowYOffset : 0
             )
             .animation(accessibleSurfaceAnimation, value: isHovering)
             .animation(accessibleSurfaceAnimation, value: selectionEmphasis)
@@ -64,26 +68,39 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
             // shadow, its glow and the content it covers every frame, on two
             // surfaces at every tab switch.
             .animation(accessibleSurfaceAnimation, value: isPressed)
-            // Content on the material reads in the material's scheme.
+            // Content on the material reads in the material's scheme, and
+            // on paper in the paper's.
             .environment(
                 \.colorScheme,
-                showsMaterial ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme
+                contentScheme
             )
     }
 
     /// Whether the surface draws the device's material under the content.
     private var showsMaterial: Bool { isSelected || isPressed || showsRestingSurface }
 
+    /// Whether the surface is a sheet of paper now, rather than material.
+    private var isPaper: Bool { selectsOnPaper && (isSelected || isPressed) }
+
+    /// The scheme content reads in: light on paper, the material's on the
+    /// material, else the surroundings'.
+    private var contentScheme: ColorScheme {
+        if isPaper { return .light }
+        return showsMaterial ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme
+    }
+
     /// Selected, pressed and resting surfaces are layers of the device's
-    /// material, wearing their accent tint; hover is only ever a tint, laid
-    /// over that material or, on a plain row, alone.
+    /// material, or a selection's sheet of paper, wearing their accent tint;
+    /// hover is only ever a tint, laid over that layer or, on a plain row,
+    /// alone.
     @ViewBuilder
     private func surface(in shape: RoundedRectangle) -> some View {
         if showsMaterial {
             CrestSurfaceLayer(
                 shape: shape,
                 tint: isSelected || isPressed ? customSelectedFill : customRestingFill,
-                hoverTint: isHovering ? hoverFill : nil
+                hoverTint: isHovering ? hoverFill : nil,
+                isPaper: isPaper
             )
         } else if isHovering {
             shape.fill(hoverFill)
@@ -102,7 +119,18 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
 
     private var shadowOpacity: Double {
         guard isSelected || isPressed, !reduceTransparency else { return 0 }
-        return CrestOpacity.interactionSelectionShadow
+        return isPaper ? CrestOpacity.paperShadow : CrestOpacity.interactionSelectionShadow
+    }
+
+    private var shadowColor: Color { isPaper ? CrestBrandPalette.ink : .black }
+
+    private var shadowRadius: CGFloat {
+        isPaper ? CrestInteractiveSurfaceMetrics.paperShadowRadius : CrestInteractiveSurfaceMetrics.selectedShadowRadius
+    }
+
+    private var shadowYOffset: CGFloat {
+        isPaper
+            ? CrestInteractiveSurfaceMetrics.paperShadowYOffset : CrestInteractiveSurfaceMetrics.selectedShadowYOffset
     }
 
     private var accessibleSurfaceAnimation: Animation? {
@@ -119,20 +147,24 @@ private struct CrestHoverSurfaceModifier: ViewModifier {
     let showsRestingSurface: Bool
     let selectedBorderColor: Color
     let selectedBorderWidth: CGFloat
+    let selectsOnPaper: Bool
 
     @Environment(\.isEnabled) private var isEnabled
     @State private var isHovering = false
 
     func body(content: Content) -> some View {
         content
-            .crestInteractiveSurface(
-                isSelected: isSelected,
-                isHovering: isHovering && isEnabled,
-                cornerRadius: cornerRadius,
-                isPressed: isPressed && isEnabled,
-                showsRestingSurface: showsRestingSurface,
-                selectedBorderColor: selectedBorderColor,
-                selectedBorderWidth: selectedBorderWidth
+            .modifier(
+                CrestInteractiveSurfaceModifier(
+                    isSelected: isSelected,
+                    isHovering: isHovering && isEnabled,
+                    cornerRadius: cornerRadius,
+                    isPressed: isPressed && isEnabled,
+                    showsRestingSurface: showsRestingSurface,
+                    selectedBorderColor: selectedBorderColor,
+                    selectedBorderWidth: selectedBorderWidth,
+                    selectsOnPaper: selectsOnPaper
+                )
             )
             .onHover { isHovering = $0 }
     }
@@ -171,7 +203,8 @@ extension View {
         showsRestingSurface: Bool = false,
         selectedBorderColor: Color = CrestColor.selectedBorder,
         selectedBorderWidth: CGFloat =
-            CrestInteractiveSurfaceMetrics.defaultSelectedBorderWidth
+            CrestInteractiveSurfaceMetrics.defaultSelectedBorderWidth,
+        selectsOnPaper: Bool = false
     ) -> some View {
         modifier(
             CrestHoverSurfaceModifier(
@@ -180,7 +213,8 @@ extension View {
                 isPressed: isPressed,
                 showsRestingSurface: showsRestingSurface,
                 selectedBorderColor: selectedBorderColor,
-                selectedBorderWidth: selectedBorderWidth
+                selectedBorderWidth: selectedBorderWidth,
+                selectsOnPaper: selectsOnPaper
             )
         )
     }

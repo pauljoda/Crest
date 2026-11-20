@@ -23,6 +23,10 @@ enum BrowserCommandPaletteMetrics {
     static let fieldRegionTopMargin: CGFloat = 10
     static let maximumCardWidth: CGFloat = 720
     static let cardCornerRadius: CGFloat = 26
+    /// The soft shadow the card casts on the page it floats over.
+    static let cardShadowOpacity = 0.16
+    static let cardShadowRadius: CGFloat = 18
+    static let cardShadowYOffset: CGFloat = 8
     /// How far below full size the card's contents start while the card grows
     /// out of the address field, and end while it shrinks back.
     static let morphContentScale: CGFloat = 0.97

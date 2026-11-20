@@ -7,11 +7,15 @@ struct BrowserUtilityListEmptyState: View {
     let dismiss: (() -> Void)?
 
     var body: some View {
-        ContentUnavailableView(
-            presentation.title,
-            systemImage: presentation.systemImage,
-            description: Text(presentation.description)
-        )
+        ContentUnavailableView {
+            Label {
+                Text(presentation.title).font(CrestTypography.displayPage)
+            } icon: {
+                Image(systemName: presentation.systemImage)
+            }
+        } description: {
+            Text(presentation.description)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .contentShape(.rect)
         .onTapGesture {

@@ -93,13 +93,7 @@ struct BrowserWebPageSurface: View {
             .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
 
-            BrowserWebPageFailureOverlay(
-                page: page,
-                branding: browser.spaceModel(
-                    matching: BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
-                ).map(\.settings.look),
-                pagePresentation: pagePresentation
-            )
+            BrowserWebPageFailureOverlay(page: page, pagePresentation: pagePresentation)
 
             BrowserCredentialChrome(
                 presentation: BrowserCredentialChromePresentation.resolve(

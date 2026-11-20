@@ -110,7 +110,8 @@ struct PinnedTabTile: View {
                 favicons: grid.favicons,
                 assignment: assignment,
                 dragState: grid.dragState,
-                reorder: reorder
+                reorder: reorder,
+                isSelected: isSelected
             )
         )
         .modifier(

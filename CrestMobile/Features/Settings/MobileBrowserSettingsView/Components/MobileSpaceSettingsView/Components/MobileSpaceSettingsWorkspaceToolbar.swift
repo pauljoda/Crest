@@ -116,12 +116,8 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         } label: {
             Label("Space Actions", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
-                .foregroundStyle(.primary)
-                .frame(width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget)
-                .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .buttonStyle(.crestIcon())
         .disabled(selectedSpaceID == nil)
         .accessibilityIdentifier("space-settings-actions")
     }

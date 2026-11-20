@@ -37,7 +37,8 @@ struct BrowserTabDragPreview: View {
         let rowOpacity = 1 - Double(metrics.cardContentWeight)
 
         ZStack(alignment: .leading) {
-            CrestSurfaceLayer(shape: shape)
+            // A selected tab stays the sheet of paper it is in the sidebar.
+            CrestSurfaceLayer(shape: shape, isPaper: isSelected)
                 .overlay {
                     shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
                 }
@@ -69,7 +70,7 @@ struct BrowserTabDragPreview: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.shownTitle)
-        .modifier(SurfaceToneAppearance())
+        .modifier(BrowserTabDragPreviewTone(isSelected: isSelected))
     }
 
     private var rowIconCenter: CGFloat {
@@ -92,5 +93,27 @@ struct BrowserTabDragPreview: View {
         .padding(.horizontal, CrestSpacing.medium)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
+    }
+}
+
+/// The scheme and ink a dragged tab reads in: ink on light paper for the
+/// selected tab, as its row has them, and otherwise the label color in the
+/// scheme the device's material color gives the material.
+///
+/// Both states set the same modifiers, so picking up the selected tab
+/// changes values rather than the preview's structure.
+private struct BrowserTabDragPreviewTone: ViewModifier {
+    let isSelected: Bool
+
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(isSelected ? CrestBrandTheme.textDisplay : Color.primary)
+            .environment(\.spaceChromeForeground, nil)
+            .environment(
+                \.colorScheme,
+                isSelected ? .light : CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme))
     }
 }

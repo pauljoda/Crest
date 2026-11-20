@@ -57,9 +57,15 @@
             let members = practice.members
             return Group {
                 if members.isEmpty {
-                    ContentUnavailableView(
-                        "Open tabs cleared", systemImage: "sun.max",
-                        description: Text("Your pinned and saved tabs are still in the sidebar."))
+                    ContentUnavailableView {
+                        Label {
+                            Text("Open tabs cleared").font(CrestTypography.displayPage)
+                        } icon: {
+                            Image(systemName: "sun.max")
+                        }
+                    } description: {
+                        Text("Your pinned and saved tabs are still in the sidebar.")
+                    }
                 } else {
                     BrowserSplitColumnsView(
                         members: members, focusedTabID: practice.selectedTabID,

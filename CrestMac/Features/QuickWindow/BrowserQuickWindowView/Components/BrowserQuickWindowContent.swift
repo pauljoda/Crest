@@ -25,13 +25,15 @@ struct BrowserQuickWindowContent: View {
                     openBrowserWindow: openBrowserWindow
                 )
             } else {
-                ContentUnavailableView(
-                    "Space Unavailable",
-                    systemImage: "square.grid.2x2",
-                    description: Text(
-                        "This Quick Window cannot reconnect to its original browsing profile."
-                    )
-                )
+                ContentUnavailableView {
+                    Label {
+                        Text("Space Unavailable").font(CrestTypography.displayPage)
+                    } icon: {
+                        Image(systemName: "square.grid.2x2")
+                    }
+                } description: {
+                    Text("This Quick Window cannot reconnect to its original browsing profile.")
+                }
             }
         }
     }

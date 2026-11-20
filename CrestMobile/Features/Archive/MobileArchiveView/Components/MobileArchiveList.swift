@@ -22,10 +22,13 @@ struct MobileArchiveList: View {
                     favicons: favicons
                 )
             } else {
-                ContentUnavailableView(
-                    "No Space",
-                    systemImage: "square.grid.2x2"
-                )
+                ContentUnavailableView {
+                    Label {
+                        Text("No Space").font(CrestTypography.displayPage)
+                    } icon: {
+                        Image(systemName: "square.grid.2x2")
+                    }
+                }
             }
         }
     }

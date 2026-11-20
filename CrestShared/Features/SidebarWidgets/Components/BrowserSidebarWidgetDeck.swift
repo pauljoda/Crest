@@ -48,21 +48,6 @@ struct BrowserSidebarWidgetDeck: View {
         }
     }
 
-    /// Separate containers prevent overlapping glass cards from merging.
-    @ViewBuilder
-    private func containedCard(
-        for instance: BrowserSidebarWidgetInstance,
-        depth: Int
-    ) -> some View {
-        if BrowserSidebarWidgetDeckStyle.usesLiquidGlass {
-            GlassEffectContainer {
-                presentedCard(for: instance, depth: depth)
-            }
-        } else {
-            presentedCard(for: instance, depth: depth)
-        }
-    }
-
     private func presentedCard(
         for instance: BrowserSidebarWidgetInstance,
         depth: Int
@@ -82,7 +67,7 @@ struct BrowserSidebarWidgetDeck: View {
         depth: Int
     ) -> some View {
         let isFront = depth == 0
-        return containedCard(for: instance, depth: depth)
+        return presentedCard(for: instance, depth: depth)
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.height
             } action: { measuredHeight in
