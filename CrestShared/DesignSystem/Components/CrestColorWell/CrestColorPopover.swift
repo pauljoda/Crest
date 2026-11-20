@@ -85,7 +85,7 @@ struct CrestColorPopover: View {
             }
             spectrum
         }
-        .padding(CrestSpacing.medium)
+        .padding(CrestColorPopoverMetrics.inset)
         // Narrower where the popover opens beside a well on a phone, the
         // wheel and the rows under it taking the width there is.
         .frame(
@@ -240,11 +240,19 @@ struct CrestColorPopover: View {
 
 enum CrestColorPopoverMetrics {
     static let width: CGFloat = 320
+    #if os(macOS)
+        /// The room between the popover's edge and what it holds.
+        static let inset = CrestSpacing.medium
+    #else
+        /// The room between the popover's edge and what it holds, more on a
+        /// phone or iPad, whose popover corners are much rounder.
+        static let inset = CrestSpacing.large
+    #endif
     /// The narrowest the popover gets where the screen leaves it less room.
     static let smallestWidth: CGFloat = 260
     /// The wheel's room, as wide as the popover's content: its diameter and
     /// the chosen handle's overhang at the rim.
-    static let wheelHeight: CGFloat = width - 2 * CrestSpacing.medium
+    static let wheelHeight: CGFloat = width - 2 * inset
     /// The least room the wheel shrinks to where the popover has to fit a
     /// smaller space.
     static let smallestWheelHeight: CGFloat = 120
