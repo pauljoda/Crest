@@ -20,7 +20,8 @@ import SwiftUI
 ///
 /// A folder far down a folder that has just opened draws its header at once
 /// and what it holds a moment later, once the opening has run, so the rows
-/// that show come first. VoiceOver and Switch Control get everything at once.
+/// that show come first. VoiceOver and Switch Control get everything at once,
+/// as does a folder drawn again after a block stood in for it.
 struct BrowserFolderGroup: View {
     // MARK: - Variables
 
@@ -38,6 +39,7 @@ struct BrowserFolderGroup: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
     @Environment(\.accessibilitySwitchControlEnabled) private var isSwitchControlEnabled
+    @Environment(\.sidebarFolderIsDrawnAgain) private var isDrawnAgain
     /// Whether the folder still holds back what it holds, which it does only
     /// from when it is first drawn until its turn comes.
     @State private var holdsContents: Bool
@@ -63,7 +65,7 @@ struct BrowserFolderGroup: View {
 
     /// Whether what the folder holds waits for its turn now.
     private var isHoldingContents: Bool {
-        holdsContents && !isVoiceOverEnabled && !isSwitchControlEnabled
+        holdsContents && !isDrawnAgain && !isVoiceOverEnabled && !isSwitchControlEnabled
     }
 
     private var configuration: BrowserFolderGroupConfiguration {
@@ -226,6 +228,9 @@ struct BrowserFolderGroup: View {
         // Rows come and go in place as the folder closes around the tabs it
         // keeps and opens again, rather than sliding up through its title.
         .environment(\.sidebarFolderRowTransition, .opacity)
+        // The folders inside have blocks of their own, which say for each
+        // one whether it is drawn again.
+        .environment(\.sidebarFolderIsDrawnAgain, false)
     }
 
     /// Draws what the folder holds once its turn comes, after the opening it

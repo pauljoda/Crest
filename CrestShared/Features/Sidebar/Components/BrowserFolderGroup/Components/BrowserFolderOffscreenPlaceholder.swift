@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Draws a folder well away from the screen as a block of the height it had
+/// Draws a folder well below the screen as a block of the height it had
 /// when it was last drawn, where the shell keeps a visible band. The band
 /// decides when; see `BrowserSidebarVisibleBand`.
 ///
@@ -13,6 +13,11 @@ import SwiftUI
 /// block has nothing for them to reach, or while something inside it is in
 /// progress, such as a rename or an open picker, which would be lost with the
 /// rows that hold it.
+///
+/// A folder drawn again after a block stood in for it draws what it holds at
+/// once, as it did before. Holding back a folder far down a list is for the
+/// list's first opening; here it would shrink the folder to its header just
+/// before it scrolls into view, then grow it again under the rows that follow.
 struct BrowserFolderOffscreenPlaceholder: ViewModifier {
     // MARK: - Types
 
@@ -73,11 +78,13 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
                         .frame(height: drawn.height)
                         .accessibilityHidden(true)
                 } else {
-                    content.onGeometryChange(for: CGFloat.self) {
-                        $0.size.height
-                    } action: { height in
-                        drawn = (height, shape)
-                    }
+                    content
+                        .environment(\.sidebarFolderIsDrawnAgain, band.slot(for: folder.id).wasLetGo)
+                        .onGeometryChange(for: CGFloat.self) {
+                            $0.size.height
+                        } action: { height in
+                            drawn = (height, shape)
+                        }
                 }
             }
             .transaction(value: drawsPlaceholder) { $0.animation = nil }
@@ -186,4 +193,10 @@ extension View {
     func keepsSidebarFolderDrawn(_ keeps: Bool) -> some View {
         transformPreference(BrowserFolderOffscreenPlaceholder.KeepsDrawnKey.self) { $0 = $0 || keeps }
     }
+}
+
+extension EnvironmentValues {
+    /// Whether the folder group under it is drawn again after a block stood
+    /// in for it, so it draws what it holds at once.
+    @Entry var sidebarFolderIsDrawnAgain = false
 }

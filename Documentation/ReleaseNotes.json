@@ -5921,6 +5921,10 @@
     "phone-color-picker-above-or-below": {
       "category": "fixed",
       "message": "On iPhone, every color's picker opens above or below it at full width, with more room around its edges, so the accent color's picker no longer runs off the screen."
+    },
+    "sidebar-long-folder-scroll": {
+      "category": "fixed",
+      "message": "Scrolling down a sidebar with long open folders no longer jumps back up, and folders inside them no longer shrink to their title and grow again as they scroll into view."
     }
   }
 }
