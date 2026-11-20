@@ -1103,11 +1103,27 @@ button {
   -webkit-app-region: no-drag;
 }
 
+/* The page's navigation where the Mac's stands: at the sidebar's trailing
+   side, 12 in from its edge, following the sidebar's width. */
 .title-bar-navigation {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding-inline-start: calc(var(--crest-space-medium) - 4px);
+  justify-content: flex-end;
+  gap: 1px;
+  flex: none;
+  width: var(--sidebar-width);
+  padding-inline-end: var(--crest-space-medium);
+}
+
+.chrome-button.navigation-button {
+  width: 30px;
+  height: 30px;
+  color: rgb(var(--primary-rgb) / 0.85);
+}
+
+.chrome-button.navigation-button:disabled {
+  opacity: 1;
+  color: rgb(var(--primary-rgb) / 0.275);
 }
 
 .title-bar-drag {
@@ -3721,7 +3737,8 @@ embed.page-frame {
   border-radius: 5px;
   background: rgb(var(--pal-primary) / 0.07);
   color: var(--pal-secondary);
-  font-family: var(--crest-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+  /* The system's font, as the Mac sets its key glyphs, not a typewriter's. */
+  font-family: var(--crest-font-system);
   font-size: 11px;
   font-weight: 500;
 }

@@ -5893,6 +5893,10 @@
     "windows-menus-match-mac": {
       "category": "internal",
       "message": "Windows' tab menus offer the Mac's Pull New Icon, Clear Icon and Change Icon, tabs can wear an emoji, and the sidebar's empty area offers Edit Space, with a new Space opening for editing"
+    },
+    "windows-small-items-match-mac": {
+      "category": "internal",
+      "message": "On Windows the page's navigation stands where the Mac's does as chevrons, palette shortcuts read in the system font, and tabs keep their site icons after a relaunch"
     }
   }
 }
