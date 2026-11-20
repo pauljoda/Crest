@@ -8039,12 +8039,6 @@ struct PageMixedContent: OptionSet, Sendable {
     static let form = PageMixedContent(rawValue: 4)
 }
 
-enum PageResourceKind: Int, CaseIterable, Sendable {
-    case frame = 0
-    case image = 1
-    case object = 2
-}
-
 enum PageScriptWorld: Int, CaseIterable, Sendable {
     case agent = 0
     case page = 1
@@ -15984,6 +15978,44 @@ struct PagePresentation: Hashable, Sendable {
     }
 
     static func == (lhs: PagePresentation, rhs: PagePresentation) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `PageResourceKind`. A member's wire tag is its index in `all`.
+struct PageResourceKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let frame = PageResourceKind(tag: 0, name: "frame")
+    static let image = PageResourceKind(tag: 1, name: "image")
+    static let object = PageResourceKind(tag: 2, name: "object")
+
+    static let all: [PageResourceKind] = [frame, image, object]
+
+    static func named(_ name: String?) -> PageResourceKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PageResourceKind, rhs: PageResourceKind) -> Bool {
         lhs.tag == rhs.tag
     }
 

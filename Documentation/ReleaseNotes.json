@@ -6021,6 +6021,10 @@
     "can-send-session-intents": {
       "category": "internal",
       "message": "Asking whether the core would take an action accepts only session intents, so the type says what the check covers."
+    },
+    "filter-library-typed-state": {
+      "category": "internal",
+      "message": "Page resource kinds carry the request kind the content filter matches, and the filter library's saved state has one codec."
     }
   }
 }

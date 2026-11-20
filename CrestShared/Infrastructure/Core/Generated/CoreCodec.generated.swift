@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xbb, 0x7b, 0xfb, 0xb8, 0x54, 0xf7, 0x0f, 0x36, 0x0e, 0xf4, 0x56, 0xd4, 0xa4, 0x0a, 0x1c, 0xc5, 0xf9, 0x09, 0x5c, 0xdc, 0x7e, 0xed, 0x06, 0x1a, 0x5a, 0x6e, 0xb0, 0x95, 0x94, 0xc3, 0x50, 0xf4
+        0xae, 0x73, 0xed, 0x8e, 0x52, 0xaa, 0xe8, 0xac, 0xa7, 0x25, 0x8d, 0xb2, 0x68, 0xda, 0xa1, 0x65, 0xb3, 0x5f, 0xa7, 0x02, 0xa4, 0x7f, 0x46, 0xeb, 0x53, 0xe7, 0xea, 0x21, 0x7b, 0x01, 0xc9, 0x72
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -27688,20 +27688,6 @@ extension PageMixedContent {
     }
 }
 
-extension PageResourceKind {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = PageResourceKind(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown PageResourceKind \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension PageScriptWorld {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -28937,6 +28923,20 @@ extension PagePresentation {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown PagePresentation \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension PageResourceKind {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown PageResourceKind \(tag)")
         }
         self = Self.all[tag]
     }
