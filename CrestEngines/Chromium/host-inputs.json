@@ -557,6 +557,6 @@
   },
   "components/surface_embed/renderer/surface_embed_web_plugin.cc": {
     "before": "4dc9a4d8926f77e010e5cc40751bf848b6b19fc80f3ae4411996d3992fc481dc",
-    "after": "79653dc58900fe4719cb3888814eab58a1e557248dd69021efd9b2ac50f02cba"
+    "after": "74e26350d5ae781d8b14db489276e784d00ed86159f24fa196f257f3b50ef55d"
   }
 }

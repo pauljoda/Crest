@@ -803,16 +803,18 @@
  
 --- a/components/surface_embed/renderer/surface_embed_web_plugin.cc
 +++ b/components/surface_embed/renderer/surface_embed_web_plugin.cc
-@@ -4,6 +4,8 @@
+@@ -4,7 +4,10 @@
  
  #include "components/surface_embed/renderer/surface_embed_web_plugin.h"
  
 +#include <cstdlib>
 +
  #include "base/notimplemented.h"
++#include "cc/layers/deadline_policy.h"
  #include "cc/layers/picture_layer.h"
  #include "cc/layers/surface_layer.h"
-@@ -214,15 +216,37 @@
+ #include "cc/paint/paint_image_builder.h"
+@@ -214,15 +217,37 @@
    // Note: Layer bounds are set by WebPluginContainerImpl::Paint()
    // so we don't need to set them here for the time being.
  
@@ -855,7 +857,7 @@
    last_is_visible_ = is_visible;
  
    if (frame_sink_id_.is_valid()) {
-@@ -407,6 +431,20 @@
+@@ -407,6 +432,20 @@
    pending_visual_properties.compositing_scale_factor = 1.0f;
    pending_visual_properties.cursor_accessibility_scale_factor = 1.0f;
  
@@ -876,7 +878,7 @@
    bool synchronized_props_changed =
        frame_sink_id_changed_ || !sent_visual_properties_ ||
        sent_visual_properties_->auto_resize_enabled !=
-@@ -417,8 +455,6 @@
+@@ -417,8 +456,6 @@
            pending_visual_properties.max_size_for_auto_resize ||
        sent_visual_properties_->local_frame_size !=
            pending_visual_properties.local_frame_size ||
@@ -885,7 +887,7 @@
        sent_visual_properties_->screen_infos !=
            pending_visual_properties.screen_infos ||
        sent_visual_properties_->zoom_level !=
-@@ -433,10 +469,6 @@
+@@ -433,10 +470,6 @@
            pending_visual_properties.cursor_accessibility_scale_factor ||
        sent_visual_properties_->is_pinch_gesture_active !=
            pending_visual_properties.is_pinch_gesture_active ||
@@ -896,7 +898,24 @@
        sent_visual_properties_->root_widget_viewport_segments !=
            pending_visual_properties.root_widget_viewport_segments ||
        !sent_last_is_visible_ || sent_last_is_visible_ != last_is_visible_;
-@@ -459,7 +491,7 @@
+@@ -454,12 +487,24 @@
+   CHECK(surface_id.is_valid());
+   paint_holding_helper_.SetSurfaceId(layer_.get(), surface_id,
+                                      allow_paint_holding);
++  // Crest: while the embedding document resizes the embed frame after frame,
++  // as Crest's sidebar morph does, it marks the embed data-live-resize, and
++  // the parent stops waiting on the child at each new size. A page that lays
++  // out within a frame keeps up regardless; a heavier one would otherwise
++  // hold every frame of the parent's motion until the deadline. Until the
++  // child draws at the new size, the parent shows the child's latest surface,
++  // which the embed clips or leaves its background beside.
++  if (container_ &&
++      container_->GetElement().HasAttribute("data-live-resize")) {
++    layer_->SetSurfaceId(surface_id,
++                         cc::DeadlinePolicy::UseSpecifiedDeadline(0));
++  }
+   if (container_) {
+     container_->SetCcLayer(layer_.get());
      container_->ScheduleAnimation();
    }
  
@@ -905,7 +924,7 @@
      host_->SynchronizeVisualProperties(pending_visual_properties,
                                         last_is_visible_);
      sent_visual_properties_ = pending_visual_properties;
-@@ -505,6 +537,19 @@
+@@ -505,6 +550,19 @@
  
  void SurfaceEmbedWebPlugin::UpdateLocalSurfaceIdFromChild(
      const ::viz::LocalSurfaceId& local_surface_id) {

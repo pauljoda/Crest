@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 
 import { isMenuOpen } from "../menus";
 import { holdCards } from "./cards-snap";
+import { setLiveResize } from "./PageCard";
 import { holdPointer } from "./pointer-hold";
 import { clampedSidebarWidth, sidebarWidths } from "./sidebar-layout";
 import { SpaceBanner } from "./SpaceBanner";
@@ -156,13 +157,17 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
     if (page) page.style.marginLeft = offsets ? `calc(${offsets.page}px - var(--window-inset))` : "";
   };
   // Script moves them each frame, so their own transitions stand aside
-  // meanwhile, and until the frame after the morph hands them over.
+  // meanwhile, and until the frame after the morph hands them over. The pages
+  // resize each frame too, so they follow without the window waiting on them,
+  // the last size among them: a heavy page catches up once the motion rests.
   const holdTransitions = (held: boolean) => {
     for (const element of [slot.current, shadow.current]) {
       if (!element) continue;
       element.style.transition = held ? "none" : "";
       element.style.willChange = held ? "transform" : "";
     }
+    const page = content();
+    if (page) setLiveResize(page, held);
   };
   const stop = () => {
     const current = running.current;

@@ -170,6 +170,17 @@ export async function pageContentId(session: Session, pageId: string): Promise<s
 }
 
 /**
+ * Marks the pages embedded under `root` as resized frame after frame, or no
+ * longer. While marked, the window draws each of a page's sizes without
+ * waiting for the page to lay out at it (`desktop-host.patch`), so a page
+ * too heavy for a frame lags its card's edge instead of holding the motion,
+ * showing what it last drew, clipped by the card or beside its background.
+ */
+export function setLiveResize(root: HTMLElement, live: boolean) {
+  for (const embed of root.querySelectorAll("embed.page-frame")) embed.toggleAttribute("data-live-resize", live);
+}
+
+/**
  * A page embedded in its card. Asleep beneath its still while a slide brings
  * the card on screen, the embed stands unseen, which the engine takes as the
  * page hidden, so the page neither draws nor gives up its place: it wakes in

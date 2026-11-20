@@ -5845,6 +5845,10 @@
     "windows-title-bar-moves-window": {
       "category": "internal",
       "message": "Dragging a Crest window's title bar on Windows moves the window"
+    },
+    "windows-sidebar-smooth-heavy-pages": {
+      "category": "internal",
+      "message": "The sidebar slides smoothly on Windows over pages that take long to lay out, which follow it a few frames behind instead of holding it back"
     }
   }
 }
