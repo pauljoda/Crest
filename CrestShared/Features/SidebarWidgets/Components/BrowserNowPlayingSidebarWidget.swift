@@ -267,8 +267,13 @@ struct BrowserNowPlayingSidebarWidget: View {
                     .contentShape(.circle)
                     .animation(pressAnimation, value: isPlaying)
             }
-            .buttonStyle(.plain)
-            .glassEffect(.regular.interactive(), in: .circle)
+            // A fill rather than material, which disappears on the card's
+            // own material.
+            .buttonStyle(
+                CrestChromeButtonStyle(
+                    controlSize: nil, cornerRadius: BrowserSidebarWidgetDeckStyle.focalControlDiameter / 2,
+                    showsRestingFill: true)
+            )
             .frame(
                 width: BrowserSidebarWidgetDeckStyle.quietControlHitTarget,
                 height: BrowserSidebarWidgetDeckStyle.quietControlHitTarget

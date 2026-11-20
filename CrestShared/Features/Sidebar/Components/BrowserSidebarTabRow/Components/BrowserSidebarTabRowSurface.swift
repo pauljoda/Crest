@@ -94,7 +94,8 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 isEnabled: !interaction.isRenaming
                     && configuration.isAvailableForDisplay
                     && configuration.capabilities.supportsOrganization,
-                requiresSelectedSpace: true
+                requiresSelectedSpace: true,
+                isTabSelected: configuration.isSelected
             )
             .browserSidebarReorderZone(
                 .currentTab(configuration.tab.id),
@@ -208,26 +209,22 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
     }
 }
 
-/// A selected row stands in the device's material with text in the scheme
-/// its material color gives it, as the address field and the pins do. Any
-/// other row keeps the Space's ink.
+/// A selected row is a sheet of Crest's light paper with ink text on every
+/// Space. Any other row keeps the Space's ink.
 ///
 /// Both states set the same modifiers, so selecting a row changes values
 /// rather than the row's structure.
 private struct BrowserSelectedTabRowAppearance: ViewModifier {
     let isSelected: Bool
 
-    @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.spaceChromeForeground) private var spaceForeground
 
     func body(content: Content) -> some View {
         content
-            .foregroundStyle(isSelected ? AnyShapeStyle(Color.primary) : AnyShapeStyle(.primary))
+            .foregroundStyle(isSelected ? AnyShapeStyle(CrestBrandTheme.textDisplay) : AnyShapeStyle(.primary))
             .environment(\.spaceChromeForeground, isSelected ? nil : spaceForeground)
-            .environment(
-                \.colorScheme,
-                isSelected ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme)
+            .environment(\.colorScheme, isSelected ? .light : colorScheme)
     }
 }
 

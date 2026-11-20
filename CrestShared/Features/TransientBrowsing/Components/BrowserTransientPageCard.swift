@@ -111,15 +111,19 @@ private struct BrowserTransientReleasedPageView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(vocabulary.releasedTitle, systemImage: "memorychip")
+            Label {
+                Text(vocabulary.releasedTitle).font(CrestTypography.displayPage)
+            } icon: {
+                Image(systemName: "memorychip")
+            }
         } description: {
             Text(vocabulary.releasedDescription)
         } actions: {
             Button(vocabulary.restoreTitle, action: restore)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.crestPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .background(CrestBrandTheme.canvas)
     }
 }
 

@@ -57,7 +57,8 @@ final class BrowserAddressAppearance {
     /// shrinks back into it, rather than the palette opening in place.
     var animatesIntoCommandPalette = true { didSet { changed() } }
     /// Whether the command palette tints its selected row in the Space's
-    /// accent, rather than lifting it as the sidebar lifts its selected tab.
+    /// accent, rather than laying it on paper as the sidebar's selected tab
+    /// is.
     var tintsPaletteWithSpaceAccent = false { didSet { changed() } }
     /// Whether a live site's address field offers a button that copies its
     /// URL, beside Site Controls. Only the Mac's sidebar field draws it.

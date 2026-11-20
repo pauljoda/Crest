@@ -58,28 +58,19 @@ private struct BrowserSidebarWidgetCardContentFade: ViewModifier {
     }
 }
 
-/// Applies the selected glass or custom material treatment.
+/// A card is a layer of the device's material, as the pins and the address
+/// field are, edged in Crest's warm hairline and casting a paper layer's
+/// shadow.
 private struct BrowserSidebarWidgetCardChrome: ViewModifier {
     let depth: Int
 
     func body(content: Content) -> some View {
-        if BrowserSidebarWidgetDeckStyle.usesLiquidGlass {
-            content.glassEffect(
-                .regular,
-                in: BrowserSidebarWidgetDeckStyle.cardShape
-            )
-        } else {
-            crestChrome(content)
-        }
-    }
-
-    private func crestChrome(_ content: Content) -> some View {
         content
             .background { CrestSurfaceLayer(shape: BrowserSidebarWidgetDeckStyle.cardShape) }
             .overlay {
                 BrowserSidebarWidgetDeckStyle.cardShape
                     .stroke(
-                        BrowserSidebarWidgetDeckStyle.edgeHighlight(scale: chromeScale),
+                        CrestBrandTheme.line.opacity(chromeScale),
                         lineWidth: BrowserSidebarWidgetDeckStyle.cardStrokeWidth
                     )
                     .allowsHitTesting(false)

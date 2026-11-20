@@ -14,8 +14,17 @@ struct CrestChromeButtonStyle: ButtonStyle {
     /// rather than the device's material because these tiles sit inside
     /// panels that already wear it, where material on material disappears.
     var showsRestingFill = false
+    /// Draws the device's material at rest, for a control that floats on its
+    /// own over the sidebar, as the pins and the address field stand on it.
+    var restsOnMaterial = false
     /// Draws the surface of a control that is on, for a toggle.
     var isSelected = false
+    /// Lays a control that is on, or pressed, on Crest's light paper, as the
+    /// sidebar's selected tab is, rather than on the material.
+    var selectsOnPaper = false
+    /// How far past its surface the control takes presses on every side, for
+    /// a small control that still needs a full hit target.
+    var hitOutset: CGFloat = 0
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -25,7 +34,10 @@ struct CrestChromeButtonStyle: ButtonStyle {
                     controlSize: controlSize,
                     cornerRadius: cornerRadius,
                     showsRestingFill: showsRestingFill,
-                    isSelected: isSelected
+                    restsOnMaterial: restsOnMaterial,
+                    isSelected: isSelected,
+                    selectsOnPaper: selectsOnPaper,
+                    hitOutset: hitOutset
                 )
             )
     }
@@ -36,7 +48,10 @@ private struct CrestChromeButtonSurface: ViewModifier {
     let controlSize: CGSize?
     let cornerRadius: CGFloat
     let showsRestingFill: Bool
+    let restsOnMaterial: Bool
     let isSelected: Bool
+    let selectsOnPaper: Bool
+    let hitOutset: CGFloat
 
     @Environment(\.isEnabled) private var isEnabled
 
@@ -52,12 +67,16 @@ private struct CrestChromeButtonSurface: ViewModifier {
             .crestHoverSurface(
                 isSelected: isSelected,
                 cornerRadius: cornerRadius,
-                isPressed: isPressed
+                isPressed: isPressed,
+                showsRestingSurface: restsOnMaterial,
+                selectsOnPaper: selectsOnPaper
             )
             .background {
                 if showsRestingFill {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(.quaternary)
                 }
             }
+            .padding(hitOutset)
+            .contentShape(.rect)
     }
 }

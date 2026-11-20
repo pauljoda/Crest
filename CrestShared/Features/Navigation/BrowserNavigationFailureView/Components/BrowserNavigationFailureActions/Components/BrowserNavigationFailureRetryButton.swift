@@ -1,14 +1,11 @@
 import SwiftUI
 
 struct BrowserNavigationFailureRetryButton: View {
-    let accent: Color
     let action: () -> Void
 
     var body: some View {
         Button("Try Again", systemImage: "arrow.clockwise", action: action)
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(accent)
+            .buttonStyle(.crestPrimary)
             .accessibilityHint("Retries the failed address")
             .accessibilityIdentifier("navigation-failure-retry")
     }
@@ -16,6 +13,6 @@ struct BrowserNavigationFailureRetryButton: View {
 
 #if DEBUG
     #Preview("Component") {
-        BrowserNavigationFailureRetryButton(accent: .indigo, action: {}).padding()
+        BrowserNavigationFailureRetryButton(action: {}).padding()
     }
 #endif

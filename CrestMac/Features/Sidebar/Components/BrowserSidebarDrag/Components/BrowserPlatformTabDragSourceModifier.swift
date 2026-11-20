@@ -9,6 +9,9 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
     var reorder: BrowserSidebarReorderContext?
     var parentSplitGroupID: UUID?
     var isEnabled = true
+    /// Whether the tab is the selected one. The window draws the Mac's lift
+    /// from the sidebar's own selection, so this source reads none of it.
+    var isTabSelected = false
 
     private var item: BrowserTabDragItem {
         BrowserTabDragItem(tabID: tab.id, spaceID: spaceID, profileID: profileID)

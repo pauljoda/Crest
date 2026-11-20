@@ -17,12 +17,12 @@ struct BrowserCommandSurfaceMorph: Hashable, Sendable {
     static let animation = CrestMotion.sidebarMorph
 
     /// A fade that runs as the frame starts to move: the field letting go and
-    /// the palette's glass taking over on open, the palette's contents
+    /// the palette's surface taking over on open, the palette's contents
     /// clearing on close.
     static let leadingFade = CrestMotion.contentReveal
 
     /// A fade that finishes as the frame settles: the palette's contents on
-    /// open, the palette's glass and the field trading places on close.
+    /// open, the palette's surface and the field trading places on close.
     static let trailingFade = CrestMotion.contentReveal.delay(
         CrestMotion.sidebarMorphTransition - CrestMotion.contentRevealTransition
     )

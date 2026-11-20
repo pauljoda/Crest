@@ -5850,6 +5850,46 @@
       "category": "fixed",
       "message": "Fixed a crash when a page using the WebKit engine closed while it was loading another site."
     },
+    "palette-sidebar-material": {
+      "category": "improved",
+      "message": "The command palette and the recent tabs panel sit on the same material as the address field and pinned tabs, so the palette looks like the field it grows out of."
+    },
+    "selected-tab-paper": {
+      "category": "improved",
+      "message": "The selected tab, the selected pin and the command palette's selected row look like a sheet of light paper on every Space."
+    },
+    "flyouts-on-paper": {
+      "category": "improved",
+      "message": "Site Controls, color pickers, permission and password prompts, hover previews and notices sit on Crest's paper in light mode instead of always being dark, and on a warm charcoal in dark mode."
+    },
+    "sidebar-controls-material": {
+      "category": "improved",
+      "message": "The sidebar's scroll button, widget cards, sound and sharing badges on tabs, and the command palette's search engine chips use Crest's own surfaces instead of glass."
+    },
+    "crest-buttons-in-bars": {
+      "category": "improved",
+      "message": "The element picker, the History, Downloads and Archive buttons, and the Space buttons in Settings use Crest's own buttons."
+    },
+    "prompts-crest-blue": {
+      "category": "improved",
+      "message": "Password prompts, the page error screen and the locked Space screen use Crest blue buttons on every Space."
+    },
+    "page-canvas": {
+      "category": "improved",
+      "message": "The page area, the error screen, the locked Space screen and empty Peek and Quick Window pages use Crest's warm canvas."
+    },
+    "rounded-headings": {
+      "category": "improved",
+      "message": "Empty lists and pages, the page error title, a locked Space's name and the Settings sidebar heading use Crest's rounded display type."
+    },
+    "allo-display-type": {
+      "category": "improved",
+      "message": "Headings, buttons and labels across setup, Settings, the Start Page and Getting Started use Allo, Crest's new rounded typeface."
+    },
+    "dragged-tab-stays-paper": {
+      "category": "fixed",
+      "message": "A selected tab you pick up and drag keeps its light paper look instead of turning glassy."
+    },
     "core-close-waits-for-filter-conversions": {
       "category": "internal",
       "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."

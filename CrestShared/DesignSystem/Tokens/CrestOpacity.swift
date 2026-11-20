@@ -6,16 +6,14 @@ enum CrestOpacity {
     static let interactionSelection = 0.13
     static let interactionSelectionBorder = 0.10
     static let interactionSelectionShadow = 0.08
+    /// The ink shadow a selection on Crest's paper casts on the layer under
+    /// it.
+    static let paperShadow = 0.16
     static let selection = interactionSelection
     static let chromeSurface = 0.055
     static let selectedSurface = selection
     static let border = 0.12
     static let selectedBorder = interactionSelectionBorder
-    /// How far a selected row lifts dark glass toward white, so it stands off
-    /// a dark sidebar as light glass does off any.
-    static let darkSelectionLift = 0.10
-    /// The edge a selected row's dark glass wears over a dark sidebar.
-    static let darkSelectionBorder = 0.18
     static let disabled = 0.5
     /// Chrome that belongs to a part of the window without focus but stays
     /// usable, such as the bar of a split card another card has focus over.

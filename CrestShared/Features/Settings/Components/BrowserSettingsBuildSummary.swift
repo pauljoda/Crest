@@ -14,7 +14,7 @@ struct BrowserSettingsBuildSummary<Icon: View>: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Crest Browser")
-                    .font(.headline)
+                    .font(CrestTypography.sectionHeading)
                     .foregroundStyle(.primary)
                 Group {
                     Text("Version \(build.version) (\(build.build))")

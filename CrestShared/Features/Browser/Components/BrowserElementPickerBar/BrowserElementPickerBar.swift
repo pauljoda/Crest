@@ -61,24 +61,26 @@ struct BrowserElementPickerBar: View {
                 "Choose the Element Around It", systemImage: "arrow.up.left.and.arrow.down.right", action: picker.widen
             )
             .labelStyle(.iconOnly)
+            .buttonStyle(.crestIcon())
             .help("Choose the Element Around It")
             .disabled(!picker.canWiden)
             Button(
                 "Choose the Element Inside", systemImage: "arrow.down.right.and.arrow.up.left", action: picker.narrow
             )
             .labelStyle(.iconOnly)
+            .buttonStyle(.crestIcon())
             .help("Choose the Element Inside")
             .disabled(!picker.canNarrow)
             Spacer(minLength: CrestSpacing.small)
             Button("Cancel", role: .cancel, action: picker.cancel)
+                .buttonStyle(.crestSecondary)
+            // Crest blue, the accent the page's outline takes, on every
+            // platform.
             Button("Block", action: picker.block)
-                .buttonStyle(.glassProminent)
-                // The accent the page's outline takes, on every platform.
-                .tint(CrestBrandTheme.accent)
+                .buttonStyle(.crestPrimary)
                 .keyboardShortcut(.defaultAction)
                 .disabled(picker.selector == nil)
         }
-        .buttonStyle(.glass)
     }
 
     private var hint: LocalizedStringKey {
