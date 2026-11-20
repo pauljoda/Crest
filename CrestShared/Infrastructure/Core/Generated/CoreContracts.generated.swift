@@ -10722,7 +10722,7 @@ struct CrestBackplate: Hashable, Sendable {
 }
 
 /// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `normalize`.
+/// Core-only behavior, not emitted: `normalize`, `read`, `write`.
 struct CrestChargeKind: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic

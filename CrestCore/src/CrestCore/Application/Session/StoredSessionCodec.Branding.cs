@@ -177,20 +177,14 @@ internal static partial class StoredSessionCodec {
     internal static CrestCharge DecodeCharge(JsonObject value) {
         var text = TolerantText(value[Key.Value]) ?? "";
         var kind = CrestChargeKind.Named(TolerantText(value[Key.Kind])) ?? CrestChargeKind.None;
-        return kind.Kind switch {
-            CrestChargeKind.Kinds.Heraldic => new(kind, CrestSymbol.Named(text) ?? CrestSymbol.Fallback),
-            CrestChargeKind.Kinds.System or CrestChargeKind.Kinds.Emoji => new(kind, Text: text),
-            CrestChargeKind.Kinds.Monogram => new(kind, Text: text,
-                Style: CrestMonogramStyle.Named(TolerantText(value[Key.Style])) ?? CrestMonogramStyle.Serif),
-            _ => new(CrestChargeKind.None)
-        };
+        return kind.Read(text, TolerantText(value[Key.Style]));
     }
 
     internal static JsonObject Encode(CrestCharge charge) {
         var value = new JsonObject { [Key.Kind] = charge.Kind.Name };
-        if (charge.Kind == CrestChargeKind.Heraldic && charge.Symbol is { } symbol) value[Key.Value] = symbol.Name;
-        else if (charge.Kind != CrestChargeKind.None) value[Key.Value] = charge.Text ?? "";
-        if (charge.Kind == CrestChargeKind.Monogram) value[Key.Style] = (charge.Style ?? CrestMonogramStyle.Serif).Name;
+        var (stored, style) = charge.Kind.Written(charge);
+        if (stored is not null) value[Key.Value] = stored;
+        if (style is not null) value[Key.Style] = style;
         return value;
     }
 

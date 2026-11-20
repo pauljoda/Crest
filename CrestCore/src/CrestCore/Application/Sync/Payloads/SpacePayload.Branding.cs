@@ -101,13 +101,7 @@ internal sealed partial record SpacePayload {
             var value = new SyncPayloadReader(node, SyncPayloadForm.Journal);
             string text = value.OptionalText(StoredSessionCodec.Key.Value) ?? "";
             var kind = CrestChargeKind.Named(value.TolerantText(StoredSessionCodec.Key.Kind)) ?? CrestChargeKind.None;
-            return kind.Kind switch {
-                CrestChargeKind.Kinds.Heraldic => new(kind, CrestSymbol.Named(text) ?? CrestSymbol.Fallback),
-                CrestChargeKind.Kinds.System or CrestChargeKind.Kinds.Emoji => new(kind, Text: text),
-                CrestChargeKind.Kinds.Monogram => new(kind, Text: text,
-                    Style: CrestMonogramStyle.Named(value.TolerantText(StoredSessionCodec.Key.Style)) ?? CrestMonogramStyle.Serif),
-                _ => new(CrestChargeKind.None)
-            };
+            return kind.Read(text, value.TolerantText(StoredSessionCodec.Key.Style));
         } catch (UnreadableSyncPayloadException) {
             return null;
         }

@@ -6013,6 +6013,10 @@
     "session-rules-one-place": {
       "category": "internal",
       "message": "Closing and deleting tabs, the Spaces being deleted, and numbered Sub-Space names each follow one rule in the core."
+    },
+    "charge-kind-codec": {
+      "category": "internal",
+      "message": "Each crest figure kind reads and writes its own stored form."
     }
   }
 }
