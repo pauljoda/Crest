@@ -8,12 +8,13 @@ import socket
 import subprocess
 
 from chromium_fork import REPO, RUNNER_WORK, download, run, sha256, validate_workspace
+from repository import REPOSITORY
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.home() / "Dev/CrestChromium")
-    parser.add_argument("--repository", default="pauljoda/Crest")
+    parser.add_argument("--repository", default=REPOSITORY)
     args = parser.parse_args()
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         parser.error("The Chromium runner requires an Apple Silicon Mac")

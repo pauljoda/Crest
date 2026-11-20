@@ -30,6 +30,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import content_filter  # noqa: E402
+from repository import REPOSITORY  # noqa: E402
 
 DOWNLOADS = "https://github.com/{repository}/releases/download/{tag}/{asset}"
 DOWNLOAD_ATTEMPTS = 5
@@ -128,7 +129,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime", required=True, choices=[*content_filter.TARGETS, "host"])
     parser.add_argument("--cache", type=Path, default=content_filter.REPOSITORY / "CrestCore/artifacts/content-filter")
-    parser.add_argument("--repository", default=os.environ.get("CREST_CONTENT_FILTER_REPOSITORY", "pauljoda/Crest"))
+    parser.add_argument("--repository", default=os.environ.get("CREST_CONTENT_FILTER_REPOSITORY", REPOSITORY))
     args = parser.parse_args()
 
     from_source = os.environ.get("CREST_CONTENT_FILTER_FROM_SOURCE") == "1"
