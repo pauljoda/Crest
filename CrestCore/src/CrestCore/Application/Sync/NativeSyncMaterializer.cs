@@ -19,7 +19,7 @@ public static class NativeSyncMaterializer {
             .ToDictionary(record => record.Id, record => record.Tombstone!.DeletedAt.Moment);
         var deleted = deletedAt.Keys.ToHashSet();
         var locals = session.Spaces.ToDictionary(space => space.Id);
-        var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = session.DeletingSpaceIds;
         var brandingIds = records.Where(record => record.Kind == SyncRecordKind.Space && record.SuppliesBranding).Select(record => record.Id).ToHashSet();
         var spaces = new List<SpaceState>();
         var profiles = new HashSet<Guid>();

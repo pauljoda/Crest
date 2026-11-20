@@ -95,11 +95,14 @@ public sealed partial class BrowserTabCollection {
         tabs.Insert(insertion, tab);
     }
 
-    /// Archives the `requested` tabs and answers the tab the Space shows next.
-    /// Refused with `UnknownTab` for a tab the Space does not hold, and with
-    /// `CurrentTabsOnly` for a saved or pinned tab unless `deleting`.
+    /// Archives the `requested` tabs for `reason`, closed or deleted, and
+    /// answers the tab the Space shows next. A deletion archives each tab as
+    /// an open tab. Refused with `UnknownTab` for a tab the Space does not
+    /// hold, and with `CurrentTabsOnly` for a saved or pinned tab unless it is
+    /// a deletion.
     public Guid? DismissTabs(IReadOnlyCollection<Guid> requested, Guid? selected, Guid? fallback,
-        DateTimeOffset now, bool deleting, bool ensureSelection, bool resetArchivePlacement) {
+        DateTimeOffset now, ArchiveReason reason, bool ensureSelection) {
+        bool deleting = reason.IsExplicitDeletion;
         var removing = requested.ToHashSet();
         foreach (var id in removing) _ = Tab(id);
         var removed = tabs.Where(t => removing.Contains(t.Id)).ToArray();
@@ -108,8 +111,8 @@ public sealed partial class BrowserTabCollection {
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
         foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
             var value = tab.State with { SplitGroupId = null };
-            if (resetArchivePlacement) value = value.SavedAt(null) with { Placement = TabPlacement.Current, FolderId = null };
-            archive.Add(new(value, now, deleting ? ArchiveReason.Deleted : ArchiveReason.Closed));
+            if (deleting) value = value.SavedAt(null) with { Placement = TabPlacement.Current, FolderId = null };
+            archive.Add(new(value, now, reason));
         }
         tabs.RemoveAll(t => removing.Contains(t.Id));
         folders.Clear(); folders.AddRange(orderedFolders);
@@ -127,7 +130,7 @@ public sealed partial class BrowserTabCollection {
     /// no tab is given one too.
     private Guid? DeleteIntoArchive(IReadOnlyCollection<Guid> requested, Guid? shown, Guid? fallback, DateTimeOffset now,
         bool ensureSelection = true) {
-        var next = DismissTabs(requested, shown, fallback, now, deleting: true, ensureSelection, resetArchivePlacement: true);
+        var next = DismissTabs(requested, shown, fallback, now, ArchiveReason.Deleted, ensureSelection);
         return shown is { } removed && requested.Contains(removed)
             ? fallback is { } other && tabs.Any(tab => tab.Id == other) ? other : null
             : next;

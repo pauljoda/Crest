@@ -15,8 +15,7 @@ public sealed partial class BrowserTabCollection {
         RequireSelectedTabs(selection);
         if (selection.Members.FirstOrDefault(tab => tab.Placement.IsDurable) is { } durable)
             throw new Rejected(new CurrentTabsOnly(durable.Id));
-        return DismissTabs(selection.MemberIds, shown, fallback, now, deleting: false, ensureSelection: false,
-            resetArchivePlacement: false);
+        return DismissTabs(selection.MemberIds, shown, fallback, now, ArchiveReason.Closed, ensureSelection: false);
     }
 
     /// Deletes the selected tabs into the archive as open tabs, and answers the

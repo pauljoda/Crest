@@ -75,7 +75,7 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
         var primaryId = from.PrimaryId ?? from.SpaceId;
         var primary = Spaces.FirstOrDefault(space => space.SpaceId == primaryId) ?? from;
         var space = new SetupDraftSpace(nextId(), nextId(), IsNew: true,
-            from.Customization with { Name = NextName(primary.ShownName) }, primaryId);
+            from.Customization with { Name = SpaceCustomization.NextName(primary.ShownName, Spaces.Select(space => space.ShownName)) }, primaryId);
         var spaces = Spaces.ToList();
         int last = spaces.FindLastIndex(candidate => candidate.SpaceId == primaryId || candidate.PrimaryId == primaryId);
         spaces.Insert(last + 1, space);
@@ -90,19 +90,6 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
                 Spaces = [.. Spaces.Where(space => space.SpaceId != spaceId && !(space.IsNew && space.PrimaryId == spaceId))]
             }
             : this;
-
-    /// `name` with the next number no Space of the setup wears: "Work" and
-    /// "Work 2" both give "Work 2" while no Space is named that, else
-    /// "Work 3", and on.
-    private string NextName(string name) {
-        var trimmed = name.TrimEnd();
-        var gap = trimmed.LastIndexOf(' ');
-        var stem = gap > 0 && int.TryParse(trimmed.AsSpan(gap + 1), out _) ? trimmed[..gap] : trimmed;
-        var taken = Spaces.Select(space => space.ShownName.Trim()).ToHashSet(StringComparer.CurrentCultureIgnoreCase);
-        var number = 2;
-        while (taken.Contains($"{stem} {number}")) number++;
-        return $"{stem} {number}";
-    }
 
     /// The setup with `spaceId` where `targetId` stands, keeping its order.
     internal SetupDraft Moving(Guid spaceId, Guid targetId) {
