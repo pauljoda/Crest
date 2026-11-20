@@ -105,9 +105,10 @@ class DesktopClientView : public views::ClientView {
   using ClientView::ClientView;
 
   void SetDraggableRegion(SkRegion region) { draggable_region_ = std::move(region); }
+  bool IsDraggable(const gfx::Point& point) const { return draggable_region_.contains(point.x(), point.y()); }
 
   int NonClientHitTest(const gfx::Point& point) override {
-    if (draggable_region_.contains(point.x(), point.y())) return HTCAPTION;
+    if (IsDraggable(point)) return HTCAPTION;
     return ClientView::NonClientHitTest(point);
   }
 
@@ -242,6 +243,18 @@ views::ClientView* DesktopFrame::CreateClientView(views::Widget* widget) {
 
 std::unique_ptr<views::FrameView> DesktopFrame::CreateFrameView(views::Widget* widget) {
   return std::make_unique<DesktopFrameView>();
+}
+
+// A press where the interface marks `app-region: drag` stays with the frame,
+// which leaves it to the system to move, snap or maximize the window. Sent
+// into the interface's native view, the press would be taken there and the
+// window would never move; BrowserView keeps a web app's draggable region
+// from its contents the same way.
+bool DesktopFrame::ShouldDescendIntoChildForEventHandling(gfx::NativeView child, const gfx::Point& location) {
+  if (!client_view_) return true;
+  gfx::Point point = location;
+  views::View::ConvertPointToTarget(widget_->GetRootView(), client_view_, &point);
+  return !client_view_->IsDraggable(point);
 }
 
 // Only a close that skips the request, such as the system ending the

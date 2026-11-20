@@ -70,6 +70,7 @@ class DesktopFrame : public views::WidgetDelegate,
   // views::WidgetDelegate:
   views::ClientView* CreateClientView(views::Widget* widget) override;
   std::unique_ptr<views::FrameView> CreateFrameView(views::Widget* widget) override;
+  bool ShouldDescendIntoChildForEventHandling(gfx::NativeView child, const gfx::Point& location) override;
 
   // views::WidgetObserver:
   void OnWidgetClosing(views::Widget* widget) override;

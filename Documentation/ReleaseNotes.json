@@ -5841,6 +5841,10 @@
     "windows-desktop-interface": {
       "category": "internal",
       "message": "Crest's Windows interface draws the browser window in Crest's Chromium: the sidebar, Spaces and their pager, page cards, the command palette, the recent-tab switcher, downloads, prompts and settings"
+    },
+    "windows-title-bar-moves-window": {
+      "category": "internal",
+      "message": "Dragging a Crest window's title bar on Windows moves the window"
     }
   }
 }
