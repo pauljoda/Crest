@@ -37,8 +37,6 @@ enum CrestColor {
     static let success = status(
         light: CrestColorComponents(red: 47, green: 112, blue: 66),
         dark: CrestColorComponents(red: 134, green: 196, blue: 142))
-    /// The wash under a row or tag that is in danger.
-    static let dangerFill = danger.opacity(CrestOpacity.statusFill)
     /// The wash under a row or tag that needs the person.
     static let warningFill = warning.opacity(CrestOpacity.statusFill)
 

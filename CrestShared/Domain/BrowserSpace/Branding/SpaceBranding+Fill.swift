@@ -80,11 +80,6 @@ extension SpaceBranding {
         return Self.fill(base, into: gradients.indices.contains(slot) ? gradients[slot] : nil)
     }
 
-    /// The color of the palette's `role`, with the gradient it runs into.
-    func roleFill(_ role: BrowserSpaceBrandColorRole) -> CrestColorFill {
-        slotFill(role.slot)
-    }
-
     /// The fill a crest layer drawn from palette entry `index` wears, with
     /// the gradient that entry runs into: the crest's own palette's when it
     /// keeps one, or else the Space's.
@@ -117,12 +112,6 @@ extension SpaceBranding {
         hasCustomAppearance = true
     }
 
-    /// Gives the palette's `role` the fill: its first color, and the gradient
-    /// the rest make.
-    mutating func setRoleFill(_ fill: CrestColorFill, of role: BrowserSpaceBrandColorRole) {
-        setSlotFill(fill, at: role.slot)
-    }
-
     /// Gives the palette's color at `slot` the fill, giving the palette every
     /// color up to that one.
     mutating func setSlotFill(_ fill: CrestColorFill, at slot: Int) {
@@ -130,19 +119,6 @@ extension SpaceBranding {
         while colors.count <= slot { colors.append(colors.last ?? color) }
         colors[slot] = color
         colorGradients = Self.gradients(colorGradients, setting: fill, at: slot)
-        hasCustomAppearance = true
-    }
-
-    /// Gives the crest's palette entry `index` the fill: the crest's own
-    /// palette's entry when it keeps one, or else the Space's color.
-    mutating func setCrestLayerFill(_ fill: CrestColorFill, at index: Int) {
-        guard let color = fill.colors.first else { return }
-        guard let palette = crest.palette, palette.indices.contains(index) else {
-            setSlotFill(fill, at: index)
-            return
-        }
-        crest.palette?[index] = color
-        crest.paletteGradients = Self.gradients(crest.paletteGradients, setting: fill, at: index)
         hasCustomAppearance = true
     }
 

@@ -314,7 +314,6 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
                     kindID: kindID,
                     instanceID: snapshot.id.id
                 ),
-                scope: .profile(snapshot.owner.profileID),
                 orderingOrdinal: snapshot.orderingOrdinal,
                 presentation: .nowPlaying(snapshot),
                 availableActions: actions

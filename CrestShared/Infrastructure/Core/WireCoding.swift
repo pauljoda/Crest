@@ -89,9 +89,6 @@ struct WireWriter {
         writeDouble(value.timeIntervalSinceReferenceDate)
     }
 
-    mutating func writeTimeInterval(_ value: TimeInterval) {
-        writeDouble(value)
-    }
 }
 
 /// Reads what `WireWriter` writes, checking every length against the bytes
@@ -226,10 +223,6 @@ struct WireReader {
 
     mutating func readDate() throws(WireError) -> Date {
         Date(timeIntervalSinceReferenceDate: try readSeconds("date"))
-    }
-
-    mutating func readTimeInterval() throws(WireError) -> TimeInterval {
-        try readSeconds("interval")
     }
 
     private mutating func readSeconds(_ what: String) throws(WireError) -> Double {
