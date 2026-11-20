@@ -5877,6 +5877,10 @@
     "windows-page-card-frame-match-mac": {
       "category": "internal",
       "message": "The Windows page card is framed as the Mac's: beside a docked sidebar, 9.5 points from the window's edges, with the Mac's smaller corner, lighter shadow and split focus ring"
+    },
+    "windows-overlay-scrollbars": {
+      "category": "internal",
+      "message": "Pages and the interface on Windows scroll with overlay scrollbars, hidden at rest as the Mac's, unless Windows is set to always show scrollbars"
     }
   }
 }

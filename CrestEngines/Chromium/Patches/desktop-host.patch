@@ -652,19 +652,30 @@
  #include "chrome/common/chrome_features.h"
  #include "components/lens/lens_features.h"
  #include "components/security_interstitials/core/features.h"
-@@ -135,14 +135,16 @@
+@@ -63,6 +63,10 @@
+ #include "media/base/media_switches.h"
+ #endif
+ 
++#if BUILDFLAG(IS_WIN)
++#include "ui/native_theme/features/native_theme_features.h"
++#endif
++
+ #if BUILDFLAG(IS_CHROMEOS)
+ #include "chrome/common/channel_info.h"
+ #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
+@@ -135,14 +139,23 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
-+#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
-+  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
- #if BUILDFLAG(IS_MAC)
+-#if BUILDFLAG(IS_MAC)
 -  // Crest shares a page's screen through the system's own picker, which asks
 -  // the person what to share and needs no Screen Recording access. As in
 -  // Chrome, a page may ask without a click of its own, since sites built for
 -  // Chrome ask from a timer or from a click in another of their windows. A
 -  // command line can still turn the picker off.
--  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++#if BUILDFLAG(IS_MAC)
 +    // Crest shares a page's screen through the system's own picker, which
 +    // asks the person what to share and needs no Screen Recording access. As
 +    // in Chrome, a page may ask without a click of its own, since sites built
@@ -672,10 +683,17 @@
 +    // windows. A command line can still turn the picker off.
      feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
 +#endif
++#if BUILDFLAG(IS_WIN)
++    // Pages and Crest's own interface scroll with overlay scrollbars, as
++    // the Mac's do: thin, and hidden until a scroll or the pointer brings
++    // them out, unless the person keeps scrollbars always shown in Windows'
++    // settings, which the feature's default mode follows.
++    feature_overrides.EnableFeature(features::kOverlayScrollbar);
++#endif
      // Crest keeps federated sign-in (FedCM) off.
      // Disabling it explicitly also hides the API from pages, which otherwise
      // keep it, so sites sign in through their own pop-up or redirect, as in
-@@ -160,7 +162,7 @@
+@@ -160,7 +173,7 @@
      feature_overrides.DisableFeature(lens::features::kLensOverlay);
      feature_overrides.DisableFeature(lens::features::kLensStandalone);
    }
