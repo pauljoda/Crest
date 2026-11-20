@@ -71,7 +71,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         color: CrestBrandPalette.sage)
     static let shortcuts = BrowserSettingsDestination(
         kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
-        searchTerms: "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page",
+        searchTerms: "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page",
         symbol: "keyboard.fill",
         color: CrestBrandPalette.butter, platforms: [.desktop])
     static let spaces = BrowserSettingsDestination(

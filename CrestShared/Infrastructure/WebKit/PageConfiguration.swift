@@ -61,7 +61,7 @@ enum BrowserPageConfiguration {
             ?? BrowserWebsiteDataStore.launchScoped(forProfile: profileID)
         configuration.defaultWebpagePreferences = webpagePreferences
         configuration.preferences = preferences
-        configuration.applicationNameForUserAgent = safariCompatibleApplicationName
+        configuration.applicationNameForUserAgent = fullBrowserApplicationName
         configuration.upgradeKnownHostsToHTTPS = true
         configuration.allowsAirPlayForMediaPlayback = true
         configuration.suppressesIncrementalRendering = false
@@ -78,10 +78,11 @@ enum BrowserPageConfiguration {
         return configuration
     }
 
-    static var safariCompatibleApplicationName: String? {
-        // WKWebView omits Safari's browser tokens. Supply the platform's native
-        // compatibility suffix without an app token so sign-in providers evaluate
-        // Crest as the user-driven browser it is instead of an embedded app flow.
+    static var fullBrowserApplicationName: String? {
+        // WKWebView omits the tokens a full browser's user agent carries. Supply
+        // the platform's native compatibility suffix without an app token so
+        // sign-in providers evaluate Crest as the user-driven browser it is
+        // instead of an embedded app flow.
         return BrowserPlatformUserAgent.applicationName
     }
 }

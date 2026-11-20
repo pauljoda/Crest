@@ -259,7 +259,7 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Split With Next Tab", symbol: "rectangle.split.2x1",
         searchTerms: "split view cards side by side columns", availableWhen: facts => facts.HasSplitCandidate);
     // ⌃⌘←/→ is the one arrow pair left free: ⌥⌘←/→ switch Spaces and ⌥⌘↑/↓ tabs.
-    // Splitting a single card stays menu-only because Arc's ⌘⇧+ collides with
+    // Splitting a single card stays menu-only because ⌘⇧+ collides with
     // zoom and ⌘W already closes the focused card.
     public static readonly ShortcutCommand FocusNextSplitCard = new(Kinds.FocusNextSplitCard, name: "focusNextSplitCard",
         ShortcutSection.Tabs, title: "Focus Next Split Card", symbol: "rectangle.righthalf.filled",

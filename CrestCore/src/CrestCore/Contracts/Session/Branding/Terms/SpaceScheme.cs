@@ -9,7 +9,7 @@ public sealed class SpaceScheme {
 
     /// A neutral gray laid thinly over the window's own background, which
     /// settles it near #333 by night and #E5E5E5 by day, under a fine grain,
-    /// with its icon in a mid gray. The values follow Arc's sidebar.
+    /// with its icon in a mid gray.
     public static readonly SpaceScheme Neutral = new("neutral", "Neutral", SchemeLook(
         [Tincture.NeutralSmoke], Tincture.NeutralGray, strength: 0.15, textureStrength: 1));
 

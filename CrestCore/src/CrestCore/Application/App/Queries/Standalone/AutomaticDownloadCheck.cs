@@ -5,10 +5,10 @@ namespace CrestCore.Contracts;
 /// Whether a download a page starts goes ahead, is refused or asks first:
 /// whether a person's gesture started it or approved a retry, the site's saved
 /// decision, and whether the page has already had its one automatic download
-/// while that decision is Ask. This is Chrome-style automatic-download
-/// throttling for one page and origin: while the site's saved decision is
-/// still Ask, the first file it sends without a user gesture is allowed and any
-/// further file must ask first. `HasAllowedAutomaticDownload` is the throttle
+/// while that decision is Ask. This throttles automatic downloads for one
+/// page and origin: while the site's saved decision is still Ask, the first
+/// file it sends without a user gesture is allowed and any further file must
+/// ask first. `HasAllowedAutomaticDownload` is the throttle
 /// state the caller keeps per page, origin and Space. Callers without such a
 /// scope pass false and discard the returned state.
 public sealed record AutomaticDownloadCheck(bool UserInitiated, bool UserApprovedRetry, SitePermissionDecision SavedDecision,

@@ -13,9 +13,9 @@ extension WKWebView {
     /// The scale a page is shown at: its zoom.
     ///
     /// On iOS the public page zoom shrinks a page inside the width it laid out
-    /// for, leaving the rest of the view blank. The view scale WebKit gives
-    /// Safari lays the page out wider and fits it to the view instead, the
-    /// way the Mac's page zoom does. A WebKit without it falls back to the
+    /// for, leaving the rest of the view blank. WebKit's view scale lays the
+    /// page out wider and fits it to the view instead, the way the Mac's page
+    /// zoom does. A WebKit without it falls back to the
     /// page zoom.
     var pageScale: CGFloat {
         get {

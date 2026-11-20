@@ -15,11 +15,11 @@ enum MobileBrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable () -> Void
     ) {
         let alert = UIAlertController(
-            title: "\(sourceLabel(for: request)) says",
+            title: String(localized: "\(sourceLabel(for: request)) says"),
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completion() })
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in completion() })
         present(alert, dismissal: dismissal, fallback: completion)
     }
 
@@ -30,12 +30,12 @@ enum MobileBrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
         let alert = UIAlertController(
-            title: "\(sourceLabel(for: request)) says",
+            title: String(localized: "\(sourceLabel(for: request)) says"),
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in completion(false) })
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completion(true) })
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { _ in completion(false) })
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in completion(true) })
         present(alert, dismissal: dismissal) { completion(false) }
     }
 
@@ -47,14 +47,14 @@ enum MobileBrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable (String?) -> Void
     ) {
         let alert = UIAlertController(
-            title: "\(sourceLabel(for: request)) says",
+            title: String(localized: "\(sourceLabel(for: request)) says"),
             message: message,
             preferredStyle: .alert
         )
         alert.addTextField { $0.text = defaultText }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in completion(nil) })
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { _ in completion(nil) })
         alert.addAction(
-            UIAlertAction(title: "OK", style: .default) { [weak alert] _ in
+            UIAlertAction(title: String(localized: "OK"), style: .default) { [weak alert] _ in
                 completion(alert?.textFields?.first?.text)
             })
         present(alert, dismissal: dismissal) { completion(nil) }
@@ -70,19 +70,19 @@ enum MobileBrowserDialogPresenter {
         else { return }
         let shouldOpen = await withCheckedContinuation { continuation in
             let alert = UIAlertController(
-                title: "Location Access Is Off for Crest",
-                message:
-                    "iOS is blocking Crest from receiving a location, even when this site is allowed. "
-                    + "Turn on Location for Crest in Settings. "
-                    + "This request will continue when you return.",
+                title: String(localized: "Location Access Is Off for Crest"),
+                message: String(
+                    localized:
+                        "iOS is blocking Crest from receiving a location, even when this site is allowed. Turn on Location for Crest in Settings. This request will continue when you return."
+                ),
                 preferredStyle: .alert
             )
             alert.addAction(
-                UIAlertAction(title: "Not Now", style: .cancel) { _ in
+                UIAlertAction(title: String(localized: "Not Now"), style: .cancel) { _ in
                     continuation.resume(returning: false)
                 })
             alert.addAction(
-                UIAlertAction(title: "Open Settings", style: .default) { _ in
+                UIAlertAction(title: String(localized: "Open Settings"), style: .default) { _ in
                     continuation.resume(returning: true)
                 })
             present(alert) {
@@ -116,21 +116,23 @@ enum MobileBrowserDialogPresenter {
         let scheme = destinationURL.scheme?.lowercased() ?? "link"
         return await withCheckedContinuation { continuation in
             let alert = UIAlertController(
-                title: "Open this “\(scheme)” link in another app?",
-                message:
-                    "\(origin.host) wants to leave Crest and open \(externalDestinationLabel(for: destinationURL)). The choice belongs only to the \(spaceName) Space.",
+                title: String(localized: "Open this “\(scheme)” link in another app?"),
+                message: String(
+                    localized:
+                        "\(origin.host) wants to leave Crest and open \(externalDestinationLabel(for: destinationURL)). The choice belongs only to the \(spaceName) Space."
+                ),
                 preferredStyle: .alert
             )
             alert.addAction(
-                UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { _ in
                     continuation.resume(returning: .cancel)
                 })
             alert.addAction(
-                UIAlertAction(title: "Open", style: .default) { _ in
+                UIAlertAction(title: String(localized: "Open"), style: .default) { _ in
                     continuation.resume(returning: .open)
                 })
             alert.addAction(
-                UIAlertAction(title: "Always Allow", style: .default) { _ in
+                UIAlertAction(title: String(localized: "Always Allow"), style: .default) { _ in
                     continuation.resume(returning: .openAndRemember)
                 })
             present(alert) {
@@ -159,37 +161,42 @@ enum MobileBrowserDialogPresenter {
         let descriptor = prompt.descriptor
         var paragraphs: [String] = []
         if let realm = descriptor.realm, !realm.isEmpty {
-            paragraphs.append("Realm: \(realm)")
+            paragraphs.append(String(localized: "Realm: \(realm)"))
         }
         if prompt.allowsSaving {
             paragraphs.append(
-                "This sign-in belongs only to the \(spaceName) Space. Crest saves it only after the site accepts it.")
+                String(
+                    localized:
+                        "This sign-in belongs only to the \(spaceName) Space. Crest saves it only after the site accepts it."
+                ))
         } else {
             paragraphs.append(
-                "This sign-in belongs only to the \(spaceName) Space and cannot be saved because the connection is not protected by HTTPS."
-            )
+                String(
+                    localized:
+                        "This sign-in belongs only to the \(spaceName) Space and cannot be saved because the connection is not protected by HTTPS."
+                ))
         }
         if descriptor.previousFailureCount > 0 {
-            paragraphs.append("The previous credentials were not accepted.")
+            paragraphs.append(String(localized: "The previous credentials were not accepted."))
         }
         if !descriptor.isSecureTransport {
-            paragraphs.append("Warning: this connection is not protected by HTTPS.")
+            paragraphs.append(String(localized: "Warning: this connection is not protected by HTTPS."))
         }
 
         let alert = UIAlertController(
-            title: "Sign in to \(descriptor.source)",
+            title: String(localized: "Sign in to \(descriptor.source)"),
             message: paragraphs.joined(separator: "\n\n"),
             preferredStyle: .alert
         )
         alert.addTextField { field in
-            field.placeholder = "Username"
+            field.placeholder = String(localized: "Username")
             field.text = prompt.suggestedUsername
             field.textContentType = .username
             field.autocapitalizationType = .none
             field.autocorrectionType = .no
         }
         alert.addTextField { field in
-            field.placeholder = "Password"
+            field.placeholder = String(localized: "Password")
             field.isSecureTextEntry = true
             field.textContentType = .password
         }
@@ -197,11 +204,11 @@ enum MobileBrowserDialogPresenter {
             // An action or the question's dismissal answers, whichever comes first.
             let answer = AlertAnswer(continuation)
             alert.addAction(
-                UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { _ in
                     answer.resume(nil)
                 })
             alert.addAction(
-                UIAlertAction(title: "Sign In Once", style: .default) { [weak alert] _ in
+                UIAlertAction(title: String(localized: "Sign In Once"), style: .default) { [weak alert] _ in
                     answer.resume(
                         authenticationResponse(
                             from: alert,
@@ -210,7 +217,7 @@ enum MobileBrowserDialogPresenter {
                 })
             if prompt.allowsSaving {
                 alert.addAction(
-                    UIAlertAction(title: "Sign In & Save", style: .default) { [weak alert] _ in
+                    UIAlertAction(title: String(localized: "Sign In & Save"), style: .default) { [weak alert] _ in
                         answer.resume(
                             authenticationResponse(
                                 from: alert,
@@ -276,7 +283,7 @@ enum MobileBrowserDialogPresenter {
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
         present(alert, fallback: {})
     }
 

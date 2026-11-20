@@ -302,7 +302,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         #if DEBUG
             // iOS ships no developer tooling of its own, so an inspectable
             // release web view would be attack surface and nothing else: any
-            // trusted Mac could attach Safari's Web Inspector to a session.
+            // trusted Mac could attach a Web Inspector to a session.
             webView.isInspectable = true
         #endif
         webView.navigationDelegate = self

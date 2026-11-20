@@ -455,6 +455,9 @@
     "%@ wants to leave Crest and open %@. The choice belongs only to the %@ Space and can be changed in Settings > Site Permissions." : {
 
     },
+    "%@ wants to leave Crest and open %@. The choice belongs only to the %@ Space." : {
+
+    },
     "%@ will use %@’s sign-ins, history and extensions. Its own sign-ins and website data stay on this device and come back if you separate it." : {
 
     },
@@ -2193,6 +2196,9 @@
       "comment" : "Screen sharing picker option to include the shared tab's sound."
     },
     "Also show" : {
+
+    },
+    "Always Allow" : {
 
     },
     "Always Allow in %@" : {
@@ -7158,6 +7164,9 @@
     "Interactive sidebar preview" : {
 
     },
+    "iOS is blocking Crest from receiving a location, even when this site is allowed. Turn on Location for Crest in Settings. This request will continue when you return." : {
+
+    },
     "Iron" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7274,12 +7283,12 @@
         }
       }
     },
-    "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page" : {
+    "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لوحة المفاتيح المفاتيح الأوامر إعادة التعيين تغيير التعيين Arc الاختصارات التنقل علامات التبويب المساحات الصفحة"
+            "value" : "لوحة المفاتيح المفاتيح الأوامر إعادة التعيين تغيير التعيين الاختصارات التنقل علامات التبويب المساحات الصفحة"
           }
         }
       }
@@ -9721,6 +9730,9 @@
 
     },
     "Press Tab, enter your query, then press Return." : {
+
+    },
+    "Preview" : {
 
     },
     "Preview hover" : {
@@ -12187,6 +12199,12 @@
 
     },
     "Sign In" : {
+
+    },
+    "Sign In & Save" : {
+
+    },
+    "Sign In Once" : {
 
     },
     "Sign in to %@" : {
