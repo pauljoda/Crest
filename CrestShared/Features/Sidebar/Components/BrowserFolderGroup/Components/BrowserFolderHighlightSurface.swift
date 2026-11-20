@@ -65,6 +65,9 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                             if emphasisOpacity > 0 { shape.fill(.primary.opacity(emphasisOpacity)) }
                         }
                         .overlay {
+                            if let hoverFill { shape.fill(hoverFill) }
+                        }
+                        .overlay {
                             if isSelected { shape.fill(CrestColor.hover) }
                         }
                         .overlay {

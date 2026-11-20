@@ -46,7 +46,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
                         ? BrowserTabAppearanceSurface.hoverFill(
                             appearance: appearance.tabs, accent: (appearance.tabs.color ?? hoverAccent).color,
                             reduceTransparency: reduceTransparency) : nil,
-                    emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
+                    emphasisOpacity: alwaysVisible && isTargeted ? 0.16 : 0)
             )
             .onHover { isHovered = $0 }
             .animation(
