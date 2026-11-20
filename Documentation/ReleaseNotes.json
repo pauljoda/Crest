@@ -5933,6 +5933,10 @@
     "mobile-padlock-page-security": {
       "category": "internal",
       "message": "iPhone, iPad and Mac decide the address field's padlock with one rule that reads the security Crest judged for the page."
+    },
+    "session-save-failure-reason": {
+      "category": "fixed",
+      "message": "When Crest can't save your session, Sync settings says why in plain words instead of showing an internal code."
     }
   }
 }

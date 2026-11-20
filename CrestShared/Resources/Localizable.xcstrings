@@ -4844,6 +4844,21 @@
         }
       }
     },
+    "Crest couldn’t save your session because another app is using its file." : {
+
+    },
+    "Crest couldn’t save your session because its file is damaged." : {
+
+    },
+    "Crest couldn’t save your session because its folder can’t be written to." : {
+
+    },
+    "Crest couldn’t save your session because the disk is full." : {
+
+    },
+    "Crest couldn’t save your session." : {
+
+    },
     "Crest couldn’t tell which program this agent is." : {
 
     },
