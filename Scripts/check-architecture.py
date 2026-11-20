@@ -11,7 +11,7 @@ import sys
 from typing import NamedTuple
 
 
-SOURCE_ROOTS = ("CrestShared", "CrestMac", "CrestMobile")
+SOURCE_ROOTS = ("CrestShared", "CrestMac", "CrestMobile", "CrestAgents", "CrestEngines/Chromium/Apple")
 LAYER_IMPORT_POLICIES = {
     "CrestShared/Domain/": frozenset({"Foundation"}),
     "CrestShared/Application/": frozenset(
@@ -19,11 +19,25 @@ LAYER_IMPORT_POLICIES = {
     ),
 }
 PLATFORM_FRAMEWORK_OWNERS = {
-    "AppKit": "CrestMac/",
-    "CoreServices": "CrestMac/",
-    "SecurityInterface": "CrestMac/",
-    "UIKit": "CrestMobile/",
+    "AppKit": ("CrestMac/", "CrestEngines/Chromium/Apple/"),
+    "CoreServices": ("CrestMac/", "CrestEngines/Chromium/Apple/"),
+    "SecurityInterface": ("CrestMac/", "CrestEngines/Chromium/Apple/"),
+    "UIKit": ("CrestMobile/",),
 }
+# WebKit belongs to the WebKit engine's adapters and the compositions that
+# choose it; shared and feature code reach pages through the engine
+# abstraction.
+WEBKIT_OWNERS = (
+    "CrestShared/Infrastructure/WebKit/",
+    "CrestMac/Infrastructure/WebKit/",
+    "CrestMac/Infrastructure/Pages/",
+    "CrestMac/App/Composition/",
+    "CrestMobile/Infrastructure/WebKit/",
+    "CrestEngines/",
+)
+# Only the Chromium engine's own sources ask whether they build for its host.
+CHROMIUM_HOST_CONDITION = re.compile(r"^\s*#(?:if|elseif)\b.*\bCREST_CHROMIUM_HOST\b")
+CHROMIUM_HOST_OWNER = "CrestEngines/"
 LEGACY_OBSERVATION_PATTERNS = (
     re.compile(r"\bObservableObject\b"),
     re.compile(r"@Published\b"),
@@ -239,17 +253,42 @@ def _import_violations(
                 )
             )
 
-        owner_prefix = PLATFORM_FRAMEWORK_OWNERS.get(module)
-        if owner_prefix is not None and not relative_path.startswith(owner_prefix):
+        owner_prefixes = PLATFORM_FRAMEWORK_OWNERS.get(module)
+        if owner_prefixes is not None and not relative_path.startswith(owner_prefixes):
             violations.append(
                 Violation(
                     "platform-framework-placement",
                     relative_path,
                     line_number,
-                    f"{module} belongs under {owner_prefix.rstrip('/')}",
+                    f"{module} belongs under {' or '.join(prefix.rstrip('/') for prefix in owner_prefixes)}",
+                )
+            )
+
+        if module == "WebKit" and not relative_path.startswith(WEBKIT_OWNERS):
+            violations.append(
+                Violation(
+                    "engine-import",
+                    relative_path,
+                    line_number,
+                    "WebKit belongs to the WebKit engine's adapters and compositions",
                 )
             )
     return violations
+
+
+def _engine_condition_violations(relative_path: str, source: str) -> list[Violation]:
+    if relative_path.startswith(CHROMIUM_HOST_OWNER):
+        return []
+    return [
+        Violation(
+            "engine-condition",
+            relative_path,
+            line_number,
+            "Only the Chromium engine's sources test CREST_CHROMIUM_HOST",
+        )
+        for line_number, code in _source_lines(source)
+        if CHROMIUM_HOST_CONDITION.search(code)
+    ]
 
 
 def _modern_swift_violations(relative_path: str, source: str) -> list[Violation]:
@@ -431,6 +470,7 @@ def scan_repository(
                 _import_violations(relative_path, source, configuration)
             )
             violations.extend(_modern_swift_violations(relative_path, source))
+            violations.extend(_engine_condition_violations(relative_path, source))
             violations.extend(
                 _xcode27_violations(relative_path, source, configuration)
             )

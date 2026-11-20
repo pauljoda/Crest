@@ -69,9 +69,11 @@ Scripts/check-architecture.py
 
 The check enforces these high-confidence contracts:
 
-- Domain imports Foundation only; Application imports Foundation, Observation, and Dispatch only.
+- Domain imports Foundation only; Application imports Foundation, Observation, Dispatch, and Synchronization only.
 - SwiftUI presentation stays out of shared Infrastructure.
-- AppKit, CoreServices, and SecurityInterface stay under `CrestMac`; UIKit stays under `CrestMobile`.
+- AppKit, CoreServices, and SecurityInterface stay under `CrestMac` or the Chromium engine's Apple shell; UIKit stays under `CrestMobile`.
+- WebKit is imported only by the WebKit adapters (`Infrastructure/WebKit`, the Mac's `Infrastructure/Pages`), the app compositions and `CrestEngines`, and only `CrestEngines` tests `CREST_CHROMIUM_HOST`.
+- The check also scans `CrestAgents` and the Chromium engine's Apple shell.
 - Production code does not introduce `ObservableObject`, `@Published`, or `AnyView`.
 - Conservative checks cover the documented Xcode 27 `@State` initialization and composition hazards, nested `TupleView` constraints, empty MapKit builders, and modified shape styles passed to non-builder `background` or `overlay` forms.
 

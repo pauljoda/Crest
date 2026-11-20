@@ -81,7 +81,25 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(
             self.violation_rules(),
-            {"layer-import"},
+            {"engine-import", "layer-import"},
+        )
+
+    def test_only_the_chromium_engine_tests_its_host_condition(self) -> None:
+        self.write_source(
+            "CrestShared/Application/Conditioned.swift",
+            "#if CREST_CHROMIUM_HOST\nstruct A {}\n#elseif DEBUG && CREST_CHROMIUM_HOST\nstruct B {}\n#endif\n",
+        )
+        self.write_source(
+            "CrestShared/Application/Named.swift",
+            'let flagName = "CREST_CHROMIUM_HOST"\n',
+        )
+
+        self.assertEqual(
+            [(violation.rule, violation.path, violation.line) for violation in self.violations()],
+            [
+                ("engine-condition", "CrestShared/Application/Conditioned.swift", 1),
+                ("engine-condition", "CrestShared/Application/Conditioned.swift", 3),
+            ],
         )
 
     def test_xcode_27_state_and_builder_hazards_are_rejected(self) -> None:
