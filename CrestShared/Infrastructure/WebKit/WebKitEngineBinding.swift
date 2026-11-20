@@ -60,6 +60,12 @@ final class WebKitEngineBinding: EngineBinding {
 
     // MARK: - Static Variables
 
+    /// The system WebKit's version, which the build runs pages in, as the
+    /// About credits and the build header show it.
+    nonisolated static let version =
+        (Bundle(for: WKWebView.self).infoDictionary?["CFBundleShortVersionString"] as? String)
+        .map { "WebKit \($0)" }
+
     /// How long a staged link waits for its Peek, and how many may wait.
     private static let stagedLinkLifetime: TimeInterval = 300
     private static let stagedLinkLimit = 16

@@ -248,7 +248,7 @@ struct MobilePageActionsContent: View {
     }
 
     private var blockedElements: BrowserBlockedElements {
-        BrowserBlockedElements(core: browser.core, pageURL: pages.activePage?.webView.url)
+        BrowserBlockedElements(core: browser.core, pageURL: pages.activePage?.live.documentURL)
     }
 
     private var contentBlockingAction: MobileContentBlockingAction {

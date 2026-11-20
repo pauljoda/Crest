@@ -131,10 +131,6 @@ private struct BrowserTranslationInformation: View {
             .navigationTitle("Page Translation")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
-        #if os(macOS)
-            .frame(width: 460, height: 440)
-        #else
-            .presentationDetents([.medium, .large])
-        #endif
+        .crestSheetSize(minWidth: 460, idealWidth: 460, minHeight: 440, idealHeight: 440)
     }
 }

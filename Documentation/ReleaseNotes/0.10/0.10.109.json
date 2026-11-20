@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "platform-code-placed",
+      "category": "improved",
+      "message": "The page for a media file that cannot play no longer names the engine."
+    },
+    {
+      "id": "ios-download-finished-notice",
+      "category": "improved",
+      "message": "iPhone and iPad confirm a finished download, as the Mac does.",
+      "platforms": ["ios"]
+    }
+  ]
+}

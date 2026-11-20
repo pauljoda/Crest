@@ -51,9 +51,18 @@ struct BrowserDirectMediaNavigation: Equatable {
         let reportedType = Self.escapeHTML(mimeType)
         let titleSource = url.lastPathComponent.removingPercentEncoding
         let title = Self.escapeHTML(
-            titleSource.flatMap { $0.isEmpty ? nil : $0 } ?? "Media"
+            titleSource.flatMap { $0.isEmpty ? nil : $0 } ?? String(localized: "Media")
         )
         let element = kind.rawValue
+        let playerLabel = Self.escapeHTML(String(localized: "Media player"))
+        let failureTitle = Self.escapeHTML(String(localized: "This media file couldn’t be played."))
+        let failureDetail = Self.escapeHTML(
+            String(
+                localized:
+                    "The server reported \(mimeType), but Crest couldn’t decode the file. You can try downloading it instead."
+            )
+        ).replacingOccurrences(of: reportedType, with: "<strong>\(reportedType)</strong>")
+        let download = Self.escapeHTML(String(localized: "Download media"))
         return """
             <!doctype html>
             <html lang="en">
@@ -77,13 +86,13 @@ struct BrowserDirectMediaNavigation: Equatable {
               </style>
             </head>
             <body>
-              <\(element) controls autoplay playsinline preload="metadata" aria-label="Media player">
+              <\(element) controls autoplay playsinline preload="metadata" aria-label="\(playerLabel)">
                 <source src="\(source)" type="\(reportedType)">
               </\(element)>
               <section id="failure" role="alert" hidden>
-                <h1>This media file couldn’t be played.</h1>
-                <p>The server reported <strong>\(reportedType)</strong>, but WebKit couldn’t decode the file. You can try downloading it instead.</p>
-                <a href="\(source)" download>Download media</a>
+                <h1>\(failureTitle)</h1>
+                <p>\(failureDetail)</p>
+                <a href="\(source)" download>\(download)</a>
               </section>
               <script>
                 const media = document.querySelector("\(element)");

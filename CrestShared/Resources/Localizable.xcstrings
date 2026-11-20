@@ -5360,6 +5360,9 @@
     "Download location" : {
 
     },
+    "Download media" : {
+
+    },
     "Download More Languages…" : {
 
     },
@@ -7787,7 +7790,13 @@
         }
       }
     },
+    "Media" : {
+
+    },
     "Media from this tab" : {
+
+    },
+    "Media player" : {
 
     },
     "Media tab" : {
@@ -13475,6 +13484,9 @@
     "The download folder is unavailable. Choose another folder in Space settings." : {
 
     },
+    "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder." : {
+
+    },
     "The download stopped because of a network problem." : {
 
     },
@@ -13561,6 +13573,9 @@
 
     },
     "The server couldn’t provide the file." : {
+
+    },
+    "The server reported %@, but Crest couldn’t decode the file. You can try downloading it instead." : {
 
     },
     "The server-reported file type does not match the filename and one of those types can run software." : {
@@ -13848,6 +13863,9 @@
           }
         }
       }
+    },
+    "This media file couldn’t be played." : {
+
     },
     "This page cannot be exported." : {
 

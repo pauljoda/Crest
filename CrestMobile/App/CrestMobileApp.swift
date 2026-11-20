@@ -47,6 +47,8 @@ private final class BrowserMobileApplication {
     /// process's one core.
     let downloads: MobileBrowserDownloads
     let privateDownloads: MobileBrowserDownloads
+    /// Confirms each download that finishes while the app runs.
+    let downloadNotices: BrowserDownloadNotices
     let tabStateArchive: (any BrowserTabStateArchiving)?
     let windowLayouts: BrowserWindowLayouts
     let startupBehavior: StartupBehavior
@@ -120,6 +122,7 @@ private final class BrowserMobileApplication {
             core.addShowcaseDownloads(profileID: profileID)
         }
         let downloads = MobileBrowserDownloads(core: core, permissionCenter: permissionCenter)
+        downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess)
         let privateDownloads = MobileBrowserDownloads(
             core: core,
             browsingMode: .privateBrowsing,
