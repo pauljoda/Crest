@@ -6,41 +6,37 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.66</title>
-            <pubDate>Fri, 20 Nov 2026 16:25:00 +0000</pubDate>
+            <title>0.10.72</title>
+            <pubDate>Fri, 20 Nov 2026 20:33:34 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1657</sparkle:version>
-            <sparkle:shortVersionString>0.10.66</sparkle:shortVersionString>
+            <sparkle:version>1659</sparkle:version>
+            <sparkle:shortVersionString>0.10.72</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Improved
 
-- The command palette and the recent tabs panel sit on the same material as the address field and pinned tabs, so the palette looks like the field it grows out of.
-- The selected tab, the selected pin and the command palette's selected row look like a sheet of light paper on every Space.
-- Site Controls, color pickers, permission and password prompts, hover previews and notices sit on Crest's paper in light mode instead of always being dark, and on a warm charcoal in dark mode.
-- The sidebar's scroll button, widget cards, sound and sharing badges on tabs, and the command palette's search engine chips use Crest's own surfaces instead of glass.
-- The element picker, the History, Downloads and Archive buttons, and the Space buttons in Settings use Crest's own buttons.
-- Password prompts, the page error screen and the locked Space screen use Crest blue buttons on every Space.
-- The page area, the error screen, the locked Space screen and empty Peek and Quick Window pages use Crest's warm canvas.
-- Empty lists and pages, the page error title, a locked Space's name and the Settings sidebar heading use Crest's rounded display type.
-- Headings, buttons and labels across setup, Settings, the Start Page and Getting Started use Allo, Crest's new rounded typeface.
+- On iPhone and iPad, setup's Back button sits on frosted glass, so the page scrolling behind it no longer shows through.
 
 ### Fixed
 
-- A selected tab you pick up and drag keeps its light paper look instead of turning glassy.
+- On iPhone and iPad, fixed a crash when a page closed while it was loading another site.
+- On iPhone, the color picker fits on screen: it opens on the side with more room, and its wheel and colors make way when space is short.
+- On iPhone Duo, setup's welcome fills the whole screen, including the strip beside the status bar.
+- On iPhone, every color's picker opens above or below it at full width, with more room around its edges, so the accent color's picker no longer runs off the screen.
+- Scrolling down a sidebar with long open folders no longer jumps back up, and folders inside them no longer shrink to their title and grow again as they scroll into view.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/dd11083e5b7a4e4610eb492926476d10015d5156...6fd6d9c5229c84715bfa072620358ce152b3f481) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.66-2026-11-20-1657-r657.1/Installer-Crest-0.10.66-development-2026-11-20-6fd6d9c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/6fd6d9c5229c84715bfa072620358ce152b3f481...06e7a3494cad43862e126345b095ea7e9db1d22d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.72-2026-11-20-1659-r659.1/Installer-Crest-0.10.72-development-2026-11-20-06e7a34-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.66-2026-11-20-1657-r657.1/Installer-Crest-0.10.66-development-2026-11-20-6fd6d9c-arm64.dmg" length="241726085" type="application/octet-stream" sparkle:edSignature="kbPW9skaCMFfcr8sJoHGmfUIqTQo21K9DPU/82vpg1G13e+IMlpAQ4hmIpg5kik7L4dRkwA5SrZdpLuvMHQjAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.72-2026-11-20-1659-r659.1/Installer-Crest-0.10.72-development-2026-11-20-06e7a34-arm64.dmg" length="241730693" type="application/octet-stream" sparkle:edSignature="GULkOqP3tXE/J3899T4j9RR/50r0jGizkhb9s3kCOKHvafqWgfkf/MJlqJa1oupICGyUgfDdmaF/kjpXS1WtDg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -72,6 +68,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: j0+/qMVHUB7LPmPa2G1zv9MjdsZowsxC8OQ0Vod3QkkOjC1ktOQLGPfEKDhj97ouTcbGg8xVYTqvi7jilvTgCw==
-length: 5276
+edSignature: RpZrzaO7ut1ROO/zcWzOU949OMgVJ1TeRvsdeo0Xl+LbIeH/u5hfS9Gsb3C6iLdV6dr6C2oj98te+i904r4OBw==
+length: 4699
 -->

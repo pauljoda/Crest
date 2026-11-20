@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "core-close-waits-for-every-filter-worker",
+    "development": "sidebar-long-folder-scroll",
     "nightly": "palette-history-site-icons"
   }
 }
