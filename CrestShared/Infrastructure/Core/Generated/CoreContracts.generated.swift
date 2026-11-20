@@ -3240,6 +3240,7 @@ struct FolderLimitReached: Equatable, Sendable {
 struct FolderState: Equatable, Sendable, Identifiable {
     static let maximumDepth: Int = 16
     static let defaultSymbol: String = "folder"
+    static let untitledTitle: String = "Untitled Folder"
     static let defaultColor = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
 
     let id: UUID
@@ -3499,6 +3500,7 @@ struct ImportPasswordRoutes: Equatable, Sendable {
 struct ImportPasswordSource: Equatable, Sendable {
     var profileName: String
     var host: String
+    var isSecure: Bool
 }
 
 struct ImportPasswordStore: Equatable, Sendable, Identifiable {
@@ -6444,6 +6446,7 @@ struct SetupReviewSpace: Equatable, Sendable {
     let placements: [TabPlacementChoice]
     let includesPasswords: Bool
     let passwordCount: Int
+    let insecurePasswordCount: Int
     let extensions: [ImportExtension]
     let includedExtensionIDs: [String]
     let joinsGroupOf: UUID?
@@ -7135,7 +7138,7 @@ struct SplitNeedsTwoTabs: Equatable, Sendable {
     let limit: Int
 
     var message: LocalizedStringResource {
-        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select fewer tabs or use a smaller split.")
+        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select at least 2 tabs to make a split.")
     }
 }
 
@@ -8187,14 +8190,6 @@ enum SitePermissionVerdict: Int, CaseIterable, Sendable {
 enum SpaceAccessPolicy: Int, CaseIterable, Sendable {
     case open = 0
     case deviceOwnerAuthentication = 1
-}
-
-enum StorageFailure: Int, CaseIterable, Sendable {
-    case diskFull = 0
-    case readOnly = 1
-    case busy = 2
-    case damaged = 3
-    case unavailable = 4
 }
 
 enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
@@ -24862,6 +24857,69 @@ struct StartupBehavior: Hashable, Sendable {
             self.title = title
             self.activatesRestoredTab = activatesRestoredTab
             self.opensNewTab = opensNewTab
+        }
+    }
+}
+
+/// The members of the core's `StorageFailure`. A member's wire tag is its index in `all`.
+struct StorageFailure: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, message: message)
+    }
+
+    static let diskFull = StorageFailure(
+        tag: 0,
+        name: "disk_full",
+        message: LocalizedStringResource("Crest couldn’t save your session because the disk is full.")
+    )
+    static let readOnly = StorageFailure(
+        tag: 1,
+        name: "read_only",
+        message: LocalizedStringResource("Crest couldn’t save your session because its folder can’t be written to.")
+    )
+    static let busy = StorageFailure(
+        tag: 2,
+        name: "busy",
+        message: LocalizedStringResource("Crest couldn’t save your session because another app is using its file.")
+    )
+    static let damaged = StorageFailure(
+        tag: 3,
+        name: "damaged",
+        message: LocalizedStringResource("Crest couldn’t save your session because its file is damaged.")
+    )
+    static let unavailable = StorageFailure(
+        tag: 4,
+        name: "unavailable",
+        message: LocalizedStringResource("Crest couldn’t save your session.")
+    )
+
+    static let all: [StorageFailure] = [diskFull, readOnly, busy, damaged, unavailable]
+
+    static func named(_ name: String?) -> StorageFailure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: StorageFailure, rhs: StorageFailure) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
         }
     }
 }

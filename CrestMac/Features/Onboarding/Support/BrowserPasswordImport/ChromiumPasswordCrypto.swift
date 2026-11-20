@@ -2,6 +2,18 @@ import CommonCrypto
 import Foundation
 
 enum ChromiumPasswordCrypto {
+    // MARK: - Static Variables
+
+    /// The version prefixes of the encrypted passwords this can decrypt.
+    private static let versionPrefixes = [Data("v10".utf8), Data("v11".utf8)]
+
+    // MARK: - Actions - Decrypting
+
+    /// Whether `encrypted` is a password in a version this can decrypt.
+    static func canDecrypt(_ encrypted: Data) -> Bool {
+        encrypted.count > 3 && versionPrefixes.contains(encrypted.prefix(3))
+    }
+
     static func key(safeStorageSecret: String) throws -> Data {
         let password = Data(safeStorageSecret.utf8)
         let salt = Data("saltysalt".utf8)
@@ -31,10 +43,7 @@ enum ChromiumPasswordCrypto {
     }
 
     static func decrypt(_ encrypted: Data, key: Data) throws -> Data {
-        guard encrypted.count > 3,
-            encrypted.prefix(3) == Data("v10".utf8)
-                || encrypted.prefix(3) == Data("v11".utf8)
-        else {
+        guard canDecrypt(encrypted) else {
             throw BrowserPasswordImportError.unsupportedEncryption
         }
         let ciphertext = encrypted.dropFirst(3)

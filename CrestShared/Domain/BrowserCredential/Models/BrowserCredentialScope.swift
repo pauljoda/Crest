@@ -19,16 +19,16 @@ enum BrowserCredentialScope: Codable, Equatable, Hashable, Sendable {
         case .webForm:
             nil
         case .httpBasic(let realm):
-            Self.httpAuthenticationLabel(method: "HTTP Basic", realm: realm)
+            Self.httpAuthenticationLabel(method: String(localized: "HTTP Basic"), realm: realm)
         case .httpDigest(let realm):
-            Self.httpAuthenticationLabel(method: "HTTP Digest", realm: realm)
+            Self.httpAuthenticationLabel(method: String(localized: "HTTP Digest"), realm: realm)
         }
     }
 
     private static func httpAuthenticationLabel(method: String, realm: String?) -> String {
         guard let realm, !realm.isEmpty else {
-            return "\(method) authentication"
+            return String(localized: "\(method) authentication")
         }
-        return "\(method) · Realm “\(realm)”"
+        return String(localized: "\(method) · Realm “\(realm)”")
     }
 }

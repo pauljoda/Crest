@@ -195,6 +195,9 @@
         }
       }
     },
+    "%@ · Realm “%@”" : {
+
+    },
     "%@ (%lld)" : {
       "localizations" : {
         "en" : {
@@ -259,6 +262,9 @@
           }
         }
       }
+    },
+    "%@ authentication" : {
+
     },
     "%@ didn’t respond in time." : {
       "localizations" : {
@@ -417,6 +423,9 @@
         }
       }
     },
+    "%@ says" : {
+
+    },
     "%@ sent Crest through too many redirects." : {
       "localizations" : {
         "ar" : {
@@ -451,6 +460,9 @@
 
     },
     "%@ The Space was kept so you can try again." : {
+
+    },
+    "%@ wants to leave Crest and open %@. The choice belongs only to the %@ Space and can be changed in Settings > Site Permissions." : {
 
     },
     "%@ will use %@’s sign-ins, history and extensions. Its own sign-ins and website data stay on this device and come back if you separate it." : {
@@ -2183,6 +2195,9 @@
     "Allow 120 FPS" : {
 
     },
+    "Allow Access" : {
+
+    },
     "Allow Access to a Download Folder" : {
 
     },
@@ -2195,7 +2210,13 @@
     "Allow automatic pop-ups for %@" : {
 
     },
+    "Allow Crest in Privacy & Security > Files and Folders, then choose the files again." : {
+
+    },
     "Allow Crest in Screen & System Audio Recording to capture your screen" : {
+
+    },
+    "Allow Crest to Read %@" : {
 
     },
     "Allow Crest to Use Passkeys…" : {
@@ -2256,6 +2277,9 @@
       "comment" : "Screen sharing picker option to include the shared tab's sound."
     },
     "Also show" : {
+
+    },
+    "Always Allow in %@" : {
 
     },
     "Always List Results" : {
@@ -3282,6 +3306,9 @@
     "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
 
     },
+    "Changes you made on %@ may not be saved." : {
+
+    },
     "Channels" : {
 
     },
@@ -3469,6 +3496,9 @@
         }
       }
     },
+    "Choose" : {
+
+    },
     "Choose a band to color it" : {
 
     },
@@ -3515,7 +3545,13 @@
         }
       }
     },
+    "Choose Download Folder for %@" : {
+
+    },
     "Choose Emoji" : {
+
+    },
+    "Choose Files for %@" : {
 
     },
     "Choose Folder…" : {
@@ -4664,7 +4700,13 @@
         }
       }
     },
+    "Crest can’t reach iCloud right now." : {
+
+    },
     "Crest can’t show or fill them. This cannot be undone." : {
+
+    },
+    "Crest cannot import passwords from this browser yet." : {
 
     },
     "Crest colors" : {
@@ -4692,6 +4734,9 @@
           }
         }
       }
+    },
+    "Crest could not read this browser’s password database. Close the source browser and try again." : {
+
     },
     "Crest could not read this file." : {
       "localizations" : {
@@ -4724,6 +4769,9 @@
       }
     },
     "Crest could not save to %@. Choose the folder again or review Files & Folders in System Settings." : {
+
+    },
+    "Crest could not unlock this browser’s passwords. Allow Keychain access, or turn password import off to continue." : {
 
     },
     "Crest could not update its icon. Please try again." : {
@@ -4787,6 +4835,9 @@
     "Crest couldn’t open itself to agents. Turn agents off and on again to try again." : {
 
     },
+    "Crest couldn’t open the selected files." : {
+
+    },
     "Crest couldn't open your session" : {
 
     },
@@ -4843,6 +4894,21 @@
           }
         }
       }
+    },
+    "Crest couldn’t save your session because another app is using its file." : {
+
+    },
+    "Crest couldn’t save your session because its file is damaged." : {
+
+    },
+    "Crest couldn’t save your session because its folder can’t be written to." : {
+
+    },
+    "Crest couldn’t save your session because the disk is full." : {
+
+    },
+    "Crest couldn’t save your session." : {
+
     },
     "Crest couldn’t tell which program this agent is." : {
 
@@ -5712,6 +5778,9 @@
         }
       }
     },
+    "Download “%@”?" : {
+
+    },
     "Download Actions" : {
 
     },
@@ -6286,6 +6355,9 @@
     "Explore" : {
 
     },
+    "Export" : {
+
+    },
     "Export as PDF" : {
       "localizations" : {
         "ar" : {
@@ -6325,6 +6397,9 @@
           }
         }
       }
+    },
+    "Export Page as PDF" : {
+
     },
     "Export Passwords as Plaintext?" : {
       "localizations" : {
@@ -7275,6 +7350,12 @@
     "HTTP" : {
 
     },
+    "HTTP Basic" : {
+
+    },
+    "HTTP Digest" : {
+
+    },
     "https://example.com" : {
 
     },
@@ -7327,6 +7408,15 @@
           }
         }
       }
+    },
+    "iCloud didn’t respond in time. Crest will retry automatically." : {
+
+    },
+    "iCloud is temporarily busy. Crest will retry automatically." : {
+
+    },
+    "iCloud is temporarily unavailable. Crest will retry automatically." : {
+
     },
     "iCloud Keychain and Passwords choices apply to this device only." : {
 
@@ -8119,6 +8209,9 @@
     "Keep" : {
 
     },
+    "Keep “%@”?" : {
+
+    },
     "Keep Browsing" : {
 
     },
@@ -8126,6 +8219,9 @@
 
     },
     "Keep current password" : {
+
+    },
+    "Keep Download" : {
 
     },
     "Keep History" : {
@@ -8328,6 +8424,9 @@
     "Leave all" : {
 
     },
+    "Leave Page" : {
+
+    },
     "Leave Private Browsing" : {
       "localizations" : {
         "ar" : {
@@ -8337,6 +8436,9 @@
           }
         }
       }
+    },
+    "Leave this page?" : {
+
     },
     "left arrow" : {
       "localizations" : {
@@ -8512,6 +8614,9 @@
     "Location" : {
 
     },
+    "Location Access Is Off for Crest" : {
+
+    },
     "Lock" : {
 
     },
@@ -8557,6 +8662,15 @@
       "extractionState" : "manual"
     },
     "macOS has not returned a location decision. Respond to its prompt, or open System Settings > Privacy & Security > Location Services to allow Crest." : {
+
+    },
+    "macOS is blocking Crest from receiving a location, even when this site is allowed. Turn on Crest in Privacy & Security > Location Services. This request will continue when you return." : {
+
+    },
+    "macOS is blocking Crest notifications, even when this site is allowed. Turn on Allow notifications for Crest. This request will continue when you return." : {
+
+    },
+    "macOS will quarantine the completed file. Open it only if you trust its source." : {
 
     },
     "Make “%@” a Sub-Space of “%@”?" : {
@@ -8704,6 +8818,12 @@
           }
         }
       }
+    },
+    "Media from this tab" : {
+
+    },
+    "Media tab" : {
+
     },
     "Meeting notes" : {
 
@@ -9470,7 +9590,13 @@
     "Notifications are allowed, but banners are off in System Settings." : {
 
     },
+    "Notifications Are Off for Crest" : {
+
+    },
     "Now Playing" : {
+
+    },
+    "Now Playing, %@" : {
 
     },
     "Oak" : {
@@ -9641,6 +9767,9 @@
     "Open File…" : {
 
     },
+    "Open Files and Folders Settings" : {
+
+    },
     "Open First Tab" : {
       "localizations" : {
         "ar" : {
@@ -9790,6 +9919,9 @@
         }
       }
     },
+    "Open Location Settings" : {
+
+    },
     "Open new tabs at" : {
 
     },
@@ -9797,6 +9929,9 @@
 
     },
     "Open Next Extension" : {
+
+    },
+    "Open Notification Settings" : {
 
     },
     "Open Page in %@" : {
@@ -9851,6 +9986,9 @@
 
     },
     "Open tabs cleared" : {
+
+    },
+    "Open this “%@” link in another app?" : {
 
     },
     "Open This Page in" : {
@@ -10220,6 +10358,9 @@
       }
     },
     "passwords credentials autofill iCloud Keychain import export" : {
+
+    },
+    "Passwords for sites without HTTPS come in, but Crest won’t fill them in." : {
 
     },
     "Passwords in %@" : {
@@ -10904,6 +11045,9 @@
     "Pull and Merge" : {
 
     },
+    "Pull from iCloud to recover an incomplete download." : {
+
+    },
     "Pull from iCloud…" : {
 
     },
@@ -11139,6 +11283,9 @@
 
     },
     "Ready to Install" : {
+
+    },
+    "Realm: %@" : {
 
     },
     "Rearrange cards" : {
@@ -12141,6 +12288,9 @@
     "Save A weekend away" : {
 
     },
+    "Save Download" : {
+
+    },
     "Save downloads and open files you select." : {
 
     },
@@ -12180,6 +12330,9 @@
     "Save or Unsave Tab" : {
 
     },
+    "Save Page as Web Archive" : {
+
+    },
     "Save password?" : {
       "localizations" : {
         "ar" : {
@@ -12190,10 +12343,16 @@
         }
       }
     },
+    "Save Portrait Capture" : {
+
+    },
     "Save Setup" : {
 
     },
     "Save Tab" : {
+
+    },
+    "Save this sign-in in the %@ Space" : {
 
     },
     "Save this tab" : {
@@ -13209,6 +13368,15 @@
     "Sidebar Widgets" : {
 
     },
+    "Sign In" : {
+
+    },
+    "Sign in to %@" : {
+
+    },
+    "Sign in to iCloud to sync Crest." : {
+
+    },
     "Sign in to websites using passkeys saved with your system providers." : {
 
     },
@@ -13375,6 +13543,12 @@
     "Some iCloud records can’t be read. Update Crest on all your devices and try again." : {
 
     },
+    "Some iCloud records could not be read. Update Crest on all devices and try again." : {
+
+    },
+    "Some incoming changes still need to be recovered." : {
+
+    },
     "Some of this browsing session can’t be synced." : {
 
     },
@@ -13391,6 +13565,12 @@
 
     },
     "Source Space" : {
+
+    },
+    "Source: %@" : {
+
+    },
+    "Source: %@ · Space: %@" : {
 
     },
     "space" : {
@@ -13456,6 +13636,9 @@
     "Space background" : {
 
     },
+    "Space cleanup needs another attempt: %@" : {
+
+    },
     "Space extensions and permissions" : {
 
     },
@@ -13507,6 +13690,9 @@
 
     },
     "Space Unavailable" : {
+
+    },
+    "Space: %@" : {
 
     },
     "Spaces" : {
@@ -13655,6 +13841,9 @@
 
     },
     "Split View Name" : {
+
+    },
+    "Split View needs 2 to %lld tabs. Select at least 2 tabs to make a split." : {
 
     },
     "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split." : {
@@ -13835,6 +14024,9 @@
           }
         }
       }
+    },
+    "Stay on Page" : {
+
     },
     "Steel" : {
 
@@ -14183,6 +14375,9 @@
     "Sync is paused until you choose." : {
 
     },
+    "Sync is paused." : {
+
+    },
     "Sync Now" : {
       "localizations" : {
         "ar" : {
@@ -14192,6 +14387,9 @@
           }
         }
       }
+    },
+    "Sync stopped while applying downloaded content." : {
+
     },
     "Sync with iCloud" : {
 
@@ -14486,6 +14684,9 @@
     "The app is missing access to Crest’s CloudKit container." : {
 
     },
+    "The checkpoint could not be restored. Your original files have been preserved." : {
+
+    },
     "The connection to %@ ended before the page finished loading." : {
       "localizations" : {
         "ar" : {
@@ -14572,6 +14773,9 @@
     "The folder is empty." : {
 
     },
+    "The iCloud account changed during the download." : {
+
+    },
     "The original filename used invisible or direction-changing characters that can disguise its real extension." : {
       "localizations" : {
         "ar" : {
@@ -14622,6 +14826,9 @@
 
     },
     "The person stopped agents from using this tab." : {
+
+    },
+    "The previous credentials were not accepted." : {
 
     },
     "The report has counts only: no URLs, titles or passwords." : {
@@ -14746,6 +14953,9 @@
         }
       }
     },
+    "This browser uses a password format Crest cannot import safely." : {
+
+    },
     "This browsing session is too large to sync." : {
 
     },
@@ -14758,6 +14968,9 @@
           }
         }
       }
+    },
+    "This build is not permitted to use Crest’s iCloud container." : {
+
     },
     "This build of Crest does not include permission to request browser passkey access." : {
 
@@ -14821,6 +15034,9 @@
 
     },
     "This download was blocked by a safety or organization policy." : {
+
+    },
+    "This extension action is unavailable on this page." : {
 
     },
     "This extension couldn’t be verified or installed." : {
@@ -15068,6 +15284,12 @@
       }
     },
     "This session was saved by a newer version of Crest. Update Crest before opening it." : {
+
+    },
+    "This sign-in belongs only to the %@ Space and cannot be saved because the connection is not protected by HTTPS." : {
+
+    },
+    "This sign-in belongs only to the %@ Space. Crest saves it only after the site accepts it." : {
 
     },
     "This sign-in form belongs to a different website." : {
@@ -15743,6 +15965,9 @@
     "Unsave Tab" : {
 
     },
+    "Untitled media" : {
+
+    },
     "Untitled Space" : {
 
     },
@@ -16265,6 +16490,9 @@
     "Wants to use your microphone" : {
 
     },
+    "Warning: this connection is not protected by HTTPS." : {
+
+    },
     "Warnings" : {
 
     },
@@ -16536,6 +16764,9 @@
 
     },
     "Your example Space" : {
+
+    },
+    "Your iCloud storage is full." : {
 
     },
     "Your Lists" : {

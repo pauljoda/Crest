@@ -53,7 +53,8 @@ struct MobileCompactPageToolbar: View {
                     browser: browser,
                     text: $address,
                     isEditing: $isAddressEditing,
-                    isSecure: pageActions?.activeURL?.scheme?.lowercased() == "https",
+                    isSecure: PageSecurity.isSecure(
+                        page: pageActions?.activePage?.live, storedAddress: browser.shownTab?.url),
                     progress: pageActions?.activePage?.estimatedProgress ?? 0,
                     isLoading: pageActions?.activePage?.live.isLoading == true,
                     pageActions: pageActions,

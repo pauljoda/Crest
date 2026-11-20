@@ -84,7 +84,6 @@ internal static class ArcSidebar {
     };
 
     private const string DefaultSymbol = "sidebar.left";
-    private const string UntitledFolder = "Untitled Folder";
     private const string UnpinnedSection = "unpinned";
     private const string PinnedSection = "pinned";
 
@@ -261,7 +260,7 @@ internal static class ArcSidebar {
         }
         if (content.IsFolder && placement == TabPlacement.Saved) {
             if (draft.Folders.Count > FolderTree.MaximumCount) return;
-            draft.Folders.Add(new SessionFolder(id, item.Title ?? UntitledFolder, parent));
+            draft.Folders.Add(new SessionFolder(id, item.Title ?? FolderState.UntitledTitle, parent));
             foreach (var child in item.Children) Append(child, placement, id, depth + 1, items, draft, importedAt);
             return;
         }

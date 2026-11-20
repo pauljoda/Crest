@@ -702,8 +702,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 panel.allowedContentTypes = [.png]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = live.suggestedFilename(pathExtension: "png")
-                panel.title = "Save Portrait Capture"
-                panel.prompt = "Save"
+                panel.title = String(localized: "Save Portrait Capture")
+                panel.prompt = String(localized: "Save")
                 guard await panel.beginSheetModal(for: window) == .OK,
                     let destinationURL = panel.url
                 else { return }
@@ -1069,8 +1069,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 panel.allowedContentTypes = [.pdf]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
-                panel.title = "Export Page as PDF"
-                panel.prompt = "Export"
+                panel.title = String(localized: "Export Page as PDF")
+                panel.prompt = String(localized: "Export")
                 guard await panel.beginSheetModal(for: window) == .OK,
                     let destinationURL = panel.url
                 else { return }
@@ -1101,8 +1101,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 panel.allowedContentTypes = [format.contentType]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
-                panel.title = "Save Page as Web Archive"
-                panel.prompt = "Save"
+                panel.title = String(localized: "Save Page as Web Archive")
+                panel.prompt = String(localized: "Save")
                 guard await panel.beginSheetModal(for: window) == .OK,
                     let destinationURL = panel.url
                 else { return }

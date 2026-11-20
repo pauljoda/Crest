@@ -68,7 +68,8 @@ extension BrowserStore {
         }) {
             attempted.insert(intent.spaceID)
             do { try await deleteSpace(intent.spaceID, dataDeleter: dataDeleter) } catch {
-                localSyncErrorDescription = "Space cleanup needs another attempt: \(error.localizedDescription)"
+                localSyncErrorDescription = String(
+                    localized: "Space cleanup needs another attempt: \(error.localizedDescription)")
             }
         }
     }

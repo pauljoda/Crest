@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x30, 0x97, 0xd8, 0x15, 0xb2, 0xf6, 0x9d, 0x11, 0x2c, 0x26, 0x8f, 0x0d, 0x5e, 0x6d, 0xa9, 0x46, 0xff, 0x2d, 0xbf, 0xcc, 0x25, 0x3c, 0xfb, 0x46, 0xc5, 0x1f, 0x83, 0x8c, 0x32, 0x8a, 0xc7, 0xee
+        0xd0, 0xe4, 0x33, 0x37, 0x71, 0xde, 0x23, 0x55, 0xd9, 0x67, 0x13, 0xdc, 0x64, 0xc9, 0x0f, 0x01, 0xe6, 0xcb, 0x0d, 0xff, 0xf5, 0x7b, 0x61, 0x21, 0x65, 0x06, 0xe8, 0x8b, 0xe5, 0x2d, 0xe3, 0x63
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -10921,7 +10921,8 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(reader);
         return new ImportPasswordSource(
             reader.ReadString(),
-            reader.ReadString());
+            reader.ReadString(),
+            reader.ReadBool());
     }
 
     public static void WriteImportPasswordSource(WireWriter writer, ImportPasswordSource value) {
@@ -10929,6 +10930,7 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteString(value.ProfileName);
         writer.WriteString(value.Host);
+        writer.WriteBool(value.IsSecure);
     }
 
     public static ImportPasswordStore ReadImportPasswordStore(WireReader reader) {
@@ -18109,6 +18111,7 @@ public static class ContractCodec {
             reader.ReadList(() => ReadTabPlacementChoice(reader)),
             reader.ReadBool(),
             reader.ReadInt32(),
+            reader.ReadInt32(),
             reader.ReadList(() => ReadImportExtension(reader)),
             reader.ReadList(() => reader.ReadString()),
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
@@ -18148,6 +18151,7 @@ public static class ContractCodec {
         }
         writer.WriteBool(value.IncludesPasswords);
         writer.WriteInt32(value.PasswordCount);
+        writer.WriteInt32(value.InsecurePasswordCount);
         writer.WriteCount(value.Extensions.Count);
         foreach (var itemExtensions in value.Extensions) {
             WriteImportExtension(writer, itemExtensions);
@@ -21829,16 +21833,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static StorageFailure ReadStorageFailure(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (StorageFailure)reader.ReadEnum(5);
-    }
-
-    public static void WriteStorageFailure(WireWriter writer, StorageFailure value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static SystemPasswordWriteThroughAvailability ReadSystemPasswordWriteThroughAvailability(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (SystemPasswordWriteThroughAvailability)reader.ReadEnum(5);
@@ -23164,6 +23158,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(StartupBehavior.All, value));
+    }
+
+    public static StorageFailure ReadStorageFailure(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return StorageFailure.All[reader.ReadEnum(StorageFailure.All.Count)];
+    }
+
+    public static void WriteStorageFailure(WireWriter writer, StorageFailure value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(StorageFailure.All, value));
     }
 
     public static SyncDeletionReason ReadSyncDeletionReason(WireReader reader) {

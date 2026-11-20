@@ -78,15 +78,15 @@ enum BrowserPasswordImportCommitter {
 
 extension BrowserImportedPassword {
     /// Where the password belongs, as the core routes it: its profile and its
-    /// site's host.
+    /// site's host, and whether that site is secure.
     var routingSource: ImportPasswordSource {
-        ImportPasswordSource(profileName: sourceProfileName, host: origin.host)
+        ImportPasswordSource(profileName: sourceProfileName, host: origin.host, isSecure: origin.isSecure)
     }
 }
 
 extension BrowserPasswordImportCandidate {
     /// Where the password belongs, as the core counts it for the review.
     var routingSource: ImportPasswordSource {
-        ImportPasswordSource(profileName: sourceProfileName, host: origin.host)
+        ImportPasswordSource(profileName: sourceProfileName, host: origin.host, isSecure: origin.isSecure)
     }
 }
