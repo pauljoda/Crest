@@ -5969,6 +5969,10 @@
     "remove-unused-mac-setup-code": {
       "category": "internal",
       "message": "Removed Mac setup code the overhaul left unused, permission fields nothing reads, and kept preview-only fixtures out of release builds."
+    },
+    "remove-unused-compact-prompt": {
+      "category": "internal",
+      "message": "Removed the iPhone sidebar's new-tab prompt, which no layout ever showed."
     }
   }
 }

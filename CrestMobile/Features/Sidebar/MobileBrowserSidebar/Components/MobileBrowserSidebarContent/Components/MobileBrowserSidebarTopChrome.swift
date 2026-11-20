@@ -57,21 +57,6 @@ struct MobileBrowserSidebarTopChrome: View {
                 .padding(.bottom, 4)
             }
         }
-
-        if configuration.showsCompactAddressBar {
-            GlassEffectContainer(spacing: 0) {
-                MobileCompactNewTabPrompt(
-                    namespace: configuration.compactChromeNamespace,
-                    geometryID: configuration.context.browser
-                        .selectedSpaceID,
-                    transitionEnded: configuration.compactTransitionEnded,
-                    openNewTab: configuration.openNewTab
-                )
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
-        }
     }
 
     /// The strip's controls as items in the side toolbar's top group, or at

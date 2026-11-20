@@ -78,7 +78,3 @@ enum MobileCompactDomainChipLayout {
     static let horizontalPadding: CGFloat = 14
     static let outerHorizontalPadding: CGFloat = 12
 }
-
-enum MobileCompactTabViewerLayout {
-    static let showsTopAddressBar = false
-}
