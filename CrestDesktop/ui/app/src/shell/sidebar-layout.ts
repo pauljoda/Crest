@@ -26,6 +26,26 @@ export function rowPlacement(depth: number, inSplit: boolean): Record<string, st
     : { "--row-inset": `${4 * level}px`, "--row-indent": `${12 * level}px`, "--row-depth": String(level) };
 }
 
+/** The Mac's BrowserPinnedTabReorderLayout: its narrowest tile and the room between tiles. */
+const pinMinimumWidth = 36;
+const pinSpacing = 8;
+
+/** How many pinned tiles fit side by side in a grid `width` wide, up to the Mac's four. */
+export function pinCapacity(width: number): number {
+  return Math.min(4, Math.max(1, Math.floor((width + pinSpacing) / (pinMinimumWidth + pinSpacing))));
+}
+
+/**
+ * How many columns `count` pinned tiles take where `capacity` fit side by
+ * side, as the Mac's automatic layout counts them: rows balanced, so the
+ * last row is never much shorter than the others.
+ */
+export function pinColumns(count: number, capacity: number): number {
+  const tiles = Math.max(1, count);
+  const rows = Math.ceil(tiles / Math.max(1, capacity));
+  return Math.ceil(tiles / rows);
+}
+
 /**
  * A window's sidebar layout on this device, as the Mac's BrowserWindowState:
  * how wide the sidebar is and whether it is shown. Only the platform reads

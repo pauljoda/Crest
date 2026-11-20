@@ -20,7 +20,7 @@ import {
 } from "@crest/contracts";
 import { motion as tokens } from "@crest/design";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { type KeyboardEvent, type MouseEvent, type ReactElement, useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { Session } from "../boot";
@@ -28,11 +28,12 @@ import type { Browsing } from "../browsing";
 import { openPalette, toggleUtilityEvent } from "../commands";
 import { insideCrest } from "../environment";
 import { type MenuEntry, showContextMenu } from "../menus";
+import { useFaviconColor } from "../favicon-palette";
 import { useTabIcon } from "../page-icon";
 import { pageStills } from "../spaces/page-stills";
 import { Symbol } from "../symbols";
 import type { Downloads } from "../downloads";
-import { emojiOf, indigo } from "../branding";
+import { css, emojiOf, indigo, primaryColor } from "../branding";
 import { spacePager } from "../spaces/space-pager";
 import { CommonListsButton, UtilityFan } from "../utilities/CommonLists";
 import { chooseSurface, chosenSurface, type UtilitySurfaceName } from "../utilities/utility-list";
@@ -49,7 +50,7 @@ import { useCertificates } from "./site-control";
 import { PinnedExtensionStrip } from "./ExtensionActions";
 import { AddressSecurityButton, SiteControlPanel, SiteControlTrigger } from "./SiteControl";
 import { droppedJustNow, type Lift, type LiftItem, useSidebarLift } from "./sidebar-drag";
-import { rowIconSize, rowPlacement } from "./sidebar-layout";
+import { pinCapacity, pinColumns, rowIconSize, rowPlacement } from "./sidebar-layout";
 import {
   backgroundMenu,
   batchIntents,
@@ -521,14 +522,19 @@ export function Sidebar({
       <>
       <PinnedExtensionStrip session={session} space={space} pageId={page?.id ?? null} pageKey={`${page?.live.url ?? ""}|${page?.live.title ?? ""}`} />
       {(pinned.some((list) => list.rows.length > 0) || lift) && (
-        <div className={`pinned-grid${gapAt(TabPlacement.pinned, null, null) ? " drop-at-end" : ""}`} data-list-section={TabPlacement.pinned.name} data-list-folder="">
+        <PinnedGrid className={`pinned-grid${gapAt(TabPlacement.pinned, null, null) ? " drop-at-end" : ""}`}
+          count={pinned.reduce((count, list) => count + list.rows.filter((row) => tabs.has(row.id) && !isLifted(row.id)).length, 0)}
+          data-list-section={TabPlacement.pinned.name} data-list-folder="">
           {pinned.flatMap((list) => list.rows).flatMap((row) => {
             const tab = tabs.get(row.id);
             if (!tab) return [];
+            const pageId = pagesByTab.get(tab.id) ?? null;
+            const loaded = pageId !== null && session.core.state.pages.get(pageId)?.phase.name === "live";
             const tile = (
-              <motion.button
+              <button
+                type="button"
                 key={tab.id}
-                className={`pinned-tile${tab.id === shownTabId ? " selected" : ""}${marked(tabItem(tab.id)) ? " unit-selected" : ""}${shaken.has(tab.id) ? " shaken" : ""}${isLifted(tab.id) ? " lifted" : ""}${gapAt(TabPlacement.pinned, null, tab.id) ? " drop-before" : ""}`}
+                className={`pinned-tile${tab.id === shownTabId ? " selected" : ""}${loaded ? "" : " unloaded"}${marked(tabItem(tab.id)) ? " unit-selected" : ""}${shaken.has(tab.id) ? " shaken" : ""}${isLifted(tab.id) ? " lifted" : ""}${gapAt(TabPlacement.pinned, null, tab.id) ? " drop-before" : ""}`}
                 data-row={tab.id}
                 data-before-tab={tab.id}
                 data-unit={tabItem(tab.id)}
@@ -538,17 +544,15 @@ export function Sidebar({
                 onAuxClick={(event) => event.button === 1 && middleClick(tab)}
                 onContextMenu={(event) => rowMenu(event, tabItem(tab.id), () => tabMenu(context, tab))}
                 {...previewHandlers(tab.id)}
-                whileTap={{ scale: 0.96 }}
-                transition={tokens.press}
                 // The card says what the tile is, where the person keeps previews.
                 title={showsTabPreviews() ? undefined : tab.displayTitle}
               >
-                <TabIcon session={session} tab={tab} pageId={pagesByTab.get(tab.id) ?? null} size={20} />
-              </motion.button>
+                <PinnedTileFace session={session} tab={tab} pageId={pageId} />
+              </button>
             );
             return [tile];
           })}
-        </div>
+        </PinnedGrid>
       )}
 
       <div className="space-header">
@@ -715,7 +719,7 @@ export function Sidebar({
       {/* An open utility list's search stands where the address field stood, as on the Mac. */}
       {!utility && <div className="address-area">
         <AddressField
-          address={live?.address ?? live?.url ?? ""}
+          address={live?.address ?? live?.url ?? tabs.get(shownTabId ?? "")?.url ?? ""}
           // A live site's controls: its lock, which opens its certificate, and Site Controls.
           site={siteControlPage ? {
             secure: siteControlPage.live.security.isSecure,
@@ -726,6 +730,9 @@ export function Sidebar({
             toggle: () => setSiteControlsOpen((open) => !open),
           } : null}
           secure={live ? live.security.isSecure : !!tabs.get(shownTabId ?? "")?.url?.toLowerCase().startsWith("https:")}
+          resident={!!page}
+          loading={!!live?.isLoading}
+          accent={css(primaryColor(space.settings.look))}
         />
         <PermissionPrompt session={session} asked={permission} spaceName={space.settings.name} />
         <AnimatePresence>
@@ -1027,15 +1034,71 @@ function RenameField({ initial, placeholder, onDone }: {
 }
 
 export function TabIcon({ session, tab, pageId, size = 16 }: { session: Session; tab: TabState; pageId: string | null; size?: number }) {
-  const [failed, setFailed] = useState(false);
+  return <TabIconFace icon={useTabIconSource(session, tab, pageId)} symbol={tab.symbol} size={size} />;
+}
+
+/** The image a tab's icon shows. Inside Crest it comes from its page's engine; in development, from the site. */
+function useTabIconSource(session: Session, tab: TabState, pageId: string | null): string | null {
   const engineIcon = useTabIcon(session, tab.id, pageId, tab.faviconUrl);
-  // Inside Crest a site's icon comes from its page's engine; in development,
-  // from the site.
-  const icon = insideCrest ? engineIcon : (tab.faviconUrl ?? (tab.url ? faviconFor(tab.url) : null));
+  return insideCrest ? engineIcon : (tab.faviconUrl ?? (tab.url ? faviconFor(tab.url) : null));
+}
+
+/**
+ * A tab's icon, or its symbol while it has none. A site without an icon of
+ * its own wears the engine's grey globe, as the Mac's tabs do.
+ */
+function TabIconFace({ icon, symbol, size }: { icon: string | null; symbol: string; size: number }) {
+  const [failed, setFailed] = useState(false);
   if (icon && !failed) {
     return <img className="tab-icon" src={icon} width={size} height={size} alt="" onError={() => setFailed(true)} />;
   }
-  return <Symbol name={tab.symbol} size={size} className="tab-icon" />;
+  return <Symbol name={symbol} size={size} className={`tab-icon${symbol === "globe" ? " default-favicon" : ""}`} />;
+}
+
+/**
+ * The pinned tiles in the Mac's PinnedTabGridLayout: at most four to a row,
+ * fewer where the sidebar has no room for four tiles of the Mac's narrowest,
+ * and the rows balanced, so one tile spans the sidebar, five sit three over
+ * two, and every tile shares its row's width.
+ */
+function PinnedGrid({ count, children, ...rest }: {
+  count: number;
+  children: ReactNode;
+  className: string;
+  "data-list-section": string;
+  "data-list-folder": string;
+}) {
+  const grid = useRef<HTMLDivElement>(null);
+  // Only a change in how many tiles fit redraws the grid, not every step of a resize.
+  const [capacity, setCapacity] = useState(4);
+  useLayoutEffect(() => {
+    const element = grid.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => setCapacity(pinCapacity(entry.contentRect.width)));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={grid} {...rest} style={{ "--pin-columns": pinColumns(count, capacity) } as CSSProperties}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * A pinned tile's icon and the ring the tile wears while its window shows
+ * it, in the icon's own color, as the Mac's pins take their site's color.
+ * A site without an icon rings in its grey globe's.
+ */
+function PinnedTileFace({ session, tab, pageId }: { session: Session; tab: TabState; pageId: string | null }) {
+  const icon = useTabIconSource(session, tab, pageId);
+  const accent = useFaviconColor(icon);
+  return (
+    <>
+      <span className="pin-ring" style={accent ? { "--pin-accent": accent } as CSSProperties : undefined} aria-hidden />
+      <TabIconFace icon={icon} symbol={tab.symbol} size={19} />
+    </>
+  );
 }
 
 function faviconFor(url: string): string | null {
@@ -1048,12 +1111,40 @@ function faviconFor(url: string): string | null {
 }
 
 /**
- * The shown tab's address, which opens the command palette to edit it, as
- * the Mac's sidebar address field does; typing an address happens there. A
- * live site puts its lock in the leading slot and Site Controls in the
- * trailing one; without one, the lock or the search glyph stands in.
+ * The Mac's BrowserAddressPresentation: the site, without "www." and with
+ * its port, over the rest of the address, decoded; an address with no site
+ * shows whole, and no address the prompt.
  */
-function AddressField({ address, site, secure }: {
+export function addressPresentation(text: string): { domain: string; route: string | null } {
+  if (!text) return { domain: "Search or enter website", route: null };
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    return { domain: text, route: null };
+  }
+  if (!url.hostname) return { domain: text, route: null };
+  const host = url.hostname.startsWith("www.") ? url.hostname.slice(4) : url.hostname;
+  const detail = `${url.pathname === "/" ? "" : url.pathname}${url.search.length > 1 ? url.search : ""}${url.hash.length > 1 ? url.hash : ""}`;
+  let route = detail;
+  try {
+    route = decodeURIComponent(detail);
+  } catch {
+    // An address that is not valid percent-encoding shows as it is.
+  }
+  return { domain: url.port ? `${host}:${url.port}` : host, route: route || null };
+}
+
+/**
+ * The shown tab's address, which opens the command palette to edit it, as
+ * the Mac's sidebar address field does; typing an address happens there.
+ * The site shows centred over the rest of its address. A live site puts its
+ * lock in the leading slot and Site Controls in the trailing one; a tab
+ * holding a page without one shows the lock or the search glyph instead.
+ * While the page loads, the Space's accent fills the field from its leading
+ * edge, the window's only loading indicator.
+ */
+function AddressField({ address, site, secure, resident, loading, accent }: {
   address: string;
   site: {
     readonly secure: boolean;
@@ -1064,16 +1155,29 @@ function AddressField({ address, site, secure }: {
     readonly toggle: () => void;
   } | null;
   secure: boolean;
+  /** Whether the shown tab holds a page, which an address alone does not make it. */
+  resident: boolean;
+  loading: boolean;
+  accent: string;
 }) {
   // The field fades out while the palette that grew out of it is open, keeping its place.
   const handedOff = useFieldHandedOff();
+  const { domain, route } = addressPresentation(address);
   return (
-    <div className={`address-field${handedOff ? " handed-off" : ""}`}>
+    <div className={`address-field${handedOff ? " handed-off" : ""}${loading ? " loading" : ""}`}
+      style={{ "--field-accent": accent } as CSSProperties}>
+      <span className="address-progress" aria-hidden />
       {site
         ? <AddressSecurityButton secure={site.secure} certificate={site.certificate} onReview={site.reviewCertificate} />
-        : <Symbol name={secure ? "lock.fill" : "magnifyingglass"} size={13} className="address-glyph" />}
-      <button type="button" className="address-summary" aria-label="Edit Location" onClick={() => openPalette("editLocation")}>
-        <span className={`address-text ${address ? "" : "placeholder"}`}>{address || "Search or Enter URL…"}</span>
+        : resident && address && (
+          <span className="address-glyph" aria-hidden>
+            <Symbol name={secure ? "lock.fill" : "magnifyingglass"} size={10} strokeWidth={2.5} />
+          </span>
+        )}
+      <button type="button" className="address-summary" aria-label={address ? `Address, ${address}` : "Address and search"}
+        aria-description="Opens the command palette" onClick={() => openPalette("editLocation")}>
+        <span className={`address-domain${address ? "" : " placeholder"}`}>{domain}</span>
+        {route && <span className="address-route">{route}</span>}
       </button>
       {site && <SiteControlTrigger open={site.open} notice={site.notice} onToggle={site.toggle} />}
     </div>

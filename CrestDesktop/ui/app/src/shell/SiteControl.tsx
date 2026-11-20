@@ -40,7 +40,7 @@ export function AddressSecurityButton({ secure, certificate, onReview }: {
   return (
     <button type="button" className={`address-security${secure ? "" : " insecure"}`} disabled={!certificate}
       aria-label={description} title={description} onClick={onReview}>
-      <Symbol name={secure ? "lock.fill" : "lock.open.fill"} size={13} />
+      <Symbol name={secure ? "lock.fill" : "lock.open.fill"} size={12} />
     </button>
   );
 }
@@ -59,7 +59,7 @@ export function SiteControlTrigger({ open, notice, onToggle }: {
   return (
     <button type="button" className={`site-control-trigger${open ? " open" : ""}${notice ? " warning" : ""}`}
       aria-label={label} title={label} aria-expanded={open} aria-haspopup="dialog" onClick={onToggle}>
-      <Symbol name="slider.horizontal.3" size={15} />
+      <Symbol name="slider.horizontal.3" size={12} />
       {notice && <span className="site-control-dot" aria-hidden />}
     </button>
   );

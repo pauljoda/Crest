@@ -72,7 +72,6 @@ import {
   Link,
   ListFilter,
   Lock,
-  LockOpen,
   type LucideIcon,
   MapPin,
   Mic,
@@ -102,7 +101,6 @@ import {
   Share,
   Shield,
   ShieldAlert,
-  SlidersHorizontal,
   Sparkles,
   SquareArrowLeft,
   SquareArrowOutUpRight,
@@ -125,6 +123,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import type { ReactElement } from "react";
 
 /**
  * SF Symbols are licensed for Apple platforms only, yet the core's data names
@@ -148,7 +147,6 @@ const symbols: Record<string, LucideIcon> = {
   "sidebar.left": PanelLeft,
   archivebox: Archive,
   ellipsis: Ellipsis,
-  "slider.horizontal.3": SlidersHorizontal,
   "rectangle.split.2x1": Columns2,
   "briefcase.fill": Briefcase,
   briefcase: Briefcase,
@@ -269,8 +267,6 @@ const symbols: Record<string, LucideIcon> = {
   // Site Controls and the address field's lock.
   scope: Crosshair,
   lock: Lock,
-  "lock.fill": Lock,
-  "lock.open.fill": LockOpen,
   "lock.trianglebadge.exclamationmark.fill": ShieldAlert,
   "exclamationmark.lock.fill": ShieldAlert,
   "exclamationmark.octagon.fill": OctagonAlert,
@@ -299,12 +295,44 @@ const symbols: Record<string, LucideIcon> = {
   "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90": TriangleAlert,
 };
 
+/**
+ * Glyphs drawn to the SF Symbols' own shapes where an outline would read as
+ * another symbol: the solid locks and Site Controls' sliders with their
+ * hollow knobs. Each fills a square of the symbol's point size, as SF
+ * Symbols set at that size do.
+ */
+const drawn: Record<string, (props: { size: number; className?: string }) => ReactElement> = {
+  "lock.fill": ({ size, className }) => (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className} aria-hidden>
+      <path d="M3.72 5V3.15a2.28 2.28 0 0 1 4.56 0V5" fill="none" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="1.75" y="4.95" width="8.5" height="6.8" rx="1.25" fill="currentColor" />
+    </svg>
+  ),
+  "lock.open.fill": ({ size, className }) => (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className} aria-hidden>
+      <path d="M6.95 5V3.15a2.28 2.28 0 0 1 4.56 0v1.1" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+      <rect x="0.5" y="4.95" width="8.5" height="6.8" rx="1.25" fill="currentColor" />
+    </svg>
+  ),
+  "slider.horizontal.3": ({ size, className }) => (
+    <svg width={size} height={size} viewBox="0 0 12 12" className={className} aria-hidden
+      fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round">
+      <path d="M0.5 2.25H6M9.5 2.25H11.5M0.5 5.75H1.5M5 5.75H11.5M0.5 9.5H6M9.5 9.5H11.5" />
+      <circle cx="7.75" cy="2.25" r="1.25" />
+      <circle cx="3.25" cy="5.75" r="1.25" />
+      <circle cx="7.75" cy="9.5" r="1.25" />
+    </svg>
+  ),
+};
+
 export function Symbol({ name, size = 16, className, strokeWidth = 1.75 }: {
   name: string | null | undefined;
   size?: number;
   className?: string;
   strokeWidth?: number;
 }) {
+  const Drawn = name ? drawn[name] : undefined;
+  if (Drawn) return <Drawn size={size} className={className} />;
   const Icon = (name && symbols[name]) || Circle;
   return <Icon size={size} strokeWidth={strokeWidth} className={className} aria-hidden />;
 }

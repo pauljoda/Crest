@@ -5865,6 +5865,10 @@
     "windows-sidebar-structure-match-mac": {
       "category": "internal",
       "message": "The Windows sidebar is arranged as the Mac's: New Tab at the top of the current tabs, folders with their tab count, groups as a caption, splits without a card at rest, dimmed unloaded tabs, and renaming in place"
+    },
+    "windows-address-field-pins-match-mac": {
+      "category": "internal",
+      "message": "The Windows address field and pinned tabs match the Mac's: the site centred over its path, solid lock and Site Controls glyphs, the Space's colour filling the field while a page loads, and pinned tabs sharing the row with a ring in their site's colour"
     }
   }
 }
