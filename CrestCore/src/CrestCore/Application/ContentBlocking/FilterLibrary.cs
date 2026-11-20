@@ -166,6 +166,13 @@ internal sealed class FilterLibrary {
     private string? engineKey;
     private string? buildingEngineKey;
     private bool engineRebuildWanted;
+    /// The workers converting the rules or compiling the engine filter that
+    /// may still run, including one a newer worker replaced while it
+    /// announced its rules; whether the library stopped, after which none
+    /// starts; and whether it closed, after which nothing writes in the folder.
+    private readonly List<Task> workers = [];
+    private bool stopped;
+    private bool closed;
 
     #endregion
 
@@ -385,7 +392,7 @@ internal sealed class FilterLibrary {
                 copies.Remove(gone);
                 leases.Remove(gone);
                 heldTexts.Remove(gone);
-                if (folder is not null) File.Delete(Path.Combine(folder, "lists", gone + ".txt"));
+                if (folder is not null && !closed) File.Delete(Path.Combine(folder, "lists", gone + ".txt"));
             }
             SaveState();
         }
@@ -477,13 +484,15 @@ internal sealed class FilterLibrary {
     }
 
     /// Converts the lists again unless their rules are the ones in force: at
-    /// once from what an earlier conversion stored, or on a worker.
+    /// once from what an earlier conversion stored, or on a worker. A stopped
+    /// library converts nothing.
     private void RebuildRules() {
         var chosen = preferences();
         string key;
         List<(string Name, string Digest)> inputs;
         ContentRuleListSet? restored = null;
         lock (gate) {
+            if (stopped) return;
             inputs = Inputs(chosen);
             key = RulesKey(inputs);
             if (key == publishedKey) return;
@@ -495,10 +504,10 @@ internal sealed class FilterLibrary {
                 return;
             } else {
                 buildingKey = key;
+                StartWorker(() => Build(key, inputs, chosen.CustomFilters));
             }
         }
         if (restored is not null) announce(new ContentRuleListsChanged(restored));
-        else _ = Task.Run(() => Build(key, inputs, chosen.CustomFilters));
     }
 
     /// The lists in force that the device holds a copy of, with their digests,
@@ -722,12 +731,14 @@ internal sealed class FilterLibrary {
     };
 
     /// Compiles the engine filter again unless the one in force matches the
-    /// lists: at once from what an earlier compile saved, or on a worker.
+    /// lists: at once from what an earlier compile saved, or on a worker. A
+    /// stopped library compiles nothing.
     private void RebuildEngine() {
         var chosen = preferences();
         string key;
         List<(string Name, string Digest)> inputs;
         lock (gate) {
+            if (stopped) return;
             inputs = Inputs(chosen);
             if (copies.GetValueOrDefault(ResourcesName)?.Digest is { } resources && resources == resourcesDigest)
                 inputs.Add((ResourcesName, resources));
@@ -738,8 +749,8 @@ internal sealed class FilterLibrary {
                 return;
             }
             buildingEngineKey = key;
+            StartWorker(() => BuildEngine(key, inputs, chosen.CustomFilters));
         }
-        _ = Task.Run(() => BuildEngine(key, inputs, chosen.CustomFilters));
     }
 
     /// The key the lists in force compile to, with the pinned resources and
@@ -851,10 +862,11 @@ internal sealed class FilterLibrary {
         }
     }
 
-    /// Keeps a download's text. The caller holds the lock.
+    /// Keeps a download's text, unless the library closed. The caller holds
+    /// the lock.
     private void WriteText(string name, byte[] bytes, string text) {
         if (folder is null) heldTexts[name] = text;
-        else WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
+        else if (!closed) WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
     }
 
     private static void WriteAtomically(string path, byte[] bytes) {
@@ -864,9 +876,10 @@ internal sealed class FilterLibrary {
         File.Move(pending, path, overwrite: true);
     }
 
-    /// Writes every copy's state, and the rules in force. The caller holds the lock.
+    /// Writes every copy's state, and the rules in force, unless the library
+    /// closed. The caller holds the lock.
     private void SaveState() {
-        if (folder is null) return;
+        if (folder is null || closed) return;
         var lists = new JsonObject();
         foreach (var (name, copy) in copies)
             lists[name] = new JsonObject {
@@ -914,6 +927,33 @@ internal sealed class FilterLibrary {
                 state["failures"]?.GetValue<int>() ?? 0, state["title"]?.GetValue<string>(),
                 state["tooLarge"]?.GetValue<bool>() ?? false);
         }
+    }
+
+    #endregion
+
+    #region Actions - Lifetime
+
+    /// Starts no worker from now on, waits for every one still converting,
+    /// compiling or announcing so they keep and announce what they made, and
+    /// then closes: a download reported or a list changed afterwards writes
+    /// nothing, so once this returns no worker runs and nothing writes in the
+    /// folder. A worker that failed stays unreported, as it was while the
+    /// library ran.
+    public void Stop() {
+        Task[] running;
+        lock (gate) {
+            stopped = true;
+            running = [.. workers];
+        }
+        Task.WhenAll(running).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
+        lock (gate) closed = true;
+    }
+
+    /// Runs `work` on a worker that `Stop` waits for, forgetting those that
+    /// finished. The caller holds the lock.
+    private void StartWorker(Action work) {
+        workers.RemoveAll(worker => worker.IsCompleted);
+        workers.Add(Task.Run(work));
     }
 
     #endregion

@@ -5889,6 +5889,18 @@
     "dragged-tab-stays-paper": {
       "category": "fixed",
       "message": "A selected tab you pick up and drag keeps its light paper look instead of turning glassy."
+    },
+    "core-close-waits-for-filter-conversions": {
+      "category": "internal",
+      "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."
+    },
+    "core-close-refuses-late-filter-writes": {
+      "category": "internal",
+      "message": "A filter list download or list change that reaches the core after it closed no longer writes in its storage folder."
+    },
+    "core-close-waits-for-every-filter-worker": {
+      "category": "internal",
+      "message": "Closing the core also waits for a filter list conversion that a newer one replaced while it finished, so none is still running once the core has closed."
     }
   }
 }
