@@ -6057,6 +6057,10 @@
     "translation-offer-other-script": {
       "category": "fixed",
       "message": "A page in a language written in another script, such as Traditional Chinese for a reader of Simplified Chinese, is offered translation."
+    },
+    "local-development-from-core": {
+      "category": "improved",
+      "message": "Addresses ending in .test count as local everywhere: the developer toolbar turns on for them, and a typed one opens over HTTP first."
     }
   }
 }
