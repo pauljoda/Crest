@@ -1,0 +1,927 @@
+# Crest: hosts Crest where Chromium draws Crest's interface, on Windows. The
+# Crest window is a widget whose client area is Crest's interface, a WebUI
+# (chrome://crest-desktop) that embeds each page's own surface, so pages and
+# chrome share one compositor. The host compiles there, and Crest's WebUI may
+# make the surface embeds Chromium allows only its WebUI browser.
+#
+# A Crest Browser has no BrowserView on Windows either, so the gates
+# native-host.patch keeps on the Mac for that reason take Windows too:
+# startup, downloads, discards and freezing, link routing and page close,
+# hovered links, permission prompts, script dialogs, extension side panels,
+# toasts, partial translation, tab sharing, and the features that need
+# Chrome's Views frame. Gates whose hooks need interface Windows does not draw
+# yet (docked DevTools, extension popups and install prompts) and the Mac's
+# own (iCloud passkeys, the app bundle, the system screen picker) stay on the
+# Mac.
+#
+# A surface embed's <embed> that loses focus to another element of the
+# interface, such as a field the interface focused by script, gives the
+# interface the keyboard back (crbug.com/508638062 leaves this open), so the
+# command palette and the sheets take what is typed after a page had it.
+
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -3374,6 +3374,9 @@
+   if (is_win) {
+     public_deps += [ "//chrome/browser/win" ]
+ 
++    # Crest's host where Chromium draws Crest's interface.
++    deps += [ ":crest_desktop_host" ]
++
+     deps += [
+       "//chrome/browser/taskbar",
+       "//chrome/browser/ui:accessibility_util",
+@@ -5328,6 +5331,84 @@
+   }
+ }
+ 
++if (is_win) {
++  # Crest's host where Chromium draws Crest's interface: its windows, the
++  # WebUI that runs the interface and bridges it to the core, Crest's
++  # BrowserWindow for Views, and the engine binding it shares with the Mac.
++  # Like crest_host, it is circular with "browser".
++  source_set("crest_desktop_host") {
++    sources = [
++      "ui/crest/crest_app.h",
++      "ui/crest/crest_browser_window.h",
++      "ui/crest/crest_browser_window_views.cc",
++      "ui/crest/crest_chrome_hooks.h",
++      "ui/crest/crest_content_filter.h",
++      "ui/crest/crest_core.h",
++      "ui/crest/crest_core_library.cc",
++      "ui/crest/crest_core_library.h",
++      "ui/crest/crest_desktop_frame.cc",
++      "ui/crest/crest_desktop_frame.h",
++      "ui/crest/crest_desktop_host.cc",
++      "ui/crest/crest_desktop_host.h",
++      "ui/crest/crest_desktop_ui.cc",
++      "ui/crest/crest_desktop_ui.h",
++      "ui/crest/crest_engine.h",
++      "ui/crest/crest_engine_agent.cc",
++      "ui/crest/crest_engine_agent.h",
++      "ui/crest/crest_engine_binding.cc",
++      "ui/crest/crest_engine_binding.h",
++      "ui/crest/crest_engine_browsers.cc",
++      "ui/crest/crest_engine_browsers.h",
++      "ui/crest/crest_engine_content.cc",
++      "ui/crest/crest_engine_content.h",
++      "ui/crest/crest_engine_contract.h",
++      "ui/crest/crest_engine_documents.cc",
++      "ui/crest/crest_engine_documents.h",
++      "ui/crest/crest_engine_downloads.cc",
++      "ui/crest/crest_engine_downloads.h",
++      "ui/crest/crest_engine_extensions.cc",
++      "ui/crest/crest_engine_extensions.h",
++      "ui/crest/crest_engine_infobars.cc",
++      "ui/crest/crest_engine_infobars.h",
++      "ui/crest/crest_engine_inspector.cc",
++      "ui/crest/crest_engine_inspector.h",
++      "ui/crest/crest_engine_media.cc",
++      "ui/crest/crest_engine_media.h",
++      "ui/crest/crest_engine_notifications.cc",
++      "ui/crest/crest_engine_notifications.h",
++      "ui/crest/crest_engine_page.cc",
++      "ui/crest/crest_engine_page.h",
++      "ui/crest/crest_engine_profiles.cc",
++      "ui/crest/crest_engine_profiles.h",
++      "ui/crest/crest_engine_prompts.cc",
++      "ui/crest/crest_engine_prompts.h",
++      "ui/crest/crest_engine_screen_sharing.cc",
++      "ui/crest/crest_engine_screen_sharing.h",
++      "ui/crest/crest_engine_scriptlets.cc",
++      "ui/crest/crest_engine_scriptlets.h",
++      "ui/crest/crest_engine_store.cc",
++      "ui/crest/crest_engine_store.h",
++      "ui/crest/crest_engine_tab_groups.cc",
++      "ui/crest/crest_engine_tab_groups.h",
++      "ui/crest/crest_request_filter.cc",
++      "ui/crest/crest_request_filter.h",
++    ]
++
++    public_deps = [ ":browser_public_dependencies" ]
++    deps = [
++      "//components/js_injection/common:common_mojom",
++      "//components/origin_matcher",
++      "//components/surface_embed/browser",
++      "//media/mojo/mojom",
++      "//services/audio/public/mojom",
++      "//services/media_session/public/mojom",
++      "//ui/base/mojom:ui_base_types",
++      "//ui/views",
++      "//ui/views/controls/webview",
++    ]
++  }
++}
++
+ # These are the dependencies for the "browser" target that are outside of
+ # //chrome/browser. All gn targets that have circular dependencies with
+ # "browser" should include this dependency.
+--- a/chrome/browser/ui/views/frame/browser_window_factory.cc
++++ b/chrome/browser/ui/views/frame/browser_window_factory.cc
+@@ -5,7 +5,7 @@
+ #include <memory>
+ 
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/browser.h"
+ #include "chrome/browser/ui/crest/crest_browser_window.h"
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+@@ -37,7 +37,7 @@
+ BrowserWindow::CreateBrowserWindow(BrowserWindowInterface* browser,
+                                    bool user_gesture,
+                                    bool in_tab_dragging) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest composes every browsing window, including the ones the engine
+   // creates for itself: chrome.windows.create, renderer popups and app
+   // windows. DevTools and picture-in-picture keep their Views windows, which
+--- a/chrome/browser/ui/startup/startup_browser_creator.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator.cc
+@@ -36,7 +36,7 @@
+ #include "base/trace_event/trace_event.h"
+ #include "build/branding_buildflags.h"
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ #include "chrome/browser/app_mode/app_mode_utils.h"
+@@ -1505,7 +1505,7 @@
+   } else  // NOLINT
+ #endif
+   {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+     // Crest's shell decides which window a launch brings forward. The last
+     // used profile's Browser has no window, so activating it would raise the
+     // Crest window standing in for it, over the one the launch opened.
+@@ -1651,7 +1651,7 @@
+     bool ignore_profile_picker) {
+   ProfileManager* profile_manager = g_browser_process->profile_manager();
+   const base::FilePath& user_data_dir = profile_manager->user_data_dir();
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest's core restores its Spaces and owns profile selection. The bootstrap
+   // profile never presents Chrome's profile picker or restores Chrome tabs.
+   // This is keyed on the host itself, not on the switch, because a product
+--- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
+@@ -18,7 +18,7 @@
+ #include "base/supports_user_data.h"
+ #include "base/version.h"
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ #include "chrome/browser/apps/platform_apps/install_chrome_app.h"
+@@ -256,7 +256,7 @@
+     bool restore_tabbed_browser) {
+   DCHECK(profile);
+   profile_ = profile;
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::IsEnabled()) {
+     CreateBrowserWindow(BrowserWindowCreateParams(profile, false))
+         ->GetWindow()
+--- a/chrome/browser/chrome_content_browser_client_receiver_bindings.cc
++++ b/chrome/browser/chrome_content_browser_client_receiver_bindings.cc
+@@ -46,6 +46,9 @@
+ #include "components/subresource_filter/content/browser/content_subresource_filter_throttle_manager.h"
+ #include "components/surface_embed/browser/surface_embed_host.h"
+ #include "components/surface_embed/common/features.h"
++#if BUILDFLAG(IS_WIN)
++#include "chrome/browser/ui/crest/crest_desktop_ui.h"
++#endif
+ #include "components/sync/base/features.h"
+ #include "content/public/browser/browser_child_process_host.h"
+ #include "content/public/browser/browser_task_traits.h"
+@@ -450,8 +453,13 @@
+                mojo::PendingAssociatedReceiver<
+                    surface_embed::mojom::SurfaceEmbedHost> receiver) {
+               auto* web_ui = render_frame_host->GetWebUI();
++              // Crest's interface embeds the window's pages too.
+               if (!web_ui ||
+-                  !web_ui->GetController()->GetAs<WebUIBrowserUI>()) {
++                  (!web_ui->GetController()->GetAs<WebUIBrowserUI>()
++#if BUILDFLAG(IS_WIN)
++                   && !web_ui->GetController()->GetAs<crest::CrestDesktopUI>()
++#endif
++                       )) {
+                 return;
+               }
+               surface_embed::SurfaceEmbedHost::Create(render_frame_host,
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -3,7 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/chrome_content_browser_client.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #include "chrome/browser/ui/crest/crest_request_filter.h"
+ #endif
+@@ -3133,7 +3133,7 @@
+ 
+   std::string process_type =
+       command_line->GetSwitchValueASCII(switches::kProcessType);
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::IsEnabled() && process_type == switches::kRendererProcess)
+     command_line->AppendSwitch("crest-control-plane");
+ #endif
+@@ -5738,7 +5738,7 @@
+ void ChromeContentBrowserClient::CreateThrottlesForNavigation(
+     content::NavigationThrottleRegistry& registry) {
+   CreateAndAddChromeThrottlesForNavigation(registry);
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   crest::AddNavigationThrottle(registry);
+ #endif
+ }
+@@ -6883,7 +6883,7 @@
+     network::mojom::URLLoaderFactoryOverridePtr* factory_override,
+     scoped_refptr<base::SequencedTaskRunner> navigation_response_task_runner,
+     bool is_for_network_service) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // A Crest page's requests pass its content filter first.
+   crest::FilterRequests(frame, type, isolation_info, factory_builder);
+ #endif
+--- a/chrome/renderer/chrome_content_renderer_client.cc
++++ b/chrome/renderer/chrome_content_renderer_client.cc
+@@ -996,8 +996,13 @@
+ #if !BUILDFLAG(IS_ANDROID)
+   if (base::FeatureList::IsEnabled(surface_embed::features::kSurfaceEmbed)) {
+     GURL url = render_frame->GetWebFrame()->GetDocument().Url();
++    // Crest's interface embeds the window's pages too.
+     if (url.SchemeIs(content::kChromeUIScheme) &&
+-        url.host() == chrome::kChromeUIWebuiBrowserHost) {
++        (url.host() == chrome::kChromeUIWebuiBrowserHost
++#if BUILDFLAG(IS_WIN)
++         || url.host() == "crest-desktop"
++#endif
++         )) {
+       if (surface_embed::MaybeCreatePlugin(render_frame, params, plugin)) {
+         return true;
+       }
+--- a/chrome/browser/ui/tabs/tab_features.cc
++++ b/chrome/browser/ui/tabs/tab_features.cc
+@@ -13,7 +13,7 @@
+ #include "base/no_destructor.h"
+ #include "base/task/sequenced_task_runner.h"
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ #include "base/time/default_tick_clock.h"
+@@ -808,7 +808,7 @@
+   // SidePanelCoordinator. Do not register Chrome's side-panel lifecycle hooks
+   // against that absent coordinator (including activated-tab detachment).
+   bool has_chrome_reader_ui = true;
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   has_chrome_reader_ui = !crest::IsEnabled();
+ #endif
+   if (has_chrome_reader_ui) {
+--- a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
++++ b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
+@@ -46,6 +46,11 @@
+ #include "chrome/browser/web_applications/os_integration/mac/web_app_shortcut_mac.h"
+ #endif
+ 
++#if BUILDFLAG(IS_WIN)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#include "chrome/browser/ui/crest/crest_permission_prompt.h"
++#endif
++
+ namespace {
+ 
+ BrowserWindowInterface* GetBrowser(content::WebContents* web_contents) {
+@@ -294,7 +299,7 @@
+ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
+     content::WebContents* web_contents,
+     permissions::PermissionPrompt::Delegate* delegate) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::IsEnabled()) return crest::CreatePermissionPrompt(web_contents, delegate);
+ #endif
+   if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly() &&
+--- a/chrome/browser/profiles/profile.cc
++++ b/chrome/browser/profiles/profile.cc
+@@ -121,7 +121,7 @@
+     : profile_id_(profile_id) {}
+ 
+ bool Profile::OTRProfileID::AllowsBrowserWindows() const {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest private workspaces retain independent OTR contexts under the source
+   // Space's profile instead of sharing Chromium's primary incognito context.
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane") &&
+--- a/chrome/browser/ui/unload_controller.cc
++++ b/chrome/browser/ui/unload_controller.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "chrome/browser/ui/unload_controller.h"
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ 
+@@ -253,7 +253,7 @@
+ void UnloadController::BeforeUnloadFired(content::WebContents* web_contents,
+                                          bool proceed,
+                                          bool* proceed_to_fire_unload) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::IsEnabled() && crest::CompletePageClosePreparation(web_contents, proceed)) {
+     *proceed_to_fire_unload = false;
+     return;
+--- a/chrome/browser/download/download_ui_controller.cc
++++ b/chrome/browser/download/download_ui_controller.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "chrome/browser/download/download_ui_controller.h"
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_download_hooks.h"
+ #endif
+ 
+@@ -222,7 +222,7 @@
+ 
+ void DownloadUIController::OnDownloadUpdated(content::DownloadManager* manager,
+                                              download::DownloadItem* item) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::OwnsDownload(item)) crest::PublishDownload(item);
+ #endif
+   DownloadItemModel item_model(item);
+@@ -292,7 +292,7 @@
+   }
+ 
+   DownloadItemModel(item).SetWasUINotified(true);
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::OwnsDownload(item)) return;
+ #endif
+   delegate_->OnNewDownloadReady(item);
+--- a/chrome/browser/download/chrome_download_manager_delegate.cc
++++ b/chrome/browser/download/chrome_download_manager_delegate.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "chrome/browser/download/chrome_download_manager_delegate.h"
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_download_hooks.h"
+ #endif
+ 
+@@ -1612,7 +1612,7 @@
+     DownloadTargetDeterminerDelegate::ConfirmationCallback callback) {
+   CHECK_CURRENTLY_ON(BrowserThread::UI, base::NotFatalUntil::M161);
+   CHECK(!download->IsTransient(), base::NotFatalUntil::M161);
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::OwnsDownload(download)) {
+     crest::ChooseDownloadDestination(download, suggested_path, reason, std::move(callback));
+     return;
+--- a/chrome/browser/download/download_target_determiner.cc
++++ b/chrome/browser/download/download_target_determiner.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "chrome/browser/download/download_target_determiner.h"
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_download_hooks.h"
+ #endif
+ 
+@@ -663,7 +663,7 @@
+ 
+     // If there is a non-neutral confirmation reason, prompt the user.
+     bool choose_destination = confirmation_reason_ != DownloadConfirmationReason::NONE;
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+     // Crest resolves ordinary transfers using the owning Space preferences.
+     // Do not manufacture a confirmation reason or bypass managed/forced paths.
+     choose_destination |= !is_resumption_ && !download_prefs_->IsDownloadPathManaged() &&
+--- a/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc
++++ b/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc
+@@ -117,6 +117,10 @@
+ #include "chrome/browser/ui/settings_window_manager_chromeos.h"
+ #endif
+ 
++#if BUILDFLAG(IS_WIN)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
++
+ #if BUILDFLAG(IS_MAC)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #include "ui/display/display.h"
+@@ -544,7 +548,7 @@
+                                   std::move(navigation_handle_callback));
+   }
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (crest::RouteModifiedLink(source, params)) return nullptr;
+ #endif
+ 
+@@ -773,7 +777,7 @@
+ 
+ bool BrowserWebContentsDelegate::CrestPageAskedToClose(
+     content::WebContents* source) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest decides whether a page it shows may close itself, and closes it.
+   return crest::IsEnabled() && crest::RequestPageClose(source);
+ #else
+@@ -804,7 +808,7 @@
+ 
+ void BrowserWebContentsDelegate::UpdateTargetURL(content::WebContents* source,
+                                                  const GURL& url) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest shows the hovered link itself; this build has no Views status
+   // bubble to cast to.
+   if (crest::IsEnabled()) {
+@@ -1129,7 +1133,7 @@
+ content::JavaScriptDialogManager*
+ BrowserWebContentsDelegate::GetJavaScriptDialogManager(
+     content::WebContents* source) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (auto* manager = crest::JavaScriptDialogManagerFor(source)) return manager;
+ #endif
+   return javascript_dialogs::TabModalDialogManager::FromWebContents(source);
+--- a/third_party/blink/renderer/core/html/html_anchor_element.cc
++++ b/third_party/blink/renderer/core/html/html_anchor_element.cc
+@@ -540,11 +540,18 @@
+   // Crest carries the actual trusted link event, never global modifier state.
+   // Download attributes keep the normal download pipeline even when modified.
+   int crest_link_modifiers = 0;
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (event.isTrusted() && completed_url.ProtocolIsInHttpFamily() &&
+       !FastHasAttribute(html_names::kDownloadAttr) &&
+       base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
+-    crest_link_modifiers = (event.metaKey() ? 1 : 0) | (event.altKey() ? 2 : 0) |
++    // The platform's command modifier opens a link in a new tab: Command on
++    // the Mac, Control on Windows.
++#if BUILDFLAG(IS_MAC)
++    const bool command = event.metaKey();
++#else
++    const bool command = event.ctrlKey();
++#endif
++    crest_link_modifiers = (command ? 1 : 0) | (event.altKey() ? 2 : 0) |
+                            (event.shiftKey() ? 4 : 0) | (event.button() == 1 ? 8 : 0);
+   }
+ #endif
+--- a/chrome/browser/ui/extensions/extension_side_panel_utils.cc
++++ b/chrome/browser/ui/extensions/extension_side_panel_utils.cc
+@@ -23,7 +23,7 @@
+ #include "chrome/browser/ui/tabs/organizer/organizer_panel_utils.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ // Declared in chrome/browser/ui/crest/crest_chrome_hooks.h. Crest hosts an
+ // extension side panel as a card in its own page row and never creates the
+ // Views side-panel UI below, so every entry point that reaches these helpers
+@@ -94,7 +94,7 @@
+ // Defined in extension_side_panel_utils.h
+ void ToggleExtensionSidePanel(BrowserWindowInterface* browser_window,
+                               const ExtensionId& extension_id) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (::crest::IsEnabled()) {
+     ::crest::OpenExtensionSidePanel(
+         CrestPanelContents(browser_window, nullptr), extension_id);
+@@ -130,7 +130,7 @@
+ void OpenGlobalExtensionSidePanel(BrowserWindowInterface& browser_window,
+                                   content::WebContents* web_contents,
+                                   const ExtensionId& extension_id) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (::crest::IsEnabled()) {
+     ::crest::OpenExtensionSidePanel(
+         CrestPanelContents(&browser_window, web_contents), extension_id);
+@@ -221,7 +221,7 @@
+ void OpenContextualExtensionSidePanel(BrowserWindowInterface& browser_window,
+                                       content::WebContents& web_contents,
+                                       const ExtensionId& extension_id) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (::crest::IsEnabled()) {
+     ::crest::OpenExtensionSidePanel(&web_contents, extension_id);
+     return;
+@@ -265,7 +265,7 @@
+ // Declared in extension_side_panel_utils.h
+ void CloseGlobalExtensionSidePanel(BrowserWindowInterface* browser_window,
+                                    const ExtensionId& extension_id) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (::crest::IsEnabled()) {
+     ::crest::CloseExtensionSidePanel(
+         CrestPanelContents(browser_window, nullptr), extension_id);
+@@ -320,7 +320,7 @@
+ void CloseContextualExtensionSidePanel(BrowserWindowInterface* browser_window,
+                                        content::WebContents* web_contents,
+                                        const ExtensionId& extension_id) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   if (::crest::IsEnabled()) {
+     ::crest::CloseExtensionSidePanel(
+         CrestPanelContents(browser_window, web_contents), extension_id);
+--- a/chrome/browser/extensions/api/tabs/windows_api.cc
++++ b/chrome/browser/extensions/api/tabs/windows_api.cc
+@@ -32,7 +32,7 @@
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface_iterator.h"
+ #include "chrome/browser/ui/browser_window/public/create_browser_window.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
+ #endif
+ #include "chrome/browser/ui/navigator/browser_navigator.h"
+@@ -654,7 +654,7 @@
+     return RespondNow(Error(ExtensionTabUtil::kBrowserWindowNotAllowed));
+   }
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest composes every browsing window, so this request is only possible
+   // where a Crest Space can host it. Reporting the refusal here settles the
+   // promise instead of leaving an unowned window running with tabs nothing
+--- a/chrome/browser/ui/views/profiles/profile_picker_view.cc
++++ b/chrome/browser/ui/views/profiles/profile_picker_view.cc
+@@ -20,7 +20,7 @@
+ #include "base/time/time.h"
+ #include "base/trace_event/trace_event.h"
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ #include "chrome/app/chrome_command_ids.h"
+@@ -164,7 +164,7 @@
+ 
+ // static
+ void ProfilePicker::Show(Params&& params) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest is a single-window browser whose core owns Space and profile
+   // selection, so Chrome's profile picker has nothing to choose and no window
+   // to live in. Every route to it — startup, Dock reopen, the profile menu —
+--- a/chrome/browser/ui/toasts/toast_controller.cc
++++ b/chrome/browser/ui/toasts/toast_controller.cc
+@@ -5,7 +5,7 @@
+ #include "chrome/browser/ui/toasts/toast_controller.h"
+ 
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ 
+@@ -144,7 +144,7 @@
+ }
+ 
+ bool ToastController::MaybeShowToast(ToastParams params) {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest has no Views browser frame to anchor a toast in. The message becomes
+   // a Crest notice; toast actions and menus are not offered there.
+   if (crest::IsEnabled()) {
+--- a/chrome/browser/ui/views/translate/translate_bubble_controller.cc
++++ b/chrome/browser/ui/views/translate/translate_bubble_controller.cc
+@@ -5,7 +5,7 @@
+ #include "chrome/browser/ui/views/translate/translate_bubble_controller.h"
+ 
+ #include "build/build_config.h"
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #endif
+ 
+@@ -172,8 +172,9 @@
+     const std::string& source_language,
+     const std::string& target_language,
+     const std::u16string& text_selection) {
+-#if BUILDFLAG(IS_MAC)
+-  // Crest translates a selection with the system's own translation panel.
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
++  // Crest translates a selection with the system's own translation panel,
++  // where the system has one.
+   if (crest::IsEnabled()) {
+     crest::TranslateSelection(text_selection);
+     return;
+--- a/chrome/browser/resource_coordinator/tab_lifecycle_unit.cc
++++ b/chrome/browser/resource_coordinator/tab_lifecycle_unit.cc
+@@ -46,7 +46,7 @@
+ #include "third_party/abseil-cpp/absl/cleanup/cleanup.h"
+ #include "url/gurl.h"
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
+ #endif
+ 
+@@ -366,7 +366,7 @@
+   if (IsDiscardBlockedByFeature(reason)) {
+     return false;
+   }
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest decides when a page it shows unloads. A discard would replace the
+   // tab's WebContents and leave that page without one.
+   if (crest::IsEnabled() && crest::KeepsPageResident(web_contents())) {
+--- a/chrome/browser/chrome_browser_field_trials.cc
++++ b/chrome/browser/chrome_browser_field_trials.cc
+@@ -55,7 +55,7 @@
+ #include "ui/gl/gl_switches.h"
+ #endif
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/common/chrome_features.h"
+ #include "components/lens/lens_features.h"
+ #include "components/security_interstitials/core/features.h"
+@@ -135,14 +135,16 @@
+     base::FeatureList* feature_list) {
+   variations::FeatureOverrides feature_overrides(*feature_list);
+ 
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
+ #if BUILDFLAG(IS_MAC)
+-  // Crest shares a page's screen through the system's own picker, which asks
+-  // the person what to share and needs no Screen Recording access. As in
+-  // Chrome, a page may ask without a click of its own, since sites built for
+-  // Chrome ask from a timer or from a click in another of their windows. A
+-  // command line can still turn the picker off.
+-  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    // Crest shares a page's screen through the system's own picker, which
++    // asks the person what to share and needs no Screen Recording access. As
++    // in Chrome, a page may ask without a click of its own, since sites built
++    // for Chrome ask from a timer or from a click in another of their
++    // windows. A command line can still turn the picker off.
+     feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
++#endif
+     // Crest keeps federated sign-in (FedCM) off.
+     // Disabling it explicitly also hides the API from pages, which otherwise
+     // keep it, so sites sign in through their own pop-up or redirect, as in
+@@ -160,7 +162,7 @@
+     feature_overrides.DisableFeature(lens::features::kLensOverlay);
+     feature_overrides.DisableFeature(lens::features::kLensStandalone);
+   }
+-#endif  // BUILDFLAG(IS_MAC)
++#endif  // BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ 
+ #if BUILDFLAG(IS_ANDROID)
+ #if BUILDFLAG(IS_DESKTOP_ANDROID)
+--- a/chrome/browser/media/webrtc/desktop_capture_devices_util.cc
++++ b/chrome/browser/media/webrtc/desktop_capture_devices_util.cc
+@@ -46,6 +46,7 @@
+ 
+ #if BUILDFLAG(IS_WIN)
+ #include "chrome/browser/media/webrtc/desktop_capture_devices_util_win.h"
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
+ #endif  // BUILDFLAG(IS_WIN)
+ 
+ #if BUILDFLAG(IS_MAC)
+@@ -373,7 +374,7 @@
+         web_contents, media_id, app_preferred_current_tab);
+   }
+ #else
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest shows a shared tab in its own bars, in the shared tab and in the
+   // page that captures it.
+   if (display_notification && crest::IsEnabled() &&
+--- a/components/performance_manager/freezing/freezer.cc
++++ b/components/performance_manager/freezing/freezer.cc
+@@ -12,7 +12,7 @@
+ #include "content/public/browser/visibility.h"
+ #include "content/public/browser/web_contents.h"
+ 
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
+ #endif
+ 
+@@ -28,7 +28,7 @@
+   if (contents->GetVisibility() == content::Visibility::VISIBLE) {
+     return;
+   }
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest keeps a page running media loaded however long nobody looks at
+   // it: a video in Picture in Picture, playing or paused, sound, or a
+   // capture. Freezing would stop it as surely as unloading it.
+--- a/chrome/browser/ui/autofill/chrome_autofill_client.cc
++++ b/chrome/browser/ui/autofill/chrome_autofill_client.cc
+@@ -1079,7 +1079,7 @@
+ }
+ 
+ bool ChromeAutofillClient::IsAutofillProfileEnabled() const {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest fills, imports and offers to save no addresses, whatever the
+   // setting: the save and update prompts need a Views browser window, which
+   // Crest's pages don't have.
+--- a/chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc
++++ b/chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc
+@@ -874,7 +874,7 @@
+ }
+ 
+ bool ChromePaymentsAutofillClient::IsAutofillPaymentMethodsEnabled() const {
+-#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
+   // Crest fills, imports and offers to save no cards or IBANs, whatever the
+   // setting: the save prompts need a Views browser window, which Crest's
+   // pages don't have.
+--- a/content/public/browser/surface_embed_connector.h
++++ b/content/public/browser/surface_embed_connector.h
+@@ -154,6 +154,11 @@
+   // surface-embedded child WebContents' tree is stitched into, or
+   // ui::AXTreeIDUnknown() if the trees are not currently stitched.
+   virtual ui::AXTreeID GetParentAXTreeID() const = 0;
++
++  // Crest: the embedding element lost focus to another element of the parent
++  // document, such as a field the parent focused by script, so the parent
++  // takes the keyboard back from the child. A click moves it by itself.
++  virtual void ReturnFocusToParent() = 0;
+ };
+ 
+ }  // namespace content
+--- a/content/browser/surface_embed/surface_embed_connector_impl.h
++++ b/content/browser/surface_embed/surface_embed_connector_impl.h
+@@ -91,6 +91,7 @@
+   void SetParentAccessibilityInfo(ui::AXNodeID ax_node_id,
+                                   const ui::AXTreeID& ax_tree_id) override;
+   ui::AXTreeID GetParentAXTreeID() const override;
++  void ReturnFocusToParent() override;
+ 
+   // FrameConnector:
+   void SetKeepSurfaceAlive(bool keep_alive) override;
+--- a/content/browser/surface_embed/surface_embed_connector_impl.cc
++++ b/content/browser/surface_embed/surface_embed_connector_impl.cc
+@@ -346,6 +346,12 @@
+       ->GetPrimaryMainFrame()
+       ->GetRenderWidgetHost()
+       ->SetPageFocus(true);
++}
++
++void SurfaceEmbedConnectorImpl::ReturnFocusToParent() {
++  if (parent_web_contents_) {
++    ClearFocusOnInnerWebContents();
++  }
+ }
+ 
+ void SurfaceEmbedConnectorImpl::ClearFocusOnInnerWebContents() {
+--- a/components/surface_embed/browser/surface_embed_host.cc
++++ b/components/surface_embed/browser/surface_embed_host.cc
+@@ -223,6 +223,14 @@
+   if (!focused) {
+     // TODO(crbug.com/508638062): the <embed> element in the parent frame lost
+     // focus. Should we remove the page focus from the embedded page?
++    // Crest: when it lost focus to another element of its document, such as a
++    // field the parent focused by script, the parent takes the keyboard back;
++    // a window losing focus changes nothing here.
++    if (focus_type != blink::mojom::FocusType::kPage) {
++      if (content::SurfaceEmbedConnector* connector = GetConnector()) {
++        connector->ReturnFocusToParent();
++      }
++    }
+     return;
+   }
+ 
+--- a/components/surface_embed/renderer/surface_embed_web_plugin.cc
++++ b/components/surface_embed/renderer/surface_embed_web_plugin.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "components/surface_embed/renderer/surface_embed_web_plugin.h"
+ 
++#include <cstdlib>
++
+ #include "base/notimplemented.h"
+ #include "cc/layers/picture_layer.h"
+ #include "cc/layers/surface_layer.h"
+@@ -214,15 +216,37 @@
+   // Note: Layer bounds are set by WebPluginContainerImpl::Paint()
+   // so we don't need to set them here for the time being.
+ 
+-  if (last_window_rect_ == window_rect && last_clip_rect_ == clip_rect &&
+-      last_unobscured_rect_ == unobscured_rect &&
++  // Crest: an embed that moves, as the Space pager slides a page, tells the
++  // child where it stands and nothing more. A rect moving by fractions of a
++  // pixel snaps to one a pixel wider or narrower now and then, so as it moves
++  // a size within a pixel of the last one is that size; and what of it shows
++  // changes as it passes the edge of what clips it, so while it moves at its
++  // size the child keeps the part it showed, and so has drawn all of it
++  // wherever it goes. Otherwise the child would be resized, laid out and
++  // drawn again, under a new viz::LocalSurfaceId, every frame of the move.
++  gfx::Rect moved_rect = window_rect;
++  gfx::Rect moved_clip_rect = clip_rect;
++  gfx::Rect moved_unobscured_rect = unobscured_rect;
++  if (window_rect.origin() != last_window_rect_.origin() &&
++      !last_window_rect_.IsEmpty() &&
++      std::abs(window_rect.width() - last_window_rect_.width()) <= 1 &&
++      std::abs(window_rect.height() - last_window_rect_.height()) <= 1) {
++    moved_rect.set_size(last_window_rect_.size());
++    if (!last_clip_rect_.IsEmpty()) {
++      moved_clip_rect = last_clip_rect_;
++      moved_unobscured_rect = last_unobscured_rect_;
++    }
++  }
++
++  if (last_window_rect_ == moved_rect && last_clip_rect_ == moved_clip_rect &&
++      last_unobscured_rect_ == moved_unobscured_rect &&
+       last_is_visible_ == is_visible && !frame_sink_id_changed_) {
+     return;
+   }
+ 
+-  last_window_rect_ = window_rect;
+-  last_clip_rect_ = clip_rect;
+-  last_unobscured_rect_ = unobscured_rect;
++  last_window_rect_ = moved_rect;
++  last_clip_rect_ = moved_clip_rect;
++  last_unobscured_rect_ = moved_unobscured_rect;
+   last_is_visible_ = is_visible;
+ 
+   if (frame_sink_id_.is_valid()) {
+@@ -407,6 +431,20 @@
+   pending_visual_properties.compositing_scale_factor = 1.0f;
+   pending_visual_properties.cursor_accessibility_scale_factor = 1.0f;
+ 
++  // Crest: only what the child draws at, its size, scale, zoom and screen,
++  // needs a new viz::LocalSurfaceId, as SurfaceEmbedConnectorImpl requires.
++  // The embed moving within its document, or its clip changing as it moves,
++  // goes to the child under the current one: a new id would have the parent
++  // wait for the child to draw a frame for it, every frame something moves
++  // the embed, such as Crest's Space pager sliding a page across the window.
++  bool moved =
++      sent_visual_properties_ &&
++      (sent_visual_properties_->rect_in_local_root !=
++           pending_visual_properties.rect_in_local_root ||
++       sent_visual_properties_->visible_viewport_size !=
++           pending_visual_properties.visible_viewport_size ||
++       sent_visual_properties_->compositor_viewport !=
++           pending_visual_properties.compositor_viewport);
+   bool synchronized_props_changed =
+       frame_sink_id_changed_ || !sent_visual_properties_ ||
+       sent_visual_properties_->auto_resize_enabled !=
+@@ -417,8 +455,6 @@
+           pending_visual_properties.max_size_for_auto_resize ||
+       sent_visual_properties_->local_frame_size !=
+           pending_visual_properties.local_frame_size ||
+-      sent_visual_properties_->rect_in_local_root !=
+-          pending_visual_properties.rect_in_local_root ||
+       sent_visual_properties_->screen_infos !=
+           pending_visual_properties.screen_infos ||
+       sent_visual_properties_->zoom_level !=
+@@ -433,10 +469,6 @@
+           pending_visual_properties.cursor_accessibility_scale_factor ||
+       sent_visual_properties_->is_pinch_gesture_active !=
+           pending_visual_properties.is_pinch_gesture_active ||
+-      sent_visual_properties_->visible_viewport_size !=
+-          pending_visual_properties.visible_viewport_size ||
+-      sent_visual_properties_->compositor_viewport !=
+-          pending_visual_properties.compositor_viewport ||
+       sent_visual_properties_->root_widget_viewport_segments !=
+           pending_visual_properties.root_widget_viewport_segments ||
+       !sent_last_is_visible_ || sent_last_is_visible_ != last_is_visible_;
+@@ -459,7 +491,7 @@
+     container_->ScheduleAnimation();
+   }
+ 
+-  if (synchronized_props_changed) {
++  if (synchronized_props_changed || moved) {
+     host_->SynchronizeVisualProperties(pending_visual_properties,
+                                        last_is_visible_);
+     sent_visual_properties_ = pending_visual_properties;
+@@ -505,6 +537,19 @@
+ 
+ void SurfaceEmbedWebPlugin::UpdateLocalSurfaceIdFromChild(
+     const ::viz::LocalSurfaceId& local_surface_id) {
++  // Crest: a page coming back on screen allocates an id of its own as its
++  // frame sink reconnects, under the embedding it last had, before it hears
++  // of the one this plugin started for it. Merged here, that id's child
++  // sequence number would run ahead of the child's, which takes all of this
++  // embedding's id when it first hears of it; the parent would then name
++  // surfaces the child never draws, waiting for each until its deadline, and
++  // no copy of the child's surface would ever be served. So only an id of
++  // this embedding is merged.
++  if (local_surface_id.embed_token() !=
++      parent_local_surface_id_allocator_->GetCurrentLocalSurfaceId()
++          .embed_token()) {
++    return;
++  }
+   if (!parent_local_surface_id_allocator_->UpdateFromChild(local_surface_id)) {
+     return;
+   }

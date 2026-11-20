@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,6 +12,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chromium_engine  # noqa: E402
+import chromium_host  # noqa: E402
 
 # The engine contract's headers in CrestContracts/include that the binding
 # compiles against. chromium_engine.py keys the published engine on them.
@@ -29,7 +31,7 @@ def main():
     host = repo / "CrestEngines/Chromium"
     if source == repo or repo in source.parents:
         parser.error("Use the external, pinned Chromium checkout")
-    inputs = json.loads((host / "host-inputs.json").read_text())
+    inputs = json.loads((host / "host-inputs.json").read_text(encoding="utf-8"))
     states = {}
     for name, hashes in inputs.items():
         path = source / name
@@ -54,8 +56,9 @@ def main():
             (scratch / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / name, scratch / name)
         if pending:
-            subprocess.run(["patch", "--batch", "--fuzz=0", "--forward", "-p1", "-s"],
-                           input="".join(section for _, section in pending), text=True, cwd=scratch, check=True)
+            # Bytes, so Windows does not turn the patch's line endings into CRLF.
+            subprocess.run([chromium_host.patch_tool(), "--batch", "--fuzz=0", "--forward", "-p1", "-s"],
+                           input="".join(section for _, section in pending).encode("utf-8"), cwd=scratch, check=True)
         for name in {name for name, _ in pending}:
             if hashlib.sha256((scratch / name).read_bytes()).hexdigest() != inputs[name]["after"]:
                 parser.error(f"Host patches do not produce their reviewed output: {name}")
@@ -65,9 +68,15 @@ def main():
             return
         # Never alter inputs under an active compiler. The build wrapper uses a
         # dedicated process group, but other Ninja invocations must also be quiet.
-        processes = subprocess.check_output(["ps", "-axo", "comm=,args="], text=True)
-        if any("ninja" in line.split()[0] and "CrestBaseline" in line for line in processes.splitlines() if line.split()):
-            parser.error("Stop the task's Chromium Ninja build before installing the overlay")
+        if os.name == "nt":
+            # Windows lists no arguments without elevation, so any Ninja counts.
+            processes = subprocess.check_output(["tasklist", "/FI", "IMAGENAME eq ninja.exe", "/FO", "CSV", "/NH"], text=True)
+            if "ninja.exe" in processes.lower():
+                parser.error("Stop the Chromium Ninja build before installing the overlay")
+        else:
+            processes = subprocess.check_output(["ps", "-axo", "comm=,args="], text=True)
+            if any("ninja" in line.split()[0] and "CrestBaseline" in line for line in processes.splitlines() if line.split()):
+                parser.error("Stop the task's Chromium Ninja build before installing the overlay")
         for name in {name for name, _ in pending}:
             shutil.copyfile(scratch / name, source / name)
     # An installed file takes the time it was installed, never its source's:

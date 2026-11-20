@@ -1,11 +1,11 @@
 {
   "chrome/browser/ui/views/frame/browser_window_factory.cc": {
     "before": "48515fc4eb091e99e99aa1e945750badd41e2c654aeac551856cda861498cf76",
-    "after": "978968e2119eabf01597718230954080d360bb403eb3474b247aa728df250128"
+    "after": "abc5e90f1b9dbdedea3283303868d4a88a90c71eae07f085c4c7e9e76160dcd8"
   },
   "chrome/browser/ui/startup/startup_browser_creator_impl.cc": {
     "before": "613279b020e0407483ae8940d4b23dcfbd70d80ed80df373f7a857d938d40b40",
-    "after": "b66d4352a47d675cdca48dadb246c5bfb38bcb839e2300ffa99097648834701f"
+    "after": "c0f6e24da0a520733c5d78ccf02462b584f7862bbf2cd70596a60673ae41e379"
   },
   "chrome/browser/app_controller_mac.mm": {
     "before": "02599209e0cd946487a6ae54c924e2d6749794c97ce96144dc2cd001320790c7",
@@ -13,11 +13,11 @@
   },
   "chrome/browser/BUILD.gn": {
     "before": "d933e893d446407e1d7cd9ad925615e0f2f3930ce230b69d61ecd4b148cf41ba",
-    "after": "32b2602405bd3306d62cca2036e1d9b7bcd26c91a13d388205a06b90c10a2da5"
+    "after": "0a7655fce0e6ee695216eca670fc50d04cf918a733bafe57bdfda299853ae8a6"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "095a5c68a1a6ea01e09e679b3e09e4d32fc2017db9eedaef97349a420f558fce",
-    "after": "2a4be5183c1496987e6ab5ef8f507cabb5919484fee7f623e3d4b7abce981fde"
+    "after": "9bb9ea33e2413b0129ef5c9bee5bc86b7107e476f0504570c4b2ce4692b6b8c2"
   },
   "chrome/app/chrome_exe_main_mac.cc": {
     "before": "2003773d304e2a21638fc9946c8111178cf1425f84218a4762df994c5450d43f",
@@ -25,7 +25,7 @@
   },
   "chrome/browser/ui/startup/startup_browser_creator.cc": {
     "before": "4f2f261a31dbed14bed9183ffdc911cb61e17a987fc83a69cab6743f8b6e8b7c",
-    "after": "ad169b346c0928b6957fd0df9f6cc7ef78d7688cbf33beb8b41fde4591963148"
+    "after": "b91c5c7a44a87c55eaf091826b482f384970d0e60a82d2d4760812cbd942cd08"
   },
   "components/os_crypt/common/keychain_password_mac.mm": {
     "before": "dcf606d11c33974f57370e491b408232646f8ea8a55e2b5c513abf0dbc7a2214",
@@ -33,11 +33,11 @@
   },
   "chrome/browser/ui/views/permissions/permission_prompt_factory.cc": {
     "before": "ad517e6807976e1036531015b139071cdf88a2a17d6aa9bbe2c2d7a015d5fac9",
-    "after": "474fb4566a5e474f648cfe1a397b0830f74144b27189a1ffacaae81cddc17386"
+    "after": "725117f3f735c7a92dd4664b34586736949901144055b8dfc7988f4a56b32604"
   },
   "chrome/browser/profiles/profile.cc": {
     "before": "13a9b5ac3be17740b30ad4925c697328c58096a014cf23452fe86e1e4d669ab4",
-    "after": "183d25d5a50a039a2c9fee00e68c3cb5982c81f012aecb7555740fdda874dc73"
+    "after": "13a519339ce7619956819a98d8f891718cb41a8ad9bd39ac9aefe78ce5236abd"
   },
   "chrome/browser/ui/views/extensions/extension_install_dialog_view.cc": {
     "before": "78eeccae5dfa74cace459110d044200fc3de4951d8d8152f16ee8302cf3f4ae0",
@@ -49,19 +49,19 @@
   },
   "chrome/browser/ui/unload_controller.cc": {
     "before": "f2910e6cae70fbb670e891c588f29b65ea3bfa7c4ffb3657b266a35e7a152531",
-    "after": "e8e22e972d53bb5e400b1fa03d66646215cfe261790f64d7a2e4b3e7b0529270"
+    "after": "36238ace8f9731901c5760a9f01235f71b45df3362608721682f3382d8232a8e"
   },
   "chrome/browser/download/download_ui_controller.cc": {
     "before": "010b3d95d95538531d00352eb115788274cda8de19434cb8fdc37385834d75f1",
-    "after": "ac7971b424bc6d4af37b029a83a298e0b162f8614d9517f172f90804c8c56be1"
+    "after": "8e88b0406abc6de39f0975ef69a5f5202eef19024d57939a72b196c7c8f2afa2"
   },
   "chrome/browser/download/chrome_download_manager_delegate.cc": {
     "before": "5b03a8d23dc1a8c3eb7d6ad116431b0f15c406d6c99a960a5a32ec3b2249a7dc",
-    "after": "062affa9036e6796c50c09ad28474eb31307bb95303246780e800d9b5364cd40"
+    "after": "48359a5d058d78595b5eaab7a14600c682afc84e84b8c5a8dfcba72a99f411f7"
   },
   "chrome/browser/download/download_target_determiner.cc": {
     "before": "875a18d06aee8a8af7fcfc75e82b84f132d28d03462d31a1dd79d5fdc7fad0b9",
-    "after": "eec767a0dfcee9b67748ea0876faf03ba788aced86737021d1c38d8c8f98e71e"
+    "after": "9a902e553d20b7e0323ba07fbe0f9770fb66d347821fec6eb4141c76940b7aad"
   },
   "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm": {
     "before": "903582053e2ac7de59513ee8f5c4dc06b7e5359bc4873f11b3efaf6634124000",
@@ -93,11 +93,11 @@
   },
   "chrome/browser/chrome_content_browser_client.cc": {
     "before": "73e49eaa6a0f3dfa0c2d84a08ed173f6e7952f7d0676e37601c8d4eb0895f0fe",
-    "after": "b2a162246496297836a688082dc5fd45814916f91f460e00ce2581318b3bf3ed"
+    "after": "10ca1d09d9675b0dc934ae10de1e1338c8a7df9f4d54cf331950cc0cc236abfb"
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc": {
     "before": "9ebd62de115c3647df5b659fb5f6d78029cd529144380ce82fdc0660b68ee031",
-    "after": "d953d23bd31813a9dd4fabf5f8630a3fa15fa7415b8e9eee8ce2c5b75d4c5a69"
+    "after": "4e0d082b12804a8371d12d01dcd18e15f93fc57e6e5e805cb750bf965a2dd77c"
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.h": {
     "before": "f0a25d18c6bb670fd4d0b59f8f97c789171a1ecbccc20e154cb524118b22e1fa",
@@ -129,7 +129,7 @@
   },
   "third_party/blink/renderer/core/html/html_anchor_element.cc": {
     "before": "ed4f9c74891c09cc97563b869fd3e7fb0fbdd114e32745b461d5d35a61ad0f19",
-    "after": "d4aaaf86a176fa86cd203bdad43587d55d994974221c169691d1126b6d6ac79a"
+    "after": "93c7f6ddeb7de44c1730f3f6df4161d6293af8787f654ab91057bc10d1ea5440"
   },
   "third_party/blink/renderer/core/loader/empty_clients.cc": {
     "before": "8ef6d9657442b81c5e2a2dafd61a61db4d8c6186a8f5cd9dfc023a71dbe66e91",
@@ -173,7 +173,7 @@
   },
   "chrome/browser/ui/extensions/extension_side_panel_utils.cc": {
     "before": "7d1e95b7fa1e547aebfa941e17b3945c78b60f4f9a8a50a4151ed9bbcc283fbd",
-    "after": "7a2fe3460e48a3979816de480c442b83c058e70e6da9ab872d659bc2d4a404ab"
+    "after": "63e022af3b2aaf956fbf5699d58a6066283d93f86c2305a8d10eb3d4eb6eccd2"
   },
   "chrome/browser/devtools/devtools_window.cc": {
     "before": "0ec97f462fab727d46f778d7ce87e0b100488a68f8456f6f1a2c6139a321aa8f",
@@ -185,11 +185,11 @@
   },
   "chrome/browser/extensions/api/tabs/windows_api.cc": {
     "before": "27b946c55ed99fda8f8d82b5dc53608ba05eeb4b808b7234a78d5255c8a30d2e",
-    "after": "b8461183409111e431d352afc19d9f6c41f9fa583b2219d08dde2771cc055b36"
+    "after": "9d8d26683d2b3aa0305f795519a9097e302cfab690920d54da8d44cb5ed52436"
   },
   "chrome/browser/ui/views/profiles/profile_picker_view.cc": {
     "before": "e3b08478057abdd3a95a14c08133aaa8ec1e41b26dd50c3be60b7db2f9db578a",
-    "after": "eaaca6847c1b6941a414d56d8ec2c86f135c13effce7041683fe4e8e1773b3e2"
+    "after": "725fc8fa0b2045421d8836c85ee450e4a6f73b1ce937d17eb8dab42dd123d513"
   },
   "chrome/app/chrome_main_delegate.cc": {
     "before": "96728003d989ce72cfabf6fb13a16170a236aa3602198029dae44d7dd99c42ed",
@@ -209,7 +209,7 @@
   },
   "chrome/browser/ui/toasts/toast_controller.cc": {
     "before": "f1a35694be91dfe51ff23a095aca34951df586e8f04c1783bc430e5e2ddd89d0",
-    "after": "ed2e3fc1085e82f7d4466e0e1b13837d8ef817ebb96f98137e4e7675e74e0335"
+    "after": "da5027a8710141225eec64b9e33d41967cd4e57c5578584efd797ffe2b7be974"
   },
   "chrome/browser/ui/sad_tab_controller.cc": {
     "before": "f27895f484d5d13cd84d624622d2813c3e0d122893fe0863515a367d80ec950d",
@@ -229,7 +229,7 @@
   },
   "chrome/browser/ui/views/translate/translate_bubble_controller.cc": {
     "before": "1d123da65ac6cdca945788fe42e22933e9d7c76f372aee4acadcd5879f08efc1",
-    "after": "8a228195b0ae9c6201faf7b7aa55f53098d7ec0e09f779302cad26f1019d3168"
+    "after": "8ef749b8edbb4a7eb107f9c0becf4ff4be23ccd42195b026dc438e54f4efac10"
   },
   "chrome/browser/ui/views/login_handler_views.cc": {
     "before": "fa12f8d6aee2386ad8d3261a521830b22c56b22140a067f291febe46ee308794",
@@ -301,7 +301,7 @@
   },
   "chrome/browser/resource_coordinator/tab_lifecycle_unit.cc": {
     "before": "1f8e897703624324d0b31538d2f22954e7d9215d642c2f643db1fa8bcee30eb2",
-    "after": "dd96f43257f3b6ecd776c05f62839a30c40cd1d15fe8b7fc27cb8c95c84bdd77"
+    "after": "dc86a71f829e70afe774dccde0907006780cc73dce3b8ac52c40484c7af4bbdd"
   },
   "chrome/browser/ui/cocoa/dock_icon.mm": {
     "before": "b01fc554e8616e1a38f8ba94358decda2227245596edee21c86e42ef3c8fb581",
@@ -309,7 +309,7 @@
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
     "before": "2563f81bc40597e1cc900eaa781db848cfe806f6be35d0afcb02eb7282a835b9",
-    "after": "db69617879b554793514d01f9abaefdaf1b4b6b4c35daf9e1d41468481970c20"
+    "after": "1b9226f0e08d3f411e39a958fc5b74ebc946c84fa8dbd4451dae8dc06009ba48"
   },
   "chrome/browser/media/webrtc/display_media_access_handler.cc": {
     "before": "270e82e3b59e57c7303d1c083d664720f52de222894cc7f1600faa325a5df87e",
@@ -317,7 +317,7 @@
   },
   "chrome/browser/media/webrtc/desktop_capture_devices_util.cc": {
     "before": "02861ed4412788ef37f740a534959ff23ba6c4b44c5519a8306f39f1f778e283",
-    "after": "c4bfd1e3c04dadf43ab44a40a58f2d83b516962943680e6cb1cd824e203a76e5"
+    "after": "652a1dde37a7f993a1044c704779b07f0efb7b260ac2a1723c74f47867abf0b6"
   },
   "chrome/browser/media/webrtc/desktop_capture_access_handler.cc": {
     "before": "992cb9154f2f2d1110d8a36b35d5ee228718baad8acc36cfd20759e238c18f07",
@@ -333,7 +333,7 @@
   },
   "components/performance_manager/freezing/freezer.cc": {
     "before": "5cafb9a71c23ab72d7348c7659d730d2d92b4ccc89cce33c47025dc659890bad",
-    "after": "46d211d1e7d9ac2956cbbaabe345a2ec0423ebd347ea0cef78758710068cc758"
+    "after": "86606f15abb16ce695c131aa370a34054d78288a29bc78d155f9d25db509a426"
   },
   "chrome/browser/chrome_browser_main_mac.mm": {
     "before": "d4d7671a8befd46724bf25d861a53acec76e5de280ce9128dcba514cec3e3490",
@@ -353,11 +353,11 @@
   },
   "chrome/browser/ui/autofill/chrome_autofill_client.cc": {
     "before": "ef3046c2d4bf940110c448579cec65291570a0de209a389e25458c91cd7b6ecc",
-    "after": "a74f1411d989610649542bb38e5d76bf5d9d843ec4e25ea905031ee0217ab1c7"
+    "after": "bb7efaa6c56696690749bc432dfa4cbe6f5e6374d05dad3eb278c1ddbc9b2865"
   },
   "chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc": {
     "before": "586fd074535b8ecb077f8b73ce21802952b2d4903ed4fc74d8023ca6ea03d691",
-    "after": "7c63d15b7e0fa0d4b39ca103537b2b9669e7e221d7537628c58e6d21843fa465"
+    "after": "9195b8925cf62ec9652d19e55016551e06c9e218527ee01e8423c0e9767ebf96"
   },
   "net/data/ssl/chrome_root_store/root_store.textproto": {
     "before": "28386f4821e87d4d7abdfb2b90a28f938f27f1c16ded746133b2913c85027d5a",
@@ -525,7 +525,7 @@
   },
   "chrome/renderer/chrome_content_renderer_client.cc": {
     "before": "5344bebff76601d605ad3b3cc96a8a507742ada486580b945a20a9515c338be6",
-    "after": "c9b5a53898b6df6a1b260702329d8e82af93bca206ca700dca6617e5f76cea5e"
+    "after": "26a3213ac0317353ae484cbfc67667cf77ed727dbf6eebe46a6ae14db2525d21"
   },
   "content/browser/renderer_host/browser_compositor_view_mac.h": {
     "before": "0fb0c587ec1ea931b609b47c0206706700c37f6cb0ecf69245a97d812547c3dd",
@@ -534,5 +534,29 @@
   "content/browser/renderer_host/browser_compositor_view_mac.mm": {
     "before": "1579b8073ab9c8682f11edd12227324048bbf7c5ae6b3d6b924cb285d0eca665",
     "after": "710968c986105f73a0a01c95331c8049d007e1c9cffda35a21667118c3ecbdfd"
+  },
+  "chrome/browser/chrome_content_browser_client_receiver_bindings.cc": {
+    "before": "266bb123c46f77316912383037c637b5d76bfc64cc3acaa2ec21c68dbd4feab1",
+    "after": "c0dc66aece81ab81ce054e2ab656a670809a56c6e0ea9b13d8ca4cde3393592a"
+  },
+  "content/public/browser/surface_embed_connector.h": {
+    "before": "cdfed6ba6e4631282987ac11bd49efc41e4f7744f78bda038697afab581057ec",
+    "after": "1ff52929a81a4d2fd69e9066cec2fac66ebbbd253f0222e1c3a37ba376f90745"
+  },
+  "content/browser/surface_embed/surface_embed_connector_impl.h": {
+    "before": "bb7fa9910817e9a3e3043780b5d9b8af3296dbbf1a7c59305520bab271b0683e",
+    "after": "8c30f066993f5daf7d9f2f0cf372bc68a0f6e3b3ce970eae6e781decf790e240"
+  },
+  "content/browser/surface_embed/surface_embed_connector_impl.cc": {
+    "before": "48c140f79ef83aad02844397804fa08c352f53dc4b25dee03e42cb631e56b431",
+    "after": "1e7f1d12dd794fb5cea359a3dedb9c5a9db4999b9804a435c321f0ea907abe28"
+  },
+  "components/surface_embed/browser/surface_embed_host.cc": {
+    "before": "e6bec8281ee912ba6d1db35e38cba892454d508bc96d375cf4c2692ec937b190",
+    "after": "6b159b028683da6f6c160811b63fb31c97d892786843f2c9fe4ac71fb6e5c7db"
+  },
+  "components/surface_embed/renderer/surface_embed_web_plugin.cc": {
+    "before": "4dc9a4d8926f77e010e5cc40751bf848b6b19fc80f3ae4411996d3992fc481dc",
+    "after": "79653dc58900fe4719cb3888814eab58a1e557248dd69021efd9b2ac50f02cba"
   }
 }

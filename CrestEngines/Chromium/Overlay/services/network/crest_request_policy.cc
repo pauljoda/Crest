@@ -19,8 +19,9 @@ namespace {
 using Annotation = net::internal::StringLiteralToHash;
 
 // Requests a page or the person directs, wherever they go: navigations and
-// their preloads, workers, downloads, developer tools, and the network's own
-// work for a page's connection, such as its certificate, DNS and proxy.
+// their preloads, workers, downloads, developer tools, the search engine's
+// suggestions for what they type, and the network's own work for a page's
+// connection, such as its certificate, DNS and proxy.
 constexpr Annotation kDirected[] = {
     "background_fetch_context",
     "bidirectional_stream",
@@ -30,6 +31,7 @@ constexpr Annotation kDirected[] = {
     "certificate_verifier_2qwac_loader",
     "certificate_verifier_url_loader",
     "certificate_verifier_url_request",
+    "crest_search_suggestions",
     "dbsc_registration",
     "devtools_cdp_network_resource",
     "devtools_network_resource",

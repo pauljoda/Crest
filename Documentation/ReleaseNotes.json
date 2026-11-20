@@ -5833,6 +5833,10 @@
     "core-on-windows": {
       "category": "internal",
       "message": "The core builds, tests and publishes for Windows, with Windows shortcut defaults, the system SQLite, a catch-up query for a window that starts late, and TypeScript contracts for the desktop interface"
+    },
+    "chromium-windows-desktop-host": {
+      "category": "internal",
+      "message": "Crest's Chromium builds for Windows and hosts Crest's own interface, which embeds each page's surface in the window"
     }
   }
 }

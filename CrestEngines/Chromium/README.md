@@ -266,7 +266,9 @@ installed, so the Dock keeps the icon the person picked.
 Site state reaches Crest through the location bar Chromium already calls.
 `CrestLocationBar::UpdateContentSettingsIcons` forwards to
 `crest::UpdateSiteIndicators`, which relays a pop-up the engine's blocker held
-back to Crest's Site Controls. Crest's per-Space permission record stays the
+back to Crest's Site Controls. On Windows every page a Crest window shows
+lives in its Browser, and the page Crest shows need not be the tab Chromium
+calls active, so the location bar has each page check its own state. Crest's per-Space permission record stays the
 source of truth: each committed page applies its automatic-pop-up decision to
 the engine, and allowing a blocked site opens the pop-ups the blocker kept.
 Chromium's confirm info bars, such as tab sharing and `chrome.debugger`, have no Views
