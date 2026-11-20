@@ -5846,6 +5846,10 @@
       "category": "fixed",
       "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
     },
+    "webkit-page-closed-mid-load-crash": {
+      "category": "fixed",
+      "message": "Fixed a crash when a page using the WebKit engine closed while it was loading another site."
+    },
     "core-close-waits-for-filter-conversions": {
       "category": "internal",
       "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."

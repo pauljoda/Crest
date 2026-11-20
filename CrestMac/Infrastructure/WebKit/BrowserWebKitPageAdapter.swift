@@ -213,6 +213,8 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.menuHost = nil
+        // WebKit's page closes too, once the core has kept its history.
+        webKit.retire()
         observations.removeAll()
         page.removeGeolocationRequests()
         defer { geolocationCoordinator = nil }
