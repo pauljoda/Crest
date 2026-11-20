@@ -166,11 +166,11 @@ internal sealed class FilterLibrary {
     private string? engineKey;
     private string? buildingEngineKey;
     private bool engineRebuildWanted;
-    /// The latest worker converting the rules and the latest compiling the
-    /// engine filter; whether the library stopped, after which none starts;
-    /// and whether it closed, after which nothing writes in the folder.
-    private Task rulesWorker = Task.CompletedTask;
-    private Task engineWorker = Task.CompletedTask;
+    /// The workers converting the rules or compiling the engine filter that
+    /// may still run, including one a newer worker replaced while it
+    /// announced its rules; whether the library stopped, after which none
+    /// starts; and whether it closed, after which nothing writes in the folder.
+    private readonly List<Task> workers = [];
     private bool stopped;
     private bool closed;
 
@@ -504,7 +504,7 @@ internal sealed class FilterLibrary {
                 return;
             } else {
                 buildingKey = key;
-                rulesWorker = Task.Run(() => Build(key, inputs, chosen.CustomFilters));
+                StartWorker(() => Build(key, inputs, chosen.CustomFilters));
             }
         }
         if (restored is not null) announce(new ContentRuleListsChanged(restored));
@@ -749,7 +749,7 @@ internal sealed class FilterLibrary {
                 return;
             }
             buildingEngineKey = key;
-            engineWorker = Task.Run(() => BuildEngine(key, inputs, chosen.CustomFilters));
+            StartWorker(() => BuildEngine(key, inputs, chosen.CustomFilters));
         }
     }
 
@@ -933,19 +933,27 @@ internal sealed class FilterLibrary {
 
     #region Actions - Lifetime
 
-    /// Starts no worker from now on, waits for those still converting or
-    /// compiling so they keep what they made, and then closes: a download
-    /// reported or a list changed afterwards writes nothing, so nothing writes
-    /// in the folder once this returns. A worker that failed stays unreported,
-    /// as it was while the library ran.
+    /// Starts no worker from now on, waits for every one still converting,
+    /// compiling or announcing so they keep and announce what they made, and
+    /// then closes: a download reported or a list changed afterwards writes
+    /// nothing, so once this returns no worker runs and nothing writes in the
+    /// folder. A worker that failed stays unreported, as it was while the
+    /// library ran.
     public void Stop() {
-        Task rules, filter;
+        Task[] running;
         lock (gate) {
             stopped = true;
-            (rules, filter) = (rulesWorker, engineWorker);
+            running = [.. workers];
         }
-        Task.WhenAll(rules, filter).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
+        Task.WhenAll(running).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
         lock (gate) closed = true;
+    }
+
+    /// Runs `work` on a worker that `Stop` waits for, forgetting those that
+    /// finished. The caller holds the lock.
+    private void StartWorker(Action work) {
+        workers.RemoveAll(worker => worker.IsCompleted);
+        workers.Add(Task.Run(work));
     }
 
     #endregion

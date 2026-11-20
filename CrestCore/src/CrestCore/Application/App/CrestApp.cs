@@ -229,9 +229,9 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
 
     /// Stages and saves any accepted revision still pending and closes the
     /// session file, then waits for the filter lists' conversions under way,
-    /// so nothing writes in the storage directory once this returns. The
-    /// stored session accepts no edits afterwards, and no engine binding hears
-    /// from the core again.
+    /// so none is left running and nothing writes in the storage directory
+    /// once this returns. The stored session accepts no edits afterwards, and
+    /// no engine binding hears from the core again.
     public void Dispose() {
         lock (gate) engines.Clear();
         storedSync?.Stop();
