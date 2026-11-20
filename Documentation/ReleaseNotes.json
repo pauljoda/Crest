@@ -5825,6 +5825,10 @@
     "app-icon-paper-tile": {
       "category": "improved",
       "message": "The default app icon sits on a warm paper tile in light mode, so its butter banner stands out instead of fading into a near-white background."
+    },
+    "content-filter-windows": {
+      "category": "internal",
+      "message": "Build the content filter's Windows libraries on Windows, as its own archive under the lock's key beside the Apple one"
     }
   }
 }

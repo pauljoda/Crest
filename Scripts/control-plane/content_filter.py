@@ -10,12 +10,19 @@ hashes everything compiled into it: the crate and its lock file, the pinned
 toolchain and this recipe. `build --check` rebuilds from source and compares
 each library with the lock, which is how CI shows the published archive holds
 what the sources compile to.
+
+Each platform family (Apple, Windows, Linux) has an archive of its own under
+the same key, built on that family's own host: a Mac cannot link MSVC
+libraries and Windows cannot build Apple ones. `build` builds the family of
+the machine it runs on and records it beside the families already locked for
+the same key; every family is one more asset of the key's one release.
 """
 import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
@@ -34,15 +41,20 @@ INPUTS = (
     f"{CRATE}/include",
     "Scripts/control-plane/content_filter.py",
 )
-LIBRARY = "libcrest_content_filter.a"
 HEADER = "include/crest_content_filter.h"
-# The core's runtime identifiers, each with the Rust target that builds it and
-# the variable that sets its minimum OS, which matches project.yml.
+# The core's runtime identifiers, each with the Rust target that builds it, the
+# variable that sets its minimum OS where the platform has one (matching
+# project.yml), and the platform family whose archive carries it.
 TARGETS = {
-    "osx-arm64": ("aarch64-apple-darwin", "MACOSX_DEPLOYMENT_TARGET"),
-    "ios-arm64": ("aarch64-apple-ios", "IPHONEOS_DEPLOYMENT_TARGET"),
-    "iossimulator-arm64": ("aarch64-apple-ios-sim", "IPHONEOS_DEPLOYMENT_TARGET"),
+    "osx-arm64": ("aarch64-apple-darwin", "MACOSX_DEPLOYMENT_TARGET", "apple"),
+    "ios-arm64": ("aarch64-apple-ios", "IPHONEOS_DEPLOYMENT_TARGET", "apple"),
+    "iossimulator-arm64": ("aarch64-apple-ios-sim", "IPHONEOS_DEPLOYMENT_TARGET", "apple"),
+    "win-x64": ("x86_64-pc-windows-msvc", None, "windows"),
+    "win-arm64": ("aarch64-pc-windows-msvc", None, "windows"),
+    "linux-x64": ("x86_64-unknown-linux-gnu", None, "linux"),
 }
+# The operating system each family's archive is built on.
+FAMILY_HOSTS = {"apple": "Darwin", "windows": "Windows", "linux": "Linux"}
 DEPLOYMENT_TARGET = "26.1"
 # Every member gets the same timestamp and mode, so an archive's bytes depend
 # only on what it holds.
@@ -67,16 +79,43 @@ def release_tag(key: str) -> str:
     return f"content-filter-{key[:16]}"
 
 
-def asset_name(key: str) -> str:
-    return f"Crest-Content-Filter-{key[:16]}.zip"
+def asset_name(key: str, family: str) -> str:
+    return f"Crest-Content-Filter-{key[:16]}-{family}.zip"
+
+
+def host_family() -> str:
+    """The family this machine builds."""
+    for family, system in FAMILY_HOSTS.items():
+        if platform.system() == system:
+            return family
+    raise SystemExit(f"No content filter family builds on {platform.system()}")
+
+
+def runtimes(family: str) -> list:
+    return [runtime for runtime, (_, _, owner) in TARGETS.items() if owner == family]
+
+
+def library_name(runtime: str) -> str:
+    """The static library Rust writes for the runtime's target."""
+    return "crest_content_filter.lib" if TARGETS[runtime][2] == "windows" else "libcrest_content_filter.a"
 
 
 def member(runtime: str) -> str:
-    return f"{runtime}/{LIBRARY}"
+    return f"{runtime}/{library_name(runtime)}"
 
 
 def read_lock(repo: Path = REPOSITORY) -> dict:
-    return json.loads((repo / LOCK).read_text())
+    """The lock, with every family's archive under `archives`. A lock written
+    before families existed describes the Apple archive alone."""
+    lock = json.loads((repo / LOCK).read_text())
+    if "archives" not in lock:
+        lock = {"key": lock["key"], "archives": {"apple": {name: lock[name] for name in ("archive", "sha256", "files")}}}
+    return lock
+
+
+def family_archive(lock: dict, family: str):
+    """The family's locked archive, or None when it is not built for the key."""
+    return lock["archives"].get(family)
 
 
 def sha256(path: Path) -> str:
@@ -101,8 +140,9 @@ def cargo_environment(repo: Path = REPOSITORY) -> dict:
     environment["PATH"] = f"{cargo_home / 'bin'}{os.pathsep}{environment.get('PATH', '')}"
     environment["RUSTFLAGS"] = (f"--remap-path-prefix={cargo_home}=/cargo "
                                 f"--remap-path-prefix={(repo / CRATE).resolve()}=/crest-content-filter")
-    for _, variable in TARGETS.values():
-        environment[variable] = DEPLOYMENT_TARGET
+    for _, variable, _ in TARGETS.values():
+        if variable:
+            environment[variable] = DEPLOYMENT_TARGET
     return environment
 
 
@@ -132,15 +172,15 @@ def compile_library(target, repo: Path = REPOSITORY) -> Path:
     return crate / "target" / (target or "") / "release"
 
 
-def build(repo: Path, output: Path) -> dict:
-    """Builds every Apple library and packages them with the header. Answers
-    the lock that describes the archive."""
+def build(repo: Path, output: Path, family: str) -> dict:
+    """Builds every library of `family` and packages them with the header.
+    Answers the lock entry that describes the archive."""
     key = artifact_key(repo)
     files = {HEADER: repo / CRATE / HEADER}
-    for runtime, (target, _) in TARGETS.items():
-        files[member(runtime)] = compile_library(target, repo) / LIBRARY
+    for runtime in runtimes(family):
+        files[member(runtime)] = compile_library(TARGETS[runtime][0], repo) / library_name(runtime)
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / asset_name(key)
+    archive = output / asset_name(key, family)
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
         for name in sorted(files):
             info = zipfile.ZipInfo(name, MEMBER_DATE)
@@ -148,15 +188,25 @@ def build(repo: Path, output: Path) -> dict:
             info.compress_type = zipfile.ZIP_DEFLATED
             bundle.writestr(info, files[name].read_bytes())
     return {
-        "key": key,
         "archive": archive.name,
         "sha256": sha256(archive),
         "files": {name: sha256(path) for name, path in sorted(files.items())},
     }
 
 
+def record(entry: dict, family: str, key: str, repo: Path = REPOSITORY) -> dict:
+    """The lock with `family` built for `key`. Other families built for the
+    same key stay; those locked for an older key are dropped, since their
+    libraries no longer match the sources."""
+    lock = read_lock(repo)
+    archives = lock["archives"] if lock["key"] == key else {}
+    return {"key": key, "archives": {**archives, family: entry}}
+
+
 def write_lock(lock: dict, repo: Path = REPOSITORY):
-    (repo / LOCK).write_text(json.dumps(lock, indent=2) + "\n")
+    archives = dict(sorted(lock["archives"].items()))
+    (repo / LOCK).write_text(json.dumps({"key": lock["key"], "archives": archives}, indent=2) + "\n",
+                             encoding="utf-8", newline="\n")
 
 
 NOTICES = "ThirdParty/ContentFilter-LICENSES.txt"
@@ -210,7 +260,7 @@ def notices(repo: Path = REPOSITORY) -> str:
 
 
 def published(repository: str, lock: dict) -> bool:
-    """Whether the archive the lock names is released and complete."""
+    """Whether every archive the lock names is released and complete."""
     result = subprocess.run(["gh", "api", f"repos/{repository}/releases/tags/{release_tag(lock['key'])}"],
                             capture_output=True, text=True)
     if result.returncode:
@@ -219,8 +269,8 @@ def published(repository: str, lock: dict) -> bool:
         raise SystemExit(f"Cannot inspect the content filter release: {result.stderr.strip()}")
     release = json.loads(result.stdout)
     names = {item["name"] for item in release.get("assets", []) if item.get("state") == "uploaded"}
-    return not release.get("draft") and lock["key"] in (release.get("body") or "") and {
-        lock["archive"], f"{lock['archive']}.sha256"} <= names
+    expected = {name for entry in lock["archives"].values() for name in (entry["archive"], f"{entry['archive']}.sha256")}
+    return not release.get("draft") and lock["key"] in (release.get("body") or "") and expected <= names
 
 
 def main():
@@ -228,8 +278,10 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for field in ("key", "tag", "asset"):
         commands.add_parser(field)
-    build_command = commands.add_parser("build", help="Build every library from source and update the lock")
+    build_command = commands.add_parser("build", help="Build one family's libraries from source and update the lock")
     build_command.add_argument("--output", type=Path, help="Where the archive goes (default: the crate's target/)")
+    build_command.add_argument("--family", choices=sorted(FAMILY_HOSTS),
+                               help="The family to build (default: this machine's)")
     build_command.add_argument("--check", action="store_true",
                                help="Compare the rebuilt libraries with the lock instead of rewriting it")
     commands.add_parser("notices", help=f"Rewrite {NOTICES} from the crates Cargo.lock resolves")
@@ -252,24 +304,29 @@ def main():
 
     if args.command in ("key", "tag", "asset"):
         key = artifact_key()
-        print({"key": key, "tag": release_tag(key), "asset": asset_name(key)}[args.command])
+        print({"key": key, "tag": release_tag(key), "asset": asset_name(key, host_family())}[args.command])
         return
+    family = args.family or host_family()
     output = args.output or REPOSITORY / CRATE / "target/artifact"
     if not args.check:
-        lock = build(REPOSITORY, output)
-        write_lock(lock)
-        print(f"Built {lock['archive']} (sha256 {lock['sha256']}) and updated {LOCK}.")
+        key = artifact_key()
+        entry = build(REPOSITORY, output, family)
+        write_lock(record(entry, family, key))
+        print(f"Built {entry['archive']} (sha256 {entry['sha256']}) and updated {LOCK}.")
         return
     recorded = read_lock()
     if recorded["key"] != artifact_key():
         raise SystemExit(f"{LOCK} names key {recorded['key'][:16]}, but the sources hash to "
                          f"{artifact_key()[:16]}: run `content_filter.py build` and commit the lock")
+    locked = family_archive(recorded, family)
+    if locked is None:
+        raise SystemExit(f"{LOCK} has no {family} archive for this key: run `content_filter.py build` on {FAMILY_HOSTS[family]}")
     with tempfile.TemporaryDirectory(prefix="crest-content-filter-") as temporary:
-        rebuilt = build(REPOSITORY, Path(temporary))
-    differing = sorted(name for name, digest in rebuilt["files"].items() if recorded["files"].get(name) != digest)
-    if differing or set(rebuilt["files"]) != set(recorded["files"]):
+        rebuilt = build(REPOSITORY, Path(temporary), family)
+    differing = sorted(name for name, digest in rebuilt["files"].items() if locked["files"].get(name) != digest)
+    if differing or set(rebuilt["files"]) != set(locked["files"]):
         sys.exit("The sources do not compile to the locked libraries: " + ", ".join(differing or ["file list"]))
-    print(f"Rebuilt every library of {recorded['archive']} from source; each matches the lock.")
+    print(f"Rebuilt every library of {locked['archive']} from source; each matches the lock.")
 
 
 if __name__ == "__main__":

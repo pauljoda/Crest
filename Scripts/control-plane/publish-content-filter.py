@@ -26,6 +26,8 @@ def run(*command, **kwargs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, help="The built archive (default: the crate's target/artifact)")
+    parser.add_argument("--family", choices=sorted(content_filter.FAMILY_HOSTS),
+                        help="The family to publish (default: this machine's)")
     parser.add_argument("--repository", default="pauljoda/Crest")
     parser.add_argument("--dry-run", action="store_true", help="Verify without uploading")
     args = parser.parse_args()
@@ -36,43 +38,50 @@ def main():
     if lock["key"] != key:
         raise SystemExit(f"{content_filter.LOCK} is for key {lock['key'][:16]}, but the sources hash to {key[:16]}: "
                          "run content_filter.py build and commit the lock")
-    tag, asset = content_filter.release_tag(key), content_filter.asset_name(key)
+    family = args.family or content_filter.host_family()
+    entry = content_filter.family_archive(lock, family)
+    if entry is None:
+        raise SystemExit(f"{content_filter.LOCK} has no {family} archive; run content_filter.py build first")
+    tag, asset = content_filter.release_tag(key), content_filter.asset_name(key, family)
     archive = args.archive or repo / content_filter.CRATE / "target/artifact" / asset
     if archive.name != asset or not archive.is_file():
         raise SystemExit(f"No {asset} to publish; run content_filter.py build first")
-    if content_filter.sha256(archive) != lock["sha256"]:
+    if content_filter.sha256(archive) != entry["sha256"]:
         raise SystemExit(f"{asset} does not match the digest in {content_filter.LOCK}; build it again")
 
     existing = subprocess.run(["gh", "release", "view", tag, "--repo", args.repository, "--json", "assets,isDraft,body"],
                               capture_output=True, text=True)
     release = json.loads(existing.stdout) if existing.returncode == 0 else None
-    if release and not release["isDraft"]:
+    if release:
         names = {item["name"] for item in release["assets"]}
-        if {asset, f"{asset}.sha256"} <= names and key in release["body"]:
-            print(f"{tag} is already published.")
+        if key not in release["body"]:
+            raise SystemExit("The content filter release has a different key; refusing to change it")
+        if {asset, f"{asset}.sha256"} <= names:
+            print(f"{asset} is already published in {tag}.")
             return
-        raise SystemExit("The published content filter release is incomplete or has a different key; "
-                         "refusing to overwrite it")
-    print(f"Verified {asset} ({archive.stat().st_size // (1 << 20)} MiB, sha256 {lock['sha256']}).")
+        # A published release gains another family's archive beside the ones
+        # builds already download; nothing it holds is ever replaced.
+        if asset in names or f"{asset}.sha256" in names:
+            raise SystemExit(f"{tag} holds part of {asset}; refusing to overwrite it")
+    print(f"Verified {asset} ({archive.stat().st_size // (1 << 20)} MiB, sha256 {entry['sha256']}).")
     if args.dry_run:
         return
 
     commit = run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()
     with tempfile.TemporaryDirectory(prefix="crest-content-filter-") as temporary:
         checksum = Path(temporary) / f"{asset}.sha256"
-        checksum.write_text(f"{lock['sha256']}  {asset}\n")
+        checksum.write_text(f"{entry['sha256']}  {asset}\n", encoding="utf-8", newline="\n")
         notes = ("Crest's content filter, Brave's adblock engine behind Crest's C interface, compiled for "
-                 "macOS, iOS and the iOS Simulator for the native core to link.\n\n"
+                 "each platform family's runtimes for the native core to link; each family is one archive.\n\n"
                  f"Content filter key `{key}`, computed by `Scripts/control-plane/content_filter.py` over the "
                  f"crate and its recipe at commit `{commit}`.")
-        if existing.returncode != 0:
+        if release is None:
             run("gh", "release", "create", tag, "--repo", args.repository, "--draft", "--prerelease", "--latest=false",
                 "--title", f"Crest content filter {key[:16]}", "--notes", notes)
-        # Only an unpublished draft can be resumed or replaced. The release
-        # becomes visible to builds after every asset has uploaded.
-        run("gh", "release", "upload", tag, archive, checksum, "--repo", args.repository, "--clobber")
-        run("gh", "release", "edit", tag, "--repo", args.repository, "--draft=false", "--latest=false")
-    print(f"Published {tag}.")
+        run("gh", "release", "upload", tag, archive, checksum, "--repo", args.repository)
+        if release is None or release["isDraft"]:
+            run("gh", "release", "edit", tag, "--repo", args.repository, "--draft=false", "--latest=false")
+    print(f"Published {asset} in {tag}.")
 
 
 if __name__ == "__main__":

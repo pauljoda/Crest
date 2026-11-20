@@ -39,8 +39,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Compare every library with the lock
-        run: python3 Scripts/control-plane/content_filter.py build --check
+      - name: Compare every Apple library with the lock
+        run: python3 Scripts/control-plane/content_filter.py build --check --family apple
 
       - name: Test the content filter
         working-directory: CrestCore/native/ContentFilter
@@ -55,3 +55,18 @@ jobs:
           else
             python3 Scripts/control-plane/content_filter.py published --require
           fi
+
+  # The Windows libraries are built on Windows, as the Apple ones are on a Mac.
+  rebuild-windows:
+    name: Rebuild the Windows content filter from source
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare every Windows library with the lock
+        run: py -3 Scripts/control-plane/content_filter.py build --check --family windows
