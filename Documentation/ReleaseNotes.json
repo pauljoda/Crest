@@ -5945,6 +5945,10 @@
     "untitled-names-everywhere": {
       "category": "fixed",
       "message": "A folder or Space without a name is called Untitled Folder or Untitled Space wherever it comes from, including storage and sync."
+    },
+    "browser-import-http-passwords": {
+      "category": "fixed",
+      "message": "Importing another browser's passwords brings those for sites without HTTPS too, and setup says Crest won't fill them in, instead of leaving them out without a word."
     }
   }
 }

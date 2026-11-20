@@ -10360,6 +10360,9 @@
     "passwords credentials autofill iCloud Keychain import export" : {
 
     },
+    "Passwords for sites without HTTPS come in, but Crest won’t fill them in." : {
+
+    },
     "Passwords in %@" : {
       "localizations" : {
         "ar" : {
