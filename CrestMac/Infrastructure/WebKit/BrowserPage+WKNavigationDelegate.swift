@@ -42,6 +42,7 @@ extension BrowserPage: WKNavigationDelegate {
         mediaSessionCoordinator?.didCommitNavigation()
         pictureInPicture?.navigationDidCommit()
         committedNavigationCount += 1
+        updateUnderPageBackground()
         // A new document drops the supplements that described the old one; a
         // return to history keeps the entries the person may go forward to.
         navigationHistory.documentDidCommit(in: webView.backForwardList)

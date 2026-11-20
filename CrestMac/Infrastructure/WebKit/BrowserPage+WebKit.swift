@@ -36,8 +36,14 @@ extension BrowserPage {
     }
 
     func updateUnderPageBackground() {
-        webKitView?.underPageBackgroundColor =
-            completedNavigationCount == 0 ? .clear : nil
+        guard let webKitView else { return }
+        if committedNavigationCount == 0 && completedNavigationCount == 0 {
+            webKitView.underPageBackgroundColor = .clear
+        } else if let themeColor, themeColor.alphaComponent > 0 {
+            webKitView.underPageBackgroundColor = themeColor
+        } else {
+            webKitView.underPageBackgroundColor = .windowBackgroundColor
+        }
     }
 
     /// Tells the core the page's current navigation failed with `error`,

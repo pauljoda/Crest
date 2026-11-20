@@ -10,5 +10,6 @@ struct BrowserPageThemeColorChanged: BrowserPageEngineEvent {
 
     func apply(to page: BrowserPage) {
         page.themeColor = color
+        page.updateUnderPageBackground()
     }
 }

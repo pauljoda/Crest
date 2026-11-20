@@ -5845,6 +5845,10 @@
     "settings-selected-icons": {
       "category": "fixed",
       "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
+    },
+    "macos-dark-page-opening-flash": {
+      "category": "fixed",
+      "message": "Dark pages on macOS open without a white flash from the browser background."
     }
   }
 }
