@@ -115,13 +115,13 @@ struct BrowserMediaSessionSnapshot: Equatable, Identifiable, Sendable {
     let availableActions: Set<MediaSessionAction>
     let orderingOrdinal: UInt64
 
-    var ownerDisplayTitle: String { ownerTitle ?? "Media tab" }
+    var ownerDisplayTitle: String { ownerTitle ?? String(localized: "Media tab") }
 
-    var mediaDisplayTitle: String { title ?? "Media from this tab" }
+    var mediaDisplayTitle: String { title ?? String(localized: "Media from this tab") }
 
     /// System Now Playing still needs a single primary title. Prefer the
     /// standards-provided media title, with the stable tab title as its fallback.
-    var displayTitle: String { title ?? ownerTitle ?? "Untitled media" }
+    var displayTitle: String { title ?? ownerTitle ?? String(localized: "Untitled media") }
 
     var secondaryMetadata: String? {
         [artist, album]

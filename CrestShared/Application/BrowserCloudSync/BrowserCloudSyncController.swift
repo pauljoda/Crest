@@ -219,7 +219,7 @@ final class BrowserCloudSyncController {
     }
 
     private func failed(_ step: CloudSyncStep, _ error: any Error, observed: Int?) -> [CloudSyncStep] {
-        let message = remoteService?.message(for: error) ?? String(describing: error)
+        let message = remoteService?.message(for: error) ?? error.localizedDescription
         return advance(
             CloudStepFailed(attempt: step.attempt, step: step.kind, message: message, observedCloudRecords: observed))
     }

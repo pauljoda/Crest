@@ -33,7 +33,8 @@ final class BrowserApplicationLaunch<Value> {
             recoveryError = nil
             retry()
         } catch {
-            recoveryError = "The checkpoint could not be restored. Your original files have been preserved."
+            recoveryError = String(
+                localized: "The checkpoint could not be restored. Your original files have been preserved.")
         }
     }
 }

@@ -51,30 +51,30 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
         if let syncError = error as? BrowserCloudSyncError {
             switch syncError {
             case .remoteChangeNotApplied:
-                return "Crest couldn’t apply the latest changes from iCloud."
+                return String(localized: "Crest couldn’t apply the latest changes from iCloud.")
             case .accountCheckUnanswered:
-                return "iCloud didn’t respond in time. Crest will retry automatically."
+                return String(localized: "iCloud didn’t respond in time. Crest will retry automatically.")
             }
         }
         if let rejection = error as? Rejection {
             return rejection.explanation
         }
         guard let cloudError = error as? CKError else {
-            return String(describing: error)
+            return error.localizedDescription
         }
         switch cloudError.code {
         case .notAuthenticated:
-            return "Sign in to iCloud to sync Crest."
+            return String(localized: "Sign in to iCloud to sync Crest.")
         case .networkUnavailable, .networkFailure:
-            return "Crest can’t reach iCloud right now."
+            return String(localized: "Crest can’t reach iCloud right now.")
         case .serviceUnavailable:
-            return "iCloud is temporarily unavailable. Crest will retry automatically."
+            return String(localized: "iCloud is temporarily unavailable. Crest will retry automatically.")
         case .requestRateLimited:
-            return "iCloud is temporarily busy. Crest will retry automatically."
+            return String(localized: "iCloud is temporarily busy. Crest will retry automatically.")
         case .quotaExceeded:
-            return "Your iCloud storage is full."
+            return String(localized: "Your iCloud storage is full.")
         case .permissionFailure:
-            return "This build is not permitted to use Crest’s iCloud container."
+            return String(localized: "This build is not permitted to use Crest’s iCloud container.")
         default:
             return cloudError.localizedDescription
         }
