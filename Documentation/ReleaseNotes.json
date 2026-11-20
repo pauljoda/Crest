@@ -5889,6 +5889,10 @@
     "windows-site-controls-content-match-mac": {
       "category": "internal",
       "message": "Site Controls on Windows lists its sections in the Mac's order, with extensions after the quick actions, permission choices as blue menus, and the Mac's type sizes"
+    },
+    "windows-menus-match-mac": {
+      "category": "internal",
+      "message": "Windows' tab menus offer the Mac's Pull New Icon, Clear Icon and Change Icon, tabs can wear an emoji, and the sidebar's empty area offers Edit Space, with a new Space opening for editing"
     }
   }
 }

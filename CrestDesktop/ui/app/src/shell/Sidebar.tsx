@@ -1,4 +1,5 @@
 import {
+  ChooseTabIcon,
   CollapseFolder,
   ExpandSavedTabs,
   type FolderState,
@@ -15,6 +16,7 @@ import {
   ShowTab,
   type SidebarList,
   type SpaceState,
+  TabIconMode,
   TabPlacement,
   type TabState,
 } from "@crest/contracts";
@@ -185,6 +187,7 @@ export function Sidebar({
   const [renaming, setRenaming] = useState<Renaming>(null);
   // A folder's icon or colour being chosen, in a popover beside its row.
   const [folderLook, setFolderLook] = useState<{ folderId: string; kind: "icon" | "color"; anchor: DOMRect } | null>(null);
+  const [tabLook, setTabLook] = useState<{ tabId: string; anchor: DOMRect } | null>(null);
   useEffect(() => setRenaming(null), [space.id]);
 
   // Site Controls act for the shown page while it has an address, and go
@@ -237,6 +240,11 @@ export function Sidebar({
     chooseLook: (folder, kind) => {
       const row = document.querySelector<HTMLElement>(`[data-folder="${folder.id}"]`);
       if (row) setFolderLook({ folderId: folder.id, kind, anchor: row.getBoundingClientRect() });
+    },
+    chooseTabIcon: (tab) => {
+      const page = aside.current?.querySelector(".space-page:not([aria-hidden])") ?? aside.current;
+      const row = page?.querySelector<HTMLElement>(`[data-row="${tab.id}"], [data-before-tab="${tab.id}"], [data-unit~="${tabItem(tab.id)}"]`);
+      if (row) setTabLook({ tabId: tab.id, anchor: row.getBoundingClientRect() });
     },
     addToSelection: (item) => {
       const { units, current } = selectionOverRows();
@@ -802,6 +810,28 @@ export function Sidebar({
           );
         })()}
       </AnimatePresence>
+      <AnimatePresence>
+        {tabLook && (() => {
+          const tab = tabs.get(tabLook.tabId);
+          if (!tab) return null;
+          const close = () => setTabLook(null);
+          const choose = (mode: TabIconMode, emoji: string | null) => {
+            void session.core.send(ChooseTabIcon({
+              workspaceId: session.workspaceId, spaceId: space.id, tabId: tab.id, mode, emoji, accent: null,
+            })).catch(() => {});
+            close();
+          };
+          // The Mac's BrowserIconCustomizationPresentation for a tab.
+          return (
+            <Popover key="tab-icon" anchor={tabLook.anchor} label="Tab Icon" onClose={close}>
+              <EmojiPicker title="Tab Icon" current={emojiOf(tab.symbol)}
+                resetTitle={tab.iconMode.followsPage ? null : "Use Website Icon"}
+                onChoose={(emoji) => choose(TabIconMode.emoji, emoji)}
+                onReset={() => choose(TabIconMode.automatic, null)} />
+            </Popover>
+          );
+        })()}
+      </AnimatePresence>
       {lift && <LiftPreview session={session} lift={lift} tab={lift.item.kind === "tab" ? tabs.get(lift.item.id) : undefined}
         folder={lift.item.kind === "folder" ? folders.get(lift.item.id) : undefined}
         pageId={lift.item.kind === "tab" ? pagesByTab.get(lift.item.id) ?? null : null} />}
@@ -1050,6 +1080,11 @@ function useTabIconSource(session: Session, tab: TabState, pageId: string | null
  */
 function TabIconFace({ icon, symbol, size }: { icon: string | null; symbol: string; size: number }) {
   const [failed, setFailed] = useState(false);
+  // An emoji the person chose stands in for the site's icon.
+  const emoji = emojiOf(symbol);
+  if (emoji) {
+    return <span className="tab-icon tab-emoji" style={{ width: size, height: size, fontSize: size * 0.85 }} aria-hidden>{emoji}</span>;
+  }
   if (icon && !failed) {
     return <img className="tab-icon" src={icon} width={size} height={size} alt="" onError={() => setFailed(true)} />;
   }

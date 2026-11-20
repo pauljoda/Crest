@@ -59,6 +59,13 @@ export function openPalette(kind: "newTab" | "editLocation") {
   window.dispatchEvent(new CustomEvent(openPaletteEvent, { detail: kind }));
 }
 
+/**
+ * Opens a Space's page in the window's Settings, where Windows edits a
+ * Space's name, icon and profile, as the Mac's Edit Space… opens its
+ * editor. The window sets it.
+ */
+export const spaceEditing = { open: (_spaceId: string) => {} };
+
 /** What a window shows now, which its commands act on. */
 export interface WindowView {
   readonly space: SpaceState | undefined;

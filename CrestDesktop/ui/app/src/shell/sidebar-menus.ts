@@ -1,6 +1,7 @@
 import {
   AddSubSpace,
   CanSend,
+  ChooseTabIcon,
   ClearCurrentTabs,
   CloseTab,
   CloseTabs,
@@ -27,6 +28,7 @@ import {
   MoveTab,
   MoveTabsToSpace,
   MoveTabToSpace,
+  RefreshPageIcon,
   ReleasePage,
   ReplaceSavedAddress,
   ReturnToSavedAddress,
@@ -37,6 +39,7 @@ import {
   type SpaceState,
   SplitTabs,
   StepSplitMember,
+  TabIconMode,
   TabPlacement,
   type TabSelection,
   type TabState,
@@ -47,7 +50,7 @@ import {
 import { CoreRejection } from "@crest/core-client";
 
 import type { Session } from "../boot";
-import { openPalette, toggleUtility } from "../commands";
+import { openPalette, spaceEditing, toggleUtility } from "../commands";
 import { CopiedLink } from "../copied-link";
 import type { MenuEntry } from "../menus";
 import { failureNotice, notices, urlCopiedNotice } from "../notices";
@@ -70,6 +73,8 @@ export interface SidebarContext {
   readonly confirmDeleteFolder: (folder: FolderState) => void;
   /** Opens the popover that chooses a folder's emoji or colour, beside its row. */
   readonly chooseLook: (folder: FolderState, kind: "icon" | "color") => void;
+  /** Opens the popover that chooses a tab's emoji, beside its row or tile. */
+  readonly chooseTabIcon: (tab: TabState) => void;
   /** Adds a row to the selection, as Ctrl-click does, and selects every row. */
   readonly addToSelection: (item: SelectionItem) => void;
   readonly selectAll: () => void;
@@ -116,8 +121,7 @@ function selectionOf(tabId: string): TabSelection {
 
 /**
  * The menu of a tab row, saved row, split member or pinned tile, as the Mac's
- * BrowserTabOrganizationMenuContent builds it. Items whose interface Windows
- * does not draw yet, such as the icon pickers, wait for it.
+ * BrowserTabOrganizationMenuContent builds it.
  */
 export async function tabMenu(context: SidebarContext, tab: TabState): Promise<MenuEntry[]> {
   const { session, space, spaces, shownTabId, pagesByTab } = context;
@@ -130,6 +134,7 @@ export async function tabMenu(context: SidebarContext, tab: TabState): Promise<M
   const isSaved = placement === TabPlacement.saved;
   const isPinned = placement === TabPlacement.pinned;
   const pageId = pagesByTab.get(tab.id) ?? null;
+  const isLoaded = pageId !== null;
   const otherSpaces = spaces.filter((candidate) => candidate.id !== spaceId);
   // The split the sidebar draws the tab in, by its members in order.
   const split = tab.splitGroupId
@@ -173,20 +178,39 @@ export async function tabMenu(context: SidebarContext, tab: TabState): Promise<M
       run: () => void copyLink(session, tab.url!),
     }, "separator");
   }
-  entries.push({ title: "Rename Tab…", run: () => context.rename({ tabId: tab.id }) }, "separator");
-  if (!isStartPage) {
+  entries.push({ title: "Rename Tab…", run: () => context.rename({ tabId: tab.id }) });
+  // The tab's icon, as the Mac's BrowserTabIconActions: its page's icon
+  // fetched again, its own icon cleared back to the page's, or an emoji.
+  const iconItems: MenuEntry[] = [
+    ...(tab.nativeContent === null ? [{
+      title: "Pull New Icon", enabled: isLoaded,
+      run: () => void session.core.request(RefreshPageIcon({ pageId: pageId! })).catch(() => undefined),
+    }] : []),
+    {
+      title: "Clear Icon", enabled: !(tab.iconMode.followsPage && tab.faviconUrl === null),
+      run: () => void send(session, ChooseTabIcon({ workspaceId, spaceId, tabId: tab.id, mode: TabIconMode.automatic, emoji: null, accent: null })),
+    },
+    { title: "Change Icon…", run: () => context.chooseTabIcon(tab) },
+  ];
+  if (savedAddress && !isStartPage) {
     const away = tab.isAwayFromSavedAddress;
-    const editItems: MenuEntry[] = [
-      {
-        title: "Replace with Current URL", enabled: away,
-        run: () => void send(session, ReplaceSavedAddress({ workspaceId, spaceId, tabId: tab.id })),
-      },
-      {
-        title: "Return to Saved URL", enabled: away,
-        run: () => void send(session, ReturnToSavedAddress({ workspaceId, spaceId, tabId: tab.id })),
-      },
-    ];
-    if (savedAddress) entries.push({ title: "Edit Tab", submenu: editItems }, "separator");
+    entries.push("separator", {
+      title: "Edit Tab",
+      submenu: [
+        {
+          title: "Replace with Current URL", enabled: away,
+          run: () => void send(session, ReplaceSavedAddress({ workspaceId, spaceId, tabId: tab.id })),
+        },
+        {
+          title: "Return to Saved URL", enabled: away,
+          run: () => void send(session, ReturnToSavedAddress({ workspaceId, spaceId, tabId: tab.id })),
+        },
+        "separator",
+        ...iconItems,
+      ],
+    }, "separator");
+  } else {
+    entries.push(...iconItems, "separator");
   }
   entries.push(isPinned
     ? { title: "Unpin Tab", run: move(TabPlacement.current) }
@@ -510,7 +534,6 @@ export async function batchMenu(context: SidebarContext, selected: SelectedTabs)
     ...plainFolders.filter((folder) => folder.location === TabPlacement.saved),
     ...plainFolders.filter((folder) => folder.location !== TabPlacement.saved),
   ];
-  const sectionName = (placement: TabPlacement) => (placement === TabPlacement.saved ? "Saved Tabs" : "Current Tabs");
   const batch = batchIntents(session, spaceId, selection);
 
   const intents = {
@@ -561,8 +584,9 @@ export async function batchMenu(context: SidebarContext, selected: SelectedTabs)
     { title: "New Current Tabs Folder", enabled: can.newCurrentFolder, run: act(intents.newCurrentFolder) },
     { title: "New Saved Folder", enabled: can.newSavedFolder, run: act(intents.newSavedFolder) },
   ];
+  // Each folder by its own name and its ancestors', as the Mac's batch menu names them.
   const folderEntries = ordered.map((folder, index) => ({
-    title: `${sectionName(folder.location)} › ${folderPath(space, folder)}`,
+    title: folderPath(space, folder),
     enabled: canFolder[index], run: act(folderFiles[index]),
   }));
 
@@ -677,8 +701,14 @@ export async function backgroundMenu(context: SidebarContext): Promise<MenuEntry
     allows(session, collapse), allows(session, newSpace), allows(session, subSpace),
   ]);
   return [
+    // The Mac edits a Space in its own sheet; Windows edits it on its page in Settings.
+    { title: "Edit Space…", run: () => spaceEditing.open(space.id) },
     { title: "Collapse All Folders", enabled: canCollapse, run: () => void send(session, collapse) },
-    ...(canCreate ? [{ title: "New Space…", run: () => void send(session, newSpace) }] : []),
+    // A new Space opens for editing, as the Mac's does, once the core has made it.
+    ...(canCreate ? [{
+      title: "New Space…",
+      run: () => void send(session, newSpace).then((made) => made && spaceEditing.open(newSpace.spaceId)),
+    }] : []),
     ...(canAddSubSpace ? [{ title: "New Sub-Space", run: () => void send(session, subSpace) }] : []),
   ];
 }

@@ -1871,6 +1871,13 @@ button {
   color: var(--default-favicon);
 }
 
+/* An emoji the person chose for a tab, in its icon's square. */
+.tab-emoji {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
 /* A split's card shows only while the pointer is over it, as the Mac's
    does by default: a fill and a fine edge around its header and members. */
 .split-card {

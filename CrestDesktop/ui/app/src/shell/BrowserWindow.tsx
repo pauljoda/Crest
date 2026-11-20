@@ -35,7 +35,7 @@ import { type CSSProperties, type RefObject, useCallback, useEffect, useLayoutEf
 import type { Session } from "../boot";
 import { primaryColor, readsLight } from "../branding";
 import { Browsing } from "../browsing";
-import { openPaletteEvent, windowCommands, type WindowView } from "../commands";
+import { openPaletteEvent, spaceEditing, windowCommands, type WindowView } from "../commands";
 import { useDownloads } from "../downloads";
 import { copiedNotice, notices } from "../notices";
 import { CommandPalette } from "../palette/CommandPalette";
@@ -415,31 +415,35 @@ export function BrowserWindow({ session }: { session: Session }) {
     };
     handlers.openPalette = () => startPageTakesNewTab() || open("newTab");
     handlers.editLocation = () => open("editLocation");
-    // Settings is a tab of the Space the window shows, one to a Space: Ctrl+, shows it, or opens it.
-    const openSettings = (page?: string) => {
+    // Settings is a tab of a Space, one to a Space: Ctrl+, shows the shown
+    // Space's, or opens it. Edit Space… opens it on a Space's own page.
+    const openSettings = (page?: string, spaceId?: string) => {
       dismissPalette();
       const { space: shownSpace, tab: shownTab } = shown.current;
-      if (!shownSpace) return;
-      const existing = shownSpace.tabs.find((candidate) => candidate.nativeView === NativeView.settings);
+      const target = spaceId ? session.core.state.workspaces.get(session.workspaceId)?.spaces.get(spaceId) : shownSpace;
+      if (!target) return;
+      const existing = target.tabs.find((candidate) => candidate.nativeView === NativeView.settings);
       const tabId = existing?.id ?? crypto.randomUUID();
       if (page) {
-        // A Space's own pages are the shown Space's.
+        // A Space's own pages are its Space's.
         requestSettings(tabId, ["spaces", "passwords", "extensions"].includes(page)
-          ? { kind: "space", spaceId: shownSpace.id, tab: page === "extensions" ? "extensions" : undefined }
+          ? { kind: "space", spaceId: target.id, tab: page === "extensions" ? "extensions" : undefined }
           : { kind: "page", name: page as SettingsPageName });
       }
       if (existing) {
-        void session.core.send(ShowTab({ windowId: session.windowId, spaceId: shownSpace.id, tabId: existing.id })).catch(() => {});
+        void session.core.send(ShowTab({ windowId: session.windowId, spaceId: target.id, tabId: existing.id })).catch(() => {});
         return;
       }
       void session.core.send(OpenTab({
-        workspaceId: session.workspaceId, windowId: session.windowId, spaceId: shownSpace.id, tabId,
+        workspaceId: session.workspaceId, windowId: session.windowId, spaceId: target.id, tabId,
         content: { address: null, view: NativeView.settings, title: null }, placement: TabPlacement.current,
-        afterTabId: shownTab?.id ?? null, shows: true, placesAsNewTab: false, savesInSavedFolder: false,
+        afterTabId: target.id === shownSpace?.id ? shownTab?.id ?? null : null,
+        shows: true, placesAsNewTab: false, savesInSavedFolder: false,
       })).catch(() => {});
     };
     handlers.openSettings = () => openSettings();
     extensions.openSettings = () => openSettings("extensions");
+    spaceEditing.open = (spaceId) => openSettings("spaces", spaceId);
     // Close Tab closes a Peek shown over the tab first, and Esc, which the
     // window holds while one shows, closes it too.
     const peekShown = () => !!peekNow.current && peekNow.current.sourceTabId === shown.current.tab?.id;
