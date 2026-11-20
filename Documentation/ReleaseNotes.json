@@ -5849,6 +5849,10 @@
     "windows-sidebar-smooth-heavy-pages": {
       "category": "internal",
       "message": "The sidebar slides smoothly on Windows over pages that take long to lay out, which follow it a few frames behind instead of holding it back"
+    },
+    "windows-resize-drags-smooth-heavy-pages": {
+      "category": "internal",
+      "message": "Dragging the sidebar's edge or a split's divider on Windows stays smooth over pages that take long to lay out"
     }
   }
 }

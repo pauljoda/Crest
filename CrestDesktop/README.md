@@ -402,13 +402,15 @@ frame, sets the sidebar's place and the page's edge together, so they never
 part, and its last frame is where the presentation lays them out, so nothing
 moves as the morph hands over. The cards' own layout animations stand aside
 meanwhile (`cards-snap.ts`), since they would scale the live page from its
-last box. While the morph runs, the page embeds carry `data-live-resize`,
-and Crest's Chromium draws each width without waiting for the page to lay
-itself out at it (`desktop-host.patch`). A page that lays out within a frame
-keeps up; a heavier one follows a few frames behind, showing what it last
-drew, clipped by its card or with its background beside it, instead of
-holding every frame of the morph. The mark goes the frame after the morph
-hands over, and the page catches up at its final width.
+last box. While the morph runs, and while the sidebar's edge or a split's
+divider is dragged, the page embeds carry `data-live-resize`
+(`holdLiveResize` in `PageCard.tsx`), and Crest's Chromium draws each width
+without waiting for the page to lay itself out at it (`desktop-host.patch`).
+A page that lays out within a frame keeps up; a heavier one follows a few
+frames behind, showing what it last drew, clipped by its card or with its
+background beside it, instead of holding every frame of the motion. The mark
+goes the frame after the morph hands over, or as the drag ends, and the page
+catches up at its final width.
 
 The sidebar's edge beside the page resizes it, docked or floating, between
 the Mac's bounds (164 to 380, opening at 289), and its arrow keys step it.

@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 
 import { isMenuOpen } from "../menus";
 import { holdCards } from "./cards-snap";
-import { setLiveResize } from "./PageCard";
+import { holdLiveResize } from "./PageCard";
 import { holdPointer } from "./pointer-hold";
 import { clampedSidebarWidth, sidebarWidths } from "./sidebar-layout";
 import { SpaceBanner } from "./SpaceBanner";
@@ -111,10 +111,12 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
   const reveal = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const running = useRef<Morph | null>(null);
   const cardsHeld = useRef<(() => void) | null>(null);
+  const liveResize = useRef<(() => void) | null>(null);
   useEffect(() => () => {
     clearTimeout(reveal.current);
     if (running.current) cancelAnimationFrame(running.current.frame);
     cardsHeld.current?.();
+    liveResize.current?.();
   }, []);
   const shown = useRef(presentation);
   shown.current = presentation;
@@ -166,8 +168,11 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
       element.style.transition = held ? "none" : "";
       element.style.willChange = held ? "transform" : "";
     }
-    const page = content();
-    if (page) setLiveResize(page, held);
+    if (held) liveResize.current ??= holdLiveResize();
+    else {
+      liveResize.current?.();
+      liveResize.current = null;
+    }
   };
   const stop = () => {
     const current = running.current;
@@ -402,6 +407,7 @@ function SidebarResizeHandle({ grip, width, center, floating, onResize, onResize
     readonly pointerId: number;
     readonly x: number;
     readonly width: number;
+    /** Lets go of the pointer and of the pages, which the drag resizes each move. */
     readonly release: () => void;
   } | null>(null);
   const latest = useRef(width);
@@ -446,7 +452,15 @@ function SidebarResizeHandle({ grip, width, center, floating, onResize, onResize
         // The handle moves as the width changes, so the drag is measured from where it began.
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
-        drag.current = { pointerId: event.pointerId, x: event.clientX, width, release: holdPointer() };
+        const pointer = holdPointer();
+        const pages = holdLiveResize();
+        drag.current = {
+          pointerId: event.pointerId, x: event.clientX, width,
+          release: () => {
+            pointer();
+            pages();
+          },
+        };
         setActive(true);
       }}
       onPointerMove={(event) => {

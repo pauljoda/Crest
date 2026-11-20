@@ -6,6 +6,7 @@ import { type CSSProperties, type ReactNode, type Ref, useEffect, useLayoutEffec
 import { css } from "../branding";
 import { Symbol } from "../symbols";
 import { useCardsSnap } from "./cards-snap";
+import { holdLiveResize } from "./PageCard";
 import { holdPointer, usePointerHeld } from "./pointer-hold";
 import { CardIdentities, sameMembers, type SpaceCards, sharesAfterResize, sharesDiffer, sharesInserting, splitMetrics } from "./shown-cards";
 import { useSplitDropIndex } from "./split-drop";
@@ -175,6 +176,7 @@ function Divider({ ref, index, interactive, shows, shares, transition, resize, c
   resize: (delta: number, baseline: readonly number[]) => void;
   commit: (shares: readonly number[]) => void;
 }) {
+  // Releasing lets go of the pointer and of the pages, which the drag resizes each move.
   const drag = useRef<{ pointerId: number; x: number; baseline: readonly number[]; release: () => void } | null>(null);
   const [active, setActive] = useState(false);
   const latest = useRef(shares);
@@ -211,7 +213,15 @@ function Divider({ ref, index, interactive, shows, shares, transition, resize, c
           event.preventDefault();
           event.stopPropagation();
           event.currentTarget.setPointerCapture(event.pointerId);
-          drag.current = { pointerId: event.pointerId, x: event.clientX, baseline: shares, release: holdPointer() };
+          const pointer = holdPointer();
+          const pages = holdLiveResize();
+          drag.current = {
+            pointerId: event.pointerId, x: event.clientX, baseline: shares,
+            release: () => {
+              pointer();
+              pages();
+            },
+          };
           setActive(true);
         }}
         onPointerMove={(event) => {

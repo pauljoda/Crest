@@ -169,15 +169,30 @@ export async function pageContentId(session: Session, pageId: string): Promise<s
   return content ?? null;
 }
 
+/** How many motions resize the window's pages frame after frame now. */
+let liveResizes = 0;
+
 /**
- * Marks the pages embedded under `root` as resized frame after frame, or no
- * longer. While marked, the window draws each of a page's sizes without
- * waiting for the page to lay out at it (`desktop-host.patch`), so a page
- * too heavy for a frame lags its card's edge instead of holding the motion,
- * showing what it last drew, clipped by the card or beside its background.
+ * Holds the window's pages as resized frame after frame, as the sidebar's
+ * morphs and the resize drags do, until the returned function lets go. While
+ * any hold stands, the pages' embeds are marked, and the window draws each of
+ * a page's sizes without waiting for the page to lay out at it
+ * (`desktop-host.patch`): a page too heavy for a frame follows its card's
+ * edge a few frames behind instead of holding the motion, showing what it
+ * last drew, clipped by the card or with its background beside it.
  */
-export function setLiveResize(root: HTMLElement, live: boolean) {
-  for (const embed of root.querySelectorAll("embed.page-frame")) embed.toggleAttribute("data-live-resize", live);
+export function holdLiveResize(): () => void {
+  if (liveResizes++ === 0) markLiveResize(true);
+  let held = true;
+  return () => {
+    if (!held) return;
+    held = false;
+    if (--liveResizes === 0) markLiveResize(false);
+  };
+}
+
+function markLiveResize(live: boolean) {
+  for (const embed of document.querySelectorAll("embed.page-frame")) embed.toggleAttribute("data-live-resize", live);
 }
 
 /**
