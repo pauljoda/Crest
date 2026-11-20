@@ -5925,6 +5925,10 @@
     "sidebar-long-folder-scroll": {
       "category": "fixed",
       "message": "Scrolling down a sidebar with long open folders no longer jumps back up, and folders inside them no longer shrink to their title and grow again as they scroll into view."
+    },
+    "split-one-tab-message": {
+      "category": "fixed",
+      "message": "Making a Split View from a single tab now asks you to select at least 2 tabs, instead of asking for fewer."
     }
   }
 }

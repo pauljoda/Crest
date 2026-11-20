@@ -87,7 +87,7 @@ public sealed record SplitNeedsTwoTabs(int Limit) : Rejection {
 
     /// What the person is told.
     [Localized(Argument = nameof(Limit))]
-    public string Message => "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split.";
+    public string Message => "Split View needs 2 to %lld tabs. Select at least 2 tabs to make a split.";
 
     #endregion
 }
