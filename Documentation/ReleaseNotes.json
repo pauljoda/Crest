@@ -5909,6 +5909,10 @@
     "windows-space-color-popover": {
       "category": "internal",
       "message": "A Space's colors on Windows open the Mac's color popover: a wheel with a handle for each color, Brightness and Texture, a spectrum, and up to three colors placed in harmony, moved together or apart, with their direction"
+    },
+    "windows-space-crest-studio": {
+      "category": "internal",
+      "message": "A Space's crest on Windows can be built part by part, as on the Mac: its shape, field, band, emblem, border and finish, each part's color from the stage, and Shuffle for a new crest and colors"
     }
   }
 }

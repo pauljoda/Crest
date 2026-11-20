@@ -13,7 +13,7 @@ import {
   Tincture,
 } from "@crest/contracts";
 import { AnimatePresence } from "motion/react";
-import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { Session } from "../boot";
 import { emojiOf } from "../branding";
@@ -24,6 +24,12 @@ import { accentFill, backgroundFill, fillPaint, type SpaceFill } from "../spaces
 import {
   applyingHouse,
   applyingPalette,
+  type CrestLayer,
+  crestFollowsSpace,
+  crestLayers,
+  type CrestStep,
+  followingSpaceColors,
+  layerFill,
   houseTileLook,
   paletteAccent,
   paletteBackground,
@@ -33,29 +39,40 @@ import {
   startingLook,
   wearingPattern,
   wearsHouse,
+  shuffledLook,
   wearsPalette,
   withAccentFill,
   withBackgroundFill,
+  withLayerFill,
   withPatternFill,
 } from "../spaces/space-look";
 import { SpaceCrestIcon, SpaceIdentityIcon } from "../spaces/SpaceIdentity";
-import { Symbol, symbolNames } from "../symbols";
+import { Symbol } from "../symbols";
 import { ColorPopoverContent } from "./ColorPopover";
-import { Group, Row, Segmented } from "./controls";
+import { Button, Group, Row, Segmented } from "./controls";
+import { ChoiceTile, CrestStudio, initialCrestStep, rememberCrestStep, SymbolPicker } from "./CrestStudio";
 
 /** BrowserCrestStudio's undo depth: the oldest look goes past it. */
 const historyLimit = 40;
 
-/** The Space's colors a well edits: its Background, its Accent, and the color its sidebar pattern wears. */
-type WellRole = "background" | "accent" | "pattern";
+/**
+ * The colors a well edits: the Space's Background, its Accent, and the color
+ * its sidebar pattern wears, or a part of its crest, by the layer's slot.
+ */
+type WellRole = "background" | "accent" | "pattern" | number;
 
-const wellTitles: Record<WellRole, string> = { background: "Background", accent: "Accent", pattern: "Pattern" };
+const sidebarRoles = ["background", "accent", "pattern"] as const;
+const sidebarTitles = { background: "Background", accent: "Accent", pattern: "Pattern" } as const;
+
+const wellTitle = (role: WellRole) => (typeof role === "number" ? crestLayers[role].title : sidebarTitles[role]);
 
 function wellFill(role: WellRole, look: SpaceBranding): SpaceFill {
+  if (typeof role === "number") return layerFill(look, crestLayers[role]);
   return role === "background" ? backgroundFill(look) : role === "accent" ? accentFill(look) : patternFill(look);
 }
 
 function withWellFill(role: WellRole, look: SpaceBranding, fill: SpaceFill): SpaceBranding {
+  if (typeof role === "number") return withLayerFill(look, crestLayers[role], fill);
   return role === "background" ? withBackgroundFill(look, fill) : role === "accent" ? withAccentFill(look, fill) : withPatternFill(look, fill);
 }
 
@@ -84,6 +101,7 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
   const branding = draft ?? space.settings.look;
   const [history, setHistory] = useState<readonly SpaceBranding[]>([]);
   const [showsMore, setShowsMore] = useState(false);
+  const [step, setStep] = useState<CrestStep>(initialCrestStep);
   const dragStart = useRef<SpaceBranding | null>(null);
   const dragLatest = useRef<SpaceBranding | null>(null);
   const pending = useRef<{ branding: SpaceBranding; frame: number } | null>(null);
@@ -159,6 +177,13 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
     setWell({ role, anchor: element.getBoundingClientRect(), element });
   };
 
+  /** A crest swatch whose part the crest doesn't draw opens the step that adds it. */
+  const openStep = (next: CrestStep) => {
+    rememberCrestStep(next);
+    setStep(next);
+    setShowsMore(true);
+  };
+
   const undo = () => {
     const previous = history.at(-1);
     if (!previous) return;
@@ -180,7 +205,9 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
     <div className="space-appearance" data-testid="space-customization-controls">
       <section className="space-appearance-section">
         <Stage branding={branding} symbol={space.settings.symbol} canUndo={history.length > 0} onUndo={undo}
-          openWell={well?.element.closest(".forge-stage") ? well.role : null} onWell={toggleWell} />
+          onShuffle={() => write(shuffledLook(branding))}
+          showsCrest={showsMore && branding.iconStyle === SpaceIconStyle.layeredCrest}
+          openWell={well?.element.closest(".forge-stage") ? well.role : null} onWell={toggleWell} onStep={openStep} />
         <div className="settings-card space-palettes" role="group" aria-label="Palettes" data-testid="space-palettes">
           {spacePalettes.map((palette) => {
             const worn = wearsPalette(palette, branding);
@@ -251,11 +278,24 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
                 onChange={(textColorMode) => write({ ...branding, textColorMode, hasCustomAppearance: true })} />
             </Row>
           </Group>
+          {branding.iconStyle === SpaceIconStyle.layeredCrest && (
+            <>
+              <CrestStudio branding={branding} preview={dragStart.current ?? branding} defaults={defaults.current} step={step}
+                onStep={setStep} write={write} />
+              {!crestFollowsSpace(branding) && (
+                <Group>
+                  <Row title="The crest has colors of its own.">
+                    <Button onClick={() => write(followingSpaceColors(branding))}>Use Space Colors</Button>
+                  </Row>
+                </Group>
+              )}
+            </>
+          )}
         </>
       )}
       <AnimatePresence>
         {well && (
-          <Popover key={`${well.role}-${well.anchor.x}-${well.anchor.y}`} anchor={well.anchor} label={wellTitles[well.role]} edge="bottom"
+          <Popover key={`${well.role}-${well.anchor.x}-${well.anchor.y}`} anchor={well.anchor} label={wellTitle(well.role)} edge="bottom"
             ignore={well.element} className="color-popover" onClose={closeWell}>
             <ColorPopoverContent fill={wellFill(well.role, branding)} flush={flushWell}
               onCommit={(fill) => drag((look) => withWellFill(well.role, look, fill))}
@@ -271,16 +311,20 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
 
 /**
  * BrowserCrestForgeStage: the Space's icon at 188 on its own sidebar field,
- * shaded toward the trailing edge, the colors beside it, and Undo at the
- * top. The stage reads dark whatever the Space.
+ * shaded toward the trailing edge, its colors beside it, and while More
+ * Customization shows a crest, the crest's parts' colors under them, with
+ * Shuffle and Undo at the top. The stage reads dark whatever the Space.
  */
-function Stage({ branding, symbol, canUndo, onUndo, openWell, onWell }: {
+function Stage({ branding, symbol, canUndo, onUndo, onShuffle, showsCrest, openWell, onWell, onStep }: {
   branding: SpaceBranding;
   symbol: string;
   canUndo: boolean;
   onUndo: () => void;
+  onShuffle: () => void;
+  showsCrest: boolean;
   openWell: WellRole | null;
   onWell: (role: WellRole, element: HTMLElement) => void;
+  onStep: (step: CrestStep) => void;
 }) {
   const stage = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 720, height: 284 });
@@ -305,14 +349,29 @@ function Stage({ branding, symbol, canUndo, onUndo, openWell, onWell }: {
         <div className="forge-swatch-group">
           <h4>Colors</h4>
           <div className="forge-swatches">
-            {(["background", "accent", "pattern"] as const).filter((role) => role !== "pattern" || showsPattern(branding)).map((role) => (
-              <Swatch key={role} title={wellTitles[role]} fill={wellFill(role, branding)} selected={openWell === role}
+            {sidebarRoles.filter((role) => role !== "pattern" || showsPattern(branding)).map((role) => (
+              <Swatch key={role} title={sidebarTitles[role]} fill={wellFill(role, branding)} selected={openWell === role}
                 onToggle={(element) => onWell(role, element)} />
             ))}
           </div>
         </div>
+        {showsCrest && (
+          <div className="forge-swatch-group">
+            <h4>Crest</h4>
+            <div className="forge-swatches">
+              {crestLayers.map((layer) => (
+                <LayerSwatch key={layer.slot} layer={layer} branding={branding} selected={openWell === layer.slot}
+                  onToggle={(element) => (layer.draws(branding.crest) ? onWell(layer.slot, element) : onStep(layer.step))} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="forge-tools">
+        <button type="button" className="forge-tool" data-testid="space-forge-shuffle" onClick={onShuffle}>
+          <Symbol name="shuffle" size={12} strokeWidth={2} />
+          <span>Shuffle</span>
+        </button>
         <button type="button" className="forge-tool" disabled={!canUndo} data-testid="space-forge-undo" onClick={onUndo}>
           <Symbol name="arrow.uturn.backward" size={12} strokeWidth={2} />
           <span>Undo</span>
@@ -335,6 +394,29 @@ function Swatch({ title, fill, selected, onToggle }: {
       aria-label={title} aria-description={name} aria-expanded={selected} onClick={(event) => onToggle(event.currentTarget)}>
       <FillDot fill={fill} size={28} ring />
       <span className="forge-swatch-title">{title}</span>
+    </button>
+  );
+}
+
+/**
+ * A crest part's swatch: its color, dimmed where the crest doesn't draw the
+ * part, when a press opens the step that adds it instead of a popover.
+ */
+function LayerSwatch({ layer, branding, selected, onToggle }: {
+  layer: CrestLayer;
+  branding: SpaceBranding;
+  selected: boolean;
+  onToggle: (element: HTMLElement) => void;
+}) {
+  const fill = layerFill(branding, layer);
+  const drawn = layer.draws(branding.crest);
+  const name = colorName(fill);
+  return (
+    <button type="button" className={`forge-swatch${selected ? " selected" : ""}${drawn ? "" : " undrawn"}`}
+      title={drawn ? (name === "Gradient" ? layer.title : name) : layer.hint} aria-label={layer.title} aria-description={drawn ? name : layer.hint}
+      aria-expanded={drawn ? selected : undefined} onClick={(event) => onToggle(event.currentTarget)}>
+      <FillDot fill={fill} size={28} ring />
+      <span className="forge-swatch-title">{layer.title}</span>
     </button>
   );
 }
@@ -396,22 +478,6 @@ function PatternTile({ pattern, branding, selected, onChoose }: {
         <BannerLayers branding={wearingPattern(branding, pattern)} width={56} height={48} />
       </span>
     </ChoiceTile>
-  );
-}
-
-/** BrowserCrestStudioChoice: artwork in a 64 by 58 frame over a two-line title. */
-function ChoiceTile({ title, selected, onChoose, children }: {
-  title: string;
-  selected: boolean;
-  onChoose: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button type="button" className={`forge-card forge-choice${selected ? " selected" : ""}`} aria-label={title} aria-pressed={selected}
-      title={title} onClick={onChoose}>
-      <span className="forge-choice-art">{children}</span>
-      <span className="forge-choice-title">{title}</span>
-    </button>
   );
 }
 
@@ -508,33 +574,6 @@ function IconPicker({ branding, symbol, onCrest, onWear }: {
           </Popover>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-/** BrowserSystemSymbolPicker: a search over the symbols this interface draws, every word a part of the name. */
-function SymbolPicker({ current, onChoose, onDone }: { current: string; onChoose: (name: string) => void; onDone: () => void }) {
-  const [query, setQuery] = useState("");
-  const words = query.toLowerCase().split(/[\s.]+/).filter(Boolean);
-  const shown = symbolNames.filter((name) => words.every((word) => name.toLowerCase().includes(word)));
-  return (
-    <div className="symbol-picker">
-      <div className="picker-header">
-        <span className="picker-title">SF Symbols</span>
-        <button type="button" className="symbol-picker-done" onClick={onDone}>Done</button>
-      </div>
-      <input className="emoji-field" placeholder="Search symbols" aria-label="Search symbols" value={query} autoFocus
-        onChange={(event) => setQuery(event.target.value)} />
-      <div className="symbol-grid">
-        {shown.map((name) => (
-          <button key={name} type="button" className={`forge-card symbol-choice${name === current ? " selected" : ""}`} title={name}
-            aria-label={name} onClick={() => onChoose(name)}>
-            <Symbol name={name} size={24} />
-            <span>{name.replace(/\./g, " ")}</span>
-          </button>
-        ))}
-      </div>
-      <span className="symbol-count">{shown.length} symbols</span>
     </div>
   );
 }

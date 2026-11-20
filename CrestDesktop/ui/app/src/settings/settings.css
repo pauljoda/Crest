@@ -1643,3 +1643,101 @@ button.forge-swatch.selected {
     transition: none;
   }
 }
+
+/* The stage's swatch groups, Colors over Crest; a crest part the crest doesn't draw dims. */
+.forge-swatch-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.forge-swatch.undrawn .fill-dot {
+  opacity: 0.3;
+}
+
+.forge-swatch.undrawn .forge-swatch-title {
+  opacity: 0.6;
+}
+
+.forge-swatch.undrawn:hover .forge-swatch-title {
+  opacity: 1;
+}
+
+/* The crest studio: its heading over the step bar, then the step's gallery or the emblem. */
+.settings-group-header.forge-step-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.forge-step-header h3 {
+  flex: none;
+}
+
+.crest-emblem-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 14px;
+}
+
+.crest-emblem-search-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--settings-secondary);
+}
+
+.crest-emblem-search-glyph {
+  flex: none;
+  margin-right: 6px;
+  color: var(--settings-secondary);
+}
+
+.settings-group .forge-gallery.crest-emblem-grid {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px 10px;
+  padding: 4px 0;
+}
+
+.crest-emblem-more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--forge-tint);
+  font: 12px var(--crest-font-system);
+}
+
+.crest-emblem-caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+.crest-monogram-field {
+  flex: none;
+  width: 160px;
+}
+
+/* BrowserSystemSymbolPicker in the Emblem step, on the page's own colors. */
+.symbol-picker.inline {
+  width: auto;
+  max-height: 360px;
+  padding: 0;
+}
+
+.symbol-picker.inline .symbol-choice {
+  --settings-primary: inherit;
+  --forge-tint: inherit;
+}
+
+.symbol-picker.inline .symbol-count {
+  color: var(--settings-secondary);
+}
+
+.symbol-picker-search {
+  border: 0;
+  color: var(--settings-ink);
+  font: inherit;
+  outline: none;
+}

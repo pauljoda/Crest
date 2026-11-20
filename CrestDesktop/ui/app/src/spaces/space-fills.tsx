@@ -231,7 +231,7 @@ function blendingStops(colors: readonly BrandColor[]): readonly Stop[] {
  */
 export function shadedColor(color: BrandColor): BrandColor {
   const { lightness, chroma, degrees } = lch(color);
-  return fromLch(lightness < 0.86 ? lightness + 0.1 : lightness - 0.1, chroma, degrees);
+  return fromLch(lightness < 0.86 ? lightness + 0.1 : lightness - 0.1, chroma, degrees / 360);
 }
 
 /** CrestPerceptualColorMetrics. */

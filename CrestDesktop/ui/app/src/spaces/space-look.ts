@@ -1,9 +1,20 @@
 import {
   type BrandColor,
   type BrandGradient,
+  CrestBackplate,
+  type CrestCharge,
+  CrestChargeKind,
+  CrestChargeLayout,
+  CrestDepth,
+  CrestFieldDivision,
+  CrestFinish,
+  CrestOrdinary,
+  CrestSymbol,
+  CrestTrim,
   type SpaceBannerPattern,
   SpaceBannerPattern as BannerPatterns,
   type SpaceBranding,
+  type SpaceCrest,
   SpaceGradientKind,
   type SpaceHouse,
   SpaceHouse as Houses,
@@ -14,7 +25,9 @@ import {
   Tincture,
 } from "@crest/contracts";
 
-import { accentFill, backgroundFill, type FillKind, shadedColor, slotFill, type SpaceFill } from "./space-fills";
+import { indigo } from "../branding";
+import { harmonyRun } from "./color-harmony";
+import { accentFill, backgroundFill, crestLayerFill, type FillKind, shadedColor, slotFill, type SpaceFill } from "./space-fills";
 
 /**
  * The Mac's SpaceBranding editing, as pure functions over the core's
@@ -273,4 +286,206 @@ export function startingLook(branding: SpaceBranding): SpaceBranding | null {
     crest: { ...branding.crest, startingPresetId: scheme.name },
     hasCustomAppearance: false,
   };
+}
+
+// MARK: - Crest studio
+
+/**
+ * The parts More Customization offers a crest (BrowserCrestForgeChoices):
+ * the ones that read at a sidebar's size and that the starter crests wear.
+ * A crest that already wears another keeps it among the choices.
+ */
+export const offeredBackplates: readonly CrestBackplate[] = [
+  CrestBackplate.shield, CrestBackplate.frenchShield, CrestBackplate.circle, CrestBackplate.seal,
+  CrestBackplate.hexagon, CrestBackplate.octagon, CrestBackplate.diamond, CrestBackplate.banner,
+];
+export const offeredDivisions: readonly CrestFieldDivision[] = [
+  CrestFieldDivision.plain, CrestFieldDivision.perPale, CrestFieldDivision.perFess, CrestFieldDivision.perBend,
+  CrestFieldDivision.perChevron, CrestFieldDivision.quarterly, CrestFieldDivision.barry,
+];
+export const offeredOrdinaries: readonly CrestOrdinary[] = [
+  CrestOrdinary.none, CrestOrdinary.pale, CrestOrdinary.fess, CrestOrdinary.bend,
+  CrestOrdinary.chevron, CrestOrdinary.cross, CrestOrdinary.saltire, CrestOrdinary.chief,
+];
+export const offeredTrims: readonly CrestTrim[] = [
+  CrestTrim.none, CrestTrim.line, CrestTrim.doubleLine, CrestTrim.laurel, CrestTrim.sunburst, CrestTrim.doubleRing, CrestTrim.beaded,
+];
+export const offeredLayouts: readonly CrestChargeLayout[] = [CrestChargeLayout.single, CrestChargeLayout.paired, CrestChargeLayout.trio];
+/** CrestSymbol.selectable: the heraldic emblems on offer. */
+export const selectableSymbols: readonly CrestSymbol[] = CrestSymbol.all.filter((symbol) => symbol.isOffered);
+
+/** BrowserCrestFinishChoice: how a crest is finished, its surface and the shadow under it, chosen together. */
+export interface FinishChoice {
+  readonly name: string;
+  readonly title: string;
+  readonly finish: CrestFinish;
+  readonly depth: CrestDepth;
+}
+
+export const finishChoices: readonly FinishChoice[] = [
+  { name: "flat", title: "Flat", finish: CrestFinish.flat, depth: CrestDepth.none },
+  { name: "shadow", title: "Shadow", finish: CrestFinish.flat, depth: CrestDepth.soft },
+  { name: "sheen", title: "Sheen", finish: CrestFinish.sheen, depth: CrestDepth.lifted },
+  { name: "embossed", title: "Embossed", finish: CrestFinish.embossed, depth: CrestDepth.soft },
+];
+
+/** Whether `crest` is finished this way: its surface, and for a flat one, whether it casts a shadow. */
+export function wearsFinish(choice: FinishChoice, crest: SpaceCrest): boolean {
+  if (crest.finish.name !== choice.finish.name) return false;
+  return choice.finish.name !== CrestFinish.flat.name
+    || (crest.depth.name === CrestDepth.none.name) === (choice.depth.name === CrestDepth.none.name);
+}
+
+export function applyingFinish(choice: FinishChoice, crest: SpaceCrest): SpaceCrest {
+  return { ...crest, finish: choice.finish, depth: choice.depth };
+}
+
+/** BrowserCrestStudioStep: the crest's parts, one step each. */
+export type CrestStep = "shape" | "field" | "band" | "emblem" | "border" | "finish";
+
+export const crestSteps: readonly { readonly step: CrestStep; readonly title: string }[] = [
+  { step: "shape", title: "Shape" },
+  { step: "field", title: "Field" },
+  { step: "band", title: "Band" },
+  { step: "emblem", title: "Emblem" },
+  { step: "border", title: "Border" },
+  { step: "finish", title: "Finish" },
+];
+
+/** The figure a crest draws: its charge, or its heraldic symbol. */
+export function resolvedCharge(crest: SpaceCrest): CrestCharge {
+  return crest.charge ?? { kind: CrestChargeKind.heraldic, symbol: crest.symbol, text: null, style: null };
+}
+
+type CrestColorIndex = "backplateColorIndex" | "secondaryFieldColorIndex" | "ordinaryColorIndex"
+  | "symbolColorIndex" | "trimColorIndex" | "edgeColorIndex";
+
+/**
+ * BrowserCrestForgeLayer: a part of the crest a color paints, the palette
+ * entry it reads, the Space color it follows (Background 0, Accent 1,
+ * Pattern 2), and the step that makes it draw where it doesn't yet.
+ */
+export interface CrestLayer {
+  readonly slot: number;
+  readonly title: string;
+  readonly index: CrestColorIndex;
+  readonly role: number;
+  readonly step: CrestStep;
+  readonly hint: string;
+  readonly draws: (crest: SpaceCrest) => boolean;
+}
+
+const hasPlate = (crest: SpaceCrest) => crest.backplate.name !== CrestBackplate.none.name;
+
+export const crestLayers: readonly CrestLayer[] = [
+  { slot: 0, title: "Field", index: "backplateColorIndex", role: 2, step: "shape", hint: "Choose a shape to color its field", draws: hasPlate },
+  {
+    slot: 1, title: "Second field", index: "secondaryFieldColorIndex", role: 0, step: "field", hint: "Divide the field to use a second color",
+    draws: (crest) => hasPlate(crest) && crest.fieldDivision.name !== CrestFieldDivision.plain.name,
+  },
+  {
+    slot: 2, title: "Band", index: "ordinaryColorIndex", role: 1, step: "band", hint: "Choose a band to color it",
+    draws: (crest) => hasPlate(crest) && crest.ordinary.name !== CrestOrdinary.none.name,
+  },
+  {
+    slot: 3, title: "Emblem", index: "symbolColorIndex", role: 1, step: "emblem", hint: "Choose an emblem to color it",
+    draws: (crest) => resolvedCharge(crest).kind.name !== CrestChargeKind.none.name,
+  },
+  {
+    slot: 4, title: "Border", index: "trimColorIndex", role: 1, step: "border", hint: "Choose a border to color it",
+    draws: (crest) => crest.trim.name !== CrestTrim.none.name,
+  },
+  {
+    slot: 5, title: "Edge", index: "edgeColorIndex", role: 0, step: "shape", hint: "Give the shape an edge to color it",
+    draws: (crest) => hasPlate(crest) && (crest.edgeWidth > 0 || crest.showsOutline),
+  },
+];
+
+/** Whether the crest wears the Space's colors by role, with none of its own. */
+export function crestFollowsSpace(branding: SpaceBranding): boolean {
+  return branding.crest.palette === null && crestLayers.every((layer) => branding.crest[layer.index] === layer.role);
+}
+
+/** Whether the crest has a palette of its own, one entry a layer. */
+function hasLayeredCrestPalette(branding: SpaceBranding): boolean {
+  return branding.crest.palette?.colors.length === crestLayers.length
+    && crestLayers.every((layer) => branding.crest[layer.index] === layer.slot);
+}
+
+/** The fill a crest layer wears. */
+export function layerFill(branding: SpaceBranding, layer: CrestLayer): SpaceFill {
+  return crestLayerFill(branding, branding.crest[layer.index]);
+}
+
+/**
+ * SpaceBranding.setForgeFill(_:of:): the layer's fill. The first layer
+ * colored this way forks the crest onto a palette of its own, a copy of
+ * what each layer wore, gradients and all, so nothing else changes.
+ */
+export function withLayerFill(branding: SpaceBranding, layer: CrestLayer, fill: SpaceFill): SpaceBranding {
+  const color = fill.colors[0];
+  if (!color) return branding;
+  const layered = hasLayeredCrestPalette(branding);
+  const worn = layered
+    ? branding.crest.paletteGradients
+    : { slots: crestLayers.map((each) => gradientAfter(layerFill(branding, each)) ?? plainGradient) };
+  let crest = branding.crest;
+  if (!layered) {
+    const own = crest.palette?.colors ?? [];
+    const spaceColors = branding.colors.colors.length > 0 ? branding.colors.colors : [indigo];
+    const colors = own.length > 0 ? own : spaceColors;
+    crest = {
+      ...crest,
+      palette: { colors: crestLayers.map((each) => colors[crest[each.index]] ?? colors[0]) },
+      backplateColorIndex: 0,
+      secondaryFieldColorIndex: 1,
+      ordinaryColorIndex: 2,
+      symbolColorIndex: 3,
+      trimColorIndex: 4,
+      edgeColorIndex: 5,
+    };
+  }
+  const colors = [...(crest.palette?.colors ?? [])];
+  colors[layer.slot] = color;
+  crest = { ...crest, palette: { colors }, paletteGradients: gradientsSetting(worn, fill, layer.slot) };
+  return { ...branding, crest, hasCustomAppearance: true };
+}
+
+/** BrandColor.luminance: luma over the encoded channels, which Shuffle sorts tinctures by. */
+const encodedLuma = (color: BrandColor) => 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
+
+/**
+ * BrowserCrestForge.shuffled: a new crest and colors, every part chosen
+ * afresh from the ones More Customization offers: a dark tincture for the
+ * Background and a light one for the Accent, each half the time running on
+ * into the color the harmony adds, and the crest in the Space's colors.
+ */
+export function shuffledLook(branding: SpaceBranding, random: () => number = Math.random): SpaceBranding {
+  const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
+  const chance = (odds: number) => random() < odds;
+  const tinctures = Tincture.all.map((tincture) => tincture.color);
+  const darks = tinctures.filter((color) => encodedLuma(color) < 0.3);
+  const lights = tinctures.filter((color) => encodedLuma(color) > 0.42);
+  if (darks.length === 0 || lights.length === 0) return branding;
+  const dark = pick(darks);
+  const light = pick(lights);
+  const run = (color: BrandColor): SpaceFill => (chance(0.5)
+    ? { colors: [color, harmonyRun(color)[0]], kind: "linear", degrees: Math.floor(random() * 8) * 45 }
+    : { colors: [color], kind: "linear", degrees: 90 });
+  let crest: SpaceCrest = {
+    ...branding.crest,
+    backplate: pick(offeredBackplates),
+    fieldDivision: chance(0.5) ? CrestFieldDivision.plain : pick(offeredDivisions.filter((part) => part !== CrestFieldDivision.plain)),
+    ordinary: chance(0.5) ? CrestOrdinary.none : pick(offeredOrdinaries.filter((part) => part !== CrestOrdinary.none)),
+    symbol: pick(selectableSymbols),
+    charge: null,
+    chargeLayout: chance(0.75) ? CrestChargeLayout.single : pick([CrestChargeLayout.paired, CrestChargeLayout.trio]),
+    trim: pick(offeredTrims),
+  };
+  crest = applyingFinish(pick(finishChoices), crest);
+  let look: SpaceBranding = followingSpaceColors({ ...branding, iconStyle: SpaceIconStyle.layeredCrest, crest });
+  look = wearingPattern(look, BannerPatterns.solid);
+  look = withBackgroundFill(look, run(dark));
+  look = withAccentFill(look, run(light));
+  return { ...look, hasCustomAppearance: true };
 }
