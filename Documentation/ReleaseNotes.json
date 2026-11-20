@@ -5846,6 +5846,10 @@
       "category": "fixed",
       "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
     },
+    "webkit-page-closed-mid-load-crash": {
+      "category": "fixed",
+      "message": "Fixed a crash when a page using the WebKit engine closed while it was loading another site."
+    },
     "palette-sidebar-material": {
       "category": "improved",
       "message": "The command palette and the recent tabs panel sit on the same material as the address field and pinned tabs, so the palette looks like the field it grows out of."
