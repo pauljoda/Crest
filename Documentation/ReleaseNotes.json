@@ -5917,6 +5917,10 @@
     "translatable-dialogs": {
       "category": "internal",
       "message": "Mac dialogs and save panels, sync and password-import messages, and the sidebar's media card text go through the string catalog so they can be translated."
+    },
+    "untitled-names-everywhere": {
+      "category": "fixed",
+      "message": "A folder or Space without a name is called Untitled Folder or Untitled Space wherever it comes from, including storage and sync."
     }
   }
 }

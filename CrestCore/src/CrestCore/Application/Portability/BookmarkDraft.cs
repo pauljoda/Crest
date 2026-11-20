@@ -13,7 +13,6 @@ internal sealed class BookmarkDraft {
     /// The most links one browser's bookmarks bring.
     public const int MaximumBookmarks = 5_000;
 
-    private const string UntitledFolder = "Untitled Folder";
     private const string BookmarkSymbol = "book.closed";
 
     #endregion
@@ -59,7 +58,7 @@ internal sealed class BookmarkDraft {
     /// leaving it out with everything in it, when it is past the folders or
     /// nesting a Space keeps or titled longer than a folder keeps.
     public Guid? AppendFolder(string? title, Guid? parent, int depth) {
-        string? kept = depth < FolderTree.MaximumDepth ? ImportText.Bounded(title, UntitledFolder, ImportText.MaximumFolderTitle) : null;
+        string? kept = depth < FolderTree.MaximumDepth ? ImportText.Bounded(title, FolderState.UntitledTitle, ImportText.MaximumFolderTitle) : null;
         if (kept is not null && earlierFolders.TryGetValue((parent, kept), out var earlier)) return earlier;
         if (kept is null || folders.Count >= FolderTree.MaximumCount) {
             IsCut = true;

@@ -31,6 +31,9 @@ public sealed record FolderState(
     /// The SF Symbol a folder shows until someone chooses one.
     public const string DefaultSymbol = "folder";
 
+    /// What a folder without a title is called, wherever it comes from.
+    public const string UntitledTitle = "Untitled Folder";
+
     /// The color a folder the core makes for a person's tabs is drawn in, and the one
     /// a folder shows until someone chooses one.
     public static BrandColor DefaultColor { get; } = new(0.43, 0.48, 0.54);

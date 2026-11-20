@@ -19,7 +19,6 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
     /// The most tabs one window or Space brings.
     public const int MaximumTabs = BrowserDataSpace.MaximumTabs;
 
-    private const string UntitledFolder = "Untitled Folder";
     /// The fewest tabs a split view shows.
     private const int MinimumSplitMembers = 2;
 
@@ -133,7 +132,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             if (folder.ParentSourceId is { } parentSource)
                 parent = parentSource != folder.SourceId && folderIds.TryGetValue(parentSource, out var mapped) ? mapped
                     : throw new Rejected(new SessionUnrecognized());
-            string title = ImportText.Bounded(folder.Title, UntitledFolder, ImportText.MaximumFolderTitle)
+            string title = ImportText.Bounded(folder.Title, FolderState.UntitledTitle, ImportText.MaximumFolderTitle)
                 ?? throw new Rejected(new SessionOverLimits());
             return Folder(folderIds[folder.SourceId], title, FolderState.DefaultSymbol, parent, folder.Placement, folder.Color?.Color);
         })];

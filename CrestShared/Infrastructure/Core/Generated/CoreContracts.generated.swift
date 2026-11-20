@@ -3240,6 +3240,7 @@ struct FolderLimitReached: Equatable, Sendable {
 struct FolderState: Equatable, Sendable, Identifiable {
     static let maximumDepth: Int = 16
     static let defaultSymbol: String = "folder"
+    static let untitledTitle: String = "Untitled Folder"
     static let defaultColor = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
 
     let id: UUID

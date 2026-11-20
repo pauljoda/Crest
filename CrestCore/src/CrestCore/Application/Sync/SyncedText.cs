@@ -17,7 +17,7 @@ internal sealed class SyncedText {
     #region Static Variables
 
     /// A Space's name. A Space the session holds unnamed is shown as this.
-    public static readonly SyncedText SpaceName = new(field: StoredSessionCodec.Key.Name, limit: 128, standIn: _ => "Your Space");
+    public static readonly SyncedText SpaceName = new(field: StoredSessionCodec.Key.Name, limit: 128, standIn: _ => SpaceCustomization.UntitledName);
     public static readonly SyncedText SpaceSymbol = new(field: StoredSessionCodec.Key.Symbol, limit: 128, standIn: _ => SpaceTemplate.Ordinary.Symbol);
     /// A split's name; a split without one shows its default name.
     public static readonly SyncedText SplitTitle = new(field: StoredSessionCodec.Key.CustomTitle, limit: 2_048, standIn: _ => null);
@@ -25,7 +25,7 @@ internal sealed class SyncedText {
     public static readonly SyncedText SplitIcon = new(field: StoredSessionCodec.Key.CustomIconSymbol, limit: 128, standIn: _ => null,
         reads: symbol => EmojiIcon.Parse(symbol) is not null);
     /// A folder's title. A folder the session holds untitled is shown as this.
-    public static readonly SyncedText FolderTitle = new(field: StoredSessionCodec.Key.Title, limit: 512, standIn: _ => StoredSessionCodec.UntitledFolder);
+    public static readonly SyncedText FolderTitle = new(field: StoredSessionCodec.Key.Title, limit: 512, standIn: _ => FolderState.UntitledTitle);
     /// A folder's symbol; a folder without one wears the folder symbol.
     public static readonly SyncedText FolderSymbol = new(field: StoredSessionCodec.Key.Symbol, limit: 128, standIn: _ => null);
     /// A tab's page title. A page that named itself nothing is shown by its host.
