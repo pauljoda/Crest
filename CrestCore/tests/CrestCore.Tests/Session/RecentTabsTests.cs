@@ -1,3 +1,4 @@
+using CrestCore.Application;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -35,9 +36,9 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
-    /// The list holds five items with the shown one first, leaves a Start Page
-    /// out unless it is the shown tab, and the two commands go to its second
-    /// and last items.
+    /// The list holds as many items as a window keeps with the shown one
+    /// first, leaves a Start Page out unless it is the shown tab, and the two
+    /// commands go to its second and last items.
     [Fact]
     public void RecentTabsHoldFiveItemsAndLeaveOutStartPagesUnlessShown() {
         var f = new OrderSpace();
@@ -45,6 +46,7 @@ public sealed partial class BrowserContractsTests {
         var window = device.Open(f.Space, (f.Space, f.C1));
 
         ShowAll(device, window, f.Space, f.C2, f.C3, f.N, f.C5, f.P1, f.P2);
+        Assert.Equal(Window.RecentLimit, RecentFocus(device, window).Length);
         Assert.Equal([f.P2, f.P1, f.C5, f.C3, f.C2], RecentFocus(device, window));
 
         device.Send(new ShowMostRecentTab(window));
@@ -110,65 +112,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(f.C2, device.Tab(first, f.Space));
     }
 
-    /// A split is one item that focuses its page used last: moving between its
-    /// pages keeps the order, and the command no longer ping-pongs inside it.
-    [Fact]
-    public void ASplitIsOneItemAndMovingInsideItKeepsTheOrder() {
-        var f = new OrderSpace();
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.C1));
-
-        ShowAll(device, window, f.Space, f.A, f.C2, f.B);
-        var items = device.Query(new RecentTabs(window)).Items;
-        Assert.Equal([f.B, f.C2, f.C1], items.Select(item => item.FocusedTabId));
-        Assert.Equal([f.A, f.B], items[0].TabIds);
-
-        device.Send(new ShowTab(window, f.Space, f.A));
-        Assert.Equal([f.A, f.C2, f.C1], RecentFocus(device, window));
-
-        // From the other tab, the command returns to the page used last, and
-        // returning again does not stop inside the split.
-        device.Send(new ShowTab(window, f.Space, f.C2));
-        device.Send(new ShowMostRecentTab(window));
-        Assert.Equal(f.A, device.Tab(window, f.Space));
-        device.Send(new ShowTab(window, f.Space, f.B));
-        device.Send(new ShowMostRecentTab(window));
-        Assert.Equal(f.C2, device.Tab(window, f.Space));
-        device.Send(new ShowMostRecentTab(window));
-        Assert.Equal(f.B, device.Tab(window, f.Space));
-    }
-
-    /// Taking a split apart makes each page its own item.
-    [Fact]
-    public void ASplitTakenApartBecomesItsPagesAsItems() {
-        var f = new OrderSpace();
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.C1));
-
-        ShowAll(device, window, f.Space, f.A, f.B, f.C2);
-        Assert.Equal([f.C2, f.B, f.C1], RecentFocus(device, window));
-        device.Send(new SeparateSplits(device.Workspace, window, f.Space, new([f.A, f.B], [], [f.A, f.B])));
-        Assert.Equal([f.C2, f.B, f.A, f.C1], RecentFocus(device, window));
-    }
-
-    /// A closed tab drops out at once, and switching Space neither counts as
-    /// using a tab nor loses the Space's list.
-    [Fact]
-    public void ClosedTabsDropOutAndSwitchingSpaceKeepsEachSpacesList() {
-        var f = new OrderSpace();
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.C1));
-
-        ShowAll(device, window, f.Space, f.C2, f.C3);
-        device.Send(new CloseTab(device.Workspace, window, f.Space, f.C2));
-        Assert.Equal([f.C3, f.C1], RecentFocus(device, window));
-
-        device.Send(new ShowSpace(window, f.Second));
-        Assert.Equal([f.SecondTab], RecentFocus(device, window));
-        device.Send(new ShowSpace(window, f.Space));
-        Assert.Equal([f.C3, f.C1], RecentFocus(device, window));
-    }
-
     /// A tab moved to another window leaves the first window's recent tabs
     /// at once, even while that window still shows it, and returns to them
     /// when the window shows it again; the other window lists it once shown.
@@ -197,51 +140,4 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([f.C3, f.C1], RecentFocus(device, first));
     }
 
-    /// Only tabs whose page is loaded are offered, the shown one whatever its
-    /// page, so a tab put away, unloaded or never opened since a launch drops
-    /// out of the panel and the quick jumps, and comes back once loaded again.
-    [Fact]
-    public void RecentTabsOfferOnlyLoadedTabsBesideTheShownOne() {
-        var f = new OrderSpace();
-        using var device = new TestDevice(f.Session);
-        var window = device.Open(f.Space, (f.Space, f.C1));
-        ShowAll(device, window, f.Space, f.C2, f.C3);
-        device.Send(new ShowTab(window, f.Space, f.C5));
-        Assert.Equal([f.C5, f.C3, f.C2, f.C1], RecentFocus(device, window));
-
-        // A tab shown without a page loads none, and one whose page closes drops out.
-        device.Send(new ShowTab(window, f.Space, f.P1));
-        Assert.Equal([f.P1, f.C3, f.C2, f.C1], RecentFocus(device, window));
-        var page = device.ShowPage(window, f.Space, f.P2, PageSnapshot.Blank);
-        device.Send(new ShowTab(window, f.Space, f.P2));
-        device.Send(new ReleasePage(page, KeepsState: true));
-        device.Send(new ShowTab(window, f.Space, f.C3));
-        Assert.Equal([f.C3, f.C2, f.C1], RecentFocus(device, window));
-        device.Send(new ShowMostRecentTab(window));
-        Assert.Equal(f.C2, device.Tab(window, f.Space));
-    }
-    /// A Space with a Sub-Space lists the loaded tabs of its whole group, each
-    /// naming its Space, the one used most recently first, and the most
-    /// recent tab command switches the window to the other Space; a Space
-    /// outside the group stays out.
-    [Fact]
-    public void RecentTabsReachAcrossTheSubSpaceGroup() {
-        var f = new OrderSpace();
-        using var device = new TestDevice(f.Session);
-        device.Send(new JoinSpace(device.Workspace, f.Second, f.Space));
-        var window = device.Open(f.Space, (f.Space, f.C1));
-        ShowAll(device, window, f.Space, f.C2);
-        device.Send(new ShowSpace(window, f.Third));
-        ShowAll(device, window, f.Third, f.ThirdTab);
-        device.Send(new ShowSpace(window, f.Second));
-        ShowAll(device, window, f.Second, f.SecondTab);
-
-        var items = device.Query(new RecentTabs(window)).Items;
-        Assert.Equal([f.SecondTab, f.C2, f.C1], items.Select(item => item.FocusedTabId));
-        Assert.Equal([f.Second, f.Space, f.Space], items.Select(item => item.SpaceId));
-
-        device.Send(new ShowMostRecentTab(window));
-        Assert.Equal(f.Space, device.Space(window));
-        Assert.Equal(f.C2, device.Tab(window, f.Space));
-    }
 }

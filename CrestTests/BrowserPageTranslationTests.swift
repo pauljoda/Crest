@@ -29,13 +29,6 @@ final class BrowserPageTranslationTests: XCTestCase {
         XCTAssertEqual(values, ["Hola mundo", "edited", "Site update", "#next"])
     }
 
-    /// Applies `texts` to the captured entries in document order.
-    private func apply(_ texts: [String], token: String, in web: WKWebView) async throws -> Int {
-        try await BrowserTranslationDocument(webView: web).apply(
-            texts.enumerated().map { BrowserTranslationDocument.Update(index: $0.offset, text: $0.element) },
-            token: token)
-    }
-
     private func fixture() async throws -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()

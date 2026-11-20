@@ -361,19 +361,6 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         )
     }
 
-    private func waitUntil(
-        _ description: String,
-        timeout: Duration = .seconds(10),
-        condition: () async throws -> Bool
-    ) async throws {
-        let deadline = ContinuousClock.now.advanced(by: timeout)
-        while ContinuousClock.now < deadline {
-            if try await condition() { return }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-        XCTFail("Timed out waiting for \(description).")
-    }
-
     private var fixtureHTML: String {
         """
         <!doctype html>

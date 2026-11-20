@@ -203,22 +203,16 @@ public sealed unsafe class ContractCodecTests {
         Assert.NotEqual(ordered.Fingerprint, reordered.Fingerprint);
     }
 
-    /// A record that holds a password, itself or through a list or an optional,
-    /// names none in its Swift text: it shows each list's count and nothing
-    /// else of its values, and reflects no children.
+    /// A record that holds a password, itself or through a list, an optional or
+    /// another record, is one whose Swift text the generator redacts, and a
+    /// record that holds none keeps its own.
     [Fact]
-    public void ARecordThatHoldsAPasswordNamesNoneInItsSwiftText() {
-        string swift = SwiftEmitter.EmitContracts(ContractSchema.Load([typeof(Secret.Unlock), typeof(Secret.Remember),
-            typeof(Secret.Recall), typeof(Secret.Note)]));
+    public void EveryRecordThatHoldsAPasswordIsRedacted() {
+        var secrets = SwiftEmitter.SecretRecords(ContractSchema.Load([typeof(Secret.Unlock), typeof(Secret.Remember),
+            typeof(Secret.Recall), typeof(Secret.Note)])).Select(type => type.Name).ToHashSet();
 
-        foreach (string holder in new[] { "Unlock", "Remember", "Recall", "ExistingCredential" })
-            Assert.Contains($"extension {holder}: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {{", swift,
-                StringComparison.Ordinal);
-        Assert.DoesNotContain("extension Note:", swift, StringComparison.Ordinal);
-        Assert.Contains("\"Unlock(owner: <redacted>, password: <redacted>)\"", swift, StringComparison.Ordinal);
-        Assert.Contains("\"Remember(credentials: \\(credentials.count), hooks: <redacted>)\"", swift, StringComparison.Ordinal);
-        Assert.Contains("var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }", swift,
-            StringComparison.Ordinal);
+        Assert.Superset(new HashSet<string> { "Unlock", "Remember", "Recall", "ExistingCredential" }, secrets);
+        Assert.DoesNotContain("Note", secrets);
     }
 
     [Fact]

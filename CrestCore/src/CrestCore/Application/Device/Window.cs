@@ -13,7 +13,7 @@ internal sealed class Window {
 
 
     /// The most items a Space's recent tabs hold, the shown one included.
-    private const int RecentLimit = 5;
+    internal const int RecentLimit = 5;
 
     /// The tab shown in each Space; null when the window shows none there.
     private readonly Dictionary<Guid, Guid?> tabs;

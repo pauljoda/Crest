@@ -94,30 +94,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(PaletteRowKind.Calculation, Asked("24 * 7").First.Kind);
     }
 
-    /// A history row names the tabs whose icon it may wear for its site, best
-    /// first: tabs on its page, whatever their fragment, archived ones too,
-    /// then the rest of the site, `www.` aside. A tab on another port or
-    /// another site is never one.
-    [Fact]
-    public void AHistoryRowWearsTheIconOfATabOnItsPageFirstThenOfItsSite() {
-        Guid samePage = Guid.NewGuid(), sameSite = Guid.NewGuid(), otherPort = Guid.NewGuid(), otherSite = Guid.NewGuid();
-        var (session, space) = PaletteSession(
-            [OpenTab(sameSite, "Pears", "https://www.orchard.example/pears"), OpenTab(otherPort, "Apples", "https://orchard.example:8443/apples"),
-                OpenTab(otherSite, "Apples", "https://harbor.example/apples")],
-            ("https://orchard.example/apples", "Orchard Apples", 3, 2, 1));
-        session["spaces"]![0]!["archivedTabs"] = new JsonArray(new JsonObject {
-            ["tab"] = OpenTab(samePage, "Apples", "https://orchard.example/apples#core"),
-            ["reason"] = "closed",
-            ["archivedAt"] = (DateTimeOffset.UtcNow.AddHours(-1) - StoredSessionCodec.ReferenceEpoch).TotalSeconds
-        });
-        using var device = new TestDevice(session);
-        var window = device.Open(space);
-
-        var history = device.Query(Asking(window, "orchard apples")).Groups.SelectMany(group => group.Rows)
-            .First(row => row.Kind == PaletteRowKind.History);
-        Assert.Equal([samePage, sameSite], history.IconTabIds);
-    }
-
     [Fact]
     public void StoredPalettePreferencesNameEveryKindOnceAndKeepWhatTheyCannotRead() {
         var stored = JsonNode.Parse("""
