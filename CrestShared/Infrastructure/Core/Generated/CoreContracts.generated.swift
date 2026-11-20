@@ -2155,6 +2155,8 @@ struct CredentialPreferences: Equatable, Sendable {
 
 struct CredentialRecord: Equatable, Sendable, Identifiable {
     static let maximumRecords: Int = 64
+    static let revealLifetime: Double = 30
+    static let clipboardLifetime: Double = 60
 
     var id: UUID
     var username: String?
@@ -5017,8 +5019,25 @@ struct PaletteGroup: Equatable, Sendable {
     let rows: [PaletteRow]
 }
 
+struct PaletteLimiting: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let limit: Int
+}
+
+struct PaletteOffering: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let isEnabled: Bool
+}
+
 struct PalettePreferences: Equatable, Sendable {
     static let maximumLimit: Int = 50
+    static let offeredLimits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
     static let `default` = PalettePreferences(
         layout: PaletteLayout.sections,
         sources: [
@@ -5109,6 +5128,20 @@ struct PaletteRow: Equatable, Sendable {
             httpFallback: httpFallback
         )
     }
+}
+
+struct PaletteSectionMove: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let index: Int
+}
+
+struct PaletteSectionOrder: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
 }
 
 struct PaletteSettingsPage: Equatable, Sendable {
@@ -7532,13 +7565,17 @@ struct TransientPagePromoted: CoreChange, Equatable, Sendable {
 struct TranslationChoice: Query, Equatable, Sendable {
     typealias Answer = TranslationDecision
 
+    static let fallbackPreferredLanguage: String = "en"
+
     let rules: [TranslationRule]
     let sourceLanguage: String
+    let preferredLanguage: String?
 }
 
 struct TranslationDecision: Equatable, Sendable {
     let rule: TranslationRule?
     let target: String?
+    let offers: Bool
 }
 
 struct TranslationRule: Equatable, Sendable {
@@ -17019,6 +17056,7 @@ struct PaletteSource: Hashable, Sendable {
     var isEnabledByDefault: Bool { facts.isEnabledByDefault }
     var restingSection: PaletteSection? { facts.restingSection }
     var defaultLimit: Int { facts.defaultLimit }
+    var isArranged: Bool { facts.isArranged }
     private let facts: Facts
 
     private init(
@@ -17030,7 +17068,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: Bool,
         isEnabledByDefault: Bool,
         restingSection: PaletteSection?,
-        defaultLimit: Int
+        defaultLimit: Int,
+        isArranged: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -17041,7 +17080,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: isSection,
             isEnabledByDefault: isEnabledByDefault,
             restingSection: restingSection,
-            defaultLimit: defaultLimit
+            defaultLimit: defaultLimit,
+            isArranged: isArranged
         )
     }
 
@@ -17054,7 +17094,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.recentTabs,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let openTabs = PaletteSource(
         tag: 1,
@@ -17065,7 +17106,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 8
+        defaultLimit: 8,
+        isArranged: true
     )
     static let saved = PaletteSource(
         tag: 2,
@@ -17076,7 +17118,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let history = PaletteSource(
         tag: 3,
@@ -17087,7 +17130,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 6
+        defaultLimit: 6,
+        isArranged: true
     )
     static let actions = PaletteSource(
         tag: 4,
@@ -17098,7 +17142,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.actions,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let spaces = PaletteSource(
         tag: 5,
@@ -17109,7 +17154,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: true
     )
     static let archivedTabs = PaletteSource(
         tag: 6,
@@ -17120,7 +17166,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let suggestions = PaletteSource(
         tag: 7,
@@ -17131,7 +17178,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let settingsPages = PaletteSource(
         tag: 8,
@@ -17142,7 +17190,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let scopes = PaletteSource(
         tag: 9,
@@ -17153,7 +17202,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
     static let calculator = PaletteSource(
         tag: 10,
@@ -17164,7 +17214,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 1
+        defaultLimit: 1,
+        isArranged: false
     )
     static let pasteAndGo = PaletteSource(
         tag: 11,
@@ -17175,7 +17226,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
 
     static let all: [PaletteSource] = [
@@ -17214,6 +17266,7 @@ struct PaletteSource: Hashable, Sendable {
         let isEnabledByDefault: Bool
         let restingSection: PaletteSection?
         let defaultLimit: Int
+        let isArranged: Bool
 
         init(
             name: String,
@@ -17223,7 +17276,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: Bool,
             isEnabledByDefault: Bool,
             restingSection: PaletteSection?,
-            defaultLimit: Int
+            defaultLimit: Int,
+            isArranged: Bool
         ) {
             self.name = name
             self.title = title
@@ -17233,6 +17287,7 @@ struct PaletteSource: Hashable, Sendable {
             self.isEnabledByDefault = isEnabledByDefault
             self.restingSection = restingSection
             self.defaultLimit = defaultLimit
+            self.isArranged = isArranged
         }
     }
 }

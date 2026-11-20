@@ -73,6 +73,11 @@ public sealed class PaletteSource {
     /// section's, or before anything is typed for a kind that only shows then.
     public int DefaultLimit => Section.Limit > 0 ? Section.Limit : Section.RestingLimit;
 
+    /// Whether the person places the kind among the sections: every section
+    /// but search suggestions, which always come last and which the search
+    /// engine settings turn on or off.
+    public bool IsArranged => IsSection && this != Suggestions;
+
     /// How the kind finds and scores its rows, each finder a kind of row it offers.
     private readonly IReadOnlyList<PaletteFinder> finders;
 

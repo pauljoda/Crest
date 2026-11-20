@@ -6049,6 +6049,10 @@
     "core-answers-store-gates": {
       "category": "internal",
       "message": "The core answers which tabs Clear and Delete Folder remove, which search providers may be a default, where native views open, and whether a Space's passwords may be read, filled or saved and from which vaults."
+    },
+    "core-feature-rules": {
+      "category": "internal",
+      "message": "The core publishes the password reveal and clipboard lifetimes, answers whether a page is offered translation, and edits the palette's section order and row limits for Settings."
     }
   }
 }
