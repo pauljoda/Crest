@@ -2548,6 +2548,7 @@ button {
   --prompt-border: rgb(255 255 255 / 0.16);
   --flyout-edge: rgb(255 255 255 / 0.08);
   --site-tile: rgb(255 255 255 / 0.165);
+  --site-accent: rgb(var(--crest-accent-dark));
   --site-success: rgb(134 196 142);
   --site-warning: rgb(236 190 92);
   --site-danger: rgb(238 106 92);
@@ -2560,6 +2561,7 @@ button {
   --prompt-border: rgb(0 0 0 / 0.1);
   --flyout-edge: rgb(0 0 0 / 0.1);
   --site-tile: rgb(0 0 0 / 0.06);
+  --site-accent: rgb(var(--crest-accent-light));
   --site-success: rgb(47 112 66);
   --site-warning: rgb(138 90 8);
   --site-danger: rgb(178 50 37);
@@ -2607,7 +2609,7 @@ button {
 }
 
 .site-control-host {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--prompt-ink-secondary);
 }
 
@@ -2698,6 +2700,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -2727,7 +2730,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: var(--crest-space-medium);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .site-permissions-toggle {
@@ -2781,11 +2784,14 @@ button {
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
 }
 
+/* A permission as the Mac lists it: its name in caption size, and its
+   choice a borderless menu in Crest's blue with a small chevron. */
 .site-permission-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  font-size: 10px;
 }
 
 .site-permission-choice {
@@ -2793,13 +2799,14 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px;
-  border-radius: 5px;
-  color: var(--prompt-ink);
+  padding: 0;
+  color: var(--site-accent);
+  font-size: 13px;
+  line-height: 16px;
 }
 
-.site-permission-choice:hover {
-  background: color-mix(in srgb, var(--prompt-ink) 8%, transparent);
+.site-permission-choice:active {
+  opacity: 0.6;
 }
 
 .permission-symbol {
@@ -4283,12 +4290,14 @@ embed.page-frame {
   gap: 8px;
 }
 
+/* The Mac's Extensions heading: the headline over its caption-size rows. */
 .site-extensions-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--prompt-ink-secondary);
-  font-weight: 600;
+  color: var(--prompt-ink);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .site-extensions-manage {
@@ -4305,7 +4314,7 @@ embed.page-frame {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 10px;
   color: var(--prompt-ink-secondary);
 }
 

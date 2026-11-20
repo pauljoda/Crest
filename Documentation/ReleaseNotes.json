@@ -5885,6 +5885,10 @@
     "windows-surfaces-match-mac": {
       "category": "internal",
       "message": "The Windows command palette, Site Controls, find bar and page alerts take the Mac's surfaces: a neutral palette selection with the search engine's logo, Site Controls hung from its button with an arrow, a warm find bar that closes up when empty, and compact alerts with a blue default button"
+    },
+    "windows-site-controls-content-match-mac": {
+      "category": "internal",
+      "message": "Site Controls on Windows lists its sections in the Mac's order, with extensions after the quick actions, permission choices as blue menus, and the Mac's type sizes"
     }
   }
 }

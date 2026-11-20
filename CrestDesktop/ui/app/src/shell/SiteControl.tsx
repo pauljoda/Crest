@@ -190,6 +190,21 @@ export function SiteControlPanel({
               onClick={perform(() => void session.core.request(OpenInspector({ pageId: page.id, panel: InspectorPanel.Elements }))
                 .catch(() => undefined))} />
           </div>
+          {/* The engine's own section follows the actions, as the Mac's
+              BrowserEngineSiteControlsSection does: the page's extensions. */}
+          {session.shell && !isPrivate && (
+            <>
+              <SiteExtensionsSection session={session} space={space} pageId={page.id} pageKey={`${page.live.url ?? ""}|${page.live.title}`}
+                onRun={(run) => perform(run)()} onManage={perform(() => extensions.openSettings())} />
+              {webStoreExtensionId(address) && (
+                <button type="button" className="site-control-action labelled"
+                  onClick={perform(() => void extensions.install(session, webStoreExtensionId(address)!, space.id, [], page.id))}>
+                  <Symbol name="plus" size={12} />
+                  <span>Install Extension…</span>
+                </button>
+              )}
+            </>
+          )}
           {origin && (
             <>
               <div className="site-control-divider" />
@@ -198,20 +213,6 @@ export function SiteControlPanel({
               <div className="site-control-divider" />
               <Permissions session={session} spaceId={space.id} origin={origin} expanded={permissionsExpanded}
                 onToggle={() => setPermissionsExpanded((expanded) => !expanded)} />
-              {session.shell && !isPrivate && (
-                <>
-                  <div className="site-control-divider" />
-                  <SiteExtensionsSection session={session} space={space} pageId={page.id} pageKey={`${page.live.url ?? ""}|${page.live.title}`}
-                    onRun={(run) => perform(run)()} onManage={perform(() => extensions.openSettings())} />
-                  {webStoreExtensionId(address) && (
-                    <button type="button" className="site-control-action labelled"
-                      onClick={perform(() => void extensions.install(session, webStoreExtensionId(address)!, space.id, [], page.id))}>
-                      <Symbol name="plus" size={12} />
-                      <span>Install Extension…</span>
-                    </button>
-                  )}
-                </>
-              )}
             </>
           )}
           {host && (
@@ -353,7 +354,7 @@ function Permissions({ session, spaceId, origin, expanded, onToggle }: {
             <button type="button" className="site-permission-choice" aria-label={`${permission.title}: ${permissionTitle(permission, decision)}`}
               onClick={(event) => choose(event, permission, decision)}>
               {permissionTitle(permission, decision)}
-              <Symbol name="chevron.up.chevron.down" size={9} />
+              <Symbol name="chevron.down" size={8} strokeWidth={3} />
             </button>
           </div>
         );
