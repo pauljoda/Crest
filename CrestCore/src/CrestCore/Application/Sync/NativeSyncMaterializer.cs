@@ -66,7 +66,7 @@ public static class NativeSyncMaterializer {
     private static IEnumerable<T> Payloads<T>(IReadOnlyList<SyncSessionRecord> records, Guid? space = null) where T : SyncPayload =>
         records.Where(record => space is null || record.SpaceId == space).Select(record => record.Payload).OfType<T>();
 
-    internal static bool Portable(TabState tab) => SyncedAddress.IncludesTab(tab.Url, tab.NativeContent is not null,
+    private static bool Portable(TabState tab) => SyncedAddress.IncludesTab(tab.Url, tab.NativeContent is not null,
         tab.SavedUrl ?? (tab.Placement.IsDurable ? tab.Url : null));
 
     private static bool Portable(TabPayload tab) => SyncedAddress.IncludesTab(tab.Url?.Text, tab.NativeContent is not null,
@@ -164,6 +164,21 @@ public static class NativeSyncMaterializer {
         var hidden = new FolderTree(folders).Empty(holding,
             folder => folder.Location == TabPlacement.Current && ((folder.IsGroup && folder.ParentId is null) || emptied.Contains(folder.Id)));
         return [.. folders.Where(folder => !hidden.Contains(folder.Id))];
+    }
+
+    /// The pending primary keeps its local tabs while the successor arrives.
+    /// For the handover, use the accepted state of its synced shared pins.
+    internal static SpaceState UpdatingHandoverPins(SpaceState primary, SyncPreferences policy,
+        IReadOnlyDictionary<Guid, SyncSessionRecord> acceptedTabs) {
+        if (primary.Settings.SeparatesPinnedTabs || acceptedTabs.Count == 0) return primary;
+        return primary with { Tabs = [.. primary.Tabs.Select(UpdatedPin).OfType<TabState>()] };
+
+        TabState? UpdatedPin(TabState tab) {
+            if (!tab.IsPinned || !Portable(tab) || !acceptedTabs.TryGetValue(tab.Id, out var accepted)) return tab;
+            if (accepted.Tombstone is not null) return null;
+            if (accepted.Payload is not TabPayload remote || !Portable(remote) || !policy.Includes(remote.Placement)) return tab;
+            return remote.SpaceId == primary.Id && remote.Placement == TabPlacement.Pinned ? Tab(remote, tab) : null;
+        }
     }
 
     /// The tab `remote` describes, keeping what never syncs from `local`: its

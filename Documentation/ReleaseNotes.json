@@ -5873,6 +5873,10 @@
     "shared-space-order-and-window-handover": {
       "category": "fixed",
       "message": "Independent Space order stays intact as sync records arrive in batches. Links from shared pinned tabs open where their page is showing."
+    },
+    "synced-pin-addresses-during-space-handover": {
+      "category": "fixed",
+      "message": "Shared pinned tabs keep their latest synced addresses when another Space takes over."
     }
   }
 }

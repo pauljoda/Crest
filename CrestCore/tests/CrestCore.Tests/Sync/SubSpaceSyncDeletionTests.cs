@@ -129,6 +129,57 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(reason, accepted.Record(SyncRecordKind.Tab, deletedPin)?["tombstone"]?["reason"]?.GetValue<string>());
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void PrimarySuccessionCarriesTheAcceptedPinPayload(bool syncsPins, bool earlierBatch) {
+        var (work, workProfile, client, clientProfile, pin) = (Fixed(8_900), Fixed(8_901), Fixed(8_910), Fixed(8_911), Fixed(8_902));
+        const string oldUrl = "https://example.com/old";
+        const string latestUrl = "https://example.com/latest";
+        const string latestSavedUrl = "https://example.com/saved";
+        var session = Canonical(SessionOf(
+            SpaceOf(work, workProfile, "Work", tabs: [TabOf(pin, url: oldUrl, placement: "pinned")]),
+            Joined(SpaceOf(client, clientProfile, "Client"), work, workProfile, at: 1_800_000_000)));
+        var journal = new JournalUnderTest(Fixed(8_903), savedStructure: syncsPins);
+        using var directory = new StorageDirectory();
+        var receiveTime = new TestClock(DateTimeOffset.FromUnixTimeSeconds(1_800_000_200));
+        using var stored = StoredSyncing(directory, new JsonObject { ["session"] = session }, journal: journal.Document, clock: receiveTime);
+
+        var edited = CloudTab(pin, work, clock: 1_002);
+        var tabBody = JsonNode.Parse(edited.Body)!.AsObject();
+        tabBody["value"]!["placement"] = "pinned";
+        tabBody["value"]!["url"] = latestUrl;
+        tabBody["value"]!["savedURL"] = latestSavedUrl;
+        edited = edited with { Body = Bytes(tabBody) };
+        var handover = CloudSpace(client, clientProfile, clock: 1_001);
+        var spaceBody = JsonNode.Parse(handover.Body)!.AsObject();
+        spaceBody["value"]!["sharedProfileID"] = workProfile.ToString("D").ToUpperInvariant();
+        spaceBody["value"]!["membershipModifiedAt"] = 1_800_000_100.0;
+        handover = handover with { Body = Bytes(spaceBody) };
+        var departure = Tombstone(SyncRecordKind.Space, work, work, clock: 1_000);
+
+        if (earlierBatch) {
+            Assert.Empty(stored.App.Send(new MergeSyncRecords([departure, edited])));
+            Assert.Equal(oldUrl, stored.Session.Current.KnownSpace(work).Tabs.Single(tab => tab.Id == pin).Url);
+            Assert.Empty(stored.App.Send(new MergeSyncRecords([handover])));
+        } else {
+            Assert.Empty(stored.App.Send(new MergeSyncRecords([departure, edited, handover])));
+        }
+
+        var moved = Assert.Single(stored.Session.Current.KnownSpace(client).Tabs, tab => tab.Id == pin);
+        Assert.True(moved.IsPinned);
+        Assert.Equal(syncsPins ? latestUrl : oldUrl, moved.Url);
+        Assert.Equal(syncsPins ? latestSavedUrl : oldUrl, moved.SavedUrl);
+        if (syncsPins) {
+            var accepted = new JournalUnderTest(stored.Sync.Snapshot);
+            var value = accepted.Value(SyncRecordKind.Tab, pin);
+            Assert.Equal(latestUrl, value?["url"]?.GetValue<string>());
+            Assert.Equal(latestSavedUrl, value?["savedURL"]?.GetValue<string>());
+            Assert.True(JsonNode.DeepEquals(SwiftId(client), value?["spaceID"]));
+        }
+    }
+
     [Fact]
     public void AnOfflineReceiverKeepsAProfileAndItsCredentialsWhenAnotherSpaceTakesOver() {
         var (work, workProfile, client, clientProfile) = (Fixed(8_100), Fixed(8_101), Fixed(8_200), Fixed(8_201));

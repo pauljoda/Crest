@@ -109,18 +109,13 @@ public sealed record NativeSyncSessionTransition {
     /// that have yet to arrive. Use the sender's time for inferred changes.
     private static SessionState ApplyingArrivedHandovers(SessionState raw, IEnumerable<SpaceState> deleted,
         SyncPreferences policy, IReadOnlyList<SyncSessionRecord> records) {
-        var tombstonedTabs = policy.Includes(TabPlacement.Pinned)
-            ? records.Where(record => record.Kind == SyncRecordKind.Tab && record.Tombstone is not null)
-                .Select(record => record.Id).ToHashSet()
-            : [];
+        Dictionary<Guid, SyncSessionRecord>? acceptedTabs = null;
         foreach (var former in deleted) {
             if (raw.CredentialSuccessor(former) is not { } successorId) continue;
-            // The pending primary still holds its pre-merge tabs. Honor
-            // accepted tombstones for shared pins that sync on this device.
-            var source = tombstonedTabs.Count == 0 || former.Settings.SeparatesPinnedTabs ? former : former with {
-                Tabs = former.Tabs.Where(tab => !tab.IsPinned || !tombstonedTabs.Contains(tab.Id)
-                    || !NativeSyncMaterializer.Portable(tab)).ToArray()
-            };
+            acceptedTabs ??= policy.Includes(TabPlacement.Pinned)
+                ? records.Where(record => record.Kind == SyncRecordKind.Tab).ToDictionary(record => record.Id)
+                : [];
+            var source = NativeSyncMaterializer.UpdatingHandoverPins(former, policy, acceptedTabs);
             var (departing, successor) = SpaceGroup.HandingOverPins(source, raw.KnownSpace(successorId));
             var handoverTime = successor.Membership!.ModifiedAt;
             var children = raw.StayingSpaces.Where(space => space.PrimaryId == former.Id).Select(space => {
