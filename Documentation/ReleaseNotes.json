@@ -5953,6 +5953,10 @@
     "ci-builds-swift-tests": {
       "category": "internal",
       "message": "Continuous integration compiles the Mac and iOS test targets, so a test that no longer builds fails the change."
+    },
+    "guard-engine-imports": {
+      "category": "internal",
+      "message": "The architecture guard keeps WebKit imports to the WebKit adapters and the Chromium host condition to the engine, and now also checks the agents and the Chromium shell."
     }
   }
 }

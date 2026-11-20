@@ -5,6 +5,21 @@
       "path": "CrestShared/Domain/BrowserTab/Icons/BrowserFaviconPayloadIdentity.swift",
       "module": "CryptoKit",
       "reason": "A favicon render identity must read every byte exactly once off the main actor's update path. SHA-256 states that directly; hand-rolling an equivalent from Foundation's per-process Hasher took two full passes over the payload and a fingerprint that could not safely be stored or compared across processes."
+    },
+    {
+      "path": "CrestShared/Infrastructure/Popups/PopupSchemeRouting.swift",
+      "module": "WebKit",
+      "reason": "Each pop-up route resolves WebKit's own new-window request (its navigation action and the configuration WebKit built), so the routes are written against WebKit's types until pop-up routing moves behind the engine abstraction."
+    },
+    {
+      "path": "CrestMobile/Features/Browser/MobileBrowserRootView/Components/MobileBrowserWebView/MobileBrowserWebHostView.swift",
+      "module": "WebKit",
+      "reason": "The iPhone and iPad page surface hosts the WKWebView of the page it shows; it moves under the WebKit adapters with the shared WebKit page."
+    },
+    {
+      "path": "CrestMobile/Features/Settings/MobileBrowserSettingsView/Components/MobileSettingsBuildHeader.swift",
+      "module": "WebKit",
+      "reason": "The About header names the WebKit version pages run in, read from the WebKit framework's bundle."
     }
   ],
   "xcode27PatternExemptions": []

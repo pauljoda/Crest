@@ -81,7 +81,7 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(
             self.violation_rules(),
-            {"layer-import"},
+            {"engine-import", "layer-import"},
         )
 
     def test_xcode_27_state_and_builder_hazards_are_rejected(self) -> None:
