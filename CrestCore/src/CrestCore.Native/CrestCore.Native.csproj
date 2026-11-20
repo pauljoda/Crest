@@ -6,24 +6,30 @@
     <IsAotCompatible>true</IsAotCompatible>
     <!-- The apps' deployment target (project.yml), which the content filter is built for too. -->
     <AppleMinOSVersion>26.1</AppleMinOSVersion>
+    <CrestRuntimeFamily Condition="$(RuntimeIdentifier.StartsWith('osx-')) or $(RuntimeIdentifier.StartsWith('ios'))">apple</CrestRuntimeFamily>
+    <CrestRuntimeFamily Condition="$(RuntimeIdentifier.StartsWith('win-'))">windows</CrestRuntimeFamily>
+    <CrestRuntimeFamily Condition="$(RuntimeIdentifier.StartsWith('linux-'))">linux</CrestRuntimeFamily>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../CrestCore/CrestCore.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The session file uses the system SQLite on every Apple platform. -->
+    <!-- The session file uses the system SQLite: the library every Apple
+         platform and Linux distribution ships, and on Windows the copy the OS
+         ships as winsqlite3.dll, whose import library is in the Windows SDK.
+         The managed code names it libsqlite3 everywhere. -->
     <DirectPInvoke Include="libsqlite3" />
-    <NativeLibrary Include="-lsqlite3" />
+    <NativeLibrary Include="-lsqlite3" Condition="'$(CrestRuntimeFamily)' == 'apple' or '$(CrestRuntimeFamily)' == 'linux'" />
+    <NativeLibrary Include="winsqlite3.lib" Condition="'$(CrestRuntimeFamily)' == 'windows'" />
     <!-- The content filter is linked in statically: the prebuilt library the
          lock in CrestCore/native/ContentFilter names, for the runtime published. -->
     <DirectPInvoke Include="crest_content_filter" />
   </ItemGroup>
-  <Target Name="CrestContentFilterLibrary" BeforeTargets="SetupOSSpecificProps"
-      Condition="'$(RuntimeIdentifier)' == 'osx-arm64' or '$(RuntimeIdentifier)' == 'ios-arm64' or '$(RuntimeIdentifier)' == 'iossimulator-arm64'">
+  <Target Name="CrestContentFilterLibrary" BeforeTargets="SetupOSSpecificProps" Condition="'$(CrestRuntimeFamily)' != ''">
     <PropertyGroup>
       <CrestContentFilterPathFile>$(IntermediateOutputPath)content-filter.path</CrestContentFilterPathFile>
     </PropertyGroup>
-    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)../../../Scripts/control-plane/fetch-content-filter.py&quot; --runtime $(RuntimeIdentifier) &gt; &quot;$(CrestContentFilterPathFile)&quot;"
+    <Exec Command="$(CrestPython) &quot;$(MSBuildThisFileDirectory)../../../Scripts/control-plane/fetch-content-filter.py&quot; --runtime $(RuntimeIdentifier) &gt; &quot;$(CrestContentFilterPathFile)&quot;"
         IgnoreStandardErrorWarningFormat="true" />
     <ReadLinesFromFile File="$(CrestContentFilterPathFile)">
       <Output TaskParameter="Lines" PropertyName="CrestContentFilterLibraryPath" />
@@ -32,9 +38,13 @@
       <NativeLibrary Include="$(CrestContentFilterLibraryPath)" />
       <!-- An engine that checks each request itself calls the slot check directly,
            without the core's managed code. -->
-      <LinkerArg Include="-Wl,-exported_symbol,_crest_content_filter_slot_check" />
-      <LinkerArg Include="-Wl,-exported_symbol,_crest_content_filter_slot_check_redirect" />
-      <LinkerArg Include="-Wl,-exported_symbol,_crest_content_filter_buffer_free" />
+      <CrestContentFilterExport Include="crest_content_filter_slot_check;crest_content_filter_slot_check_redirect;crest_content_filter_buffer_free" />
+      <LinkerArg Include="@(CrestContentFilterExport->'-Wl,-exported_symbol,_%(Identity)')" Condition="'$(CrestRuntimeFamily)' == 'apple'" />
+      <LinkerArg Include="@(CrestContentFilterExport->'/EXPORT:%(Identity)')" Condition="'$(CrestRuntimeFamily)' == 'windows'" />
+      <LinkerArg Include="@(CrestContentFilterExport->'-Wl,--export-dynamic-symbol=%(Identity)')" Condition="'$(CrestRuntimeFamily)' == 'linux'" />
+      <!-- The Rust standard library's Windows imports, which a static Rust
+           library leaves to the final link. -->
+      <NativeLibrary Include="ws2_32.lib;userenv.lib;ntdll.lib;bcrypt.lib;advapi32.lib" Condition="'$(CrestRuntimeFamily)' == 'windows'" />
     </ItemGroup>
   </Target>
 </Project>

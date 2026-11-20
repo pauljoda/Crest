@@ -64,7 +64,10 @@ public sealed record ShiftedDigit(string Symbol, string Digit);
 public sealed record ShortcutDefault(DevicePlatform Platform, KeyCombination Keys, bool YieldsToOverrides);
 
 /// The modifier keys held with a shortcut's key. The values are the bits of
-/// the native modifier mask that persisted shortcuts store.
+/// the native modifier mask that persisted shortcuts store. Command is the
+/// platform's shortcut key: ⌘ on the Mac and iPad, Ctrl on Windows. Option is
+/// ⌥ or Alt, and Control is the Mac's ⌃, which is the Windows key on Windows,
+/// so no Windows default holds it.
 [Flags]
 public enum ShortcutModifiers {
     None = 0,

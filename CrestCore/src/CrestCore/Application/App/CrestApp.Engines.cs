@@ -19,6 +19,7 @@ public sealed partial class CrestApp {
 
     /// The engines as the core last published them.
     private EngineRoster publishedEngines = EngineRoster.Unregistered;
+    internal EngineRoster PublishedEngines => publishedEngines;
 
     #endregion
 

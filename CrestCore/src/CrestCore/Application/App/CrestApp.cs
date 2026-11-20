@@ -179,6 +179,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             extensions.Prune(changes, Issue);
             // Agents let go of the tabs they may no longer use.
             device.PruneAgents(changes);
+            // What the turn asked, or settled, for a read model that starts later.
+            foreach (var change in changes.Published) asked.Follow(change);
             published = [.. TakePending(), .. changes.Published];
         }
         Deliver();

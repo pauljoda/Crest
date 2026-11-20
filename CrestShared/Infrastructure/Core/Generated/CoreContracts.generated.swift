@@ -1587,6 +1587,15 @@ struct CapturePage: PageRequest, Equatable, Sendable {
     let width: Double
 }
 
+struct CatchUp: Query, Equatable, Sendable {
+    typealias Answer = CaughtUp
+
+}
+
+struct CaughtUp: Equatable, Sendable {
+    let changes: [Change]
+}
+
 struct CertificateChain: Equatable, Sendable {
     let certificates: [Data]
 }
@@ -12904,8 +12913,9 @@ struct DevicePlatform: Hashable, Sendable {
 
     static let desktop = DevicePlatform(tag: 0, name: "desktop", keepsSetupDraft: false, importsBrowsers: true)
     static let mobile = DevicePlatform(tag: 1, name: "mobile", keepsSetupDraft: true, importsBrowsers: false)
+    static let windows = DevicePlatform(tag: 2, name: "windows", keepsSetupDraft: false, importsBrowsers: false)
 
-    static let all: [DevicePlatform] = [desktop, mobile]
+    static let all: [DevicePlatform] = [desktop, mobile, windows]
 
     static func named(_ name: String?) -> DevicePlatform? {
         all.first { $0.name == name }
@@ -19299,6 +19309,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: 1,
@@ -19352,6 +19367,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -19414,6 +19434,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19442,6 +19467,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -19474,6 +19504,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19502,6 +19537,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -19534,6 +19574,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "[", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19564,6 +19609,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "]", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19592,6 +19642,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -19624,6 +19679,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: ".", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: ".", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19654,6 +19714,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19682,6 +19747,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "d", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "d", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -19733,6 +19803,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: 2,
@@ -19761,6 +19836,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
             )
@@ -19793,6 +19873,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19822,6 +19907,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "upArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "pageUp", isSpecialKey: true, modifiers: [.command]),
                 yieldsToOverrides: false
             )
         ],
@@ -19853,6 +19943,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "downArrow", isSpecialKey: true, modifiers: [.command, .option]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "pageDown", isSpecialKey: true, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19883,6 +19978,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.control]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19911,6 +20011,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -19943,6 +20048,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -19971,6 +20081,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -20003,6 +20118,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20031,6 +20151,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -20063,6 +20188,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20091,6 +20221,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -20123,6 +20258,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20151,6 +20291,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -20183,6 +20328,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .option]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20211,6 +20361,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .option]),
                 yieldsToOverrides: false
             )
@@ -20243,6 +20398,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.control]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20272,6 +20432,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.option]),
                 yieldsToOverrides: false
             )
         ],
@@ -20303,6 +20468,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.control]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20332,6 +20502,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.option]),
                 yieldsToOverrides: false
             )
         ],
@@ -20363,6 +20538,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.control]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20392,6 +20572,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.option]),
                 yieldsToOverrides: false
             )
         ],
@@ -20423,6 +20608,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.control]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20453,6 +20643,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.control]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.option]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20482,6 +20677,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.option]),
                 yieldsToOverrides: false
             )
         ],
@@ -20589,6 +20789,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "f", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "f", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20619,6 +20824,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "+", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "=", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20647,6 +20857,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "-", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "-", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -20679,6 +20894,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "0", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "0", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20707,6 +20927,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "c", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "c", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
             )
@@ -20826,6 +21051,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "p", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "p", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -20854,6 +21084,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "s", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "s", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
@@ -20885,6 +21120,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "y", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "h", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: false
             )
         ],
@@ -20935,6 +21175,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "j", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "j", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: 4,
@@ -20964,6 +21209,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "i", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "f12", isSpecialKey: true, modifiers: []),
                 yieldsToOverrides: false
             )
         ],
@@ -21123,6 +21373,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21151,6 +21406,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
             )
@@ -21183,6 +21443,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "i", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "m", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21211,6 +21476,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: false
             )
@@ -21257,6 +21527,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.desktop,
                 keys: KeyCombination(key: "g", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "f3", isSpecialKey: true, modifiers: []),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21282,6 +21557,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.desktop,
                 keys: KeyCombination(key: "g", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "f3", isSpecialKey: true, modifiers: [.shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21307,6 +21587,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.desktop,
                 keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.command, .shift]),
                 yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "s", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21337,6 +21622,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.mobile,
                 keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.control, .shift]),
                 yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21419,6 +21709,11 @@ struct ShortcutCommand: Hashable, Sendable {
                 platform: DevicePlatform.desktop,
                 keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
                 yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
             )
         ],
         paletteRest: nil,
@@ -21447,6 +21742,11 @@ struct ShortcutCommand: Hashable, Sendable {
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.windows,
                 keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .option, .shift]),
                 yieldsToOverrides: true
             )

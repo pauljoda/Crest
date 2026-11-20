@@ -5829,6 +5829,10 @@
     "content-filter-windows": {
       "category": "internal",
       "message": "Build the content filter's Windows libraries on Windows, as its own archive under the lock's key beside the Apple one"
+    },
+    "core-on-windows": {
+      "category": "internal",
+      "message": "The core builds, tests and publishes for Windows, with Windows shortcut defaults, the system SQLite, a catch-up query for a window that starts late, and TypeScript contracts for the desktop interface"
     }
   }
 }
