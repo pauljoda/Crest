@@ -344,6 +344,11 @@
   color: var(--settings-secondary);
 }
 
+/* A row that does something, as a button in a macOS grouped form reads: its title in the accent. */
+.settings-action-row .settings-row-title {
+  color: var(--settings-accent);
+}
+
 .settings-switch {
   position: relative;
   display: flex;

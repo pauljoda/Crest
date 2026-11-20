@@ -51,15 +51,16 @@ export const destinations: Readonly<Record<SettingsPageName, SettingsDestination
     "credentials autofill passkeys"),
   extensions: destination("extensions", "Extensions", "Space extensions and permissions", "puzzlepiece.extension", brand.sky,
     "extensions permissions Chromium Chrome Web Store install copies Spaces"),
-  advanced: destination("advanced", "Advanced", "Import, export, and runtime", "switch.2", brand.coral,
-    "import export backup portability data records"),
+  // Windows' Advanced page holds Setup alone so far: it imports and exports nothing yet.
+  advanced: destination("advanced", "Advanced", "Setup and onboarding", "switch.2", brand.coral,
+    "setup onboarding rerun welcome review customize Spaces"),
   about: destination("about", "About", "Version, updates, and support", "info.circle", brand.sky,
     "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community"),
 };
 
 /** The sidebar's rows before the Spaces, and after them, in the Mac's order less what Windows leaves out. */
 export const leadingRows: readonly SettingsPageName[] = ["general", "tabs", "search", "lookAndFeel", "links", "shortcuts", "privacy", "adBlocking"];
-export const trailingRows: readonly SettingsPageName[] = ["about"];
+export const trailingRows: readonly SettingsPageName[] = ["advanced", "about"];
 
 /** Whether `destination` answers a search for `query`, by any of its words, ignoring case and accents. */
 export function matches(destination: SettingsDestination, query: string): boolean {

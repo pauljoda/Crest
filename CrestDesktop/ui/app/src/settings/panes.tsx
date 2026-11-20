@@ -21,11 +21,13 @@ import {
   type SpaceState,
   StartupBehavior,
   TabPlacement,
+  SetupEntry,
 } from "@crest/contracts";
 import { useEffect, useState } from "react";
 
 import crestIcon from "../../../../../CrestShared/Resources/AppIconPreviews.xcassets/CrestPreview.imageset/icon.png";
 import type { Session } from "../boot";
+import { setupLauncher } from "../commands";
 import { Symbol } from "../symbols";
 import type { SettingsPageName } from "./catalog";
 import { Button, Group, Picker, Row, Segmented, Toggle } from "./controls";
@@ -50,6 +52,7 @@ export function SettingsPane({ name, ...props }: PaneProps & { name: SettingsPag
     case "shortcuts": return <ShortcutsPane session={props.session} />;
     case "privacy": return <PrivacyPane {...props} />;
     case "adBlocking": return <AdBlockingPane session={props.session} />;
+    case "advanced": return <AdvancedPane />;
     case "about": return <AboutPane {...props} />;
     default: return null;
   }
@@ -342,6 +345,26 @@ function PrivacyPane({ session, spaces, shownSpace }: PaneProps) {
       </Group>
       <SpacePrivacySections key={space.id} session={session} space={space} spaces={spaces} />
     </>
+  );
+}
+
+/**
+ * BrowserAdvancedSettingsPane's Setup section: Crest Setup again from the
+ * welcome, or its Spaces to review and change, over this window. The Mac's
+ * Import from Another Browser waits for Windows to read other browsers.
+ */
+function AdvancedPane() {
+  return (
+    <Group title="Setup">
+      <button type="button" className="settings-row settings-link-row settings-action-row" title="Restart setup from the welcome screen"
+        data-testid="settings-rerun-onboarding" onClick={() => setupLauncher.open(SetupEntry.rerun)}>
+        <span className="settings-row-title">Rerun onboarding</span>
+      </button>
+      <button type="button" className="settings-row settings-link-row settings-action-row" title="Customize current Spaces or add new Spaces"
+        data-testid="settings-manual-setup" onClick={() => setupLauncher.open(SetupEntry.manualSetup)}>
+        <span className="settings-row-title">Review &amp; Customize Setup…</span>
+      </button>
+    </Group>
   );
 }
 

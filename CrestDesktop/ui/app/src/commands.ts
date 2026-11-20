@@ -28,6 +28,7 @@ import {
   type TabState,
   TabSurface,
   TogglePin,
+  type SetupEntry,
 } from "@crest/contracts";
 import { CoreRejection } from "@crest/core-client";
 
@@ -65,6 +66,9 @@ export function openPalette(kind: "newTab" | "editLocation") {
  * editor. The window sets it.
  */
 export const spaceEditing = { open: (_spaceId: string) => {} };
+
+/** Opens Crest Setup over the window for `entry`, as Settings' Setup actions do; the app sets it once it starts. */
+export const setupLauncher = { open: (_entry: SetupEntry) => {} };
 
 /** What a window shows now, which its commands act on. */
 export interface WindowView {

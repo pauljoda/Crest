@@ -1,9 +1,11 @@
 import {
   DevicePlatform,
   FinishSetup,
+  type SetupEntry,
   type SetupFinished,
   SetupStep,
   ShowSetupStep,
+  ShowSpace,
   StartSetup,
 } from "@crest/contracts";
 import { motion as tokens } from "@crest/design";
@@ -38,28 +40,35 @@ const slide: Variants = {
 };
 
 /**
- * Crest Setup, as the Mac's BrowserSetupWindowContent draws it in the
- * window a first launch holds back: the welcome across the whole window,
- * then the steps on a sheet of paper at the leading third, beside a preview
- * of Crest in the room the shown Space's look colors. Every page edits
- * Setup's draft in the core, which takes effect only when Start Browsing
- * finishes Setup: the held window opens beneath, the preview moves to where
- * its window stands, and Setup fades into it.
+ * Crest Setup, as the Mac's BrowserSetupWindowContent draws it: in the
+ * window a first launch holds back, or over a window Settings opens it on.
+ * The welcome across the whole window, then the steps on a sheet of paper
+ * at the leading third, beside a preview of Crest in the room the shown
+ * Space's look colors. Every page edits Setup's draft in the core, which
+ * takes effect only when Start Browsing finishes Setup: the window opens or
+ * shows beneath, the preview moves to where its window stands, and Setup
+ * fades into it. Over a window that is already open, the welcome offers
+ * Cancel, since Setup covers it here where the Mac's has a window of its own.
  */
-export function SetupWindow({ session, onOpened, onHandedOver }: {
+export function SetupWindow({ session, entry, holdsLaunch, onOpened, onHandedOver, onCancel }: {
   session: Session;
-  /** The held window is open, for the browser window to draw beneath Setup. */
+  entry: SetupEntry;
+  /** Whether this window is a launch's held back for Setup, which opens once it finishes. */
+  holdsLaunch: boolean;
+  /** The window is open and shows what Setup made, for the browser window to draw beneath Setup. */
   onOpened: () => void;
   /** Setup has faded into the browser window. */
   onHandedOver: () => void;
+  /** Leaves Setup without finishing, or null where it can't be left. */
+  onCancel: (() => void) | null;
 }) {
   useCoreVersion(session);
   const reducesMotion = useReducedMotion() ?? false;
-  const held = useRef(session.setup.current);
   const draft = session.core.state.setupDraft;
   const previewSpaces = usePreviewSpaces(session);
   const walk = setupWalk(DevicePlatform.windows.importsBrowsers, false);
-  const [path, setPath] = useState<readonly SetupPage[]>([]);
+  // Review & Customize Setup opens on the Spaces, as the Mac's manual setup entry does.
+  const [path, setPath] = useState<readonly SetupPage[]>(() => (entry.firstStep.name === "manualSetup" ? [stepPage("spaces")] : []));
   const direction = useRef(1);
   const [shownSpaceId, setShownSpaceId] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
@@ -84,8 +93,6 @@ export function SetupWindow({ session, onOpened, onHandedOver }: {
   // Setup opens over the session's own Spaces, which the manual setup draft
   // takes from the first page, as the Mac's live setup begins it at once.
   useEffect(() => {
-    const entry = held.current?.entry;
-    if (!entry) return;
     void (async () => {
       try {
         await session.core.send(StartSetup({ workspaceId: session.workspaceId, entry }));
@@ -94,7 +101,13 @@ export function SetupWindow({ session, onOpened, onHandedOver }: {
         setError(explanation(failure));
       }
     })();
-  }, [session]);
+  }, [session, entry]);
+
+  // Setup takes the keyboard from the window it covers.
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!holdsLaunch) root.current?.focus();
+  }, [holdsLaunch]);
 
   const firstSpaceId = draft?.spaces[0]?.spaceId ?? null;
   const shownId = shownSpaceId ?? firstSpaceId;
@@ -131,8 +144,10 @@ export function SetupWindow({ session, onOpened, onHandedOver }: {
     try {
       const changes = await session.core.send(FinishSetup({ windowId: session.windowId }));
       const finished = changes.find((change): change is SetupFinished => change.$kind === "SetupFinished");
-      // Windows draws no Getting Started view yet, so the window opens on the Space it would have shown.
-      await openHeldLaunch(session, finished?.guideSpaceId ?? null);
+      // Windows draws no Getting Started view yet, so the window opens on, or shows, the Space it would have shown.
+      const guideSpaceId = finished?.guideSpaceId ?? null;
+      if (holdsLaunch) await openHeldLaunch(session, guideSpaceId);
+      else if (guideSpaceId) await session.core.send(ShowSpace({ windowId: session.windowId, spaceId: guideSpaceId })).catch(() => undefined);
       onOpened();
       // The browser window draws beneath first, as the Mac waits for it, then Setup hands over.
       requestAnimationFrame(() => requestAnimationFrame(() => setTakingOver(true)));
@@ -185,7 +200,7 @@ export function SetupWindow({ session, onOpened, onHandedOver }: {
   }
 
   return (
-    <motion.div className={`setup-window${narrow ? " narrow" : ""}${takingOver ? " taking-over" : ""}`}
+    <motion.div ref={root} tabIndex={-1} className={`setup-window${narrow ? " narrow" : ""}${takingOver ? " taking-over" : ""}`}
       style={{ "--steps-width": `${stepsWidth}px` } as CSSProperties}
       initial={false} animate={{ opacity: takingOver ? 0 : 1 }} transition={handOver}
       onAnimationComplete={() => {
@@ -220,6 +235,11 @@ export function SetupWindow({ session, onOpened, onHandedOver }: {
                 </p>
                 {error && <p className="setup-error" role="alert">{error}</p>}
                 <div className="setup-welcome-actions">
+                  {onCancel && (
+                    <button type="button" className="setup-button secondary large" data-testid="setup-cancel" onClick={onCancel}>
+                      Cancel
+                    </button>
+                  )}
                   <button type="button" className="setup-button primary large" data-testid={landing ? "setup-continue" : undefined} onClick={forward}>
                     Continue
                   </button>

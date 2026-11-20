@@ -33,6 +33,11 @@
   -webkit-app-region: drag;
 }
 
+/* Setup holds the keyboard over the window it covers, without a ring of its own. */
+.setup-window:focus {
+  outline: none;
+}
+
 /* Handing over, Setup fades into the browser window beneath, which takes the pointer at once. */
 .setup-window.taking-over {
   pointer-events: none;

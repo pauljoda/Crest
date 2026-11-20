@@ -5925,6 +5925,10 @@
     "windows-crest-setup-preview": {
       "category": "internal",
       "message": "Crest Setup on Windows shows Crest as each Space will look beside the steps, slides between them, and hands over to the browser window as it finishes"
+    },
+    "windows-setup-rerun": {
+      "category": "internal",
+      "message": "Settings on Windows has an Advanced page whose Setup section reruns Crest Setup from the welcome, or opens it to review and customize the Spaces"
     }
   }
 }
