@@ -1,3 +1,5 @@
+using CrestCore.Application;
+
 namespace CrestCore.Contracts;
 
 #region Archives
@@ -19,7 +21,7 @@ public sealed record ArchiveTooLarge : Rejection {
 
     /// What the person is told.
     [Localized]
-    public string Message => "This file is larger than Crest’s 50 MB import limit.";
+    public string Message => $"This file is larger than Crest’s {BrowserDataFile.MaximumMegabytes} MB import limit.";
 
     #endregion
 }
@@ -78,7 +80,7 @@ public sealed record BookmarksTooLarge : Rejection {
 
     /// What the person is told.
     [Localized]
-    public string Message => "This bookmark file is larger than Crest’s 50 MB import limit.";
+    public string Message => $"This bookmark file is larger than Crest’s {BookmarkFile.MaximumMegabytes} MB import limit.";
 
     #endregion
 }
@@ -152,7 +154,7 @@ public sealed record SessionTooLarge : Rejection {
 
     /// What the person is told.
     [Localized]
-    public string Message => "This session file is larger than Crest’s 512 MB import limit.";
+    public string Message => $"This session file is larger than Crest’s {InstalledBrowser.MaximumSessionMegabytes} MB import limit.";
 
     #endregion
 }

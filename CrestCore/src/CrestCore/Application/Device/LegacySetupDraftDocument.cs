@@ -28,7 +28,7 @@ internal static class LegacySetupDraftDocument {
     private const string Accent = "accent";
     private const string Branding = "branding";
 
-    private static readonly JsonDocumentOptions Options = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions Options = JsonDepth.Session.Options;
 
     #endregion
 

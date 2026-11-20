@@ -11,6 +11,9 @@ public sealed record SpaceCustomization(string Name, string Symbol, SpaceAccent 
     /// What a Space named with nothing but blanks is called.
     public const string UntitledName = "Untitled Space";
 
+    /// The longest name a Space takes, named or imported.
+    public const int MaximumNameLength = 200;
+
     /// The symbol a Space given a blank one wears.
     private const string DefaultSymbol = "square.grid.2x2";
 
@@ -25,8 +28,8 @@ public sealed record SpaceCustomization(string Name, string Symbol, SpaceAccent 
     /// `Rejected` with `InvalidName` for one longer than a Space name holds.
     internal static string Chosen(string name) {
         var resolved = Resolved(name);
-        if (resolved.Length > BrowserTabCollection.MaximumNameLength)
-            throw new Rejected(new InvalidName(BrowserTabCollection.MaximumNameLength));
+        if (resolved.Length > MaximumNameLength)
+            throw new Rejected(new InvalidName(MaximumNameLength));
         return resolved;
     }
 

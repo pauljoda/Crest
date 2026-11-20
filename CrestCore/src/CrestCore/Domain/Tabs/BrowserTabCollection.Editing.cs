@@ -49,7 +49,7 @@ public sealed partial class BrowserTabCollection {
         if (!target.Placement.HoldsSplits) throw new Rejected(new CannotPinSplit(targetId));
         var run = SplitMembers(targetId);
         var members = run.Where(t => t.Id != id).ToArray();
-        if (members.Length >= MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
+        if (members.Length >= SplitGroupState.MaximumMembers) throw new Rejected(new SplitLimitReached(SplitGroupState.MaximumMembers));
         int slot = Math.Clamp(memberIndex ?? members.Length, 0, members.Length);
         Guid? anchor = slot < members.Length ? members[slot].Id
             : tabs.Skip(tabs.IndexOf(run[^1]) + 1).FirstOrDefault(t => t.Id != id)?.Id;
@@ -63,7 +63,7 @@ public sealed partial class BrowserTabCollection {
 
     public bool MoveSplitMember(Guid id, int memberIndex, DateTimeOffset now) {
         var tab = Tab(id); var run = SplitMembers(id);
-        if (run.Count < 2) return false;
+        if (run.Count < SplitGroupState.MinimumMembers) return false;
         int first = tabs.IndexOf(run[0]); int insertion = first + Math.Clamp(memberIndex, 0, run.Count - 1);
         if (tabs.IndexOf(tab) == insertion) return false;
         var originalPositions = run.ToDictionary(t => t.Id, tabs.IndexOf);

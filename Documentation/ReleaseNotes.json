@@ -5997,6 +5997,10 @@
     "ci-release-test-build": {
       "category": "internal",
       "message": "Continuous integration compiles each app and its tests in one Release build, with the test fixtures compiled into that build only."
+    },
+    "core-values-one-spelling": {
+      "category": "internal",
+      "message": "The core spells each limit, document depth, stored key and web scheme once, on the type that owns it."
     }
   }
 }

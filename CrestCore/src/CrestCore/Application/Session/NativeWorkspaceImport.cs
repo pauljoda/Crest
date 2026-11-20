@@ -22,11 +22,9 @@ internal sealed class NativeWorkspaceImport {
     internal const string OverflowFolderTitle = "Imported Pinned Tabs";
     internal const string OverflowFolderSymbol = "pin.slash";
 
-    /// The fewest tabs a split brings.
-    private const int MinimumSplitMembers = 2;
 
     /// How deep an imported Space may nest, as the stored format reads it.
-    private static readonly JsonDocumentOptions SpacesDocument = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions SpacesDocument = JsonDepth.Session.Options;
 
     #endregion
 
@@ -409,7 +407,7 @@ internal sealed class NativeWorkspaceImport {
         var repaired = SplitMember.Repair(all).Skip(existing.Count).ToArray();
         var counts = repaired.OfType<Guid>().GroupBy(id => id).ToDictionary(group => group.Key, group => group.Count());
         var tabs = edited.Select((tab, index) => {
-            Guid? kept = repaired[index] is { } joined && joined == asked[index] && counts[joined] >= MinimumSplitMembers ? joined : null;
+            Guid? kept = repaired[index] is { } joined && joined == asked[index] && counts[joined] >= SplitGroupState.MinimumMembers ? joined : null;
             return tab.SplitGroupId == kept ? tab : Copied(tab, tab with { SplitGroupId = kept });
         }).ToArray();
         foreach (var (source, identity) in identities)

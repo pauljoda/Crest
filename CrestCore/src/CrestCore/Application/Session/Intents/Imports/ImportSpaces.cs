@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// beside them, and otherwise make way, as a reviewed import's do. Pinned
 /// tabs past the limit become saved tabs. The window shows the first of them,
 /// on its first tab.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record ImportSpaces(Guid WorkspaceId, Guid WindowId, IReadOnlyList<SpaceState> Spaces)
     : ImportWorkspace(WorkspaceId, WindowId) {
     #region Actions - Session

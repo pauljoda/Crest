@@ -59,8 +59,6 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
 
     internal const string CanceledMessage = "Canceled.";
     internal const string DeclinedMessage = "Canceled before downloading a potentially dangerous file.";
-    /// The longest host a question shows; anything longer is not a host.
-    internal const int MaximumHostLength = 253;
 
     private readonly Dictionary<(Engine Engine, Guid ProfileId, string EngineId), Tracked> tracked = [];
     private readonly Dictionary<Guid, Tracked> byDownload = [];

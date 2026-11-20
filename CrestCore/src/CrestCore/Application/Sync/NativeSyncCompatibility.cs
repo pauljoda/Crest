@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using K = CrestCore.Application.StoredSessionCodec.Key;
+
 namespace CrestCore.Application;
 
 /// Additive fields in an accepted wire record belong to that record. A local
@@ -26,59 +28,59 @@ internal static class NativeSyncCompatibility {
         #endregion
     }
 
-    private static readonly Shape Identity = new("rawValue");
-    private static readonly Shape Color = new("red green blue alpha");
-    private static readonly Shape Charge = new("kind value style");
-    private static readonly Shape Gradient = new("colors kind angle", new() { ["colors"] = List(Color) });
+    private static readonly Shape Identity = new([K.RawValue]);
+    private static readonly Shape Color = new([K.Red, K.Green, K.Blue, K.Alpha]);
+    private static readonly Shape Charge = new([K.Kind, K.Value, K.Style]);
+    private static readonly Shape Gradient = new([K.Colors, K.Kind, K.Angle], new() { [K.Colors] = List(Color) });
 
     private static readonly Shape Crest = new(
-        "backplate fieldDivision ordinary trim symbol chargeLayout backplateColorIndex secondaryFieldColorIndex ordinaryColorIndex trimColorIndex symbolColorIndex edgeColorIndex palette charge plateScale edgeWidth divisionCount finish ordinaryWidth trimWeight trimDetail chargeScale chargeOffset chargeWeight startingPresetID sheenAngle sealTeeth showsOutline depth paletteGradients",
-        new() { ["palette"] = List(Color), ["charge"] = Charge, ["paletteGradients"] = List(Gradient) });
+        [K.Backplate, K.FieldDivision, K.Ordinary, K.Trim, K.Symbol, K.ChargeLayout, K.BackplateColorIndex, K.SecondaryFieldColorIndex, K.OrdinaryColorIndex, K.TrimColorIndex, K.SymbolColorIndex, K.EdgeColorIndex, K.Palette, K.Charge, K.Finish, K.ChargeWeight, K.StartingPresetId, K.ShowsOutline, K.Depth, K.PaletteGradients, .. CrestMeasure.All.Select(measure => measure.Name)],
+        new() { [K.Palette] = List(Color), [K.Charge] = Charge, [K.PaletteGradients] = List(Gradient) });
 
     private static readonly Shape Branding = new(
-        "colors bannerPattern bannerStrength readabilityFade keepsControlsReadable themeMode gradientAngle showsTexture textureStrength iconStyle symbolColor crest renderingVersion folderColorIntensity textColorMode hasCustomAppearance gradientKind symbolGradient colorGradients",
+        [K.Colors, K.BannerPattern, K.BannerStrength, K.ReadabilityFade, K.KeepsControlsReadable, K.ThemeMode, K.GradientAngle, K.ShowsTexture, K.TextureStrength, K.IconStyle, K.SymbolColor, K.Crest, K.RenderingVersion, K.FolderColorIntensity, K.TextColorMode, K.HasCustomAppearance, K.GradientKind, K.SymbolGradient, K.ColorGradients],
         new() {
-            ["colors"] = List(Color),
-            ["symbolColor"] = Color,
-            ["crest"] = Crest,
-            ["symbolGradient"] = Gradient,
-            ["colorGradients"] = List(Gradient)
+            [K.Colors] = List(Color),
+            [K.SymbolColor] = Color,
+            [K.Crest] = Crest,
+            [K.SymbolGradient] = Gradient,
+            [K.ColorGradients] = List(Gradient)
         });
 
-    private static readonly Shape SearchProvider = new("id name searchURLTemplate suggestionURLTemplate");
+    private static readonly Shape SearchProvider = new([K.Id, K.Name, K.SearchUrlTemplate, K.SuggestionUrlTemplate]);
 
     private static readonly Shape Browsing = new(
-        "searchProvider selectedSearchProviderID customSearchProviders searchSuggestionsEnabled searchFollowsDefault suggestionsFollowDefault currentTabCleanupPolicy contentBlockingPolicy dataRetention",
-        new() { ["customSearchProviders"] = List(SearchProvider, true), ["dataRetention"] = new("history archive downloads") });
+        [K.LegacySearchProvider, K.SelectedSearchProviderId, K.CustomSearchProviders, K.SearchSuggestionsEnabled, K.SearchFollowsDefault, K.SuggestionsFollowDefault, K.CurrentTabCleanupPolicy, K.ContentBlockingPolicy, K.DataRetention],
+        new() { [K.CustomSearchProviders] = List(SearchProvider, true), [K.DataRetention] = new([K.History, K.Archive, K.Downloads]) });
 
     private static readonly Shape Group = new(SplitGroupPayload.Members,
-        new() { [StoredSessionCodec.Key.Id] = Identity, [StoredSessionCodec.Key.Tint] = Color });
+        new() { [K.Id] = Identity, [K.Tint] = Color });
 
     private static readonly Shape Tab = new(TabPayload.Members, new() {
-        [StoredSessionCodec.Key.Id] = Identity,
-        [StoredSessionCodec.Key.SpaceId] = Identity,
-        [StoredSessionCodec.Key.FolderId] = Identity,
-        [StoredSessionCodec.Key.SplitGroupId] = Identity
+        [K.Id] = Identity,
+        [K.SpaceId] = Identity,
+        [K.FolderId] = Identity,
+        [K.SplitGroupId] = Identity
     });
 
     private static readonly Dictionary<string, Shape> Values = new() {
         [SyncRecordKind.Space.Name] = new(SpacePayload.Members, new() {
-            [StoredSessionCodec.Key.Id] = Identity,
-            [StoredSessionCodec.Key.PrimarySpaceId] = Identity,
-            [StoredSessionCodec.Key.Branding] = Branding,
-            [StoredSessionCodec.Key.BrowsingPreferences] = Browsing,
-            [StoredSessionCodec.Key.SplitGroups] = List(Group, true)
+            [K.Id] = Identity,
+            [K.PrimarySpaceId] = Identity,
+            [K.Branding] = Branding,
+            [K.BrowsingPreferences] = Browsing,
+            [K.SplitGroups] = List(Group, true)
         }),
         [SyncRecordKind.Folder.Name] = new(FolderPayload.Members, new() {
-            [StoredSessionCodec.Key.Id] = Identity,
-            [StoredSessionCodec.Key.SpaceId] = Identity,
-            [StoredSessionCodec.Key.ParentId] = Identity,
-            [StoredSessionCodec.Key.OrderAnchorTabId] = Identity,
-            [StoredSessionCodec.Key.Color] = Color
+            [K.Id] = Identity,
+            [K.SpaceId] = Identity,
+            [K.ParentId] = Identity,
+            [K.OrderAnchorTabId] = Identity,
+            [K.Color] = Color
         }),
         [SyncRecordKind.Tab.Name] = Tab,
-        [SyncRecordKind.History.Name] = new(HistoryPayload.Members, new() { [StoredSessionCodec.Key.SpaceId] = Identity }),
-        [SyncRecordKind.Archive.Name] = new(ArchivePayload.Members, new() { [StoredSessionCodec.Key.Tab] = Tab })
+        [SyncRecordKind.History.Name] = new(HistoryPayload.Members, new() { [K.SpaceId] = Identity }),
+        [SyncRecordKind.Archive.Name] = new(ArchivePayload.Members, new() { [K.Tab] = Tab })
     };
 
     #endregion
@@ -95,8 +97,8 @@ internal static class NativeSyncCompatibility {
     }
 
     private static string? MemberId(JsonNode? value) {
-        var id = value?["id"];
-        if (id is JsonObject wrapper) id = wrapper["rawValue"];
+        var id = value?[K.Id];
+        if (id is JsonObject wrapper) id = wrapper[K.RawValue];
         return id is JsonValue raw && raw.TryGetValue<string>(out var text) ? text.ToLowerInvariant() : null;
     }
 

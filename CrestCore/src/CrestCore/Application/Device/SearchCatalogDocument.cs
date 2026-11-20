@@ -41,7 +41,7 @@ internal static class SearchCatalogDocument {
     public static SearchCatalog? Read(string? document) {
         if (document is null) return null;
         try {
-            if (JsonNode.Parse(document, documentOptions: new() { MaxDepth = 8 }) is not JsonObject value) return null;
+            if (JsonNode.Parse(document, documentOptions: JsonDepth.Preferences.Options) is not JsonObject value) return null;
             var builtIns = (value[BuiltInsKey] as JsonArray ?? []).OfType<JsonObject>().Select(BuiltIn).OfType<SearchProviderSettings>();
             var custom = (value[CustomKey] as JsonArray ?? []).OfType<JsonObject>().Select(Custom).OfType<CustomSearchProvider>();
             var (builtIn, customId) = Chosen(Text(value[DefaultKey]));

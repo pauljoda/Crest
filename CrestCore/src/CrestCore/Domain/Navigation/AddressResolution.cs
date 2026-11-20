@@ -11,6 +11,10 @@ public sealed record AddressResolution(string Url, string? SearchQuery, string? 
     #region Static Variables
 
     // Browser-owned URL spellings that are shared by address and tab rules.
+    /// The longest text a person types that Crest reads as an address or a search.
+    public const int MaximumTypedLength = 4_096;
+    /// The longest address a Space holds.
+    public const int MaximumUrlLength = 16_384;
     public const string AboutBlank = "about:blank";
     public const string ChromeScheme = "chrome";
     public const string CrestScheme = "crest";
@@ -75,7 +79,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery, string? 
     public static AddressResolution? Resolve(string input, SearchProvider provider, bool allowsInternalPages = false) {
         string value = input.Trim();
         if (value.Length == 0) return null;
-        if (value.Length > 4096) throw new Rejected(new UnsupportedAddress(value));
+        if (value.Length > MaximumTypedLength) throw new Rejected(new UnsupportedAddress(value));
         if (value == AboutBlank || IsInternalPage(value)) {
             if (!allowsInternalPages) return new(provider.Search(value), value);
             ValidateUrl(value, allowsInternalPages: true);
@@ -99,10 +103,10 @@ public sealed record AddressResolution(string Url, string? SearchQuery, string? 
     /// over https, falling back to http when https can't reach it. Null when
     /// it names no host.
     private static AddressResolution? SchemelessAddress(string value) {
-        if (value.Any(char.IsWhiteSpace) || !Uri.TryCreate("http://" + value, UriKind.Absolute, out var typed) || typed.Host.Length == 0)
+        if (value.Any(char.IsWhiteSpace) || !Uri.TryCreate(WebScheme.Http.Address(value), UriKind.Absolute, out var typed) || typed.Host.Length == 0)
             return null;
-        if (IsLocal(typed, value)) return new("http://" + value, null);
-        return value.Contains('.') ? new("https://" + value, null, HttpFallback: "http://" + value) : null;
+        if (IsLocal(typed, value)) return new(WebScheme.Http.Address(value), null);
+        return value.Contains('.') ? new(WebScheme.Https.Address(value), null, HttpFallback: WebScheme.Http.Address(value)) : null;
     }
 
     /// Whether `address`, read from `typed` without a scheme, names a host
@@ -156,7 +160,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery, string? 
     /// Throws `Rejected` with `UnsupportedAddress` for an address no Space
     /// holds.
     public static void ValidateUrl(string? url, bool allowsInternalPages = false) {
-        if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+        if (url is null || url.Length > MaximumUrlLength || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
             || (WebScheme.Named(parsed.Scheme) is null
                 && url != AboutBlank
                 // A local document is a legitimate tab URL on every engine. It stays

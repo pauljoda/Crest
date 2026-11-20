@@ -48,7 +48,7 @@ public static class NativeSyncProjection {
     }
 
     internal static SyncPreferences Preferences(JsonNode source) => new(
-        source["savedStructure"]!.GetValue<bool>(), source["currentTabs"]!.GetValue<bool>(), source["historyAndArchive"]!.GetValue<bool>());
+        source[NativeSyncJournal.Key.SavedStructure]!.GetValue<bool>(), source[NativeSyncJournal.Key.CurrentTabs]!.GetValue<bool>(), source[NativeSyncJournal.Key.HistoryAndArchive]!.GetValue<bool>());
 
     public static JsonArray Project(JsonObject session, JsonNode preferences, IEnumerable<JsonObject> existingRecords) {
         var policy = Preferences(preferences);

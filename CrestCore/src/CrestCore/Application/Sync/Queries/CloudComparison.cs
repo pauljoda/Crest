@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// cloud holds, which the transport asks before it syncs with an account it has
 /// not synced with yet. Refused as a `CloudSyncIntent` is, with
 /// `NoStoredSession` or `StoredSessionClosed`.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record CloudComparison(IReadOnlyList<SyncRecord> Cloud) : Query<CloudContentComparison> {
     #region Variables
 

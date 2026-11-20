@@ -104,7 +104,7 @@ internal sealed partial class PageHistory {
     public static PageHistory? Unarchive(byte[]? archive) {
         if (archive is null || archive.Length == 0) return null;
         try {
-            using var document = JsonDocument.Parse(archive, new() { MaxDepth = 8 });
+            using var document = JsonDocument.Parse(archive, JsonDepth.Preferences.Options);
             var root = document.RootElement;
             if (root.GetProperty(VersionName).GetInt32() != ArchiveVersion) return null;
             var kept = root.GetProperty(KeptName).EnumerateArray()

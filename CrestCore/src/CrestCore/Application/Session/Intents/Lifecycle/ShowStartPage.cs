@@ -28,7 +28,7 @@ public sealed record ShowStartPage(Guid WorkspaceId, Guid WindowId, Guid SpaceId
         var shown = followUp.Window?.Tab(space.Id);
         var folder = PlacesAsNewTab && shown is { } shownId && workspace.NewTabsJoinFolder(turn.Basis)
             ? space.Tabs.FirstOrDefault(tab => tab.Id == shownId)?.FolderId : null;
-        bool Reusable(TabState tab) => tab.IsStartPage && (!OutsideSplits || edited.SplitMembers(tab.Id).Count < 2);
+        bool Reusable(TabState tab) => tab.IsStartPage && (!OutsideSplits || edited.SplitMembers(tab.Id).Count < SplitGroupState.MinimumMembers);
         var draft = folder is { } joined ? space.Tabs.FirstOrDefault(tab => Reusable(tab) && tab.FolderId == joined)
             : space.Tabs.FirstOrDefault(tab => Reusable(tab) && !tab.Placement.IsDurable);
         if (draft is null)

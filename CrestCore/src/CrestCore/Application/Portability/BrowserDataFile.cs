@@ -17,12 +17,14 @@ internal static class BrowserDataFile {
 
     public const string Format = "com.pauldavis.crest.browser-data";
     public const int SchemaVersion = 5;
-    /// The largest file an import reads or an export writes.
-    public const int MaximumBytes = 50 * 1024 * 1024;
+    /// The largest file an import reads or an export writes, in megabytes and
+    /// in bytes.
+    public const int MaximumMegabytes = 50;
+    public const int MaximumBytes = MaximumMegabytes * 1024 * 1024;
     /// The most Spaces a file holds.
     public const int MaximumSpaces = 64;
 
-    private static readonly JsonDocumentOptions Document = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions Document = JsonDepth.Session.Options;
     private static readonly JsonWriterOptions Writer = new() {
         Indented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

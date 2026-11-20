@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// Space that keeps `Existing` means, as a browser's own password file would.
 /// The core keeps nothing of either.
 [HoldsSecrets]
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record PasswordImportPreview(IReadOnlyList<ImportedCredential> Credentials, IReadOnlyList<ExistingCredential> Existing)
     : Query<CredentialImportPlan> {
     #region Actions - Text
