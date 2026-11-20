@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chromium_engine  # noqa: E402
 from chromium_fork import exclusive_workspace, performance_configuration_matches, read_json, sha256  # noqa: E402
+from repository import REPOSITORY  # noqa: E402
 
 
 def run(*command, **kwargs):
@@ -30,7 +31,7 @@ def main():
     parser.add_argument("--source", required=True, type=Path, help="The pinned external Chromium checkout")
     parser.add_argument("--output", default="out/CrestBaseline", help="Build directory inside the checkout")
     parser.add_argument("--ninja", required=True, type=Path)
-    parser.add_argument("--repository", default="pauljoda/Crest")
+    parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--dry-run", action="store_true", help="Verify and package without uploading")
     args = parser.parse_args()
 

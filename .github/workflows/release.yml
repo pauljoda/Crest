@@ -273,6 +273,13 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
 
+          # Crest signs as the team project.yml builds with.
+          team_id="$(sed -n 's/^    DEVELOPMENT_TEAM: //p' project.yml)"
+          if [[ -z "$team_id" ]]; then
+            print -u2 "project.yml names no DEVELOPMENT_TEAM."
+            exit 1
+          fi
+
           release_root="$RUNNER_TEMP/crest-release"
           archive_path="$release_root/Crest.xcarchive"
           export_path="$release_root/export"
@@ -332,7 +339,7 @@ jobs:
 
           identity_hash="$(
             security find-identity -v -p codesigning "$keychain_path" \
-              | awk '/Developer ID Application: .*\(3U2R97HLXF\)/ { print $2; exit }'
+              | awk -v team="($team_id)" '/Developer ID Application: / && index($0, team) { print $2; exit }'
           )"
           if [[ -z "$identity_hash" ]]; then
             print -u2 "The imported archive does not contain Crest's Developer ID Application identity."
@@ -379,7 +386,7 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
             CREST_DEFAULT_UPDATE_CHANNEL="$RELEASE_CHANNEL" \
-            DEVELOPMENT_TEAM=3U2R97HLXF \
+            DEVELOPMENT_TEAM="$team_id" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
             CREST_PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"
@@ -400,13 +407,13 @@ jobs:
           codesign -d --entitlements :- "$app_path" \
             > "$exported_entitlements" 2>/dev/null
           test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.application-identifier' "$exported_entitlements")" \
-            = "3U2R97HLXF.com.pauldavis.crest"
+            = "$team_id.com.pauldavis.crest"
           test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.aps-environment' "$exported_entitlements")" \
             = "production"
           test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.icloud-container-identifiers:0' "$exported_entitlements")" \
             = "iCloud.com.pauldavis.crest"
           test "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$exported_entitlements")" \
-            = "3U2R97HLXF.com.pauldavis.crest"
+            = "$team_id.com.pauldavis.crest"
           if /usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$exported_entitlements" >/dev/null 2>&1; then
             print -u2 "The product entitlements must not enable the app sandbox; it would strand installed data."
             exit 1

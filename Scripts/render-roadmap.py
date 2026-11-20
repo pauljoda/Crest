@@ -11,6 +11,9 @@ import subprocess
 import sys
 from typing import Any, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "control-plane"))
+from repository import REPOSITORY  # noqa: E402
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROADMAP = REPOSITORY_ROOT / "Documentation" / "ROADMAP.md"
@@ -24,7 +27,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Render Crest's public roadmap from roadmap-labelled GitHub issues."
     )
-    parser.add_argument("--repository", default="pauljoda/Crest")
+    parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--input", type=Path, help="Read a saved JSON snapshot instead of GitHub.")
     parser.add_argument("--roadmap", type=Path, default=DEFAULT_ROADMAP)
     mode = parser.add_mutually_exclusive_group()
