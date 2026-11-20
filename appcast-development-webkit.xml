@@ -6,29 +6,41 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.53</title>
-            <pubDate>Fri, 20 Nov 2026 15:40:18 +0000</pubDate>
+            <title>0.10.66</title>
+            <pubDate>Fri, 20 Nov 2026 16:25:07 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1655</sparkle:version>
-            <sparkle:shortVersionString>0.10.53</sparkle:shortVersionString>
+            <sparkle:version>1657</sparkle:version>
+            <sparkle:shortVersionString>0.10.66</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### Improved
+
+- The command palette and the recent tabs panel sit on the same material as the address field and pinned tabs, so the palette looks like the field it grows out of.
+- The selected tab, the selected pin and the command palette's selected row look like a sheet of light paper on every Space.
+- Site Controls, color pickers, permission and password prompts, hover previews and notices sit on Crest's paper in light mode instead of always being dark, and on a warm charcoal in dark mode.
+- The sidebar's scroll button, widget cards, sound and sharing badges on tabs, and the command palette's search engine chips use Crest's own surfaces instead of glass.
+- The element picker, the History, Downloads and Archive buttons, and the Space buttons in Settings use Crest's own buttons.
+- Password prompts, the page error screen and the locked Space screen use Crest blue buttons on every Space.
+- The page area, the error screen, the locked Space screen and empty Peek and Quick Window pages use Crest's warm canvas.
+- Empty lists and pages, the page error title, a locked Space's name and the Settings sidebar heading use Crest's rounded display type.
+- Headings, buttons and labels across setup, Settings, the Start Page and Getting Started use Allo, Crest's new rounded typeface.
+
 ### Fixed
 
-- Fixed a crash when a page using the WebKit engine closed while it was loading another site.
+- A selected tab you pick up and drag keeps its light paper look instead of turning glassy.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/759ad72ad0c2549b612857cb60d4eccd83749a33...dd11083e5b7a4e4610eb492926476d10015d5156) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.53-2026-11-20-1655-r655.1/Installer-Crest-0.10.53-development-2026-11-20-dd11083-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/dd11083e5b7a4e4610eb492926476d10015d5156...6fd6d9c5229c84715bfa072620358ce152b3f481) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.66-2026-11-20-1657-r657.1/Installer-Crest-0.10.66-development-2026-11-20-6fd6d9c-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.53-2026-11-20-1655-r655.1/Installer-Crest-0.10.53-development-2026-11-20-dd11083-arm64.dmg" length="240606853" type="application/octet-stream" sparkle:edSignature="or/vVbT5zNB2VCpJ+OFxC0Bgs8KGLPmQM1pZmuOegSSbTmuFkki3mP3W3IIbbRa47v830jWfHCbhEPbLe3eSCg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.66-2026-11-20-1657-r657.1/Installer-Crest-0.10.66-development-2026-11-20-6fd6d9c-arm64.dmg" length="241726085" type="application/octet-stream" sparkle:edSignature="kbPW9skaCMFfcr8sJoHGmfUIqTQo21K9DPU/82vpg1G13e+IMlpAQ4hmIpg5kik7L4dRkwA5SrZdpLuvMHQjAg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +72,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: kNy88xWJ8yWsMWYsYYq+gFotAk0MNSPlvu44CxHu3jKE73TDmCkB/hs7S1wlz7DJzokXs3wmCyJCD6r4aDAyAw==
-length: 3990
+edSignature: P/btwwPi+/vjJ9QAtg/iKYB2hWD61y9dQ9qq8aafyrgV+bRl9sRtbG8Rbju1QX2qyxHh6NlAjkpLz3kgOBsgAw==
+length: 5276
 -->

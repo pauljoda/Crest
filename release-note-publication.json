@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "webkit-page-closed-mid-load-crash",
+    "development": "core-close-waits-for-every-filter-worker",
     "nightly": "palette-history-site-icons"
   }
 }
