@@ -141,7 +141,7 @@ Swift tests or direct app validation.
 
 The supported guards follow the same dependency direction as production code. Framework-neutral default-browser and passkey values and policies stay in Domain, their observable workflow controllers stay in Application, and AuthenticationServices, AppKit, UIKit, and Security bridges stay in shared or platform Infrastructure. Launch flags are parsed by `BrowserLaunchEnvironment`, evaluated by the Application launch policy, and read from the process only by the Infrastructure adapter; BrowserStore composition consumes that typed value.
 
-Structural assertions check current owners and reject superseded paths. Keep those checks recursive where they protect a layer or framework boundary, and match declarations or signatures flexibly enough to allow formatting and typed parameters without accepting a different contract. The Python tooling itself must remain compatible with the Python 3.9 runtime bundled with Xcode.
+Structural assertions check current owners and reject superseded paths. Keep those checks recursive where they protect a layer or framework boundary, and match declarations or signatures flexibly enough to allow formatting and typed parameters without accepting a different contract. The scripts a build runs itself, `build-apple-core.py` from Xcode and `fetch-content-filter.py` with `content_filter.py` from MSBuild, must stay compatible with the Python 3.9 runtime bundled with Xcode. The rest of the tooling and its tests need Python 3.11 or newer.
 
 ## Periphery evidence audit
 
@@ -152,4 +152,4 @@ brew install periphery
 Scripts/audit-periphery.sh
 ```
 
-The script scans both app schemes across Debug and Release using one task-scoped Derived Data directory, then removes that directory. It retains Objective-C-accessible declarations and Codable properties up front. Its remaining findings are evidence only. Before deleting anything, prove references and target membership, run the affected builds and tests, and account for dynamic WebKit, AppKit, delegate, serialization, and preview entry points.
+The script scans the WebKit app, the Chromium product and the iOS app across Debug and Release; Periphery builds into its own cache, which you remove when the audit is done. It retains Objective-C-accessible declarations and Codable properties up front. Its remaining findings are evidence only. Before deleting anything, prove references and target membership, run the affected builds and tests, and account for dynamic WebKit, AppKit, delegate, serialization, and preview entry points.
