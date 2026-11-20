@@ -5905,6 +5905,10 @@
     "split-one-tab-message": {
       "category": "fixed",
       "message": "Making a Split View from a single tab now asks you to select at least 2 tabs, instead of asking for fewer."
+    },
+    "mobile-padlock-page-security": {
+      "category": "internal",
+      "message": "iPhone, iPad and Mac decide the address field's padlock with one rule that reads the security Crest judged for the page."
     }
   }
 }
