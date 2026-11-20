@@ -6025,6 +6025,10 @@
     "filter-library-typed-state": {
       "category": "internal",
       "message": "Page resource kinds carry the request kind the content filter matches, and the filter library's saved state has one codec."
+    },
+    "core-files-by-rule": {
+      "category": "internal",
+      "message": "Two lone rejections join their concept files, the capacity limits file takes its record's name, and the palette's layout and source sets get files of their own."
     }
   }
 }
