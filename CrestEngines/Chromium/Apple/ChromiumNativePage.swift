@@ -211,7 +211,8 @@
             guard let source = anchor.presentationSource(fallbackWindow: surface.window) else { return }
             if host?.runExtension(extensionID, page: pageID, anchorView: source.view, anchorRect: source.rect) != true {
                 ChromiumComposition.showNativeNotice(
-                    "This extension action is unavailable on this page.", icon: "puzzlepiece.extension")
+                    String(localized: "This extension action is unavailable on this page."),
+                    icon: "puzzlepiece.extension")
             }
         }
 

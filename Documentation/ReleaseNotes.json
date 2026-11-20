@@ -5937,6 +5937,10 @@
     "session-save-failure-reason": {
       "category": "fixed",
       "message": "When Crest can't save your session, Sync settings says why in plain words instead of showing an internal code."
+    },
+    "translatable-dialogs": {
+      "category": "internal",
+      "message": "Mac dialogs and save panels, sync and password-import messages, and the sidebar's media card text go through the string catalog so they can be translated."
     }
   }
 }

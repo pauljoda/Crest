@@ -17,8 +17,8 @@ enum BrowserPlatformDownloadDirectory {
             let panel = NSSavePanel()
             panel.canCreateDirectories = true
             panel.nameFieldStringValue = safeFilename
-            panel.title = "Save Download"
-            panel.prompt = "Save"
+            panel.title = String(localized: "Save Download")
+            panel.prompt = String(localized: "Save")
             let response = await withCheckedContinuation { continuation in
                 panel.begin { continuation.resume(returning: $0) }
             }

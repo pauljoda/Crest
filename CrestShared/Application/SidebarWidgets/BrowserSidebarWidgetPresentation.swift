@@ -11,8 +11,8 @@ enum BrowserSidebarWidgetPresentation: Equatable, Sendable {
     /// technologies, after its position.
     var deckDescription: String {
         switch self {
-        case .nowPlaying(let session): "Now Playing, \(session.ownerDisplayTitle)"
-        case .softwareUpdate: "Update Available"
+        case .nowPlaying(let session): String(localized: "Now Playing, \(session.ownerDisplayTitle)")
+        case .softwareUpdate: String(localized: "Update Available")
         }
     }
 }

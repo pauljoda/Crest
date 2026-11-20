@@ -147,7 +147,7 @@ actor BrowserCloudSyncEngine {
             }
             guard !transport.requiresFullPull else {
                 throw BrowserCloudSyncError.remoteChangeNotApplied(
-                    "Pull from iCloud to recover an incomplete download.")
+                    String(localized: "Pull from iCloud to recover an incomplete download."))
             }
             await enqueueLocalChanges(on: syncEngine)
             try await syncEngine.sendChanges(.init(scope: .zoneIDs([codec.recordZoneID])))
@@ -166,7 +166,7 @@ actor BrowserCloudSyncEngine {
     /// waits to upload. Answers how many records the zone held.
     func pullFromICloud() async throws -> Int {
         guard !isStopped, !transport.awaitsAccountDecision, !isPullingSnapshot else {
-            throw BrowserCloudSyncError.remoteChangeNotApplied("Sync is paused.")
+            throw BrowserCloudSyncError.remoteChangeNotApplied(String(localized: "Sync is paused."))
         }
         isPullingSnapshot = true
         defer { isPullingSnapshot = false }
@@ -177,15 +177,18 @@ actor BrowserCloudSyncEngine {
             // the core refuses one whose payloads it cannot all read.
             guard snapshot.unreadable == 0 else {
                 throw BrowserCloudSyncError.remoteChangeNotApplied(
-                    "Some iCloud records could not be read. Update Crest on all devices and try again.")
+                    String(
+                        localized: "Some iCloud records could not be read. Update Crest on all devices and try again."))
             }
             let records = snapshot.records
             guard !isStopped, !transport.awaitsAccountDecision else {
-                throw BrowserCloudSyncError.remoteChangeNotApplied("The iCloud account changed during the download.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied(
+                    String(localized: "The iCloud account changed during the download."))
             }
             try await mergeDownloadedRecords(records, isFullSnapshot: true)
             guard !transport.requiresFullPull else {
-                throw BrowserCloudSyncError.remoteChangeNotApplied("Some incoming changes still need to be recovered.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied(
+                    String(localized: "Some incoming changes still need to be recovered."))
             }
             eventFailureDescription = nil
             isPullingSnapshot = false
@@ -224,7 +227,8 @@ actor BrowserCloudSyncEngine {
                 receipts = try await deliver(MergeSyncRecords(records: records))
             }
             guard !isStopped, !transport.awaitsAccountDecision else {
-                throw BrowserCloudSyncError.remoteChangeNotApplied("Sync stopped while applying downloaded content.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied(
+                    String(localized: "Sync stopped while applying downloaded content."))
             }
         } catch {
             _ = try? await send(FinishCloudMerge(mergeID: merge, succeeded: false, fullSnapshot: isFullSnapshot))
@@ -396,7 +400,7 @@ actor BrowserCloudSyncEngine {
     /// What the person is told of a failure: a refusal in the core's own words,
     /// anything else as it describes itself.
     private static func describe(_ error: any Error) -> String {
-        (error as? Rejection)?.explanation ?? String(describing: error)
+        (error as? Rejection)?.explanation ?? error.localizedDescription
     }
 
     private func handleFetchedRecordZoneChanges(

@@ -21,6 +21,16 @@ enum BrowserCloudSyncError: Error, Equatable {
     case accountCheckUnanswered
 }
 
+extension BrowserCloudSyncError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .remoteChangeNotApplied(let reason): reason
+        case .accountCheckUnanswered:
+            String(localized: "iCloud didn’t respond in time. Crest will retry automatically.")
+        }
+    }
+}
+
 enum BrowserCloudSyncStatus: Equatable, Sendable {
     case stopped
     case syncing
