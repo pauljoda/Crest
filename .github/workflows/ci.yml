@@ -128,17 +128,7 @@ jobs:
 
       - uses: ./.github/actions/prepare-apple-build
 
-      - name: Check Swift formatting
-        run: |
-          python3 - <<'PYTHON'
-          import subprocess
-          paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
-          paths = [path for path in paths if path and "/Generated/" not in path]
-          subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
-          PYTHON
-
-      - name: Test script contracts with macOS tools
-        run: python3 -m unittest discover -s Scripts/Tests
+      - uses: ./.github/actions/check-sources
 
       - name: Build Chromium product host
         run: |
@@ -190,6 +180,18 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
             CODE_SIGNING_ALLOWED=NO
 
+      # Compiles CrestTests without launching the hosted suite, which stays a
+      # manual run, so a test that no longer builds fails here.
+      - name: Build macOS tests
+        run: |
+          xcodebuild build-for-testing \
+            -project Crest.xcodeproj \
+            -scheme Crest \
+            -configuration Debug \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
+            CODE_SIGNING_ALLOWED=NO
+
       - name: Remove generated build data
         if: always()
         run: find "$RUNNER_TEMP/crest-build-derived-data" -depth -delete 2>/dev/null || true
@@ -211,19 +213,8 @@ jobs:
       # The Chromium host job lints Swift and tests the script contracts with
       # macOS tools whenever it runs; an iOS-only change skips that job, so
       # this one does both instead.
-      - name: Check Swift formatting
+      - uses: ./.github/actions/check-sources
         if: needs.changes.outputs.mac != 'true'
-        run: |
-          python3 - <<'PYTHON'
-          import subprocess
-          paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
-          paths = [path for path in paths if path and "/Generated/" not in path]
-          subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
-          PYTHON
-
-      - name: Test script contracts with macOS tools
-        if: needs.changes.outputs.mac != 'true'
-        run: python3 -m unittest discover -s Scripts/Tests
 
       - name: Build iOS
         run: |
@@ -231,6 +222,17 @@ jobs:
             -project Crest.xcodeproj \
             -scheme CrestMobile \
             -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
+            CODE_SIGNING_ALLOWED=NO
+
+      # Compiles CrestMobileTests without running them.
+      - name: Build iOS tests
+        run: |
+          xcodebuild build-for-testing \
+            -project Crest.xcodeproj \
+            -scheme CrestMobile \
+            -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
             CODE_SIGNING_ALLOWED=NO
