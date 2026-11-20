@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x6c, 0x3e, 0x24, 0xba, 0x55, 0xb4, 0x7a, 0x24, 0xf7, 0x28, 0xe3, 0x81, 0xb5, 0xa3, 0xbd, 0xdd, 0xfe, 0x4e, 0x89, 0x58, 0xd1, 0xeb, 0x89, 0x12, 0xbf, 0x75, 0x50, 0x90, 0xd5, 0x23, 0x66, 0x46
+        0x57, 0xd4, 0xa6, 0x54, 0xbd, 0x39, 0x96, 0x5a, 0x3e, 0x87, 0x4a, 0x27, 0xe7, 0x9b, 0x24, 0x4e, 0x92, 0x0f, 0x9e, 0xba, 0x4b, 0x87, 0x9d, 0x82, 0xe7, 0x86, 0x56, 0xd9, 0x1c, 0x92, 0x28, 0xb3
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -21829,16 +21829,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static StorageFailure ReadStorageFailure(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (StorageFailure)reader.ReadEnum(5);
-    }
-
-    public static void WriteStorageFailure(WireWriter writer, StorageFailure value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static SystemPasswordWriteThroughAvailability ReadSystemPasswordWriteThroughAvailability(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (SystemPasswordWriteThroughAvailability)reader.ReadEnum(5);
@@ -23164,6 +23154,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(StartupBehavior.All, value));
+    }
+
+    public static StorageFailure ReadStorageFailure(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return StorageFailure.All[reader.ReadEnum(StorageFailure.All.Count)];
+    }
+
+    public static void WriteStorageFailure(WireWriter writer, StorageFailure value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(StorageFailure.All, value));
     }
 
     public static SyncDeletionReason ReadSyncDeletionReason(WireReader reader) {
