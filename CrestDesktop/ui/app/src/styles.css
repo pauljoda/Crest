@@ -1311,6 +1311,8 @@ button {
   display: flex;
   align-items: center;
   height: 40px;
+  /* The Space's rows start a row's separation below it, not the page's gap. */
+  margin-bottom: -6px;
   padding: 0 4px;
   border-radius: 8px;
   transition: background 120ms ease-in-out;
@@ -1413,18 +1415,39 @@ button {
   gap: 2px;
 }
 
-.tab-list > .tab-section + .tab-section {
+/* The current tabs stand under a divider even with no saved tabs above,
+   with the Mac's room on either side of it: about 19 above, 18 below, and as
+   much again where the saved tabs would stand when there are none. */
+.tab-list > .tab-section.current-tabs {
   border-top: 1px solid var(--surface-border);
-  padding-top: var(--crest-space-small);
-  margin-top: var(--crest-space-small);
+  padding-top: 18px;
+  margin-top: 17px;
+}
+
+.tab-list > .tab-section.current-tabs:first-child {
+  margin-top: 27px;
+}
+
+/* An open folder, group or split is the Mac's container: 4 of padding over
+   its header, which is shorter than a row by the container's padding and
+   spacing (29 for a 40 row), and room under its last row before what follows,
+   as measured on the Mac: 7 after a folder or group, 5 after a split. */
+.sidebar-row.folder-row {
+  min-height: 29px;
+  margin-top: 4px;
+}
+
+.tab-section[data-list-folder]:not([data-list-folder=""]) {
+  padding-bottom: 7px;
 }
 
 /* A sidebar row, as the Mac's pointer tab row: 40px tall, its icon's 18px box
    9px in from the surface's edge and 9px from the title, its trailing control
    6px from its end. Inside folders and splits, --row-inset insets the surface
-   and --row-indent the content (rowPlacement in sidebar-layout.ts); the
-   corner is the Mac's layer radius, 4px rounder than the 8px setting at the
-   top level and 4px tighter each level in, never under the setting. */
+   and --row-indent the content (rowPlacement in sidebar-layout.ts). The
+   corner is the Mac's layer radius at its default 10pt setting, 14pt at the
+   top level and 4pt tighter each level in, never under 10pt; the Mac draws
+   those as continuous corners, which measure as these 13px and 9px circles. */
 .sidebar-row {
   position: relative;
   display: flex;
@@ -1433,7 +1456,7 @@ button {
   min-height: 40px;
   margin-inline: var(--row-inset, 0px);
   padding-inline: calc(9px + var(--row-indent, 0px)) 6px;
-  border-radius: max(var(--crest-radius-compact), calc(var(--crest-radius-compact) + 4px - 4px * var(--row-depth, 0)));
+  border-radius: max(9px, calc(13px - 4px * var(--row-depth, 0)));
   text-align: start;
   color: var(--fg);
   transition: background 140ms ease-in-out;
@@ -1444,6 +1467,23 @@ button {
   display: grid;
   place-items: center;
   width: 18px;
+}
+
+/* A group's header is its name alone, as a caption over its tabs: small,
+   semibold and secondary, where a folder's artwork would start. */
+.group-row .row-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+/* How many tabs a folder holds, at its end in the trailing control's place. */
+.folder-count {
+  flex: none;
+  width: 28px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--fg-secondary);
 }
 
 .sidebar-row:hover {
@@ -1494,6 +1534,13 @@ button {
 .tab-row:hover .row-close,
 .tab-row.selected .row-close {
   opacity: 1;
+}
+
+/* A tab whose page isn't loaded, as the Mac's residency dims it. */
+.tab-row.unloaded > .tab-icon,
+.tab-row.unloaded > .row-title {
+  opacity: 0.5;
+  filter: saturate(0.3);
 }
 
 .row-close:hover {
@@ -1659,29 +1706,27 @@ button {
   pointer-events: none;
 }
 
-/* A tab's or folder's title being renamed in place. */
+/* A tab's or folder's title being renamed where it stands, as on the Mac:
+   the title itself becomes editable, its text selected, with no field. */
 .rename-field {
   flex: 1;
   min-width: 0;
-  height: 24px;
   margin-inline-end: 6px;
-  padding: 0 6px;
+  padding: 0;
   border: 0;
-  border-radius: 6px;
   outline: none;
-  background: var(--field);
-  box-shadow: inset 0 0 0 1px var(--surface-border);
+  background: none;
   color: var(--fg);
   font: 400 13px var(--crest-font-system);
 }
 
-.rename-field:focus {
-  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.45);
+.group-row .rename-field {
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .new-tab-row {
   color: var(--fg-secondary);
-  margin-top: var(--crest-space-extraSmall);
 }
 
 .new-tab-row:hover {
@@ -1693,13 +1738,20 @@ button {
   border-radius: 4px;
 }
 
+/* A split's card shows only while the pointer is over it, as the Mac's
+   does by default: a fill and a fine edge around its header and members. */
 .split-card {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 4px 4px;
-  border-radius: var(--crest-radius-control);
+  padding: 4px 4px 5px;
+  border-radius: 13px;
+  transition: background 140ms ease-in-out, box-shadow 140ms ease-in-out;
+}
+
+.split-card:hover {
   background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
 }
 
 /* A folder drawn as two flat faces in its own colour, which swing apart as
@@ -1746,9 +1798,14 @@ button {
   padding-inline-start: calc(12px + var(--row-indent, 0px));
 }
 
-/* Rows on a split's card sit a level in, so their corners are a level tighter. */
+/* Rows on a split's card sit a level in, so their corners are a level tighter;
+   its header stands at the card's own padding. */
 .split-card > .sidebar-row {
-  border-radius: max(var(--crest-radius-compact), calc(var(--crest-radius-compact) - 4px * var(--row-depth, 0)));
+  border-radius: 9px;
+}
+
+.split-card > .split-header {
+  margin-top: 0;
 }
 
 .split-header-icon {

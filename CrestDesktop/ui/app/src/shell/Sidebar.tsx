@@ -499,6 +499,13 @@ export function Sidebar({
     const pinned = space.sidebar.lists.filter(isPinnedTop);
     // The saved tabs show while the header has them open.
     const rest = space.sidebar.lists.filter((list) => !isPinnedTop(list) && (savedTabsExpanded || list.section.name !== "saved"));
+    const isCurrentTop = (list: SidebarList) => list.folderId === null && list.section.name === "current";
+    const newTabRow = (
+      <button key="new-tab" className="sidebar-row new-tab-row" onClick={() => openPalette("newTab")}>
+        <span className="row-glyph"><Symbol name="plus" /></span>
+        <span className="row-title">New Tab</span>
+      </button>
+    );
     // An open utility list takes the shown Space's page: its pins, its header
     // and its tabs. Another Space's page a slide passes shows nothing.
     if (utility) {
@@ -577,14 +584,16 @@ export function Sidebar({
           onContextMenu={(event) => event.target === event.currentTarget && menu(event, backgroundMenu(context))}
           onDoubleClick={(event) => event.target === event.currentTarget && openPalette("newTab")}
         >
-          {rest.filter((list) => list.folderId === null && (list.rows.length > 0 || lift)).map(function renderList(list: SidebarList): ReactElement {
+          {/* The current tabs always stand under the divider, the New Tab row at their top, as on the Mac. */}
+          {rest.filter((list) => list.folderId === null && (list.rows.length > 0 || lift || isCurrentTop(list))).map(function renderList(list: SidebarList): ReactElement {
             return (
             <section
               key={`${list.section.name}-${list.folderId ?? "root"}`}
-              className={`tab-section${list.folderId && liftedFolders.has(list.folderId) ? " lifted" : ""}${gapAt(list.section, list.folderId, null) ? " drop-at-end" : ""}`}
+              className={`tab-section${isCurrentTop(list) ? " current-tabs" : ""}${list.folderId && liftedFolders.has(list.folderId) ? " lifted" : ""}${gapAt(list.section, list.folderId, null) ? " drop-at-end" : ""}`}
               data-list-section={list.section.name}
               data-list-folder={list.folderId ?? ""}
             >
+              {isCurrentTop(list) && newTabRow}
               {list.rows.flatMap((row) => {
                 const gap: ReactElement[] = [];
                 const insertsBefore = gapAt(list.section, list.folderId, row.id);
@@ -596,6 +605,7 @@ export function Sidebar({
                     <FolderRow
                       key={row.id}
                       folder={folder}
+                      tabCount={folderTabCount(space, folder.id)}
                       depth={row.depth}
                       renaming={renamesFolder}
                       marked={marked(folderItem(folder.id))}
@@ -687,10 +697,7 @@ export function Sidebar({
             </section>
             );
           })}
-          <button className="sidebar-row new-tab-row" onClick={() => openPalette("newTab")}>
-            <span className="row-glyph"><Symbol name="plus" /></span>
-            <span className="row-title">New Tab</span>
-          </button>
+          {!rest.some(isCurrentTop) && <section className="tab-section current-tabs">{newTabRow}</section>}
         </div>
       </LayoutGroup>
       </>
@@ -863,11 +870,13 @@ function TabRow({
   session, tab, pageId, depth, inSplit, selected, renaming, row, unit, marked, held, lifted, insertsBefore, aimedAround, onPress,
   onSelect, onClose, onMiddleClick, onContextMenu, onRenamed,
 }: TabRowProps) {
+  // A tab whose page isn't loaded reads dimmer, as the Mac's residency shows it.
+  const loaded = pageId !== null && session.core.state.pages.get(pageId)?.phase.name === "live";
   return (
     <div
       role="button"
       tabIndex={0}
-      className={`sidebar-row tab-row${selected ? " selected" : ""}${marked ? " unit-selected" : ""}${lifted ? " lifted" : ""}${insertsBefore ? " drop-before" : ""}${aimedAround ? " drop-nest" : ""}`}
+      className={`sidebar-row tab-row${selected ? " selected" : ""}${loaded ? "" : " unloaded"}${marked ? " unit-selected" : ""}${lifted ? " lifted" : ""}${insertsBefore ? " drop-before" : ""}${aimedAround ? " drop-nest" : ""}`}
       style={rowPlacement(depth, inSplit)}
       data-row={row?.id}
       data-before-tab={row ? tab.id : undefined}
@@ -911,11 +920,33 @@ function TabRow({
   );
 }
 
-/** A folder or group header: a click opens or closes it, as the Mac's does. */
+/** How many tabs a folder holds, in it and in the folders inside it, as the Mac's header counts them. */
+function folderTabCount(space: SpaceState, folderId: string): number {
+  const inside = new Set([folderId]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const folder of space.folders) {
+      if (folder.parentId !== null && inside.has(folder.parentId) && !inside.has(folder.id)) {
+        inside.add(folder.id);
+        grew = true;
+      }
+    }
+  }
+  return space.tabs.filter((tab) => tab.folderId !== null && inside.has(tab.folderId)).length;
+}
+
+/**
+ * A folder or group header: a click opens or closes it, as the Mac's does. A
+ * folder shows its artwork and, at its end, how many tabs it holds; a group
+ * shows only its name, small, semibold and secondary, as a caption over its
+ * tabs (the Mac's BrowserGroupHeaderTitle), and no count, as the Mac's
+ * defaults have it.
+ */
 function FolderRow({
-  folder, depth, renaming, marked, held, lifted, insertsBefore, aimedInto, onPress, onToggle, onContextMenu, onRenamed,
+  folder, tabCount, depth, renaming, marked, held, lifted, insertsBefore, aimedInto, onPress, onToggle, onContextMenu, onRenamed,
 }: {
   folder: FolderState;
+  tabCount: number;
   depth: number;
   renaming: boolean;
   /** Whether the row draws itself selected for tab actions, and whether the selection holds it. */
@@ -936,7 +967,7 @@ function FolderRow({
     <div
       role="button"
       tabIndex={0}
-      className={`sidebar-row folder-row${marked ? " unit-selected" : ""}${lifted ? " lifted" : ""}${insertsBefore ? " drop-before" : ""}${aimedInto ? " drop-into" : ""}`}
+      className={`sidebar-row folder-row${folder.isGroup ? " group-row" : ""}${marked ? " unit-selected" : ""}${lifted ? " lifted" : ""}${insertsBefore ? " drop-before" : ""}${aimedInto ? " drop-into" : ""}`}
       style={rowPlacement(depth, false)}
       data-row={folder.id}
       data-before-folder={folder.id}
@@ -949,10 +980,11 @@ function FolderRow({
       onClick={renaming ? undefined : onToggle}
       onContextMenu={onContextMenu}
     >
-      <FolderArtwork symbol={folder.displaySymbol} color={folder.displayColor} expanded={!folder.isCollapsed} />
+      {!folder.isGroup && <FolderArtwork symbol={folder.displaySymbol} color={folder.displayColor} expanded={!folder.isCollapsed} />}
       {renaming
         ? <RenameField initial={folder.title} placeholder={folder.isGroup ? "Group Name" : "Folder Name"} onDone={onRenamed} />
         : <span className="row-title">{folder.title}</span>}
+      {!folder.isGroup && !renaming && <span className="folder-count">{tabCount}</span>}
     </div>
   );
 }

@@ -5861,6 +5861,10 @@
     "windows-sidebar-rows-match-mac": {
       "category": "internal",
       "message": "Sidebar rows on Windows match the Mac's size and spacing: 40-point rows in regular type, with the Mac's insets, icon size and nesting"
+    },
+    "windows-sidebar-structure-match-mac": {
+      "category": "internal",
+      "message": "The Windows sidebar is arranged as the Mac's: New Tab at the top of the current tabs, folders with their tab count, groups as a caption, splits without a card at rest, dimmed unloaded tabs, and renaming in place"
     }
   }
 }
