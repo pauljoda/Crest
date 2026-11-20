@@ -65,7 +65,7 @@ extension BrowserPlatformPage {
             context: linkNavigationContext, sourcePresentation: sourcePresentation,
             engineNavigation: engineNavigation)
         {
-            openPeek(request)
+            presentLinkPeek(request)
             decisionHandler(.cancel)
             return
         }

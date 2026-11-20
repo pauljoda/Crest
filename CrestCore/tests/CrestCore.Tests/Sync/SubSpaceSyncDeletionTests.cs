@@ -85,6 +85,50 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
+    [Theory]
+    [InlineData(true, "explicitDelete", false)]
+    [InlineData(true, "explicitDelete", true)]
+    [InlineData(true, "superseded", false)]
+    [InlineData(false, "explicitDelete", false)]
+    public void PrimarySuccessionKeepsOnlyPinsThatWereNotRemovedBySync(bool syncsPins, string reason, bool earlierBatch) {
+        var (work, workProfile, client, clientProfile) = (Fixed(8_700), Fixed(8_701), Fixed(8_800), Fixed(8_801));
+        var (deletedPin, keptPin, localPin) = (Fixed(8_702), Fixed(8_703), Fixed(8_704));
+        var session = Canonical(SessionOf(
+            SpaceOf(work, workProfile, "Work", tabs: [
+                TabOf(deletedPin, placement: "pinned"), TabOf(keptPin, placement: "pinned"),
+                TabOf(localPin, url: "file:///local.html", placement: "pinned")]),
+            Joined(SpaceOf(client, clientProfile, "Client"), work, workProfile, at: 1_800_000_000)));
+        var journal = new JournalUnderTest(Fixed(8_705), savedStructure: syncsPins);
+        using var directory = new StorageDirectory();
+        var receiveTime = new TestClock(DateTimeOffset.FromUnixTimeSeconds(1_800_000_200));
+        using var stored = StoredSyncing(directory, new JsonObject { ["session"] = session }, journal: journal.Document, clock: receiveTime);
+
+        var handover = CloudSpace(client, clientProfile, clock: 1_001);
+        var body = JsonNode.Parse(handover.Body)!.AsObject();
+        body["value"]!["sharedProfileID"] = workProfile.ToString("D").ToUpperInvariant();
+        body["value"]!["membershipModifiedAt"] = 1_800_000_100.0;
+        handover = handover with { Body = Bytes(body) };
+        List<SyncRecord> records = [
+            Tombstone(SyncRecordKind.Space, work, work, clock: 1_000),
+            Tombstone(SyncRecordKind.Tab, deletedPin, work, clock: 1_002, reason: reason),
+            Tombstone(SyncRecordKind.Tab, localPin, work, clock: 1_003)
+        ];
+        if (earlierBatch) {
+            Assert.Empty(stored.App.Send(new MergeSyncRecords(records)));
+            records = [];
+        }
+        records.Add(handover);
+
+        Assert.Empty(stored.App.Send(new MergeSyncRecords(records)));
+
+        var after = stored.Session.Current;
+        Assert.Equal(client, after.PendingDeletion(work)!.SuccessorId);
+        Guid[] expectedPins = syncsPins ? [keptPin, localPin] : [deletedPin, keptPin, localPin];
+        Assert.Equal(expectedPins, after.KnownSpace(client).Tabs.Where(tab => tab.IsPinned).Select(tab => tab.Id));
+        var accepted = new JournalUnderTest(stored.Sync.Snapshot);
+        Assert.Equal(reason, accepted.Record(SyncRecordKind.Tab, deletedPin)?["tombstone"]?["reason"]?.GetValue<string>());
+    }
+
     [Fact]
     public void AnOfflineReceiverKeepsAProfileAndItsCredentialsWhenAnotherSpaceTakesOver() {
         var (work, workProfile, client, clientProfile) = (Fixed(8_100), Fixed(8_101), Fixed(8_200), Fixed(8_201));

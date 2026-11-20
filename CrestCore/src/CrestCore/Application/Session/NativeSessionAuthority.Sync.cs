@@ -11,8 +11,10 @@ namespace CrestCore.Application;
 /// What one intent of the cloud transport needs: the sync component the
 /// session stages into, the time it runs at, where the identities repair gives
 /// come from, and the lock the host's intents take, which a merge or
-/// replacement commits holding, taken before its journal transaction.
-internal sealed record CloudSyncTurn(NativeSyncAuthority Sync, DateTimeOffset Now, IIdSource Ids, Lock CommitGate);
+/// replacement commits holding, taken before its journal transaction. The
+/// same lock protects the engine erasures checked at commit.
+internal sealed record CloudSyncTurn(NativeSyncAuthority Sync, DateTimeOffset Now, IIdSource Ids, Lock CommitGate,
+    DataDeletions Deletions);
 
 #endregion
 
@@ -56,10 +58,11 @@ public sealed partial class NativeSessionAuthority {
     /// order whole; an intent about the journal alone never takes it. Answers
     /// the intent's receipts: `SyncRecordsSkipped` when it left records out.
     /// Throws `Rejected`.
-    internal IReadOnlyList<Change> Handle(CloudSyncIntent intent, DateTimeOffset now, IIdSource ids, Lock commitGate) {
+    internal IReadOnlyList<Change> Handle(CloudSyncIntent intent, DateTimeOffset now, IIdSource ids, Lock commitGate,
+        DataDeletions deletions) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
-        var records = intent.Apply(this, new CloudSyncTurn(AttachedSync(), now, ids, commitGate));
+        var records = intent.Apply(this, new CloudSyncTurn(AttachedSync(), now, ids, commitGate, deletions));
         return records?.Receipt ?? [];
     }
 
@@ -86,8 +89,8 @@ public sealed partial class NativeSessionAuthority {
     /// stages still queued are superseded before each computation, and a
     /// merge deletes each record their edits removed for the reason of the
     /// edit that removed it; a merge that never commits queues them again.
-    internal void Converging(NativeSyncAuthority sync, IncomingSyncRecords records, bool replacing, DateTimeOffset now,
-        IIdSource ids, Lock commitGate, bool seedOnly = false) {
+    internal void Converging(CloudSyncTurn turn, IncomingSyncRecords records, bool replacing, bool seedOnly = false) {
+        var sync = turn.Sync;
         // The stages this merge superseded, until the transaction that commits it takes them over.
         var superseded = sync.Supersede();
         NativeSessionReplacement? reserved = null;
@@ -107,10 +110,10 @@ public sealed partial class NativeSessionAuthority {
                         sync.Requeue(superseded);
                         return;
                     }
-                    computed = Converge(journal, superseded, basis, records, replacing, now, ids);
+                    computed = Converge(journal, superseded, basis, records, replacing, turn.Now, turn.Ids);
                 }
                 sync.RequireNoTransactionHeldHere();
-                lock (commitGate) {
+                lock (turn.CommitGate) {
                     var transaction = sync.BeginTransaction();
                     transaction.Superseded = superseded;
                     superseded = null;
@@ -124,12 +127,17 @@ public sealed partial class NativeSessionAuthority {
                                     transaction.Dispose();
                                     return;
                                 }
-                                computed = Converge(transaction.Journal, transaction.Superseded, basis, records, replacing, now, ids);
+                                computed = Converge(transaction.Journal, transaction.Superseded, basis, records, replacing, turn.Now, turn.Ids);
                             } else if (Revision != revision || !ReferenceEquals(transaction.Journal, journal)
                                 || transaction.Superseded?.Sequence != covered) {
                                 superseded = transaction.Abandon();
                                 continue;
                             }
+                            // A repaired deletion plan cannot recall a command already issued.
+                            // Erasures and their replies take the same lock as this commit.
+                            if (computed.Session.StayingSpaces.Any(space => turn.Deletions.Erasing(space.ProfileId)
+                                    && (session.Space(space.Id)?.ProfileId != space.ProfileId || session.PendingDeletion(space.Id) is not null)))
+                                throw new Rejected(new SyncStagingRefused(SyncStagingFailure.NotSaved));
                             reserved = Reserving(transaction, computed);
                         }
                     } catch {

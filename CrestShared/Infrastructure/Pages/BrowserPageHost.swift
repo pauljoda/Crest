@@ -434,14 +434,15 @@ final class BrowserPageHost {
         defer { spacesDeletingData.remove(deletion.spaceID) }
         await release()
         for profileID in deletion.erasing {
-            await BrowserFaviconFallbackLoader.shared.removeAll(for: profileID)
-            // Nothing may outlive the profile it describes.
-            tabState.removeStates(profileID: profileID)
             // Every engine erases the profile, started or not; the Space's
             // deletion finishes only once each has.
             let erased = await core.deleteData(
                 DeleteProfileData(requestID: UUID(), profileID: profileID, ephemeral: ephemeral))
             guard erased else { throw BrowserSpaceDeletionError.dataNotErased }
+            // Sync may have handed the profile to a successor while the
+            // pages were released. A refused erasure leaves its state alone.
+            tabState.removeStates(profileID: profileID)
+            await BrowserFaviconFallbackLoader.shared.removeAll(for: profileID)
         }
     }
 

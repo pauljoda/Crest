@@ -13,7 +13,7 @@ public sealed record ReorderSpaces(Guid WorkspaceId, IReadOnlyList<Guid> SpaceId
         if (SpaceIds.Count != byId.Count || SpaceIds.Distinct().Count() != byId.Count || SpaceIds.Any(id => !byId.ContainsKey(id)))
             throw new Rejected(new InvalidSpaceOrder());
         var spaces = SpaceIds.Select(id => byId[id]).ToArray();
-        return new(turn.Basis.Spaces.SequenceEqual(spaces) ? turn.Basis : turn.Basis with { Spaces = spaces }, SyncStaging.Edit);
+        return new(turn.Basis.Spaces.SequenceEqual(spaces) ? turn.Basis : turn.Basis with { Spaces = spaces }, SyncStaging.SpaceOrder);
     }
 
     #endregion

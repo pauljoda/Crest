@@ -38,6 +38,79 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(page.linkNavigationContext?.spaceID, primary.id)
     }
 
+    func testSharedPinLinksFollowTheNativeViewDuringWindowHandoff() throws {
+        let savedURL = try XCTUnwrap(URL(string: "https://saved.crest.test/"))
+        let destination = try XCTUnwrap(URL(string: "https://linked.crest.test/"))
+        let pin = TabState.Seed(title: "Saved site", url: savedURL, placement: .pinned)
+        let primary = makeSpace(tabs: [pin], selectedTabID: pin.id)
+        let browser = hosting(primary)
+        try browser.addSubSpace(after: primary.id)
+        let subSpace = try XCTUnwrap(browser.shownSpace)
+        let runtimeStore = BrowserPageRuntimeStore()
+        var firstPeeks: [BrowserPeekRequest] = []
+        var secondPeeks: [BrowserPeekRequest] = []
+        var firstModifiedLinks: [UUID] = []
+        var secondModifiedLinks: [UUID] = []
+        let first = BrowserPagePool(
+            browser: browser, runtimeStore: runtimeStore,
+            openModifiedLink: { _, spaceID, _ in
+                firstModifiedLinks.append(spaceID)
+                return nil
+            },
+            openPeek: { firstPeeks.append($0) })
+        let second = BrowserPagePool(
+            browser: browser.makeWindowStore(), runtimeStore: runtimeStore,
+            openModifiedLink: { _, spaceID, _ in
+                secondModifiedLinks.append(spaceID)
+                return nil
+            },
+            openPeek: { secondPeeks.append($0) })
+        let windows = [first, second].map { pool in
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
+                styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = BrowserWebHostView()
+            pool.bindNativeWindow(window)
+            return window
+        }
+        defer { for window in windows { window.close() } }
+
+        first.setWindowFocused(true)
+        present(first, tab: pin.id, in: primary.id)
+        let page = try XCTUnwrap(first.activePage)
+        let firstView = try XCTUnwrap(windows[0].contentView as? BrowserWebHostView)
+        firstView.attach(page.webView, allowsAttachment: true)
+        present(second, tab: pin.id, in: subSpace.id)
+        XCTAssertTrue(second.isMirroringPage(for: pin.id))
+
+        second.setWindowFocused(true)
+        XCTAssertTrue(page.host === second)
+        XCTAssertTrue(page.webView.window === windows[0])
+        page.decideLinkPolicy(
+            for: StubPopupNavigationAction(url: destination, navigationType: .linkActivated), in: page.webView
+        ) { XCTAssertEqual($0, .cancel) }
+        XCTAssertEqual(firstPeeks.map(\.assignment), [BrowserSpaceRuntimeAssignment(space: primary)])
+        XCTAssertTrue(secondPeeks.isEmpty)
+        page.routeModifiedLink(URLRequest(url: destination), selecting: true)
+        XCTAssertEqual(firstModifiedLinks, [primary.id])
+        XCTAssertTrue(secondModifiedLinks.isEmpty)
+        XCTAssertNil(page.linkDragNavigationContext)
+
+        let secondView = try XCTUnwrap(windows[1].contentView as? BrowserWebHostView)
+        secondView.attach(page.webView, allowsAttachment: second.presentedPage(for: pin.id) === page)
+        XCTAssertTrue(page.webView.window === windows[1])
+        page.decideLinkPolicy(
+            for: StubPopupNavigationAction(url: destination, navigationType: .linkActivated), in: page.webView
+        ) { XCTAssertEqual($0, .cancel) }
+        XCTAssertEqual(firstPeeks.count, 1)
+        XCTAssertEqual(secondPeeks.map(\.assignment), [BrowserSpaceRuntimeAssignment(space: subSpace)])
+        page.routeModifiedLink(URLRequest(url: destination), selecting: true)
+        XCTAssertEqual(firstModifiedLinks, [primary.id])
+        XCTAssertEqual(secondModifiedLinks, [subSpace.id])
+        XCTAssertEqual(page.linkDragNavigationContext?.spaceID, subSpace.id)
+    }
+
     func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
         let browser = BrowserStore.hostingPages(.preview)
         let pool = BrowserPagePool(browser: browser)

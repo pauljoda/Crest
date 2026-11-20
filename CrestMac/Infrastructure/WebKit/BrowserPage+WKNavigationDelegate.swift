@@ -88,7 +88,12 @@ extension BrowserPage: WKNavigationDelegate {
 
     /// Opens a modified click's link in a new tab of the page's Space.
     func routeModifiedLink(_ request: URLRequest, selecting: Bool) {
-        openModifiedLink(request, linkNavigationContext?.spaceID ?? spaceID, selecting)
+        let spaceID = linkNavigationContext?.spaceID ?? self.spaceID
+        if let presenter = attachedLinkPresenter {
+            presenter.openModifiedLink(request, in: spaceID, selecting: selecting, opener: corePage.id)
+        } else {
+            openModifiedLink(request, spaceID, selecting)
+        }
     }
 
     private func peekSourcePresentation(

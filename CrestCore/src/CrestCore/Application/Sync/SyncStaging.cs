@@ -50,6 +50,10 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// An organizing edit, staged once edits pause: a rename, a move or a split.
     public static SyncStaging Edit { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.Coalesced);
 
+    /// Saves a chosen Space order with its journal, so a later stage holds the
+    /// positions the person chose even after it reloads the session.
+    public static SyncStaging SpaceOrder { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave) { ReorderedSpaces = true };
+
     /// Who may open a Space, or whether it uses Crest Passwords, changed:
     /// another device should see it soon.
     public static SyncStaging Protection { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.Immediate);
@@ -80,6 +84,8 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// holding nothing, by record name. Their records are marked emptied rather
     /// than deleted, so a device that still holds a tab in one keeps it.
     public IReadOnlySet<string> Emptied { get; init; } = NoRecords;
+
+    public bool ReorderedSpaces { get; private init; }
 
     #endregion
 

@@ -12,7 +12,7 @@ public sealed record ReplaceWithCloudRecords(IReadOnlyList<SyncRecord> Records) 
 
     internal override IncomingSyncRecords? Apply(NativeSessionAuthority workspace, CloudSyncTurn turn) {
         var records = new IncomingSyncRecords(Records);
-        workspace.Converging(turn.Sync, records, replacing: true, turn.Now, turn.Ids, turn.CommitGate);
+        workspace.Converging(turn, records, replacing: true);
         return records;
     }
 

@@ -66,7 +66,7 @@ public static class NativeSyncMaterializer {
     private static IEnumerable<T> Payloads<T>(IReadOnlyList<SyncSessionRecord> records, Guid? space = null) where T : SyncPayload =>
         records.Where(record => space is null || record.SpaceId == space).Select(record => record.Payload).OfType<T>();
 
-    private static bool Portable(TabState tab) => SyncedAddress.IncludesTab(tab.Url, tab.NativeContent is not null,
+    internal static bool Portable(TabState tab) => SyncedAddress.IncludesTab(tab.Url, tab.NativeContent is not null,
         tab.SavedUrl ?? (tab.Placement.IsDurable ? tab.Url : null));
 
     private static bool Portable(TabPayload tab) => SyncedAddress.IncludesTab(tab.Url?.Text, tab.NativeContent is not null,

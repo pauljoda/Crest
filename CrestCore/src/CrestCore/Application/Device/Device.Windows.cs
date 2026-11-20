@@ -186,6 +186,16 @@ internal sealed partial class Device {
         if (LockedSpace(profileId) is { } spaceId) throw new Rejected(new SpaceLocked(spaceId));
     }
 
+    /// Protects a profile a staying Space uses in place of its own, including
+    /// after the previous owner finishes deleting.
+    internal void RefuseSharedProfileErasure(Guid profileId) {
+        NativeSessionAuthority[] attached;
+        lock (gate) attached = [.. workspaces.Values];
+        if (attached.Any(workspace => workspace.Current.StayingSpaces.Any(space =>
+                space.ProfileId == profileId && space.OwnProfileId != profileId)))
+            throw new Rejected(new ProfileInUse(profileId));
+    }
+
     /// The locked Space that holds profile `profileId`, or nil when none does.
     internal Guid? LockedSpace(Guid profileId) {
         KeyValuePair<Guid, NativeSessionAuthority>[] attached;

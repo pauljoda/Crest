@@ -144,7 +144,8 @@ public sealed class NativeSyncAuthority {
         value.Superseded = replaced;
         try {
             var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason, staging.Deleted, staging.Emptied));
-            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow), removals.Emptied);
+            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow), removals.Emptied,
+                staging.ReorderedSpaces);
             _ = value.Seal();
             return value;
         } catch (Exception error) {

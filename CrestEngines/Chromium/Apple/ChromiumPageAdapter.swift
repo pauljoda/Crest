@@ -19,7 +19,7 @@
             BrowserLinkHoverController(contentView: native.nativeView)
         private(set) lazy var linkDrag: BrowserLinkDragController? = BrowserLinkDragController(
             nativeView: native.nativeView,
-            context: { [weak self] in self?.page?.linkNavigationContext },
+            context: { [weak self] in self?.page?.linkDragNavigationContext },
             dragsLinksToPeek: { [weak self] in self?.page?.corePage.linkPreferences?.dragsLinksToPeek == true },
             handle: { [weak self] event in self?.page?.handleLinkDrag(event) })
         private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =

@@ -54,7 +54,7 @@ public static class NativeSyncProjection {
         Project(session, preferences, existingRecords, new HashSet<Guid>(), now: 0);
 
     internal static JsonArray Project(JsonObject session, JsonNode preferences, IEnumerable<JsonObject> existingRecords,
-        IReadOnlySet<Guid> cleaning, double now) {
+        IReadOnlySet<Guid> cleaning, double now, bool reorderedSpaces = false) {
         var policy = Preferences(preferences);
         var existing = new Dictionary<string, string?>(StringComparer.Ordinal);
         var existingSpaceOrder = new Dictionary<Guid, JsonObject>();
@@ -84,16 +84,18 @@ public static class NativeSyncProjection {
         var grouped = GroupedSpaces(spaces);
         var legacyTokens = Tokens(SyncPayloadType.Space, grouped);
         var legacyIndex = grouped.Select((space, index) => (SpaceId(space), index)).ToDictionary(pair => pair.Item1, pair => pair.index);
-        var previousTokens = spaces.Select(space => {
-            var previous = existingSpaceOrder.GetValueOrDefault(SpaceId(space));
-            return Text(previous?[SpacePayload.IndependentOrderKey] ?? previous?[SyncPayload.Key.OrderToken]);
-        }).ToArray();
-        bool alreadyIndependent = existingSpaceOrder.Values.Any(value => value[SpacePayload.IndependentOrderKey] is not null);
-        var independentTokens = alreadyIndependent || !spaces.SequenceEqual(grouped) ? SyncOrderTokens.Allocate(previousTokens) : null;
-        // A device can receive the first independent positions in several
-        // batches. Don't publish positions for its untouched legacy records
-        // while it waits for the rest of that edit to arrive.
-        bool writesNewPositions = independentTokens is not null && (!alreadyIndependent || !independentTokens.SequenceEqual(previousTokens));
+        var previousOrders = spaces.Select(space => existingSpaceOrder.GetValueOrDefault(SpaceId(space))).ToArray();
+        bool alreadyIndependent = previousOrders.Any(value => value?[SpacePayload.IndependentOrderKey] is not null);
+        bool hasNewSpaces = previousOrders.Contains(null);
+        bool startsIndependentOrder = !alreadyIndependent && (reorderedSpaces || hasNewSpaces) && !spaces.SequenceEqual(grouped);
+        var independentTokens = startsIndependentOrder || alreadyIndependent && (reorderedSpaces || hasNewSpaces)
+            ? SyncOrderTokens.Allocate(previousOrders.Select(value =>
+                Text(value?[SpacePayload.IndependentOrderKey] ?? value?[SyncPayload.Key.OrderToken])).ToArray()) : null;
+        // While an independent order is still arriving, an untouched Space
+        // displays at its legacy position. Keep that fallback stable until the
+        // rest of the positions arrive or the person chooses a new order.
+        bool keepsLegacyPositions = alreadyIndependent
+            && previousOrders.Any(value => value is not null && value[SpacePayload.IndependentOrderKey] is null);
         for (int i = 0; i < spaces.Length; i++) {
             var space = spaces[i];
             var id = SpaceId(space);
@@ -119,16 +121,19 @@ public static class NativeSyncProjection {
             spaceValue[StoredSessionCodec.Key.SplitGroups] = new JsonArray(Items(space, StoredSessionCodec.Key.SplitGroups)
                 .Where(g => splitIds.Contains(Id(g![StoredSessionCodec.Key.Id]))).DistinctBy(g => Id(g![StoredSessionCodec.Key.Id]))
                 .Select(SplitGroup).ToArray());
-            spaceValue[SyncPayload.Key.OrderToken] = legacyTokens[legacyIndex[id]];
-            if (independentTokens is not null) {
-                var previous = existingSpaceOrder.GetValueOrDefault(id);
-                var token = independentTokens[i];
-                var unchanged = Text(previous?[SpacePayload.IndependentOrderKey]) == token;
-                if (writesNewPositions || unchanged) {
-                    spaceValue[SpacePayload.IndependentOrderKey] = token;
-                    spaceValue[StoredSessionCodec.Key.PositionModifiedAt] = unchanged
-                        ? previous![StoredSessionCodec.Key.PositionModifiedAt]!.DeepClone() : JsonValue.Create(now);
-                }
+            var previous = previousOrders[i];
+            var legacyPosition = Text(previous?[SyncPayload.Key.OrderToken]);
+            var previousPosition = Text(previous?[SpacePayload.IndependentOrderKey]);
+            var position = independentTokens?[i] ?? previousPosition;
+            bool hasIndependentPosition = position is not null
+                && (startsIndependentOrder || previousPosition is not null || position != legacyPosition);
+            var groupedPosition = legacyTokens[legacyIndex[id]];
+            spaceValue[SyncPayload.Key.OrderToken] = keepsLegacyPositions && (!reorderedSpaces || !hasIndependentPosition)
+                ? legacyPosition ?? groupedPosition : groupedPosition;
+            if (hasIndependentPosition) {
+                spaceValue[SpacePayload.IndependentOrderKey] = position;
+                spaceValue[StoredSessionCodec.Key.PositionModifiedAt] = position == previousPosition
+                    ? previous![StoredSessionCodec.Key.PositionModifiedAt]!.DeepClone() : JsonValue.Create(now);
             }
             Add(SyncPayloadType.Space, spaceValue);
 

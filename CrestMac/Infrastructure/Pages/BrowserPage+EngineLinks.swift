@@ -61,6 +61,6 @@ extension BrowserPage {
             if let stagedLink { corePage.discardStagedLink(stagedLink) }
             return
         }
-        openPeek(request)
+        presentLinkPeek(request)
     }
 }

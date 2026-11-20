@@ -324,6 +324,7 @@ final class BrowserPagePool:
 
     func bindRuntimeRouting(_ runtime: BrowserTabRuntime, tabID: UUID) {
         for page in runtime.allPages {
+            if let previous = page.host, previous !== self { page.linkDrag?.cancel() }
             page.setPrivateBrowsing(browsingMode.isPrivate)
             page.host = self
             page.windowRouting?.pool = self
@@ -526,7 +527,7 @@ final class BrowserPagePool:
 
     /// Opens the link a person followed with a modifier in page `opener` as a
     /// new tab of Space `spaceID`, whose page runs on its opener's engine.
-    private func openModifiedLink(
+    func openModifiedLink(
         _ request: URLRequest,
         in spaceID: UUID,
         selecting: Bool,

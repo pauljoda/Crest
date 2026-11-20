@@ -95,7 +95,7 @@ struct BrowserPageContextMenuAction {
             linkURL: linkURL, selectionText: nil
         ) { page, context, _ in
             guard let context else { return false }
-            page.openPeek(
+            page.presentLinkPeek(
                 BrowserPeekRequest(
                     url: linkURL, sourceTabID: context.tabID, sourceTitle: context.title,
                     spaceAssignment: context.assignment, trigger: .contextMenu))

@@ -5869,6 +5869,10 @@
     "synced-primary-space-handover": {
       "category": "fixed",
       "message": "When sync delivers a primary Space deletion before its successor, shared pins and sign-ins stay available while the group waits for the handover."
+    },
+    "shared-space-order-and-window-handover": {
+      "category": "fixed",
+      "message": "Independent Space order stays intact as sync records arrive in batches. Links from shared pinned tabs open where their page is showing."
     }
   }
 }

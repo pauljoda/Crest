@@ -58,7 +58,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     private(set) lazy var linkHover: BrowserLinkHoverController? = BrowserLinkHoverController(webView: webView)
     private(set) lazy var linkDrag: BrowserLinkDragController? = BrowserLinkDragController(
         webView: webView,
-        context: { [weak self] in self?.page?.linkNavigationContext },
+        context: { [weak self] in self?.page?.linkDragNavigationContext },
         dragsLinksToPeek: { [weak self] in self?.page?.corePage.linkPreferences?.dragsLinksToPeek == true },
         handle: { [weak self] event in self?.page?.handleLinkDrag(event) }
     )
