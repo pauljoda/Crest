@@ -75,6 +75,7 @@ import { spaceCards } from "./shown-cards";
 import { SpaceBanner } from "./SpaceBanner";
 import { StartPage } from "./StartPage";
 import { TitleBar } from "./TitleBar";
+import { useWindowIsCornerless } from "./WindowControls";
 
 /**
  * One Crest window: the Space's banner behind everything, the sidebar over it
@@ -571,6 +572,8 @@ export function BrowserWindow({ session }: { session: Session }) {
     }
   }, [space?.id, shownTabId, dismissPalette]);
 
+  // The page card's corner follows the window's, which a maximized or full-screen window has none of.
+  const cornerless = useWindowIsCornerless(session.shell);
   if (!space) return <div className="window-loading" />;
   const branding = space.settings.look;
   const isPrivate = workspace?.kind.isPrivate ?? false;
@@ -603,7 +606,7 @@ export function BrowserWindow({ session }: { session: Session }) {
       .then(() => byPointer && requestAnimationFrame(focusShownPage));
   };
   return (
-    <div className={`browser-window ${shell ? "with-title-bar" : ""} ${readsLight(branding) ? "reads-light" : "reads-dark"} sidebar-${sidebar}`}
+    <div className={`browser-window ${shell ? "with-title-bar" : ""} ${readsLight(branding) ? "reads-light" : "reads-dark"} sidebar-${sidebar}${cornerless ? " cornerless" : ""}`}
       style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
       <SpaceBanner spaces={spaces} spaceId={space.id} />
       <SidebarSlot presentation={sidebar} onPresentation={setSidebar} morph={sidebarMorph} width={sidebarWidth} onResize={setSidebarWidth}
@@ -864,7 +867,6 @@ function SpaceCard({ host, space, tabId, pages, passive, card }: {
       ) : null)}>
       {!passive && page && !showsStartPage && <FindBar core={session.core} pageId={page.id} />}
       {!passive && <PromptSheet session={session} prompt={sheetPrompt(session.core.state, page?.id ?? null)} spaceName={space.settings.name} />}
-      {card.ring}
     </PageCard>
   );
 }

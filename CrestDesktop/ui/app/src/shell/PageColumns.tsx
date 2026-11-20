@@ -17,8 +17,6 @@ export interface ColumnCard {
   readonly focused: boolean;
   /** How the card moves into the place the row gives it. */
   readonly transition: Transition;
-  /** The focus ring, which a card draws over its page while it is one of several. */
-  readonly ring: ReactNode;
 }
 
 /**
@@ -81,10 +79,6 @@ export function PageColumns({ cards, focusedTabId, accent, interactive, onFocus,
     : membersChanged ? (settles ? tokens.collection : { duration: 0 })
       : placeholderChanged ? tokens.collection : held || snaps ? { duration: 0 } : tokens.chrome;
   const several = cards.tabIds.length > 1;
-  const ring = (focused: boolean) => several && (
-    <div className={`split-focus-ring${focused ? " focused" : ""}`} aria-hidden
-      style={{ "--split-accent": css(accent, 0.9) } as CSSProperties} />
-  );
 
   // The row's slots: each member's card, and the drop column where a lift aims.
   type Slot = { readonly kind: "member"; readonly tabId: string; readonly member: number } | { readonly kind: "placeholder" };
@@ -93,7 +87,9 @@ export function PageColumns({ cards, focusedTabId, accent, interactive, onFocus,
   const slotKey = (slot: Slot) => (slot.kind === "member" ? keys.get(slot.tabId)! : "placeholder");
 
   return (
-    <div ref={row} className={`page-columns${several || placeholder !== null ? " split" : ""}`}
+    // The focused card's ring, in the Space's colour, is its outline (styles.css).
+    <div ref={row} className={`page-columns${several || placeholder !== null ? " split" : ""}${several ? " several" : ""}`}
+      style={{ "--split-accent": css(accent, 0.9) } as CSSProperties}
       role={several ? "group" : undefined} aria-label={several ? "Split View Columns" : undefined}>
       <AnimatePresence initial={false} mode="popLayout">
         {slots.flatMap((slot, index) => {
@@ -125,7 +121,7 @@ export function PageColumns({ cards, focusedTabId, accent, interactive, onFocus,
                 onFocusCapture={() => interactive && onFocus(tabId, false)}
                 onPointerEnter={() => interactive && onFocus(tabId, true)}
               >
-                {renderCard(tabId, { focused, transition, ring: ring(focused) })}
+                {renderCard(tabId, { focused, transition })}
               </motion.div>
             );
           })();

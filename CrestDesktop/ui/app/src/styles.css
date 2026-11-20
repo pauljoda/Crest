@@ -22,7 +22,14 @@
 
 :root {
   color-scheme: light dark;
-  --window-inset: 10px;
+  /* The page card as the Mac frames it: an 8-point frame and a 1.5-point
+     seam around the page, so the page stands 9.5 from the window's edges
+     and the seam alone from a docked sidebar. Its corner is the window's
+     corner less the frame, and the seam less again: 6.5 on the Mac. */
+  --window-inset: 9.5px;
+  --sidebar-gap: 1.5px;
+  --page-seam: 1.5px;
+  --page-corner: 6.5px;
   --sidebar-width: 289px;
   --ink: var(--crest-ink);
   --paper: var(--crest-paper);
@@ -71,8 +78,14 @@ button {
   height: 100%;
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  gap: var(--window-inset);
+  gap: var(--window-inset) var(--sidebar-gap);
   padding: var(--window-inset) var(--window-inset) var(--window-inset) 0;
+}
+
+/* A maximized or full-screen window has no corner for the card to follow,
+   so the card keeps Crest's own 13, less the seam, as the Mac's does. */
+.browser-window.cornerless {
+  --page-corner: 11.5px;
 }
 
 /* The title bar is the interface's: the window's banner around the sidebar
@@ -105,8 +118,7 @@ button {
 .space-content-overlay,
 .utility-fan,
 .download-flights,
-.tab-preview-layer,
-.split-focus-ring {
+.tab-preview-layer {
   -webkit-app-region: initial;
 }
 
@@ -273,7 +285,7 @@ button {
   justify-items: center;
   gap: 8px;
   padding: 12px;
-  border-radius: var(--crest-radius-control);
+  border-radius: var(--page-corner);
   background: rgb(255 255 255);
   color: rgb(0 0 0 / 0.5);
   font: 500 13px var(--crest-font-system);
@@ -299,7 +311,8 @@ button {
 .split-divider {
   position: relative;
   flex: none;
-  width: 8px;
+  /* The frame's 8 between two cards' frames, and each card's seam. */
+  width: 11px;
   z-index: 2;
 }
 
@@ -330,27 +343,13 @@ button {
   box-shadow: 0 0 0 2px var(--focus-ring, Highlight);
 }
 
-/* The card the window's chrome speaks for, in the Space's colour, inside its edge. */
-.split-focus-ring {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  border: 2px solid transparent;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.split-focus-ring.focused {
-  border-color: var(--split-accent);
-}
-
 /* What the window asks over its cards: its dialogs, download approvals and notices. */
 .page-row-overlay {
   position: absolute;
   inset: 0;
   z-index: 3;
   overflow: hidden;
-  border-radius: var(--crest-radius-control);
+  border-radius: var(--page-corner);
   pointer-events: none;
 }
 
@@ -664,7 +663,7 @@ button {
 .peek-scrim {
   position: absolute;
   inset: 0;
-  border-radius: var(--crest-radius-control);
+  border-radius: var(--page-corner);
   background: rgb(0 0 0 / 0.34);
   pointer-events: auto;
 }
@@ -2935,10 +2934,27 @@ button {
 .page-card {
   position: relative;
   min-width: 0;
-  border-radius: var(--crest-radius-control);
+  border-radius: var(--page-corner);
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 30px rgb(0 0 0 / 0.22);
+  /* The Mac's frame around the page: a faint 0.5-point edge on the frame's
+     outer line, past the seam, and a light shadow beneath it. */
+  outline: 0.5px solid rgb(0 0 0 / 0.12);
+  outline-offset: calc(var(--page-seam) - 0.5px);
+  box-shadow: 0 2px 14px var(--page-seam) rgb(0 0 0 / 0.11);
+  transition: outline-color 140ms ease-in-out;
+}
+
+/* In a Split View the card the window's chrome speaks for wears a 2-point
+   ring in the Space's colour on that outer line, over the seam, as the Mac's
+   BrowserSplitCardFocusIndicator does. */
+.page-columns.several > .page-column > .page-card {
+  outline: 2px solid transparent;
+  outline-offset: -0.5px;
+}
+
+.page-columns.several > .page-column.focused > .page-card {
+  outline-color: var(--split-accent);
 }
 
 .page-card::before {
@@ -2946,7 +2962,7 @@ button {
   position: absolute;
   inset: 1px;
   z-index: -1;
-  border-radius: calc(var(--crest-radius-control) - 1px);
+  border-radius: calc(var(--page-corner) - 1px);
   background: rgb(255 255 255);
 }
 

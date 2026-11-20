@@ -24,11 +24,11 @@ export function spaceCards(window: WindowState | undefined, spaceId: string, sho
 
 /** BrowserSplitLayoutMetrics and BrowserSplitCardResizeHandleMetrics. */
 export const splitMetrics = Object.freeze({
-  /** The space between cards, the page frame's own inset. */
-  gap: 8,
+  /** The space between cards: the page frame's own inset between their frames, and each card's seam. */
+  gap: 11,
   /** No card is narrower; a row that cannot seat every card at it clips. */
   minimumCardWidth: 240,
-  /** A divider's target: the gap and 4 points over each card beside it. */
+  /** A divider's target: the frames' gap and 4 points over each card's frame, its seam included. */
   handleHitWidth: 16,
   /** How far one accessibility step moves a divider. */
   keyboardStep: 24,

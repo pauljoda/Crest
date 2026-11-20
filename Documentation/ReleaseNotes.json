@@ -5873,6 +5873,10 @@
     "windows-sidebar-text-placement-match-mac": {
       "category": "internal",
       "message": "Sidebar text on Windows sits where the Mac's does: row titles and the Space name placed as SF places them, the Space name at the Mac's size and inset, and the Mac's spacing around saved tabs and an empty pinned area"
+    },
+    "windows-page-card-frame-match-mac": {
+      "category": "internal",
+      "message": "The Windows page card is framed as the Mac's: beside a docked sidebar, 9.5 points from the window's edges, with the Mac's smaller corner, lighter shadow and split focus ring"
     }
   }
 }

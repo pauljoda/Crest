@@ -9,6 +9,19 @@ export function useShellFrame(shell: ShellTransport): ShellFrame {
   );
 }
 
+const noFrames = () => () => {};
+
+/**
+ * Whether the window has no rounded corner for the page card to follow:
+ * maximized or full screen, or a window the shell doesn't frame.
+ */
+export function useWindowIsCornerless(shell: ShellTransport | null): boolean {
+  return useSyncExternalStore(
+    (listener) => (shell ? shell.subscribeFrame(listener) : noFrames()),
+    () => !shell || shell.frame.maximized || shell.frame.fullscreen,
+  );
+}
+
 // Windows' own caption glyphs (Segoe Fluent Icons, or Segoe MDL2 Assets
 // before Windows 11), which every window on the system draws its buttons in.
 const glyphs = {

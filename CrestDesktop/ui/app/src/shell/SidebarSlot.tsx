@@ -247,9 +247,14 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
     const shadowBox = shadow.current?.getBoundingClientRect();
     const shadowBase = shadowBox ? { x: slotBox.left - shadowBox.left, y: slotBox.top - shadowBox.top } : { x: 0, y: 0 };
     const from: Offsets = { x: fromRows.left - natural.left, y: fromRows.top - natural.top, page: fromPage - naturalPage };
-    // The page's edge at the window's full width, and beside the docked sidebar.
-    const pageWide = during === "docked" ? -natural.width : 0;
-    const pageBeside = during === "docked" ? 0 : natural.width;
+    // The page's edge at the window's full width, and beside the docked
+    // sidebar: the sidebar's gap past its edge, where a full-width page
+    // keeps the window's inset.
+    const frame = getComputedStyle(element.parentElement ?? element);
+    const reach = natural.width + (parseFloat(frame.getPropertyValue("--sidebar-gap")) || 0)
+      - (parseFloat(frame.getPropertyValue("--window-inset")) || 0);
+    const pageWide = during === "docked" ? -reach : 0;
+    const pageBeside = during === "docked" ? 0 : reach;
     // A drawer goes until the sidebar is past the window's edge, or comes
     // into its seat; a card settles where its presentation lays it out.
     const to: Offsets = kind === "drawer" && final === "collapsed"
@@ -342,7 +347,7 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
           width={width}
           // Docked, the handle stands in the gap between the sidebar and the
           // page; floating, on the card's edge, above the card's hits.
-          center={presentation === "docked" ? `calc(${width}px + var(--window-inset) / 2)` : `${cardInset + width}px`}
+          center={presentation === "docked" ? `calc(${width}px + var(--sidebar-gap) / 2)` : `${cardInset + width}px`}
           floating={presentation === "floating"}
           onResize={onResize}
           onResizeEnded={onResizeEnded}
