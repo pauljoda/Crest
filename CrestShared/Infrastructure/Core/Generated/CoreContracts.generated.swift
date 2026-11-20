@@ -2371,6 +2371,10 @@ struct DetachedSession: Query, Equatable, Sendable {
     let seed: SessionState.Seed
 }
 
+struct DevelopmentAddressVerdict: Equatable, Sendable {
+    let isLocal: Bool
+}
+
 struct DiscardStagedLink: Intent, PageIntent, Equatable, Sendable {
     let sourcePageID: UUID
     let stagedLinkID: UUID
@@ -4058,6 +4062,13 @@ struct LoadPage: Equatable, Sendable {
     let pageID: UUID
     let url: String
     let entryID: UUID?
+}
+
+struct LocalDevelopmentAddress: Query, Equatable, Sendable {
+    typealias Answer = DevelopmentAddressVerdict
+
+    let scheme: String?
+    let host: String?
 }
 
 struct LocalDocumentFacts: Equatable, Sendable {

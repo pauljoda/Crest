@@ -24,9 +24,10 @@ public sealed record AddressResolution(string Url, string? SearchQuery, string? 
     public const string ChromeExtensionPrefix = ChromeExtensionScheme + "://";
 
     /// The endings of names reserved for one device or one local network:
-    /// loopback, multicast DNS, home networks and private use, and the one
-    /// home routers give their devices. No public certificate can name them.
-    private static readonly string[] LocalNameEndings = [".localhost", ".local", ".home.arpa", ".internal", ".lan"];
+    /// loopback, multicast DNS, home networks and private use, testing, and
+    /// the one home routers give their devices. No public certificate can name
+    /// them.
+    private static readonly string[] LocalNameEndings = [".localhost", ".local", ".home.arpa", ".internal", ".test", ".lan"];
 
     #endregion
 
@@ -120,10 +121,14 @@ public sealed record AddressResolution(string Url, string? SearchQuery, string? 
         if (address.HostNameType == UriHostNameType.IPv6) return true;
         if (address.HostNameType == UriHostNameType.IPv4) return typed.StartsWith(address.Host, StringComparison.Ordinal);
         string host = address.Host.TrimEnd('.');
-        return host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-            || LocalNameEndings.Any(ending => host.EndsWith(ending, StringComparison.OrdinalIgnoreCase))
-            || (!host.Contains('.') && typed.StartsWith(host + ":", StringComparison.OrdinalIgnoreCase));
+        return IsLocalName(host) || (!host.Contains('.') && typed.StartsWith(host + ":", StringComparison.OrdinalIgnoreCase));
     }
+
+    /// Whether `host` is `localhost` or a name reserved for one device or one
+    /// local network.
+    internal static bool IsLocalName(string host) =>
+        host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        || LocalNameEndings.Any(ending => host.EndsWith(ending, StringComparison.OrdinalIgnoreCase));
 
     /// Whether `value` names one of the browser's own pages.
     private static bool IsInternalPage(string value) =>
