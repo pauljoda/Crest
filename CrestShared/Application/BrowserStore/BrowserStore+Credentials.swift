@@ -54,14 +54,14 @@ extension BrowserStore {
         for url: URL,
         in spaceID: UUID
     ) async throws -> [CredentialDescriptor] {
-        guard let space = spaceModel(spaceID) else {
+        guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        guard space.settings.credentialPreferences.isEnabled else { return [] }
-        guard let origin = CredentialOrigin(url: url) else {
+        let origin = CredentialOrigin(url: url)
+        guard try credentialAccess(.fill, in: spaceID, origin: origin).refusal == nil else { return [] }
+        guard let origin else {
             throw CredentialVaultError.invalidOrigin
         }
-        guard origin.isSecure else { return [] }
         return try await groupDescriptors(of: spaceID) {
             try await credentialVault.descriptors(matching: origin, in: $0)
         }
@@ -112,11 +112,12 @@ extension BrowserStore {
         for protectionSpace: BrowserHTTPAuthenticationProtectionSpace,
         in spaceID: UUID
     ) async throws -> BrowserCredential? {
-        guard let space = spaceModel(spaceID) else {
+        guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        guard space.settings.credentialPreferences.isEnabled else { return nil }
-        guard protectionSpace.origin.isSecure else { return nil }
+        guard try credentialAccess(.fill, in: spaceID, origin: protectionSpace.origin).refusal == nil else {
+            return nil
+        }
         let descriptors = try await groupDescriptors(of: spaceID) {
             try await credentialVault.descriptors(matching: protectionSpace, in: $0)
         }
@@ -131,6 +132,20 @@ extension BrowserStore {
 
     /// What `read` answers for each vault of the group of `spaceID`, the
     /// primary's first.
+    /// Whether the passwords of `spaceID` serve `use`, for a page of `origin`
+    /// when one is named, and the Spaces whose vaults hold them, as the core
+    /// answers. Throws `missingSpace` for a Space the core does not know.
+    func credentialAccess(
+        _ use: CredentialUse, in spaceID: UUID, origin: CredentialOrigin? = nil
+    ) throws(CredentialVaultError) -> CredentialAccessAnswer {
+        do {
+            return try core.query(
+                CredentialAccess(workspaceID: family.workspaceID, spaceID: spaceID, use: use, origin: origin))
+        } catch {
+            throw .missingSpace
+        }
+    }
+
     private func groupDescriptors(
         of spaceID: UUID, _ read: (UUID) async throws -> [CredentialDescriptor]
     ) async throws -> [CredentialDescriptor] {
@@ -353,20 +368,15 @@ extension BrowserStore {
         guard let space = spaceModel(spaceID) else {
             throw CredentialVaultError.missingSpace
         }
-        guard !isPrivateBrowsing else {
-            throw CredentialVaultError.unavailableInPrivateBrowsing
-        }
-        guard space.settings.credentialPreferences.isEnabled else {
-            throw CredentialVaultError.credentialManagerDisabled
+        let origin = CredentialOrigin(url: url)
+        if let refusal = try credentialAccess(.save, in: spaceID, origin: origin).refusal {
+            throw CredentialVaultError(refusal)
         }
         let resolvedSynchronization =
             isSynchronizable
             ?? space.settings.credentialPreferences.syncsCrestPasswordsWithICloud
-        guard let origin = CredentialOrigin(url: url) else {
+        guard let origin else {
             throw CredentialVaultError.invalidOrigin
-        }
-        guard origin.isSecure else {
-            throw CredentialVaultError.insecureOrigin
         }
 
         // A group keeps new passwords in its primary, and each one where it is.
@@ -410,14 +420,8 @@ extension BrowserStore {
         guard let space = spaceModel(spaceID) else {
             throw CredentialVaultError.missingSpace
         }
-        guard !isPrivateBrowsing else {
-            throw CredentialVaultError.unavailableInPrivateBrowsing
-        }
-        guard space.settings.credentialPreferences.isEnabled else {
-            throw CredentialVaultError.credentialManagerDisabled
-        }
-        guard protectionSpace.origin.isSecure else {
-            throw CredentialVaultError.insecureOrigin
+        if let refusal = try credentialAccess(.save, in: spaceID, origin: protectionSpace.origin).refusal {
+            throw CredentialVaultError(refusal)
         }
 
         let vaultID = try credentialVaultID(of: spaceID, keeping: existing)
@@ -541,14 +545,11 @@ extension BrowserStore {
         in spaceID: UUID,
         now: Date
     ) throws {
-        guard let space = spaceModel(spaceID) else {
+        guard spaceModel(spaceID) != nil else {
             throw CredentialVaultError.missingSpace
         }
-        guard !isPrivateBrowsing else {
-            throw CredentialVaultError.unavailableInPrivateBrowsing
-        }
-        guard space.settings.credentialPreferences.isEnabled else {
-            throw CredentialVaultError.credentialManagerDisabled
+        if let refusal = try credentialAccess(.save, in: spaceID).refusal {
+            throw CredentialVaultError(refusal)
         }
         let check = CredentialSaveCheck(
             origin: candidate.origin, topLevelOrigin: candidate.topLevelOrigin,

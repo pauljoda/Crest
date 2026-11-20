@@ -13,7 +13,7 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
     #region Variables
 
     /// The most saved origins one fill question may carry.
-    internal const int MaximumFillCandidates = 1_024;
+    public const int MaximumFillCandidates = 1_024;
 
     /// An IP address host must be spelled as a page's origin spells it: IPv6
     /// compressed, with no zone ID, brackets or escapes, and IPv4 in dotted

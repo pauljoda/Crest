@@ -47,6 +47,10 @@ public sealed record CredentialChoice(Guid? CredentialId);
 /// Whether each saved origin a fill question named fills its page, in order.
 public sealed record CredentialFills(IReadOnlyList<bool> Fills);
 
+/// Whether a Space's passwords serve a use, or why not, and the Spaces whose
+/// vaults hold them, the one that keeps new passwords first.
+public sealed record CredentialAccessAnswer(CredentialRefusal? Refusal, IReadOnlyList<Guid> Vaults);
+
 #endregion
 
 #region Rejections

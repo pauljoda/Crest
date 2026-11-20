@@ -6045,6 +6045,10 @@
     "release-tools-one-source": {
       "category": "internal",
       "message": "The Xcode Cloud guard reads its Xcode floor from project.yml, and the release tools read the repository and signing team from one place."
+    },
+    "core-answers-store-gates": {
+      "category": "internal",
+      "message": "The core answers which tabs Clear and Delete Folder remove, which search providers may be a default, where native views open, and whether a Space's passwords may be read, filled or saved and from which vaults."
     }
   }
 }

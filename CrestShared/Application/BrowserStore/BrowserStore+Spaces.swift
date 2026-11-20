@@ -548,16 +548,18 @@ extension BrowserStore {
         guard !isDeleting(assignment.spaceID), let space = spaceModel(matching: assignment),
             space.folders.contains(folderID)
         else { return false }
-        // Each page of the folder's tabs is asked whether it may go before the core deletes them.
-        let tabIDs = space.tabIDs(inFolder: folderID)
+        // Each page of the tabs the core would delete is asked whether it may
+        // go before the core deletes them.
+        let deleting = FolderDeletionTabs(workspaceID: family.workspaceID, spaceID: space.id, folderID: folderID)
+        guard let tabIDs = try? core.query(deleting).tabIDs else { return false }
         let tabs = tabIDs.map {
             BrowserTabRuntimeAssignment(tabID: $0, spaceID: assignment.spaceID, profileID: assignment.profileID)
         }
         return performPageDismissal(of: tabs) { [weak self] in
             // A tab that joined or left the folder while its pages were asked
             // was not asked itself, so the folder stays as it is.
-            guard let self, let current = self.spaceModel(matching: assignment),
-                Set(current.tabIDs(inFolder: folderID)) == Set(tabIDs)
+            guard let self, self.spaceModel(matching: assignment) != nil,
+                Set((try? self.core.query(deleting).tabIDs) ?? []) == Set(tabIDs)
             else { return false }
             return self.family.send(
                 DeleteFolderAndContents(

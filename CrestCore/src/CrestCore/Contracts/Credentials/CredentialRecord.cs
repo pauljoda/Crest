@@ -12,7 +12,7 @@ public sealed record CredentialRecord(Guid Id, string? Username, double UpdatedA
     #region Static Variables
 
     /// The most records one question may carry.
-    internal const int MaximumRecords = 64;
+    public const int MaximumRecords = 64;
 
     internal const int MaximumUsernameLength = 4_096;
 

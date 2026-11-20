@@ -30,7 +30,8 @@ public sealed record FinishSetup(Guid WindowId) : SetupFlowIntent {
             authority.Handle(apply, turn.Now, turn.Ids, turn.Pages);
             device.FinishManualSetup(finish.WorkspaceId, turn.Changes);
         }
-        device.FinishedSetup(finish, finish.OpensGuide ? authority.Current.Spaces.FirstOrDefault()?.Id : null, turn.Changes);
+        device.FinishedSetup(finish, finish.OpensGuide && !authority.IsPrivateBrowsing ? authority.Current.Spaces.FirstOrDefault()?.Id : null,
+            turn.Changes);
     }
 
     #endregion

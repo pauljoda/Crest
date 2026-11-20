@@ -51,7 +51,7 @@ extension BrowserOnboardingFlow {
 
     /// Whether the chosen browser's passwords come in.
     var includesPasswords: Bool {
-        reviewSpaces.contains { $0.isIncluded && $0.record.includesPasswords }
+        reviewSpaces.contains { $0.record.bringsPasswords }
     }
 
     /// How many saved passwords the chosen browser keeps.
@@ -62,7 +62,7 @@ extension BrowserOnboardingFlow {
     /// How many of the passwords that come in are for sites without HTTPS,
     /// which are never filled in automatically.
     var insecurePasswordCount: Int {
-        reviewSpaces.filter { $0.isIncluded && $0.record.includesPasswords }
+        reviewSpaces.filter { $0.record.bringsPasswords }
             .reduce(0) { $0 + $1.record.insecurePasswordCount }
     }
 
