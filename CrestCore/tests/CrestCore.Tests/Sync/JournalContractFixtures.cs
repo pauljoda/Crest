@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Contracts;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -108,8 +110,8 @@ public sealed partial class BrowserContractsTests {
         public JsonObject Materialize(JsonObject local) {
             var now = At(1_000_000);
             var records = NativeSyncEvaluator.Reconcile(Journal.Records).Select(record => record!.AsObject()).ToArray();
-            var session = NativeSyncMaterializer.Materialize(Canonical(local), Journal.Preferences, records, now);
-            return NativeSessionMaintenance.Repair(session, now, ids: new TestIds())["session"]!.AsObject();
+            var session = StoredSessionMaintenance.Materialize(Canonical(local), Journal.Preferences, records, now);
+            return StoredSessionMaintenance.Repair(session, now, ids: new TestIds())["session"]!.AsObject();
         }
 
         /// The record of `kind` with identity `id`, or null when the journal

@@ -29,7 +29,11 @@ generated: run `Scripts/control-plane/generate-contracts.sh` after changing a
 contract record to rewrite the core's codec, the Swift models and codec,
 `include/crest_contracts.h` with the tags and the fingerprint, and the C++
 engine codec `include/crest_engine_contract.h`. Source code never spells a wire
-tag.
+tag. No product code includes `crest_contracts.h` for its tags, since Swift and
+the engine carry their own generated codecs; the tags serve the native ABI
+tests under `tests/`. Likewise the core's codec reads and writes every root in
+both directions, and the directions the core itself never takes serve the
+in-process test client.
 
 `crest_engine.h` is the engine contract. An engine binding registers with an
 app through `crest_engine_register`, passing the engine contract's own
@@ -135,9 +139,9 @@ retention expiry (the shortest retention among Spaces sharing a profile). It is
 never persisted or synced. Each download intent answers `DownloadUpdated` with
 the record and its newest-first position, or `DownloadsRemoved`; an event that
 does not apply to a record's phase answers no changes. Engines keep reporting
-download events and the native center forwards them as intents. The
-`DownloadProgress` query answers transfer telemetry and ETA with the estimator
-state to send with the next sample, and `DownloadRisk` answers risk reasons and
+download events and the native center forwards them as intents; the core
+works out transfer telemetry and ETA from them itself. `DownloadRisk` answers
+risk reasons and
 whether the person must confirm; the platform supplies only its
 file-system-safe filename and type registry facts. The
 `AutomaticDownloadCheck` query answers the automatic-download throttle from
