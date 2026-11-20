@@ -1341,10 +1341,6 @@ struct AutomaticDownloadVerdict: Equatable, Sendable {
     let hasAllowedAutomaticDownload: Bool
 }
 
-struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
-}
-
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let proceeds: Bool
@@ -1385,10 +1381,6 @@ struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let requestID: UUID
-}
-
-struct BlockAutomaticDownload: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
 }
 
 struct BlockElement: Intent, Equatable, Sendable {
@@ -2431,23 +2423,6 @@ struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
-struct DownloadProgress: Query, Equatable, Sendable {
-    typealias Answer = DownloadProgressReading
-
-    let estimator: DownloadTransferEstimator?
-    let completedUnitCount: Int64
-    let totalUnitCount: Int64
-    let fractionCompleted: Double
-    let isPaused: Bool
-    let uptime: Double
-}
-
-struct DownloadProgressReading: Equatable, Sendable {
-    let estimator: DownloadTransferEstimator
-    let telemetry: DownloadTelemetry
-    let progress: Double
-}
-
 struct DownloadRisk: Query, Equatable, Sendable {
     typealias Answer = DownloadRiskVerdict
 
@@ -2512,28 +2487,6 @@ struct DownloadTelemetry: Equatable, Sendable {
     var bytesPerSecond: Double?
     var estimatedTimeRemaining: Double?
     var isPaused: Bool
-}
-
-struct DownloadTransferEstimator: Equatable, Sendable {
-    static let minimumRateInterval: Double = 0.15
-    static let smoothingWeight: Double = 0.25
-    static let minimumUsefulEstimate: Double = 0.5
-    static let maximumUsefulEstimate: Double = 604800
-    static let initial = DownloadTransferEstimator(
-        publishedBytes: 0,
-        knownTotalBytes: nil,
-        totalIsUnreliable: false,
-        measurementBytes: nil,
-        measurementUptime: nil,
-        smoothedBytesPerSecond: nil
-    )
-
-    var publishedBytes: Int64
-    var knownTotalBytes: Int64?
-    var totalIsUnreliable: Bool
-    var measurementBytes: Int64?
-    var measurementUptime: Double?
-    var smoothedBytesPerSecond: Double?
 }
 
 struct DownloadUpdated: CoreChange, Equatable, Sendable {
@@ -3993,14 +3946,6 @@ struct LinkGesture: Equatable, Sendable {
 struct LinkHovered: Equatable, Sendable {
     let pageID: UUID
     let url: String?
-}
-
-struct LinkNavigation: Query, Equatable, Sendable {
-    typealias Answer = LinkNavigationAnswer
-
-    let pageID: UUID
-    let url: String?
-    let gesture: LinkGesture
 }
 
 struct LinkNavigationAnswer: Equatable, Sendable {
@@ -9532,48 +9477,6 @@ struct BuiltInSearchProvider: Hashable, Sendable {
             self.logo = logo
             self.isEnabledByDefault = isEnabledByDefault
             self.options = options
-        }
-    }
-}
-
-/// The members of the core's `CapabilityStatus`. A member's wire tag is its index in `all`.
-struct CapabilityStatus: Hashable, Sendable {
-    let tag: Int
-    var name: String { facts.name }
-    var isAvailable: Bool { facts.isAvailable }
-    private let facts: Facts
-
-    private init(tag: Int, name: String, isAvailable: Bool) {
-        self.tag = tag
-        facts = Facts(name: name, isAvailable: isAvailable)
-    }
-
-    static let supported = CapabilityStatus(tag: 0, name: "supported", isAvailable: true)
-    static let partial = CapabilityStatus(tag: 1, name: "partial", isAvailable: false)
-    static let unavailable = CapabilityStatus(tag: 2, name: "unavailable", isAvailable: false)
-    static let unverified = CapabilityStatus(tag: 3, name: "unverified", isAvailable: false)
-
-    static let all: [CapabilityStatus] = [supported, partial, unavailable, unverified]
-
-    static func named(_ name: String?) -> CapabilityStatus? {
-        all.first { $0.name == name }
-    }
-
-    static func == (lhs: CapabilityStatus, rhs: CapabilityStatus) -> Bool {
-        lhs.tag == rhs.tag
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(tag)
-    }
-
-    private final class Facts: Sendable {
-        let name: String
-        let isAvailable: Bool
-
-        init(name: String, isAvailable: Bool) {
-            self.name = name
-            self.isAvailable = isAvailable
         }
     }
 }

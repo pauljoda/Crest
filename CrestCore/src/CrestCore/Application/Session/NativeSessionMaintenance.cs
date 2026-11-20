@@ -19,14 +19,6 @@ public static class NativeSessionMaintenance {
 
     #region Actions - Session maintenance
 
-    /// The repaired session and positional asset references: `{"session", "assets"}`.
-    public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
-        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
-        var repaired = Repair(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now),
-            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), ids ?? new SystemIdSource(), out var origins);
-        return Answer(repaired, origins);
-    }
-
     /// A repaired session with the positional references to the native assets
     /// each of its tabs keeps: `{"session", "assets"}`.
     internal static JsonObject Answer(SessionState repaired, IReadOnlyList<TabOrigin> origins) => new() {
