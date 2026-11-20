@@ -19,3 +19,4 @@ manifest-v2-extensions.patch
 content-filter.patch
 navigation-keeps-last-frame.patch
 desktop-host.patch
+windows-branding.patch

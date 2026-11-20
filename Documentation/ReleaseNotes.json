@@ -5913,6 +5913,10 @@
     "windows-space-crest-studio": {
       "category": "internal",
       "message": "A Space's crest on Windows can be built part by part, as on the Mac: its shape, field, band, emblem, border and finish, each part's color from the stage, and Shuffle for a new crest and colors"
+    },
+    "windows-crest-branding": {
+      "category": "internal",
+      "message": "Crest's Windows build shows Crest's icon and name in the taskbar, Alt+Tab, Task Manager and Explorer, where it showed Chromium's"
     }
   }
 }

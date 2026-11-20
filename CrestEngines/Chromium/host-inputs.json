@@ -558,5 +558,21 @@
   "components/surface_embed/renderer/surface_embed_web_plugin.cc": {
     "before": "4dc9a4d8926f77e010e5cc40751bf848b6b19fc80f3ae4411996d3992fc481dc",
     "after": "74e26350d5ae781d8b14db489276e784d00ed86159f24fa196f257f3b50ef55d"
+  },
+  "chrome/app/chrome_exe.rc": {
+    "before": "2ad48370adfcc2a4406132ca559773ec75cbc04a84e66111b5b0133cd9e1dca0",
+    "after": "0e9754825658e2c59fa01174e3a168f78135022bc0b77aab2045590962f4bb52"
+  },
+  "chrome/app/chrome_dll.rc": {
+    "before": "a9c034c151c9aaba5f3b2a60669b73ecfc2ec119613d669fc1cbf68987ecf399",
+    "after": "c298aefb419e23ae77714aa89f8594f075041d531898906201e7a8401390bdd6"
+  },
+  "chrome/BUILD.gn": {
+    "before": "48e3d6e2495f77153e9dc79208a05f20c9a4974885a87834b58564e74d66a86c",
+    "after": "83beb43f5e63a3ce202c108e78cc9b02a34e9017853de9daa39d5e6324e7a6b5"
+  },
+  "chrome/install_static/chromium_install_modes.h": {
+    "before": "f1e173ce85627969b995e1844a9260d31aef8f4b27ccdca9ac728b60c4f23cd1",
+    "after": "6b6d5a71c5ced47ccdf9bc48d6c0e1cd2b034cf3c7d6bbd265ef81e4ef497887"
   }
 }
