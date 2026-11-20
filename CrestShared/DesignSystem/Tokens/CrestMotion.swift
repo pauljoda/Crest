@@ -17,8 +17,9 @@ import SwiftUI
 /// )
 /// ```
 enum CrestMotion {
-    /// The deliberate hold that distinguishes a long press from an ordinary tap.
-    static let longPressRecognitionDelay: TimeInterval = 0.55
+    /// The deliberate hold that distinguishes a long press from an ordinary
+    /// tap: as long as the system waits before it opens a menu.
+    static let longPressRecognitionDelay: TimeInterval = 0.5
     /// Advancing or retreating a step in a multi-step flow.
     static let stepTransition: TimeInterval = 0.22
     /// A control acknowledging a press.

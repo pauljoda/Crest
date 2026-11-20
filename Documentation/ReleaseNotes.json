@@ -6037,6 +6037,10 @@
     "swift-values-once": {
       "category": "internal",
       "message": "Swift reads web schemes, limits, waits, log categories, settings links and accessibility identifiers from one owner each, and a link opened in Split View takes its first title from the core."
+    },
+    "one-hold-one-indent": {
+      "category": "improved",
+      "message": "Every long press takes the same half second, and a Sub-Space sits the same distance in from its Space in every list."
     }
   }
 }

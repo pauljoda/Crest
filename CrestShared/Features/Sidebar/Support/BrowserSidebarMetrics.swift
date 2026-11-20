@@ -37,6 +37,10 @@ enum BrowserSidebarMetrics {
     /// beside it.
     static let containerSpacing = CrestSpacing.extraExtraSmall
 
+    /// How far a Sub-Space's row sits in from its primary's in every list of
+    /// Spaces: past the primary's icon, as a tab sits in a folder.
+    static let subSpaceIndent: CGFloat = 28
+
     // MARK: - Actions - Sections
 
     /// ``topSectionSpacing`` at the person's spacing.
