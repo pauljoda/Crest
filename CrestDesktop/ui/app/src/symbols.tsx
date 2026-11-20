@@ -35,6 +35,7 @@ import {
   Compass,
   Copy,
   CopyPlus,
+  CornerDownRight,
   Dog,
   CornerDownLeft,
   CreditCard,
@@ -281,6 +282,7 @@ const symbols: Record<string, LucideIcon> = {
   "textformat.size": ALargeSmall,
   // Spaces: the switcher's arrows, and charges a crest draws from symbols.
   "chevron.forward": ChevronRight,
+  "arrow.turn.down.right": CornerDownRight,
   "chevron.backward": ChevronLeft,
   "folder.badge.plus": FolderPlus,
   "sun.max.fill": Sun,

@@ -263,7 +263,7 @@ export function Grain({ width, height, opacity }: { width: number; height: numbe
 }
 
 /** The Mac's particles, as unit positions and point diameters (SplitMix64, seed 0xC2E57A11). */
-const grainSamples: readonly (readonly [number, number, number])[] = (() => {
+export const grainSamples: readonly (readonly [number, number, number])[] = (() => {
   const mask = (1n << 64n) - 1n;
   let state = 0xC2E5_7A11n;
   const next = () => {

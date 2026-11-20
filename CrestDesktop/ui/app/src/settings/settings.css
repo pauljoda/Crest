@@ -875,12 +875,15 @@
 .space-appearance {
   --forge-tint: rgb(43 108 196);
   --forge-line: rgb(234 223 198);
+  /* CrestBrandTheme.label: gold on cream, butter on ink. */
+  --forge-label: rgb(138 106 34);
 }
 
 @media (prefers-color-scheme: dark) {
   .space-appearance {
     --forge-tint: rgb(79 142 224);
     --forge-line: rgb(255 253 247 / 0.22);
+    --forge-label: rgb(242 193 78);
   }
 }
 
@@ -1159,6 +1162,7 @@
   font-weight: var(--crest-font-display-weight);
   letter-spacing: 1.7px;
   text-transform: uppercase;
+  color: var(--forge-label, inherit);
 }
 
 /* BrowserArtworkPickerButton. */

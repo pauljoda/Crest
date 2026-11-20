@@ -60,10 +60,10 @@ export function AdBlockingPane({ session }: { session: Session }) {
  * the level, the row says "Customized", and its reset restores the level's
  * lists. That word keeps its place while hidden, so the picker never moves.
  */
-function LevelSection({ session, lists }: { session: Session; lists: FilterLists }) {
+export function LevelSection({ session, lists, title }: { session: Session; lists: FilterLists; title?: string }) {
   const choose = (level: ContentBlockingLevel) => void send(session, SetContentBlockingLevel({ level }));
   return (
-    <Group footer={lists.level.summary}>
+    <Group title={title} footer={lists.level.summary}>
       <Row title="Blocking" onReset={lists.isCustomized ? () => choose(lists.level) : null}>
         <span className="settings-customized" style={{ opacity: lists.isCustomized ? 1 : 0 }} aria-hidden>Customized</span>
         <Segmented label="Blocking" value={lists.level} onChange={choose}

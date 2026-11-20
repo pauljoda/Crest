@@ -384,7 +384,7 @@ const providerLogos: Record<string, string> = Object.fromEntries(
 );
 
 /** A provider's logo where it has one, as the Mac's BrowserSearchProviderIcon draws it, else its kind's glyph. */
-function ProviderIcon({ provider, size = 14 }: { provider: SearchProvider; size?: number }) {
+export function ProviderIcon({ provider, size = 14 }: { provider: SearchProvider; size?: number }) {
   const logo = provider.logo ? providerLogos[provider.logo] : undefined;
   if (logo) return <img className="palette-provider-logo" src={logo} width={size} height={size} alt="" />;
   return (

@@ -208,19 +208,7 @@ export function SpaceAppearance({ session, space }: { session: Session; space: S
           onShuffle={() => write(shuffledLook(branding))}
           showsCrest={showsMore && branding.iconStyle === SpaceIconStyle.layeredCrest}
           openWell={well?.element.closest(".forge-stage") ? well.role : null} onWell={toggleWell} onStep={openStep} />
-        <div className="settings-card space-palettes" role="group" aria-label="Palettes" data-testid="space-palettes">
-          {spacePalettes.map((palette) => {
-            const worn = wearsPalette(palette, branding);
-            return (
-              <button key={palette.name} type="button" className={`forge-card space-palette${worn ? " selected" : ""}`}
-                aria-label={palette.title} aria-pressed={worn} title={palette.title} data-testid={`space-palette-${palette.name}`}
-                onClick={() => write(applyingPalette(palette, branding))}>
-                <PaletteSwatch background={paletteBackground(palette)} accent={paletteAccent(palette)} />
-                <span className="space-palette-title">{palette.title}</span>
-              </button>
-            );
-          })}
-        </div>
+        <PalettePicker className="settings-card" branding={branding} onChoose={write} />
       </section>
 
       <section className="space-appearance-section">
@@ -422,7 +410,7 @@ function LayerSwatch({ layer, branding, selected, onToggle }: {
 }
 
 /** CrestColorWell: a 30-point circle of the fill in a ring, which opens its color popover below it. */
-function ColorWell({ title, fill, selected, onToggle }: {
+export function ColorWell({ title, fill, selected, onToggle }: {
   title: string;
   fill: SpaceFill;
   selected: boolean;
@@ -447,6 +435,29 @@ function FillDot({ fill, size, ring = false, line = false }: { fill: SpaceFill; 
       {ring && <circle cx={size / 2} cy={size / 2} r={size / 2 - 0.75} fill="none" stroke="rgb(255 255 255 / 0.35)" strokeWidth={1.5} />}
       {line && <circle className="fill-dot-line" cx={size / 2} cy={size / 2} r={size / 2 - 0.5} fill="none" strokeWidth={1} />}
     </svg>
+  );
+}
+
+/** BrowserSpacePalettePicker: the palettes as cards, the one the Space wears selected; choosing one applies it. */
+export function PalettePicker({ branding, onChoose, className = "" }: {
+  branding: SpaceBranding;
+  onChoose: (next: SpaceBranding) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`space-palettes ${className}`} role="group" aria-label="Palettes" data-testid="space-palettes">
+      {spacePalettes.map((palette) => {
+        const worn = wearsPalette(palette, branding);
+        return (
+          <button key={palette.name} type="button" className={`forge-card space-palette${worn ? " selected" : ""}`}
+            aria-label={palette.title} aria-pressed={worn} title={palette.title} data-testid={`space-palette-${palette.name}`}
+            onClick={() => onChoose(applyingPalette(palette, branding))}>
+            <PaletteSwatch background={paletteBackground(palette)} accent={paletteAccent(palette)} />
+            <span className="space-palette-title">{palette.title}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -488,7 +499,7 @@ type IconKind = "crest" | "symbol" | "emoji";
  * houses, Simple then Heraldic, each in its own colors; a symbol and an
  * emoji each open a picker, and wear what is picked.
  */
-function IconPicker({ branding, symbol, onCrest, onWear }: {
+export function IconPicker({ branding, symbol, onCrest, onWear }: {
   branding: SpaceBranding;
   symbol: string;
   onCrest: (house: SpaceHouse | null) => void;

@@ -5917,6 +5917,10 @@
     "windows-crest-branding": {
       "category": "internal",
       "message": "Crest's Windows build shows Crest's icon and name in the taskbar, Alt+Tab, Task Manager and Explorer, where it showed Chromium's"
+    },
+    "windows-crest-setup": {
+      "category": "internal",
+      "message": "A first launch on Windows opens Crest Setup before the browser: a welcome, then Your Space, Spaces and Make It Home, whose choices take effect when Start Browsing opens the window"
     }
   }
 }

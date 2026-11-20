@@ -316,7 +316,7 @@ export function fromLch(lightness: number, chroma: number, hue: number): BrandCo
 }
 
 /** CrestPerceptualColor.mix: `start` `amount` of the way to `end`, in OKLab. */
-function mixOklab(start: BrandColor, end: BrandColor, amount: number): BrandColor {
+export function mixOklab(start: BrandColor, end: BrandColor, amount: number): BrandColor {
   const [l1, a1, b1] = oklab(start);
   const [l2, a2, b2] = oklab(end);
   const l = l1 + (l2 - l1) * amount;

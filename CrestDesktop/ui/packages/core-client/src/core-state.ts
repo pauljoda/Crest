@@ -18,6 +18,8 @@ import {
   type PageState,
   type PermissionAsked,
   type ScriptDialogAsked,
+  type SetupDraft,
+  type SetupFlowState,
   type SearchCatalogChanged,
   type SessionState,
   type ShortcutsChanged,
@@ -97,6 +99,12 @@ export class CoreState {
   filterLists: FilterLists | null = null;
   /** The sites where ad blocking blocks nothing, with the Space that turned each off. */
   blockingSites: readonly SiteContentBlocking[] = [];
+  /** Setup under way: its entry, step and phase, as the core last published it, or null with none open. */
+  setupFlow: SetupFlowState | null = null;
+  /** The Spaces Setup is shaping, which take effect when it finishes, or null with no draft. */
+  setupDraft: SetupDraft | null = null;
+  /** Whether this device has finished setup, once the core has said. */
+  setupCompleted: boolean | null = null;
   /** The choices each Space keeps for sites, by Space, as the core last published them. */
   sitePermissions = new Map<string, readonly SitePermissionRecordState[]>();
   /** The sites each read of website data found, by its request. */
@@ -312,10 +320,17 @@ const appliers: ChangeAppliers = {
   QuitWithDownloadsAsked: unread,
   Saved: unread,
   SessionAdopted: unread,
-  SetupCompletedChanged: unread,
-  SetupDraftChanged: unread,
+  SetupCompletedChanged: (state, change) => {
+    state.setupCompleted = change.completed;
+  },
+  SetupDraftChanged: (state, change) => {
+    state.setupDraft = change.draft;
+  },
+  // Setup reads the Space it finished on from FinishSetup's own changes.
   SetupFinished: unread,
-  SetupFlowChanged: unread,
+  SetupFlowChanged: (state, change) => {
+    state.setupFlow = change.flow;
+  },
   SiteContentBlockingChanged: (state, change) => {
     state.blockingSites = change.sites;
   },

@@ -1,5 +1,6 @@
 import {
   AdoptLegacySession,
+  AdoptSetupCompletion,
   type AppConfiguration,
   CatchUp,
   type Change,
@@ -12,12 +13,14 @@ import {
   GetSiteContentBlocking,
   LaunchEnvironmentStatics,
   LaunchPlan,
+  type LaunchWindowPlan,
   LaunchWindows,
   OpenWindow,
   OpenWorkspace,
   ReleasePage,
   RememberWindowsForLaunch,
   RestoreSearchCatalog,
+  type SetupEntry,
   ShowStartPage,
   SiteContentBlockingChanged,
   StartupBehavior,
@@ -41,6 +44,14 @@ export interface Session {
   readonly shell: ShellTransport | null;
   /** Set once the window is closing, when it opens no more pages. */
   readonly closing: { current: boolean };
+  /** The launch this window holds back for first-run Setup, until Setup finishes and opens it. */
+  readonly setup: { current: HeldLaunch | null };
+}
+
+/** A launch held for Setup: the setup it opens, and the windows it opens once Setup finishes. */
+export interface HeldLaunch {
+  readonly entry: SetupEntry;
+  readonly plan: LaunchWindowPlan;
 }
 
 /** The interface runs on Windows, whose keys and rules the core keeps apart from the Mac's. */
@@ -126,9 +137,13 @@ export async function boot(bridgeUrl: string): Promise<Session> {
       engine,
     );
   }
-  const opened = await openWorkspace(core, workspaceKind);
+  const { changes: opened, created } = await openWorkspace(core, workspaceKind);
   const workspace = opened.find((change): change is WorkspaceOpened => change.$kind === "WorkspaceOpened");
   if (!workspace) throw new Error("The core opened no workspace.");
+  // Only a session this launch had to create meets first-run Setup: Windows
+  // had no Setup before, so a session it already kept counts as set up. The
+  // core adopts this once for the device, and keeps what Setup decides after.
+  if (shell && launches) await core.send(AdoptSetupCompletion({ completed: !created }));
   // A launch restores the search catalog for the person's language and
   // region once the session that keeps the device's preferences is open, as
   // the Mac's launch does before any window shows.
@@ -146,28 +161,61 @@ export async function boot(bridgeUrl: string): Promise<Session> {
     FilterListsChanged({ lists: await core.query(GetFilterLists()) }),
     SiteContentBlockingChanged({ sites: await core.query(GetSiteContentBlocking()) }),
   ]);
-  if (shell && launches) windowId = await reopenLaunchWindows(core, shell);
-  // Crest's own windows are saved windows, which the next launch reopens as
-  // they were; a development window starts afresh.
-  await core.send(
-    OpenWindow({
-      windowId,
-      workspaceId: workspace.workspaceId,
-      saved: shell !== null,
-      copyingWindowId: null,
-      showingSpaceId: null,
-      showingTabs: [],
-      restoresTabs: shell !== null,
-    }),
-  );
-  if (shell && launches) await presentLaunchChoice(core, workspace.workspaceId, windowId);
+  const setup: { current: HeldLaunch | null } = { current: null };
+  if (shell && launches) {
+    const plan = await core.query(LaunchWindows({ environment: LaunchEnvironmentStatics.installed }));
+    windowId = await adoptLaunchWindows(shell, plan);
+    // First-run Setup holds the launch's windows back, as the Mac opens only
+    // Setup's: this window shows Setup, and the windows open once it finishes.
+    if (plan.setup) setup.current = { entry: plan.setup, plan };
+    else await reopenLaunchWindows(shell, plan);
+  }
+  if (!setup.current) {
+    // Crest's own windows are saved windows, which the next launch reopens as
+    // they were; a development window starts afresh.
+    await core.send(
+      OpenWindow({
+        windowId,
+        workspaceId: workspace.workspaceId,
+        saved: shell !== null,
+        copyingWindowId: null,
+        showingSpaceId: null,
+        showingTabs: [],
+        restoresTabs: shell !== null,
+      }),
+    );
+    if (shell && launches) await presentLaunchChoice(core, workspace.workspaceId, windowId);
+  }
   const closing = { current: false };
   if (shell) {
-    closesThroughCore(core, shell, windowId, closing);
+    closesThroughCore(core, shell, windowId, closing, setup);
     // Crest's Chromium downloads the filter lists, as the Mac app does.
     startFilterListUpdates(core, shell);
   }
-  return { core, engine, shell, workspaceId: workspace.workspaceId, windowId, closing };
+  return { core, engine, shell, workspaceId: workspace.workspaceId, windowId, closing, setup };
+}
+
+/**
+ * Opens the windows a launch held for Setup once Setup has finished: this
+ * window, on the Space Setup finished on, and the others behind it, as the
+ * Mac opens the held launch on Setup's frame, not on the startup choice.
+ */
+export async function openHeldLaunch(session: Session, showingSpaceId: string | null) {
+  const held = session.setup.current;
+  if (!held) return;
+  await session.core.send(
+    OpenWindow({
+      windowId: session.windowId,
+      workspaceId: session.workspaceId,
+      saved: true,
+      copyingWindowId: null,
+      showingSpaceId,
+      showingTabs: [],
+      restoresTabs: true,
+    }),
+  );
+  if (session.shell) await reopenLaunchWindows(session.shell, held.plan);
+  session.setup.current = null;
 }
 
 /**
@@ -188,17 +236,19 @@ async function presentLaunchChoice(core: CrestCore, workspaceId: string, windowI
 }
 
 /**
- * Brings back the windows the last launch left open, each under the identity
- * the core saved it by: this window becomes the frontmost, and the shell
- * reopens the others behind it. Answers this window's identity.
+ * This window takes the identity the core saved the launch's frontmost
+ * window by. Answers that identity.
  */
-async function reopenLaunchWindows(core: CrestCore, shell: ShellTransport): Promise<string> {
-  const plan = await core.query(LaunchWindows({ environment: LaunchEnvironmentStatics.installed }));
+async function adoptLaunchWindows(shell: ShellTransport, plan: LaunchWindowPlan): Promise<string> {
   await shell.adoptWindow(plan.startupWindowId);
+  return plan.startupWindowId;
+}
+
+/** Brings back the other windows the last launch left open, behind this one, each under the identity the core saved it by. */
+async function reopenLaunchWindows(shell: ShellTransport, plan: LaunchWindowPlan) {
   for (const id of plan.windowIds) {
     if (id !== plan.startupWindowId) await shell.reopenWindow(id);
   }
-  return plan.startupWindowId;
 }
 
 /**
@@ -209,9 +259,16 @@ async function reopenLaunchWindows(core: CrestCore, shell: ShellTransport): Prom
  * the Mac app does, and any other window closes for good. The window goes
  * either way.
  */
-function closesThroughCore(core: CrestCore, shell: ShellTransport, windowId: string, closing: { current: boolean }) {
+function closesThroughCore(core: CrestCore, shell: ShellTransport, windowId: string, closing: { current: boolean },
+  setup: { current: HeldLaunch | null }) {
   shell.onCloseRequested = (last, stack, pages) => {
     closing.current = true;
+    // A window still showing Setup has opened nothing for the core to close;
+    // the unfinished draft starts over at the next launch, as on the Mac.
+    if (setup.current) {
+      void shell.window("close");
+      return;
+    }
     const told = (async () => {
       for (const pageId of pages) await core.send(ReleasePage({ pageId: pageId.toLowerCase(), keepsState: false }));
       await core.send(
@@ -228,16 +285,16 @@ function closesThroughCore(core: CrestCore, shell: ShellTransport, windowId: str
  * Opens the workspace a window shows. The session the core keeps in its file
  * opens as it was saved; a file that holds none yet, on a first launch, first
  * takes the session a first install starts with, as the Mac's first launch
- * does when it has no earlier release to carry over.
+ * does when it has no earlier release to carry over. Says whether it had to.
  */
-async function openWorkspace(core: CrestCore, kind: WorkspaceKind): Promise<readonly Change[]> {
+async function openWorkspace(core: CrestCore, kind: WorkspaceKind): Promise<{ changes: readonly Change[]; created: boolean }> {
   try {
-    return await core.send(OpenWorkspace({ kind, seed: null }));
+    return { changes: await core.send(OpenWorkspace({ kind, seed: null })), created: false };
   } catch (error) {
     if (!(error instanceof CoreRejection) || error.rejection.$kind !== "NoStoredSession") throw error;
     await core.send(
       AdoptLegacySession({ installed: { core: null, wholeGraph: null, history: [], journal: null }, seed: null }),
     );
-    return core.send(OpenWorkspace({ kind, seed: null }));
+    return { changes: await core.send(OpenWorkspace({ kind, seed: null })), created: true };
   }
 }

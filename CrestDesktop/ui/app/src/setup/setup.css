@@ -1,0 +1,545 @@
+/* Crest Setup, as the Mac's BrowserSetupWindowContent: the paper sheet of
+   steps at the leading third over the room, the shown Space's look, both
+   under grain, in Crest's own cream and ink whichever way the device reads. */
+.setup-window {
+  --setup-canvas: rgb(251 245 230);
+  --setup-ink: rgb(0 0 0 / 0.85);
+  --setup-secondary: rgb(0 0 0 / 0.5);
+  --setup-tertiary: rgb(0 0 0 / 0.26);
+  --setup-surface: rgb(255 253 247);
+  --setup-line: rgb(234 223 198);
+  --setup-accent: rgb(43 108 196);
+  --setup-accent-text: rgb(34 92 172);
+  --setup-danger: rgb(178 50 37);
+  --settings-canvas: var(--setup-canvas);
+  --settings-card: rgb(0 0 0 / 0.028);
+  --settings-ink: var(--setup-ink);
+  --settings-secondary: var(--setup-secondary);
+  --settings-primary: 0 0 0;
+  --settings-hairline: rgb(0 0 0 / 0.045);
+  --settings-accent: var(--setup-accent);
+  --forge-tint: var(--setup-accent);
+  --forge-line: rgb(234 223 198);
+  --forge-label: rgb(138 106 34);
+  --fg: rgb(0 0 0 / 0.86);
+  --surface: rgb(0 0 0 / 0.06);
+  --surface-selected: rgb(0 0 0 / 0.1);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--setup-ink);
+  font: 13px var(--crest-font-system);
+  -webkit-app-region: drag;
+}
+
+@media (prefers-color-scheme: dark) {
+  .setup-window {
+    --setup-canvas: rgb(23 34 56);
+    --setup-ink: rgb(255 255 255 / 0.85);
+    --setup-secondary: rgb(255 255 255 / 0.55);
+    --setup-tertiary: rgb(255 255 255 / 0.25);
+    --setup-surface: rgb(43 58 92);
+    --setup-line: rgb(255 253 247 / 0.22);
+    --setup-accent: rgb(79 142 224);
+    --setup-accent-text: rgb(122 170 235);
+    --setup-danger: rgb(238 106 92);
+    --settings-card: rgb(255 255 255 / 0.03);
+    --settings-primary: 255 255 255;
+    --settings-hairline: rgb(255 255 255 / 0.06);
+    --forge-line: rgb(255 253 247 / 0.22);
+    --forge-label: rgb(242 193 78);
+    --fg: rgb(255 255 255 / 0.9);
+    --surface: rgb(255 255 255 / 0.08);
+    --surface-selected: rgb(255 255 255 / 0.13);
+  }
+}
+
+.setup-room,
+.setup-paper,
+.setup-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.setup-room {
+  transition: background 250ms ease-in-out;
+}
+
+.setup-paper {
+  overflow: hidden;
+  background: var(--setup-canvas);
+}
+
+.setup-grain {
+  background-repeat: repeat;
+  mix-blend-mode: soft-light;
+}
+
+/* The sheet the steps lie on: the whole window on the welcome, then the
+   leading third, with a band of shadow past its edge over the room. */
+.setup-sheet {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--steps-width);
+  -webkit-app-region: no-drag;
+}
+
+.setup-sheet.landing {
+  width: 100%;
+}
+
+.setup-sheet-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 22px;
+  background: linear-gradient(to right, rgb(23 34 56 / 0.22) 0%, rgb(23 34 56 / 0.077) 35%, rgb(23 34 56 / 0) 100%);
+  pointer-events: none;
+}
+
+/* The top of the window moves it, as a title bar does; its buttons stay pressable. */
+.setup-titlebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 40px;
+  -webkit-app-region: drag;
+}
+
+.setup-window-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  height: 40px;
+  -webkit-app-region: no-drag;
+}
+
+/* BrowserSetupLanding: the mark, the steps, the welcome and Continue, centred. */
+.setup-landing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 48px;
+  text-align: center;
+}
+
+.setup-welcome-title {
+  margin: 0;
+  font: var(--crest-font-display-weight) 84px/1 var(--crest-font-display);
+  letter-spacing: -2.5px;
+  color: var(--setup-ink);
+}
+
+.setup-welcome-body {
+  max-width: 560px;
+  margin: 0;
+  font: 500 20px var(--crest-font-system);
+  color: var(--setup-secondary);
+}
+
+.setup-welcome-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* BrowserSetupStepChips: paper chips, tilted, the open one lifted. */
+.setup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.setup-chips.welcome {
+  justify-content: center;
+  gap: 10px;
+}
+
+.setup-chips.compact {
+  gap: 6px;
+}
+
+.setup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: var(--setup-surface);
+  box-shadow: inset 0 0 0 1px var(--setup-line), 0 1px 3px rgb(23 34 56 / 0.16);
+  color: var(--setup-secondary);
+  font-family: var(--crest-font-display);
+  font-weight: var(--crest-font-display-weight);
+  white-space: nowrap;
+  rotate: var(--chip-tilt);
+  scale: calc(var(--chip-lift, 1) * var(--chip-press, 1));
+  transition: scale 150ms cubic-bezier(0.25, 1, 0.5, 1), background-color 450ms cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 450ms cubic-bezier(0.25, 1, 0.5, 1), color 450ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.setup-chip.colored {
+  background: var(--chip-color);
+  box-shadow: 0 1px 3px rgb(23 34 56 / 0.16);
+  color: rgb(23 34 56);
+}
+
+.setup-chip.open {
+  --chip-lift: 1.06;
+  z-index: 1;
+  box-shadow: 0 3px 10px rgb(23 34 56 / 0.28);
+}
+
+.setup-chip:hover {
+  --chip-press: 1.04;
+}
+
+.setup-chip:active {
+  --chip-press: 0.95;
+}
+
+.setup-chip-number {
+  opacity: 0.7;
+}
+
+.setup-chips.welcome .setup-chip {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 16px;
+  font-size: 16px;
+}
+
+.setup-chips.welcome .setup-chip-number {
+  font-size: 12px;
+}
+
+.setup-chips.compact .setup-chip {
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.setup-chips.compact .setup-chip-number {
+  font-size: 11px;
+}
+
+/* A step's page: the chips over it, then the page, which scrolls, then Back and the way forward. */
+.setup-steps {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.setup-header {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 80px;
+  padding: 40px 30px 0;
+}
+
+.setup-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 20px;
+}
+
+.setup-page-heading {
+  margin: 18px 10px 10px;
+  font: var(--crest-font-display-weight) 22px/28px var(--crest-font-display);
+  color: var(--setup-ink);
+}
+
+.setup-page .settings-group {
+  margin-bottom: 32px;
+}
+
+.setup-page .settings-row {
+  min-height: 36px;
+  padding: 4px 10px;
+}
+
+.setup-page .settings-footer {
+  margin: 8px 10px 0;
+  font-size: 12px;
+}
+
+.setup-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 30px 26px;
+}
+
+.setup-footer-space {
+  flex: 1;
+}
+
+.setup-error {
+  margin: 0 10px 12px;
+  font-size: 12px;
+  color: var(--setup-danger);
+}
+
+.setup-footer-error {
+  margin: 8px 30px 0;
+}
+
+.setup-unavailable {
+  margin: 40px 10px;
+  color: var(--setup-secondary);
+  text-align: center;
+}
+
+.setup-progress {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgb(var(--settings-primary) / 0.18);
+  border-top-color: var(--setup-ink);
+  border-radius: 50%;
+  animation: setup-spin 800ms linear infinite;
+}
+
+@keyframes setup-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+/* CrestButtonSurface: capsules, Crest blue with a sheen for the way forward, quiet for Back. */
+.setup-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  font: 700 13px var(--crest-font-display);
+  white-space: nowrap;
+  transition: background-color 100ms ease-out, scale 100ms ease-out, opacity 100ms ease-out;
+}
+
+.setup-button:active:not(:disabled) {
+  scale: 0.975;
+}
+
+.setup-button:disabled {
+  opacity: 0.42;
+}
+
+.setup-button.primary {
+  background: rgb(43 108 196 / 0.92);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+  color: white;
+}
+
+.setup-button.primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0) 50%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.setup-button.primary:hover:not(:disabled) {
+  background: rgb(43 108 196);
+}
+
+.setup-button.primary:active:not(:disabled) {
+  background: rgb(43 108 196 / 0.78);
+}
+
+.setup-button.secondary {
+  padding: 0 16px;
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 1px rgb(var(--settings-primary) / 0.08);
+  color: var(--setup-ink);
+}
+
+.setup-button.secondary:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.11);
+}
+
+.setup-button.secondary:active:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.16);
+}
+
+.setup-button.large {
+  height: 50px;
+  padding: 0 28px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* crestTertiary: Add Sub-Space and New Space, in accent text. */
+.setup-tertiary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--setup-accent-text);
+  font: 500 13px var(--crest-font-system);
+  transition: background-color 100ms ease-in-out;
+}
+
+.setup-tertiary:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.setup-tertiary:active {
+  background: rgb(var(--settings-primary) / 0.13);
+}
+
+/* BrowserSetupRowButtonStyle: a whole row presses, its surface a little inside the card. */
+.settings-card.setup-list > * + * {
+  border-top: 1px solid var(--settings-hairline);
+}
+
+.setup-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--setup-ink);
+  font: 600 13px var(--crest-font-system);
+  text-align: start;
+  isolation: isolate;
+}
+
+.setup-row::before {
+  content: "";
+  position: absolute;
+  inset: 3px 2px;
+  z-index: -1;
+  border-radius: 8px;
+  transition: background-color 100ms ease-in-out;
+}
+
+.setup-row:hover::before {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.setup-row:active::before {
+  background: rgb(var(--settings-primary) / 0.13);
+}
+
+.setup-space-row.sub {
+  padding-left: 14px;
+  font-weight: 500;
+}
+
+.setup-sub-arrow,
+.setup-disclosure {
+  flex: none;
+  color: var(--setup-tertiary);
+}
+
+.setup-space-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.setup-list-item {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 10px;
+}
+
+.setup-list-item:has(.setup-add-sub-space) {
+  padding-left: 40px;
+}
+
+/* Your Space: the name, the two wells over the palettes. */
+.setup-name-field {
+  min-width: 0;
+  width: 220px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--setup-ink);
+  font: inherit;
+  text-align: right;
+}
+
+.setup-wells {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 17px 10px 18px;
+}
+
+.setup-well {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.setup-well-title {
+  font-size: 10px;
+  color: var(--setup-secondary);
+}
+
+/* The starter crests sit in the icon card's own padding, four to a row, as the Mac's. */
+.setup-page .forge-icon .forge-gallery {
+  padding: 4px 0;
+}
+
+.space-palettes.setup-palettes {
+  padding: 13px 10px 12px;
+  border-top: 1px solid var(--settings-hairline);
+}
+
+/* macOS draws Setup's segmented pickers with the chosen segment in Crest blue. */
+.setup-window .settings-segmented button.chosen {
+  background: var(--setup-accent);
+  box-shadow: none;
+  color: white;
+}
+
+.setup-search-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setup-chip,
+  .setup-button,
+  .setup-room {
+    transition: none;
+  }
+}
