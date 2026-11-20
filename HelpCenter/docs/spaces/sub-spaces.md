@@ -16,7 +16,7 @@ A Space and its Sub-Spaces form a group. The Space that leads it is the group's 
 <GuideScreenshot
   src="/img/guides/sub-spaces/settings-group.png"
   alt="Crest Settings with Client A and Client B indented under Work in the sidebar, and Work's page showing the crests of Work, Client A and Client B"
-  caption="Sub-Spaces sit under their primary in Settings, and a group's page shows the crests of its Spaces."
+  caption="A group's Settings page shows the crests of its primary and Sub-Spaces."
 />
 
 ## What a group shares
@@ -57,7 +57,7 @@ On iPhone and iPad, open **Settings → Spaces**, touch and hold a Space, then c
 
 ## Add an existing Space to a group
 
-Right-click the Space in the Settings sidebar, or open the **…** menu on its page, choose **Make Sub-Space of**, then choose the group. On Mac you can also drag the Space in the Settings sidebar onto another Space, or among a group's Sub-Spaces. On iPhone and iPad, touch and hold the Space in **Settings → Spaces**.
+Right-click the Space in the Settings sidebar, or open the **…** menu on its page, choose **Make Sub-Space of**, then choose the group. On Mac you can also drag the Space in the Settings sidebar onto a row in the group you want to join. On iPhone and iPad, touch and hold the Space in **Settings → Spaces**.
 
 <GuideScreenshot
   src="/img/guides/sub-spaces/make-sub-space-menu.png"
@@ -77,19 +77,19 @@ A Space that leads Sub-Spaces can't join another group, and private windows can'
 
 ## Switch between Sub-Spaces
 
-Sub-Spaces switch like any other Space. A group's Spaces sit together, primary first, and the Space picker outlines each group. **Control-1** through **Control-9** select Spaces by position, counting Sub-Spaces.
+You can choose the position of each Space in the picker. For example, you can place Personal between Work and its Sub-Space Client A. Work and Client A still share their sign-ins. **Control-1** through **Control-9** select Spaces by position, counting Sub-Spaces.
 
 <GuideScreenshot
   src="/img/guides/sub-spaces/space-picker.png"
   alt="The Space picker with an outline around Work, Client A and Client B, and Personal on its own"
-  caption="The Space picker outlines each group."
+  caption="The Space picker outlines adjacent Spaces that share a profile."
 />
 
-To move a whole group, drag its primary. On Mac, dragging a Sub-Space among its own group's Sub-Spaces reorders it.
+In Mac Settings, click the pencil beside **Spaces** and drag a row by its handle. On iPhone and iPad, select a Space in **Settings → Spaces** and use the order controls.
 
 ## Separate a Sub-Space
 
-Right-click the Sub-Space in the Settings sidebar, or open the **…** menu on its page, and choose **Separate from "Primary"…**, or drag it out of its group in the Settings sidebar on Mac. On iPhone and iPad, touch and hold it in **Settings → Spaces**. The Space keeps its tabs and goes back to its own sign-ins, website data and extensions. History it recorded while in the group stays with the group.
+Right-click the Sub-Space in the Settings sidebar, or open the **…** menu on its page, and choose **Separate from "Primary"…**. On iPhone and iPad, touch and hold it in **Settings → Spaces**. The Space keeps its tabs and goes back to its own sign-ins, website data and extensions. History it recorded while in the group stays with the group.
 
 A primary can't be separated. To end a group, separate or delete each of its Sub-Spaces.
 
@@ -107,7 +107,7 @@ Deleting a primary asks which of its Sub-Spaces keeps the group, with its sign-i
 
 ## Open a page under another account
 
-To open a link with another Space's sign-ins on Mac, right-click it and choose a Space from **Open Link in**. The page opens in a Quick Window in that Space's session, so you can see the same site under another account. Choose **Open in** and the Space to move it there. **Open This Page in** in Site Controls does the same for the page you're on. The Spaces of one group are listed together.
+To open a link with another Space's sign-ins on Mac, right-click it and choose a Space from **Open Link in**. The page opens in a Quick Window in that Space's session, so you can see the same site under another account. Choose **Open in** and the Space to move it there. **Open This Page in** in Site Controls does the same for the page you're on. The menu follows the order of your Spaces.
 
 ## Use Sub-Spaces on older devices
 

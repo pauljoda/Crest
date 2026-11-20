@@ -12,6 +12,38 @@ namespace CrestCore.Tests;
 /// lock, one owner of its pins and history, and an owner that hands them on
 /// when it goes. A private window's session is never shared.
 public sealed partial class BrowserContractsTests {
+    #region Actions - Order
+
+    /// A Sub-Space can precede its primary with an unrelated Space between
+    /// them. Reopening preserves that order and the profile and pins they share.
+    [Fact]
+    public void ReorderingAndReopeningKeepEachSpacesPositionAndProfile() {
+        var (primary, member, solo) = (Fixed(3_000), Fixed(3_001), Fixed(3_002));
+        var (profile, pin) = (Fixed(3_090), Fixed(3_010));
+        using var device = new TestDevice(SessionOf(
+            SpaceOf(primary, profile, "Work", tabs: [TabOf(pin, placement: "pinned")]),
+            Joined(SpaceOf(member, Fixed(3_091), "Client"), primary, profile, at: 100),
+            SpaceOf(solo, Fixed(3_092), "Personal")));
+        Guid[] order = [member, solo, primary];
+        device.Send(new ReorderSpaces(device.Workspace, order));
+
+        void Check(SessionState session) {
+            Assert.Equal(order, session.Spaces.Select(space => space.Id));
+            var group = session.GroupOf(member)!;
+            Assert.Equal(primary, group.Primary.Id);
+            Assert.Equal([primary, member], group.Members.Select(space => space.Id));
+            Assert.All(group.Members, space => Assert.Equal(profile, space.ProfileId));
+            Assert.Equal(Fixed(3_092), session.Space(solo)!.ProfileId);
+            Assert.Contains(session.Viewed(session.Space(member)!).Tabs, tab => tab.Id == pin && tab.IsPinned);
+        }
+
+        Check(device.Authority.Current);
+        using var reopened = new TestDevice(StoredSessionCodec.Encode(device.Authority.Current));
+        Check(reopened.Authority.Current);
+    }
+
+    #endregion
+
     #region Actions - Lock
 
     /// Unlocking any Space of a group opens all of it and locking any locks

@@ -121,10 +121,9 @@ internal sealed class Extensions(Device device, Engines engines, Prompts prompts
     /// workspace keeps them.
     private IReadOnlyList<SpaceState> CopyTargets(SpaceState source) {
         if (device.Persistent()?.Authority is not { } workspace) return [];
-        return [.. workspace.Current.Spaces
-            .Where(space => space.ProfileId != source.ProfileId && !workspace.IsDeleting(space.Id) && !workspace.IsLocked(space))
-            .GroupBy(space => space.ProfileId)
-            .Select(group => group.FirstOrDefault(space => space.OwnProfileId == space.ProfileId) ?? group.First())];
+        return [.. workspace.Current.Groups.Where(group => group.ProfileId != source.ProfileId)
+            .Select(group => group.Members.FirstOrDefault(space => !workspace.IsDeleting(space.Id) && !workspace.IsLocked(space)))
+            .OfType<SpaceState>()];
     }
 
     #endregion

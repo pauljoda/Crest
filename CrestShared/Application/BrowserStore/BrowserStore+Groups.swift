@@ -17,10 +17,9 @@ extension BrowserStore {
     /// The Spaces of the group `space` belongs to that stay, the primary
     /// first and then its Sub-Spaces in order.
     func groupMembers(of space: SpaceModel) -> [SpaceModel] {
-        let primaryID = primary(of: space).id
-        return spaceModels.filter {
-            ($0.id == primaryID || $0.membership?.primaryID == primaryID) && !isDeleting($0.id)
-        }
+        let primary = primary(of: space)
+        let children = spaceModels.filter { $0.membership?.primaryID == primary.id && !isDeleting($0.id) }
+        return isDeleting(primary.id) ? children : [primary] + children
     }
 
     /// Whether `space` leads Sub-Spaces that stay.
@@ -45,22 +44,6 @@ extension BrowserStore {
     func joinableGroups(for space: SpaceModel) -> [SpaceModel] {
         let own = primary(of: space).id
         return spaceModels.filter { !isDeleting($0.id) && !isSubSpace($0) && $0.id != own && $0.id != space.id }
-    }
-
-    /// The Spaces of this window's workspace grouped as the picker and the
-    /// Settings list show them, each group its primary then its Sub-Spaces.
-    var spaceGroups: [[SpaceModel]] {
-        var groups: [[SpaceModel]] = []
-        for space in spaceModels where !isDeleting(space.id) {
-            if isSubSpace(space), let last = groups.indices.last,
-                groups[last].first?.id == space.membership?.primaryID
-            {
-                groups[last].append(space)
-            } else {
-                groups.append([space])
-            }
-        }
-        return groups
     }
 
     /// `spaces`, in their order, split where one group ends and the next
@@ -118,8 +101,7 @@ extension BrowserStore {
     }
 
     /// Moves `spaceID` to where `targetID` stands: before it when it comes
-    /// from further on, after it when it comes from earlier. The core keeps
-    /// every group together, its primary first.
+    /// from further on, after it when it comes from earlier.
     func move(_ spaceID: UUID, to targetID: UUID) {
         var order = spaceModels.map(\.id)
         guard let from = order.firstIndex(of: spaceID), let to = order.firstIndex(of: targetID), from != to else {
@@ -130,32 +112,21 @@ extension BrowserStore {
         orderSpaces(order)
     }
 
-    /// Moves `spaceID` to stand right before `targetID`.
-    func move(_ spaceID: UUID, before targetID: UUID) {
+    /// Moves a Space before the target row, or to the end of the workspace.
+    func move(_ spaceID: UUID, before targetID: UUID?) {
         var order = spaceModels.map(\.id)
         guard spaceID != targetID, let from = order.firstIndex(of: spaceID) else { return }
         order.remove(at: from)
-        guard let to = order.firstIndex(of: targetID) else { return }
-        order.insert(spaceID, at: to)
+        if let targetID {
+            guard let to = order.firstIndex(of: targetID) else { return }
+            order.insert(spaceID, at: to)
+        } else {
+            order.append(spaceID)
+        }
         orderSpaces(order)
     }
 
-    /// Moves the group `spaceID` belongs to, whole, to stand right before the
-    /// group `targetID` leads, or last when there is none.
-    func moveGroup(of spaceID: UUID, before targetID: UUID?) {
-        var groups = spaceGroups
-        guard let from = groups.firstIndex(where: { $0.contains { $0.id == spaceID } }),
-            !groups[from].contains(where: { $0.id == targetID })
-        else { return }
-        let group = groups.remove(at: from)
-        let to = targetID.flatMap { id in groups.firstIndex { $0[0].id == id } } ?? groups.count
-        groups.insert(group, at: to)
-        // The core orders every Space, those being deleted too.
-        orderSpaces(groups.flatMap { $0.map(\.id) } + spaceModels.map(\.id).filter(isDeleting))
-    }
-
-    /// Puts the workspace's Spaces in the order `spaceIDs` lists; the core
-    /// keeps every group together.
+    /// Applies the requested workspace order through the core.
     func orderSpaces(_ spaceIDs: [UUID]) {
         family.send(
             ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: spaceIDs), from: self)

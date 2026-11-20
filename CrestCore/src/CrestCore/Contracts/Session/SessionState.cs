@@ -95,8 +95,8 @@ public sealed record SessionState(
     }
 
     /// The session once `successor` takes `group` over from its primary at
-    /// `now`, as the primary's deletion begins; see `SpaceGroup.HandedTo`. The
-    /// group then sits where its new primary does.
+    /// `now`, as the primary's deletion begins (see `SpaceGroup.HandedTo`).
+    /// Members keep their positions as they change primary.
     internal SessionState HandingOver(SpaceGroup group, SpaceState successor, DateTimeOffset now) {
         var handed = Replacing([.. group.HandedTo(successor, now)]);
         HashSet<Guid> pending = [.. SpaceDeletions.Select(deletion => deletion.SpaceId), group.Primary.Id];

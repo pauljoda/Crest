@@ -5849,6 +5849,10 @@
     "shared-pin-peek-in-current-space": {
       "category": "fixed",
       "message": "When you follow a link from a shared pinned tab, Peek opens in the Space where you clicked it."
+    },
+    "independent-sub-space-order": {
+      "category": "new",
+      "message": "Spaces can now appear anywhere in the picker, including between members of another group. Moving a Space preserves its shared sign-ins and pinned tab settings."
     }
   }
 }

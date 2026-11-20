@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Spaces Space settings edits, one row each in picker order, a Sub-Space
-/// indented under its primary. Tapping a row edits that Space, as choosing its
+/// showing its primary's name. Tapping a row edits that Space, as choosing its
 /// crest in the group's crest row does; a long press opens its menu, which
 /// moves it, changes its group or deletes it.
 struct MobileSpaceSelectionSection: View {
@@ -13,7 +13,7 @@ struct MobileSpaceSelectionSection: View {
 
     var body: some View {
         Section {
-            ForEach(browser.spaceGroups.flatMap { $0 }) { space in
+            ForEach(browser.availableSpaces) { space in
                 row(space)
             }
 
@@ -41,8 +41,15 @@ struct MobileSpaceSelectionSection: View {
             selectedSpaceID = space.id
         } label: {
             HStack {
-                BrowserSpaceIdentityLabel(space: space)
-                    .foregroundStyle(Color.primary)
+                VStack(alignment: .leading) {
+                    BrowserSpaceIdentityLabel(space: space)
+                        .foregroundStyle(Color.primary)
+                    if browser.isSubSpace(space) {
+                        Text("Sub-Space of \(browser.primary(of: space).settings.name)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Spacer(minLength: 0)
                 if isSelected {
                     Image(systemName: "checkmark")
@@ -51,7 +58,6 @@ struct MobileSpaceSelectionSection: View {
                         .accessibilityHidden(true)
                 }
             }
-            .padding(.leading, browser.isSubSpace(space) ? MobileSpaceSelectionMetrics.subSpaceIndent : 0)
             .contentShape(Rectangle())
         }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -70,10 +76,4 @@ struct MobileSpaceSelectionSection: View {
             .crestMenuActionLabelStyle()
         }
     }
-}
-
-private enum MobileSpaceSelectionMetrics {
-    /// How far a Sub-Space's row sits in from its primary's: past the
-    /// primary's icon, as a tab sits in a folder.
-    static let subSpaceIndent: CGFloat = 28
 }

@@ -1,44 +1,32 @@
 import Foundation
 
-/// Moves a Space one place up or down the workspace's order. A group moves as
-/// one: moving its primary moves past a whole neighbouring group, and a
-/// Sub-Space moves only among the Sub-Spaces of its group.
+/// Moves a Space one place in the workspace, or among the Sub-Spaces on its group's page.
 @MainActor
 struct BrowserSpaceOrderActions {
     let browser: BrowserStore
     let spaceID: UUID?
+    var withinGroup = false
 
-    var canMoveUp: Bool { moved(by: -1) != nil }
+    var canMoveUp: Bool { neighbour(by: -1) != nil }
 
-    var canMoveDown: Bool { moved(by: 1) != nil }
+    var canMoveDown: Bool { neighbour(by: 1) != nil }
 
     func moveUp() {
-        guard let order = moved(by: -1) else { return }
-        browser.orderSpaces(order)
+        guard let spaceID, let target = neighbour(by: -1) else { return }
+        browser.move(spaceID, to: target.id)
     }
 
     func moveDown() {
-        guard let order = moved(by: 1) else { return }
-        browser.orderSpaces(order)
+        guard let spaceID, let target = neighbour(by: 1) else { return }
+        browser.move(spaceID, to: target.id)
     }
 
-    /// The order with the Space moved one place by `step`, or nil when it
-    /// cannot move that way: past the end, or a Sub-Space past its primary.
-    private func moved(by step: Int) -> [UUID]? {
-        guard let spaceID, !browser.isDeleting(spaceID) else { return nil }
-        var groups = browser.spaceGroups.map { $0.map(\.id) }
-        guard let group = groups.firstIndex(where: { $0.contains(spaceID) }),
-            let member = groups[group].firstIndex(of: spaceID)
+    private func neighbour(by step: Int) -> SpaceModel? {
+        guard let spaceID, let space = browser.spaceModel(spaceID) else { return nil }
+        let spaces = withinGroup ? browser.groupMembers(of: space).filter(browser.isSubSpace) : browser.availableSpaces
+        guard let index = spaces.firstIndex(where: { $0.id == spaceID }),
+            spaces.indices.contains(index + step)
         else { return nil }
-        if member > 0 {
-            let target = member + step
-            guard groups[group].indices.contains(target), target > 0 else { return nil }
-            groups[group].swapAt(member, target)
-        } else {
-            let target = group + step
-            guard groups.indices.contains(target) else { return nil }
-            groups.swapAt(group, target)
-        }
-        return groups.flatMap { $0 } + browser.spaceModels.map(\.id).filter(browser.isDeleting)
+        return spaces[index + step]
     }
 }

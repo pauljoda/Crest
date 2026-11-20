@@ -151,19 +151,19 @@ struct BrowserSettingsSidebar: View {
         .accessibilityElement(children: .contain)
     }
 
-    /// A Space's row: its crest and name, a Sub-Space indented under its
-    /// primary. Choosing it shows the Space's page, as choosing its crest in
-    /// the page's crest row does, so the two always select the same Space.
+    /// The Space's name and crest, with its primary's name below a Sub-Space.
     private func spaceRow(_ space: SpaceModel) -> some View {
         HStack(spacing: 6) {
-            // A Sub-Space sits under its primary, as a tab sits in a folder.
-            if browser.isSubSpace(space) {
-                Color.clear.frame(width: BrowserSettingsSidebarMetrics.subSpaceIndent, height: 1)
-                    .accessibilityHidden(true)
-            }
             Label {
-                Text(space.settings.name.isEmpty ? String(localized: "Untitled Space") : space.settings.name)
-                    .lineLimit(1)
+                VStack(alignment: .leading) {
+                    Text(space.settings.name.isEmpty ? String(localized: "Untitled Space") : space.settings.name)
+                    if browser.isSubSpace(space) {
+                        Text("Sub-Space of \(browser.primary(of: space).settings.name)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .lineLimit(1)
             } icon: {
                 BrowserSpaceIdentityIcon(space: space, size: 18)
             }
@@ -219,25 +219,9 @@ struct BrowserSettingsSidebar: View {
         return true
     }
 
-    /// Places `space` where a drag left it, before the row at `index` of
-    /// `spaces`, as a tab moves among folders: among another group's
-    /// Sub-Spaces it asks to join that group, among its own it moves there,
-    /// and between groups a Sub-Space asks to come out on its own while a
-    /// group moves whole.
+    /// Dropping between rows sets the Space's position. A drop onto a row asks to join its group.
     private func place(_ space: SpaceModel, before index: Int, in spaces: [SpaceModel]) {
-        let next = spaces.indices.contains(index) ? spaces[index] : nil
-        if let next, browser.isSubSpace(next) {
-            let group = browser.primary(of: next)
-            if browser.isSubSpace(space), browser.primary(of: space) === group {
-                browser.move(space.id, before: next.id)
-            } else {
-                _ = requestJoin(of: space, into: group)
-            }
-        } else if let change = BrowserSpaceGroupChange.separating(space, in: browser) {
-            pendingGroupChange = change
-        } else {
-            browser.moveGroup(of: space.id, before: next?.id)
-        }
+        browser.move(space.id, before: spaces.indices.contains(index) ? spaces[index].id : nil)
     }
 
     private func spaceMenu(_ space: SpaceModel) -> some View {
@@ -246,13 +230,14 @@ struct BrowserSettingsSidebar: View {
             requestDeletion: { pendingDeletion = $0 }, requestGroupChange: { pendingGroupChange = $0 })
     }
 
-    /// Every Space while arranging, each group's primary then its
-    /// Sub-Spaces; otherwise the groups with a Space the search shows, whole.
+    /// The workspace order, including every member of a group that matches the search.
     private var visibleSpaces: [SpaceModel] {
-        let groups = browser.spaceGroups
-        guard !tabState.isArrangingSpaces else { return groups.flatMap { $0 } }
+        let spaces = browser.availableSpaces
+        guard !navigation.query.isEmpty else { return spaces }
         let tab = navigation.matchingSpaceTab(locale: locale, in: state)
-        return groups.filter { group in group.contains { navigation.lists($0, spaceTab: tab) } }.flatMap { $0 }
+        let matched = spaces.filter { navigation.lists($0, spaceTab: tab) }
+        let primaries = Set(matched.map { browser.primary(of: $0).id })
+        return spaces.filter { primaries.contains(browser.primary(of: $0).id) }
     }
 
     // MARK: - Selection
@@ -309,15 +294,12 @@ private enum BrowserSettingsSidebarMetrics {
     /// Lines the header's buttons up with the trailing glyphs of the rows.
     static let headerTrailingInset: CGFloat = 6
     static let headerButtonSize = CGSize(width: 22, height: 22)
-    /// How far a Sub-Space's row sits in from its primary's.
-    static let subSpaceIndent: CGFloat = 14
 }
 
 /// Lets a Space's Settings row take a Space dragged onto it, from another row
 /// or from a group page's crests, which asks to make it a Sub-Space of the
 /// row's group. A Space on its own and a Sub-Space drag from their rows the
-/// same way; a primary stays, since its group goes where it goes. While the
-/// person arranges Spaces, rows reorder instead.
+/// same way. While arranging, every row can move to a new position.
 private struct BrowserSettingsSpaceGroupDrag: ViewModifier {
     let space: SpaceModel
     let browser: BrowserStore

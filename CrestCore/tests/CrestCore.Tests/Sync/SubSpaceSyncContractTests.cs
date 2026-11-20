@@ -105,11 +105,10 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(500, Unix(kept["protectionModifiedAt"]), precision: 6);
     }
 
-    /// An older build that drags a Sub-Space away from its group moves only
-    /// that record; the session this device makes of it puts the group back
-    /// together where its primary is.
+    /// Moving a Sub-Space on another device changes its place in the
+    /// workspace while it continues to browse with its primary's profile.
     [Fact]
-    public void AGroupAnOlderBuildScatteredComesBackTogether() {
+    public void ARemoteMovePlacesASubSpaceAcrossGroupsAndKeepsItsMembership() {
         var (primary, subSpace, solo) = (Fixed(2_300), Fixed(2_301), Fixed(2_302));
         var local = SessionOf(SpaceOf(primary, Fixed(2_390), "Work"), Joined(SpaceOf(subSpace, Fixed(2_391), "Client"), primary,
             Fixed(2_390), at: 200), SpaceOf(solo, Fixed(2_392), "Personal"));
@@ -120,8 +119,12 @@ public sealed partial class BrowserContractsTests {
             value => value["orderToken"] = last + "z"));
 
         var materialized = journal.Materialize(local);
-        Assert.Equal([primary, subSpace, solo], Ids(materialized["spaces"]));
-        Assert.Null(SessionIdentities.Flaw(StoredSessionCodec.DecodeSession(materialized)));
+        Assert.Equal([primary, solo, subSpace], Ids(materialized["spaces"]));
+        var session = StoredSessionCodec.DecodeSession(materialized);
+        var member = session.Space(subSpace)!;
+        Assert.Equal(primary, member.PrimaryId);
+        Assert.Equal(session.Space(primary)!.ProfileId, member.ProfileId);
+        Assert.Null(SessionIdentities.Flaw(session));
     }
 
     /// Sub-Spaces whose primary is gone stay together: the first of them leads

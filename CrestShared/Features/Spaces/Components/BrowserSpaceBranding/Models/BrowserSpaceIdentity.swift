@@ -8,6 +8,7 @@ struct BrowserSpaceIdentity: Equatable, Identifiable {
 
     let id: UUID
     let profileID: UUID
+    let primaryID: UUID?
     private(set) var name: String
     private(set) var symbol: String
     let accent: SpaceAccent
@@ -28,6 +29,7 @@ struct BrowserSpaceIdentity: Equatable, Identifiable {
     init(space: SpaceModel) {
         id = space.id
         profileID = space.profileID
+        primaryID = space.membership?.primaryID
         name = space.settings.name
         symbol = space.settings.symbol
         accent = space.settings.accent
@@ -40,6 +42,7 @@ struct BrowserSpaceIdentity: Equatable, Identifiable {
     init(draft space: SetupDraftSpace) {
         id = space.spaceID
         profileID = space.profileID
+        primaryID = space.primaryID
         name = space.shownName
         symbol = space.customization.symbol
         accent = space.customization.accent
@@ -52,6 +55,7 @@ struct BrowserSpaceIdentity: Equatable, Identifiable {
     init(dockSpace space: DockMenuSpace) {
         id = space.spaceID
         profileID = space.profileID
+        primaryID = nil
         name = space.name
         symbol = space.symbol
         accent = space.accent

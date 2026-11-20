@@ -55,14 +55,14 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         .fixedSize()
     }
 
-    /// Every Space in picker order, each group in a section of its own, so
+    /// Every Space in picker order, with adjacent group members in one section, so
     /// choosing one here or in the crest row under the toolbar chooses it in
     /// both. Its own label keeps the selected Space's name on one line, shortened
     /// when the toolbar is narrow, so the actions beside it stay in view.
     private var spacePicker: some View {
         Menu {
-            // One inline picker per group, which the menu separates.
-            ForEach(browser.spaceGroups, id: \.[0].id) { group in
+            // The menu separates adjacent runs of different groups.
+            ForEach(browser.grouped(browser.availableSpaces), id: \.[0].id) { group in
                 Picker("Space", selection: $selectedSpaceID) {
                     ForEach(group) { space in
                         BrowserSpaceIdentityLabel(space: space).tag(Optional(space.id))
