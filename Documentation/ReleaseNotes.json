@@ -5901,6 +5901,10 @@
     "windows-motion-match-mac": {
       "category": "internal",
       "message": "Crest's motion on Windows takes the Mac's quicker timings: every animation about a quarter shorter, a change of Space 0.28 s, Peek on its 240 ms spring, and the page stepping out as the sidebar hides"
+    },
+    "windows-space-appearance-page": {
+      "category": "internal",
+      "message": "A Space's Appearance page on Windows, opened by Edit Space: the Mac's thirteen palettes, starter crests, symbol and emoji icons, and the sidebar's pattern, strength, fade, folder colors, texture and text"
     }
   }
 }

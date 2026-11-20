@@ -864,3 +864,420 @@
 .settings-spacer {
   flex: 1;
 }
+
+/* A Space's Appearance page, as the Mac's BrowserCrestForge: a 720-point
+   column; the stage over its palettes; the icon; More Customization. Cards
+   are the Mac's CrestSelectableCard in Crest's blue. */
+.settings-column.wide {
+  max-width: 720px;
+}
+
+.space-appearance {
+  --forge-tint: rgb(43 108 196);
+  --forge-line: rgb(234 223 198);
+}
+
+@media (prefers-color-scheme: dark) {
+  .space-appearance {
+    --forge-tint: rgb(79 142 224);
+    --forge-line: rgb(255 253 247 / 0.22);
+  }
+}
+
+.space-appearance-section {
+  margin-bottom: 20px;
+}
+
+.forge-heading {
+  margin: 0;
+  padding: 0 10px 6px;
+  font-family: var(--crest-font-display);
+  font-size: 13px;
+  font-weight: var(--crest-font-display-weight);
+}
+
+/* The stage: the Space's field, shaded toward the trailing edge, reading dark. */
+.forge-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-height: 284px;
+  margin-bottom: 4px;
+  padding: 0 16px 0 28px;
+  overflow: hidden;
+  border-radius: 16px;
+  color: rgb(255 255 255 / 0.9);
+  isolation: isolate;
+}
+
+.forge-stage-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.forge-stage-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgb(0 0 0 / 0.05) 0, rgb(0 0 0 / 0.28) 62%, rgb(0 0 0 / 0.34) 100%);
+}
+
+.forge-stage-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 188px;
+  height: 188px;
+}
+
+.forge-swatch-group h4 {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.55);
+}
+
+.forge-swatches {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.forge-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 62px;
+  padding: 6px 0;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.forge-swatch .fill-dot {
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.3));
+}
+
+.forge-tools {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.forge-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.16);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.22);
+  backdrop-filter: blur(12px);
+  color: rgb(255 255 255 / 0.92);
+  font: 500 11px var(--crest-font-system);
+}
+
+.forge-tool:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.24);
+}
+
+.forge-tool:disabled {
+  opacity: 0.4;
+}
+
+/* CrestSelectableCard, compact. */
+.forge-card {
+  border: 0;
+  border-radius: 12px;
+  padding: 8px;
+  background: rgb(var(--settings-primary) / 0.055);
+  color: inherit;
+  font: inherit;
+  transition: background 100ms ease-out, box-shadow 100ms ease-out, transform 100ms ease-out;
+}
+
+.forge-card:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.forge-card:active {
+  background: rgb(var(--settings-primary) / 0.13);
+  transform: scale(0.975);
+}
+
+.forge-card.selected {
+  background: color-mix(in srgb, var(--forge-tint) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--forge-tint);
+}
+
+.forge-card.selected:active {
+  background: color-mix(in srgb, var(--forge-tint) 16%, transparent);
+}
+
+.space-palettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+  padding: 10px;
+}
+
+.space-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.space-palette-swatch {
+  position: relative;
+  display: block;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.space-palette-swatch > svg {
+  display: block;
+}
+
+.space-palette-swatch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--forge-line);
+}
+
+.space-palette-accent {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: flex;
+}
+
+.space-palette-title {
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--settings-secondary);
+}
+
+.forge-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 0;
+  color: var(--settings-ink);
+  font: 13px var(--crest-font-system);
+  text-align: start;
+}
+
+.forge-more-chevron {
+  color: var(--settings-secondary);
+  transition: transform 100ms ease-in-out;
+}
+
+.forge-more[aria-expanded="true"] .forge-more-chevron {
+  transform: rotate(90deg);
+}
+
+.forge-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.settings-group .forge-gallery {
+  padding: 8px 10px;
+}
+
+.forge-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.forge-choice-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 58px;
+}
+
+.forge-choice-title {
+  display: -webkit-box;
+  min-height: 30px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.forge-pattern-art {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  isolation: isolate;
+}
+
+.forge-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+}
+
+.forge-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.forge-caps {
+  margin: 0 0 8px;
+  font-family: var(--crest-font-display);
+  font-size: 12px;
+  font-weight: var(--crest-font-display-weight);
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+}
+
+/* BrowserArtworkPickerButton. */
+.forge-artwork-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(var(--settings-primary) / 0.035);
+  box-shadow: inset 0 0 0 1px rgb(var(--settings-primary) / 0.09);
+  color: var(--settings-ink);
+  font: inherit;
+  text-align: start;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
+}
+
+.forge-artwork-button:hover {
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 1px rgb(var(--settings-primary) / 0.18);
+}
+
+.forge-artwork-button:active {
+  background: rgb(var(--settings-primary) / 0.1);
+}
+
+.forge-artwork {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--forge-tint);
+}
+
+.forge-artwork-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.forge-artwork-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.forge-artwork-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.forge-artwork-detail {
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--settings-secondary);
+}
+
+.symbol-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 480px;
+  max-height: 500px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.symbol-picker-done {
+  border: 0;
+  background: none;
+  color: rgb(79 142 224);
+  font: 600 13px var(--crest-font-system);
+}
+
+.symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.symbol-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  --settings-primary: 255 255 255;
+  --forge-tint: rgb(79 142 224);
+}
+
+.symbol-choice > span {
+  display: -webkit-box;
+  height: 30px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.symbol-count {
+  font-size: 11px;
+  color: var(--prompt-ink-secondary);
+}
+
+.forge-slider {
+  width: 160px;
+  accent-color: var(--forge-tint);
+}
+
+.forge-readout {
+  min-width: 76px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--settings-secondary);
+}

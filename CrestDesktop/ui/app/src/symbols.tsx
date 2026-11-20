@@ -101,6 +101,8 @@ import {
   Share,
   Shield,
   ShieldAlert,
+  Shuffle,
+  Smile,
   Sparkles,
   SquareArrowLeft,
   SquareArrowOutUpRight,
@@ -233,6 +235,9 @@ const symbols: Record<string, LucideIcon> = {
   "xmark.square": SquareX,
   "xmark.circle": CircleX,
   "arrow.uturn.backward": Undo2,
+  // The Space editor's emoji artwork and its Shuffle.
+  "face.smiling": Smile,
+  shuffle: Shuffle,
   "plus.magnifyingglass": ZoomIn,
   "minus.magnifyingglass": ZoomOut,
   "1.magnifyingglass": Search,
@@ -324,6 +329,9 @@ const drawn: Record<string, (props: { size: number; className?: string }) => Rea
     </svg>
   ),
 };
+
+/** Every SF Symbol name this interface draws, which a Space's icon may wear. */
+export const symbolNames: readonly string[] = [...new Set([...Object.keys(symbols), ...Object.keys(drawn)])].sort();
 
 export function Symbol({ name, size = 16, className, strokeWidth = 1.75 }: {
   name: string | null | undefined;

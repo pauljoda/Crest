@@ -14,16 +14,18 @@ import type { Session } from "../boot";
 import { SpaceIdentityIcon } from "../spaces/SpaceIdentity";
 import { Button, Group, keptScroll, Picker, Row, Segmented, Toggle } from "./controls";
 import { ExtensionsTab } from "./ExtensionsTab";
+import { SpaceAppearance } from "./SpaceAppearance";
 import { groupOf, SpacePrivacySections } from "./privacy";
 
 /** The tabs of a Space's page, which a Settings tab keeps as its selection moves between Spaces. */
-export type SpacePageTab = "browsing" | "privacy" | "extensions";
+export type SpacePageTab = "appearance" | "browsing" | "privacy" | "extensions";
 
 /**
  * The Mac's BrowserSettingsSpacePage, as far as Windows has built it: the
- * Space's icon and name, which edits in place, over its tabs: Browsing, how
- * it searches, archives and shares pinned tabs; and Privacy, what it keeps
- * and clearing what it holds.
+ * Space's icon and name, which edits in place, over its tabs: Appearance,
+ * its look (Edit Space… opens it); Browsing, how it searches, archives and
+ * shares pinned tabs; Privacy, what it keeps and clearing what it holds;
+ * and Extensions.
  */
 export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
   session: Session;
@@ -59,11 +61,13 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
       </header>
       <div className="settings-space-tabs">
         <Segmented label="Space settings" value={tab} onChange={onTab}
-          choices={[{ value: "browsing", label: "Browsing" }, { value: "privacy", label: "Privacy" }, { value: "extensions", label: "Extensions" }]} />
+          choices={[{ value: "appearance", label: "Appearance" }, { value: "browsing", label: "Browsing" }, { value: "privacy", label: "Privacy" },
+            { value: "extensions", label: "Extensions" }]} />
       </div>
       <div key={`${space.id}:${tab}`} className="settings-scroll" {...keptScroll(scrolls, `${space.id}:${tab}`)}>
-        <div className="settings-column">
-          {tab === "browsing" ? <BrowsingTab session={session} space={space} spaces={spaces} />
+        <div className={`settings-column${tab === "appearance" ? " wide" : ""}`}>
+          {tab === "appearance" ? <SpaceAppearance key={space.id} session={session} space={space} />
+            : tab === "browsing" ? <BrowsingTab session={session} space={space} spaces={spaces} />
             : tab === "privacy" ? <SpacePrivacySections session={session} space={space} spaces={spaces} />
               : <ExtensionsTab session={session} space={space} spaces={spaces} />}
         </div>

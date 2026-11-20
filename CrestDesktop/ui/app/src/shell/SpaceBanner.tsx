@@ -65,7 +65,8 @@ function blend(frame: PagerFrame, layers: ReadonlyMap<string, HTMLDivElement>, s
   }
 }
 
-function BannerLayers({ branding, width, height }: { branding: SpaceBranding; width: number; height: number }) {
+/** The Space's sidebar field at `width` by `height`, as its banner draws it: the Space editor's stage shows it too. */
+export function BannerLayers({ branding, width, height }: { branding: SpaceBranding; width: number; height: number }) {
   const reducesTransparency = useMediaQuery("(prefers-reduced-transparency: reduce)");
   const increasesContrast = useMediaQuery("(prefers-contrast: more)");
   const fieldOpacity = reducesTransparency ? Math.max(branding.bannerStrength, 0.85) : branding.bannerStrength;

@@ -426,8 +426,8 @@ export function BrowserWindow({ session }: { session: Session }) {
       const tabId = existing?.id ?? crypto.randomUUID();
       if (page) {
         // A Space's own pages are its Space's.
-        requestSettings(tabId, ["spaces", "passwords", "extensions"].includes(page)
-          ? { kind: "space", spaceId: target.id, tab: page === "extensions" ? "extensions" : undefined }
+        requestSettings(tabId, ["spaces", "passwords", "extensions", "appearance"].includes(page)
+          ? { kind: "space", spaceId: target.id, tab: page === "extensions" || page === "appearance" ? page : undefined }
           : { kind: "page", name: page as SettingsPageName });
       }
       if (existing) {
@@ -443,7 +443,7 @@ export function BrowserWindow({ session }: { session: Session }) {
     };
     handlers.openSettings = () => openSettings();
     extensions.openSettings = () => openSettings("extensions");
-    spaceEditing.open = (spaceId) => openSettings("spaces", spaceId);
+    spaceEditing.open = (spaceId) => openSettings("appearance", spaceId);
     // Close Tab closes a Peek shown over the tab first, and Esc, which the
     // window holds while one shows, closes it too.
     const peekShown = () => !!peekNow.current && peekNow.current.sourceTabId === shown.current.tab?.id;

@@ -53,7 +53,7 @@ const tabStates = new Map<string, SettingsTabState>();
 function tabState(tabId: string): SettingsTabState {
   let state = tabStates.get(tabId);
   if (!state) {
-    state = { selection: { kind: "page", name: "general" }, spaceTab: "browsing", taken: 0, scrolls: new Map() };
+    state = { selection: { kind: "page", name: "general" }, spaceTab: "appearance", taken: 0, scrolls: new Map() };
     tabStates.set(tabId, state);
   }
   return state;

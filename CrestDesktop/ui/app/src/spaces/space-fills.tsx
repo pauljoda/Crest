@@ -224,6 +224,16 @@ function blendingStops(colors: readonly BrandColor[]): readonly Stop[] {
   return stops;
 }
 
+/**
+ * CrestColorHarmony.shade(of:): the color a tenth lighter in OKLCH, or a
+ * tenth darker where it is already light, at its own chroma and hue, as far
+ * as sRGB holds it. A solid sidebar's pattern wears its Background's shade.
+ */
+export function shadedColor(color: BrandColor): BrandColor {
+  const { lightness, chroma, degrees } = lch(color);
+  return fromLch(lightness < 0.86 ? lightness + 0.1 : lightness - 0.1, chroma, degrees);
+}
+
 /** CrestPerceptualColorMetrics. */
 const perceptual = {
   gamutSteps: 18,
