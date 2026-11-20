@@ -10,7 +10,6 @@ import tempfile
 import unittest
 
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
-EXPORT_OPTIONS = REPOSITORY_ROOT / "Config" / "DeveloperIDExportOptions.plist"
 RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 PACKAGING_SPEC = importlib.util.spec_from_file_location(
     "package_chromium_host", REPOSITORY_ROOT / "Scripts/control-plane/package-chromium-host.py")

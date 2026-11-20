@@ -113,8 +113,6 @@ targetTemplates:
       # supply their own.
       - path: CrestShared
         excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
           - Infrastructure/Engines/BrowserEngineRegistration+Composition.swift
           - Features/Settings/Components/BrowserEngineExtensionSettingsPane.swift
           - Features/Settings/Components/BrowserEngineRegistration+FeatureFlags.swift
@@ -194,9 +192,6 @@ targets:
       - path: Documentation/ReleaseNotes.json
         buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMac
       - path: CrestAgents
     dependencies:
@@ -304,9 +299,6 @@ targets:
       - path: Documentation/ReleaseNotes.json
         buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMac
       - path: CrestAgents
     dependencies:
@@ -411,9 +403,6 @@ targets:
       - path: Documentation/ReleaseNotes.json
         buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
       - sdk: AuthenticationServices.framework
@@ -468,9 +457,6 @@ targets:
       - path: Documentation/ReleaseNotes.json
         buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
       - target: CrestShareExtension
@@ -579,13 +565,3 @@ schemes:
       config: Release
     archive:
       config: Release
-  CrestKeychainIntegration:
-    build:
-      targets:
-        Crest: all
-        CrestTests: [test]
-    test:
-      environmentVariables:
-        CREST_RUN_KEYCHAIN_INTEGRATION: "1"
-      targets:
-        - CrestTests

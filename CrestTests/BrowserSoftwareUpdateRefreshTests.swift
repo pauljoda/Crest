@@ -60,25 +60,14 @@ private final class TestSoftwareUpdateChecker: BrowserSoftwareUpdateChecking {
     var lastUpdateCheckDate: Date?
     var backgroundCheckCount = 0
     var userInitiatedCheckCount = 0
-    var resetCycleCount = 0
-    var backgroundAutomaticDownloadValues: [Bool] = []
-    var userInitiatedAutomaticDownloadValues: [Bool] = []
-    var onBackgroundCheck: (() -> Void)?
-    var onUserInitiatedCheck: (() -> Void)?
 
     func checkForUpdates() {
         userInitiatedCheckCount += 1
-        userInitiatedAutomaticDownloadValues.append(automaticallyDownloadsUpdates)
-        onUserInitiatedCheck?()
     }
 
     func checkForUpdatesInBackground() {
         backgroundCheckCount += 1
-        backgroundAutomaticDownloadValues.append(automaticallyDownloadsUpdates)
-        onBackgroundCheck?()
     }
 
-    func resetUpdateCycleAfterShortDelay() {
-        resetCycleCount += 1
-    }
+    func resetUpdateCycleAfterShortDelay() {}
 }

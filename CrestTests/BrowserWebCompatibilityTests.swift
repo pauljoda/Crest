@@ -346,15 +346,6 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         }
     }
 
-    private func fixtureURL(_ serverURL: URL, run: String, tab: Int) throws -> URL {
-        try XCTUnwrap(
-            URL(
-                string: "performance.html?run=\(run)&tab=\(tab)",
-                relativeTo: serverURL
-            )?.absoluteURL
-        )
-    }
-
     private func makeSpace(
         profile: UUID,
         tabs: [TabState.Seed]
@@ -508,26 +499,6 @@ private final class NavigationWaiter: NSObject, WKNavigationDelegate {
         }
     }
 
-    func load(_ request: URLRequest) async throws {
-        guard let webView else { throw NavigationWaiterError.releasedWebView }
-        try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            webView.load(request)
-        }
-    }
-
-    func reload() async throws {
-        guard let webView else { throw NavigationWaiterError.releasedWebView }
-        try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            guard webView.reload() != nil else {
-                self.continuation = nil
-                continuation.resume(throwing: NavigationWaiterError.navigationUnavailable)
-                return
-            }
-        }
-    }
-
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
         continuation?.resume()
         continuation = nil
@@ -554,5 +525,4 @@ private final class NavigationWaiter: NSObject, WKNavigationDelegate {
 
 private enum NavigationWaiterError: Error {
     case releasedWebView
-    case navigationUnavailable
 }

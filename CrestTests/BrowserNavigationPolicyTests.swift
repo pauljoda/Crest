@@ -133,10 +133,6 @@ final class BrowserExternalSchemeCoordinatorTests: XCTestCase {
 }
 
 @MainActor
-final class BrowserDownloadNavigationLifecycleTests: XCTestCase {
-}
-
-@MainActor
 final class BrowserPopupSchemeRoutingTests: XCTestCase {
 
     func testABlockedSchemePopupIsDroppedWithoutAHandOffOrAPage() throws {
