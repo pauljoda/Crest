@@ -5845,6 +5845,10 @@
     "settings-selected-icons": {
       "category": "fixed",
       "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
+    },
+    "shared-pin-peek-in-current-space": {
+      "category": "fixed",
+      "message": "When you follow a link from a shared pinned tab, Peek opens in the Space where you clicked it."
     }
   }
 }

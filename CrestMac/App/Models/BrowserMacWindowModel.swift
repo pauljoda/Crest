@@ -36,8 +36,9 @@ final class BrowserMacWindowModel {
         self.windowState = windowState
         // Page commands act on a Peek only once it opens, not while its link
         // is still being dragged.
-        pages.isPeekOpen = { [weak transientBrowsing] request in
-            transientBrowsing?.presentationPhase(for: request) == .committed
+        pages.isPeekOpen = { [weak transientBrowsing, weak browser] request in
+            guard let browser, request.isSelected(in: browser) else { return false }
+            return transientBrowsing?.presentationPhase(for: request) == .committed
         }
         // Closes as the Peek's own Close button does: back into its link,
         // where the card removes itself once it lands, or with Reduce Motion

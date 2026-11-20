@@ -7,6 +7,37 @@ import XCTest
 @MainActor
 final class BrowserPagePoolTests: XCTestCase {
 
+    func testLinkInASharedPinOpensPeekInTheSpaceThatShowsThePage() throws {
+        let savedURL = try XCTUnwrap(URL(string: "https://saved.crest.test/"))
+        let destination = try XCTUnwrap(URL(string: "https://linked.crest.test/"))
+        let pin = TabState.Seed(title: "Saved site", url: savedURL, placement: .pinned)
+        let primary = makeSpace(tabs: [pin], selectedTabID: pin.id)
+        let browser = hosting(primary)
+        var opened: BrowserPeekRequest?
+        let pool = BrowserPagePool(browser: browser, openPeek: { opened = $0 })
+        present(pool, tab: pin.id, in: primary.id)
+        let page = try XCTUnwrap(pool.activePage)
+
+        try browser.addSubSpace(after: primary.id)
+        let subSpace = try XCTUnwrap(browser.shownSpace)
+        present(pool, tab: pin.id, in: subSpace.id)
+        XCTAssertTrue(pool.activePage === page)
+        page.decideLinkPolicy(
+            for: StubPopupNavigationAction(url: destination, navigationType: .linkActivated), in: page.webView
+        ) { XCTAssertEqual($0, .cancel) }
+
+        let peek = try XCTUnwrap(opened)
+        XCTAssertEqual(peek.trigger, .protectedSavedSite)
+        XCTAssertEqual(peek.url, destination)
+        XCTAssertEqual(peek.sourceTabID, pin.id)
+        XCTAssertEqual(peek.assignment, BrowserSpaceRuntimeAssignment(space: subSpace))
+        XCTAssertTrue(peek.isSelected(in: browser))
+
+        present(pool, tab: pin.id, in: primary.id)
+        XCTAssertFalse(peek.isSelected(in: browser))
+        XCTAssertEqual(page.linkNavigationContext?.spaceID, primary.id)
+    }
+
     func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
         let browser = BrowserStore.hostingPages(.preview)
         let pool = BrowserPagePool(browser: browser)
