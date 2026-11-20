@@ -109,7 +109,7 @@ internal static class SwiftEmitter {
             if (record.IsNormalizedOnConstruction) conformances.Add("Hashable");
             else if (equatable.Contains(record.Type)) conformances.Add("Equatable");
             conformances.Add("Sendable");
-            if (record.Fields.Any(field => field.Name == "Id")) conformances.Add("Identifiable");
+            if (record.IsIdentified) conformances.Add("Identifiable");
             code.Append('\n').Append($"struct {record.Name}: {string.Join(", ", conformances)} {{\n");
             if (isSent && owner.Root.HasAnswer)
                 code.Append($"    typealias Answer = {TypeName(owner.Member.Answer!)}\n\n");

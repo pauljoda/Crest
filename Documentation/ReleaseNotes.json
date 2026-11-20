@@ -6001,6 +6001,10 @@
     "core-values-one-spelling": {
       "category": "internal",
       "message": "The core spells each limit, document depth, stored key and web scheme once, on the type that owns it."
+    },
+    "generator-and-test-epoch": {
+      "category": "internal",
+      "message": "The contract generator reads a record's identity from its own fact, and the core reads the 2001 reference date from the session codec everywhere."
     }
   }
 }

@@ -20,7 +20,7 @@ internal static partial class StoredSessionCodec {
     /// platforms' dates do.
     internal const double ReferenceEpochUnixSeconds = 978_307_200;
 
-    private static readonly DateTimeOffset ReferenceEpoch = DateTimeOffset.UnixEpoch.AddSeconds(ReferenceEpochUnixSeconds);
+    internal static readonly DateTimeOffset ReferenceEpoch = DateTimeOffset.UnixEpoch.AddSeconds(ReferenceEpochUnixSeconds);
 
     /// The stored member names, shared by every record that uses one.
     internal static class Key {

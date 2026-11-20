@@ -108,7 +108,7 @@ public sealed partial class BrowserContractsTests {
         session["spaces"]![0]!["archivedTabs"] = new JsonArray(new JsonObject {
             ["tab"] = OpenTab(samePage, "Apples", "https://orchard.example/apples#core"),
             ["reason"] = "closed",
-            ["archivedAt"] = (DateTimeOffset.UtcNow.AddHours(-1) - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds
+            ["archivedAt"] = (DateTimeOffset.UtcNow.AddHours(-1) - StoredSessionCodec.ReferenceEpoch).TotalSeconds
         });
         using var device = new TestDevice(session);
         var window = device.Open(space);
@@ -147,7 +147,7 @@ public sealed partial class BrowserContractsTests {
         saved["tabs"] = new JsonArray(tabs);
         saved["folders"] = new JsonArray();
         saved.AsObject().Remove("selectedTabID");
-        double now = (DateTimeOffset.UtcNow - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds;
+        double now = (DateTimeOffset.UtcNow - StoredSessionCodec.ReferenceEpoch).TotalSeconds;
         saved["history"] = new JsonArray([.. history.OrderBy(entry => entry.LastDaysAgo).Select(entry => (JsonNode)new JsonObject {
             ["id"] = Guid.NewGuid().ToString().ToUpperInvariant(),
             ["url"] = entry.Url,
@@ -166,6 +166,6 @@ public sealed partial class BrowserContractsTests {
         ["url"] = url,
         ["placement"] = "current",
         ["symbol"] = "globe",
-        ["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddDays(-7) - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds
+        ["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddDays(-7) - StoredSessionCodec.ReferenceEpoch).TotalSeconds
     };
 }
