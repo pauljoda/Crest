@@ -50,15 +50,21 @@ public static class NativeSyncProjection {
     internal static SyncPreferences Preferences(JsonNode source) => new(
         source["savedStructure"]!.GetValue<bool>(), source["currentTabs"]!.GetValue<bool>(), source["historyAndArchive"]!.GetValue<bool>());
 
-    public static JsonArray Project(JsonObject session, JsonNode preferences, IEnumerable<JsonObject> existingRecords) {
+    public static JsonArray Project(JsonObject session, JsonNode preferences, IEnumerable<JsonObject> existingRecords) =>
+        Project(session, preferences, existingRecords, new HashSet<Guid>(), now: 0);
+
+    internal static JsonArray Project(JsonObject session, JsonNode preferences, IEnumerable<JsonObject> existingRecords,
+        IReadOnlySet<Guid> cleaning, double now, bool reorderedSpaces = false) {
         var policy = Preferences(preferences);
         var existing = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var existingSpaceOrder = new Dictionary<Guid, JsonObject>();
         var archiveReasons = new Dictionary<Guid, string?>();
         foreach (var json in existingRecords) {
             var record = new SyncJournalRecord(json);
             if (record.Payload?[SyncPayload.Key.Value] is not JsonObject value) continue;
             var type = SyncPayloadType.Of(record.Payload);
             existing[type.Kind.RecordName(record.Id)] = Text(type.Subject(value)[SyncPayload.Key.OrderToken]);
+            if (type == SyncPayloadType.Space) existingSpaceOrder[record.Id] = value;
             if (type == SyncPayloadType.Archive) archiveReasons[record.Id] = Text(value[StoredSessionCodec.Key.Reason]);
         }
         var result = new JsonArray();
@@ -74,10 +80,25 @@ public static class NativeSyncProjection {
                 existing.GetValueOrDefault(type.Kind.RecordName(Id(type.Subject(item.AsObject())[StoredSessionCodec.Key.Id]))))
                 .ToArray());
 
-        var spaces = Items(session, StoredSessionCodec.Key.Spaces).Select(n => n!).ToArray();
-        var spaceTokens = Tokens(SyncPayloadType.Space, spaces);
+        var spaces = Items(session, StoredSessionCodec.Key.Spaces).Select(n => n!).Where(space => !cleaning.Contains(SpaceId(space))).ToArray();
+        var grouped = GroupedSpaces(spaces);
+        var legacyTokens = Tokens(SyncPayloadType.Space, grouped);
+        var legacyIndex = grouped.Select((space, index) => (SpaceId(space), index)).ToDictionary(pair => pair.Item1, pair => pair.index);
+        var previousOrders = spaces.Select(space => existingSpaceOrder.GetValueOrDefault(SpaceId(space))).ToArray();
+        bool alreadyIndependent = previousOrders.Any(value => value?[SpacePayload.IndependentOrderKey] is not null);
+        bool hasNewSpaces = previousOrders.Contains(null);
+        bool startsIndependentOrder = !alreadyIndependent && (reorderedSpaces || hasNewSpaces) && !spaces.SequenceEqual(grouped);
+        var independentTokens = startsIndependentOrder || alreadyIndependent && (reorderedSpaces || hasNewSpaces)
+            ? SyncOrderTokens.Allocate(previousOrders.Select(value =>
+                Text(value?[SpacePayload.IndependentOrderKey] ?? value?[SyncPayload.Key.OrderToken])).ToArray()) : null;
+        // While an independent order is still arriving, an untouched Space
+        // displays at its legacy position. Keep that fallback stable until the
+        // rest of the positions arrive or the person chooses a new order.
+        bool keepsLegacyPositions = alreadyIndependent
+            && previousOrders.Any(value => value is not null && value[SpacePayload.IndependentOrderKey] is null);
         for (int i = 0; i < spaces.Length; i++) {
             var space = spaces[i];
+            var id = SpaceId(space);
             var portable = Items(space, StoredSessionCodec.Key.Tabs).Where(t => PortableTab(t!)).Select(t => t!).ToArray();
             var splitIds = portable.Where(t => t[StoredSessionCodec.Key.SplitGroupId] is not null)
                 .Select(t => Id(t[StoredSessionCodec.Key.SplitGroupId])).ToHashSet();
@@ -100,7 +121,20 @@ public static class NativeSyncProjection {
             spaceValue[StoredSessionCodec.Key.SplitGroups] = new JsonArray(Items(space, StoredSessionCodec.Key.SplitGroups)
                 .Where(g => splitIds.Contains(Id(g![StoredSessionCodec.Key.Id]))).DistinctBy(g => Id(g![StoredSessionCodec.Key.Id]))
                 .Select(SplitGroup).ToArray());
-            spaceValue[SyncPayload.Key.OrderToken] = spaceTokens[i];
+            var previous = previousOrders[i];
+            var legacyPosition = Text(previous?[SyncPayload.Key.OrderToken]);
+            var previousPosition = Text(previous?[SpacePayload.IndependentOrderKey]);
+            var position = independentTokens?[i] ?? previousPosition;
+            bool hasIndependentPosition = position is not null
+                && (startsIndependentOrder || previousPosition is not null || position != legacyPosition);
+            var groupedPosition = legacyTokens[legacyIndex[id]];
+            spaceValue[SyncPayload.Key.OrderToken] = keepsLegacyPositions && (!reorderedSpaces || !hasIndependentPosition)
+                ? legacyPosition ?? groupedPosition : groupedPosition;
+            if (hasIndependentPosition) {
+                spaceValue[SpacePayload.IndependentOrderKey] = position;
+                spaceValue[StoredSessionCodec.Key.PositionModifiedAt] = position == previousPosition
+                    ? previous![StoredSessionCodec.Key.PositionModifiedAt]!.DeepClone() : JsonValue.Create(now);
+            }
             Add(SyncPayloadType.Space, spaceValue);
 
             if (policy.CurrentTabs || policy.SavedStructure) {
@@ -155,6 +189,18 @@ public static class NativeSyncProjection {
             });
         }
         return result;
+    }
+
+    private static Guid SpaceId(JsonNode space) => Id(space[StoredSessionCodec.Key.Id]);
+
+    /// Older clients retain the independent position as an additive member
+    /// and read this order, which lists each primary followed by its children.
+    private static JsonNode[] GroupedSpaces(JsonNode[] spaces) {
+        var positions = spaces.Select((space, index) => (SpaceId(space), index)).ToDictionary(pair => pair.Item1, pair => pair.index);
+        return spaces.OrderBy(space => {
+            var position = positions[SpaceId(space)];
+            return space[StoredSessionCodec.Key.PrimarySpaceId] is { } primary ? positions.GetValueOrDefault(Id(primary), position) : position;
+        }).ThenBy(space => space[StoredSessionCodec.Key.PrimarySpaceId] is not null).ToArray();
     }
 
     private static JsonObject Tab(JsonNode source, JsonNode spaceId, string token, bool archived) {

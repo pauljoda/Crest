@@ -6,6 +6,39 @@ import XCTest
 
 @MainActor
 final class BrowserSharedPageRuntimeTests: XCTestCase {
+    func testClosingOneWindowsPeekKeepsTheOtherWindowsPage() throws {
+        let tab = TabState.Seed.startPage()
+        let space = makeSpace(tabs: [tab])
+        let runtimeStore = BrowserPageRuntimeStore()
+        let browser = hosting(space)
+        let first = BrowserPagePool(browser: browser, runtimeStore: runtimeStore)
+        let second = BrowserPagePool(browser: browser.makeWindowStore(), runtimeStore: runtimeStore)
+        let url = try XCTUnwrap(URL(string: "about:blank"))
+
+        func openPeek(in pool: BrowserPagePool) throws -> (BrowserPeekRequest, BrowserTransientPageLease) {
+            let spaceModel = try XCTUnwrap(pool.browser.spaceModel(space.id))
+            let request = BrowserPeekRequest(
+                url: url, sourceTabID: tab.id, sourceTitle: "Shared tab",
+                spaceAssignment: BrowserSpaceRuntimeAssignment(space: spaceModel), trigger: .modifierClick)
+            let lease = try XCTUnwrap(
+                pool.makePeekPageLease(request: request, in: spaceModel, onDownloadOnlyNavigation: {}))
+            return (request, lease)
+        }
+
+        let (firstRequest, firstLease) = try openPeek(in: first)
+        let (_, secondLease) = try openPeek(in: second)
+        let original = try XCTUnwrap(firstLease.page)
+        XCTAssertNotNil(secondLease.page)
+        first.retainPeekPages(for: [firstRequest])
+        XCTAssertNotNil(secondLease.page)
+
+        second.releaseWindowPresentation()
+        XCTAssertNil(secondLease.page)
+        XCTAssertTrue(firstLease.page === original)
+        first.releaseWindowPresentation()
+        XCTAssertNil(firstLease.page)
+    }
+
     func testNormalWindowsShareLivePagesButKeepIndependentSelections() throws {
         let tabs = [TabState.Seed.startPage(), TabState.Seed.startPage()]
         let space = makeSpace(tabs: tabs)

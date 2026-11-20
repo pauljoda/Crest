@@ -1,6 +1,36 @@
 import Foundation
 
 extension BrowserPlatformPage {
+    /// A shared pin keeps one resident page. Its links open in the Space the
+    /// presenting window shows, even when another Space first opened the page.
+    var linkNavigationContext: BrowserPageNavigationContext? {
+        #if os(macOS)
+            let presenter = attachedLinkPresenter ?? host
+        #else
+            let presenter = host
+        #endif
+        guard var context = navigationContext, let owner = presenter, let space = owner.browser.shownSpace,
+            space.id != context.spaceID, owner.presentedTabIDs.contains(context.tabID),
+            owner.host.page(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: context.tabID, spaceID: space.id, profileID: space.profileID)
+            ) === self
+        else { return navigationContext }
+        context.spaceAssignment = BrowserSpaceRuntimeAssignment(space: space)
+        return context
+    }
+
+    /// Presents the Peek over the same window used to resolve the link's Space.
+    func presentLinkPeek(_ request: BrowserPeekRequest) {
+        #if os(macOS)
+            if let presenter = attachedLinkPresenter {
+                presenter.presentPeek(request)
+                return
+            }
+        #endif
+        openPeek(request)
+    }
+
     /// Steps back through the page's history as the core keeps it, first
     /// leaving a failed navigation the page shows.
     func goBack() {

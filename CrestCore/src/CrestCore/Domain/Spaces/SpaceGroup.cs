@@ -3,10 +3,9 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 /// <summary>
-/// A primary Space and the Sub-Spaces that joined its session, in order. Every member
-/// browses with the primary's profile, and they sit together: the primary, then its
-/// Sub-Spaces. A Space on its own is a group of one, and no two groups browse with one
-/// profile.
+/// A primary Space and the Sub-Spaces that joined its session. Members browse
+/// with the primary's profile wherever they appear in the workspace. A Space
+/// on its own is a group of one, and no two groups browse with one profile.
 /// </summary>
 /// <remarks>
 /// Only Spaces that stay count. A Sub-Space whose deletion is under way belongs to no
@@ -22,7 +21,7 @@ internal sealed record SpaceGroup(SpaceState Primary, IReadOnlyList<SpaceState> 
         init => field = [.. value];
     } = [.. SubSpaces];
 
-    /// The primary, then its Sub-Spaces.
+    /// The primary, followed by its Sub-Spaces in workspace order.
     public IReadOnlyList<SpaceState> Members => [Primary, .. SubSpaces];
 
     /// The profile every member browses with.
@@ -49,23 +48,21 @@ internal sealed record SpaceGroup(SpaceState Primary, IReadOnlyList<SpaceState> 
 
     /// The first rule the Spaces' groups break, in session order, or null when
     /// they break none: every Sub-Space that stays names a primary the session
-    /// holds, sits in its primary's group and browses with its profile, and no
+    /// holds and browses with that primary's profile, and no
     /// two groups browse with one profile.
     internal static SessionFlaw? Flaw(IReadOnlyList<SpaceState> spaces, IReadOnlySet<Guid> pending) {
         var byId = spaces.DistinctBy(space => space.Id).ToDictionary(space => space.Id);
-        Guid? leading = null;
         var profiles = new HashSet<Guid>();
         foreach (var space in spaces) {
             if (space.PrimaryId is not { } primaryId) {
                 if (pending.Contains(space.Id) && !Leads(space, spaces, pending)) continue;
-                leading = space.Id;
                 if (!profiles.Add(space.ProfileId)) return SessionFlaw.SharedProfile;
                 continue;
             }
             if (pending.Contains(space.Id)) continue;
             if (!byId.TryGetValue(primaryId, out var primary) || primary.Id == space.Id || primary.PrimaryId is not null)
                 return SessionFlaw.UnknownPrimary;
-            if (leading != primaryId || space.ProfileId != primary.ProfileId) return SessionFlaw.ScatteredGroup;
+            if (space.ProfileId != primary.ProfileId) return SessionFlaw.ScatteredGroup;
         }
         return null;
     }
@@ -91,17 +88,23 @@ internal sealed record SpaceGroup(SpaceState Primary, IReadOnlyList<SpaceState> 
             Membership = SpaceMembership.Leading(ProfileId, now),
             History = Merged(primary.History, successor.History, entry => Derived(successor.Id, entry.Id))
         };
-        if (!primary.Settings.SeparatesPinnedTabs) {
-            List<TabState> pins = [.. primary.Tabs.Where(tab => tab.IsPinned), .. successor.Tabs.Where(tab => tab.IsPinned)];
-            leading = leading with {
-                Tabs = [.. pins.Take(TabPlacement.PinnedCapacity),
-                    .. pins.Skip(TabPlacement.PinnedCapacity).Select(tab => tab with { Placement = TabPlacement.Pinned.OverflowsTo! }),
-                    .. successor.Tabs.Where(tab => !tab.IsPinned)]
-            };
-            primary = primary with { Tabs = [.. primary.Tabs.Where(tab => !tab.IsPinned)] };
-        }
+        (primary, leading) = HandingOverPins(primary, leading);
         return [primary, leading, .. SubSpaces.Where(member => member.Id != successor.Id)
             .Select(member => member with { Membership = SpaceMembership.Joining(leading, now) })];
+    }
+
+    /// Moves shared pins that have not arrived ahead of the successor's pins.
+    /// Pins already there keep their current state and relative order.
+    internal static (SpaceState Primary, SpaceState Successor) HandingOverPins(SpaceState primary, SpaceState successor) {
+        if (primary.Settings.SeparatesPinnedTabs) return (primary, successor);
+        var arrived = successor.Tabs.Select(tab => tab.Id).ToHashSet();
+        TabState[] pins = [.. primary.Tabs.Where(tab => tab.IsPinned && !arrived.Contains(tab.Id)),
+            .. successor.Tabs.Where(tab => tab.IsPinned)];
+        return (primary with { Tabs = [.. primary.Tabs.Where(tab => !tab.IsPinned)] }, successor with {
+            Tabs = [.. pins.Take(TabPlacement.PinnedCapacity),
+                .. pins.Skip(TabPlacement.PinnedCapacity).Select(tab => tab with { Placement = TabPlacement.Pinned.OverflowsTo! }),
+                .. successor.Tabs.Where(tab => !tab.IsPinned)]
+        });
     }
 
     /// `kept` with the entries of `moved` made again in it, one entry per
@@ -147,14 +150,14 @@ internal sealed record SpaceGroup(SpaceState Primary, IReadOnlyList<SpaceState> 
     /// Sub-Spaces of a primary that is gone stay together, led by the first of
     /// them, which keeps their profile. A Sub-Space browses with its primary's
     /// profile. A group that took over a profile another group browses with
-    /// gives it up and browses with its primary's own. Each group sits where
-    /// its primary does, and its members' shared settings are settled; see
-    /// `GroupSetting`. A Space that needs no mending is the same object.
+    /// gives it up and browses with its primary's own. Members' shared settings
+    /// are settled (see `GroupSetting`). Each Space keeps its position, and a
+    /// Space that needs no mending is the same object.
     internal static IReadOnlyList<SpaceState> Regrouped(IReadOnlyList<SpaceState> spaces, IReadOnlySet<Guid> pending) {
         var mended = Mended(spaces, pending);
         mended = Distinct(mended, pending);
         mended = Aligned(mended, pending);
-        return Settled(Gathered(mended, pending), pending);
+        return Settled(mended, pending);
     }
 
     /// Every group's members that stay share its settings.
@@ -230,20 +233,6 @@ internal sealed record SpaceGroup(SpaceState Primary, IReadOnlyList<SpaceState> 
         return [.. spaces.Select(space => !pending.Contains(space.Id) && space.PrimaryId is { } primaryId
             && byId[primaryId].ProfileId is var profile && space.ProfileId != profile
                 ? space with { Membership = space.Membership! with { SharedProfileId = profile } } : space)];
-    }
-
-    /// Each group's Sub-Spaces follow its primary, in their order, wherever
-    /// they stood; every other Space keeps its place.
-    private static IReadOnlyList<SpaceState> Gathered(List<SpaceState> spaces, IReadOnlySet<Guid> pending) {
-        var led = Led(spaces, pending);
-        var following = led.Values.SelectMany(members => members).Select(member => member.Id).ToHashSet();
-        var result = new List<SpaceState>(spaces.Count);
-        foreach (var space in spaces) {
-            if (following.Contains(space.Id)) continue;
-            result.Add(space);
-            if (led.TryGetValue(space.Id, out var members)) result.AddRange(members);
-        }
-        return result.SequenceEqual(spaces) ? spaces : result;
     }
 
     /// The Sub-Spaces that stay, by the primary they name, in session order.

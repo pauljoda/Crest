@@ -167,12 +167,10 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(TabPlacement.Pinned, alone.Tabs[0].Placement);
     }
 
-    /// Spaces that shared a session but were not side by side where they came
-    /// from, as Arc lists them, come in gathered behind the first of them, and
-    /// every tab still says which imported Space and tab it came from, in the
-    /// preview and the import alike.
+    /// The preview and import keep the source order of Spaces that share a
+    /// session. Every tab still names the imported Space and tab it came from.
     [Fact]
-    public void SpacesThatSharedASessionApartComeInGatheredWithEachTabsOwnOrigin() {
+    public void ImportKeepsSpaceOrderMembershipAndTabOrigins() {
         var session = SavedSession().Document["session"]!;
         using var device = new TestDevice(session);
         var window = device.Showing(session);
@@ -195,7 +193,8 @@ public sealed partial class BrowserContractsTests {
         var changes = device.Send(intent);
 
         var current = device.Authority.Current;
-        Assert.Equal(["Work", "Client", "School", "Personal"], current.Spaces.Select(space => space.Settings.Name));
+        Assert.Equal(["Work", "Client", "Personal", "School"], current.Spaces.Select(space => space.Settings.Name));
+        Assert.Equal([SpaceId(work), SpaceId(client), SpaceId(school)], current.GroupOf(SpaceId(school))!.Members.Select(space => space.Id));
         Assert.Equal(current.Spaces.Select(space => space.Settings.Name), preview.Session.Spaces.Select(space => space.Settings.Name));
         var origins = brought.SelectMany((space, index) => space["tabs"]!.AsArray().Select(tab => new ImportedTab(TabId(tab!), index, TabId(tab!))))
             .ToHashSet();

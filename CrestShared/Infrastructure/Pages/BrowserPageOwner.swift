@@ -297,7 +297,7 @@ extension BrowserPageOwner {
     ) -> BrowserPlatformTransientPageLease? {
         guard request.assignment == BrowserSpaceRuntimeAssignment(space: space) else { return nil }
         let opener = request.engineNavigation?.sourcePageID ?? host.page(for: request.sourceTabID)?.corePage.id
-        return host.peekPageLease(for: request) {
+        return host.peekPageLease(for: request, in: browser.windowID) {
             makeTransientPageLease(
                 url: request.url, in: space, presentation: .peek, engineNavigation: request.engineNavigation,
                 opener: opener, onUserActivity: {}, onDownloadOnlyNavigation: onDownloadOnlyNavigation)
@@ -305,7 +305,7 @@ extension BrowserPageOwner {
     }
 
     func retainPeekPages(for requests: [BrowserPeekRequest]) {
-        host.retainPeekPages(for: requests)
+        host.retainPeekPages(for: requests, in: browser.windowID)
     }
 
     func pruneTransientLeases() {

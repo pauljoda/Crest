@@ -5,6 +5,21 @@ import XCTest
 
 @MainActor
 final class BrowserStoreWorkspaceTests: XCTestCase {
+    func testReorderingASubSpaceBeforeItsPrimaryKeepsThePrimaryCredentialVault() throws {
+        let browser = BrowserStore(seed: .preview)
+        let primary = try XCTUnwrap(browser.spaceModels.first)
+        let other = try XCTUnwrap(browser.spaceModels.dropFirst().first)
+        try browser.addSubSpace(after: primary.id)
+        let child = browser.selectedSpaceID
+
+        browser.move(child, before: primary.id)
+        browser.move(other.id, before: primary.id)
+
+        XCTAssertEqual(browser.availableSpaces.map(\.id), [child, other.id, primary.id])
+        XCTAssertEqual(browser.credentialSpaceIDs(of: child), [primary.id, child])
+        XCTAssertEqual(browser.credentialSpaceIDs(of: primary.id), [primary.id, child])
+    }
+
     func testTemporaryWorkspaceCannotDeleteItsBorrowedProfile() async throws {
         let source = BrowserStore(seed: .preview)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(source.shownSpace))

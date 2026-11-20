@@ -9,8 +9,7 @@ import UniformTypeIdentifiers
 /// never comes or goes.
 ///
 /// On the Mac a crest also drags: onto another crest of the row to move it
-/// there, or onto Settings' list of Spaces to move it to another group or
-/// bring it out on its own, which asks first.
+/// there, or onto another group's Settings row to ask to join that group.
 struct BrowserSpaceGroupCrestRow: View {
     // MARK: - Variables
 
@@ -104,7 +103,7 @@ struct BrowserSpaceGroupCrestRow: View {
     private func menu(_ member: SpaceModel) -> some View {
         // The primary leads its group; a Sub-Space moves among the others.
         if browser.isSubSpace(member) {
-            let order = BrowserSpaceOrderActions(browser: browser, spaceID: member.id)
+            let order = BrowserSpaceOrderActions(browser: browser, spaceID: member.id, withinGroup: true)
             Button("Move Left", systemImage: "arrow.left", action: order.moveUp).disabled(!order.canMoveUp)
             Button("Move Right", systemImage: "arrow.right", action: order.moveDown).disabled(!order.canMoveDown)
             Divider()

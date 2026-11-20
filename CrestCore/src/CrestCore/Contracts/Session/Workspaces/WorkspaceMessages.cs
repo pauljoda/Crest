@@ -29,8 +29,7 @@ public enum SessionFlaw {
     /// A Sub-Space names a primary the session does not hold, itself, or
     /// another Sub-Space.
     UnknownPrimary,
-    /// A Sub-Space sits apart from its primary's group, or browses with
-    /// another profile than its primary.
+    /// A Sub-Space browses with a different profile than its primary.
     ScatteredGroup
 }
 

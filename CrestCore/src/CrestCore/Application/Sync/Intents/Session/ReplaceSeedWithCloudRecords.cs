@@ -13,7 +13,7 @@ public sealed record ReplaceSeedWithCloudRecords(IReadOnlyList<SyncRecord> Recor
     internal override IncomingSyncRecords? Apply(NativeSessionAuthority workspace, CloudSyncTurn turn) {
         var records = new IncomingSyncRecords(Records);
         if (workspace.Current.DisposableSeedMarker is not null)
-            workspace.Converging(turn.Sync, records, replacing: true, turn.Now, turn.Ids, turn.CommitGate, seedOnly: true);
+            workspace.Converging(turn, records, replacing: true, seedOnly: true);
         return records;
     }
 

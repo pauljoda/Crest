@@ -16,8 +16,7 @@ public abstract record DataDeletionIntent(Guid RequestId) : Intent {
 
     #region Actions - Access
 
-    /// Refuses the deletion before any engine is asked, as one that would
-    /// erase a locked Space's data. A deletion no lock guards refuses nothing.
+    /// Checks access to the profile before asking any engine to erase its data.
     internal virtual void Guard(Device device) { }
 
     #endregion

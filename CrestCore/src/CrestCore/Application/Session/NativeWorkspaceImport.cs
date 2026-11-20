@@ -442,8 +442,7 @@ internal sealed class NativeWorkspaceImport {
                 && !tab.Placement.IsDurable && tab.LastActivatedAt < now ? Copied(tab, tab with { LastActivatedAt = now }) : tab)]
         };
         int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
-        // Repair may replace colliding identities and move a Sub-Space beside
-        // its primary, so hints and origins travel by where each Space went.
+        // Positions still identify the imported records when repair replaces colliding IDs.
         var shown = new List<(int Space, int Tab)>();
         for (int si = 0; si < spaces.Count; si++)
             if (spaces[si].ShownTab is { } tab && spaces[si].State.Tabs.Select(t => t.Id).ToList().IndexOf(tab) is var ti and >= 0)
@@ -454,24 +453,23 @@ internal sealed class NativeWorkspaceImport {
             DefaultSpaceId = defaultSpace,
             DisposableSeedMarker = seedMarker
         };
-        var repaired = NativeSessionMaintenance.Repair(imported, now, null, ids, out _, out var places);
+        var repaired = NativeSessionMaintenance.Repair(imported, now, null, ids, out _);
         // Show the imported instance even when repair replaced a colliding ID.
-        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[places[affectedIndex]].Id);
+        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[affectedIndex].Id);
         foreach (var (si, ti) in shown) {
-            var space = repaired.Spaces[places[si]];
+            var space = repaired.Spaces[si];
             followUp.ShowTab(space.Id, space.Tabs[ti].Id);
         }
-        var (importedTabs, copies) = Placed(before, repaired, places);
+        var (importedTabs, copies) = Placed(before, repaired);
         return new(repaired, importedTabs, copies);
     }
 
     /// Where each tab of `repaired` came from, matched by position with the
-    /// records `before` held, each Space where `places` says it went: each
-    /// tab an imported Space brought, and each of the session's own tabs
-    /// repair gave a new identity. A Space repair kept as it was, such as one
-    /// being deleted, placed nothing.
+    /// records `before` held, including each tab an imported Space brought
+    /// and each of the session's own tabs given a new identity by repair. A
+    /// Space repair kept as it was, such as one being deleted, placed nothing.
     private (IReadOnlyList<ImportedTab> Imported, IReadOnlyList<SessionTabCopy> Copied) Placed(IReadOnlyList<SpaceState> before,
-        SessionState repaired, IReadOnlyList<int> places) {
+        SessionState repaired) {
         var imported = new List<ImportedTab>();
         var copied = new List<SessionTabCopy>();
         void Place(object record, Guid id) {
@@ -480,7 +478,7 @@ internal sealed class NativeWorkspaceImport {
             else if (id != origin.TabId) copied.Add(new(origin.TabId, id));
         }
         for (int si = 0; si < before.Count; si++) {
-            var space = repaired.Spaces[places[si]];
+            var space = repaired.Spaces[si];
             if (ReferenceEquals(space, before[si])) continue;
             for (int ti = 0; ti < before[si].Tabs.Count; ti++) Place(before[si].Tabs[ti], space.Tabs[ti].Id);
             // Repair drops a Start Page from the archive.

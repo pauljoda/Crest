@@ -7,6 +7,20 @@ extension BrowserPage {
     var presentationWindow: NSWindow? { nativeView.window }
     var viewportSize: CGSize { nativeView.bounds.size }
 
+    /// A shared page's claim can move before SwiftUI reattaches its native
+    /// view. Only the window containing the view can receive its link input.
+    var attachedLinkPresenter: BrowserPagePool? {
+        guard let host, let window = presentationWindow else { return nil }
+        if host.presentationWindow === window { return host }
+        return host.runtimeStore.registeredPools.first { $0.presentationWindow === window }
+    }
+
+    /// A link drag keeps its Peek in one window for the entire gesture.
+    var linkDragNavigationContext: BrowserPageNavigationContext? {
+        if let presenter = attachedLinkPresenter, presenter !== host { return nil }
+        return linkNavigationContext
+    }
+
     var canReviewCertificate: Bool {
         Self.canReviewCertificate(of: live.displayURL, hasServerTrust: serverTrust != nil)
     }

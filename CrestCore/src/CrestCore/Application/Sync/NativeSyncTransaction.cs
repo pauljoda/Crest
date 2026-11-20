@@ -54,8 +54,8 @@ internal sealed class NativeSyncTransaction : IDisposable {
     /// emptied instead, and dating tombstones and marks `now` seconds since
     /// 2001.
     internal void Stage(SessionState session, SyncDeletionReason reason,
-        IReadOnlyDictionary<string, SyncDeletionReason> removals, double now, IReadOnlySet<string>? emptied = null) {
-        Journal = Journal.Stage(StoredSessionCodec.Encode(session), reason, now, removals, emptied);
+        IReadOnlyDictionary<string, SyncDeletionReason> removals, double now, IReadOnlySet<string>? emptied = null, bool reorderedSpaces = false) {
+        Journal = Journal.Stage(StoredSessionCodec.Encode(session), reason, now, removals, emptied, reorderedSpaces);
         _ = Journal.Read();
     }
 

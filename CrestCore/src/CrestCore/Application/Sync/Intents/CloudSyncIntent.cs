@@ -15,8 +15,9 @@ namespace CrestCore.Contracts;
 /// What it changed reaches the host through the next drain, as one batch after
 /// the wake, never in its answer, which carries only the intent's receipts.
 ///
-/// Records the core cannot take are `InvalidSyncRecords`, and a journal that
-/// cannot record the result is `SyncStagingRefused`; either changes nothing.
+/// Records the core cannot take are `InvalidSyncRecords`. A result the
+/// journal cannot record, or one that would take a profile still being
+/// erased, is `SyncStagingRefused`. In either case nothing changes.
 public abstract record CloudSyncIntent : Intent {
     #region Abstract Methods
 

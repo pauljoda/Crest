@@ -5845,6 +5845,38 @@
     "settings-selected-icons": {
       "category": "fixed",
       "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
+    },
+    "shared-pin-peek-in-current-space": {
+      "category": "fixed",
+      "message": "When you follow a link from a shared pinned tab, Peek opens in the Space where you clicked it."
+    },
+    "independent-sub-space-order": {
+      "category": "new",
+      "message": "Spaces can now appear anywhere in the picker, including between members of another group. Moving a Space preserves its shared sign-ins and pinned tab settings."
+    },
+    "peek-space-and-window-ownership": {
+      "category": "fixed",
+      "message": "Peeks stay with their Space and window when you open or close another Peek from a shared pinned tab."
+    },
+    "shared-pinned-tab-popup-space": {
+      "category": "fixed",
+      "message": "New tabs and Quick Windows opened by a shared pinned tab use the Space showing it."
+    },
+    "independent-space-order-sync-compatibility": {
+      "category": "fixed",
+      "message": "Independent Space order stays in place when an older Crest device syncs."
+    },
+    "synced-primary-space-handover": {
+      "category": "fixed",
+      "message": "When sync delivers a primary Space deletion before its successor, shared pins and sign-ins stay available while the group waits for the handover."
+    },
+    "shared-space-order-and-window-handover": {
+      "category": "fixed",
+      "message": "Independent Space order stays intact as sync records arrive in batches. Links from shared pinned tabs open where their page is showing."
+    },
+    "synced-pin-addresses-during-space-handover": {
+      "category": "fixed",
+      "message": "Shared pinned tabs keep their latest synced addresses when another Space takes over."
     }
   }
 }

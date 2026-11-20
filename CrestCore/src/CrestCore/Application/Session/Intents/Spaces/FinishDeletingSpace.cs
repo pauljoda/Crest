@@ -18,6 +18,7 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
         workspace.RequireOwnedSpaces();
         var (space, pending) = workspace.Deleting(turn.Basis, SpaceId);
         if (pending is null || pending.Id != OperationId) throw new Rejected(new WrongDeletionOperation(space.Id));
+        if (turn.Basis.AwaitsDeletionSuccessor(SpaceId)) throw new Rejected(new InvalidNewPrimary(SpaceId));
         SessionState.RequireRemovable(turn.Basis.Spaces.Count);
         var index = turn.Basis.Spaces.ToList().IndexOf(space);
         var remaining = turn.Basis.SpaceDeletions.Where(deletion => deletion != pending).Select(deletion => deletion.SpaceId).ToHashSet();

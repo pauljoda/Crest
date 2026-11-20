@@ -88,6 +88,7 @@ final class BrowserPageRuntimeStore {
             pool.bindRuntimeRouting(runtime, tabID: tabID)
             return
         }
+        guard adoptRouting(of: runtime, tabID: tabID, in: pool) else { return }
         if runtime.presentationWindowID != nil {
             captureSnapshot(of: runtime)
             runtime.page.focusRestoration.captureBeforeDeparture()
@@ -108,7 +109,7 @@ final class BrowserPageRuntimeStore {
         for (tabID, runtime) in runtimes where runtime.routingWindowID == pool.windowID {
             reassignPresentation(tabID, excluding: pool.windowID)
             if let fallback = mostRecentPool(among: Set(pools.keys)) {
-                if runtime.presentationWindowID == nil {
+                if runtime.presentationWindowID == nil, adoptRouting(of: runtime, tabID: tabID, in: fallback) {
                     runtime.routingWindowID = fallback.windowID
                     fallback.bindRuntimeRouting(runtime, tabID: tabID)
                 }
@@ -128,6 +129,14 @@ final class BrowserPageRuntimeStore {
         for pool in registeredPools {
             pool.removeTransferredPresentation(tabID)
         }
+    }
+
+    /// Reports which window now hosts the resident page, keeping its Space
+    /// and tab. Both engines use that window when the page opens another.
+    private func adoptRouting(of runtime: BrowserTabRuntime, tabID: UUID, in pool: BrowserPagePool) -> Bool {
+        let page = runtime.page
+        return runtime.routingWindowID == pool.windowID
+            || pool.browser.adoptPage(page.corePage, in: page.spaceID, as: tabID)
     }
 
     private func reassignPresentation(_ tabID: UUID, excluding windowID: UUID) {

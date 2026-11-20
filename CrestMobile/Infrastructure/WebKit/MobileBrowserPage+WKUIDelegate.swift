@@ -41,7 +41,7 @@ extension MobileBrowserPage: WKUIDelegate {
         completionHandler: @escaping @MainActor (UIContextMenuConfiguration?) -> Void
     ) {
         guard webView === self.webView,
-            let context = navigationContext,
+            let context = linkNavigationContext,
             let url = elementInfo.linkURL,
             ExternalWebLink.accepts(url),
             let window = webView.window
@@ -58,8 +58,8 @@ extension MobileBrowserPage: WKUIDelegate {
             guard let self, let window else { return false }
             return self.webView.window === window
                 && self.committedNavigationCount == generation
-                && self.navigationContext?.tabID == source.tabID
-                && self.navigationContext?.assignment
+                && self.linkNavigationContext?.tabID == source.tabID
+                && self.linkNavigationContext?.assignment
                     == BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID)
                 && self.linkDestinationHost.browser?.shownTab?.id == source.tabID
                 && self.linkDestinationHost.canOpenLink(from: source)

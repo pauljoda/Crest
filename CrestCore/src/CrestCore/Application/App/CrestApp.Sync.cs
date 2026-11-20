@@ -18,7 +18,7 @@ public sealed partial class CrestApp {
         var session = StoredSyncSession();
         if (device.Identity(session) is null) throw new Rejected(new NoStoredSession());
         try {
-            return session.Handle(intent, clock.Now, ids, gate);
+            return session.Handle(intent, clock.Now, ids, gate, dataDeletions);
         } finally {
             WakeIfOwed();
             WakeForRequestedTurn();

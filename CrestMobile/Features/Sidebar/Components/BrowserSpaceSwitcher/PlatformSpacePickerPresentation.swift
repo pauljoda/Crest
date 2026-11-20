@@ -30,7 +30,7 @@ final class SpacePickerPresentationView: UIView {
     /// selector.
     private let groupOutline = CALayer()
     private let highlight = CALayer()
-    private var outline = SpacePickerGroupOutline(profileIDs: [])
+    private var outline = SpacePickerGroupOutline(spaces: [])
     private weak var presentation: SpacePagerPresentation?
     private var style = CrestSpaceIconPickerStyle.touch
     private weak var scrollView: UIScrollView?
@@ -74,7 +74,7 @@ final class SpacePickerPresentationView: UIView {
         let newWidth = spaces.first.flatMap { frames[$0.id]?.width } ?? 0
         if ids != spaces.map(\.id) || abs(oldWidth - newWidth) > 0.5 { needsInitialPosition = true }
         ids = spaces.map(\.id)
-        outline = SpacePickerGroupOutline(profileIDs: spaces.map(\.profileID))
+        outline = SpacePickerGroupOutline(spaces: spaces)
         let system = BrowserSpaceForegroundTone(readingIn: ColorScheme(traitCollection.userInterfaceStyle) ?? .light)
         tones = spaces.map {
             .init(

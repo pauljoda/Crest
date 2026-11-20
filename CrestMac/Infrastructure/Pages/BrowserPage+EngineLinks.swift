@@ -6,7 +6,7 @@ import AppKit
 extension BrowserPage {
     /// Opens `url` as a new card beside the tab this page presents.
     func openLinkInSplitView(_ url: URL) {
-        guard let context = navigationContext,
+        guard let context = linkNavigationContext,
             ExternalWebLink.accepts(url)
         else { return }
         _ = splitLinkHost.openLink(url, context.tabID, context.assignment)
@@ -16,7 +16,7 @@ extension BrowserPage {
     /// can open in, in picker order and split where one group ends and the
     /// next begins; none while the page shows no tab.
     var otherSpaceGroups: [[SpaceModel]] {
-        guard let context = navigationContext else { return [] }
+        guard let context = linkNavigationContext else { return [] }
         return linkDestinationHost.otherSpaceGroups(
             from: BrowserTabRuntimeAssignment(
                 tabID: context.tabID, spaceID: context.spaceID, profileID: context.assignment.profileID))
@@ -56,11 +56,11 @@ extension BrowserPage {
     ) {
         guard nativeView.window != nil,
             let request = decision.peekRequest(
-                destinationURL: destination, context: navigationContext, engineNavigation: stagedLink)
+                destinationURL: destination, context: linkNavigationContext, engineNavigation: stagedLink)
         else {
             if let stagedLink { corePage.discardStagedLink(stagedLink) }
             return
         }
-        openPeek(request)
+        presentLinkPeek(request)
     }
 }

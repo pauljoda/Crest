@@ -109,13 +109,14 @@ public sealed class NativeSyncJournal {
     /// for `reason`, but a folder `emptied` names is marked emptied instead;
     /// `now` in seconds since 2001 dates the tombstones and the marks.
     internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null, bool reorderedSpaces = false) {
         var archiveReasons = NativeSyncProjection.Items(session, StoredSessionCodec.Key.Spaces)
             .SelectMany(space => NativeSyncProjection.Items(space!, StoredSessionCodec.Key.ArchivedTabs))
             .ToDictionary(archived => Id(archived![StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]),
                 archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
-        return Stage(NativeSyncProjection.Project(session, Preferences, records.Values), archiveReasons, Cleaning(session), reason, now,
-            removals, emptied);
+        var cleaning = Cleaning(session);
+        return Stage(NativeSyncProjection.Project(session, Preferences, records.Values, cleaning, now, reorderedSpaces), archiveReasons,
+            cleaning, reason, now, removals, emptied);
     }
 
     /// The journal after staging `payloads`, everything a session holds that
@@ -211,7 +212,7 @@ public sealed class NativeSyncJournal {
         var draft = new Draft(this);
         foreach (var (name, remote) in draft.Arrive(cloud)) draft.Records[name] = remote;
         var cleaning = Cleaning(session);
-        var desired = draft.Desired(NativeSyncProjection.Project(session, Preferences, records.Values), cleaning);
+        var desired = draft.Desired(NativeSyncProjection.Project(session, Preferences, records.Values, cleaning, now, reorderedSpaces: true), cleaning);
         draft.Pending.Clear();
         foreach (string name in draft.Records.Keys.Union(desired.Keys).Order(StringComparer.Ordinal).ToArray()) {
             if (draft.Records.TryGetValue(name, out var held) && cleaning.Contains(new SyncJournalRecord(held).SpaceId)) continue;

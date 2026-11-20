@@ -95,7 +95,7 @@ struct BrowserPageContextMenuAction {
             linkURL: linkURL, selectionText: nil
         ) { page, context, _ in
             guard let context else { return false }
-            page.openPeek(
+            page.presentLinkPeek(
                 BrowserPeekRequest(
                     url: linkURL, sourceTabID: context.tabID, sourceTitle: context.title,
                     spaceAssignment: context.assignment, trigger: .contextMenu))
@@ -261,7 +261,7 @@ struct BrowserPageContextMenu {
 
 extension BrowserPage: BrowserPageContextMenuHost {
     func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction] {
-        guard let context = navigationContext else {
+        guard let context = linkNavigationContext else {
             guard let linkURL, ExternalWebLink.accepts(linkURL) else { return [] }
             return [.quickWindow(linkURL)]
         }
@@ -305,7 +305,7 @@ extension BrowserPage: BrowserPageContextMenuHost {
             contextMenuActions(linkURL: action.linkURL, selectionText: action.selectionText)
                 .contains(where: { $0.kind == action.kind })
         else { return false }
-        let context = navigationContext
+        let context = linkNavigationContext
         let source = context.map {
             BrowserTabRuntimeAssignment(tabID: $0.tabID, spaceID: $0.spaceID, profileID: $0.assignment.profileID)
         }

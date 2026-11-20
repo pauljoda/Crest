@@ -69,9 +69,8 @@ public sealed class SessionIdentitiesTests {
     }
 
     /// Sub-Spaces browse with their primary's profile while every Space keeps
-    /// a profile of its own: a group whose Sub-Spaces sit right after their
-    /// primary and browse with its profile is one a workspace holds, and an
-    /// edit that breaks a group's rules is refused for the flaw the whole
+    /// a profile of its own. A workspace accepts members in any order.
+    /// An edit that breaks a group's rules is refused for the flaw the whole
     /// session shows. A Sub-Space whose deletion is under way is out of them.
     [Fact]
     public void SubSpacesShareTheirPrimarysProfileAndNothingElse() {
@@ -95,8 +94,8 @@ public sealed class SessionIdentitiesTests {
                 Membership = new(b.Id, a.OwnProfileId, Now) }, d), SessionFlaw.UnknownPrimary),
             ("B joins A but browses with its own profile", basis,
                 Replacing(basis, b with { Membership = new(a.Id, null, Now) }), SessionFlaw.ScatteredGroup),
-            ("D sits between A and its Sub-Space C", basis, Session(a, joinedB, d, joinedC), SessionFlaw.ScatteredGroup),
-            ("C sits before its primary", basis, Session(joinedC, a, b, d), SessionFlaw.ScatteredGroup),
+            ("D sits between A and its Sub-Space C", basis, Session(a, joinedB, d, joinedC), null),
+            ("C sits before its primary", basis, Session(joinedC, a, b, d), null),
             ("D takes over the profile A browses with", basis,
                 Replacing(basis, d with { Membership = SpaceMembership.Leading(a.ProfileId, Now) }), SessionFlaw.SharedProfile),
             ("C, whose deletion is under way, names a primary that is gone", basis with { SpaceDeletions = [deleting] },

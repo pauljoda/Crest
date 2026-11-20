@@ -53,6 +53,9 @@ public sealed record SessionState(
     internal SpaceDeletionState? PendingDeletion(Guid spaceId) =>
         SpaceDeletions.FirstOrDefault(deletion => deletion.SpaceId == spaceId);
 
+    /// A remote deletion whose remaining members still have no new primary.
+    internal bool AwaitsDeletionSuccessor(Guid spaceId) => PendingDeletion(spaceId) is { SuccessorId: null } && Leads(spaceId);
+
     /// The deletion of `space` under `operationId`: it erases the Space's own
     /// profile and the one it browses with, but none that a Space staying
     /// after it and the Spaces `alsoLeaving` names browses with.
@@ -61,6 +64,26 @@ public sealed record SessionState(
             .Select(other => other.ProfileId).ToHashSet();
         return new(operationId, space.Id, space.OwnProfileId,
             [.. new[] { space.OwnProfileId, space.ProfileId }.Distinct().Where(profile => !kept.Contains(profile))]);
+    }
+
+    /// The active primary that inherited a departing primary's profile.
+    internal Guid? CredentialSuccessor(SpaceState former) => former.PrimaryId is null
+        ? StayingSpaces.FirstOrDefault(space => space.PrimaryId is null && space.Membership?.SharedProfileId == former.ProfileId)?.Id
+        : null;
+
+    /// A recorded cleanup can resume after another Space has taken over its
+    /// profile. Keep its operation, but never erase a profile still in use.
+    internal SessionState PreservingDeletionProfiles() {
+        if (SpaceDeletions.Count == 0) return this;
+        var inUse = StayingSpaces.Select(space => space.ProfileId).ToHashSet();
+        var safe = SpaceDeletions.Select(deletion => {
+            if (!deletion.Erasing.Any(inUse.Contains)) return deletion;
+            return deletion with {
+                ErasedProfileIds = [.. deletion.Erasing.Where(profile => !inUse.Contains(profile))],
+                SuccessorId = deletion.SuccessorId ?? (Space(deletion.SpaceId) is { } former ? CredentialSuccessor(former) : null)
+            };
+        }).ToArray();
+        return SpaceDeletions.SequenceEqual(safe) ? this : this with { SpaceDeletions = safe };
     }
 
     /// The groups of the Spaces, in order; see `SpaceGroup`.
@@ -95,8 +118,8 @@ public sealed record SessionState(
     }
 
     /// The session once `successor` takes `group` over from its primary at
-    /// `now`, as the primary's deletion begins; see `SpaceGroup.HandedTo`. The
-    /// group then sits where its new primary does.
+    /// `now`, as the primary's deletion begins (see `SpaceGroup.HandedTo`).
+    /// Members keep their positions as they change primary.
     internal SessionState HandingOver(SpaceGroup group, SpaceState successor, DateTimeOffset now) {
         var handed = Replacing([.. group.HandedTo(successor, now)]);
         HashSet<Guid> pending = [.. SpaceDeletions.Select(deletion => deletion.SpaceId), group.Primary.Id];

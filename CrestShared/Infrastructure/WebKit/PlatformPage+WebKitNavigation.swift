@@ -62,10 +62,10 @@ extension BrowserPlatformPage {
         let engineNavigation = decision.stagesLink ? webKitPage?.stageLink(navigationAction.request) : nil
         if let request = decision.peekRequest(
             destinationURL: navigationAction.request.url,
-            context: navigationContext, sourcePresentation: sourcePresentation,
+            context: linkNavigationContext, sourcePresentation: sourcePresentation,
             engineNavigation: engineNavigation)
         {
-            openPeek(request)
+            presentLinkPeek(request)
             decisionHandler(.cancel)
             return
         }

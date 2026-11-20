@@ -17,7 +17,7 @@ public sealed record MergeSyncRecords(IReadOnlyList<SyncRecord> Records) : Cloud
 
     internal override IncomingSyncRecords? Apply(NativeSessionAuthority workspace, CloudSyncTurn turn) {
         var records = new IncomingSyncRecords(Records);
-        if (!records.IsEmpty) workspace.Converging(turn.Sync, records, replacing: false, turn.Now, turn.Ids, turn.CommitGate);
+        if (!records.IsEmpty) workspace.Converging(turn, records, replacing: false);
         return records;
     }
 

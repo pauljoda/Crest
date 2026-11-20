@@ -36,7 +36,7 @@ final class SpacePickerPresentationView: NSView {
     /// selector.
     private let groupOutline = CAShapeLayer()
     private let highlight = CAShapeLayer()
-    private var outline = SpacePickerGroupOutline(profileIDs: [])
+    private var outline = SpacePickerGroupOutline(spaces: [])
     private var presentation: SpacePagerPresentation?
     private var style = CrestSpaceIconPickerStyle.compact
     private weak var clipView: NSClipView?
@@ -106,7 +106,7 @@ final class SpacePickerPresentationView: NSView {
             needsInitialPosition = true
         }
         spaceIDs = ids
-        outline = SpacePickerGroupOutline(profileIDs: spaces.map(\.profileID))
+        outline = SpacePickerGroupOutline(spaces: spaces)
         if self.frames != frames { needsInitialPosition = true }
         self.frames = frames
         let system = BrowserSpaceForegroundTone(

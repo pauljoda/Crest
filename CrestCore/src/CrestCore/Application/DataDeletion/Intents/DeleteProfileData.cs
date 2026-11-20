@@ -5,8 +5,16 @@ namespace CrestCore.Contracts;
 /// Erases everything every engine keeps for profile `ProfileId`: cookies,
 /// storage, caches and the stores themselves. An `Ephemeral` profile keeps
 /// nothing on disk. A Space's deletion finishes only once its profile's data
-/// is erased this way.
+/// is erased this way. Refused with `ProfileInUse` if a staying Space
+/// browses with `ProfileId` in place of its own profile.
 public sealed record DeleteProfileData(Guid RequestId, Guid ProfileId, bool Ephemeral) : DataDeletionIntent(RequestId) {
+    #region Actions - Access
+
+    /// The deletion plan may have changed while the host released its pages.
+    internal override void Guard(Device device) => device.RefuseSharedProfileErasure(ProfileId);
+
+    #endregion
+
     #region Actions - Data deletion
 
     /// Until every engine erases it again, the profile's data is not known gone.

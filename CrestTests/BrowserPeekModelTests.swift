@@ -5,6 +5,28 @@ import XCTest
 
 @MainActor
 final class BrowserPeekModelTests: XCTestCase {
+    func testCancellingAnotherSpacesPeekKeepsTheSharedPinsOpenPeek() throws {
+        let coordinator = BrowserTransientBrowsingCoordinator()
+        let profileID = UUID()
+        let tabID = UUID()
+        let url = try XCTUnwrap(URL(string: "https://linked.crest.test/"))
+        let client = BrowserPeekRequest(
+            url: url, sourceTabID: tabID, sourceTitle: "Shared pin",
+            spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: UUID(), profileID: profileID),
+            trigger: .modifierClick)
+        let work = BrowserPeekRequest(
+            url: url, sourceTabID: tabID, sourceTitle: "Shared pin",
+            spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: UUID(), profileID: profileID), trigger: .linkDrag)
+
+        coordinator.presentPeek(client)
+        coordinator.beginPeekDrag(work, state: .opening(from: nil))
+        XCTAssertEqual(coordinator.presentationPhase(for: work), .staged)
+        coordinator.cancelStagedPeek(id: work.id)
+
+        XCTAssertEqual(coordinator.presentationPhase(for: client), .committed)
+        XCTAssertNil(coordinator.presentationPhase(for: work))
+    }
+
     func testCrossSpacePromotionRebuildsUnderTheDestinationProfile() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
