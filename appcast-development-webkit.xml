@@ -6,46 +6,37 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.46</title>
-            <pubDate>Thu, 19 Nov 2026 19:44:04 +0000</pubDate>
+            <title>0.10.52</title>
+            <pubDate>Fri, 20 Nov 2026 01:06:18 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1653</sparkle:version>
-            <sparkle:shortVersionString>0.10.46</sparkle:shortVersionString>
+            <sparkle:version>1654</sparkle:version>
+            <sparkle:shortVersionString>0.10.52</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- New Simple crests (Crest, Moon, Summit, Lens, Spark and Grove) sit beside the Heraldic ones when you choose a Space's icon, and new Spaces start in the Crest look.
-- Setup now ends with Make It Home, where you can make Crest your default browser and choose its search and how much ad blocking blocks.
-
 ### Improved
 
-- Crest has a fresh look: a new three-banner mark, warm paper surfaces, Crest blue for actions, and bold rounded headings across setup, Settings and the Start Page.
-- The app icon and each alternative icon now follow your system's light, dark, tinted and clear icon styles, and sit at the right size in the Dock.
-- Setup opens on a full welcome, then lays its steps on a sheet of paper beside a live preview of Crest, with the steps as colored chips you can tap to go straight to one.
-- On iPhone, and on iPad held upright, setup walks the same steps as on a Mac: each Space's page wears that Space's colors, Preview shows it as Crest will, and the buttons float over the page.
-- The Space picker shows your Spaces in a well with a clear selector, a lighter mark for Sub-Spaces, and corners that follow your Corner radius setting.
-- Settings shows solid icons in Crest's colors.
-- Spaces brought in from another browser keep their own icon, set on a round crest in the Space's color.
+- The default app icon sits on a warm paper tile in light mode, so its butter banner stands out instead of fading into a near-white background.
+- Setup slides to its steps and hands over to Crest quickly and smoothly, without the stutter at the start or the end.
+- Crest's animations are quicker throughout, and switching Spaces is a little faster.
+- Peek opens much faster, and Peek animation time in Settings › Links sets how quickly it grows out of a link.
+- The command palette highlights the selected row the way the sidebar highlights the selected tab. Turn on Space accent in command palette in Appearance to tint it with the Space's accent instead.
 
 ### Fixed
 
-- Finishing setup now responds the moment you tap Start Browsing and moves into Crest in one smooth motion, without a pause, a flash or a late page.
-- A new window that opens on Getting Started or Settings shows it at once instead of after a blank pause.
-- Search engine icons in pickers are now sized to their name, with clear room between the two.
+- Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/5a3d978d3fd5d79a80dd358445c19608a67ba32b...fd219122f9dc2d746554b07378e08c971d6076ec) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.46-2026-11-19-1653-r653.1/Installer-Crest-0.10.46-development-2026-11-19-fd21912-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/fd219122f9dc2d746554b07378e08c971d6076ec...759ad72ad0c2549b612857cb60d4eccd83749a33) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.52-2026-11-20-1654-r654.1/Installer-Crest-0.10.52-development-2026-11-20-759ad72-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.46-2026-11-19-1653-r653.1/Installer-Crest-0.10.46-development-2026-11-19-fd21912-arm64.dmg" length="240531077" type="application/octet-stream" sparkle:edSignature="tonNt+KaBdjH0ZR81dXdbEepc5TdmG8dqoMmsBpsMUt6Fw7xevfTC+GXTYgz//HXD6TIXS/UewIVOgbFs+akAw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.52-2026-11-20-1654-r654.1/Installer-Crest-0.10.52-development-2026-11-20-759ad72-arm64.dmg" length="240647814" type="application/octet-stream" sparkle:edSignature="Vx1GQYohJ1PF73yCVMtrRmMWmInZj+4wfsY5selvrqVQH1jOQ7tm3KB3Icriwt3wzn0Kp7K+QuQofYudQOkuDQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -77,6 +68,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: FNf5iMoyaB8NGkHP45cV2weVoGL1bxqkKqKBPXpjQ4Z6WSqmvuLb57JHimVX+JTBWYvZb6TXbSMhBd2U/ezuDg==
-length: 5558
+edSignature: 7YRBbdPg3H8m1+iHaCB+zdQQ8ff01WjC+oOs/6Q7DQnqWCGyHTfRmcEJ6Ic9ipQdaxvh1GMuJH8G1PlyH1dyBQ==
+length: 4671
 -->
