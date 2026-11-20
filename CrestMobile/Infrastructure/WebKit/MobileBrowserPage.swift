@@ -571,7 +571,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webKitPage.resetAutomaticDownloads()
         webView.stopLoading()
         webView.removeFromSuperview()
-        webView.navigationDelegate = nil
+        // Whoever still holds the web view, the ended page loads and plays
+        // nothing more.
+        MobileEndedPageNavigationDelegate.takeOver(webView)
         webView.uiDelegate = nil
         for observation in observations {
             observation.invalidate()
