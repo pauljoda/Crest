@@ -155,11 +155,14 @@ struct BrowserSettingsSidebar: View {
     /// primary. Choosing it shows the Space's page, as choosing its crest in
     /// the page's crest row does, so the two always select the same Space.
     private func spaceRow(_ space: SpaceModel) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: BrowserSettingsSidebarMetrics.spaceRowSpacing) {
             // A Sub-Space sits under its primary, as a tab sits in a folder.
             if browser.isSubSpace(space) {
-                Color.clear.frame(width: BrowserSettingsSidebarMetrics.subSpaceIndent, height: 1)
-                    .accessibilityHidden(true)
+                Color.clear.frame(
+                    width: BrowserSidebarMetrics.subSpaceIndent - BrowserSettingsSidebarMetrics.spaceRowSpacing,
+                    height: 1
+                )
+                .accessibilityHidden(true)
             }
             Label {
                 Text(space.settings.name.isEmpty ? String(localized: "Untitled Space") : space.settings.name)
@@ -309,8 +312,7 @@ private enum BrowserSettingsSidebarMetrics {
     /// Lines the header's buttons up with the trailing glyphs of the rows.
     static let headerTrailingInset: CGFloat = 6
     static let headerButtonSize = CGSize(width: 22, height: 22)
-    /// How far a Sub-Space's row sits in from its primary's.
-    static let subSpaceIndent: CGFloat = 14
+    static let spaceRowSpacing: CGFloat = 6
 }
 
 /// Lets a Space's Settings row take a Space dragged onto it, from another row
