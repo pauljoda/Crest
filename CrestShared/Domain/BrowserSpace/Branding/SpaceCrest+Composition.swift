@@ -18,7 +18,7 @@ extension SpaceCrest {
     /// The colors this crest's layer indices point into.
     func layerColors(spaceColors: ColorPalette) -> ColorPalette {
         if let palette, !palette.isEmpty { return palette }
-        return spaceColors.isEmpty ? [.indigo] : spaceColors
+        return spaceColors.isEmpty ? [SpaceBranding.fallbackColor] : spaceColors
     }
 }
 

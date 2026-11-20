@@ -51,7 +51,7 @@ struct MobilePageActionsMenu: View {
         }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
-        .accessibilityIdentifier("page-actions-menu")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsMenu)
         .pagePermissionHost(pages.activePage?.sitePermissionRequests)
         .crestPopover(
             item: Binding {

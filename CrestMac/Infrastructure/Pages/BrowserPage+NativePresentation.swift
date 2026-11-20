@@ -14,7 +14,7 @@ extension BrowserPage {
     /// A certificate is offered for review only for an HTTPS document whose
     /// server trust the engine reports.
     nonisolated static func canReviewCertificate(of url: URL?, hasServerTrust: Bool) -> Bool {
-        url?.scheme?.lowercased() == "https" && hasServerTrust
+        url?.webScheme?.isSecure == true && hasServerTrust
     }
 
     /// The trust the page's current document was verified with.

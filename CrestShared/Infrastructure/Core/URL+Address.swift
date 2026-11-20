@@ -1,6 +1,15 @@
 import Foundation
 
 extension URL {
+    // MARK: - Variables
+
+    /// The web scheme the URL names, in any case, or nil for any other.
+    var webScheme: WebScheme? { WebScheme.named(scheme?.lowercased()) }
+
+    /// The scheme Crest decides about that the URL names, in any case, or nil
+    /// for one that belongs to another application.
+    var urlScheme: UrlScheme? { UrlScheme.named(scheme?.lowercased()) }
+
     // MARK: - Initializers
 
     /// The URL an address the core keeps, or an engine reports, spells. A

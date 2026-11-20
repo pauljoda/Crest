@@ -20,7 +20,7 @@ extension BrowserStore {
         let creation = CreateFolder(
             workspaceID: family.workspaceID, spaceID: spaceID, folderID: id, placement: .current,
             parentID: nil, title: isGroup ? Self.newGroupTitle : Self.newFolderTitle, color: BrandColor.folderDefault,
-            symbol: "folder", tabIDs: tabIDs, leavesSplits: detachesSplitMembers, isGroup: isGroup)
+            symbol: FolderState.defaultSymbol, tabIDs: tabIDs, leavesSplits: detachesSplitMembers, isGroup: isGroup)
         guard family.send(creation, from: self) else { return nil }
         return spaceModel(spaceID)?.folders.contains(id) == true ? id : nil
     }

@@ -67,7 +67,7 @@ struct MobileBrowserSidebarBottomChrome: View {
         }
         .help(sidebarToggleTitle)
         .accessibilityLabel(sidebarToggleTitle)
-        .accessibilityIdentifier("browser-sidebar-toggle")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.sidebarToggle)
     }
 
     /// New Tab rides with the sidebar toggle, so a new tab is always a tap
@@ -79,7 +79,7 @@ struct MobileBrowserSidebarBottomChrome: View {
         .foregroundStyle(.primary)
         .help("New Tab")
         .accessibilityLabel("New Tab")
-        .accessibilityIdentifier("browser-sidebar-new-tab")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.sidebarNewTab)
     }
 
     /// Shown with the Space's own controls: a locked Space takes no new tab.

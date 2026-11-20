@@ -17,7 +17,7 @@ struct MobileSpacePrivateBrowsingButton: View {
             isPrivateBrowsing ? "Leave Private Browsing" : "Private Browsing"
         )
         .accessibilityValue(isPrivateBrowsing ? "On" : "Off")
-        .accessibilityIdentifier("private-browsing-toggle")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.privateBrowsingToggle)
     }
 }
 

@@ -1,5 +1,5 @@
 import Foundation
 
 enum BrowserPrivateBrowsingAppearance {
-    static let symbol = "eyeglasses"
+    static let symbol = ShortcutCommand.newPrivateWindow.symbol
 }

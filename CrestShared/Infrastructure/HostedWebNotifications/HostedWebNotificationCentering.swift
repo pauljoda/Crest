@@ -22,8 +22,10 @@ extension BrowserHostedWebNotificationCentering {
     ) async -> Bool {
         guard isCurrent(), await currentAuthorization() == .authorized, isCurrent() else { return false }
         let shown = BrowserHostedWebNotificationDelivery(
-            identifier: delivery.identifier, title: String(delivery.title.prefix(200)),
-            body: String(delivery.body.prefix(1_000)), origin: delivery.origin, isSilent: delivery.isSilent)
+            identifier: delivery.identifier,
+            title: String(delivery.title.prefix(BrowserHostedWebNotificationDelivery.maximumTitleLength)),
+            body: String(delivery.body.prefix(BrowserHostedWebNotificationDelivery.maximumBodyLength)),
+            origin: delivery.origin, isSilent: delivery.isSilent)
         do {
             try await add(shown, eventHandler: eventHandler)
         } catch {

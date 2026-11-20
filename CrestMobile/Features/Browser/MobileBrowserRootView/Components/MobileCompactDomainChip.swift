@@ -20,7 +20,7 @@ struct MobileCompactDomainChip: View {
         .accessibilityLabel("Show Toolbar")
         .accessibilityValue(domain)
         .accessibilityHint("Expands the browser controls")
-        .accessibilityIdentifier("collapsed-domain-chip")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.collapsedDomainChip)
     }
 
     private var domain: String {

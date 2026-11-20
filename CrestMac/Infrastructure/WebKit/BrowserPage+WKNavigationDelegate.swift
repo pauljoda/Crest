@@ -49,7 +49,7 @@ extension BrowserPage: WKNavigationDelegate {
         webKitAdapter?.webKitPage.resetAutomaticDownloads()
         Task { [weak self] in
             guard let self, let passkeyAccess = self.passkeyAccess,
-                self.webKitView?.url?.scheme == "https",
+                self.webKitView?.url?.webScheme?.isSecure == true,
                 self.webKitView?.window?.isKeyWindow == true, NSApp.isActive
             else { return }
             await passkeyAccess.prepareForBrowsing()

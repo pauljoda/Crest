@@ -4,6 +4,10 @@ import WebKit
 final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureController,
     BrowserAutomaticPictureInPictureClient
 {
+    /// How long automatic Picture in Picture waits for the page to report a
+    /// floating video before it gives up.
+    private static let automaticPictureInPictureTimeout: Duration = .seconds(4)
+
     private struct FrameCandidate {
         let frame: WKFrameInfo
         let documentID: String
@@ -158,7 +162,7 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
             }
         }
         timeout = Task { @MainActor [weak self] in
-            do { try await Task.sleep(for: .seconds(4)) } catch { return }
+            do { try await Task.sleep(for: Self.automaticPictureInPictureTimeout) } catch { return }
             guard let self, self.automaticRequest?.id == request.id, self.completion != nil else { return }
             self.cancelAutomaticPictureInPicture()
         }

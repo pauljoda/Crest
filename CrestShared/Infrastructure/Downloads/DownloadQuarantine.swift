@@ -11,7 +11,7 @@ struct BrowserDownloadQuarantine {
         timestamp: Date = .now,
         agentName: String = ProductIdentity.name,
         agentBundleIdentifier: String =
-            Bundle.main.bundleIdentifier ?? "com.pauldavis.crest"
+            Bundle.main.bundleIdentifier ?? ProductIdentity.bundleIdentifier
     ) {
         self.sourceURL = sourceURL
         self.timestamp = timestamp

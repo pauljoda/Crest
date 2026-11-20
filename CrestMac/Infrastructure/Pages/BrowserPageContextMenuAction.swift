@@ -294,7 +294,7 @@ extension BrowserPage: BrowserPageContextMenuHost {
     /// its engine blocks content and it shows a site on the web.
     private var canPickElementToBlock: Bool {
         cosmeticFilters?.blocksContent == true && pageEngine.registration.supports(.contentBlocking)
-            && ["http", "https"].contains(live.displayURL?.scheme?.lowercased() ?? "")
+            && live.displayURL?.webScheme != nil
     }
 
     /// Runs a row the menu offered, while the page still offers it for the

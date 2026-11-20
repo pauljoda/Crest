@@ -108,9 +108,7 @@ struct BrowserDirectMediaNavigation: Equatable {
                 canShowMIMEType: canShowMIMEType,
                 response: response
             ) == .display,
-            let url = response?.url,
-            let scheme = url.scheme?.lowercased(),
-            scheme == "http" || scheme == "https",
+            let url = response?.url, url.webScheme != nil,
             let mimeType = response?.mimeType?.lowercased()
         else {
             return nil

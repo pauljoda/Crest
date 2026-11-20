@@ -47,12 +47,12 @@ struct BrowserSetupStepsPanel: View {
             if closes {
                 Button("Cancel", action: close)
                     .buttonStyle(.crestSecondary)
-                    .accessibilityIdentifier("setup-cancel")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.cancel)
             } else if welcome.opensCrest {
                 Button("Start Browsing", action: openCrest)
                     .buttonStyle(.crestSecondary)
                     .help("Start Crest with your Spaces from iCloud, without setting it up")
-                    .accessibilityIdentifier("setup-open-crest")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.openCrest)
             }
         } forward: {
             HStack(spacing: CrestSpacing.medium) {
@@ -125,7 +125,7 @@ struct BrowserSetupStepsPanel: View {
         HStack(spacing: CrestSpacing.medium) {
             Button("Back", systemImage: "chevron.left", action: goBack)
                 .buttonStyle(.crestSecondary)
-                .accessibilityIdentifier("setup-back")
+                .accessibilityIdentifier(BrowserSetupAccessibilityID.back)
             if flow.isCommittingImport || flow.isCompletingSetup {
                 ProgressView().controlSize(.small)
             }
@@ -144,14 +144,14 @@ struct BrowserSetupStepsPanel: View {
         if let current = path.last {
             if current.stepPage != nil {
                 Button("Done", action: goBack)
-                    .accessibilityIdentifier("setup-done")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.done)
             } else if let next = walk.page(after: current) {
                 Button("Continue") { go(to: next, replacing: true) }
-                    .accessibilityIdentifier("setup-continue")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
             } else {
                 Button("Start Browsing", action: startBrowsing)
                     .disabled(flow.isReading)
-                    .accessibilityIdentifier("setup-start-browsing")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.startBrowsing)
             }
         } else {
             Button("Continue") {
@@ -159,7 +159,7 @@ struct BrowserSetupStepsPanel: View {
                 go(to: .bring)
             }
             .disabled(isCheckingCloud)
-            .accessibilityIdentifier("setup-continue")
+            .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
         }
     }
 

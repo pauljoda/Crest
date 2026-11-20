@@ -6033,6 +6033,10 @@
     "placement-facts": {
       "category": "internal",
       "message": "Core rules ask a tab section for the fact they mean, such as whether it outlives the session, instead of naming the section."
+    },
+    "swift-values-once": {
+      "category": "internal",
+      "message": "Swift reads web schemes, limits, waits, log categories, settings links and accessibility identifiers from one owner each, and a link opened in Split View takes its first title from the core."
     }
   }
 }

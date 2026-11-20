@@ -92,15 +92,16 @@ enum MobileBrowserDialogPresenter {
         guard shouldOpen,
             await UIApplication.shared.open(settingsURL)
         else { return }
-        var observedInactiveApplication =
-            UIApplication.shared.applicationState != .active
-        while !observedInactiveApplication {
-            try? await Task.sleep(for: .milliseconds(100))
-            observedInactiveApplication =
-                UIApplication.shared.applicationState != .active
+        // Waits for Crest to step aside for Settings, then to come back.
+        if UIApplication.shared.applicationState == .active {
+            for await _ in NotificationCenter.default.notifications(named: UIApplication.willResignActiveNotification) {
+                break
+            }
         }
-        while UIApplication.shared.applicationState != .active {
-            try? await Task.sleep(for: .milliseconds(100))
+        if UIApplication.shared.applicationState != .active {
+            for await _ in NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification) {
+                break
+            }
         }
     }
 

@@ -16,7 +16,7 @@ struct BrowserPlatformEmojiEntryField: View {
             .focused($isFocused)
             .submitLabel(.done)
             .onSubmit(commit)
-            .accessibilityIdentifier("browser-emoji-icon-field")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.emojiIconField)
         BrowserNativeEmojiPickerButton { isFocused = true }
     }
 }

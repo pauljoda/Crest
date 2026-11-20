@@ -1560,6 +1560,7 @@ struct CapacityLimits: Equatable, Sendable {
     let tabsPerSpace: Int
     let syncRecords: Int
     let credentialFileBytes: Int
+    let filterListBytes: Int
 }
 
 struct CaptureDecision: Query, Equatable, Sendable {
@@ -4470,13 +4471,14 @@ struct OpenInspector: PageRequest, Equatable, Sendable {
 }
 
 struct OpenLinkInSplit: Intent, SessionIntent, Equatable, Sendable {
+    static let probeAddress: String = "about:blank"
+
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
     let targetTabID: UUID
     let address: String
-    let title: String
 }
 
 struct OpenPage: Intent, PageIntent, Equatable, Sendable {
@@ -26047,6 +26049,125 @@ struct TransientPresentation: Hashable, Sendable {
         init(name: String, opensNewTabsInFront: Bool) {
             self.name = name
             self.opensNewTabsInFront = opensNewTabsInFront
+        }
+    }
+}
+
+/// The members of the core's `UrlScheme`. A member's wire tag is its index in `all`.
+struct UrlScheme: Hashable, Sendable {
+    static let maximumSchemeLength = 256
+
+    let tag: Int
+    var name: String { facts.name }
+    var disposition: ExternalSchemeDisposition { facts.disposition }
+    var appInitiatedDisposition: ExternalSchemeDisposition { facts.appInitiatedDisposition }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        disposition: ExternalSchemeDisposition,
+        appInitiatedDisposition: ExternalSchemeDisposition
+    ) {
+        self.tag = tag
+        facts = Facts(name: name, disposition: disposition, appInitiatedDisposition: appInitiatedDisposition)
+    }
+
+    static let http = UrlScheme(
+        tag: 0,
+        name: "http",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let https = UrlScheme(
+        tag: 1,
+        name: "https",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let about = UrlScheme(
+        tag: 2,
+        name: "about",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let blob = UrlScheme(
+        tag: 3,
+        name: "blob",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let chromeExtension = UrlScheme(
+        tag: 4,
+        name: "chrome-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let crestExtension = UrlScheme(
+        tag: 5,
+        name: "crest-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let data = UrlScheme(
+        tag: 6,
+        name: "data",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let webKitExtension = UrlScheme(
+        tag: 7,
+        name: "webkit-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let javaScript = UrlScheme(
+        tag: 8,
+        name: "javascript",
+        disposition: ExternalSchemeDisposition.blocked,
+        appInitiatedDisposition: ExternalSchemeDisposition.blocked
+    )
+    static let file = UrlScheme(
+        tag: 9,
+        name: "file",
+        disposition: ExternalSchemeDisposition.blocked,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+
+    static let all: [UrlScheme] = [
+        http,
+        https,
+        about,
+        blob,
+        chromeExtension,
+        crestExtension,
+        data,
+        webKitExtension,
+        javaScript,
+        file
+    ]
+
+    static func named(_ name: String?) -> UrlScheme? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: UrlScheme, rhs: UrlScheme) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let disposition: ExternalSchemeDisposition
+        let appInitiatedDisposition: ExternalSchemeDisposition
+
+        init(name: String, disposition: ExternalSchemeDisposition, appInitiatedDisposition: ExternalSchemeDisposition) {
+            self.name = name
+            self.disposition = disposition
+            self.appInitiatedDisposition = appInitiatedDisposition
         }
     }
 }

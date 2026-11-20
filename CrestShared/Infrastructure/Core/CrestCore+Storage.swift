@@ -33,7 +33,7 @@ extension CrestCore {
     /// A failed save surfaces through the handler and releases every waiter:
     /// the revisions they wait for stay pending until a later save succeeds.
     func storageFailed(_ reason: StorageFailure) {
-        Logger(subsystem: "com.pauldavis.crest", category: "SessionStorage")
+        DiagnosticLog.sessionStorage.logger
             .error("The core could not save the session: \(String(describing: reason), privacy: .public)")
         storageFailureHandler?(reason)
         let waiting = saveWaiters

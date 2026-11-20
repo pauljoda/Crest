@@ -29,7 +29,7 @@ struct MobileSetupPreviewSheet: View {
                 Spacer(minLength: CrestSpacing.small)
                 Button("Done") { dismiss() }
                     .buttonStyle(.crestSecondary)
-                    .accessibilityIdentifier("setup-preview-done")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.previewDone)
             }
             .padding(.horizontal, CrestSpacing.small)
             MobileSetupLiveWindow(session: live, cornerRadius: MobileSetupPreviewSheetMetrics.cornerRadius)

@@ -31,11 +31,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var keyboardEndFrame = CGRect.null
     /// The screen the keyboard last reported for, in its own coordinates.
     @State var keyboardScreenBounds = CGRect.null
-    @AppStorage(
-        MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
-    private var allowsFloatingSidebar = false
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace
+    /// Whether a narrow window may float its sidebar over the page, as the
+    /// person chose it.
+    private var allowsFloatingSidebar: Bool { BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar }
 
     init(
         model: MobileBrowserRootModel,

@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xae, 0x73, 0xed, 0x8e, 0x52, 0xaa, 0xe8, 0xac, 0xa7, 0x25, 0x8d, 0xb2, 0x68, 0xda, 0xa1, 0x65, 0xb3, 0x5f, 0xa7, 0x02, 0xa4, 0x7f, 0x46, 0xeb, 0x53, 0xe7, 0xea, 0x21, 0x7b, 0x01, 0xc9, 0x72
+        0x7c, 0x95, 0x22, 0x5a, 0x3b, 0x0c, 0xdd, 0x43, 0x83, 0xe2, 0x60, 0x9d, 0x34, 0x02, 0x01, 0xa1, 0xab, 0xe0, 0x8a, 0xc1, 0x76, 0xc1, 0x15, 0x01, 0x45, 0xf4, 0xe0, 0x40, 0xe1, 0xb6, 0x95, 0x81
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -5923,6 +5923,7 @@ public static class ContractCodec {
             reader.ReadInt32(),
             reader.ReadInt32(),
             reader.ReadInt32(),
+            reader.ReadInt32(),
             reader.ReadInt32());
     }
 
@@ -5939,6 +5940,7 @@ public static class ContractCodec {
         writer.WriteInt32(value.TabsPerSpace);
         writer.WriteInt32(value.SyncRecords);
         writer.WriteInt32(value.CredentialFileBytes);
+        writer.WriteInt32(value.FilterListBytes);
     }
 
     public static CaptureDecision ReadCaptureDecision(WireReader reader) {
@@ -13479,7 +13481,6 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadGuid(),
-            reader.ReadString(),
             reader.ReadString());
     }
 
@@ -13492,7 +13493,6 @@ public static class ContractCodec {
         writer.WriteGuid(value.TabId);
         writer.WriteGuid(value.TargetTabId);
         writer.WriteString(value.Address);
-        writer.WriteString(value.Title);
     }
 
     public static OpenPage ReadOpenPage(WireReader reader) {
@@ -23097,6 +23097,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(TransientPresentation.All, value));
+    }
+
+    public static UrlScheme ReadUrlScheme(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return UrlScheme.All[reader.ReadEnum(UrlScheme.All.Count)];
+    }
+
+    public static void WriteUrlScheme(WireWriter writer, UrlScheme value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(UrlScheme.All, value));
     }
 
     public static WebScheme ReadWebScheme(WireReader reader) {

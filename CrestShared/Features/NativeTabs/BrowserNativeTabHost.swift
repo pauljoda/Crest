@@ -59,7 +59,7 @@ struct BrowserNativeTabActions {
                     matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
                     accessController: spaceAccess),
                 space.shownTab(source.tabID)?.nativeTabContent == content,
-                ["https", "http"].contains(url.scheme?.lowercased() ?? "")
+                url.webScheme != nil
             else { return }
             browser.openNewTab(url: url, in: space.id)
             didOpenURL()

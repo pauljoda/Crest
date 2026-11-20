@@ -33,6 +33,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
     /// field — a moment after it closes, and the sidebar that anchors it
     /// should still be there when it arrives.
     static let holdReleaseDelay: TimeInterval = 0.15
+    /// How often the view reads the pointer while it is outside the window,
+    /// where no event reports it: about a frame at 30 Hz.
+    private static let outsidePointerInterval: Duration = .milliseconds(33)
 
     // MARK: - Variables
 
@@ -289,7 +292,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
             // The watch ends with the view as well as when cancelled.
             outsideWatch = Task { @MainActor [weak self] in
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(33))
+                    try? await Task.sleep(for: Self.outsidePointerInterval)
                     guard let self, !Task.isCancelled else { return }
                     refreshPointerHover()
                 }

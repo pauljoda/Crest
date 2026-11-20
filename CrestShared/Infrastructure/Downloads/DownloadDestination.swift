@@ -2,6 +2,8 @@ import Foundation
 
 enum BrowserDownloadDestination {
     static let maximumFilenameByteCount = 240
+    /// The longest extension, dot included, a shortened filename keeps.
+    static let maximumExtensionByteCount = 32
 
     static func availableURL(
         suggestedFilename: String,
@@ -63,7 +65,7 @@ enum BrowserDownloadDestination {
         guard filename.utf8.count > maximumFilenameByteCount else { return filename }
         let path = filename as NSString
         let extensionWithDot = path.pathExtension.isEmpty ? "" : ".\(path.pathExtension)"
-        let safeExtension = extensionWithDot.utf8.count <= 32 ? extensionWithDot : ""
+        let safeExtension = extensionWithDot.utf8.count <= maximumExtensionByteCount ? extensionWithDot : ""
         let stem = safeExtension.isEmpty ? filename : path.deletingPathExtension
         let availableStemBytes = maximumFilenameByteCount - safeExtension.utf8.count
         var result = ""

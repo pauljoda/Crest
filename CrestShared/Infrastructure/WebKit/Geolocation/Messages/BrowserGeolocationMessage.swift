@@ -27,6 +27,6 @@ protocol BrowserGeolocationMessage {
 extension BrowserGeolocationMessage {
     /// Whether `identifier`, a request's, is one the bridge accepts.
     static func isValid(_ identifier: String) -> Bool {
-        !identifier.isEmpty && identifier.utf8.count <= 128
+        BrowserContentMessage.isValidIdentity(identifier)
     }
 }

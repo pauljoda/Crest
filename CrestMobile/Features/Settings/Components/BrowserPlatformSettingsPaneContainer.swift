@@ -18,6 +18,6 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
         Form {
             content
         }
-        .accessibilityIdentifier("settings-form-\(destination.name)")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.settingsForm(destination))
     }
 }

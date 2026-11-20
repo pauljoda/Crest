@@ -22,7 +22,7 @@ final class BrowserPageScriptletSession {
     /// The scriptlets of a page of `spaceID`, as `core` answers them.
     convenience init(core: CrestCore, spaceID: UUID) {
         self.init { url in
-            guard ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return "" }
+            guard url.webScheme != nil else { return "" }
             return (try? core.query(PageScriptlets(spaceID: spaceID, url: url.absoluteString))) ?? ""
         }
     }

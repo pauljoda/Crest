@@ -776,7 +776,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether Apple's Add to Home Screen can take the page: a web page, not a
     /// blank, internal or file one.
     var canAddToHomeScreen: Bool {
-        ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+        webView.url?.webScheme != nil
     }
 
     /// Opens Apple's Add to Home Screen for the page, where the person adds it
@@ -1136,7 +1136,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether the page's bridge can start the element picker: Crest blocks,
     /// it shows a site on the web and its bridge has posted.
     var canPickElementToBlock: Bool {
-        cosmeticFilters?.blocksContent == true && ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+        cosmeticFilters?.blocksContent == true && webView.url?.webScheme != nil
     }
 
     /// Lets the person point at an element of the page to block on its site

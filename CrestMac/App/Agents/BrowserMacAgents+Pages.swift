@@ -532,8 +532,7 @@ extension BrowserMacAgents {
     private static func showsWebPage(_ address: String?) -> Bool {
         guard let address else { return true }
         guard address != "about:blank" else { return true }
-        let scheme = URL(string: address)?.scheme?.lowercased()
-        return scheme == "http" || scheme == "https"
+        return URL(string: address)?.webScheme != nil
     }
 
     /// What `script` answered in the agent's world of `page`.

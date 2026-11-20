@@ -4,6 +4,10 @@ import AppKit
 /// Placement is transient presentation state, separate from the tab transfer.
 @MainActor
 final class BrowserMacTabTearOffPlacement {
+    /// How long the new window waits for its sidebar to report the torn-off
+    /// tab's row before it shows the tab at the drop.
+    private static let revealFallbackDelay: Duration = .seconds(1)
+
     let assignment: BrowserTabRuntimeAssignment
     let dropPoint: CGPoint
     let grabFraction: CGPoint
@@ -36,7 +40,7 @@ final class BrowserMacTabTearOffPlacement {
         self.onReveal = onReveal
         fallback?.cancel()
         fallback = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: Self.revealFallbackDelay)
             guard !Task.isCancelled else { return }
             // The tab already belongs to this workspace. If layout cannot
             // report a row, reveal it at the drop rather than discard the tab.
