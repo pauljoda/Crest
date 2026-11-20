@@ -251,10 +251,16 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
     // sidebar: the sidebar's gap past its edge, where a full-width page
     // keeps the window's inset.
     const frame = getComputedStyle(element.parentElement ?? element);
-    const reach = natural.width + (parseFloat(frame.getPropertyValue("--sidebar-gap")) || 0)
-      - (parseFloat(frame.getPropertyValue("--window-inset")) || 0);
+    const gap = parseFloat(frame.getPropertyValue("--sidebar-gap")) || 0;
+    const inset = parseFloat(frame.getPropertyValue("--window-inset")) || 0;
+    const reach = natural.width + gap - inset;
     const pageWide = during === "docked" ? -reach : 0;
     const pageBeside = during === "docked" ? 0 : reach;
+    // A drawer going away hands the page the window's inset at once, as the
+    // Mac's does when its sidebar leaves the column: the page steps out by
+    // the difference and keeps that much more room beside the sidebar on
+    // the way. One coming in keeps the docked gap throughout.
+    const lead = kind === "drawer" && final === "collapsed" ? inset - gap : 0;
     // A drawer goes until the sidebar is past the window's edge, or comes
     // into its seat; a card settles where its presentation lays it out.
     const to: Offsets = kind === "drawer" && final === "collapsed"
@@ -263,7 +269,7 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
     // A drawer's page keeps its edge beside the sidebar's, within its own
     // reach; beneath a card, the page moves on the card's spring.
     const pageAt = (x: number, fraction: number) => kind === "drawer"
-      ? Math.min(pageBeside, Math.max(pageWide, x))
+      ? Math.min(pageBeside + lead, Math.max(pageWide, x + lead))
       : from.page + (to.page - from.page) * fraction;
     const offsetsAt = (fraction: number): Offsets => {
       const x = devicePixels(from.x + (to.x - from.x) * fraction);

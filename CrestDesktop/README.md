@@ -182,7 +182,7 @@ One pager moves every part of a Space change on one clock, as the Mac's
 `SpacePagerViewport` does (`space-pager.ts`): the sidebar's Space pages slide
 a whole sidebar width a Space, the switcher's selection travels between the
 crests, and each Space's banner fades in over the last. Every change slides
-one page, on the Mac's curve (cubic-bezier 0.27, 1, 0.18, 1, 0.32 seconds a
+one page, on the Mac's curve (cubic-bezier 0.27, 1, 0.18, 1, 0.28 seconds a
 page): between neighbours, around the ends for Next or Previous Space, and to
 a Space further away along a strip that puts it next door. A horizontal swipe
 on a precision touchpad follows the touchpad's own phases, which the page's

@@ -218,7 +218,7 @@ export function Sidebar({
   const [shaken, setShaken] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
     if (shaken.size === 0) return;
-    const timer = setTimeout(() => setShaken(new Set()), 420);
+    const timer = setTimeout(() => setShaken(new Set()), 360);
     return () => clearTimeout(timer);
   }, [shaken]);
   const activeItem = shownTabId ? tabItem(shownTabId) : null;

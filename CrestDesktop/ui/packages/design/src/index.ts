@@ -119,43 +119,47 @@ export interface Spring {
 const snappy = (duration: number): Spring => ({ type: "spring", visualDuration: duration, bounce: 0.15 });
 const smooth = (duration: number): Spring => ({ type: "spring", visualDuration: duration, bounce: 0 });
 
-/** `CrestMotion`: motion named by role, never invented per view. */
+/**
+ * `CrestMotion`: motion named by role, never invented per view, at the
+ * durations the Mac's #1254 gave them: every motion about a quarter shorter,
+ * and a change of Space 0.28 s.
+ */
 export const motion = Object.freeze({
-  press: { duration: 0.14, ease: "easeOut" } as const,
-  surface: { duration: 0.12, ease: "easeInOut" } as const,
-  hover: { duration: 0.14, ease: "easeInOut" } as const,
-  step: snappy(0.3),
-  collection: snappy(0.22),
-  dragPreview: smooth(0.18),
-  navigation: snappy(0.28),
-  chrome: smooth(0.28),
-  sidebarMorph: smooth(0.28),
-  floatingPane: smooth(0.24),
+  press: { duration: 0.1, ease: "easeOut" } as const,
+  surface: { duration: 0.1, ease: "easeInOut" } as const,
+  hover: { duration: 0.1, ease: "easeInOut" } as const,
+  step: snappy(0.22),
+  collection: snappy(0.17),
+  dragPreview: smooth(0.14),
+  navigation: snappy(0.2),
+  chrome: smooth(0.2),
+  sidebarMorph: smooth(0.21),
+  floatingPane: smooth(0.18),
   /** Moving the page aside before a floating sidebar takes its seat. */
-  sidebarDockApproach: smooth(0.22),
+  sidebarDockApproach: smooth(0.16),
   /** The floating sidebar's short last step into its seat. */
-  sidebarDockAttachment: smooth(0.16),
+  sidebarDockAttachment: smooth(0.12),
   /** The floating sidebar going once the pointer leaves it. */
-  sidebarRetreat: smooth(0.3),
-  toolbar: snappy(0.24),
-  feedbackPresentation: snappy(0.22),
-  dismissal: { duration: 0.18, ease: "easeOut" } as const,
-  disclosure: snappy(0.2),
-  spaceSwipe: snappy(0.32),
+  sidebarRetreat: smooth(0.22),
+  toolbar: snappy(0.18),
+  feedbackPresentation: snappy(0.16),
+  dismissal: { duration: 0.14, ease: "easeOut" } as const,
+  disclosure: snappy(0.16),
+  spaceSwipe: snappy(0.28),
   /** Aligning a chosen item within a scrolling picker. */
-  scrollAlignment: snappy(0.24),
+  scrollAlignment: snappy(0.2),
   /** A change of style, such as Space icons turning into dots. */
-  styleChange: { duration: 0.35, ease: "easeInOut" } as const,
-  /** A Peek coming in: a spring with a little more bounce than snappy. */
-  peekEntrance: { type: "spring", visualDuration: 0.28, bounce: 0.2 } as const,
-  peekDismissal: snappy(0.22),
-  palette: { duration: 0.18, ease: "easeInOut" } as const,
+  styleChange: { duration: 0.25, ease: "easeInOut" } as const,
+  /** A Peek coming in: a spring with a little more bounce than snappy, at the Mac's Peek animation time, 240 ms by default. */
+  peekEntrance: { type: "spring", visualDuration: 0.24, bounce: 0.2 } as const,
+  peekDismissal: snappy(0.16),
+  palette: { duration: 0.14, ease: "easeInOut" } as const,
   /** Contents showing on a surface as it arrives, or clearing as it goes. */
   contentReveal: { duration: 0.12, ease: "easeOut" } as const,
   /** Snappy with a little extra bounce. */
-  contentNavigation: { type: "spring", visualDuration: 0.42, bounce: 0.19 } as const,
+  contentNavigation: { type: "spring", visualDuration: 0.3, bounce: 0.19 } as const,
   /** The archive, history and downloads destinations coming out of the lists button. */
-  utilityFanReveal: { type: "spring", visualDuration: 0.42, bounce: 0.05 } as const,
+  utilityFanReveal: { type: "spring", visualDuration: 0.3, bounce: 0.05 } as const,
 });
 
 /**

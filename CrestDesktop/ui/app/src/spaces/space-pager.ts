@@ -157,9 +157,9 @@ interface Settlement {
   position(elapsed: number): number;
 }
 
-/** A slide nothing threw, as SpacePagerSettlement: the Mac's measured curve over 0.32 s a page. */
+/** A slide nothing threw, as SpacePagerSettlement: the Mac's measured curve over 0.28 s a page (spaceSwipeTransition). */
 class CurveSettlement implements Settlement {
-  static readonly pageDuration = 0.32;
+  static readonly pageDuration = 0.28;
   readonly start: number;
   readonly end: number;
   readonly duration: number;
@@ -180,13 +180,13 @@ class CurveSettlement implements Settlement {
  * A swipe's release: the strip carries on at the fingers' speed and comes to
  * rest on a critically damped spring, as a touchpad's own inertia does,
  * rather than starting over on a fixed curve. Its stiffness settles a page
- * from rest in about the Mac's 0.32 s. A throw toward the destination faster
+ * from rest in about the Mac's 0.28 s. A throw toward the destination faster
  * than the spring could stop from is eased to that speed, so the strip never
  * passes the page it lands on.
  */
 class SpringSettlement implements Settlement {
-  /** The spring's natural frequency, in radians a second: within 1% of the way in 0.32 s from rest. */
-  static readonly stiffness = 20.75;
+  /** The spring's natural frequency, in radians a second: within 1% of the way in 0.28 s from rest. */
+  static readonly stiffness = 23.71;
   /** The fastest throw the spring takes on, in pages a second. */
   static readonly fastest = 8;
   readonly end: number;

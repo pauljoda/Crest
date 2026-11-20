@@ -58,7 +58,7 @@ export function SpaceContentStrip({ spaces, liveId, shownPins, embedsPages, onRe
   useLayoutEffect(() => {
     if (!dissolve || dissolve.generation === dissolving?.generation) return;
     setDissolving(dissolve);
-    const timer = setTimeout(() => setDissolving((current) => (current?.generation === dissolve.generation ? null : current)), 320);
+    const timer = setTimeout(() => setDissolving((current) => (current?.generation === dissolve.generation ? null : current)), 280);
     return () => clearTimeout(timer);
   }, [dissolve, dissolving?.generation]);
 

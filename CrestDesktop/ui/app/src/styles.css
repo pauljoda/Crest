@@ -822,7 +822,7 @@ button {
 
 /* A change of Space the pager shows at once dissolves the card it leaves. */
 .space-content-page.dissolving {
-  animation: space-dissolve 320ms cubic-bezier(0.27, 1, 0.18, 1) forwards;
+  animation: space-dissolve 280ms cubic-bezier(0.27, 1, 0.18, 1) forwards;
 }
 
 @keyframes space-dissolve {
@@ -849,12 +849,12 @@ button {
   border-radius: 18px;
   overflow: hidden;
   isolation: isolate;
-  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebar-slot.collapsed {
   transform: translateX(calc(-100% - 21px));
-  transition-duration: 200ms;
+  transition-duration: 150ms;
 }
 
 /* The floating card's shadow, beside the card rather than on it, since the
@@ -873,13 +873,13 @@ button {
   pointer-events: none;
   -webkit-app-region: initial;
   will-change: transform, opacity;
-  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out;
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 120ms ease-out;
 }
 
 .sidebar-card-shadow.collapsed {
   transform: translateX(calc(-100% - 21px));
   opacity: 0;
-  transition-duration: 200ms;
+  transition-duration: 150ms;
 }
 
 /* Leaving its seat, the sidebar becomes the card where it stands: the card's
@@ -891,13 +891,13 @@ button {
 .sidebar-slot.dressing-in > .space-banner,
 .sidebar-slot.dressing-in > .sidebar-card-sheen,
 .sidebar-slot.dressing-in::after {
-  animation: sidebar-dressing-in 280ms ease-out backwards;
+  animation: sidebar-dressing-in 210ms ease-out backwards;
 }
 
 .sidebar-card-shadow.dressing-out,
 .sidebar-slot.dressing-out > .space-banner,
 .sidebar-slot.dressing-out > .sidebar-card-sheen {
-  animation: sidebar-dressing-out 160ms ease-out forwards;
+  animation: sidebar-dressing-out 120ms ease-out forwards;
 }
 
 .sidebar-slot.docked.dressing-out {
@@ -915,7 +915,7 @@ button {
   border-radius: inherit;
   box-shadow: inset 0 0 0 0.75px var(--surface-border);
   pointer-events: none;
-  animation: sidebar-dressing-out 160ms ease-out forwards;
+  animation: sidebar-dressing-out 120ms ease-out forwards;
 }
 
 /* While it morphs, the sidebar stands over the page, which moves beside it
@@ -1021,7 +1021,7 @@ button {
   border-radius: 1px;
   background: var(--fg);
   opacity: 0;
-  transition: opacity 140ms ease-in-out;
+  transition: opacity 100ms ease-in-out;
 }
 
 .sidebar-resize-handle.active .sidebar-resize-indicator,
@@ -1137,7 +1137,7 @@ button {
      system draws them over everything else in the window. */
   z-index: 11;
   display: flex;
-  transition: opacity 140ms ease-in-out;
+  transition: opacity 100ms ease-in-out;
 }
 
 .window-controls.inactive {
@@ -1178,7 +1178,7 @@ button {
   place-items: center;
   border-radius: var(--crest-radius-compact);
   color: var(--fg-secondary);
-  transition: background 140ms ease-in-out, color 140ms ease-in-out;
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
 }
 
 .chrome-button:hover:not(:disabled) {
@@ -1208,13 +1208,13 @@ button {
   color: rgb(var(--primary-rgb) / 0.85);
   /* Back as the palette that grew out of it lands on it, as the Mac's
      hand-off's trailing fade: the frame's travel less the fade. */
-  transition: box-shadow 140ms ease-in-out, opacity 120ms ease-out 160ms;
+  transition: box-shadow 100ms ease-in-out, opacity 120ms ease-out 90ms;
 }
 
 /* Handed off to the palette growing out of it, as the frame leaves it. */
 .address-field.handed-off {
   opacity: 0;
-  transition: box-shadow 140ms ease-in-out, opacity 120ms ease-out;
+  transition: box-shadow 100ms ease-in-out, opacity 120ms ease-out;
 }
 
 .address-field:has(.address-summary:focus-visible) {
@@ -1236,7 +1236,7 @@ button {
   transform: scaleX(0);
   transform-origin: left;
   pointer-events: none;
-  transition: transform 220ms cubic-bezier(0.25, 1, 0.5, 1), opacity 220ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1), opacity 180ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .address-field.loading .address-progress {
@@ -1312,7 +1312,7 @@ button {
   height: 28px;
   border-radius: 7.5px;
   color: rgb(var(--primary-rgb) / 0.85);
-  transition: background 140ms ease-in-out;
+  transition: background 100ms ease-in-out;
 }
 
 /* A lock with no certificate to show is quiet, as a disabled control is. */
@@ -1370,7 +1370,7 @@ button {
   background:
     linear-gradient(rgb(var(--primary-rgb) / var(--pin-lift)), rgb(var(--primary-rgb) / var(--pin-lift))),
     var(--field);
-  transition: --pin-lift 140ms ease-in-out;
+  transition: --pin-lift 100ms ease-in-out;
 }
 
 @property --pin-lift {
@@ -1396,7 +1396,7 @@ button {
   box-shadow: inset 0 0 0 2px var(--pin-accent, var(--default-favicon));
   opacity: 0;
   pointer-events: none;
-  transition: opacity 140ms ease-in-out;
+  transition: opacity 100ms ease-in-out;
 }
 
 .pinned-tile.selected .pin-ring {
@@ -1423,7 +1423,7 @@ button {
      ellipsis 2 from the edge, where a 24-point control would end 4 in. */
   padding: 0 2px 0 8px;
   border-radius: 8px;
-  transition: background 120ms ease-in-out;
+  transition: background 100ms ease-in-out;
 }
 
 /* With no pinned tabs, the Mac keeps their 12-point band, where a tab
@@ -1469,7 +1469,7 @@ button {
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
-  transition: opacity 200ms cubic-bezier(0.2, 0.9, 0.3, 1), transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  transition: opacity 160ms cubic-bezier(0.2, 0.9, 0.3, 1), transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 /* Collapsing turns the chevron to point at the title as it fades in over the crest. */
@@ -1580,7 +1580,7 @@ button {
   border-radius: max(9px, calc(13px - 4px * var(--row-depth, 0)));
   text-align: start;
   color: var(--fg);
-  transition: background 140ms ease-in-out;
+  transition: background 100ms ease-in-out;
 }
 
 .row-glyph {
@@ -1660,7 +1660,7 @@ button {
   border-radius: 6px;
   color: var(--fg-secondary);
   opacity: 0;
-  transition: opacity 140ms ease-in-out, background 140ms ease-in-out;
+  transition: opacity 100ms ease-in-out, background 100ms ease-in-out;
 }
 
 .tab-row:hover .row-close,
@@ -1711,7 +1711,7 @@ button {
 
 /* A pinned tab a lift let go of shakes, as the Mac's does. */
 .pinned-tile.shaken {
-  animation: tile-shake 360ms ease-in-out;
+  animation: tile-shake 300ms ease-in-out;
 }
 
 @keyframes tile-shake {
@@ -1805,7 +1805,7 @@ button {
   border-radius: 13px;
   text-align: center;
   transform: none;
-  transition: width 180ms ease, height 180ms ease, border-radius 180ms ease, left 180ms ease, top 180ms ease;
+  transition: width 140ms ease, height 140ms ease, border-radius 140ms ease, left 140ms ease, top 140ms ease;
 }
 
 .lift-preview.card .row-title {
@@ -1902,7 +1902,7 @@ button {
   gap: 2px;
   padding: 4px 4px 5px;
   border-radius: 13px;
-  transition: background 140ms ease-in-out, box-shadow 140ms ease-in-out;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
 }
 
 .split-card:hover {
@@ -2422,7 +2422,7 @@ button {
   background: var(--alert-field);
   color: var(--alert-ink);
   font: inherit;
-  transition: box-shadow 120ms ease-in-out;
+  transition: box-shadow 100ms ease-in-out;
 }
 
 .sheet-field + .sheet-field {
@@ -2450,7 +2450,7 @@ button {
   background: var(--alert-button);
   color: var(--alert-ink);
   font: 400 13px var(--crest-font-system);
-  transition: filter 120ms ease-in-out;
+  transition: filter 100ms ease-in-out;
 }
 
 .sheet:has(.sheet-field) .sheet-actions {
@@ -2483,7 +2483,7 @@ button {
   box-shadow: inset 0 0 0 1px var(--prompt-border);
   color: var(--prompt-ink);
   font-weight: 600;
-  transition: filter 120ms ease-in-out;
+  transition: filter 100ms ease-in-out;
 }
 
 .permission-button:hover {
@@ -2689,7 +2689,7 @@ button {
   border-radius: var(--crest-radius-compact);
   background: var(--site-tile);
   color: var(--prompt-ink);
-  transition: background 120ms ease-in-out;
+  transition: background 100ms ease-in-out;
 }
 
 .site-control-action:hover {
@@ -2791,7 +2791,7 @@ button {
   border: 0;
   border-radius: 9px;
   background: color-mix(in srgb, var(--prompt-ink) 22%, transparent);
-  transition: background-color 120ms ease-in-out;
+  transition: background-color 100ms ease-in-out;
 }
 
 .site-blocking-switch.on {
@@ -2934,7 +2934,7 @@ button {
   gap: 2px;
   padding-inline-end: 4px;
   border-radius: var(--crest-radius-compact);
-  transition: background 140ms ease-in-out;
+  transition: background 100ms ease-in-out;
 }
 
 .download-row:hover {
@@ -3062,7 +3062,7 @@ button {
   outline: 0.5px solid rgb(0 0 0 / 0.12);
   outline-offset: calc(var(--page-seam) - 0.5px);
   box-shadow: 0 2px 14px var(--page-seam) rgb(0 0 0 / 0.11);
-  transition: outline-color 140ms ease-in-out;
+  transition: outline-color 100ms ease-in-out;
 }
 
 /* In a Split View the card the window's chrome speaks for wears a 2-point
@@ -3943,7 +3943,7 @@ embed.page-frame {
   background: none;
   color: var(--fg);
   text-align: start;
-  transition: background 120ms ease-in-out;
+  transition: background 100ms ease-in-out;
 }
 
 .utility-row:hover {
@@ -4268,7 +4268,7 @@ embed.page-frame {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  transition: background-color 120ms ease-in-out;
+  transition: background-color 100ms ease-in-out;
 }
 
 .extension-tile:hover {
@@ -4359,7 +4359,7 @@ embed.page-frame {
   height: 34px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
-  transition: background-color 120ms ease-in-out;
+  transition: background-color 100ms ease-in-out;
 }
 
 .site-extension-action:hover {
@@ -4379,7 +4379,7 @@ embed.page-frame {
   box-shadow: 0 0 0 1px var(--prompt-border);
   color: var(--prompt-ink-secondary);
   opacity: 0;
-  transition: opacity 120ms ease-in-out;
+  transition: opacity 100ms ease-in-out;
 }
 
 .site-extension:hover .site-extension-pin,

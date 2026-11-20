@@ -90,8 +90,11 @@ export function PeekLayer({ session, peek, spaces, hidden, onClose, onOpenIn }: 
   );
 }
 
-/** The Mac's spring for a Peek coming out of its link and going back into it. */
-const peekSpring = { type: "spring", visualDuration: 0.6, bounce: 0.16 } as const;
+/**
+ * The Mac's spring for a Peek coming out of its link and going back into it,
+ * at its Peek animation time's default, 240 ms (BrowserPeekPace).
+ */
+const peekSpring = { type: "spring", visualDuration: 0.24, bounce: 0.16 } as const;
 
 /**
  * Going back into the link, unless the Peek was kept as a tab, which leaves
@@ -100,7 +103,7 @@ const peekSpring = { type: "spring", visualDuration: 0.6, bounce: 0.16 } as cons
  */
 const stackVariants: Variants = {
   gone: (animated: boolean) => (animated && !matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? { transform: "scale(0.005)", opacity: 0, transition: { transform: peekSpring, opacity: { duration: 0.3, ease: "easeOut" } } }
+    ? { transform: "scale(0.005)", opacity: 0, transition: { transform: peekSpring, opacity: { duration: 0.22, ease: "easeOut" } } }
     : { opacity: 0, transition: { duration: 0 } }),
 };
 
