@@ -1493,7 +1493,7 @@ struct CanReturnToSavedAddress: Query, Equatable, Sendable {
 struct CanSend: Query, Sendable {
     typealias Answer = SendPermission
 
-    let intent: any Intent
+    let intent: any SessionIntent
 }
 
 struct CanTearOff: Query, Equatable, Sendable {

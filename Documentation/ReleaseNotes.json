@@ -6017,6 +6017,10 @@
     "charge-kind-codec": {
       "category": "internal",
       "message": "Each crest figure kind reads and writes its own stored form."
+    },
+    "can-send-session-intents": {
+      "category": "internal",
+      "message": "Asking whether the core would take an action accepts only session intents, so the type says what the check covers."
     }
   }
 }

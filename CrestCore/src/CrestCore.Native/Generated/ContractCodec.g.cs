@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x14, 0x73, 0xfa, 0xc4, 0x60, 0x7e, 0x1f, 0x32, 0x78, 0x22, 0x66, 0x69, 0x55, 0x97, 0xbd, 0xf0, 0xf7, 0x22, 0xbf, 0xbd, 0xc8, 0xa6, 0x52, 0xaa, 0x26, 0xc2, 0x48, 0x94, 0xed, 0x09, 0x66, 0x83
+        0xbb, 0x7b, 0xfb, 0xb8, 0x54, 0xf7, 0x0f, 0x36, 0x0e, 0xf4, 0x56, 0xd4, 0xa4, 0x0a, 0x1c, 0xc5, 0xf9, 0x09, 0x5c, 0xdc, 0x7e, 0xed, 0x06, 0x1a, 0x5a, 0x6e, 0xb0, 0x95, 0x94, 0xc3, 0x50, 0xf4
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -3604,6 +3604,99 @@ public static class ContractCodec {
 
     public static void WriteImportWorkspace(WireWriter writer, ImportWorkspace value) => WriteIntent(writer, value);
 
+    public static SessionIntent ReadSessionIntent(WireReader reader) {
+        int tag = reader.ReadTag();
+        switch (tag) {
+            case 5: return ReadAddSubSpace(reader);
+            case 24: return ReadApplyManualSetup(reader);
+            case 26: return ReadArchiveTransientPage(reader);
+            case 31: return ReadBeginDeletingSpace(reader);
+            case 49: return ReadChooseTabIcon(reader);
+            case 51: return ReadCleanUpCurrentTabs(reader);
+            case 52: return ReadClearCurrentTabs(reader);
+            case 53: return ReadClearHistory(reader);
+            case 55: return ReadCloseTab(reader);
+            case 56: return ReadCloseTabs(reader);
+            case 70: return ReadCollapseAllFolders(reader);
+            case 71: return ReadCollapseFolder(reader);
+            case 72: return ReadCollapseSplit(reader);
+            case 75: return ReadCreateFolder(reader);
+            case 76: return ReadCreateSpace(reader);
+            case 81: return ReadDeleteFolder(reader);
+            case 82: return ReadDeleteFolderAndContents(reader);
+            case 85: return ReadDeleteTab(reader);
+            case 86: return ReadDeleteTabs(reader);
+            case 89: return ReadDissolveSplit(reader);
+            case 90: return ReadDropAroundTab(reader);
+            case 91: return ReadDropIntoList(reader);
+            case 92: return ReadDropIntoSplit(reader);
+            case 93: return ReadDropOnSpace(reader);
+            case 94: return ReadDuplicateTab(reader);
+            case 95: return ReadDuplicateTabs(reader);
+            case 99: return ReadExpandSavedTabs(reader);
+            case 102: return ReadFileTabs(reader);
+            case 108: return ReadFinishDeletingSpace(reader);
+            case 114: return ReadFolderTabs(reader);
+            case 115: return ReadFolderTabsAround(reader);
+            case 121: return ReadImportAppPreferences(reader);
+            case 122: return ReadImportReviewedSpaces(reader);
+            case 123: return ReadImportSpaces(reader);
+            case 129: return ReadJoinSpace(reader);
+            case 130: return ReadJoinSplit(reader);
+            case 131: return ReadKeepPageLoaded(reader);
+            case 132: return ReadKeepTabsLoaded(reader);
+            case 134: return ReadLeaveSplit(reader);
+            case 141: return ReadMoveFolder(reader);
+            case 142: return ReadMoveFolderToSpace(reader);
+            case 147: return ReadMoveSplitMember(reader);
+            case 148: return ReadMoveTab(reader);
+            case 149: return ReadMoveTabToSpace(reader);
+            case 150: return ReadMoveTabToWindow(reader);
+            case 151: return ReadMoveTabsToSpace(reader);
+            case 152: return ReadNameSplit(reader);
+            case 154: return ReadNavigateTab(reader);
+            case 160: return ReadOpenAddress(reader);
+            case 162: return ReadOpenLinkInSplit(reader);
+            case 164: return ReadOpenTab(reader);
+            case 173: return ReadPromoteTransientPage(reader);
+            case 174: return ReadPutAwayTabs(reader);
+            case 187: return ReadRemoveHistoryAddress(reader);
+            case 192: return ReadRenameFolder(reader);
+            case 193: return ReadRenameTab(reader);
+            case 194: return ReadReopenClosedTab(reader);
+            case 195: return ReadReorderSpaces(reader);
+            case 196: return ReadReplaceSavedAddress(reader);
+            case 203: return ReadResetPrivateBrowsing(reader);
+            case 212: return ReadRestoreArchivedTab(reader);
+            case 217: return ReadReturnToSavedAddress(reader);
+            case 223: return ReadSeparateSpace(reader);
+            case 224: return ReadSeparateSplits(reader);
+            case 227: return ReadSetAppPreferences(reader);
+            case 228: return ReadSetBrowsingPreferences(reader);
+            case 231: return ReadSetCredentialPreferences(reader);
+            case 235: return ReadSetDefaultSpace(reader);
+            case 238: return ReadSetFolderColor(reader);
+            case 239: return ReadSetFolderGroup(reader);
+            case 240: return ReadSetFolderSymbol(reader);
+            case 247: return ReadSetSeparatePinnedTabs(reader);
+            case 249: return ReadSetSpaceAccess(reader);
+            case 250: return ReadSetSpaceBranding(reader);
+            case 251: return ReadSetSpaceIdentity(reader);
+            case 252: return ReadSetSpaceSearch(reader);
+            case 253: return ReadSetSplitIcon(reader);
+            case 254: return ReadSetTranslationRule(reader);
+            case 264: return ReadShowStartPage(reader);
+            case 266: return ReadSplitTabs(reader);
+            case 271: return ReadStepSplitMember(reader);
+            case 274: return ReadSweepExpiredRecords(reader);
+            case 275: return ReadTintSplit(reader);
+            case 277: return ReadTogglePin(reader);
+            default: throw new WireFormatException($"Intent tag {tag} is not a SessionIntent.");
+        }
+    }
+
+    public static void WriteSessionIntent(WireWriter writer, SessionIntent value) => WriteIntent(writer, value);
+
     /// <summary>The most bytes one encoded intent with this tag may take.</summary>
     public static int MaximumIntentBytes(int tag) => tag switch {
         6 => 67108864,
@@ -5685,7 +5778,7 @@ public static class ContractCodec {
     public static CanSend ReadCanSend(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new CanSend(
-            ReadIntent(reader));
+            ReadSessionIntent(reader));
     }
 
     public static void WriteCanSend(WireWriter writer, CanSend value) {
