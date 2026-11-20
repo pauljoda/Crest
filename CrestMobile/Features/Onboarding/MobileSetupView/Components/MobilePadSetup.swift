@@ -56,6 +56,9 @@ struct MobilePadSetup: View {
         GeometryReader { geometry in
             let stepsWidth = MobilePadSetupMetrics.panelWidth(in: geometry.size.width)
             let sheetWidth = isTakingOver ? 0 : isLanding ? geometry.size.width : stepsWidth
+            let insets = geometry.safeAreaInsets
+            let fullWidth = geometry.size.width + insets.leading + insets.trailing
+            let paperWidth = isTakingOver ? 0 : isLanding ? fullWidth : insets.leading + stepsWidth
             ZStack(alignment: .leading) {
                 copy
                     .padding(.leading, isTakingOver ? 0 : stepsWidth)
@@ -65,7 +68,7 @@ struct MobilePadSetup: View {
                     .offset(x: isLanding ? geometry.size.width - stepsWidth : 0)
                     .allowsHitTesting(!isLanding)
                     .accessibilityHidden(isLanding)
-                paper(screenWidth: geometry.size.width, width: sheetWidth)
+                paper(fullWidth: fullWidth, width: paperWidth)
                 sheet(stepsWidth: stepsWidth, screenWidth: geometry.size.width, width: sheetWidth)
             }
             .background {
@@ -92,10 +95,12 @@ struct MobilePadSetup: View {
     /// The sheet of paper setup lies on, from the top of the screen to the
     /// bottom, its trailing edge casting a shade on the room. The paper keeps
     /// the screen's width as the sheet slides, and only how much of it shows
-    /// changes, so its grain is never drawn again on the way.
-    private func paper(screenWidth: CGFloat, width: CGFloat) -> some View {
+    /// changes, so its grain is never drawn again on the way. Its width runs
+    /// from the screen's own edge, so the welcome's paper covers the strip
+    /// the status bar keeps at the side of a wide screen, as on the Duo.
+    private func paper(fullWidth: CGFloat, width: CGFloat) -> some View {
         BrowserSetupPaper()
-            .frame(width: screenWidth)
+            .frame(width: fullWidth)
             .frame(width: width, alignment: .leading)
             .frame(maxHeight: .infinity)
             .clipped()
@@ -104,6 +109,7 @@ struct MobilePadSetup: View {
                     .opacity(isLanding ? 0 : 1)
             }
             .opacity(isTakingOver ? 0 : 1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .ignoresSafeArea()
     }
 

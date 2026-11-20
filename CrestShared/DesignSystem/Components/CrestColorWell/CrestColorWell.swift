@@ -25,9 +25,7 @@ struct CrestColorWell: View {
                 .overlay { Circle().strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
                 .frame(width: diameter, height: diameter)
         }
-        // The popover hangs below the well, so growing for a gradient's
-        // controls extends it downward and never moves what it shows.
-        .crestPopover(isPresented: $isOpen, arrowEdge: .bottom) {
+        .crestPopover(isPresented: $isOpen, arrowEdge: CrestColorWellMetrics.arrowEdge) {
             // A phone keeps the picker beside the well rather than on a sheet
             // of its own, which would leave it a small card on an empty page.
             CrestColorPopover(fill: $fill, texture: texture)
@@ -36,6 +34,19 @@ struct CrestColorWell: View {
         .accessibilityValue(Text(fill.isGradient ? "Gradient" : "Color"))
         .help(Text(title))
     }
+}
+
+enum CrestColorWellMetrics {
+    #if os(macOS)
+        /// The popover hangs below the well, so growing for a gradient's
+        /// controls extends it downward and never moves what it shows.
+        static let arrowEdge: Edge? = .bottom
+    #else
+        /// A phone or iPad opens the popover on whichever side of the well
+        /// has the most room, as the picker is taller than either side of a
+        /// phone's screen leaves.
+        static let arrowEdge: Edge? = nil
+    #endif
 }
 
 #if DEBUG

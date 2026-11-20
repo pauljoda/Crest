@@ -275,8 +275,11 @@ struct MobileSetupSteps: View {
                     .multilineTextAlignment(.center)
             }
             HStack(spacing: CrestSpacing.small) {
+                // Frosted glass under the quiet pill, so the page scrolling
+                // behind it doesn't show through its title.
                 Button("Back", systemImage: "chevron.left", action: goBack)
                     .buttonStyle(.crestSecondary)
+                    .glassEffect(.regular, in: .capsule)
                     .accessibilityIdentifier("setup-back")
                 Spacer(minLength: 0)
                 if isFinishing { ProgressView() }

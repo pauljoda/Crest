@@ -67,8 +67,14 @@ struct CrestColorPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             VStack(spacing: CrestSpacing.small) {
+                // Where the screen leaves the popover less room than it asks
+                // for, as on a phone, the wheel gives up the difference and
+                // everything under it keeps its size.
                 CrestColorWheel(fill: $draft, selection: $selection, stops: $stops, isLinked: isLinked)
-                    .frame(height: CrestColorPopoverMetrics.wheelHeight)
+                    .frame(
+                        minHeight: CrestColorPopoverMetrics.smallestWheelHeight,
+                        idealHeight: CrestColorPopoverMetrics.wheelHeight,
+                        maxHeight: CrestColorPopoverMetrics.wheelHeight)
                 controls
             }
             brightness
@@ -80,7 +86,12 @@ struct CrestColorPopover: View {
             spectrum
         }
         .padding(CrestSpacing.medium)
-        .frame(width: CrestColorPopoverMetrics.width)
+        // Narrower where the popover opens beside a well on a phone, the
+        // wheel and the rows under it taking the width there is.
+        .frame(
+            minWidth: CrestColorPopoverMetrics.smallestWidth, idealWidth: CrestColorPopoverMetrics.width,
+            maxWidth: CrestColorPopoverMetrics.width
+        )
         // The popover takes its new size in one step rather than animating
         // its frame against the content, so nothing in it moves as it grows.
         .modifier(CrestPlatformInstantPopoverResizing())
@@ -149,9 +160,25 @@ struct CrestColorPopover: View {
 
     /// The spectrum: a named hue every step round the wheel, each setting
     /// the chosen handle, which the wheel and Brightness then tune.
+    /// One row where the popover is wide enough for every hue, two of half
+    /// as many where it is narrower, as beside a well on a phone.
     private var spectrum: some View {
+        let hues = Array(zip(Self.spectrum, Self.spectrumNames))
+        let half = hues.count / 2
+        return ViewThatFits(in: .horizontal) {
+            spectrumRow(hues[...])
+            VStack(spacing: CrestSpacing.extraSmall) {
+                spectrumRow(hues[..<half])
+                spectrumRow(hues[half...])
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("Spectrum"))
+    }
+
+    private func spectrumRow(_ hues: ArraySlice<(BrandColor, LocalizedStringResource)>) -> some View {
         HStack(spacing: 0) {
-            ForEach(Array(zip(Self.spectrum, Self.spectrumNames)), id: \.0) { color, name in
+            ForEach(hues, id: \.0) { color, name in
                 CrestSelectableCard(
                     isSelected: draft.colors[chosenIndex].matches(color),
                     accessibilityLabel: Text(name), density: .swatch, tint: nil
@@ -171,8 +198,6 @@ struct CrestColorPopover: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Spectrum"))
     }
 
     // MARK: - Mutators
@@ -215,9 +240,14 @@ struct CrestColorPopover: View {
 
 enum CrestColorPopoverMetrics {
     static let width: CGFloat = 320
+    /// The narrowest the popover gets where the screen leaves it less room.
+    static let smallestWidth: CGFloat = 260
     /// The wheel's room, as wide as the popover's content: its diameter and
     /// the chosen handle's overhang at the rim.
     static let wheelHeight: CGFloat = width - 2 * CrestSpacing.medium
+    /// The least room the wheel shrinks to where the popover has to fit a
+    /// smaller space.
+    static let smallestWheelHeight: CGFloat = 120
     /// Every control in the row under the wheel.
     static let control = CGSize(width: 36, height: 32)
     /// A spectrum swatch, small enough that all of them fit the popover's
