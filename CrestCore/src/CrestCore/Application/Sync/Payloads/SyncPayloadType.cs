@@ -235,7 +235,7 @@ internal abstract class SyncPayloadType {
         /// what it holds otherwise.
         public override bool HidesWhenEmpty(JsonObject value) =>
             value[StoredSessionCodec.Key.Location] is JsonValue location && location.TryGetValue<string>(out var placed)
-            && placed == TabPlacement.Current.Name && (value[SyncPayload.Key.EmptiedAt] is not null
+            && TabPlacement.Named(placed)?.IsDurable == false && (value[SyncPayload.Key.EmptiedAt] is not null
                 || value[StoredSessionCodec.Key.IsGroup] is JsonValue group && group.TryGetValue<bool>(out var isGroup) && isGroup);
     }
 

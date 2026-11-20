@@ -205,7 +205,7 @@ public sealed partial record SetupImportReview {
     internal SetupImportReview Analyzed(SessionState session) {
         ArgumentNullException.ThrowIfNull(session);
         var byId = session.ImportDestinations.ToDictionary(space => space.Id);
-        var pinned = byId.ToDictionary(entry => entry.Key, entry => entry.Value.Tabs.Count(tab => tab.Placement == TabPlacement.Pinned));
+        var pinned = byId.ToDictionary(entry => entry.Key, entry => entry.Value.Tabs.Count(tab => tab.IsPinned));
         Dictionary<Guid, int> created = [];
         List<Guid> overflow = [];
         Guid? GroupOf(Guid? spaceId) => spaceId is { } id && byId.ContainsKey(id) ? session.GroupOf(id)?.Primary.Id ?? id : null;

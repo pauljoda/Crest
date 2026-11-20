@@ -155,7 +155,7 @@ internal sealed class PageGroup {
         if (folder is null) {
             if (!showsFolder) return kept.Count > 0;
             showsFolder = false;
-            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && tab.Placement == TabPlacement.Current
+            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && !tab.Placement.IsDurable
                 && tab.FolderId is null);
             Ask(pages, issue, live, heldCollapsed, deleted ? [] : kept);
             return !deleted && kept.Count > 0;

@@ -157,7 +157,7 @@ public sealed class ShortcutCommand {
             new(DevicePlatform.Desktop, Character("e", Command | Shift), YieldsToOverrides: true),
             new(DevicePlatform.Mobile, Character("e", Command), YieldsToOverrides: false)
         ],
-        availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && shown.Placement == TabPlacement.Current);
+        availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && !shown.Placement.IsDurable);
     public static readonly ShortcutCommand PreviousTab = new(Kinds.PreviousTab, name: "previousTab", ShortcutSection.Tabs,
         title: "Previous Tab", symbol: "chevron.up", shortcuts: Everywhere(Special(ShortcutSpecialKey.UpArrow, Command | Option)),
         searchTerms: "switch cycle tabs up down arrow", reservedFromPages: true);

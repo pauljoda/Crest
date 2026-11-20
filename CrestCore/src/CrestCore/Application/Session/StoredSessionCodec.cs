@@ -257,7 +257,9 @@ internal static partial class StoredSessionCodec {
     /// own arithmetic, so both sides agree to the bit and repair cannot invent an
     /// edit; any other stored value goes back exactly as it came.
     private static double EditSeconds(DateTimeOffset date) =>
-        (date - DateTimeOffset.UnixEpoch).Ticks % TimeSpan.TicksPerMillisecond == 0 ? NativeEditTimestamp.Encode(date) : Seconds(date);
+        (date - DateTimeOffset.UnixEpoch).Ticks % TimeSpan.TicksPerMillisecond == 0
+            ? BrowserEditTimestamp.NormalizeUnixSeconds((date - DateTimeOffset.UnixEpoch).TotalSeconds) - ReferenceEpochUnixSeconds
+            : Seconds(date);
 
     private static DateTimeOffset Date(JsonNode? node) => node is null ? ReferenceEpoch : Date(Number(node));
 

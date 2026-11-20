@@ -6029,6 +6029,10 @@
     "core-files-by-rule": {
       "category": "internal",
       "message": "Two lone rejections join their concept files, the capacity limits file takes its record's name, and the palette's layout and source sets get files of their own."
+    },
+    "placement-facts": {
+      "category": "internal",
+      "message": "Core rules ask a tab section for the fact they mean, such as whether it outlives the session, instead of naming the section."
     }
   }
 }

@@ -55,7 +55,7 @@ public sealed record FolderState(
 
     /// Whether the folder goes when its last tab leaves it: a folder of the
     /// open tabs does, and a saved folder stays empty.
-    internal bool GoesWhenEmptied => Location == TabPlacement.Current;
+    internal bool GoesWhenEmptied => !Location.IsDurable;
 
     /// Whether collapsing every folder closes this one: an open folder, at
     /// any depth. A group keeps its own state.
