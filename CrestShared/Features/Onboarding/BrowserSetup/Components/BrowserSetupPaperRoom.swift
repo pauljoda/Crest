@@ -23,7 +23,7 @@ struct BrowserSetupPaperRoom: View {
         ZStack {
             Rectangle()
                 .fill(CrestColorFill(tones.colors, degrees: tones.degrees).style)
-            CrestGrain(density: BrowserSetupPaperRoomMetrics.grainDensity)
+            CrestGrain(style: .speckled(density: BrowserSetupPaperRoomMetrics.grainDensity))
                 .blendMode(.softLight)
                 .opacity(BrowserSetupPaperRoomMetrics.grain)
         }
