@@ -5949,6 +5949,10 @@
     "remove-dead-tests-and-resources": {
       "category": "internal",
       "message": "Removed empty test classes and unused test helpers, old app-icon sources, an unused fixture corpus, a broken icon script, an empty test scheme and catalog strings no code uses."
+    },
+    "ci-builds-swift-tests": {
+      "category": "internal",
+      "message": "Continuous integration compiles the Mac and iOS test targets, so a test that no longer builds fails the change."
     }
   }
 }
