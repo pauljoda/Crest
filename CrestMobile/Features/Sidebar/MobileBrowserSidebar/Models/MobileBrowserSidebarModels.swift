@@ -27,10 +27,8 @@ struct MobileBrowserSidebarContentConfiguration {
     let selectTab: (UUID) -> Void
     let submitAddress: () -> Void
     let openNewTab: () -> Void
-    let showsCompactAddressBar: Bool
     let showsBottomSpaceSwitcher: Bool
     let compactPageIsFullyPresented: Bool
-    let compactTransitionEnded: (CGSize) -> Void
     let closePrivateBrowsing: () -> Void
     let toggleSidebar: () -> Void
     let showsSidebarToggle: Bool
