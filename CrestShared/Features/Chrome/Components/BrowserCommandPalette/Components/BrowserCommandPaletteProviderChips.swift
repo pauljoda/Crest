@@ -65,7 +65,7 @@ private struct BrowserCommandPaletteProviderChip: View {
             .lineLimit(1)
             .contentShape(.capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.browserPaletteChip)
         .help(provider.actionTitle)
         .accessibilityLabel(Text(verbatim: provider.actionTitle))
         .accessibilityHint(isOffered ? Text("Press Tab, enter your query, then press Return.") : Text(verbatim: ""))

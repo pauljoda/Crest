@@ -49,8 +49,9 @@ text is ink `#172238`, and dark sections are slate `#2B3A5C`. Sky `#62A9D8`,
 butter `#F2C14E`, coral `#E9604B` and sage `#8DBF9A` are brand colors and never
 mark an action.
 
-On the web, headings, buttons and labels use Allo at its roundest and body
-text uses Allo at its friendly default. The app uses SF Pro Rounded and SF Pro.
+Headings, buttons and labels use Allo at its roundest, in the app and on the
+web. Body text uses Allo at its friendly default on the web and SF Pro in the
+app.
 
 ## Third-party assets
 

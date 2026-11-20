@@ -22,7 +22,9 @@ struct BrowserPaletteScopeChip: View {
 /// The capsule a palette chip draws its contents in: a layer of the palette's
 /// material filled with `color`, under contents in white or black, whichever
 /// the text tone a Space's colors use reads better over `color`. A chip a
-/// person can click is `isInteractive`, so it answers the pointer.
+/// person can click is `isInteractive`, so it answers the pointer, and is the
+/// label of a button in the `browserPaletteChip` style, which answers a
+/// press.
 struct BrowserPaletteChip<Content: View>: View {
     let color: Color
     let showsCloseControl: Bool
