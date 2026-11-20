@@ -10,7 +10,7 @@ import SwiftUI
 ///
 /// A destination a shell cannot host arrives here as absent data rather than as
 /// a missing case. No shortcut store means no Shortcuts pane — the same answer
-/// `BrowserPlatformSettingsDestinationCatalog` already gives the shells' lists.
+/// `BrowserSettingsDestination.platforms` already gives the shells' lists.
 struct BrowserSettingsDestinationRouter: View {
     let destination: BrowserSettingsDestination
     let browser: BrowserStore

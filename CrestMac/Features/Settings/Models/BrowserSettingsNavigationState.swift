@@ -26,13 +26,9 @@ struct BrowserSettingsNavigationState: Equatable {
     /// lists the page it lives under.
     @MainActor
     func visibleDestinations(locale: Locale, in state: CoreState) -> [BrowserSettingsDestination] {
-        let provided = BrowserSettingsDestination.platformCases(in: state)
-        guard !query.isEmpty else { return provided }
-        let matches = provided.filter { $0.matchesSearchQuery(query, locale: locale) }
-        return provided.filter { destination in
-            matches.contains(destination)
-                || matches.contains { BrowserPlatformSettingsDestinationCatalog.parent(of: $0) == destination }
-        }
+        BrowserSettingsDestination.visible(
+            matching: searchText, locale: locale, in: state,
+            parent: BrowserPlatformSettingsDestinationCatalog.parent(of:))
     }
 
     /// The page of every Space whose words the search matches, if any.

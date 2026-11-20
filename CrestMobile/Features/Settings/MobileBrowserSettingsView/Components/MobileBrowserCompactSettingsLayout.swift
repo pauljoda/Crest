@@ -46,7 +46,7 @@ struct MobileBrowserCompactSettingsLayout: View {
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {
-        MobileSettingsDestinationFilter.destinations(
+        BrowserSettingsDestination.visible(
             matching: searchText,
             locale: locale,
             in: browser.core.state

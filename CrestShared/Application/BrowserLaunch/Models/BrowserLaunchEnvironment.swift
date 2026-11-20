@@ -98,6 +98,14 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         "\(ProductIdentity.serviceNamespace).isolated.\(isolationID)"
     }
 
+    /// Has this process open the isolated session `persistenceID` names,
+    /// unless its launch named another: a review build never opens the
+    /// installed profile. It runs before anything reads the launch.
+    static func applyReviewBuildDefaults(persistenceID: String) {
+        setenv(Key.isolatedSession.rawValue, "1", 1)
+        setenv(Key.persistentIsolationID.rawValue, persistenceID, 0)
+    }
+
     /// The defaults this launch's device choices live in: the installed
     /// app's own, or a named isolated profile's, or for an isolated launch
     /// that names none, a domain of its own that no other launch reads.

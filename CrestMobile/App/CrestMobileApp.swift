@@ -64,8 +64,7 @@ private final class BrowserMobileApplication {
 
     init() throws {
         #if CREST_REVIEW_BUILD
-            setenv("CREST_ISOLATED_SESSION", "1", 1)
-            setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 0)
+            BrowserLaunchEnvironment.applyReviewBuildDefaults(persistenceID: "core-native-ui-review")
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
         let forceOnboarding = launchEnvironment.forcesOnboardingWelcome

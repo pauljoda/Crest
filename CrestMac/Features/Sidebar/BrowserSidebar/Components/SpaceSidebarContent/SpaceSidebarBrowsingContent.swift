@@ -162,9 +162,12 @@ struct SpaceSidebarBrowsingContent: View {
 
     private func restoreSavedLocation(_ tabID: UUID) {
         BrowserSavedLocationRestoreAction(
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
+            browser: browser, pages: pages, spaceAccess: spaceAccess,
+            show: { [browser, pages] assignment in
+                browser.selectTab(assignment.tabID)
+                pages.select()
+                return pages.activePage(matching: assignment)
+            }
         ).perform(
             BrowserTabRuntimeAssignment(
                 tabID: tabID,

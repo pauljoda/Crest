@@ -95,8 +95,7 @@ final class BrowserMacApplication {
             // Naming the review's isolation under a test run would open the
             // review app's own session, credentials and website data stores.
             if !BrowserLaunchEnvironment.current.isXCTestRuntime {
-                setenv("CREST_ISOLATED_SESSION", "1", 1)
-                setenv("CREST_ISOLATED_PERSISTENCE_ID", reviewPersistenceID, 0)
+                BrowserLaunchEnvironment.applyReviewBuildDefaults(persistenceID: reviewPersistenceID)
             }
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current

@@ -33,7 +33,7 @@ struct BrowserPeekUnlockedContent: View {
             pageStatus: pageStatus,
             spaces: model.availableSpaceModels.map(\.identity),
             selectedSpaceID: model.request.spaceID,
-            vocabulary: BrowserPeekVocabulary.overlay,
+            vocabulary: .peek,
             actions: actions
         ) {
             webContent

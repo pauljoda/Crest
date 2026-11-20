@@ -20,6 +20,32 @@ struct BrowserTransientOverlayVocabulary {
     let releasedTitle: LocalizedStringKey
     let releasedDescription: LocalizedStringKey
     let restoreTitle: LocalizedStringKey
+
+    // MARK: - Static Variables
+
+    /// What a Peek calls itself, on every platform.
+    static var peek: Self {
+        Self(
+            closeAccessibilityLabel: "Close Peek",
+            closeHelp: "Close Peek (Esc or ⌘W)",
+            loadingTitle: "Opening Peek…",
+            releasedTitle: "Peek Released",
+            releasedDescription: "Crest released this temporary page to reduce memory use.",
+            restoreTitle: "Reload Peek"
+        )
+    }
+
+    /// What a Quick Window an iPhone or iPad shows as a card calls itself.
+    static var quickWindow: Self {
+        Self(
+            closeAccessibilityLabel: "Close Quick Window",
+            closeHelp: "Close Quick Window (Esc or ⌘W)",
+            loadingTitle: "Opening Quick Window…",
+            releasedTitle: "Quick Window Released",
+            releasedDescription: "Crest released this temporary page to reduce memory use.",
+            restoreTitle: "Reload Page"
+        )
+    }
 }
 
 /// What a transient overlay's card has to draw where the web view goes.

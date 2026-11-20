@@ -35,6 +35,7 @@ enum BrowserMobileAccessibilityID {
     static let tabViewerButton = "tab-viewer-button"
     static let collapsedDomainChip = "collapsed-domain-chip"
     static let peekOverlay = "mobile-peek-overlay"
+    static let quickWindowOverlay = "mobile-quick-window-overlay"
     static let pageActionsMenu = "page-actions-menu"
     static let pageActionsDownloads = "page-actions-downloads"
     static let pageActionsAddToHomeScreen = "page-actions-add-to-home-screen"

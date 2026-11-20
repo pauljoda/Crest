@@ -64,7 +64,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
         searchTerms: "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility",
-        symbol: "cpu.fill", color: CrestBrandPalette.crestBlue)
+        symbol: "cpu.fill", color: CrestBrandPalette.crestBlue, platforms: [.desktop])
     static let links = BrowserSettingsDestination(
         kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",
         searchTerms: "external apps Quick Window Peek pinned saved routing open", symbol: "link",
@@ -73,7 +73,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
         searchTerms: "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page",
         symbol: "keyboard.fill",
-        color: CrestBrandPalette.butter)
+        color: CrestBrandPalette.butter, platforms: [.desktop])
     static let spaces = BrowserSettingsDestination(
         kind: .spaces, name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
         searchTerms:
@@ -108,7 +108,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         kind: .featureFlags, name: "featureFlags", title: "Feature Flags", subtitle: "Engine experiments",
         searchTerms: "WebKit Chromium experimental preview testable developer stable runtime flags features",
         symbol: "flag.2.crossed.fill", color: CrestBrandPalette.coral,
-        requiredCapability: .featureFlags)
+        requiredCapability: .featureFlags, platforms: [.desktop])
     static let advanced = BrowserSettingsDestination(
         kind: .advanced, name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
         searchTerms: "import export backup portability data records", symbol: "switch.2",
@@ -117,7 +117,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         kind: .agents, name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
         searchTerms:
             "agents AI MCP model context protocol coding agents scripts automation Claude Codex Cursor command line terminal",
-        symbol: "sparkles", color: CrestBrandPalette.butter)
+        symbol: "sparkles", color: CrestBrandPalette.butter, platforms: [.desktop])
     static let about = BrowserSettingsDestination(
         kind: .about, name: "about", title: "About", subtitle: "Version, updates, and support",
         searchTerms:
@@ -156,6 +156,12 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     /// engine without it never offers the destination.
     let requiredCapability: EngineCapability?
 
+    /// The platforms whose shells host the destination: every one, or only
+    /// the Mac for a subject only the Mac has, such as the engine choice,
+    /// rebindable keyboard commands, WebKit's private feature registry and
+    /// the agents server.
+    let platforms: Set<DevicePlatform>
+
     var id: String { name }
 
     // MARK: - Initializers
@@ -163,7 +169,8 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     private init(
         kind: Kinds, name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
         subtitle: LocalizedStringResource, searchTerms: LocalizedStringResource, symbol: String,
-        color: Color, requiredCapability: EngineCapability? = nil
+        color: Color, requiredCapability: EngineCapability? = nil,
+        platforms: Set<DevicePlatform> = Set(DevicePlatform.all)
     ) {
         self.kind = kind
         self.name = name
@@ -174,6 +181,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         self.symbol = symbol
         self.color = color
         self.requiredCapability = requiredCapability
+        self.platforms = platforms
     }
 
     // MARK: - Actions - Platform capability
@@ -185,7 +193,24 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     /// platform can host stays out of the other's list.
     @MainActor
     static func platformCases(in state: CoreState) -> [BrowserSettingsDestination] {
-        BrowserPlatformSettingsDestinationCatalog.cases.filter { $0.isProvided(in: state) }
+        all.filter { $0.platforms.contains(.current) && $0.isProvided(in: state) }
+    }
+
+    /// The destinations a list shows: those this platform presents and the
+    /// device offers, matching `searchText`. A match inside a page that lives
+    /// under another lists the page `parent` names for it.
+    @MainActor
+    static func visible(
+        matching searchText: String, locale: Locale, in state: CoreState,
+        parent: (BrowserSettingsDestination) -> BrowserSettingsDestination? = { _ in nil }
+    ) -> [BrowserSettingsDestination] {
+        let provided = platformCases(in: state)
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return provided }
+        let matches = provided.filter { $0.matchesSearchQuery(query, locale: locale) }
+        return provided.filter { destination in
+            matches.contains(destination) || matches.contains { parent($0) == destination }
+        }
     }
 
     /// Whether the device offers the destination's subject at all: the
