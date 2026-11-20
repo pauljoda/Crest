@@ -5953,6 +5953,10 @@
     "chromium-upstream-157-0-8103-81-35a9bfb397cd": {
       "category": "fixed",
       "message": "Chromium is updated to 157.0.8103.81 with upstream security and compatibility fixes."
+    },
+    "remove-unused-setup-look-path": {
+      "category": "internal",
+      "message": "Removed the setup look choices and look storage queries that nothing uses since setup's overhaul, and the unused iCloud sync status query."
     }
   }
 }
