@@ -5957,6 +5957,10 @@
     "guard-engine-imports": {
       "category": "internal",
       "message": "The architecture guard keeps WebKit imports to the WebKit adapters and the Chromium host condition to the engine, and now also checks the agents and the Chromium shell."
+    },
+    "validation-scripts-current": {
+      "category": "internal",
+      "message": "The validation scripts pick a supported Python, the dead-code audit runs on current Periphery and scans the Chromium product, and the identity check keeps only the identities persistence relies on."
     }
   }
 }
