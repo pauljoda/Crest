@@ -20,15 +20,18 @@ public sealed partial record SetupImportReview {
     /// come in new once the workspace is full starts left out. A first
     /// launch's disposable Spaces are no destination, so everything comes in
     /// new in their place. `passwords` counts the saved passwords that belong
-    /// with each Space, `extensions` lists the extensions each Space offers,
+    /// with each Space and `insecurePasswords` those of them for sites without
+    /// a secure scheme, `extensions` lists the extensions each Space offers,
     /// all of them left on, and `leftOut` is what the read could not bring. A
     /// Space that comes in new wears `look`.
     internal static SetupImportReview Started(ImportSource source, IReadOnlyList<SpaceState> spaces,
-        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyList<ImportSpaceExtensions> extensions, IReadOnlyList<ImportLeftOut> leftOut,
+        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyDictionary<Guid, int> insecurePasswords,
+        IReadOnlyList<ImportSpaceExtensions> extensions, IReadOnlyList<ImportLeftOut> leftOut,
         SessionState session, SetupLook look) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(passwords);
+        ArgumentNullException.ThrowIfNull(insecurePasswords);
         ArgumentNullException.ThrowIfNull(extensions);
         ArgumentNullException.ThrowIfNull(leftOut);
         ArgumentNullException.ThrowIfNull(session);
@@ -46,7 +49,7 @@ public sealed partial record SetupImportReview {
             bool included = match is not null || created < room;
             if (included && match is null) created++;
             reviews.Add(SetupReviewSpace.Started(space, match, included, passwords.GetValueOrDefault(space.Id),
-                offers.GetValueOrDefault(space.Id) ?? [], look));
+                insecurePasswords.GetValueOrDefault(space.Id), offers.GetValueOrDefault(space.Id) ?? [], look));
         }
         return new SetupImportReview(source, reviews, [], spaces.FirstOrDefault()?.Id, leftOut, room).Analyzed(session);
     }

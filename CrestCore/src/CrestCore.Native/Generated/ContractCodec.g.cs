@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x57, 0xd4, 0xa6, 0x54, 0xbd, 0x39, 0x96, 0x5a, 0x3e, 0x87, 0x4a, 0x27, 0xe7, 0x9b, 0x24, 0x4e, 0x92, 0x0f, 0x9e, 0xba, 0x4b, 0x87, 0x9d, 0x82, 0xe7, 0x86, 0x56, 0xd9, 0x1c, 0x92, 0x28, 0xb3
+        0xd0, 0xe4, 0x33, 0x37, 0x71, 0xde, 0x23, 0x55, 0xd9, 0x67, 0x13, 0xdc, 0x64, 0xc9, 0x0f, 0x01, 0xe6, 0xcb, 0x0d, 0xff, 0xf5, 0x7b, 0x61, 0x21, 0x65, 0x06, 0xe8, 0x8b, 0xe5, 0x2d, 0xe3, 0x63
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -10921,7 +10921,8 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(reader);
         return new ImportPasswordSource(
             reader.ReadString(),
-            reader.ReadString());
+            reader.ReadString(),
+            reader.ReadBool());
     }
 
     public static void WriteImportPasswordSource(WireWriter writer, ImportPasswordSource value) {
@@ -10929,6 +10930,7 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteString(value.ProfileName);
         writer.WriteString(value.Host);
+        writer.WriteBool(value.IsSecure);
     }
 
     public static ImportPasswordStore ReadImportPasswordStore(WireReader reader) {
@@ -18109,6 +18111,7 @@ public static class ContractCodec {
             reader.ReadList(() => ReadTabPlacementChoice(reader)),
             reader.ReadBool(),
             reader.ReadInt32(),
+            reader.ReadInt32(),
             reader.ReadList(() => ReadImportExtension(reader)),
             reader.ReadList(() => reader.ReadString()),
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
@@ -18148,6 +18151,7 @@ public static class ContractCodec {
         }
         writer.WriteBool(value.IncludesPasswords);
         writer.WriteInt32(value.PasswordCount);
+        writer.WriteInt32(value.InsecurePasswordCount);
         writer.WriteCount(value.Extensions.Count);
         foreach (var itemExtensions in value.Extensions) {
             WriteImportExtension(writer, itemExtensions);

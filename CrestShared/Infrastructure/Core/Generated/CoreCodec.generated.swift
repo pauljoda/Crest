@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x57, 0xd4, 0xa6, 0x54, 0xbd, 0x39, 0x96, 0x5a, 0x3e, 0x87, 0x4a, 0x27, 0xe7, 0x9b, 0x24, 0x4e, 0x92, 0x0f, 0x9e, 0xba, 0x4b, 0x87, 0x9d, 0x82, 0xe7, 0x86, 0x56, 0xd9, 0x1c, 0x92, 0x28, 0xb3
+        0xd0, 0xe4, 0x33, 0x37, 0x71, 0xde, 0x23, 0x55, 0xd9, 0x67, 0x13, 0xdc, 0x64, 0xc9, 0x0f, 0x01, 0xe6, 0xcb, 0x0d, 0xff, 0xf5, 0x7b, 0x61, 0x21, 0x65, 0x06, 0xe8, 0x8b, 0xe5, 0x2d, 0xe3, 0x63
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -11740,12 +11740,14 @@ extension ImportPasswordSource {
     init(from reader: inout WireReader) throws(WireError) {
         let profileName = try reader.readString()
         let host = try reader.readString()
-        self.init(profileName: profileName, host: host)
+        let isSecure = try reader.readBool()
+        self.init(profileName: profileName, host: host, isSecure: isSecure)
     }
 
     func encode(into writer: inout WireWriter) {
         writer.writeString(profileName)
         writer.writeString(host)
+        writer.writeBool(isSecure)
     }
 }
 
@@ -22707,6 +22709,7 @@ extension SetupReviewSpace {
         }
         let includesPasswords = try reader.readBool()
         let passwordCount = try reader.readInt()
+        let insecurePasswordCount = try reader.readInt()
         let extensionsCount = try reader.readCount()
         var extensions: [ImportExtension] = []
         extensions.reserveCapacity(extensionsCount)
@@ -22737,7 +22740,7 @@ extension SetupReviewSpace {
             let broughtExtensionsElement = try ImportExtension(from: &reader)
             broughtExtensions.append(broughtExtensionsElement)
         }
-        self.init(source: source, included: included, destinationID: destinationID, customization: customization, includedTabIDs: includedTabIDs, duplicateTabIDs: duplicateTabIDs, matchedTabIDs: matchedTabIDs, placements: placements, includesPasswords: includesPasswords, passwordCount: passwordCount, extensions: extensions, includedExtensionIDs: includedExtensionIDs, joinsGroupOf: joinsGroupOf, shownName: shownName, bringsPasswords: bringsPasswords, broughtExtensions: broughtExtensions)
+        self.init(source: source, included: included, destinationID: destinationID, customization: customization, includedTabIDs: includedTabIDs, duplicateTabIDs: duplicateTabIDs, matchedTabIDs: matchedTabIDs, placements: placements, includesPasswords: includesPasswords, passwordCount: passwordCount, insecurePasswordCount: insecurePasswordCount, extensions: extensions, includedExtensionIDs: includedExtensionIDs, joinsGroupOf: joinsGroupOf, shownName: shownName, bringsPasswords: bringsPasswords, broughtExtensions: broughtExtensions)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -22768,6 +22771,7 @@ extension SetupReviewSpace {
         }
         writer.writeBool(includesPasswords)
         writer.writeInt(passwordCount)
+        writer.writeInt(insecurePasswordCount)
         writer.writeCount(extensions.count)
         for element0 in extensions {
             element0.encode(into: &writer)

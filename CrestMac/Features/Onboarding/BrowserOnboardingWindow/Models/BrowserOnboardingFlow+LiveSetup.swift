@@ -66,6 +66,12 @@ extension BrowserOnboardingFlow {
         reviewSpaces.reduce(0) { $0 + $1.record.passwordCount }
     }
 
+    /// How many of them are for sites without HTTPS, which come in but are
+    /// never filled in automatically.
+    var insecurePasswordCount: Int {
+        reviewSpaces.reduce(0) { $0 + $1.record.insecurePasswordCount }
+    }
+
     /// Whether the chosen browser's extensions come in.
     var includesExtensions: Bool {
         reviewSpaces.contains { !$0.includedExtensionIDs.isEmpty }

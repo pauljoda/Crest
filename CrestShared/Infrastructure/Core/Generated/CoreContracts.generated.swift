@@ -3500,6 +3500,7 @@ struct ImportPasswordRoutes: Equatable, Sendable {
 struct ImportPasswordSource: Equatable, Sendable {
     var profileName: String
     var host: String
+    var isSecure: Bool
 }
 
 struct ImportPasswordStore: Equatable, Sendable, Identifiable {
@@ -6445,6 +6446,7 @@ struct SetupReviewSpace: Equatable, Sendable {
     let placements: [TabPlacementChoice]
     let includesPasswords: Bool
     let passwordCount: Int
+    let insecurePasswordCount: Int
     let extensions: [ImportExtension]
     let includedExtensionIDs: [String]
     let joinsGroupOf: UUID?
