@@ -42,14 +42,16 @@ struct BrowserSiteSettingsContent: View {
     }
 }
 
-#Preview("Site Settings") {
-    @Previewable @State var isExpanded = true
-    let preview = BrowserSiteSettingsPreviewFixture.makePage()
-    BrowserSiteSettingsContent(
-        page: preview.page,
-        permissionCenter: preview.permissionCenter,
-        permissionsExpansion: $isExpanded
-    )
-    .padding()
-    .frame(width: 300)
-}
+#if DEBUG
+    #Preview("Site Settings") {
+        @Previewable @State var isExpanded = true
+        let preview = BrowserSiteSettingsPreviewFixture.makePage()
+        BrowserSiteSettingsContent(
+            page: preview.page,
+            permissionCenter: preview.permissionCenter,
+            permissionsExpansion: $isExpanded
+        )
+        .padding()
+        .frame(width: 300)
+    }
+#endif

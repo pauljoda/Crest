@@ -18,7 +18,6 @@ enum BrowserQuickWindowLayout {
     // The page surface owns the gap below the controls through its frame inset.
     static let toolbarHeight: CGFloat = BrowserPageBarMetrics.quickWindow.height
     static let controlHeight: CGFloat = BrowserPageBarMetrics.quickWindow.fieldHeight
-    static let minimumMacHitTarget: CGFloat = 28
     static let addressMinimumWidth: CGFloat = BrowserPageBarMetrics.quickWindow.fieldMinimumWidth
     static let addressVerticalPadding: CGFloat = 6
     static let horizontalPadding: CGFloat = BrowserPageBarMetrics.quickWindow.trailingPadding
