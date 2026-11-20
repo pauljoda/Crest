@@ -5965,6 +5965,10 @@
     "remove-unused-shared-swift": {
       "category": "internal",
       "message": "Removed shared code nothing uses: an old setup page, unused design tokens, branding and identity helpers, a widget scope no one reads, and search sheet presentation."
+    },
+    "remove-unused-mac-setup-code": {
+      "category": "internal",
+      "message": "Removed Mac setup code the overhaul left unused, permission fields nothing reads, and kept preview-only fixtures out of release builds."
     }
   }
 }
