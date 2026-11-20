@@ -47,10 +47,6 @@ public sealed class SearchPolicyTests {
         Assert.Equal("https://kagi.com/find/" + encoded + "?source=crest", kagi.Provider.Search(query));
     }
 
-    private static IEnumerable<string> Values(SearchProviderOption option) => option.IsSwitch ? [SearchProviderOption.On]
-        : option.AcceptsText ? ["gpt-5 mini"]
-        : [.. option.Choices.Select(choice => choice.Name), .. option.Locales.Select(code => code.Code)];
-
     [Theory]
     [InlineData("https://example.com/search?q=%s", "Example", null)]
     [InlineData("  https://example.com/search?q=%s  ", "  Example  ", null)]

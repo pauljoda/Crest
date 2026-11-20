@@ -196,6 +196,4 @@ public sealed partial class BrowserContractsTests {
         device.Send(new SeparateSplits(device.Workspace, window, f.Space, Picking(f.Left, f.Right)));
         Assert.All(core.Current.Spaces[0].Tabs, tab => Assert.Null(tab.SplitGroupId));
     }
-
-    private const int BrowserTabCollectionLimit = CrestCore.Domain.BrowserTabCollection.MaximumSplitMembers;
 }

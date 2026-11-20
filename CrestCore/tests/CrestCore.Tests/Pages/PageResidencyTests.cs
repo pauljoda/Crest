@@ -114,13 +114,4 @@ public sealed partial class BrowserContractsTests {
         app.Send(new OpenPage(Guid.NewGuid(), workspace, space, other, window));
         Assert.Null(Assert.IsType<CreatePage>(binding.Commands[^1]).RestoreState);
     }
-
-    public static TheoryData<MemoryPressureLevel, DevicePlatform, int, int> ReleaseBudgets => new() {
-        { MemoryPressureLevel.Warning, DevicePlatform.Desktop, 8, 1 },
-        { MemoryPressureLevel.Critical, DevicePlatform.Desktop, 8, 4 },
-        { MemoryPressureLevel.Critical, DevicePlatform.Desktop, 7, 4 },
-        { MemoryPressureLevel.Critical, DevicePlatform.Desktop, 1, 1 },
-        { MemoryPressureLevel.Warning, DevicePlatform.Mobile, 8, 0 },
-        { MemoryPressureLevel.Critical, DevicePlatform.Mobile, 8, 1 },
-    };
 }
