@@ -1642,10 +1642,6 @@ struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
 }
 
-struct ChooseSetupLook: Intent, SetupFlowIntent, Equatable, Sendable {
-    let look: SetupLook
-}
-
 struct ChooseShareSource: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -1826,11 +1822,6 @@ struct CloudStepFailed: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let step: CloudSyncStepKind
     let message: String
     let observedCloudRecords: Int?
-}
-
-struct CloudSync: Query, Equatable, Sendable {
-    typealias Answer = CloudSyncStatus
-
 }
 
 struct CloudSyncAdvanced: CoreChange, Equatable, Sendable {
@@ -5743,12 +5734,6 @@ struct RestoreInteractionState: PageRequest, Equatable, Sendable {
     let expectedURL: String
 }
 
-struct RestoreLook: Query, Equatable, Sendable {
-    typealias Answer = RestoredLook
-
-    let text: String
-}
-
 struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
     let language: String?
     let region: String?
@@ -5759,10 +5744,6 @@ struct RestoreTabHistory: Intent, PageIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let archive: Data
-}
-
-struct RestoredLook: Equatable, Sendable {
-    let look: SpaceBranding?
 }
 
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -7249,19 +7230,9 @@ struct StoreInstallRequested: Equatable, Sendable {
     let extensionID: String
 }
 
-struct StoreLook: Query, Equatable, Sendable {
-    typealias Answer = StoredLook
-
-    let look: SpaceBranding
-}
-
 struct StoreRemovalRequested: Equatable, Sendable {
     let pageID: UUID
     let extensionID: String
-}
-
-struct StoredLook: Equatable, Sendable {
-    let text: String
 }
 
 struct StoredSessionClosed: Equatable, Sendable {
@@ -18915,76 +18886,33 @@ struct SetupFailureReason: Hashable, Sendable {
 /// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `newSpaceLook`.
 struct SetupLook: Hashable, Sendable {
-    enum Kinds: Sendable {
-        case heraldic
-        case modern
-        case simple
-    }
-
     let tag: Int
-    var kind: Kinds { facts.kind }
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var themeMode: SpaceThemeMode { facts.themeMode }
     var iconStyle: SpaceIconStyle { facts.iconStyle }
-    var gradientAngle: Double? { facts.gradientAngle }
-    var tint: Double? { facts.tint }
     private let facts: Facts
 
     private init(
         tag: Int,
-        kind: Kinds,
         name: String,
         title: LocalizedStringResource,
         themeMode: SpaceThemeMode,
-        iconStyle: SpaceIconStyle,
-        gradientAngle: Double?,
-        tint: Double?
+        iconStyle: SpaceIconStyle
     ) {
         self.tag = tag
-        facts = Facts(
-            kind: kind,
-            name: name,
-            title: title,
-            themeMode: themeMode,
-            iconStyle: iconStyle,
-            gradientAngle: gradientAngle,
-            tint: tint
-        )
+        facts = Facts(name: name, title: title, themeMode: themeMode, iconStyle: iconStyle)
     }
 
     static let heraldic = SetupLook(
         tag: 0,
-        kind: .heraldic,
         name: "heraldic",
         title: LocalizedStringResource("Heraldic (Full)"),
         themeMode: SpaceThemeMode.banner,
-        iconStyle: SpaceIconStyle.layeredCrest,
-        gradientAngle: nil,
-        tint: nil
-    )
-    static let modern = SetupLook(
-        tag: 1,
-        kind: .modern,
-        name: "modern",
-        title: LocalizedStringResource("Modern"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 90,
-        tint: nil
-    )
-    static let simple = SetupLook(
-        tag: 2,
-        kind: .simple,
-        name: "simple",
-        title: LocalizedStringResource("Simple"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 0,
-        tint: 1
+        iconStyle: SpaceIconStyle.layeredCrest
     )
 
-    static let all: [SetupLook] = [heraldic, modern, simple]
+    static let all: [SetupLook] = [heraldic]
 
     static func named(_ name: String?) -> SetupLook? {
         all.first { $0.name == name }
@@ -18999,30 +18927,16 @@ struct SetupLook: Hashable, Sendable {
     }
 
     private final class Facts: Sendable {
-        let kind: Kinds
         let name: String
         let title: LocalizedStringResource
         let themeMode: SpaceThemeMode
         let iconStyle: SpaceIconStyle
-        let gradientAngle: Double?
-        let tint: Double?
 
-        init(
-            kind: Kinds,
-            name: String,
-            title: LocalizedStringResource,
-            themeMode: SpaceThemeMode,
-            iconStyle: SpaceIconStyle,
-            gradientAngle: Double?,
-            tint: Double?
-        ) {
-            self.kind = kind
+        init(name: String, title: LocalizedStringResource, themeMode: SpaceThemeMode, iconStyle: SpaceIconStyle) {
             self.name = name
             self.title = title
             self.themeMode = themeMode
             self.iconStyle = iconStyle
-            self.gradientAngle = gradientAngle
-            self.tint = tint
         }
     }
 }

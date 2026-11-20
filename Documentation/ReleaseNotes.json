@@ -5925,6 +5925,10 @@
     "browser-import-http-passwords": {
       "category": "fixed",
       "message": "Importing another browser's passwords brings those for sites without HTTPS too, and setup says Crest won't fill them in, instead of leaving them out without a word."
+    },
+    "remove-unused-setup-look-path": {
+      "category": "internal",
+      "message": "Removed the setup look choices and look storage queries that nothing uses since setup's overhaul, and the unused iCloud sync status query."
     }
   }
 }

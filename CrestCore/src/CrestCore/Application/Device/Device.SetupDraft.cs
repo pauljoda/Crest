@@ -43,16 +43,6 @@ internal sealed partial class Device {
         changes.Publish(new SetupDraftChanged(draft));
     }
 
-    /// Gives the setup held over `workspaceId`, or else the one kept from an
-    /// earlier launch, which the manual-setup step goes on with, `look` in
-    /// place of `previous`, and publishes it. The caller holds the device lock.
-    internal void RestyleSetup(Guid workspaceId, SessionState session, SetupLook previous, SetupLook look, ChangeFeed changes) {
-        var draft = setupDraft is { } held && held.WorkspaceId == workspaceId ? held
-            : keptSetupDraft?.For(workspaceId).Reconciled(session);
-        if (draft is null) return;
-        KeepSetup(draft.Restyled(previous, look, session), changes);
-    }
-
     /// The look the Spaces setup makes wear: the one setup chose, or Crest's
     /// own while setup is not open. The caller holds the device lock.
     internal SetupLook SetupLook => setupFlow?.Look ?? SetupLook.Heraldic;

@@ -131,21 +131,6 @@ public sealed partial record SetupImportReview {
         return Editing(sourceId, session, space => space with { Customization = kept });
     }
 
-    /// `review` with each Space that comes in new wearing `look` in place of
-    /// `previous`: one the person left as it came takes `look` made from the
-    /// Space's own, and one they changed keeps its colors and crest in the new
-    /// mode. A Space that joins an existing Space keeps that Space's look.
-    internal SetupImportReview Restyled(SetupLook previous, SetupLook look) {
-        ArgumentNullException.ThrowIfNull(previous);
-        ArgumentNullException.ThrowIfNull(look);
-        return this with {
-            Spaces = [.. Spaces.Select(space => space.DestinationId is not null ? space
-                : space.Customization == previous.Applying(space.Source.Customization)
-                    ? space with { Customization = look.Applying(space.Source.Customization) }
-                    : space with { Customization = look.Applying(space.Customization) })]
-        };
-    }
-
     /// `review` looking at `sourceId`, when it holds it.
     internal SetupImportReview Showing(Guid sourceId) =>
         Spaces.Any(space => space.Source.Id == sourceId) ? this with { ShownSpaceId = sourceId } : this;
