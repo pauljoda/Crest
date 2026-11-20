@@ -5857,6 +5857,10 @@
     "windows-card-corners-clean": {
       "category": "internal",
       "message": "Page cards on Windows no longer show a pale line along their rounded corners and top edge over dark pages"
+    },
+    "windows-sidebar-rows-match-mac": {
+      "category": "internal",
+      "message": "Sidebar rows on Windows match the Mac's size and spacing: 40-point rows in regular type, with the Mac's insets, icon size and nesting"
     }
   }
 }

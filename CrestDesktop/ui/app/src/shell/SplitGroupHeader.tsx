@@ -20,6 +20,7 @@ import { showContextMenu } from "../menus";
 import { Symbol } from "../symbols";
 import { ColorPicker, EmojiPicker, folderDefault, Popover } from "./pickers";
 import { TabIcon } from "./Sidebar";
+import { rowPlacement } from "./sidebar-layout";
 
 /** BrowserSidebarSplitGroupRowMetrics.pointer: the stacked icons draw at a member favicon's size. */
 const glyph = 18;
@@ -77,7 +78,7 @@ export function SplitGroupHeader({ session, space, groupId, group, members, focu
   };
 
   return (
-    <div ref={row} className="sidebar-row folder-row split-header" style={{ paddingInlineStart: 10 + depth * 14 }}
+    <div ref={row} className="sidebar-row folder-row split-header" style={rowPlacement(depth, true)}
       role="button" tabIndex={0} aria-expanded={!collapsed} aria-label={title}
       aria-description={collapsed ? "Expands this Split View" : "Collapses this Split View"}
       onClick={(event) => {

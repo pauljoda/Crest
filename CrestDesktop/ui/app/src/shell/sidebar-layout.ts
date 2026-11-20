@@ -8,6 +8,24 @@ export function clampedSidebarWidth(width: number): number {
   return Math.min(Math.max(width, sidebarWidths.minimum), sidebarWidths.maximum);
 }
 
+/** A row's favicon box, as the Mac's TabFaviconMetrics.defaultSize. */
+export const rowIconSize = 18;
+
+/**
+ * Where a row stands inside the folders and splits that hold it, as the Mac's
+ * BrowserFolderLayout places it: each level in insets the row's surface 4px
+ * on both sides (the container's padding) and its content 12px more, so its
+ * icon moves in 16px a level. A split's members sit on the split's own card,
+ * which insets them already, and their content goes in a full 16px past the
+ * card's header, as the Mac's split row content does.
+ */
+export function rowPlacement(depth: number, inSplit: boolean): Record<string, string> {
+  const level = Math.max(0, depth);
+  return inSplit
+    ? { "--row-inset": "0px", "--row-indent": `${16 * level}px`, "--row-depth": String(level) }
+    : { "--row-inset": `${4 * level}px`, "--row-indent": `${12 * level}px`, "--row-depth": String(level) };
+}
+
 /**
  * A window's sidebar layout on this device, as the Mac's BrowserWindowState:
  * how wide the sidebar is and whether it is shown. Only the platform reads

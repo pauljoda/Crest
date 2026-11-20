@@ -39,7 +39,7 @@ export const opacity = Object.freeze({
 });
 
 /** `CrestLayout`. */
-export const layout = Object.freeze({ hairline: 1, focusRing: 3, pinnedAccentBorderWidth: 2, sidebarRowHeight: 32 });
+export const layout = Object.freeze({ hairline: 1, focusRing: 3, pinnedAccentBorderWidth: 2, sidebarRowHeight: 40 });
 
 /**
  * `CrestBrandPalette`, as RGB: cream, paper and ink for grounds and text,

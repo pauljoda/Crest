@@ -49,6 +49,7 @@ import { useCertificates } from "./site-control";
 import { PinnedExtensionStrip } from "./ExtensionActions";
 import { AddressSecurityButton, SiteControlPanel, SiteControlTrigger } from "./SiteControl";
 import { droppedJustNow, type Lift, type LiftItem, useSidebarLift } from "./sidebar-drag";
+import { rowIconSize, rowPlacement } from "./sidebar-layout";
 import {
   backgroundMenu,
   batchIntents,
@@ -641,6 +642,7 @@ export function Sidebar({
                       tab={tab}
                       pageId={pagesByTab.get(tab.id) ?? null}
                       depth={row.kind.groupsTabs ? row.depth + 1 : row.depth}
+                      inSplit={row.kind.groupsTabs}
                       selected={tab.id === shownTabId}
                       renaming={renamesTab}
                       row={row.kind.groupsTabs ? null : {
@@ -686,7 +688,7 @@ export function Sidebar({
             );
           })}
           <button className="sidebar-row new-tab-row" onClick={() => openPalette("newTab")}>
-            <Symbol name="plus" />
+            <span className="row-glyph"><Symbol name="plus" /></span>
             <span className="row-title">New Tab</span>
           </button>
         </div>
@@ -830,6 +832,8 @@ interface TabRowProps {
   readonly tab: TabState;
   readonly pageId: string | null;
   readonly depth: number;
+  /** Whether the row is a split's member, which its split's card already insets. */
+  readonly inSplit: boolean;
   readonly selected: boolean;
   /** Whether the row's title is a field the person is renaming the tab in. */
   readonly renaming: boolean;
@@ -856,7 +860,7 @@ interface TabRowProps {
 }
 
 function TabRow({
-  session, tab, pageId, depth, selected, renaming, row, unit, marked, held, lifted, insertsBefore, aimedAround, onPress,
+  session, tab, pageId, depth, inSplit, selected, renaming, row, unit, marked, held, lifted, insertsBefore, aimedAround, onPress,
   onSelect, onClose, onMiddleClick, onContextMenu, onRenamed,
 }: TabRowProps) {
   return (
@@ -864,7 +868,7 @@ function TabRow({
       role="button"
       tabIndex={0}
       className={`sidebar-row tab-row${selected ? " selected" : ""}${marked ? " unit-selected" : ""}${lifted ? " lifted" : ""}${insertsBefore ? " drop-before" : ""}${aimedAround ? " drop-nest" : ""}`}
-      style={{ paddingInlineStart: 10 + depth * 14 }}
+      style={rowPlacement(depth, inSplit)}
       data-row={row?.id}
       data-before-tab={row ? tab.id : undefined}
       data-around-tab={row?.aroundTab ? tab.id : undefined}
@@ -888,7 +892,7 @@ function TabRow({
           />
         )}
       </AnimatePresence>
-      <TabIcon session={session} tab={tab} pageId={pageId} />
+      <TabIcon session={session} tab={tab} pageId={pageId} size={rowIconSize} />
       {renaming
         ? <RenameField initial={tab.displayTitle} placeholder="Tab Name" onDone={onRenamed} />
         : <span className="row-title">{tab.displayTitle}</span>}
@@ -933,7 +937,7 @@ function FolderRow({
       role="button"
       tabIndex={0}
       className={`sidebar-row folder-row${marked ? " unit-selected" : ""}${lifted ? " lifted" : ""}${insertsBefore ? " drop-before" : ""}${aimedInto ? " drop-into" : ""}`}
-      style={{ paddingInlineStart: 10 + depth * 14 }}
+      style={rowPlacement(depth, false)}
       data-row={folder.id}
       data-before-folder={folder.id}
       data-folder={folder.id}

@@ -1058,7 +1058,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: var(--crest-space-small);
-  padding: 2px var(--crest-space-small) 0 var(--crest-space-medium);
+  /* The Mac's BrowserSidebarMetrics.layerInset on both sides. */
+  padding: 2px var(--crest-space-small) 0;
   color: var(--fg);
 }
 
@@ -1310,7 +1311,7 @@ button {
   display: flex;
   align-items: center;
   height: 40px;
-  padding: 0 4px 0 8px;
+  padding: 0 4px;
   border-radius: 8px;
   transition: background 120ms ease-in-out;
 }
@@ -1379,7 +1380,7 @@ button {
 .space-name {
   min-width: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1418,17 +1419,31 @@ button {
   margin-top: var(--crest-space-small);
 }
 
+/* A sidebar row, as the Mac's pointer tab row: 40px tall, its icon's 18px box
+   9px in from the surface's edge and 9px from the title, its trailing control
+   6px from its end. Inside folders and splits, --row-inset insets the surface
+   and --row-indent the content (rowPlacement in sidebar-layout.ts); the
+   corner is the Mac's layer radius, 4px rounder than the 8px setting at the
+   top level and 4px tighter each level in, never under the setting. */
 .sidebar-row {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 34px;
-  padding-inline-end: 10px;
-  border-radius: var(--crest-radius-compact);
+  gap: 9px;
+  min-height: 40px;
+  margin-inline: var(--row-inset, 0px);
+  padding-inline: calc(9px + var(--row-indent, 0px)) 6px;
+  border-radius: max(var(--crest-radius-compact), calc(var(--crest-radius-compact) + 4px - 4px * var(--row-depth, 0)));
   text-align: start;
   color: var(--fg);
   transition: background 140ms ease-in-out;
+}
+
+.row-glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
 }
 
 .sidebar-row:hover {
@@ -1442,7 +1457,7 @@ button {
 .row-selection {
   position: absolute;
   inset: 0;
-  border-radius: var(--crest-radius-compact);
+  border-radius: inherit;
   background: var(--surface-selected);
   box-shadow: inset 0 0 0 1px var(--surface-border), 0 1px 3px rgb(0 0 0 / 0.14);
   z-index: 0;
@@ -1459,17 +1474,15 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 500;
+  font-weight: 400;
 }
 
-.folder-row .row-title {
-  font-weight: 600;
-}
-
-/* A tab's close button shows on hover and on the selected tab. */
+/* A tab's close button shows on hover and on the selected tab: the Mac's
+   28px pointer control, its glyph 12px. */
 .row-close {
-  width: 20px;
-  height: 20px;
+  flex: none;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 6px;
@@ -1581,11 +1594,11 @@ button {
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 10px;
-  border-radius: var(--crest-radius-compact);
+  gap: 9px;
+  padding: 0 9px;
+  border-radius: calc(var(--crest-radius-compact) + 4px);
   color: var(--fg);
-  font: 500 13px var(--crest-font-system);
+  font: 400 13px var(--crest-font-system);
   transform: scale(1.04);
   box-shadow: inset 0 0 0 0.5px var(--surface-border), 0 5px 20px rgb(0 0 0 / 0.22);
   pointer-events: none;
@@ -1659,7 +1672,7 @@ button {
   background: var(--field);
   box-shadow: inset 0 0 0 1px var(--surface-border);
   color: var(--fg);
-  font: 500 13px var(--crest-font-system);
+  font: 400 13px var(--crest-font-system);
 }
 
 .rename-field:focus {
@@ -1695,7 +1708,6 @@ button {
   position: relative;
   display: inline-block;
   flex: none;
-  margin-inline: -1px;
 }
 
 .folder-face {
@@ -1726,16 +1738,26 @@ button {
 /* The split's own row, as a folder's header: its members' icons stacked in
    the folder symbol's column, or a chevron while collapsed, its title, and
    the trailing ellipsis that opens its menu. */
+/* The Mac draws the split's deck a little further in than a tab's icon and
+   its title closer to the deck: the deck from 12px into the card, the title
+   about 5px after it. */
 .split-header {
   position: relative;
+  padding-inline-start: calc(12px + var(--row-indent, 0px));
+}
+
+/* Rows on a split's card sit a level in, so their corners are a level tighter. */
+.split-card > .sidebar-row {
+  border-radius: max(var(--crest-radius-compact), calc(var(--crest-radius-compact) - 4px * var(--row-depth, 0)));
 }
 
 .split-header-icon {
   display: grid;
   place-items: center;
   flex: none;
-  width: 32px;
+  width: 24px;
   height: 18px;
+  margin-inline-end: -4px;
 }
 
 .split-chevron,
@@ -1930,7 +1952,7 @@ button {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin: 0 calc(-1 * var(--crest-space-small)) 0 calc(-1 * var(--crest-space-medium));
+  margin: 0 calc(-1 * var(--crest-space-small));
   overflow: hidden;
 }
 
@@ -1940,7 +1962,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: var(--crest-space-small);
-  padding: 0 var(--crest-space-small) 0 var(--crest-space-medium);
+  padding: 0 var(--crest-space-small);
 }
 
 .space-pages.moving .space-page {
@@ -1954,7 +1976,7 @@ button {
   position: relative;
   flex: none;
   height: 50px;
-  margin: 0 calc(-1 * var(--crest-space-small)) 0 calc(-1 * var(--crest-space-medium));
+  margin: 0 calc(-1 * var(--crest-space-small));
 }
 
 .space-strip-utilities {
