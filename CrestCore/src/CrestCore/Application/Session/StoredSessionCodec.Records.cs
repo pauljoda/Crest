@@ -6,13 +6,6 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 internal static partial class StoredSessionCodec {
-    #region Variables
-
-    /// What a folder without a title is called.
-    internal const string UntitledFolder = "Folder";
-
-    #endregion
-
     #region Actions - Tabs
 
     /// A tab. A native view keeps no address, a missing symbol is the one its
@@ -101,12 +94,12 @@ internal static partial class StoredSessionCodec {
     #region Actions - Folders and splits
 
     /// A folder. Anything but an open folder is saved; a folder without a title
-    /// reads as "Folder".
+    /// reads as `FolderState.UntitledTitle`.
     internal static FolderState DecodeFolder(JsonNode? node) {
         var value = Object(node);
         return new(Identity(value[Key.Id]),
             TabPlacement.Named(Text(value[Key.Location])) == TabPlacement.Current ? TabPlacement.Current : TabPlacement.Saved,
-            Text(value[Key.Title]) ?? UntitledFolder, Text(value[Key.Symbol]),
+            Text(value[Key.Title]) ?? FolderState.UntitledTitle, Text(value[Key.Symbol]),
             value[Key.Color] is JsonObject color ? DecodeColor(color) : null, OptionalIdentity(value[Key.ParentId]),
             Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]),
             OptionalIdentity(value[Key.OrderAnchorTabId]), Flag(value[Key.IsGroup]) ?? false);
