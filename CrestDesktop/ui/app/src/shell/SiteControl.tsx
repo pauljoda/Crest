@@ -10,7 +10,7 @@ import {
 } from "@crest/contracts";
 import { motion as tokens } from "@crest/design";
 import { motion } from "motion/react";
-import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type MouseEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Session } from "../boot";
 import type { Browsing } from "../browsing";
@@ -91,6 +91,17 @@ export function SiteControlPanel({
   session, browsing, page, space, isPrivate, certificates, notice, onAllowPopups, onClose,
 }: SiteControlProps) {
   const panel = useRef<HTMLDivElement>(null);
+  // The arrow points at the trigger the panel hangs from, wherever the
+  // window's edge leaves the panel.
+  const [arrowX, setArrowX] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const element = panel.current;
+    const area = element?.offsetParent;
+    const trigger = area?.querySelector(".site-control-trigger");
+    if (!element || !area || !trigger) return;
+    const bounds = trigger.getBoundingClientRect();
+    setArrowX(bounds.left + bounds.width / 2 - area.getBoundingClientRect().left - element.offsetLeft);
+  }, []);
   // The permissions open where the panel first appears, and always for a
   // blocked pop-up, whose permission the notice leads to.
   const [permissionsExpanded, setPermissionsExpanded] = useState(true);
@@ -137,82 +148,88 @@ export function SiteControlPanel({
       role="dialog"
       aria-label="Site Controls"
       tabIndex={-1}
+      style={arrowX === null ? undefined : { "--arrow-x": `${arrowX}px` } as CSSProperties}
       initial={{ opacity: 0, y: -6, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -4, scale: 0.98 }}
       transition={tokens.floatingPane}
     >
-      <div className="site-control-content">
-        <div className="site-control-header">
-          <span className="site-control-title">{page.live.title || "Site Controls"}</span>
-          {host && <span className="site-control-host">{host}</span>}
-        </div>
-        {notice && (
-          <div className="site-popup-notice" role="group" aria-label={noticeTitle(notice)}>
-            <span className="site-popup-title">
-              <Symbol name={notice.status.symbol} size={12} />
-              {noticeTitle(notice)}
-            </span>
-            <span className="site-popup-guidance">{notice.status.guidance}</span>
-            {notice.status.offersAllow && (
-              <button type="button" className="site-popup-allow"
-                aria-label={`Allow automatic pop-ups for ${notice.origin.host}`}
-                title="Saves this permission in the current Space. Retry the action on the site afterward"
-                onClick={() => {
-                  onAllowPopups();
-                  setPermissionsExpanded(true);
-                }}>
-                Allow Automatic Pop-ups
-              </button>
-            )}
+      <svg className="site-control-arrow" width="28" height="11" viewBox="0 0 28 11" aria-hidden>
+        <path d="M0 11c4 0 6.5-1.6 8.6-3.7l3.6-3.6a2.5 2.5 0 0 1 3.6 0l3.6 3.6C21.5 9.4 24 11 28 11z" fill="currentColor" />
+      </svg>
+      <div className="site-control-scroll">
+        <div className="site-control-content">
+          <div className="site-control-header">
+            <span className="site-control-title">{page.live.title || "Site Controls"}</span>
+            {host && <span className="site-control-host">{host}</span>}
           </div>
-        )}
-        <div className="site-control-actions">
-          <QuickAction title="Copy Link" symbol="square.and.arrow.up" onClick={perform(() => void copyLink())} />
-          <QuickAction title="Reload" symbol="arrow.clockwise" onClick={perform(() => void browsing.reload(page.id))} />
-          <QuickAction title="Inspect" symbol="scope"
-            onClick={perform(() => void session.core.request(OpenInspector({ pageId: page.id, panel: InspectorPanel.Elements }))
-              .catch(() => undefined))} />
-        </div>
-        {origin && (
-          <>
-            <div className="site-control-divider" />
-            <SecuritySection page={page} origin={origin} canReview={certificates.length > 0} onReview={reviewCertificate} />
-            <SiteBlocking session={session} spaceId={space.id} origin={origin} onChanged={() => void browsing.reload(page.id)} />
-            <div className="site-control-divider" />
-            <Permissions session={session} spaceId={space.id} origin={origin} expanded={permissionsExpanded}
-              onToggle={() => setPermissionsExpanded((expanded) => !expanded)} />
-            {session.shell && !isPrivate && (
-              <>
-                <div className="site-control-divider" />
-                <SiteExtensionsSection session={session} space={space} pageId={page.id} pageKey={`${page.live.url ?? ""}|${page.live.title}`}
-                  onRun={(run) => perform(run)()} onManage={perform(() => extensions.openSettings())} />
-                {webStoreExtensionId(address) && (
-                  <button type="button" className="site-control-action labelled"
-                    onClick={perform(() => void extensions.install(session, webStoreExtensionId(address)!, space.id, [], page.id))}>
-                    <Symbol name="plus" size={12} />
-                    <span>Install Extension…</span>
-                  </button>
-                )}
-              </>
-            )}
-          </>
-        )}
-        {host && (
-          <>
-            <div className="site-control-divider" />
-            <div className="site-control-actions">
-              {BrowsingDataCategory.all.filter((category) => category.clearsBySite).map((category) => (
-                <button key={category.name} type="button" className="site-control-action labelled"
-                  onClick={perform(() => void clearSiteData(session, page, space, category, isPrivate,
-                    () => void browsing.reload(page.id, true)))}>
-                  <Symbol name={category.symbol ?? "trash"} size={12} />
-                  <span>{category.clearSiteTitle ?? category.title}</span>
+          {notice && (
+            <div className="site-popup-notice" role="group" aria-label={noticeTitle(notice)}>
+              <span className="site-popup-title">
+                <Symbol name={notice.status.symbol} size={12} />
+                {noticeTitle(notice)}
+              </span>
+              <span className="site-popup-guidance">{notice.status.guidance}</span>
+              {notice.status.offersAllow && (
+                <button type="button" className="site-popup-allow"
+                  aria-label={`Allow automatic pop-ups for ${notice.origin.host}`}
+                  title="Saves this permission in the current Space. Retry the action on the site afterward"
+                  onClick={() => {
+                    onAllowPopups();
+                    setPermissionsExpanded(true);
+                  }}>
+                  Allow Automatic Pop-ups
                 </button>
-              ))}
+              )}
             </div>
-          </>
-        )}
+          )}
+          <div className="site-control-actions">
+            <QuickAction title="Copy Link" symbol="square.and.arrow.up" onClick={perform(() => void copyLink())} />
+            <QuickAction title="Reload" symbol="arrow.clockwise" onClick={perform(() => void browsing.reload(page.id))} />
+            <QuickAction title="Inspect" symbol="scope"
+              onClick={perform(() => void session.core.request(OpenInspector({ pageId: page.id, panel: InspectorPanel.Elements }))
+                .catch(() => undefined))} />
+          </div>
+          {origin && (
+            <>
+              <div className="site-control-divider" />
+              <SecuritySection page={page} origin={origin} canReview={certificates.length > 0} onReview={reviewCertificate} />
+              <SiteBlocking session={session} spaceId={space.id} origin={origin} onChanged={() => void browsing.reload(page.id)} />
+              <div className="site-control-divider" />
+              <Permissions session={session} spaceId={space.id} origin={origin} expanded={permissionsExpanded}
+                onToggle={() => setPermissionsExpanded((expanded) => !expanded)} />
+              {session.shell && !isPrivate && (
+                <>
+                  <div className="site-control-divider" />
+                  <SiteExtensionsSection session={session} space={space} pageId={page.id} pageKey={`${page.live.url ?? ""}|${page.live.title}`}
+                    onRun={(run) => perform(run)()} onManage={perform(() => extensions.openSettings())} />
+                  {webStoreExtensionId(address) && (
+                    <button type="button" className="site-control-action labelled"
+                      onClick={perform(() => void extensions.install(session, webStoreExtensionId(address)!, space.id, [], page.id))}>
+                      <Symbol name="plus" size={12} />
+                      <span>Install Extension…</span>
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+          {host && (
+            <>
+              <div className="site-control-divider" />
+              <div className="site-control-actions">
+                {BrowsingDataCategory.all.filter((category) => category.clearsBySite).map((category) => (
+                  <button key={category.name} type="button" className="site-control-action labelled"
+                    onClick={perform(() => void clearSiteData(session, page, space, category, isPrivate,
+                      () => void browsing.reload(page.id, true)))}>
+                    <Symbol name={category.symbol ?? "trash"} size={12} />
+                    <span>{category.clearSiteTitle ?? category.title}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </motion.div>
   );

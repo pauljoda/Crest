@@ -206,12 +206,12 @@ function InstallReview({ session, spaces }: { session: Session; spaces: readonly
           <button type="button" className="sheet-button primary" data-autofocus onClick={() => extensions.dismiss(session)}>Done</button>
         ) : (
           <>
+            <button type="button" className="sheet-button" disabled={installing} onClick={dismiss}>Cancel</button>
             {question && !failure && (
               <button type="button" className="sheet-button primary" disabled={!canAccept || installing} onClick={accept}>
                 {installing ? "Adding…" : "Add Extension"}
               </button>
             )}
-            <button type="button" className="sheet-button" disabled={installing} onClick={dismiss}>Cancel</button>
           </>
         )}
       </div>

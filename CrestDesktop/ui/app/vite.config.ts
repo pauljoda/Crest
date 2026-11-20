@@ -7,6 +7,8 @@ import { defineConfig, searchForWorkspaceRoot } from "vite";
 const appIcons = fileURLToPath(new URL("../../../CrestShared/Resources/AppIconPreviews.xcassets", import.meta.url));
 /** The heraldic charges a Space's crest draws, shared with the Mac. */
 const heraldry = fileURLToPath(new URL("../../../CrestShared/Resources/CrestHeraldry.xcassets", import.meta.url));
+/** The search providers' logos the palette shows, shared with the Mac. */
+const searchLogos = fileURLToPath(new URL("../../../CrestShared/Resources/SearchProviderLogos.xcassets", import.meta.url));
 
 /** The version the release pipeline marks the build with, which About and Settings show. */
 const version = /MARKETING_VERSION\s*=\s*(\S+)/.exec(
@@ -19,7 +21,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: "127.0.0.1",
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), appIcons, heraldry] },
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), appIcons, heraldry, searchLogos] },
   },
   build: { target: "chrome130", sourcemap: true },
 });

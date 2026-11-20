@@ -2314,7 +2314,13 @@ button {
   }
 }
 
-/* A script dialog or sign-in, over the page it holds. */
+/* A question a page or Crest asks, as the Mac's alert sheet: the page dimmed
+   beneath it, a compact grey panel with its title and message centred, and
+   capsule buttons, Cancel before the default, which is the system's blue.
+   One button spans the panel; two that fit share it; longer ones stack, the
+   default on top. A question with a field widens and reads from the start,
+   its buttons centred at their own width. It takes the Space look's scheme,
+   as the Mac's prompts do. */
 .sheet-backdrop {
   position: absolute;
   inset: 0;
@@ -2322,16 +2328,37 @@ button {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgb(0 0 0 / 0.3);
+  background: rgb(0 0 0 / 0.55);
 }
 
 .sheet {
-  width: min(440px, 100%);
-  border-radius: var(--crest-radius-card);
+  --alert-surface: rgb(72 71 71);
+  --alert-ink: rgb(255 255 255 / 0.9);
+  --alert-secondary: rgb(255 255 255 / 0.82);
+  --alert-edge: rgb(255 255 255 / 0.12);
+  --alert-button: rgb(255 255 255 / 0.1);
+  --alert-field: rgb(30 30 29);
+  width: min(260px, 100%);
+  border-radius: 22px;
   overflow: hidden;
-  background: var(--prompt-surface);
-  color: var(--prompt-ink);
-  box-shadow: 0 0 0 1px var(--prompt-border), 0 24px 64px rgb(0 0 0 / 0.34);
+  background: var(--alert-surface);
+  color: var(--alert-ink);
+  box-shadow: inset 0 0 0 0.5px var(--alert-edge), 0 20px 50px rgb(0 0 0 / 0.35);
+  text-align: center;
+}
+
+.browser-window.reads-dark .sheet {
+  --alert-surface: rgb(236 236 236);
+  --alert-ink: rgb(0 0 0 / 0.85);
+  --alert-secondary: rgb(0 0 0 / 0.75);
+  --alert-edge: rgb(0 0 0 / 0.1);
+  --alert-button: rgb(0 0 0 / 0.07);
+  --alert-field: rgb(255 255 255);
+}
+
+.sheet:has(.sheet-field) {
+  width: min(331px, 100%);
+  text-align: start;
 }
 
 .sheet form {
@@ -2341,13 +2368,13 @@ button {
 .sheet-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 24px 24px 20px;
+  gap: 9px;
+  padding: 18px 16px 0;
 }
 
 .sheet-title {
-  margin: 0 0 2px;
-  font: 650 17px/1.3 var(--crest-font-system);
+  margin: 0;
+  font: 700 13px/16px var(--crest-font-system);
   overflow-wrap: anywhere;
 }
 
@@ -2355,40 +2382,77 @@ button {
   margin: 0;
   max-height: 40vh;
   overflow: auto;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 16px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: var(--prompt-ink-secondary);
+  color: var(--alert-secondary);
 }
 
 .sheet-field {
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--prompt-border);
-  border-radius: var(--crest-radius-compact);
+  height: 25px;
+  margin-top: 9px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
   outline: none;
-  background: var(--prompt-field);
-  color: var(--prompt-ink);
+  background: var(--alert-field);
+  color: var(--alert-ink);
   font: inherit;
-  transition: border-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+  transition: box-shadow 120ms ease-in-out;
+}
+
+.sheet-field + .sheet-field {
+  margin-top: 0;
 }
 
 .sheet-field:focus {
-  border-color: var(--prompt-accent);
-  box-shadow: 0 0 0 3px rgb(237 90 67 / 0.22);
+  box-shadow: 0 0 0 3px rgb(10 132 255 / 0.5);
 }
 
 .sheet-actions {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: center;
   gap: 8px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--prompt-border);
-  background: var(--prompt-bar);
+  padding: 18px 16px 16px;
 }
 
-.sheet-button,
+.sheet-button {
+  flex: 1 0 max-content;
+  min-width: 110px;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--alert-button);
+  color: var(--alert-ink);
+  font: 400 13px var(--crest-font-system);
+  transition: filter 120ms ease-in-out;
+}
+
+.sheet:has(.sheet-field) .sheet-actions {
+  padding-top: 15px;
+}
+
+.sheet:has(.sheet-field) .sheet-button {
+  flex: 0 0 110px;
+}
+
+.sheet-button:hover {
+  filter: brightness(1.12);
+}
+
+.sheet-button.primary {
+  background: rgb(0 122 255);
+  color: rgb(255 255 255);
+}
+
+/* The default button, which Return presses, wears no ring, as the Mac's. */
+.sheet-button:not(.primary):focus-visible {
+  outline: 2px solid rgb(10 132 255 / 0.6);
+  outline-offset: 2px;
+}
+
 .permission-button {
   height: 34px;
   border-radius: var(--crest-radius-compact);
@@ -2399,19 +2463,16 @@ button {
   transition: filter 120ms ease-in-out;
 }
 
-.sheet-button:hover,
 .permission-button:hover {
   filter: brightness(0.96);
 }
 
-.sheet-button.primary,
 .permission-button.primary {
   background: var(--prompt-accent);
   box-shadow: none;
   color: var(--prompt-on-accent);
 }
 
-.sheet-button:focus-visible,
 .permission-button:focus-visible,
 .permission-dismiss:focus-visible {
   outline: 2px solid var(--prompt-ink);
@@ -2462,31 +2523,60 @@ button {
 /* Site Controls, below the address field where the permission prompt opens:
    the Mac's popover sizes, on the prompts' paper and ink. It lines its
    trailing edge up with the field's, as wide as the Mac's. */
+/* Site Controls, as the Mac's crestPopover: a neutral flyout in the Space
+   look's scheme, centred under its trigger with an arrow at the trigger and
+   reaching over the card, 520 tall at most. */
 .site-control-panel {
+  position: absolute;
+  top: calc(100% + 9px);
+  /* Centred on the trigger, 23 in from the field's end, unless that would
+     cross the window's edge. */
+  left: max(-4px, calc(100% - 23px - 144.5px));
+  width: 289px;
+  border-radius: 18px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 0.5px var(--flyout-edge), 0 10px 30px rgb(0 0 0 / 0.28);
+  transform-origin: var(--arrow-x, 50%) -10px;
+  outline: none;
+}
+
+.browser-window.reads-light .site-control-panel {
+  --prompt-surface: rgb(43 42 41);
+  --prompt-ink: rgb(255 255 255 / 0.9);
+  --prompt-ink-secondary: rgb(255 255 255 / 0.55);
+  --prompt-border: rgb(255 255 255 / 0.16);
+  --flyout-edge: rgb(255 255 255 / 0.08);
+  --site-tile: rgb(255 255 255 / 0.165);
+  --site-success: rgb(134 196 142);
+  --site-warning: rgb(236 190 92);
+  --site-danger: rgb(238 106 92);
+}
+
+.browser-window.reads-dark .site-control-panel {
+  --prompt-surface: rgb(246 245 243);
+  --prompt-ink: rgb(0 0 0 / 0.85);
+  --prompt-ink-secondary: rgb(0 0 0 / 0.5);
+  --prompt-border: rgb(0 0 0 / 0.1);
+  --flyout-edge: rgb(0 0 0 / 0.1);
+  --site-tile: rgb(0 0 0 / 0.06);
   --site-success: rgb(47 112 66);
   --site-warning: rgb(138 90 8);
   --site-danger: rgb(178 50 37);
-  position: absolute;
-  top: calc(100% + 10px);
-  left: max(0px, calc(100% - 292px));
-  width: 292px;
-  max-height: 560px;
-  overflow-y: auto;
-  border-radius: var(--crest-radius-card);
-  background: var(--prompt-surface);
-  color: var(--prompt-ink);
-  box-shadow: 0 0 0 1px var(--prompt-border), 0 16px 40px rgb(0 0 0 / 0.3);
-  transform-origin: top right;
-  outline: none;
-  scrollbar-width: thin;
 }
 
-@media (prefers-color-scheme: dark) {
-  .site-control-panel {
-    --site-success: rgb(134 196 142);
-    --site-warning: rgb(236 190 92);
-    --site-danger: rgb(238 106 92);
-  }
+.site-control-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  border-radius: inherit;
+}
+
+.site-control-arrow {
+  position: absolute;
+  top: -10.5px;
+  left: calc(var(--arrow-x, 50%) - 14px);
+  color: var(--prompt-surface);
+  pointer-events: none;
 }
 
 .site-control-content {
@@ -2572,13 +2662,13 @@ button {
   justify-content: center;
   gap: 6px;
   border-radius: var(--crest-radius-compact);
-  background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
+  background: var(--site-tile);
   color: var(--prompt-ink);
   transition: background 120ms ease-in-out;
 }
 
 .site-control-action:hover {
-  background: color-mix(in srgb, var(--prompt-ink) 11%, transparent);
+  background: color-mix(in srgb, var(--site-tile), var(--prompt-ink) 6%);
 }
 
 .site-control-action.labelled {
@@ -3005,11 +3095,13 @@ embed.page-frame {
 }
 
 @media (prefers-color-scheme: dark) {
+  /* The Mac's window background in Crest's dark, a warm near-black, and
+     its separator. */
   .find-bar {
-    --find-surface: rgb(30 30 32);
+    --find-surface: rgb(41 39 38);
     --find-ink: rgb(255 255 255 / 0.9);
     --find-secondary: rgb(255 255 255 / 0.55);
-    --find-edge: rgb(255 255 255 / 0.16);
+    --find-edge: rgb(255 255 255 / 0.12);
     --find-danger: rgb(238 106 92);
   }
 }
@@ -3047,17 +3139,23 @@ embed.page-frame {
   color: var(--find-danger);
 }
 
+/* Nothing typed, nothing counted: the bar closes up, as the Mac's does. */
+.find-status:empty {
+  display: none;
+}
+
+/* The Mac's borderless small buttons: as wide as their glyphs, dimming as
+   they are pressed rather than showing a surface. */
 .find-control {
   display: grid;
   place-items: center;
-  width: 22px;
+  width: 13px;
   height: 22px;
-  border-radius: 5px;
   color: var(--find-ink);
 }
 
-.find-control:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--find-ink) 8%, transparent);
+.find-control:active:not(:disabled) {
+  opacity: 0.6;
 }
 
 .find-control:disabled {
@@ -3193,7 +3291,10 @@ embed.page-frame {
 .browser-window.reads-light .palette-layer {
   --pal-accent: rgb(var(--crest-accent-dark));
   --pal-accent-text: rgb(var(--crest-accent-text-dark));
-  --pal-surface: rgb(32 32 35 / 0.86);
+  /* The Mac's regular glass as it reads over a dark page: #2d2d2d. */
+  --pal-surface: rgb(48 48 48 / 0.86);
+  --pal-selected: rgb(255 255 255 / 0.12);
+  --pal-selected-edge: rgb(255 255 255 / 0.18);
   --pal-ink: rgb(255 255 255 / 0.92);
   --pal-secondary: rgb(255 255 255 / 0.55);
   --pal-primary: 255 255 255;
@@ -3205,6 +3306,8 @@ embed.page-frame {
   --pal-accent: rgb(var(--crest-accent-light));
   --pal-accent-text: rgb(var(--crest-accent-text-light));
   --pal-surface: rgb(248 248 250 / 0.88);
+  --pal-selected: rgb(0 0 0 / 0.06);
+  --pal-selected-edge: rgb(0 0 0 / 0.12);
   --pal-ink: rgb(0 0 0 / 0.86);
   --pal-secondary: rgb(0 0 0 / 0.5);
   --pal-primary: 0 0 0;
@@ -3472,6 +3575,12 @@ embed.page-frame {
   color: rgb(0 0 0 / 0.55);
 }
 
+/* A provider with a logo of its own shows it, as the Mac's palette does. */
+.palette-provider-logo {
+  flex: none;
+  object-fit: contain;
+}
+
 .palette-provider-chips {
   display: flex;
   gap: 8px;
@@ -3522,8 +3631,11 @@ embed.page-frame {
   cursor: default;
 }
 
+/* The selected row lifts as the sidebar's selected tab does, with a fine
+   edge, as the Mac's BrowserCommandPaletteRowSurface draws it. */
 .palette-row.selected {
-  background: color-mix(in srgb, var(--pal-accent) 16%, transparent);
+  background: var(--pal-selected);
+  box-shadow: inset 0 0 0 1px var(--pal-selected-edge);
 }
 
 .palette-row-icon {
@@ -3922,6 +4034,7 @@ embed.page-frame {
 /* The Mac's BrowserChromeWebStoreInstallView. */
 .extension-review {
   width: min(460px, 100%);
+  text-align: start;
 }
 
 .extension-review-header {

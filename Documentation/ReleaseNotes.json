@@ -5881,6 +5881,10 @@
     "windows-overlay-scrollbars": {
       "category": "internal",
       "message": "Pages and the interface on Windows scroll with overlay scrollbars, hidden at rest as the Mac's, unless Windows is set to always show scrollbars"
+    },
+    "windows-surfaces-match-mac": {
+      "category": "internal",
+      "message": "The Windows command palette, Site Controls, find bar and page alerts take the Mac's surfaces: a neutral palette selection with the search engine's logo, Site Controls hung from its button with an arrow, a warm find bar that closes up when empty, and compact alerts with a blue default button"
     }
   }
 }

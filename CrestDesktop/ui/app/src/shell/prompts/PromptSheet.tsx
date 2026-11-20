@@ -136,10 +136,11 @@ function SignIn({ asked, spaceName, answer }: {
 }
 
 /**
- * A dialog as Windows draws one (ContentDialog): its question above, its
- * buttons across a bar below, the primary one first. Enter answers with the
- * primary button, and Escape as `onEscape` says, which is the second button
- * unless that would go ahead with something the person should choose.
+ * A dialog as the Mac's alert sheet draws one: its question above, its
+ * buttons below, the second before the primary one, as Cancel stands
+ * before OK. Enter answers with the primary button, and Escape as
+ * `onEscape` says, which is the second button unless that would go ahead
+ * with something the person should choose.
  */
 export function Sheet({ title, primary, secondary, warning = false, onPrimary, onSecondary, onEscape, children }: {
   title: string;
@@ -155,10 +156,12 @@ export function Sheet({ title, primary, secondary, warning = false, onPrimary, o
   const second = onSecondary ?? onEscape;
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    // The page held the keyboard; the question takes it.
+    // The page held the keyboard; the question takes it, its answer's
+    // default text selected, as the Mac's field has it.
     const target = form.current?.querySelector<HTMLElement>("[data-autofocus]")
       ?? form.current?.querySelector<HTMLElement>("button[type=submit]");
     target?.focus();
+    if (target instanceof HTMLInputElement) target.select();
   }, []);
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -186,8 +189,8 @@ export function Sheet({ title, primary, secondary, warning = false, onPrimary, o
           {children}
         </div>
         <div className="sheet-actions">
-          <button type="submit" className="sheet-button primary">{primary}</button>
           {secondary && <button type="button" className="sheet-button" onClick={second}>{secondary}</button>}
+          <button type="submit" className="sheet-button primary">{primary}</button>
         </div>
       </form>
     </motion.div>
