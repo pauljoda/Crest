@@ -114,7 +114,8 @@ public sealed class NativeSyncJournal {
             .SelectMany(space => NativeSyncProjection.Items(space!, StoredSessionCodec.Key.ArchivedTabs))
             .ToDictionary(archived => Id(archived![StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]),
                 archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
-        return Stage(NativeSyncProjection.Project(session, Preferences, records.Values), archiveReasons, Cleaning(session), reason, now,
+        var cleaning = Cleaning(session);
+        return Stage(NativeSyncProjection.Project(session, Preferences, records.Values, cleaning, now), archiveReasons, cleaning, reason, now,
             removals, emptied);
     }
 
@@ -211,7 +212,7 @@ public sealed class NativeSyncJournal {
         var draft = new Draft(this);
         foreach (var (name, remote) in draft.Arrive(cloud)) draft.Records[name] = remote;
         var cleaning = Cleaning(session);
-        var desired = draft.Desired(NativeSyncProjection.Project(session, Preferences, records.Values), cleaning);
+        var desired = draft.Desired(NativeSyncProjection.Project(session, Preferences, records.Values, cleaning, now), cleaning);
         draft.Pending.Clear();
         foreach (string name in draft.Records.Keys.Union(desired.Keys).Order(StringComparer.Ordinal).ToArray()) {
             if (draft.Records.TryGetValue(name, out var held) && cleaning.Contains(new SyncJournalRecord(held).SpaceId)) continue;

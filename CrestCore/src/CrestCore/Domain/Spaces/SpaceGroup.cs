@@ -88,17 +88,23 @@ internal sealed record SpaceGroup(SpaceState Primary, IReadOnlyList<SpaceState> 
             Membership = SpaceMembership.Leading(ProfileId, now),
             History = Merged(primary.History, successor.History, entry => Derived(successor.Id, entry.Id))
         };
-        if (!primary.Settings.SeparatesPinnedTabs) {
-            List<TabState> pins = [.. primary.Tabs.Where(tab => tab.IsPinned), .. successor.Tabs.Where(tab => tab.IsPinned)];
-            leading = leading with {
-                Tabs = [.. pins.Take(TabPlacement.PinnedCapacity),
-                    .. pins.Skip(TabPlacement.PinnedCapacity).Select(tab => tab with { Placement = TabPlacement.Pinned.OverflowsTo! }),
-                    .. successor.Tabs.Where(tab => !tab.IsPinned)]
-            };
-            primary = primary with { Tabs = [.. primary.Tabs.Where(tab => !tab.IsPinned)] };
-        }
+        (primary, leading) = HandingOverPins(primary, leading);
         return [primary, leading, .. SubSpaces.Where(member => member.Id != successor.Id)
             .Select(member => member with { Membership = SpaceMembership.Joining(leading, now) })];
+    }
+
+    /// Moves shared pins that have not arrived ahead of the successor's pins.
+    /// Pins already there keep their current state and relative order.
+    internal static (SpaceState Primary, SpaceState Successor) HandingOverPins(SpaceState primary, SpaceState successor) {
+        if (primary.Settings.SeparatesPinnedTabs) return (primary, successor);
+        var arrived = successor.Tabs.Select(tab => tab.Id).ToHashSet();
+        TabState[] pins = [.. primary.Tabs.Where(tab => tab.IsPinned && !arrived.Contains(tab.Id)),
+            .. successor.Tabs.Where(tab => tab.IsPinned)];
+        return (primary with { Tabs = [.. primary.Tabs.Where(tab => !tab.IsPinned)] }, successor with {
+            Tabs = [.. pins.Take(TabPlacement.PinnedCapacity),
+                .. pins.Skip(TabPlacement.PinnedCapacity).Select(tab => tab with { Placement = TabPlacement.Pinned.OverflowsTo! }),
+                .. successor.Tabs.Where(tab => !tab.IsPinned)]
+        });
     }
 
     /// `kept` with the entries of `moved` made again in it, one entry per

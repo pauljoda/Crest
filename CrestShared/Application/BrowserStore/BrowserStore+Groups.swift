@@ -65,7 +65,11 @@ extension BrowserStore {
     /// which keep what they saved before they joined.
     func credentialSpaceIDs(of spaceID: UUID) -> [UUID] {
         guard let space = spaceModel(spaceID) else { return [spaceID] }
-        return groupMembers(of: space).map(\.id)
+        let owner = primary(of: space)
+        let members = groupMembers(of: space).map(\.id)
+        // While sync still owes the group a successor, its primary's vault
+        // continues to serve the members that still belong to it.
+        return owner.id != spaceID && isDeleting(owner.id) ? [owner.id] + members : members
     }
 
     // MARK: - Actions - Changing groups

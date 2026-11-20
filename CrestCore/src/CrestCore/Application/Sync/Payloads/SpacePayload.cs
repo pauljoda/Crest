@@ -31,8 +31,12 @@ internal sealed partial record SpacePayload(
     bool IsSavedTabsExpanded,
     SyncTime? SavedTabsExpansionModifiedAt,
     IReadOnlyList<SplitGroupPayload>? SplitGroups,
-    string OrderToken) : SyncPayload {
+    string OrderToken,
+    string? IndependentOrderToken,
+    SyncTime? PositionModifiedAt) : SyncPayload {
     #region Static Variables
+
+    public const string IndependentOrderKey = "independentOrderToken";
 
     /// The members a Space's value carries; a record keeps what a newer build
     /// writes beside them.
@@ -43,7 +47,8 @@ internal sealed partial record SpacePayload(
         StoredSessionCodec.Key.CredentialsEnabledModifiedAt, StoredSessionCodec.Key.PrimarySpaceId, StoredSessionCodec.Key.SharedProfileId,
         StoredSessionCodec.Key.MembershipModifiedAt, StoredSessionCodec.Key.SeparatesPinnedTabs,
         StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, StoredSessionCodec.Key.ProtectionModifiedAt, StoredSessionCodec.Key.IsSavedTabsExpanded,
-        StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.SplitGroups, SyncPayload.Key.OrderToken
+        StoredSessionCodec.Key.SavedTabsExpansionModifiedAt, StoredSessionCodec.Key.SplitGroups, SyncPayload.Key.OrderToken,
+        IndependentOrderKey, StoredSessionCodec.Key.PositionModifiedAt
     ];
 
     /// The most splits a Space's record names.
@@ -57,6 +62,8 @@ internal sealed partial record SpacePayload(
     public override SyncRecordKind Kind => SyncRecordKind.Space;
 
     public override Guid SpaceId => Id;
+
+    public string DisplayOrderToken => IndependentOrderToken ?? OrderToken;
 
     #endregion
 
@@ -98,7 +105,9 @@ internal sealed partial record SpacePayload(
             value.OptionalFlag(StoredSessionCodec.Key.IsSavedTabsExpanded) ?? true,
             value.OptionalTime(StoredSessionCodec.Key.SavedTabsExpansionModifiedAt),
             value.OptionalArray(StoredSessionCodec.Key.SplitGroups) is { } groups ? SplitGroupPayload.Normalized(groups, value.Form) : null,
-            value.Text(Key.OrderToken));
+            value.Text(Key.OrderToken),
+            value.OptionalText(IndependentOrderKey),
+            value.OptionalTime(StoredSessionCodec.Key.PositionModifiedAt));
     }
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
@@ -132,6 +141,8 @@ internal sealed partial record SpacePayload(
         if (SplitGroups is { } groups)
             value[StoredSessionCodec.Key.SplitGroups] = new JsonArray([.. groups.Select(group => (JsonNode?)group.Encode(form))]);
         value[Key.OrderToken] = OrderToken;
+        if (IndependentOrderToken is { } independent) value[IndependentOrderKey] = independent;
+        Put(value, StoredSessionCodec.Key.PositionModifiedAt, PositionModifiedAt, form);
         return value;
     }
 
@@ -148,6 +159,8 @@ internal sealed partial record SpacePayload(
             foreach (var group in groups) group.Validate();
         }
         RequireOrderToken(OrderToken);
+        if ((IndependentOrderToken is null) != (PositionModifiedAt is null)) throw new UnreadableSyncPayloadException();
+        if (IndependentOrderToken is { } independent) RequireOrderToken(independent);
     }
 
     #endregion

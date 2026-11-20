@@ -292,6 +292,7 @@ final class WebKitEngineBinding: EngineBinding {
                 self?.mediaActivityMayHaveChanged(in: message.webView)
             }
         }
+        let pageID = creation.pageID
         let spaceID = space?.id
         return WebKitEnginePage(
             id: creation.pageID,
@@ -299,7 +300,8 @@ final class WebKitEngineBinding: EngineBinding {
             webView: BrowserPlatformWebKit.makeWebView(configuration: configuration),
             contentRuleLists: contentRuleLists,
             blocksSite: { [weak self] url in
-                guard let spaceID, let core = self?.core else { return true }
+                guard let core = self?.core, let spaceID = core.state.pages[pageID]?.spaceID ?? spaceID
+                else { return true }
                 let origin = url.flatMap(SiteOrigin.init(url:))
                 return (try? core.query(ContentBlockingApplies(spaceID: spaceID, origin: origin))) ?? true
             },

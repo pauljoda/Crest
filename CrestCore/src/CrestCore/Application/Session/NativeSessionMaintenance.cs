@@ -65,7 +65,7 @@ public static class NativeSessionMaintenance {
         var active = repaired.Select(space => space.Id).ToHashSet();
         var launch = source.DefaultSpaceId is { } chosen && active.Contains(chosen)
             ? chosen : repaired.First(space => !pending.Contains(space.Id)).Id;
-        return source with { Spaces = repaired, DefaultSpaceId = launch };
+        return (source with { Spaces = repaired, DefaultSpaceId = launch }).PreservingDeletionProfiles();
     }
 
     /// `seed` repaired as a stored session is when it loads, stamped as the

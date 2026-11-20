@@ -39,6 +39,37 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(400, Unix(left["membershipModifiedAt"]), precision: 6);
     }
 
+    /// A legacy editor can change a Space without knowing its independent
+    /// position or while carrying the position it knew before a newer move.
+    [Fact]
+    public void IndependentOrderSurvivesLegacyRecordRewrites() {
+        var (work, client, personal) = (Fixed(2_120), Fixed(2_121), Fixed(2_122));
+        var (workProfile, clientProfile, personalProfile) = (Fixed(2_190), Fixed(2_191), Fixed(2_192));
+        var primary = SpaceOf(work, workProfile, "Work");
+        var child = Joined(SpaceOf(client, clientProfile, "Client"), work, workProfile, at: 200);
+        var solo = SpaceOf(personal, personalProfile, "Personal");
+        var initial = SessionOf(primary, child, solo);
+        var journal = new JournalUnderTest(Fixed(2_129));
+        journal.Stage(initial, at: 300);
+        var legacyClient = journal.Record(SyncRecordKind.Space, client)!;
+        journal.Stage(SessionOf(primary, solo, child), at: 400);
+
+        // Older clients can continue to materialize the group as a block.
+        Assert.Equal([work, client, personal], journal.Values(SyncRecordKind.Space)
+            .OrderBy(value => value["orderToken"]!.GetValue<string>(), StringComparer.Ordinal)
+            .Select(value => StoredSessionCodec.Identity(value["id"])));
+        var firstRecords = journal.Records.Where(record => record["id"]!["kind"]!.GetValue<string>() == SyncRecordKind.Space.Name).ToArray();
+
+        journal.Merge(Edited(legacyClient, 100, Fixed(2_128), value => value["name"] = "Renamed"));
+        var firstOrder = journal.Materialize(initial);
+        Assert.Equal([work, personal, client], Ids(firstOrder["spaces"]));
+        Assert.Equal("Renamed", StoredSessionCodec.DecodeSession(firstOrder).Space(client)!.Settings.Name);
+
+        journal.Stage(SessionOf(child, solo, primary), at: 500);
+        journal.Merge(firstRecords.Select(record => Edited(record, 200, Fixed(2_128), _ => { })));
+        Assert.Equal([client, personal, work], Ids(journal.Materialize(initial)["spaces"]));
+    }
+
     #endregion
 
     #region Actions - Membership

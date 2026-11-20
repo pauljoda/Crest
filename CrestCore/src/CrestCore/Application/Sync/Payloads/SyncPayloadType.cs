@@ -188,6 +188,7 @@ internal abstract class SyncPayloadType {
             LatestFields(result, first, second, StoredSessionCodec.Key.MembershipModifiedAt, StoredSessionCodec.Key.PrimarySpaceId,
                 StoredSessionCodec.Key.SharedProfileId);
             LatestFields(result, first, second, StoredSessionCodec.Key.SeparatesPinnedTabsModifiedAt, StoredSessionCodec.Key.SeparatesPinnedTabs);
+            LatestFields(result, first, second, StoredSessionCodec.Key.PositionModifiedAt, SpacePayload.IndependentOrderKey);
             LatestNestedFields(result, first, second, StoredSessionCodec.Key.ProtectionModifiedAt, StoredSessionCodec.Key.BrowsingPreferences,
                 StoredSessionCodec.Key.ContentBlockingPolicy, StoredSessionCodec.Key.DataRetention);
             const string groups = StoredSessionCodec.Key.SplitGroups;

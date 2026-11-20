@@ -27,7 +27,7 @@ public static class NativeSyncMaterializer {
         var brandingIds = records.Where(record => record.Kind == SyncRecordKind.Space && record.SuppliesBranding).Select(record => record.Id).ToHashSet();
         var spaces = new List<SpaceState>();
         var profiles = new HashSet<Guid>();
-        foreach (var remote in Payloads<SpacePayload>(records).OrderBy(space => space.OrderToken, StringComparer.Ordinal)
+        foreach (var remote in Payloads<SpacePayload>(records).OrderBy(space => space.DisplayOrderToken, StringComparer.Ordinal)
             .ThenBy(space => space.Id.ToString("D"), StringComparer.Ordinal)) {
             if (!profiles.Add(remote.ProfileId)) throw Error(SyncRecordFlaw.SharedProfile, remote.ProfileId);
             locals.TryGetValue(remote.Id, out var local);

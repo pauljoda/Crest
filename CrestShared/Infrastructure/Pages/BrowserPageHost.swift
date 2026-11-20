@@ -45,7 +45,8 @@ final class BrowserPageHost {
     /// nothing knows only the Spaces its pages name.
     @ObservationIgnored var showsTab: @MainActor (_ spaceID: UUID, _ tabID: UUID) -> Bool = { _, _ in false }
     @ObservationIgnored private(set) var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
-    @ObservationIgnored private var peekLeases: [UUID: PeekLease] = [:]
+    /// Peek leases by presenting window, then by request.
+    @ObservationIgnored private var peekLeases: [UUID: [UUID: PeekLease]] = [:]
     /// The pages the core adopted as windows pages asked for, by page, until
     /// the Quick Window that shows each takes it. Every window over the
     /// workspace shares them, so the Quick Window finds its page whichever
@@ -461,37 +462,45 @@ final class BrowserPageHost {
     /// The Peek's lease for `request`: the one it already holds while it can
     /// still show its page, or a new one `makeLease` opens.
     func peekPageLease(
-        for request: BrowserPeekRequest,
+        for request: BrowserPeekRequest, in windowID: UUID,
         makeLease: () -> BrowserPlatformTransientPageLease?
     ) -> BrowserPlatformTransientPageLease? {
-        if let entry = peekLeases[request.id], entry.request == request,
+        if let entry = peekLeases[windowID]?[request.id], entry.request == request,
             case let lease = entry.lease, lease.assignment == request.assignment,
             lease.page != nil || lease.wasReleasedForMemoryPressure
         {
             return lease
         }
-        peekLeases.removeValue(forKey: request.id)?.lease.release()
+        let previous = peekLeases[windowID]?.removeValue(forKey: request.id)
+        previous?.lease.release()
         let lease = makeLease()
-        if let lease { peekLeases[request.id] = (request, lease) }
+        if let lease { peekLeases[windowID, default: [:]][request.id] = (request, lease) }
         return lease
     }
 
     /// The Peek over tab `tabID` that `isOpen` accepts, which shows in front
     /// of the tab's own page; nil when no such Peek is there. A staged Peek
     /// keeps its lease to draw, but is not open.
-    func peekRequest(over tabID: UUID, where isOpen: (BrowserPeekRequest) -> Bool) -> BrowserPeekRequest? {
-        peekLeases.values.first { $0.request.sourceTabID == tabID && isOpen($0.request) }?.request
+    func peekRequest(
+        over tabID: UUID, in windowID: UUID, where isOpen: (BrowserPeekRequest) -> Bool
+    ) -> BrowserPeekRequest? {
+        peekLeases[windowID]?.values.first { $0.request.sourceTabID == tabID && isOpen($0.request) }?.request
     }
 
-    /// The page of the Peek `peekRequest(over:where:)` finds.
-    func peekPage(over tabID: UUID, where isOpen: (BrowserPeekRequest) -> Bool) -> BrowserPlatformPage? {
-        peekRequest(over: tabID, where: isOpen).flatMap { peekLeases[$0.id]?.lease.page }
+    /// The page of the Peek `peekRequest(over:in:where:)` finds.
+    func peekPage(
+        over tabID: UUID, in windowID: UUID, where isOpen: (BrowserPeekRequest) -> Bool
+    ) -> BrowserPlatformPage? {
+        peekRequest(over: tabID, in: windowID, where: isOpen).flatMap { peekLeases[windowID]?[$0.id]?.lease.page }
     }
 
-    /// Lets go of the Peeks' leases no longer asked for.
-    func retainPeekPages(for requests: [BrowserPeekRequest]) {
-        for (id, entry) in peekLeases where !requests.contains(entry.request) {
-            peekLeases.removeValue(forKey: id)?.lease.release()
+    /// Lets go of the Peeks' leases that this window no longer asks for.
+    func retainPeekPages(for requests: [BrowserPeekRequest], in windowID: UUID) {
+        guard let leases = peekLeases[windowID] else { return }
+        let retained = leases.filter { requests.contains($0.value.request) }
+        peekLeases[windowID] = retained.isEmpty ? nil : retained
+        for (id, entry) in leases where retained[id] == nil {
+            entry.lease.release()
         }
     }
 

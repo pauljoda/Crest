@@ -22,10 +22,11 @@ public sealed record BeginDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid Sp
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         workspace.RequireOwnedSpaces();
         var (space, pending) = workspace.Deleting(turn.Basis, SpaceId);
-        if (pending is not null)
-            return pending.Id == OperationId
-                ? new(turn.Basis, SyncStaging.Withdrawal)
-                : throw new Rejected(new WrongDeletionOperation(space.Id));
+        if (pending is not null) {
+            if (pending.Id != OperationId) throw new Rejected(new WrongDeletionOperation(space.Id));
+            if (turn.Basis.AwaitsDeletionSuccessor(SpaceId)) throw new Rejected(new InvalidNewPrimary(SpaceId));
+            return new(turn.Basis, SyncStaging.Withdrawal);
+        }
         SessionState.RequireRemovable(turn.Basis.Spaces.Count - turn.Basis.SpaceDeletions.Count);
         var basis = turn.Basis;
         Guid? successor = null;

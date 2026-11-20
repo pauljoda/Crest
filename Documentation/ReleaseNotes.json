@@ -5853,6 +5853,22 @@
     "independent-sub-space-order": {
       "category": "new",
       "message": "Spaces can now appear anywhere in the picker, including between members of another group. Moving a Space preserves its shared sign-ins and pinned tab settings."
+    },
+    "peek-space-and-window-ownership": {
+      "category": "fixed",
+      "message": "Peeks stay with their Space and window when you open or close another Peek from a shared pinned tab."
+    },
+    "shared-pinned-tab-popup-space": {
+      "category": "fixed",
+      "message": "New tabs and Quick Windows opened by a shared pinned tab use the Space showing it."
+    },
+    "independent-space-order-sync-compatibility": {
+      "category": "fixed",
+      "message": "Independent Space order stays in place when an older Crest device syncs."
+    },
+    "synced-primary-space-handover": {
+      "category": "fixed",
+      "message": "When sync delivers a primary Space deletion before its successor, shared pins and sign-ins stay available while the group waits for the handover."
     }
   }
 }

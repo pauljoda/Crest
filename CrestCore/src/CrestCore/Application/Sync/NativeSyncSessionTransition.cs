@@ -61,37 +61,32 @@ public sealed record NativeSyncSessionTransition {
         var pending = local.SpaceDeletions.ToList();
         var pendingIds = pending.Select(deletion => deletion.SpaceId).ToHashSet();
         var deleted = records.Where(record => record.Kind == SyncRecordKind.Space && record.Tombstone?.Reason.IsExplicit == true)
-            .Select(record => local.Space(record.Id)).OfType<SpaceState>().Where(space => !pendingIds.Contains(space.Id)).ToList();
-        // A profile one of them browses with is erased only when no Space that
-        // stays browses with it.
-        var leaving = deleted.Select(space => space.Id).ToHashSet();
-        foreach (var space in deleted) {
-            pendingIds.Add(space.Id);
-            pending.Add(local.Deleting(space, Guid.NewGuid(), leaving));
-        }
+            .Select(record => local.Space(record.Id)).OfType<SpaceState>().ToDictionary(space => space.Id);
+        // Hold the deleted Spaces and their group data until any successor
+        // chosen by the sender reaches us. A tombstone may arrive first.
+        pending.AddRange(deleted.Values.Where(space => !pendingIds.Contains(space.Id))
+            .Select(space => new SpaceDeletionState(Guid.NewGuid(), space.Id, space.OwnProfileId, [])));
         local = local with { SpaceDeletions = pending };
         var raw = replacing && incoming.Count == 0 ? local with { Spaces = [], DisposableSeedMarker = null }
             : NativeSyncMaterializer.Materialize(local, NativeSyncProjection.Preferences(journal.Preferences), records, now, access);
+        raw = ApplyingArrivedHandovers(raw, deleted.Values.Where(space => local.PendingDeletion(space.Id)?.SuccessorId is null));
         var repaired = NativeSessionMaintenance.Repair(raw, now, emptySpace, ids, out var origins);
         repaired = NativeSessionMaintenance.Retain(repaired, now, out var removed);
         if (pending.Count > 0) {
+            pending = repaired.SpaceDeletions.ToList();
             var spaces = repaired.Spaces.ToList();
             foreach (var intent in pending) {
-                var original = local.Spaces.Single(space => space.Id == intent.SpaceId);
-                int index = spaces.FindIndex(space => space.Id == intent.SpaceId);
-                if (index < 0) spaces.Add(original);
-                else spaces[index] = original;
+                if (!spaces.Any(space => space.Id == intent.SpaceId)) spaces.Add(local.KnownSpace(intent.SpaceId));
             }
             repaired = repaired with { Spaces = spaces, SpaceDeletions = pending };
-            // A primary another device deleted hands its group to the first of its Sub-Spaces.
-            foreach (var space in deleted) {
-                if (repaired.GroupOf(space.Id) is not { SubSpaces: [var first, ..] } group) continue;
-                repaired = repaired.HandingOver(group, first, now);
-                repaired = repaired with {
-                    SpaceDeletions = [.. repaired.SpaceDeletions.Select(deletion => deletion.SpaceId == space.Id
-                        ? deletion with { SuccessorId = first.Id } : deletion)]
-                };
+            for (int index = 0; index < pending.Count; index++) {
+                var intent = pending[index];
+                if (intent.SuccessorId is not null || !deleted.TryGetValue(intent.SpaceId, out var space)) continue;
+                var successor = repaired.CredentialSuccessor(space);
+                if (!pendingIds.Contains(space.Id) || successor is not null)
+                    pending[index] = repaired.Deleting(space, intent.Id) with { SuccessorId = successor };
             }
+            repaired = (repaired with { SpaceDeletions = pending }).PreservingDeletionProfiles();
         }
         repaired = repaired with { AppPreferences = local.AppPreferences };
         // A folder of the open tabs that another device emptied arrives marked,
@@ -101,6 +96,28 @@ public sealed record NativeSyncSessionTransition {
         if (!replacing || removed)
             next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds);
         return new(next, repaired, origins);
+    }
+
+    #endregion
+
+    #region Actions - Handover
+
+    /// If the sender already named a successor, keep it even when some
+    /// children still arrive naming the old primary, and move the shared pins
+    /// that have yet to arrive. Use the sender's time for inferred changes.
+    private static SessionState ApplyingArrivedHandovers(SessionState raw, IEnumerable<SpaceState> deleted) {
+        foreach (var former in deleted) {
+            if (raw.CredentialSuccessor(former) is not { } successorId) continue;
+            var (departing, successor) = SpaceGroup.HandingOverPins(former, raw.KnownSpace(successorId));
+            var handoverTime = successor.Membership!.ModifiedAt;
+            var children = raw.StayingSpaces.Where(space => space.PrimaryId == former.Id).Select(space => {
+                var childTime = space.Membership!.ModifiedAt;
+                var modifiedAt = childTime > handoverTime ? childTime : handoverTime;
+                return space with { Membership = SpaceMembership.Joining(successor, modifiedAt) };
+            });
+            raw = raw.Replacing([departing, successor, .. children]);
+        }
+        return raw;
     }
 
     #endregion

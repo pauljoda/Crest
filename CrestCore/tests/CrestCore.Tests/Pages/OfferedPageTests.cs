@@ -33,6 +33,49 @@ public sealed partial class BrowserContractsTests {
             .SingleOrDefault(shown => shown.SpaceId == space)?.TabId;
 
     [Fact]
+    public void ASharedPinsPageOpensTabsAndQuickWindowsInItsPresentingSpace() {
+        var (work, client, personal, profile, pin) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var session = SessionOf(
+            SpaceOf(work, profile, "Work", tabs: [TabOf(pin, placement: "pinned")]),
+            Joined(SpaceOf(client, Guid.NewGuid(), "Client"), work, profile, at: 100),
+            SpaceOf(personal, Guid.NewGuid(), "Personal"));
+        var (app, engine, binding, workspace, workWindow) = PageHost(session);
+        using var disposal = app;
+        var (clientWindow, source) = (Guid.NewGuid(), Guid.NewGuid());
+        app.Send(new ShowTab(workWindow, work, pin));
+        app.Send(new OpenPage(source, workspace, work, pin, workWindow));
+        app.Report(engine, new PageCreated(source));
+        app.Send(new OpenWindow(clientWindow, workspace, Saved: false, CopyingWindowId: null, ShowingSpaceId: client,
+            [new ShownTab(client, pin)], RestoresTabs: true));
+        app.Send(new MovePage(source, workspace, work, pin, clientWindow));
+        app.Drain();
+
+        var tabOffer = Guid.NewGuid();
+        app.Report(engine, new PageOffered(tabOffer, profile, source, WindowId: null, SpaceId: null,
+            "https://tab.example/", Foreground: false));
+        var tab = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        Assert.Equal((clientWindow, client), (tab.WindowId, tab.SpaceId));
+        Assert.Contains(CurrentTabs(app, workspace, client), item => item.Id == tab.TabId);
+        Assert.DoesNotContain(CurrentTabs(app, workspace, work), item => item.Id == tab.TabId);
+        Assert.Equal(new AdoptOfferedPage(tab.PageId, tabOffer, profile, IsPrivate: false, clientWindow), binding.Commands[^1]);
+
+        var popupOffer = Guid.NewGuid();
+        app.Report(engine, new PageOffered(popupOffer, profile, source, WindowId: null, SpaceId: work,
+            "https://popup.example/", Foreground: true));
+        var popup = Assert.Single(app.Drain().OfType<OfferedWindowAdopted>());
+        Assert.Equal((clientWindow, client, source), (popup.WindowId, popup.SpaceId, popup.SourcePageId));
+        Assert.Equal(new AdoptOfferedPage(popup.PageId, popupOffer, profile, IsPrivate: false, clientWindow), binding.Commands[^1]);
+
+        // A later offer from the background page keeps its own Space,
+        // even when its host window is showing another profile.
+        app.Send(new ShowSpace(clientWindow, personal));
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, source, WindowId: null, SpaceId: null,
+            "https://background.example/", Foreground: false));
+        var background = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        Assert.Equal((clientWindow, work), (background.WindowId, background.SpaceId));
+    }
+
+    [Fact]
     public void NoSpaceTakesAnOfferedPageItMayNotHost() {
         var session = GuardedSession(withOpenSecondSpace: true);
         var locked = Identity(session);

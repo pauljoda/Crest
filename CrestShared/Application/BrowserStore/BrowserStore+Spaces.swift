@@ -63,8 +63,14 @@ extension BrowserStore {
 
     func resumePendingSpaceDeletions(dataDeleter: any BrowserSpaceDataDeleting) async {
         var attempted: Set<UUID> = []
-        while let intent = (workspaceModel?.spaceDeletions ?? []).first(where: {
-            !attempted.contains($0.spaceID) && !family.isActivelyDeletingSpace($0.spaceID)
+        while let intent = (workspaceModel?.spaceDeletions ?? []).first(where: { intent in
+            guard !attempted.contains(intent.spaceID), !family.isActivelyDeletingSpace(intent.spaceID)
+            else { return false }
+            // Sync can deliver the primary's deletion before the choice of successor.
+            return intent.successorID != nil
+                || !spaceModels.contains {
+                    $0.membership?.primaryID == intent.spaceID && !isDeleting($0.id)
+                }
         }) {
             attempted.insert(intent.spaceID)
             do { try await deleteSpace(intent.spaceID, dataDeleter: dataDeleter) } catch {

@@ -231,6 +231,7 @@ final class BrowserPagePool:
     }
 
     func releaseWindowPresentation() {
+        retainPeekPages(for: [])
         presentationWindow = nil
         activeTabID = nil
         presentedTabIDs = []
@@ -420,7 +421,7 @@ final class BrowserPagePool:
     /// The Peek open over the active tab, which shows in front of it. A Peek
     /// still staged by a link drag is not open yet.
     var peekPage: BrowserPage? {
-        activeTabID.flatMap { host.peekPage(over: $0, where: isPeekOpen) }
+        activeTabID.flatMap { host.peekPage(over: $0, in: windowID, where: isPeekOpen) }
     }
 
     /// The page the page commands act on: the Peek open over the active tab,
@@ -737,7 +738,7 @@ final class BrowserPagePool:
     /// Closes the Peek open over the active tab, which Close Tab closes
     /// before the tab under it; false when no Peek is open.
     func closePeek() -> Bool {
-        guard let request = activeTabID.flatMap({ host.peekRequest(over: $0, where: isPeekOpen) })
+        guard let request = activeTabID.flatMap({ host.peekRequest(over: $0, in: windowID, where: isPeekOpen) })
         else { return false }
         if let peekPage { returnFocus(fromPeek: peekPage) }
         dismissPeek(request)

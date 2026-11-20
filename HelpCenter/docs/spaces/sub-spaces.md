@@ -113,6 +113,8 @@ To open a link with another Space's sign-ins on Mac, right-click it and choose a
 
 Devices that run an earlier version of Crest keep syncing. They show each Sub-Space as a Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices.
 
+Versions that support Sub-Spaces but require groups to stay together show a grouped order. Once you arrange Spaces independently, update each device to see and change that order.
+
 ## Import groups from other browsers
 
 Importing from Arc brings the Spaces of each Arc profile in as one group, led by the profile's first Space. When another browser keeps several workspaces in one profile, they come in the same way. Workspaces that open their tabs in one container share that container's sign-ins instead, so they come in as a group of their own.
