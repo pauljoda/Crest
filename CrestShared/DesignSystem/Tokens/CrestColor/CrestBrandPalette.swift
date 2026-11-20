@@ -9,6 +9,9 @@ import SwiftUI
 enum CrestBrandPalette {
     static let inkComponents = CrestColorComponents(red: 23, green: 34, blue: 56)
     static let slateComponents = CrestColorComponents(red: 43, green: 58, blue: 92)
+    /// The warm dark neutral that stands for paper in the dark, under paper
+    /// text: the hue of the brand's warm neutrals, nearly as deep as ink.
+    static let charcoalComponents = CrestColorComponents(red: 40, green: 37, blue: 31)
     static let creamComponents = CrestColorComponents(red: 251, green: 245, blue: 230)
     static let paperComponents = CrestColorComponents(red: 255, green: 253, blue: 247)
     /// The warm ground under a control on cream, such as a segmented
@@ -26,6 +29,7 @@ enum CrestBrandPalette {
 
     static let ink = inkComponents.color
     static let slate = slateComponents.color
+    static let charcoal = charcoalComponents.color
     static let cream = creamComponents.color
     static let paper = paperComponents.color
     static let parchment = parchmentComponents.color

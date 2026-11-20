@@ -52,7 +52,7 @@ struct BrowserSpaceAccessView: View {
 
                 VStack(spacing: 6) {
                     Text(space.name)
-                        .font(.title.weight(.semibold))
+                        .font(CrestTypography.display(BrowserSpaceAccessLayout.nameSize, relativeTo: .title))
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
 
@@ -76,8 +76,7 @@ struct BrowserSpaceAccessView: View {
                         isAuthenticating: accessController.isAuthenticating(space)
                     )
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(.crestPrimary)
                 .frame(
                     maxWidth: dynamicTypeSize.isAccessibilitySize
                         ? .infinity : BrowserSpaceAccessLayout.maximumActionWidth
@@ -120,7 +119,7 @@ struct BrowserSpaceAccessView: View {
                         Label("Switch Space", systemImage: "square.grid.2x2")
                     }
                     .crestMenuActionLabelStyle()
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.crestSecondary)
                     .accessibilityIdentifier("switch-private-space")
                 }
             }
@@ -133,7 +132,7 @@ struct BrowserSpaceAccessView: View {
             if presentation == .contentOverlay, !reduceTransparency {
                 CrestSurfaceLayer(shape: Rectangle())
             } else {
-                Rectangle().fill(.background)
+                Rectangle().fill(CrestBrandTheme.canvas)
             }
             BrowserSpaceBannerBackground(branding: space.branding)
                 .opacity(reduceTransparency ? 0.04 : 0.1)

@@ -116,6 +116,11 @@ private final class SidebarScrollActivity {
 }
 
 private struct SidebarScrollIndicator: View {
+    /// The bubble's size, and how far its centered hit frame drops, so the
+    /// bubble itself sits just above the sidebar's foot.
+    private static let bubbleDiameter: CGFloat = 22
+    private static let bubbleDrop: CGFloat = 5
+
     let activity: SidebarScrollActivity
     let isDragging: Bool
     let scrollDown: () -> Void
@@ -142,31 +147,22 @@ private struct SidebarScrollIndicator: View {
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
 
+                // The bubble stands on the device's material, as the pins do,
+                // and takes presses a full hit target around it, so a touch
+                // just beside it scrolls rather than reaching the row behind.
                 Button(action: scrollDown) {
                     Image(systemName: "arrow.down")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(
-                            width: CrestLayout.glassIconButtonDiameter / 2,
-                            height: CrestLayout.glassIconButtonDiameter / 2
-                        )
-                        .glassEffect(.regular.interactive(), in: .circle)
-                        .frame(
-                            width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget,
-                            alignment: .bottom
-                        )
-                        // The bubble sits at the foot of its hit frame; the hit
-                        // circle centers on the bubble, so a touch just below
-                        // it scrolls rather than reaching the row behind.
-                        .contentShape(
-                            Circle().offset(
-                                y: (CrestLayout.minimumHitTarget - CrestLayout.glassIconButtonDiameter / 2) / 2)
-                        )
                 }
                 .labelStyle(.iconOnly)
-                .buttonStyle(.plain)
+                .buttonStyle(
+                    CrestChromeButtonStyle(
+                        controlSize: CGSize(width: Self.bubbleDiameter, height: Self.bubbleDiameter),
+                        cornerRadius: Self.bubbleDiameter / 2, restsOnMaterial: true,
+                        hitOutset: (CrestLayout.minimumHitTarget - Self.bubbleDiameter) / 2)
+                )
                 .scaleEffect(reduceMotion || showsBubble ? 1 : 0.5, anchor: .bottom)
-                .offset(y: reduceMotion ? -6 : showsBubble ? -6 : CrestLayout.glassIconButtonDiameter + 8)
+                .offset(y: reduceMotion || showsBubble ? Self.bubbleDrop : CrestLayout.minimumHitTarget + 8)
                 .opacity(showsBubble ? 1 : 0)
                 .allowsHitTesting(showsBubble)
                 .accessibilityHidden(!showsBubble)

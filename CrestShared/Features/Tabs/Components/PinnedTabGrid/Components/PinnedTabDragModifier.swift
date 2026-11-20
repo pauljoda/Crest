@@ -6,6 +6,8 @@ struct PinnedTabDragModifier: ViewModifier {
     let assignment: BrowserSpaceRuntimeAssignment
     let dragState: BrowserTabDragState?
     var reorder: BrowserSidebarReorderContext?
+    /// Whether the pin is the selected one, whose lift stays on paper.
+    var isSelected = false
 
     func body(content: Content) -> some View {
         if let reorder, let dragState {
@@ -16,7 +18,8 @@ struct PinnedTabDragModifier: ViewModifier {
                     profileID: assignment.profileID,
                     spaceID: assignment.spaceID,
                     dragState: dragState,
-                    reorder: reorder
+                    reorder: reorder,
+                    isTabSelected: isSelected
                 )
         } else {
             content

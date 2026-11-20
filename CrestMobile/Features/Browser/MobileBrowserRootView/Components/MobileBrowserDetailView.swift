@@ -321,7 +321,6 @@ struct MobileBrowserDetailView: View {
             if let page, let failure = page.live.failure {
                 BrowserNavigationFailureView(
                     failure: failure,
-                    branding: shownBranding,
                     layout: isCompact ? .compact : .regular,
                     canGoBack: page.canReturnFromNavigationFailure,
                     canProceed: page.canProceedAfterCertificateFailure,
@@ -603,7 +602,7 @@ struct MobileBrowserDetailView: View {
     }
 
     /// Which of the compact address bar and the palette holds their shared
-    /// identity: the palette's glass grows out of the bar's and shrinks back
+    /// identity: the palette's surface grows out of the bar's and shrinks back
     /// into it.
     /// Whether the palette rising from the compact bar shows: one was asked
     /// for, over a tab it can act on, as its layer requires.

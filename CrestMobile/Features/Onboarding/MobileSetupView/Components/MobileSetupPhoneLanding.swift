@@ -93,7 +93,7 @@ enum MobileSetupPhoneLandingMetrics {
     static let markSize: CGFloat = 72
     static let titleSize: CGFloat = 44
     /// Display type set tight, as Crest's headlines are.
-    static let titleTracking: CGFloat = -1.2
+    static let titleTracking: CGFloat = -0.5
     static let bodySize: CGFloat = 18
     static let inset: CGFloat = 28
     static let footerInset = EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 24)

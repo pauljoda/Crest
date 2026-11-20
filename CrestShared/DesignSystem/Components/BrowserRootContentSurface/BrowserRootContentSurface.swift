@@ -44,7 +44,7 @@ struct BrowserRootContentSurface<Content: View>: View {
                 if usesTransparentInnerSurface {
                     Color.clear
                 } else {
-                    Rectangle().fill(.background)
+                    Rectangle().fill(CrestBrandTheme.canvas)
                 }
             }
             // Clip the assembled surface once. Independently clipped backing

@@ -24,8 +24,8 @@ final class BrowserCommandPaletteModel {
     /// The Space the palette speaks for, or nil when the window shows none.
     let space: SpaceModel?
     /// The color the selected row is tinted in: the Space's accent where
-    /// the person chose it in Appearance, else none, and the row lifts as
-    /// the sidebar's selected tab does.
+    /// the person chose it in Appearance, else none, and the row is a sheet
+    /// of paper as the sidebar's selected tab is.
     var selectionAccent: Color? {
         guard BrowserDeviceAppearanceStore.shared.address.tintsPaletteWithSpaceAccent else { return nil }
         return space?.settings.look.primaryColor.color

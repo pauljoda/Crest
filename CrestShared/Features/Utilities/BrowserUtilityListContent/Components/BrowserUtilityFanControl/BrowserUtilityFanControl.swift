@@ -42,9 +42,8 @@ struct BrowserUtilityFanControl: View {
                     isRevealed ? 1 : BrowserUtilitySwitcherLayout.collapsedScale
                 )
                 .opacity(isRevealed ? 1 : 0)
-                // Each destination keeps its own glass surface. A shared
-                // GlassEffectContainer morphs the three overlapping surfaces
-                // independently from their labels while the fan is moving.
+                // Each destination keeps its own surface, which moves with
+                // its label while the fan opens and closes.
                 .position(isRevealed ? destinationPosition : origin)
                 .allowsHitTesting(isExpanded && isRevealed)
                 .accessibilityHidden(!isExpanded || !isRevealed)

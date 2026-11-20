@@ -5,8 +5,7 @@ struct BrowserNavigationFailureProceedButton: View {
 
     var body: some View {
         Button("Proceed Anyway", role: .destructive, action: action)
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            .buttonStyle(.crestDestructive)
             .accessibilityHint(
                 "Trusts this exact site certificate for the current browsing session"
             )

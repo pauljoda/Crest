@@ -39,7 +39,6 @@ struct BrowserNavigationFailureContent: View {
                 canGoBack: canGoBack,
                 canProceed: canProceed,
                 showsDetails: showsDetails,
-                accent: accent,
                 retry: retry,
                 goBack: goBack,
                 proceed: proceed,
