@@ -2714,14 +2714,27 @@ button {
   transition: stroke-dasharray 300ms ease-out;
 }
 
-/* The page card: the page's own surface, inset from the window and rounded. */
+/* The page card: the page's own surface, inset from the window and rounded.
+   White stands behind the page, for a page that hasn't drawn yet or lags its
+   card as it resizes, a pixel in from the card's edge: at the edge itself the
+   rounded clip blends what lies beneath into the edge's pixels, and white
+   beneath a dark page lit its corners and top with a pale line. */
 .page-card {
   position: relative;
   min-width: 0;
   border-radius: var(--crest-radius-control);
   overflow: hidden;
-  background: rgb(255 255 255);
+  isolation: isolate;
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 30px rgb(0 0 0 / 0.22);
+}
+
+.page-card::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: calc(var(--crest-radius-control) - 1px);
+  background: rgb(255 255 255);
 }
 
 .page-frame {
@@ -2731,6 +2744,11 @@ button {
   height: 100%;
   border: 0;
   background: white;
+}
+
+/* An embedded page draws its own surface over the card's white. */
+embed.page-frame {
+  background: none;
 }
 
 /* Find in page, as the Mac floats it over the page's top trailing corner: a
@@ -2826,8 +2844,8 @@ button {
 }
 
 /* A card with no page to draw lets the Space's backdrop through. */
-.page-card.clear {
-  background: transparent;
+.page-card.clear::before {
+  content: none;
 }
 
 /* A page's still (page-stills.ts): in place of the page as its card slides

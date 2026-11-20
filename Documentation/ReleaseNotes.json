@@ -5853,6 +5853,10 @@
     "windows-resize-drags-smooth-heavy-pages": {
       "category": "internal",
       "message": "Dragging the sidebar's edge or a split's divider on Windows stays smooth over pages that take long to lay out"
+    },
+    "windows-card-corners-clean": {
+      "category": "internal",
+      "message": "Page cards on Windows no longer show a pale line along their rounded corners and top edge over dark pages"
     }
   }
 }
