@@ -22,6 +22,9 @@ struct BrowserWebPageSurface: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The page this surface saw before its first commit and is still settling.
+    @State private var uncommittedPageID: UUID?
+
     /// The agent using the page's tab now, when one does.
     private var agent: AgentSessionState? {
         guard let tabID = browser.core.state.pages[page.corePage.id]?.tabID else { return nil }
@@ -29,6 +32,10 @@ struct BrowserWebPageSurface: View {
     }
 
     var body: some View {
+        let committed = BrowserPageSurfacePresentation.revealsWebContent(
+            committedNavigationCount: page.committedNavigationCount
+        )
+        let revealed = committed && uncommittedPageID != page.corePage.id
         ZStack(alignment: .top) {
             BrowserPlatformWebView(
                 page: page,
@@ -41,13 +48,23 @@ struct BrowserWebPageSurface: View {
                 (page.nativeView as? any BrowserNativePageSurfaceLifecycle)?.presentationGeometryDidChange()
             }
             .accessibilityLabel(page.live.title.isEmpty ? "Web page" : page.live.title)
-            .opacity(
-                BrowserPageSurfacePresentation.revealsWebContent(
-                    committedNavigationCount: page.committedNavigationCount
-                ) ? 1 : 0
-            )
+            .opacity(revealed ? 1 : 0)
+            .onChange(of: page.corePage.id, initial: true) {
+                uncommittedPageID = committed ? nil : page.corePage.id
+            }
+            .task(id: committed && uncommittedPageID == page.corePage.id ? page.corePage.id : nil) {
+                let pageID = page.corePage.id
+                guard committed, uncommittedPageID == pageID else { return }
+                try? await Task.sleep(for: .milliseconds(34))
+                guard !Task.isCancelled, uncommittedPageID == pageID else { return }
+                withAnimation(CrestMotion.contentReveal.unlessReducingMotion(reduceMotion)) {
+                    uncommittedPageID = nil
+                }
+            }
 
-            BrowserPageLoadingPresentation(page: page)
+            if !revealed {
+                BrowserPageLoadingPresentation(page: page)
+            }
 
             if let hover = page.linkHover { BrowserLinkHoverPreview(hover: hover) }
 
@@ -256,6 +273,6 @@ private struct BrowserPageLoadingPresentation: View {
     }
 
     private var showsInitialStatus: Bool {
-        isNavigating && page.committedNavigationCount == 0 && !hasFailure
+        (isNavigating || page.committedNavigationCount > 0) && !hasFailure
     }
 }
