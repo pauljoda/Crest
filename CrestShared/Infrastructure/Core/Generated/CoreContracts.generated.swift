@@ -7135,7 +7135,7 @@ struct SplitNeedsTwoTabs: Equatable, Sendable {
     let limit: Int
 
     var message: LocalizedStringResource {
-        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select fewer tabs or use a smaller split.")
+        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select at least 2 tabs to make a split.")
     }
 }
 
