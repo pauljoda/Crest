@@ -5869,6 +5869,10 @@
     "windows-address-field-pins-match-mac": {
       "category": "internal",
       "message": "The Windows address field and pinned tabs match the Mac's: the site centred over its path, solid lock and Site Controls glyphs, the Space's colour filling the field while a page loads, and pinned tabs sharing the row with a ring in their site's colour"
+    },
+    "windows-sidebar-text-placement-match-mac": {
+      "category": "internal",
+      "message": "Sidebar text on Windows sits where the Mac's does: row titles and the Space name placed as SF places them, the Space name at the Mac's size and inset, and the Mac's spacing around saved tabs and an empty pinned area"
     }
   }
 }

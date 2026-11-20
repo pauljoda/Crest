@@ -518,10 +518,11 @@ export function Sidebar({
           onDismiss={dismissUtility} />
       );
     }
+    const showsPins = pinned.some((list) => list.rows.length > 0) || !!lift;
     return (
       <>
       <PinnedExtensionStrip session={session} space={space} pageId={page?.id ?? null} pageKey={`${page?.live.url ?? ""}|${page?.live.title ?? ""}`} />
-      {(pinned.some((list) => list.rows.length > 0) || lift) && (
+      {showsPins && (
         <PinnedGrid className={`pinned-grid${gapAt(TabPlacement.pinned, null, null) ? " drop-at-end" : ""}`}
           count={pinned.reduce((count, list) => count + list.rows.filter((row) => tabs.has(row.id) && !isLifted(row.id)).length, 0)}
           data-list-section={TabPlacement.pinned.name} data-list-folder="">
@@ -555,7 +556,7 @@ export function Sidebar({
         </PinnedGrid>
       )}
 
-      <div className="space-header">
+      <div className={`space-header${showsPins ? "" : " without-pins"}`}>
         <button
           className="space-header-title"
           onClick={() => toggleSavedTabs(space)}

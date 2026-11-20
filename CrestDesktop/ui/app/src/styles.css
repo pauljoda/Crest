@@ -1401,11 +1401,21 @@ button {
   display: flex;
   align-items: center;
   height: 40px;
-  /* The Space's rows start a row's separation below it, not the page's gap. */
-  margin-bottom: -6px;
-  padding: 0 4px;
+  /* The Space's first row starts half a row's separation below it, as a
+     Mac row keeps half its separation on either side, not the page's gap. */
+  margin-bottom: -7px;
+  /* The Mac's 8 before the crest; its borderless menu button ends its
+     ellipsis 2 from the edge, where a 24-point control would end 4 in. */
+  padding: 0 2px 0 8px;
   border-radius: 8px;
   transition: background 120ms ease-in-out;
+}
+
+/* With no pinned tabs, the Mac keeps their 12-point band, where a tab
+   dropped is pinned, between the address field and the header: 4 more than
+   the page's gap. */
+.space-header.without-pins {
+  margin-top: 4px;
 }
 
 .space-header:hover {
@@ -1469,13 +1479,18 @@ button {
   }
 }
 
+/* The Mac's callout in semibold. Its capitals centre in the header, as SF
+   sets them; Segoe's line box would set them a point low. The padding keeps
+   room for descenders and accents inside the clip. */
 .space-name {
   min-width: 0;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
+  text-box: trim-both cap alphabetic;
+  padding-block: 4px;
 }
 
 .space-header-lock {
@@ -1510,12 +1525,13 @@ button {
    much again where the saved tabs would stand when there are none. */
 .tab-list > .tab-section.current-tabs {
   border-top: 1px solid var(--surface-border);
-  padding-top: 18px;
-  margin-top: 17px;
+  padding-top: 20px;
+  margin-top: 16px;
 }
 
 .tab-list > .tab-section.current-tabs:first-child {
-  margin-top: 27px;
+  padding-top: 19px;
+  margin-top: 28px;
 }
 
 /* An open folder, group or split is the Mac's container: 4 of padding over
@@ -1598,6 +1614,11 @@ button {
   z-index: 1;
 }
 
+/* A row's title sits with its capitals half a point above the row's centre,
+   where SF sets them on the Mac; Segoe's line box would set them two points
+   lower. Trimming the line to its capitals and baseline places them by the
+   padding, which also keeps room for descenders and accents inside the clip.
+   A folder's, a group's or a split's header centres them. */
 .row-title {
   flex: 1;
   min-width: 0;
@@ -1605,6 +1626,12 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 400;
+  text-box: trim-both cap alphabetic;
+  padding-block: 4px 5px;
+}
+
+.folder-row > .row-title {
+  padding-block: 4px;
 }
 
 /* A tab's close button shows on hover and on the selected tab: the Mac's
@@ -1767,6 +1794,8 @@ button {
 }
 
 .lift-preview.card .row-title {
+  text-box: normal;
+  padding-block: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
