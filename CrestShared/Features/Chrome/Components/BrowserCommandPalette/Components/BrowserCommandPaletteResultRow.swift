@@ -37,7 +37,7 @@ struct BrowserCommandPaletteResultRow: View {
         }
         .buttonStyle(
             BrowserCommandPaletteRowButtonStyle(
-                isSelected: isSelected
+                isSelected: isSelected, accent: model.selectionAccent
             )
         )
         .accessibilityValue(model.engineBadge(for: item.row).map { Text($0.pageDescription) } ?? Text(verbatim: ""))

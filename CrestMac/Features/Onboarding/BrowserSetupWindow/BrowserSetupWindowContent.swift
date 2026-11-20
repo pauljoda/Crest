@@ -15,7 +15,8 @@ struct BrowserSetupWindowContent: View {
     let progress: BrowserOnboardingProgressStore
     let flow: BrowserOnboardingFlow
     let cloudWait: BrowserOnboardingCloudWait
-    /// Whether setup finished and the preview grows to fill the window.
+    /// Whether setup finished and hands over to the Crest window drawn behind
+    /// it: the preview moves into that window's place as setup fades into it.
     let isTakingOver: Bool
     let close: () -> Void
     /// Finishes setup, carrying what the person changed in the copy's tabs
@@ -41,7 +42,13 @@ struct BrowserSetupWindowContent: View {
             let stepsWidth = BrowserSetupWindowMetrics.panelWidth(in: geometry.size.width)
             ZStack(alignment: .leading) {
                 preview
-                    .padding(.leading, isTakingOver ? 0 : stepsWidth)
+                    .padding(.leading, stepsWidth)
+                    // Into the place of the window Crest opens behind setup,
+                    // as setup fades into it.
+                    .offset(
+                        x: isTakingOver ? -(stepsWidth + BrowserSetupWindowMetrics.previewInsets.leading) : 0,
+                        y: isTakingOver ? -BrowserSetupWindowMetrics.previewInsets.top : 0
+                    )
                     .opacity(isLanding ? 0 : 1)
                     // Off the trailing edge on the welcome, it comes in with
                     // the sheet's edge, so the two never overlap.
@@ -73,8 +80,8 @@ struct BrowserSetupWindowContent: View {
             live.show(session.seed, images: session.images, spaceID: shownSpaceID)
         }
         .onChange(of: shownSpaceID) { _, spaceID in live.show(spaceID) }
-        // Crest opens on the guide once setup finishes, so the preview grows
-        // into the window showing it too.
+        // Crest opens on the guide once setup finishes, so the preview shows
+        // it too as setup fades into Crest.
         .onChange(of: isTakingOver) { _, isTakingOver in
             if isTakingOver { live.showGettingStarted() }
         }
@@ -87,8 +94,9 @@ struct BrowserSetupWindowContent: View {
     /// The sheet of paper setup lies on: the whole window on the welcome, a
     /// third of it for the steps, attached to the window's leading edge,
     /// its trailing edge casting a shadow on the room; it slides away as the
-    /// preview takes over. What it holds keeps its own width as it slides, so
-    /// nothing on it lays out again.
+    /// preview takes over. What it holds, and the paper itself, keep the
+    /// window's width as it slides, and only how much of them shows changes,
+    /// so nothing on it lays out or draws again on the way.
     private func sheet(stepsWidth: CGFloat, windowWidth: CGFloat) -> some View {
         let width = isTakingOver ? 0 : isLanding ? windowWidth : stepsWidth
         return BrowserSetupStepsPanel(
@@ -99,19 +107,26 @@ struct BrowserSetupWindowContent: View {
             path: $path,
             shownSpaceID: $shownSpaceID,
             close: close,
-            startBrowsing: { startBrowsing(live.edits) },
-            openCrest: openCrest,
+            startBrowsing: {
+                let edits = live.edits
+                live.showGettingStarted()
+                startBrowsing(edits)
+            },
+            openCrest: {
+                live.showGettingStarted()
+                openCrest()
+            },
             setUpWithoutCloud: cloudWait.setUpWithoutCloud
         )
         .frame(width: windowWidth, alignment: .leading)
-        .frame(width: width, alignment: .leading)
         .frame(maxHeight: .infinity)
         .background { BrowserSetupPaper() }
+        .frame(width: width, alignment: .leading)
         .clipped()
-        .shadow(
-            color: CrestBrandPalette.ink.opacity(isLanding ? 0 : BrowserSetupWindowMetrics.sheetShadow),
-            radius: BrowserSetupWindowMetrics.sheetShadowRadius, x: BrowserSetupWindowMetrics.sheetShadowOffset
-        )
+        .overlay(alignment: .trailing) {
+            BrowserSetupSheetEdge()
+                .opacity(isLanding ? 0 : 1)
+        }
         .tint(CrestBrandTheme.accent)
         .opacity(isTakingOver ? 0 : 1)
     }
@@ -120,17 +135,12 @@ struct BrowserSetupWindowContent: View {
     /// size in the room beside the steps.
     private var preview: some View {
         ZStack {
-            BrowserSetupLiveWindow(
-                session: live, cornerRadius: isTakingOver ? 0 : BrowserSetupLiveWindowMetrics.cornerRadius)
+            BrowserSetupLiveWindow(session: live)
             if live.copy == nil, flow.isReading {
                 ProgressView()
             }
         }
-        .shadow(
-            color: CrestBrandPalette.ink.opacity(isTakingOver ? 0 : BrowserSetupWindowMetrics.previewShadow),
-            radius: 30, y: 18
-        )
-        .padding(isTakingOver ? EdgeInsets() : BrowserSetupWindowMetrics.previewInsets)
+        .padding(BrowserSetupWindowMetrics.previewInsets)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -165,11 +175,6 @@ enum BrowserSetupWindowMetrics {
     static let panelWidths: ClosedRange<CGFloat> = 380...440
     /// The room around the preview.
     static let previewInsets = EdgeInsets(top: 44, leading: 44, bottom: 44, trailing: 44)
-    static let previewShadow = 0.3
-    /// The shadow the sheet's edge casts on the room.
-    static let sheetShadow = 0.2
-    static let sheetShadowRadius: CGFloat = 16
-    static let sheetShadowOffset: CGFloat = 4
 
     static func panelWidth(in windowWidth: CGFloat) -> CGFloat {
         min(max(windowWidth / 3, panelWidths.lowerBound), panelWidths.upperBound)

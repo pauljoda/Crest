@@ -3,33 +3,28 @@ import SwiftUI
 /// A fine film grain of light and dark specks, the same wherever it is drawn,
 /// which a Space's sidebar lays over its colors as its texture and a color
 /// picker previews.
+///
+/// The specks are drawn once, into a tile at the screen's scale, which the
+/// grain repeats across whatever it covers. Moving, clipping or resizing the
+/// grain only shows more or less of the tile, so a sheet sliding or a window
+/// growing over it never draws the specks again.
 struct CrestGrain: View {
+    // MARK: - Variables
+
+    /// How many specks lie on each square point; the large sheets setup
+    /// lies on take fewer.
+    var density = CrestGrainMetrics.density
+
+    @Environment(\.displayScale) private var displayScale
+
+    // MARK: - Actions - Drawing
+
     var body: some View {
-        Canvas(opaque: false, rendersAsynchronously: true) { context, size in
-            let sampleCount = min(20_000, max(800, Int(size.width * size.height / 24)))
-            var generator = CrestGrainGenerator(seed: 0xC2E5_7A11)
-            var lightGrain = Path()
-            var darkGrain = Path()
-
-            for index in 0..<sampleCount {
-                let x = generator.nextUnit() * size.width
-                let y = generator.nextUnit() * size.height
-                let diameter = 0.85 + generator.nextUnit() * 1.5
-                let particle = CGRect(
-                    x: x,
-                    y: y,
-                    width: diameter,
-                    height: diameter
-                )
-                if index.isMultiple(of: 2) {
-                    lightGrain.addEllipse(in: particle)
-                } else {
-                    darkGrain.addEllipse(in: particle)
-                }
+        Group {
+            if let tile = CrestGrainTile.image(scale: displayScale, density: density) {
+                Image(decorative: tile, scale: displayScale)
+                    .resizable(resizingMode: .tile)
             }
-
-            context.fill(lightGrain, with: .color(.white.opacity(0.46)))
-            context.fill(darkGrain, with: .color(.black.opacity(0.38)))
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -41,4 +36,6 @@ enum CrestGrainMetrics {
     /// the system reduces transparency.
     static let fullOpacity = 0.38
     static let reducedTransparencyOpacity = 0.24
+    /// One speck to every 24 square points, as a sidebar has always had.
+    static let density = 1.0 / 24
 }

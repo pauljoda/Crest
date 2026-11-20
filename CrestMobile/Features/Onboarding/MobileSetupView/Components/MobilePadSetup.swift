@@ -65,7 +65,7 @@ struct MobilePadSetup: View {
                     .offset(x: isLanding ? geometry.size.width - stepsWidth : 0)
                     .allowsHitTesting(!isLanding)
                     .accessibilityHidden(isLanding)
-                paper(width: sheetWidth)
+                paper(screenWidth: geometry.size.width, width: sheetWidth)
                 sheet(stepsWidth: stepsWidth, screenWidth: geometry.size.width, width: sheetWidth)
             }
             .background {
@@ -90,15 +90,19 @@ struct MobilePadSetup: View {
     }
 
     /// The sheet of paper setup lies on, from the top of the screen to the
-    /// bottom, its trailing edge casting a shadow on the room.
-    private func paper(width: CGFloat) -> some View {
+    /// bottom, its trailing edge casting a shade on the room. The paper keeps
+    /// the screen's width as the sheet slides, and only how much of it shows
+    /// changes, so its grain is never drawn again on the way.
+    private func paper(screenWidth: CGFloat, width: CGFloat) -> some View {
         BrowserSetupPaper()
-            .frame(width: width)
+            .frame(width: screenWidth)
+            .frame(width: width, alignment: .leading)
             .frame(maxHeight: .infinity)
-            .shadow(
-                color: CrestBrandPalette.ink.opacity(isLanding ? 0 : MobilePadSetupMetrics.sheetShadow),
-                radius: MobilePadSetupMetrics.sheetShadowRadius, x: MobilePadSetupMetrics.sheetShadowOffset
-            )
+            .clipped()
+            .overlay(alignment: .trailing) {
+                BrowserSetupSheetEdge()
+                    .opacity(isLanding ? 0 : 1)
+            }
             .opacity(isTakingOver ? 0 : 1)
             .ignoresSafeArea()
     }
@@ -128,10 +132,6 @@ struct MobilePadSetup: View {
         MobileSetupLiveWindow(
             session: live, cornerRadius: isTakingOver ? 0 : MobileSetupLiveWindowMetrics.cornerRadius
         )
-        .shadow(
-            color: CrestBrandPalette.ink.opacity(isTakingOver ? 0 : MobilePadSetupMetrics.copyShadow),
-            radius: 30, y: 18
-        )
         .padding(isTakingOver ? 0 : MobilePadSetupMetrics.copyInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -141,11 +141,6 @@ enum MobilePadSetupMetrics {
     /// The steps take about a third of the screen, within these widths.
     static let panelWidths: ClosedRange<CGFloat> = 340...420
     static let copyInset: CGFloat = 32
-    static let copyShadow = 0.3
-    /// The shadow the sheet's edge casts on the room.
-    static let sheetShadow = 0.2
-    static let sheetShadowRadius: CGFloat = 16
-    static let sheetShadowOffset: CGFloat = 4
 
     static func panelWidth(in width: CGFloat) -> CGFloat {
         min(max(width / 3, panelWidths.lowerBound), panelWidths.upperBound)

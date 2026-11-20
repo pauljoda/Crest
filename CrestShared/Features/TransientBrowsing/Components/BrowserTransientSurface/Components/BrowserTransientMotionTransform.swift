@@ -22,9 +22,10 @@ struct BrowserTransientMotionTransform: ViewModifier {
         let motionState = state
         let size = containerSize
         let shouldReduceMotion = reduceMotion
+        let pace = BrowserPeekPace.chosen
         let isSettling =
             state?.releasedAt != settledRelease
-            && BrowserTransientMotion.isSettling(state, at: .now, reduceMotion: reduceMotion)
+            && BrowserTransientMotion.isSettling(state, at: .now, reduceMotion: reduceMotion, pace: pace)
         // Keep the native page attached while the outgoing card fades: the
         // clock pauses rather than leaving the card's tree.
         return TimelineView(
@@ -37,7 +38,7 @@ struct BrowserTransientMotionTransform: ViewModifier {
                 let frame = geometry.frame(in: .named(BrowserTransientMotion.coordinateSpaceName))
                 let pose = BrowserTransientMotion.pose(
                     for: motionState, frame: frame, containerSize: size,
-                    at: date, reduceMotion: shouldReduceMotion)
+                    at: date, reduceMotion: shouldReduceMotion, pace: pace)
                 return
                     card
                     .scaleEffect(pose.scale, anchor: .center)
@@ -47,7 +48,7 @@ struct BrowserTransientMotionTransform: ViewModifier {
         }
         .task(id: state?.releasedAt) {
             guard let releasedAt = state?.releasedAt else { return }
-            let remaining = BrowserTransientMotion.settledAt(releasedAt).timeIntervalSinceNow
+            let remaining = BrowserTransientMotion.settledAt(releasedAt, pace: pace).timeIntervalSinceNow
             if remaining > 0 {
                 do { try await Task.sleep(for: .seconds(remaining)) } catch { return }
             }
@@ -59,21 +60,18 @@ struct BrowserTransientMotionTransform: ViewModifier {
 /// Shared scale and position springs for the held card and its release.
 enum BrowserTransientMotion {
     static let coordinateSpaceName = "crest-transient-surface"
-    private static let settlingDuration = 1.2
-    private static let springDuration = 0.6
     private static let springBounce = 0.16
     private static let returnScale = 0.005
     private static let minimumScale = 0.001
-    private static let returnFadeDuration = 0.55
     private static let framesPerSecond = 120.0
     /// The shortest time between two frames of a settling card.
     static let frameInterval = 1 / framesPerSecond
 
     static func pose(
         for state: BrowserPeekMotionState?, frame: CGRect, containerSize: CGSize,
-        at date: Date, reduceMotion: Bool
+        at date: Date, reduceMotion: Bool, pace: BrowserPeekPace
     ) -> Pose {
-        guard let state, !reduceMotion else {
+        guard let state, !reduceMotion, !pace.snaps else {
             return Pose(center: CGPoint(x: frame.midX, y: frame.midY), scale: 1, opacity: 1)
         }
         let initial =
@@ -89,10 +87,10 @@ enum BrowserTransientMotion {
             ? CGPoint(x: state.origin.x * containerSize.width, y: state.origin.y * containerSize.height)
             : CGPoint(x: frame.midX, y: frame.midY)
         let targetScale = state.returnsToSource ? returnScale : 1.0
-        guard elapsed < settlingDuration else {
+        guard elapsed < pace.settlingDuration else {
             return Pose(center: target, scale: targetScale, opacity: state.returnsToSource ? 0 : 1)
         }
-        let spring = Spring(duration: springDuration, bounce: springBounce)
+        let spring = Spring(duration: pace.springDuration, bounce: springBounce)
         let x =
             initial.x
             + spring.value(
@@ -103,10 +101,10 @@ enum BrowserTransientMotion {
             + spring.value(
                 target: target.y - initial.y,
                 initialVelocity: state.velocity.height * containerSize.height, time: elapsed)
-        let scale = BrowserTransientMotion.scale(for: state, at: date)
+        let scale = BrowserTransientMotion.scale(for: state, at: date, pace: pace)
         return Pose(
             center: CGPoint(x: x, y: y), scale: max(minimumScale, scale),
-            opacity: state.returnsToSource ? max(0, 1 - elapsed / returnFadeDuration) : 1)
+            opacity: state.returnsToSource ? max(0, 1 - elapsed / pace.returnFadeDuration) : 1)
     }
 
     struct Pose: Sendable {
@@ -116,24 +114,26 @@ enum BrowserTransientMotion {
     }
 
     /// When the spring of a card released at `releasedAt` comes to rest.
-    static func settledAt(_ releasedAt: Date) -> Date {
-        releasedAt.addingTimeInterval(settlingDuration)
+    static func settledAt(_ releasedAt: Date, pace: BrowserPeekPace) -> Date {
+        releasedAt.addingTimeInterval(pace.settlingDuration)
     }
 
     /// Whether a card in `state` is still springing at `date`: released, not
     /// yet at rest, and moving at all.
-    static func isSettling(_ state: BrowserPeekMotionState?, at date: Date, reduceMotion: Bool) -> Bool {
-        guard !reduceMotion, let releasedAt = state?.releasedAt else { return false }
-        return date < settledAt(releasedAt)
+    static func isSettling(
+        _ state: BrowserPeekMotionState?, at date: Date, reduceMotion: Bool, pace: BrowserPeekPace
+    ) -> Bool {
+        guard !reduceMotion, !pace.snaps, let releasedAt = state?.releasedAt else { return false }
+        return date < settledAt(releasedAt, pace: pace)
     }
 
-    static func scale(for state: BrowserPeekMotionState, at date: Date) -> Double {
+    static func scale(for state: BrowserPeekMotionState, at date: Date, pace: BrowserPeekPace) -> Double {
         guard let releasedAt = state.releasedAt else { return state.scale }
         let elapsed = max(0, date.timeIntervalSince(releasedAt))
         let target = state.returnsToSource ? returnScale : 1.0
-        guard elapsed < settlingDuration else { return target }
+        guard elapsed < pace.settlingDuration, !pace.snaps else { return target }
         return state.scale
-            + Spring(duration: springDuration, bounce: springBounce).value(
+            + Spring(duration: pace.springDuration, bounce: springBounce).value(
                 target: target - state.scale, initialVelocity: state.scaleVelocity, time: elapsed)
     }
 

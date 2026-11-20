@@ -27,6 +27,8 @@ enum BrowserLookAndFeelDefaults {
     /// How long, in milliseconds, the sidebar slides out over the page: a
     /// third quicker than the motion it is measured against.
     static let sidebarSlideDuration: Double = 160
+    /// How long a Peek takes to grow out of its link, in milliseconds.
+    static let peekOpenDuration: Double = 240
     /// A new device's tab appearance, made fresh each time so a reset never
     /// shares the one instance it puts back.
     @MainActor static var tabs: BrowserTabAppearance { BrowserTabAppearance() }

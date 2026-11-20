@@ -46,7 +46,7 @@ struct BrowserPeekUnlockedContent: View {
         }
         .task(id: model.motionState?.releasedAt) {
             guard model.motionState?.returnsToSource == true else { return }
-            try? await Task.sleep(for: .seconds(reduceMotion ? 0 : 1.2))
+            try? await Task.sleep(for: .seconds(reduceMotion ? 0 : BrowserPeekPace.chosen.settlingDuration))
             guard !Task.isCancelled else { return }
             model.finishReturningPull()
         }
