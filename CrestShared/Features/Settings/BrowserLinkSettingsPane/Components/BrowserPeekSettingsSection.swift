@@ -9,6 +9,8 @@ struct BrowserPeekSettingsSection: View {
     var dimsPageBehindPeek: Binding<Bool>? = nil
     /// Absent where Peek fills the screen.
     var peekSize: CrestSettingValue<Double>? = nil
+    /// How long a Peek takes to grow out of its link.
+    var peekSpeed: CrestSettingValue<Double>? = nil
     /// Opens a sample Peek over Settings; absent where Settings can't show one.
     var testPeek: (() -> Void)? = nil
 
@@ -43,6 +45,16 @@ struct BrowserPeekSettingsSection: View {
                     value: peekSize,
                     range: BrowserTransientCardArrangement.pointerCardShares,
                     identifier: "peek-size"
+                )
+            }
+
+            if let peekSpeed {
+                CrestSettingSlider(
+                    "Peek animation time",
+                    value: peekSpeed,
+                    range: BrowserPeekPace.range,
+                    readout: .milliseconds(zero: "Instant"),
+                    identifier: "peek-animation-time"
                 )
             }
 

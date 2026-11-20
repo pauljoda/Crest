@@ -69,7 +69,7 @@ struct BrowserCommandPaletteIntentRow: View {
         }
         .buttonStyle(
             BrowserCommandPaletteRowButtonStyle(
-                isSelected: isSelected
+                isSelected: isSelected, accent: model.selectionAccent
             )
         )
         .accessibilityLabel(Text(verbatim: item.row.title))

@@ -5826,6 +5826,26 @@
       "category": "improved",
       "message": "The default app icon sits on a warm paper tile in light mode, so its butter banner stands out instead of fading into a near-white background."
     },
+    "setup-hands-over-quickly": {
+      "category": "improved",
+      "message": "Setup slides to its steps and hands over to Crest quickly and smoothly, without the stutter at the start or the end."
+    },
+    "snappier-animations": {
+      "category": "improved",
+      "message": "Crest's animations are quicker throughout, and switching Spaces is a little faster."
+    },
+    "peek-animation-time": {
+      "category": "improved",
+      "message": "Peek opens much faster, and Peek animation time in Settings › Links sets how quickly it grows out of a link."
+    },
+    "palette-selection-highlight": {
+      "category": "improved",
+      "message": "The command palette highlights the selected row the way the sidebar highlights the selected tab. Turn on Space accent in command palette in Appearance to tint it with the Space's accent instead."
+    },
+    "settings-selected-icons": {
+      "category": "fixed",
+      "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
+    },
     "core-close-waits-for-filter-conversions": {
       "category": "internal",
       "message": "Closing the core now waits for the filter lists it is still converting, so nothing writes in its storage folder once it has closed."

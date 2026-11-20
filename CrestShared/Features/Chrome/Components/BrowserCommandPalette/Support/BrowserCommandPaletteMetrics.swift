@@ -47,7 +47,8 @@ enum BrowserCommandPaletteMetrics {
     static let rowTextSpacing: CGFloat = 2
     static let rowHorizontalPadding: CGFloat = 12
     static let rowCornerRadius: CGFloat = 12
-    static let selectedRowOpacity = 0.16
+    static let selectedRowOpacity = 0.22
+    static let selectedRowBorderOpacity = 0.45
     static let restingRowOpacity = 0.045
 
     static let rowIconContainerSize: CGFloat = 34

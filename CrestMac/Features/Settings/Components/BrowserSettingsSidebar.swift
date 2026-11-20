@@ -76,12 +76,7 @@ struct BrowserSettingsSidebar: View {
                 Label {
                     Text(destination.navigationTitle)
                 } icon: {
-                    // Semibold, so the few glyphs with no filled form, such
-                    // as Search's and Links', hold their own beside the
-                    // filled ones.
-                    Image(systemName: destination.symbol)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(destination.sidebarTint)
+                    BrowserSettingsSidebarGlyph(destination: destination)
                 }
                 .settingsSidebarRow(.destination(destination), hovered: $hoveredItem, selection: selection)
                 .accessibilityIdentifier("settings-\(destination.name)")

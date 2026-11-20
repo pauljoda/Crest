@@ -20,32 +20,32 @@ enum CrestMotion {
     /// The deliberate hold that distinguishes a long press from an ordinary tap.
     static let longPressRecognitionDelay: TimeInterval = 0.55
     /// Advancing or retreating a step in a multi-step flow.
-    static let stepTransition: TimeInterval = 0.30
+    static let stepTransition: TimeInterval = 0.22
     /// A control acknowledging a press.
-    static let pressFeedback: TimeInterval = 0.14
+    static let pressFeedback: TimeInterval = 0.1
     /// A compact control acknowledging a press without moving surrounding chrome.
-    static let compactPressFeedback: TimeInterval = 0.12
+    static let compactPressFeedback: TimeInterval = 0.09
     /// A dense developer control acknowledging a press.
-    static let developerPressFeedback: TimeInterval = 0.16
+    static let developerPressFeedback: TimeInterval = 0.12
     /// Hover and selection changes on compact interactive surfaces.
-    static let surfaceTransition: TimeInterval = 0.12
-    static let styleChangeTransition: TimeInterval = 0.35
+    static let surfaceTransition: TimeInterval = 0.1
+    static let styleChangeTransition: TimeInterval = 0.25
     /// Inserting, removing, or reordering items in a collection.
-    static let collectionTransition: TimeInterval = 0.22
+    static let collectionTransition: TimeInterval = 0.17
     /// Morphing the content represented by an active drag preview.
-    static let dragPreviewTransition: TimeInterval = 0.18
+    static let dragPreviewTransition: TimeInterval = 0.14
     /// Selecting a destination or changing a window's browsing mode.
-    static let navigationTransition: TimeInterval = 0.28
+    static let navigationTransition: TimeInterval = 0.2
     /// Showing or hiding the app's primary browser chrome.
-    static let chromeTransition: TimeInterval = 0.28
+    static let chromeTransition: TimeInterval = 0.2
     /// Handing the sidebar surface between its docked and floating placements.
-    static let sidebarMorphTransition: TimeInterval = 0.28
+    static let sidebarMorphTransition: TimeInterval = 0.21
     /// Moving page surfaces aside before a floating sidebar attaches to the row.
-    static let sidebarDockApproachTransition: TimeInterval = 0.22
+    static let sidebarDockApproachTransition: TimeInterval = 0.16
     /// The short final handoff from the floating sidebar card to its docked seat.
-    static let sidebarDockAttachmentTransition: TimeInterval = 0.16
+    static let sidebarDockAttachmentTransition: TimeInterval = 0.12
     /// Letting the undocked sidebar retreat after pointer interaction ends.
-    static let sidebarRetreatTransition: TimeInterval = 0.30
+    static let sidebarRetreatTransition: TimeInterval = 0.22
     /// Keeps phased sidebar work aligned with the visible geometry handoff.
     static let sidebarMorphCompletionDelay: Duration = .seconds(
         sidebarMorphTransition
@@ -59,68 +59,68 @@ enum CrestMotion {
         sidebarDockAttachmentTransition
     )
     /// Showing or changing a secondary pane layered over browser chrome.
-    static let floatingPaneTransition: TimeInterval = 0.24
+    static let floatingPaneTransition: TimeInterval = 0.18
     /// Showing or hiding compact toolbars within web content.
-    static let toolbarTransition: TimeInterval = 0.24
+    static let toolbarTransition: TimeInterval = 0.18
     /// Removing transient feedback or secondary chrome.
-    static let dismissalTransition: TimeInterval = 0.18
+    static let dismissalTransition: TimeInterval = 0.14
     /// Hover feedback for sidebar rows.
-    static let hoverTransition: TimeInterval = 0.14
+    static let hoverTransition: TimeInterval = 0.1
     /// Expanding or collapsing a sidebar disclosure group.
-    static let disclosureTransition: TimeInterval = 0.20
+    static let disclosureTransition: TimeInterval = 0.16
     /// Updating an address field's determinate loading fill.
-    static let loadingProgressTransition: TimeInterval = 0.22
+    static let loadingProgressTransition: TimeInterval = 0.18
     /// Selecting a choice within an onboarding flow.
-    static let selectionTransition: TimeInterval = 0.20
+    static let selectionTransition: TimeInterval = 0.15
     /// A color popping into or out of a color well's gradient, and the
     /// others moving to where harmony puts them beside it.
-    static let colorPopTransition: TimeInterval = 0.38
+    static let colorPopTransition: TimeInterval = 0.3
     /// Applying or removing the persistent visual state of a drag source.
-    static let dragSourceTransition: TimeInterval = 0.20
+    static let dragSourceTransition: TimeInterval = 0.15
     /// Aligning a programmatically selected item within a scrolling picker.
-    static let scrollAlignmentTransition: TimeInterval = 0.24
+    static let scrollAlignmentTransition: TimeInterval = 0.2
     /// Handing visible content from the start page to a destination page.
-    static let contentNavigationTransition: TimeInterval = 0.42
+    static let contentNavigationTransition: TimeInterval = 0.3
     /// Settling an interactive horizontal Space swipe.
-    static let spaceSwipeTransition: TimeInterval = 0.32
+    static let spaceSwipeTransition: TimeInterval = 0.28
     /// An address field's contents popping out as the field shows another
     /// Space.
-    static let addressSwapOutTransition: TimeInterval = 0.14
+    static let addressSwapOutTransition: TimeInterval = 0.1
     /// The next Space's contents popping into the field.
-    static let addressSwapInTransition: TimeInterval = 0.36
+    static let addressSwapInTransition: TimeInterval = 0.28
     /// A control fading between enabled and disabled, or between two of its
     /// symbols, such as reload and stop.
-    static let controlStateTransition: TimeInterval = 0.25
+    static let controlStateTransition: TimeInterval = 0.18
     /// How long a load runs before reload turns into stop, so a load that is
     /// over at once, such as one a change of Space starts, never flashes
     /// stop.
     static let stopSymbolDelay: Duration = .milliseconds(200)
     /// Shaking a control to show a swipe has nowhere further to go.
-    static let boundaryShakeTransition: TimeInterval = 0.36
+    static let boundaryShakeTransition: TimeInterval = 0.3
     /// Fading a page in where Reduce Motion stills a slide.
-    static let reducedMotionFadeTransition: TimeInterval = 0.2
+    static let reducedMotionFadeTransition: TimeInterval = 0.15
     /// Growing a held link's Peek out of the link.
-    static let peekEntranceTransition: TimeInterval = 0.28
+    static let peekEntranceTransition: TimeInterval = 0.2
     /// Presenting Peek inside a Quick Window, and fading in the ground behind a
     /// Mac Peek.
-    static let quickPeekEntranceTransition: TimeInterval = 0.34
+    static let quickPeekEntranceTransition: TimeInterval = 0.22
     /// Revealing initial Peek web content after its first commit.
     static let contentRevealTransition: TimeInterval = 0.12
     /// Updating a favicon-derived palette or comparable content state.
-    static let paletteTransition: TimeInterval = 0.18
+    static let paletteTransition: TimeInterval = 0.14
     /// Revealing or hiding recovery details after a navigation failure.
-    static let recoveryTransition: TimeInterval = 0.18
+    static let recoveryTransition: TimeInterval = 0.14
     /// Updating the loaded state rendered inside a pinned-tab tile, or a
     /// comparable state glyph in browser chrome.
-    static let contentStateTransition: TimeInterval = 0.22
+    static let contentStateTransition: TimeInterval = 0.16
     /// Presenting transient confirmation feedback in browser chrome.
-    static let feedbackPresentationTransition: TimeInterval = 0.22
+    static let feedbackPresentationTransition: TimeInterval = 0.16
     /// Dismissing a Peek card back into browser chrome.
-    static let peekDismissalTransition: TimeInterval = 0.22
+    static let peekDismissalTransition: TimeInterval = 0.16
     /// Shrinking a Peek's card into the preview above its link menu, and back.
-    static let peekLinkMenuTransition: TimeInterval = 0.36
+    static let peekLinkMenuTransition: TimeInterval = 0.26
     /// Revealing one destination in the utility fan.
-    static let utilityFanRevealTransition: TimeInterval = 0.42
+    static let utilityFanRevealTransition: TimeInterval = 0.3
     /// The complete press-and-return cycle for reload feedback.
     static let reloadFeedbackDuration: Duration = .milliseconds(240)
     /// One half of the reload feedback cycle.
@@ -131,22 +131,23 @@ enum CrestMotion {
     static var step: Animation { .snappy(duration: stepTransition) }
     /// Moving from one onboarding step to the next.
     static var onboardingStep: Animation { .snappy(duration: onboardingStepTransition) }
-    static let onboardingStepTransition: TimeInterval = 0.35
+    static let onboardingStepTransition: TimeInterval = 0.26
     /// Progress selection feedback, such as moving to the next reviewed Space.
     static var onboardingProgress: Animation { .snappy(duration: stepTransition) }
     /// Uses SwiftUI's native snappy curve for onboarding presentation state.
-    static var onboardingPresentation: Animation { .snappy }
+    static var onboardingPresentation: Animation { .snappy(duration: onboardingPresentationTransition) }
+    static let onboardingPresentationTransition: TimeInterval = 0.3
     /// The cross-fade to a field the person's choice changed.
     static var onboardingBackdropChange: Animation { .easeInOut(duration: onboardingBackdropChangeFade) }
-    static let onboardingBackdropChangeFade: TimeInterval = 0.35
+    static let onboardingBackdropChangeFade: TimeInterval = 0.25
     /// The welcome's sheet giving way to the steps: sliding from the whole
     /// window to a third of it as the window setup builds comes in beside it.
     static var onboardingSheet: Animation { .smooth(duration: onboardingSheetTransition) }
-    static let onboardingSheetTransition: TimeInterval = 0.7
+    static let onboardingSheetTransition: TimeInterval = 0.4
     /// Setup handing over to Crest: a phone's steps sliding away, an iPad's
     /// copy growing to fill the screen.
     static var onboardingHandOver: Animation { .smooth(duration: onboardingHandOverTransition) }
-    static let onboardingHandOverTransition: TimeInterval = 0.45
+    static let onboardingHandOverTransition: TimeInterval = 0.32
     static var press: Animation { .easeOut(duration: pressFeedback) }
     static var compactPress: Animation { .easeOut(duration: compactPressFeedback) }
     static var developerPress: Animation { .snappy(duration: developerPressFeedback) }

@@ -56,6 +56,9 @@ final class BrowserAddressAppearance {
     /// Whether the field grows into the command palette and the palette
     /// shrinks back into it, rather than the palette opening in place.
     var animatesIntoCommandPalette = true { didSet { changed() } }
+    /// Whether the command palette tints its selected row in the Space's
+    /// accent, rather than lifting it as the sidebar lifts its selected tab.
+    var tintsPaletteWithSpaceAccent = false { didSet { changed() } }
     /// Whether a live site's address field offers a button that copies its
     /// URL, beside Site Controls. Only the Mac's sidebar field draws it.
     var showsCopyURLButton = false { didSet { changed() } }
@@ -105,7 +108,8 @@ extension BrowserTabAppearance: @MainActor Codable {
 
 extension BrowserAddressAppearance: @MainActor Codable {
     private enum CodingKeys: String, CodingKey {
-        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, showsCopyURLButton, display, color
+        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, tintsPaletteWithSpaceAccent
+        case showsCopyURLButton, display, color
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -116,6 +120,8 @@ extension BrowserAddressAppearance: @MainActor Codable {
         usesAccentWhenEditing = (try? values.decode(Bool.self, forKey: .usesAccentWhenEditing)) ?? false
         animatesIntoCommandPalette =
             (try? values.decode(Bool.self, forKey: .animatesIntoCommandPalette)) ?? true
+        tintsPaletteWithSpaceAccent =
+            (try? values.decode(Bool.self, forKey: .tintsPaletteWithSpaceAccent)) ?? false
         showsCopyURLButton = (try? values.decode(Bool.self, forKey: .showsCopyURLButton)) ?? false
         display = (try? values.decode(Display.self, forKey: .display)) ?? .twoLines
         color = try? values.decode(BrandColor.self, forKey: .color)
@@ -127,6 +133,7 @@ extension BrowserAddressAppearance: @MainActor Codable {
         try values.encode(border, forKey: .border)
         try values.encode(usesAccentWhenEditing, forKey: .usesAccentWhenEditing)
         try values.encode(animatesIntoCommandPalette, forKey: .animatesIntoCommandPalette)
+        try values.encode(tintsPaletteWithSpaceAccent, forKey: .tintsPaletteWithSpaceAccent)
         try values.encode(showsCopyURLButton, forKey: .showsCopyURLButton)
         try values.encode(display, forKey: .display)
         try values.encodeIfPresent(color, forKey: .color)
@@ -165,6 +172,7 @@ final class BrowserDeviceAppearanceStore {
     static let legacySidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
     static let legacySidebarSlideDefault: Double = 240
     static let peekSizeKey = "crest.appearance.peek-size"
+    static let peekOpenDurationKey = "crest.appearance.peek-open-length"
     static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
     static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
     static let spaceIconsKey = "crest.appearance.space-icons"
@@ -225,6 +233,12 @@ final class BrowserDeviceAppearanceStore {
     /// ``BrowserTransientCardArrangement/pointerCardShares``. Only the Mac's
     /// Peek floats in that room.
     var peekSize: Double {
+        didSet { saveSoon() }
+    }
+    /// How long, in milliseconds, a Peek takes to grow out of its link, the
+    /// length its every motion is measured against; zero puts it in place
+    /// at once.
+    var peekOpenDuration: Double {
         didSet { saveSoon() }
     }
     /// Whether a sidebar tab or pin the pointer rests on shows its preview
@@ -400,6 +414,8 @@ final class BrowserDeviceAppearanceStore {
             (defaults.object(forKey: Self.peekSizeKey) as? Double).flatMap {
                 $0.isFinite ? min(max($0, shares.lowerBound), shares.upperBound) : nil
             } ?? shares.upperBound
+        peekOpenDuration =
+            defaults.object(forKey: Self.peekOpenDurationKey) as? Double ?? BrowserLookAndFeelDefaults.peekOpenDuration
         if defaults.object(forKey: Self.cornerRadiusKey) != nil {
             cornerRadius = defaults.double(forKey: Self.cornerRadiusKey)
         } else {
@@ -526,6 +542,7 @@ final class BrowserDeviceAppearanceStore {
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
         write(sidebarSpacing.name, forKey: BrowserSidebarDensityPreference.spacingKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
+        write(peekOpenDuration, forKey: Self.peekOpenDurationKey, in: defaults)
         write(previewsTabsOnHover, forKey: Self.tabHoverPreviewKey, in: defaults)
         write(previewsFoldersOnHover, forKey: Self.folderHoverPreviewKey, in: defaults)
         write(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey, in: defaults)
