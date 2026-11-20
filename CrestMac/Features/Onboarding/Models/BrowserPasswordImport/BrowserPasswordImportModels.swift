@@ -32,28 +32,41 @@ struct BrowserPasswordImportCandidate: Sendable {
     let origin: CredentialOrigin
 }
 
-enum BrowserPasswordImportError: LocalizedError, Equatable, Sendable {
-    case unsupportedBrowser
-    case safeStorageUnavailable
-    case unreadableDatabase
-    case unsupportedEncryption
+/// Why passwords could not be read from a browser, as the person is told.
+struct BrowserPasswordImportError: LocalizedError, Equatable, Sendable {
+    // MARK: - Static Variables
 
-    var errorDescription: String? {
-        switch self {
-        case .unsupportedBrowser:
-            String(localized: "Crest cannot import passwords from this browser yet.")
-        case .safeStorageUnavailable:
-            String(
-                localized:
-                    "Crest could not unlock this browser’s passwords. Allow Keychain access, or turn password import off to continue."
-            )
-        case .unreadableDatabase:
-            String(
-                localized:
-                    "Crest could not read this browser’s password database. Close the source browser and try again.")
-        case .unsupportedEncryption:
-            String(localized: "This browser uses a password format Crest cannot import safely.")
-        }
+    static let unsupportedBrowser = BrowserPasswordImportError(
+        name: "unsupportedBrowser", message: "Crest cannot import passwords from this browser yet.")
+    static let safeStorageUnavailable = BrowserPasswordImportError(
+        name: "safeStorageUnavailable",
+        message:
+            "Crest could not unlock this browser’s passwords. Allow Keychain access, or turn password import off to continue."
+    )
+    static let unreadableDatabase = BrowserPasswordImportError(
+        name: "unreadableDatabase",
+        message: "Crest could not read this browser’s password database. Close the source browser and try again.")
+    static let unsupportedEncryption = BrowserPasswordImportError(
+        name: "unsupportedEncryption", message: "This browser uses a password format Crest cannot import safely.")
+
+    // MARK: - Variables
+
+    let name: String
+    let message: LocalizedStringResource
+
+    var errorDescription: String? { String(localized: message) }
+
+    // MARK: - Initializers
+
+    private init(name: String, message: LocalizedStringResource) {
+        self.name = name
+        self.message = message
+    }
+
+    // MARK: - Actions - Identity
+
+    static func == (lhs: BrowserPasswordImportError, rhs: BrowserPasswordImportError) -> Bool {
+        lhs.name == rhs.name
     }
 }
 

@@ -15,7 +15,7 @@ extension MediaSessionOrder {
         let question = MediaSessionOrder(
             sessions: sessions.map { session in
                 MediaSessionEntry(
-                    id: session.id.id, ordinal: session.orderingOrdinal, playback: session.playbackState.core,
+                    id: session.id.id, ordinal: session.orderingOrdinal, playback: session.playbackState,
                     isAudible: session.isAudible)
             })
         guard let answer = try? CrestCore.answer(question),

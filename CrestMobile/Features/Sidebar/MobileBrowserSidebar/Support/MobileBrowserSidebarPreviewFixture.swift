@@ -76,7 +76,7 @@ struct MobileBrowserSidebarPreviewFixture {
         browser = BrowserStore(
             seed: SessionState.Seed(spaces: [space, protectedSpace]),
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing
+            workspaceKind: .private
         )
         pages = base.pages
         spaceAccess = BrowserSpaceAccessController(

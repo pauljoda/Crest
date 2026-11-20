@@ -43,7 +43,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
     private func makeFixture(
         spaces: [SpaceState.Seed],
         selectedSpaceID: UUID,
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         startupBehavior: StartupBehavior,
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController()
     ) -> MobileBrowserRootFixture {
@@ -53,12 +53,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
             // Every Space shows its first tab, as a window restoring them would.
             tabs: Dictionary(
                 uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } }),
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             core: .hostingPages(contentRuleLists: EmptyMobileRootContentRuleListProvider())
         )
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: true
         )
         let navigation = MobileBrowserNavigationState()

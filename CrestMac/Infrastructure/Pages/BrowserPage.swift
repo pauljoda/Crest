@@ -109,7 +109,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
-    var developerPanel: BrowserDeveloperPanel?
+    var developerPanel: InspectorPanel?
     private(set) var isRegionCapturePresented = false
     /// Where the agent using the page's tab last acted, which the page shows
     /// as the agent's pointer while the agent uses the tab.
@@ -192,8 +192,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var sharingPicker: NSSharingServicePicker?
     @ObservationIgnored private var printOperation: NSPrintOperation?
     @ObservationIgnored private var preparingPrint = false
-    /// The link the pending web-content context menu is over. Read and cleared
-    /// by this page's `BrowserDesktopWebViewMenuHost` conformance.
+    /// The link the pending web-content context menu is over, read and
+    /// cleared as WebKit builds that menu.
     @ObservationIgnored var linkContextCapture = BrowserLinkContextCapture()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
@@ -627,12 +627,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Closes the inspector showing `panel`, or opens one on it. An engine
     /// that cannot start on `panel` opens wherever it last was, and the page
     /// claims no panel it did not choose.
-    func toggleDeveloperPanel(_ panel: BrowserDeveloperPanel) {
-        let requested = InspectorPanel(panel)
+    func toggleDeveloperPanel(_ panel: InspectorPanel) {
         if developerPanel == panel, enginePage.isInspected {
             if enginePage.closeInspector() { developerPanel = nil } else { NSSound.beep() }
-        } else if enginePage.openInspector(on: requested) {
-            developerPanel = enginePage.inspectorStarts(on: requested) ? panel : nil
+        } else if enginePage.openInspector(on: panel) {
+            developerPanel = enginePage.inspectorStarts(on: panel) ? panel : nil
         } else {
             NSSound.beep()
         }

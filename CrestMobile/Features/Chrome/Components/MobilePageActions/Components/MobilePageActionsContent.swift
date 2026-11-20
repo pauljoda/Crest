@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MobilePageActionsContent: View {
     let browser: BrowserStore
-    let pages: any MobilePageActions
+    let pages: MobileSelectedPageActionPort
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
     /// The frame in the window of the control that opened these actions,
@@ -225,9 +225,7 @@ struct MobilePageActionsContent: View {
     private func sitePermissions(for page: MobileBrowserPage) -> some View {
         if let origin = page.live.documentURL.flatMap(SiteOrigin.init(url:)) {
             Menu("Site Permissions", systemImage: "slider.horizontal.3") {
-                // A page on iOS cannot share the screen, so that choice is
-                // not offered here.
-                ForEach(SitePermission.all.filter { $0 != .screenSharing }, id: \.self) { permission in
+                ForEach(SitePermission.all.filter { $0.platforms.contains(.current) }, id: \.self) { permission in
                     Picker(
                         permission.title,
                         selection: Binding {

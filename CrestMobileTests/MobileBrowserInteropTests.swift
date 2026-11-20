@@ -25,7 +25,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let permissionCenter = BrowserSitePermissionCenter(core: browser.core)
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             permissionCenter: permissionCenter
         )
         let privateSpace = try XCTUnwrap(browser.shownSpace)

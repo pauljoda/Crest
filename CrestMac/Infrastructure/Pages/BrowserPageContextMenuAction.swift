@@ -19,6 +19,15 @@ struct BrowserPageContextMenuAction {
         case blockElement
     }
 
+    /// Where a row sits around the engine's rows: ahead of them, in the group
+    /// of Space destinations, or after them, acting on the page rather than
+    /// on a link or selection.
+    enum Placement: Equatable {
+        case leading
+        case spaces
+        case trailing
+    }
+
     /// Runs the row on the page, answering whether it did. A page without a
     /// tab, as a Quick Window or Peek shows, has no navigation context.
     typealias Perform =
@@ -27,6 +36,7 @@ struct BrowserPageContextMenuAction {
     // MARK: - Variables
 
     let kind: Kind
+    let placement: Placement
     let title: String
     let symbolName: String
     let linkURL: URL?
@@ -36,22 +46,14 @@ struct BrowserPageContextMenuAction {
     var space: BrowserSpaceIdentity?
     let perform: Perform
 
-    var isSpaceDestination: Bool {
-        if case .space = kind { return true }
-        return false
-    }
-
-    /// Whether the row acts on the page rather than on a link or selection,
-    /// and so follows the engine's rows.
-    var isTrailing: Bool { kind == .blockElement }
-
     // MARK: - Initializers
 
     init(
-        kind: Kind, title: String, symbolName: String, linkURL: URL?, selectionText: String?,
-        space: BrowserSpaceIdentity? = nil, perform: @escaping Perform
+        kind: Kind, placement: Placement = .leading, title: String, symbolName: String, linkURL: URL?,
+        selectionText: String?, space: BrowserSpaceIdentity? = nil, perform: @escaping Perform
     ) {
         self.kind = kind
+        self.placement = placement
         self.title = title
         self.symbolName = symbolName
         self.linkURL = linkURL
@@ -67,7 +69,8 @@ struct BrowserPageContextMenuAction {
     @MainActor static func space(_ space: SpaceModel, opening linkURL: URL) -> BrowserPageContextMenuAction {
         let id = space.id
         return BrowserPageContextMenuAction(
-            kind: .space(id), title: space.settings.name, symbolName: "square.stack.3d.up", linkURL: linkURL,
+            kind: .space(id), placement: .spaces, title: space.settings.name, symbolName: "square.stack.3d.up",
+            linkURL: linkURL,
             selectionText: nil, space: space.identity
         ) { page, _, source in
             guard let source,
@@ -117,7 +120,8 @@ struct BrowserPageContextMenuAction {
     /// Starts the element picker on what the person right-clicked, to block
     /// it on the page's site from now on.
     static let blockElement = BrowserPageContextMenuAction(
-        kind: .blockElement, title: String(localized: "Block Element"), symbolName: "eye.slash", linkURL: nil,
+        kind: .blockElement, placement: .trailing, title: String(localized: "Block Element"), symbolName: "eye.slash",
+        linkURL: nil,
         selectionText: nil
     ) { page, _, _ in
         Task { await page.pickElementToBlock(fromContextMenu: true) }
@@ -138,18 +142,6 @@ struct BrowserPageContextMenuAction {
     }
 }
 
-/// A page that puts Crest's rows in an engine's context menu and runs the one
-/// the person picks.
-@MainActor
-protocol BrowserPageContextMenuHost: AnyObject {
-    /// Whether a link the engine opens in a new tab or window from this page
-    /// becomes a tab of the page's Space: the page is a tab's.
-    var opensLinksInCurrentSpace: Bool { get }
-
-    func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction]
-    @discardableResult func performContextMenuAction(_ action: BrowserPageContextMenuAction) -> Bool
-}
-
 /// Crest's rows in an engine's context menu for one page: the engine's own row
 /// that opens a link in a new tab, then the other Spaces the link opens in
 /// grouped under one row, a separator between their groups, then the page's
@@ -163,11 +155,11 @@ struct BrowserPageContextMenu {
     @MainActor
     private final class Row: NSObject {
         let action: BrowserPageContextMenuAction
-        weak var host: (any BrowserPageContextMenuHost)?
+        weak var host: BrowserPage?
         weak var view: NSView?
         let windowNumber: Int?
 
-        init(_ action: BrowserPageContextMenuAction, host: any BrowserPageContextMenuHost, view: NSView) {
+        init(_ action: BrowserPageContextMenuAction, host: BrowserPage, view: NSView) {
             self.action = action
             self.host = host
             self.view = view
@@ -192,7 +184,7 @@ struct BrowserPageContextMenu {
     // MARK: - Variables
 
     let actions: [BrowserPageContextMenuAction]
-    let host: any BrowserPageContextMenuHost
+    let host: BrowserPage
     /// The page's view, whose window the menu opened in.
     let view: NSView
 
@@ -207,7 +199,7 @@ struct BrowserPageContextMenu {
             menu.removeItem(newTab)
             items.append(newTab)
         }
-        let spaceActions = actions.filter(\.isSpaceDestination)
+        let spaceActions = actions.filter { $0.placement == .spaces }
         if !spaceActions.isEmpty {
             let group = NSMenuItem(title: String(localized: "Open Link in"), action: nil, keyEquivalent: "")
             group.image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: nil)
@@ -223,10 +215,10 @@ struct BrowserPageContextMenu {
             group.submenu = submenu
             items.append(group)
         }
-        items.append(contentsOf: actions.filter { !$0.isSpaceDestination && !$0.isTrailing }.map(item(for:)))
+        items.append(contentsOf: actions.filter { $0.placement == .leading }.map(item(for:)))
         for (index, item) in items.enumerated() { menu.insertItem(item, at: index) }
         if !items.isEmpty, menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
-        let trailing = actions.filter(\.isTrailing).map(item(for:))
+        let trailing = actions.filter { $0.placement == .trailing }.map(item(for:))
         if !trailing.isEmpty, menu.items.last?.isSeparatorItem == false { menu.addItem(.separator()) }
         for item in trailing { menu.addItem(item) }
         removeStraySeparators(from: menu)
@@ -259,7 +251,9 @@ struct BrowserPageContextMenu {
     }
 }
 
-extension BrowserPage: BrowserPageContextMenuHost {
+/// A page puts Crest's rows in an engine's context menu and runs the one the
+/// person picks.
+extension BrowserPage {
     func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction] {
         guard let context = navigationContext else {
             guard let linkURL, ExternalWebLink.accepts(linkURL) else { return [] }

@@ -1,12 +1,17 @@
 import AppKit
 import Foundation
 
-extension BrowserPage: BrowserDesktopWebViewMenuHost {
+/// What Crest contributes to WebKit's own web-content context menu. AppKit
+/// builds and tears the menu down on the main thread while the right-click is
+/// still being handled, so every answer here is synchronous.
+extension BrowserPage {
+    /// Whether a link the engine opens in a new tab or window from this page
+    /// becomes a tab of the page's Space: the page is a tab's.
     var opensLinksInCurrentSpace: Bool { navigationContext != nil }
 
-    /// Answers the menu WebKit is building right now.
-    ///
-    /// A report can never be inherited by a later menu. The shared page action
+    /// The content the right-click that is opening this menu landed on.
+    /// Consumes the capture: nil means no fresh page report arrived, and the
+    /// same report is never handed to a second menu. The shared page action
     /// builder decides which captured link and selection actions are available.
     func takeMenuContext() -> BrowserDesktopWebViewMenuContext? {
         guard let captured = linkContextCapture.take() else { return nil }

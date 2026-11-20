@@ -1,19 +1,5 @@
 import Foundation
 
-/// Where a reviewed Space goes: a new Space, or the existing Space it joins.
-enum BrowserImportDestination: Equatable, Hashable, Sendable {
-    case newSpace
-    case existing(UUID)
-
-    /// The existing Space it joins, or nil for a new Space.
-    var spaceID: UUID? {
-        switch self {
-        case .newSpace: nil
-        case .existing(let id): id
-        }
-    }
-}
-
 /// One Space of the review the core holds, as the review views draw it: the
 /// Space the browser brought, held by no workspace, with the person's choices
 /// and what the core says they mean. It holds nothing of its own; the flow
@@ -33,8 +19,9 @@ struct BrowserImportSpaceReview: Identifiable, Equatable {
     var includedExtensionIDs: Set<String> { Set(record.includedExtensionIDs) }
     var includedTabIDs: Set<UUID> { Set(record.includedTabIDs) }
     var duplicateTabIDs: Set<UUID> { Set(record.duplicateTabIDs) }
-    var destination: BrowserImportDestination {
-        record.destinationID.map(BrowserImportDestination.existing) ?? .newSpace
+    /// The existing Space the reviewed Space joins, or nil for a new Space.
+    var destinationSpaceID: UUID? {
+        record.destinationID
     }
     /// The name, symbol and look the Space takes.
     var customization: SpaceCustomization { record.customization }

@@ -11,11 +11,11 @@ struct CrestSurfaceTone: Hashable, Sendable {
 
     /// As the Space the surface stands on reads: dark over a dark Space,
     /// light over a light one.
-    static let automatic = CrestSurfaceTone(name: "automatic", title: "Automatic")
-    static let light = CrestSurfaceTone(name: "light", title: "Light")
-    static let dark = CrestSurfaceTone(name: "dark", title: "Dark")
+    static let automatic = CrestSurfaceTone(name: "automatic", title: "Automatic") { scheme, _ in scheme }
+    static let light = CrestSurfaceTone(name: "light", title: "Light") { _, _ in .light }
+    static let dark = CrestSurfaceTone(name: "dark", title: "Dark") { _, _ in .dark }
     /// As the window reads, the same on every Space.
-    static let system = CrestSurfaceTone(name: "system", title: "System")
+    static let system = CrestSurfaceTone(name: "system", title: "System") { scheme, window in window ?? scheme }
     static let all = [automatic, light, dark, system]
     static let standard = automatic
 
@@ -25,11 +25,19 @@ struct CrestSurfaceTone: Hashable, Sendable {
     let name: String
     let title: LocalizedStringResource
 
+    /// The scheme a surface draws in over content in one scheme, in a window
+    /// that reads in another when it is known.
+    private let scheme: @Sendable (ColorScheme, ColorScheme?) -> ColorScheme
+
     // MARK: - Initializers
 
-    private init(name: String, title: LocalizedStringResource) {
+    private init(
+        name: String, title: LocalizedStringResource,
+        scheme: @escaping @Sendable (ColorScheme, ColorScheme?) -> ColorScheme
+    ) {
         self.name = name
         self.title = title
+        self.scheme = scheme
     }
 
     // MARK: - Actions - Lookup
@@ -51,12 +59,7 @@ struct CrestSurfaceTone: Hashable, Sendable {
     /// that reads in `window`, or in `scheme` itself when no window scheme
     /// is known.
     func colorScheme(over scheme: ColorScheme, window: ColorScheme?) -> ColorScheme {
-        switch self {
-        case .light: .light
-        case .dark: .dark
-        case .system: window ?? scheme
-        default: scheme
-        }
+        self.scheme(scheme, window)
     }
 
     // MARK: - Actions - Identity

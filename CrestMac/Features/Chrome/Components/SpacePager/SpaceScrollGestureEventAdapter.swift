@@ -17,7 +17,7 @@ final class SpaceScrollGestureEventAdapter {
     func handle(
         _ event: NSEvent, isInside: Bool, layoutDirection: LayoutDirection,
         isEnabled: Bool = true,
-        onStep: (BrowserSpaceSwipeDirection) -> Void
+        onStep: (AdjacentDirection) -> Void
     ) -> NSEvent? {
         if !isEnabled { recognizer.cancelCurrentGesture() }
         let decision = recognizer.consume(

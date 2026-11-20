@@ -180,7 +180,7 @@ struct MobileBrowserCommandController {
         return id
     }
 
-    private func selectSpace(_ direction: BrowserSpaceSwipeDirection) -> UUID? {
+    private func selectSpace(_ direction: AdjacentDirection) -> UUID? {
         guard let id = browser.selectAdjacentSpace(direction) else { return nil }
         synchronizePages()
         return id

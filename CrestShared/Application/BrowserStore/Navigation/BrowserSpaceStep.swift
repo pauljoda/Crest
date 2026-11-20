@@ -11,13 +11,13 @@ struct BrowserSpaceStep: Equatable {
     let id = UUID()
     let origin: UUID
     let destination: UUID
-    let direction: BrowserSpaceSwipeDirection
+    let direction: AdjacentDirection
 
     // MARK: - Actions - Following
 
     /// The way this step went from `origin` to `destination`, when it is the
     /// move between them; nil for any other move.
-    func direction(from origin: UUID, to destination: UUID) -> BrowserSpaceSwipeDirection? {
+    func direction(from origin: UUID, to destination: UUID) -> AdjacentDirection? {
         origin == self.origin && destination == self.destination ? direction : nil
     }
 }

@@ -2,7 +2,8 @@ import Foundation
 
 /// A browsing engine the core hosts pages on. It builds the engine's page when
 /// the core asks, closes it when asked, and reports what happens to its pages
-/// through the `Engines` it is attached to. Chromium and WebKit each have one.
+/// through the `Engines` it is attached to. WebKit's binding is one; Chromium's
+/// is a `NativeEngineBinding`, which the core runs directly.
 @MainActor
 protocol EngineBinding: AnyObject {
     /// What the engine offers. Its registration with the core carries the

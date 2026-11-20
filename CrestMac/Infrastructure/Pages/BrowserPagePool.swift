@@ -97,7 +97,7 @@ final class BrowserPagePool:
     /// The app's passkey access, refreshed as pages navigate. Nil where no
     /// composition supplied one.
     @ObservationIgnored private let passkeyAccess: BrowserPasskeyAccessController?
-    @ObservationIgnored private let browsingMode: BrowserBrowsingMode
+    @ObservationIgnored private let workspaceKind: WorkspaceKind
     @ObservationIgnored let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
@@ -131,7 +131,7 @@ final class BrowserPagePool:
         browser: BrowserStore,
         runtimeStore: BrowserPageRuntimeStore? = nil,
         serverTrustOverrides: BrowserServerTrustOverrideStore? = nil,
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchEnvironment.current.usesEphemeralProfileStorage,
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
@@ -157,9 +157,9 @@ final class BrowserPagePool:
         let dialogPresenter = BrowserDialogPresenter()
         let core = browser.core
         self.browser = browser
-        self.browsingMode = browsingMode
+        self.workspaceKind = workspaceKind
         self.usesEphemeralWebsiteDataStores =
-            usesEphemeralWebsiteDataStores || browsingMode.isPrivate
+            usesEphemeralWebsiteDataStores || workspaceKind.isPrivate
         self.pageZoomPreferences = pageZoomPreferences
         let owner =
             runtimeStore
@@ -171,7 +171,7 @@ final class BrowserPagePool:
         self.passkeyAccess = passkeyAccess
         self.permissionCenter = permissionCenter
         self.hostedNotificationCenter = hostedNotificationCenter
-        self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
+        self.mediaSessionStore = workspaceKind.isPrivate ? nil : mediaSessionStore
         self.dialogPresenter = dialogPresenter
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
@@ -320,7 +320,7 @@ final class BrowserPagePool:
 
     func bindRuntimeRouting(_ runtime: BrowserTabRuntime, tabID: UUID) {
         for page in runtime.allPages {
-            page.setPrivateBrowsing(browsingMode.isPrivate)
+            page.setPrivateBrowsing(workspaceKind.isPrivate)
             page.host = self
             page.windowRouting?.pool = self
             page.downloadCenter = downloadCenter
@@ -339,7 +339,7 @@ final class BrowserPagePool:
         owner.publishesPageMetadataCentrally = true
         let pool = BrowserPagePool(
             browser: browser, runtimeStore: owner, serverTrustOverrides: serverTrustOverrides,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             pageZoomPreferences: pageZoomPreferences,
 
@@ -610,7 +610,7 @@ final class BrowserPagePool:
     /// Lets go of everything the private workspace kept, in each of the
     /// Spaces `spaces` names, as its last window closes.
     func closePrivateBrowsingSession(_ spaces: [BrowserSpaceRuntimeAssignment]) {
-        guard browsingMode.isPrivate else { return }
+        guard workspaceKind.isPrivate else { return }
         tabPictures.removeAll()
         releasePrivateBrowsingData(in: spaces)
     }
@@ -1009,7 +1009,7 @@ final class BrowserPagePool:
             spaceID: space.id,
             profileID: space.profileID,
             spaceName: space.settings.name,
-            allowsCredentialAccess: !browsingMode.isPrivate,
+            allowsCredentialAccess: !workspaceKind.isPrivate,
             isCredentialAccessEnabled:
                 space.settings.credentialPreferences.isEnabled,
             defaultPageZoom: pageZoomPreferences.defaultZoom,
@@ -1027,7 +1027,7 @@ final class BrowserPagePool:
             splitLinkHost: pageSplitLinkHost,
             linkDestinationHost: linkDestinationHost
         )
-        page.setPrivateBrowsing(browsingMode.isPrivate)
+        page.setPrivateBrowsing(workspaceKind.isPrivate)
         page.host = self
         page.windowRouting = routing
         return page

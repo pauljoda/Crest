@@ -276,7 +276,7 @@ extension MobileBrowserRootModel {
     }
 
     func switchSpace(
-        _ direction: BrowserSpaceSwipeDirection,
+        _ direction: AdjacentDirection,
         reduceMotion: Bool
     ) {
         withAnimation(accessibleAnimation(CrestMotion.navigation, reduceMotion)) {

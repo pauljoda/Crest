@@ -31,7 +31,7 @@ extension BrowserStore {
     ) -> BrowserStore {
         BrowserStore(
             credentialVault: credentialVault,
-            browsingMode: .standard,
+            workspaceKind: .persistent,
             family: BrowserStoreFamily(stored: stored, storage: core, favicons: favicons),
             core: core
         )
@@ -186,7 +186,7 @@ extension BrowserStore {
     static func privateBrowsing(core: CrestCore = CrestCore()) -> BrowserStore {
         BrowserStore(
             credentialVault: PrivateBrowsingCredentialVault(),
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             family: BrowserStoreFamily(privateIn: core),
             core: core
         )

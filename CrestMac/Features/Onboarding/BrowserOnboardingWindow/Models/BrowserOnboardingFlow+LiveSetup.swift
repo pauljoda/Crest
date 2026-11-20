@@ -19,7 +19,7 @@ extension BrowserOnboardingFlow {
 
     /// The Spaces the chosen browser brings in new, which the preview marks.
     var incomingSpaceIDs: Set<UUID> {
-        Set(reviewSpaces.filter { $0.isIncluded && $0.destination.spaceID == nil }.map(\.id))
+        Set(reviewSpaces.filter { $0.isIncluded && $0.destinationSpaceID == nil }.map(\.id))
     }
 
     /// The Space the preview opens on once the chosen browser's Spaces are
@@ -81,7 +81,7 @@ extension BrowserOnboardingFlow {
     /// The Space of the preview that `review` shows as: the Space it joins,
     /// or its own.
     func previewSpaceID(of review: BrowserImportSpaceReview) -> UUID {
-        review.destination.spaceID ?? review.id
+        review.destinationSpaceID ?? review.id
     }
 
     // MARK: - Actions - Live setup

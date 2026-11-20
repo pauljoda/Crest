@@ -64,7 +64,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let browser = BrowserStore.privateBrowsing(core: .hostingPages())
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             usesEphemeralWebsiteDataStores: true
         )
         pages.select()

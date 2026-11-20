@@ -1,7 +1,8 @@
 import SwiftUI
 
 enum BrowserPlatformEmojiInput {
-    static let presentation = BrowserNativeEmojiPickerPresentation.characterPalette
+    /// The emoji button opens the system's character palette.
+    static var actionTitle: LocalizedStringKey { "Open Emoji Picker" }
 }
 
 struct BrowserPlatformEmojiEntryField: View {

@@ -32,7 +32,7 @@ struct BrowserNativeEmojiPickerButton: View {
 
     var body: some View {
         Button(
-            BrowserNativeEmojiPickerPresentation.current.actionTitle,
+            BrowserPlatformEmojiInput.actionTitle,
             systemImage: "face.smiling", action: action
         )
         .labelStyle(.iconOnly)

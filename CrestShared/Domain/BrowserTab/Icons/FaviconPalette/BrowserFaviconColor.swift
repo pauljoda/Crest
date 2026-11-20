@@ -73,3 +73,8 @@ struct BrowserFaviconColor: Equatable, Sendable {
             : 1.055 * pow(value, 1 / 2.4) - 0.055
     }
 }
+
+/// The colors a favicon's artwork reads as, which its tab's accent takes.
+struct BrowserFaviconPalette: Equatable, Sendable {
+    let primary: BrowserFaviconColor
+}

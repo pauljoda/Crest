@@ -7,7 +7,7 @@ struct MobileCompactAddressBar: View {
     let isSecure: Bool
     let progress: Double
     let isLoading: Bool
-    let pageActions: (any MobilePageActions)?
+    let pageActions: MobileSelectedPageActionPort?
     let downloadsAccess: MobileDownloadsMenuAccess?
     let hideToolbar: (() -> Void)?
     let reloadOrStop: (() -> Void)?

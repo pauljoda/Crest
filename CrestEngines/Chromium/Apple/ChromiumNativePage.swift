@@ -27,7 +27,7 @@
         weak var promptPresenter: (any BrowserPromptPresenting)?
         /// The platform's page hosting this one, which puts Crest's rows in the
         /// engine's context menu for it.
-        weak var menuHost: (any BrowserPageContextMenuHost)?
+        weak var menuHost: BrowserPage?
         /// Crest's own drag of a link out of the page.
         weak var linkDrag: BrowserLinkDragController?
         private var host: (any CrestMacShell)? { engine?.host }
@@ -114,7 +114,7 @@
         /// hidden from the engine.
         func attachIfPossible(takingFocus takesFocus: Bool = true) {
             guard !disposed, created, let window = surface.window,
-                let windowID = window.identifier.flatMap({ UUID(uuidString: $0.rawValue) }), let pages
+                let windowID = (window as? BrowserMacWindow)?.windowID, let pages
             else { return }
             guard surface.presentation != .hidden else {
                 if let view = host?.view(forPage: pageID) { embed(view) }
@@ -598,7 +598,7 @@
                 else { return nil }
                 return trimmed
             }
-            let playback: BrowserMediaSessionPlaybackState
+            let playback: MediaPlaybackState
             switch session.playback {
             case .none: playback = .none
             case .playing: playback = .playing

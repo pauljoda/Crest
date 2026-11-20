@@ -9,7 +9,7 @@ struct MobileSpacePrivateBrowsingButton: View {
         Button(action: action) {
             MobileSpaceUtilityButtonLabel(
                 title: isPrivateBrowsing ? "Leave Private Browsing" : "Private Browsing",
-                systemImage: BrowserPrivateBrowsingAppearance.symbol
+                systemImage: ShortcutCommand.newPrivateWindow.symbol
             )
         }
         .foregroundStyle(isPrivateBrowsing ? accentColor : Color.primary)

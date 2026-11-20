@@ -2,6 +2,13 @@ import Foundation
 
 // MARK: - Types
 
+/// Whether a Peek card is still staged at its source or committed to its own
+/// presentation.
+enum BrowserPeekPresentationPhase: Equatable, Sendable {
+    case staged
+    case committed
+}
+
 enum BrowserPeekTrigger: String, Codable, Equatable, Sendable {
     case protectedSavedSite
     case modifierClick

@@ -36,7 +36,7 @@ import Foundation
                 seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: tab.id], core: core)
             let pages = BrowserPagePool(
                 browser: browser,
-                browsingMode: .privateBrowsing,
+                workspaceKind: .private,
                 usesEphemeralWebsiteDataStores: true,
                 permissionCenter: permissionCenter
             )

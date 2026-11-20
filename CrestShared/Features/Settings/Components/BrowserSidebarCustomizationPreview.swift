@@ -129,7 +129,7 @@ private final class BrowserAppearancePreviewState {
         siteAccents = Dictionary(uniqueKeysWithValues: zip(pins.map(\.id), pinSources.map(\.2)))
         browser = BrowserStore(
             seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: notes.id],
-            browsingMode: .privateBrowsing)
+            workspaceKind: .private)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 

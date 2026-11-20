@@ -73,7 +73,7 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let stagePeek: ((BrowserPeekRequest) -> Void)?
     @ObservationIgnored private let commitPeek: ((BrowserPeekRequest) -> Void)?
     @ObservationIgnored private let cancelStagedPeek: ((UUID) -> Void)?
-    @ObservationIgnored private let browsingMode: BrowserBrowsingMode
+    @ObservationIgnored private let workspaceKind: WorkspaceKind
     @ObservationIgnored let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
@@ -85,7 +85,7 @@ final class MobileBrowserPageStore:
 
     init(
         browser: BrowserStore,
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchEnvironment.current.requiresIsolation,
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
@@ -105,15 +105,15 @@ final class MobileBrowserPageStore:
         cancelStagedPeek: ((UUID) -> Void)? = nil
     ) {
         self.browser = browser
-        self.browsingMode = browsingMode
+        self.workspaceKind = workspaceKind
         self.usesEphemeralWebsiteDataStores =
-            usesEphemeralWebsiteDataStores || browsingMode.isPrivate
+            usesEphemeralWebsiteDataStores || workspaceKind.isPrivate
         self.pageZoomPreferences = pageZoomPreferences
         // A private store's tabs leave no state on disk, even if an archive is
         // handed in.
         host = BrowserPageHost(archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive)
         host.showsTab = { [weak browser] spaceID, tabID in browser?.spaceModel(spaceID)?.shownTab(tabID) != nil }
-        self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
+        self.mediaSessionStore = workspaceKind.isPrivate ? nil : mediaSessionStore
         self.permissionCenter = permissionCenter
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
@@ -129,7 +129,7 @@ final class MobileBrowserPageStore:
             downloads
             ?? MobileBrowserDownloads(
                 core: browser.core,
-                browsingMode: browsingMode,
+                workspaceKind: workspaceKind,
                 permissionCenter: permissionCenter
             )
         downloadRiskConfirmation = downloads.riskConfirmation
@@ -407,7 +407,7 @@ final class MobileBrowserPageStore:
     /// Lets go of everything the private workspace kept, in each of the
     /// Spaces `spaces` names, as its scene closes.
     func closePrivateBrowsingSession(_ spaces: [BrowserSpaceRuntimeAssignment]) {
-        guard browsingMode.isPrivate else { return }
+        guard workspaceKind.isPrivate else { return }
         activePage = nil
         presentedTabIDs = []
         tabPictures.removeAll()
@@ -472,7 +472,7 @@ final class MobileBrowserPageStore:
                 downloadCenter: downloadCenter,
                 permissionCenter: permissionCenter,
                 serverTrustOverrides: serverTrustOverrides,
-                allowsCredentialAccess: !browsingMode.isPrivate,
+                allowsCredentialAccess: !workspaceKind.isPrivate,
                 isCredentialAccessEnabled: space.settings.credentialPreferences.isEnabled,
                 defaultPageZoom: pageZoomPreferences.defaultZoom,
                 loadsInitialURL: false,
@@ -669,7 +669,7 @@ final class MobileBrowserPageStore:
                 permissionCenter: permissionCenter,
                 serverTrustOverrides: serverTrustOverrides,
                 mediaSessionStore: mediaSessionStore,
-                allowsCredentialAccess: !browsingMode.isPrivate,
+                allowsCredentialAccess: !workspaceKind.isPrivate,
                 isCredentialAccessEnabled: space.settings.credentialPreferences.isEnabled,
                 defaultPageZoom: pageZoomPreferences.defaultZoom,
                 // The core loads the tab's address once the page is open.

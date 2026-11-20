@@ -20,7 +20,7 @@ struct MobileContentBlockingAction {
 
     init(
         browser: BrowserStore,
-        pages: any MobilePageActions
+        pages: MobileSelectedPageActionPort
     ) {
         self.browser = browser
         pageAssignment = { pages.pageAssignment }

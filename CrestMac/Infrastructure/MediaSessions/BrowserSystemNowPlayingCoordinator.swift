@@ -2,31 +2,18 @@ import AppKit
 import ImageIO
 @preconcurrency import MediaPlayer
 
-@MainActor
-protocol BrowserSystemNowPlayingDriving: AnyObject {
-    func setCommandHandler(
-        _ handler: ((MediaSessionAction) -> Bool)?
-    )
-    func publish(_ session: BrowserMediaSessionSnapshot?)
-}
-
 /// Projects the shared page-session lifecycle into macOS Now Playing without
 /// creating a second media-session store. Its single task is explicitly owned,
 /// deduplicated, cancellable, and backed by the store's newest-only event stream.
 @MainActor
 final class BrowserSystemNowPlayingCoordinator {
     private let store: BrowserMediaSessionStore
-    private let driver: any BrowserSystemNowPlayingDriving
+    private let driver = BrowserMediaPlayerNowPlayingDriver()
     private var selectedSession: BrowserMediaSessionSnapshot?
     private var task: Task<Void, Never>?
 
-    init(
-        store: BrowserMediaSessionStore,
-        driver: any BrowserSystemNowPlayingDriving =
-            BrowserMediaPlayerNowPlayingDriver()
-    ) {
+    init(store: BrowserMediaSessionStore) {
         self.store = store
-        self.driver = driver
     }
 
     func start() {
@@ -88,9 +75,7 @@ final class BrowserSystemNowPlayingCoordinator {
 /// and accessories. Page artwork has already crossed the bounded page bridge;
 /// it is downsampled once more at the framework boundary before publication.
 @MainActor
-final class BrowserMediaPlayerNowPlayingDriver: NSObject,
-    BrowserSystemNowPlayingDriving
-{
+final class BrowserMediaPlayerNowPlayingDriver: NSObject {
     /// The largest artwork the system's Now Playing surface is handed.
     private nonisolated static let maximumArtworkPixelSize = 1_024
 

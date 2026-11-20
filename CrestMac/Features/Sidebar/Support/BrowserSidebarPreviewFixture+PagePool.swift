@@ -12,7 +12,7 @@ import Foundation
         static func makePages(for browser: BrowserStore) -> BrowserPagePool {
             BrowserPagePool(
                 browser: browser,
-                browsingMode: .privateBrowsing,
+                workspaceKind: .private,
                 usesEphemeralWebsiteDataStores: true
             )
         }
