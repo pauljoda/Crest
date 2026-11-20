@@ -64,17 +64,12 @@ struct BrowserMacTabPreviewLayer: View {
             .onChange(of: model.chrome.isCommandPalettePresented) { _, isPresented in
                 if isPresented { preview.dismiss() }
             }
-            .onChange(of: model.browser.shownSpace?.id) { preview.dismiss() }
             .onChange(of: model.sidebarPresentation.showsSidebar, initial: true) { _, isShown in
                 preview.sidebarShownChanged(isShown)
             }
-            .onChange(of: model.browser.shownSpace.map(model.spaceAccess.isLocked) ?? false) { _, isLocked in
-                if isLocked { preview.dismiss() }
-            }
-            .onAppear {
-                let spaceAccess = model.spaceAccess
-                pictures.follow { spaceAccess.isLocked($0) }
-            }
+            .browserTabPreviewDismissals(
+                preview, browser: model.browser, spaceAccess: model.spaceAccess, pictures: pictures
+            )
             .onDisappear { model.chrome.utilityPresentation.setTabPreviewHeld(false) }
     }
 }

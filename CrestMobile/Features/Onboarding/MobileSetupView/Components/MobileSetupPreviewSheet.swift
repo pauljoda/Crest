@@ -13,7 +13,7 @@ struct MobileSetupPreviewSheet: View {
     let spaceID: UUID
 
     @State private var draftPreview = BrowserSetupDraftPreview()
-    @State private var live = MobileSetupLiveSession()
+    @State private var live = BrowserSetupLiveSession()
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Actions - Drawing

@@ -132,17 +132,10 @@ struct BrowserWebPageSurface: View {
 
     /// The questions the find bar asks, bound to this surface's page.
     private var findPort: BrowserFindPort {
-        BrowserFindPort(
-            find: { query, direction in
-                page.find(query, direction: direction)
-            },
-            query: { page.findQuery },
-            matchState: { page.findMatchState },
-            matches: { page.findMatches },
-            focusRequest: { page.findFocusRequest },
-            focusesQueryField: { page.findFocusesQueryField },
-            dismiss: page.dismissFind
-        )
+        var port = BrowserFindPort(page: page)
+        port.matches = { page.findMatches }
+        port.focusesQueryField = { page.findFocusesQueryField }
+        return port
     }
 
     /// What a credential fill prompt asks of this surface's page.
@@ -152,29 +145,13 @@ struct BrowserWebPageSurface: View {
     /// pixels. The chrome is a sibling of the web view inside one box, so the
     /// zoom is the only thing between the two.
     private var credentialFillPort: BrowserCredentialFillPort {
-        BrowserCredentialFillPort(
-            spaceID: page.spaceID,
-            contentScale: page.renderedPageZoom,
-            siteIconData: page.faviconData,
-            fill: { credential, requestID in
-                try await page.fillCredential(credential, for: requestID)
-            },
-            fillGeneratedPassword: { password, requestID in
-                try await page.fillGeneratedPassword(password, for: requestID)
-            },
-            dismiss: page.dismissCredentialFillRequest
-        )
+        BrowserCredentialFillPort(page: page, contentScale: page.renderedPageZoom)
     }
 
     /// What the save prompt asks of this surface's page. This shell makes no
     /// offer to the system's Passwords app, so it binds none.
     private var credentialSavePort: BrowserCredentialSavePort {
-        BrowserCredentialSavePort(
-            spaceID: page.spaceID,
-            presentedCandidateID: { page.credentialSaveCandidate?.id },
-            dismiss: page.dismissCredentialSaveCandidate,
-            offerToSystemPasswords: nil
-        )
+        BrowserCredentialSavePort(page: page, offerToSystemPasswords: nil)
     }
 
     /// What this shell can do: a pointer rests over the chrome and nothing is

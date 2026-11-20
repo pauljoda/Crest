@@ -41,19 +41,12 @@ struct MobileTabPreviewLayer: View {
                         .accessibilityHidden(true)
                 }
             }
-            .onChange(of: pages.browser.shownSpace?.id) { preview.dismiss() }
-            .onChange(of: pages.browser.shownSpace.map(spaceAccess.isLocked) ?? false) { _, isLocked in
-                if isLocked { preview.dismiss() }
-            }
+            .browserTabPreviewDismissals(preview, browser: pages.browser, spaceAccess: spaceAccess, pictures: pictures)
             .onChange(of: scenePhase) { _, phase in
                 if phase != .active { preview.dismiss() }
             }
             .onChange(of: sidebarInteraction.sidebarReorderState.isDragging) { _, isDragging in
                 if isDragging, preview.shown?.isHeldByTouch == true { preview.dismiss() }
-            }
-            .onAppear {
-                let spaceAccess = spaceAccess
-                pictures.follow { spaceAccess.isLocked($0) }
             }
     }
 }

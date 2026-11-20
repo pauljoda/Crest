@@ -44,3 +44,18 @@ struct BrowserFindPort {
     /// Closes the bar and clears the page's highlight.
     let dismiss: () -> Void
 }
+
+extension BrowserFindPort {
+    // MARK: - Initializers
+
+    /// The questions the find bar asks, bound to `page`. A shell whose page
+    /// counts matches or keeps the keys sets those after.
+    init(page: BrowserPlatformPage) {
+        self.init(
+            find: { query, direction in page.find(query, direction: direction) },
+            query: { page.findQuery },
+            matchState: { page.findMatchState },
+            focusRequest: { page.findFocusRequest },
+            dismiss: page.dismissFind)
+    }
+}

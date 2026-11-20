@@ -42,7 +42,7 @@ struct BrowserSetupLiveWindow: View {
 
     /// Crest's browser over the copy, with the copy's own core, a line where
     /// a web page would load, and nothing of the window around it to style.
-    private func browser(_ copy: BrowserSetupLiveSession.Copy) -> some View {
+    private func browser(_ copy: BrowserPlatformSetupLiveCopy) -> some View {
         BrowserRootView(
             browser: copy.store,
             pages: copy.pages,

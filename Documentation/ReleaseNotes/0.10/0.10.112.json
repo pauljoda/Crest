@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "setup-and-shell-twins-folded",
+      "category": "improved",
+      "message": "Setup's live preview keeps pace on iPad as it does on the Mac, and the iPhone and iPad palette names the search provider it uses while it is empty.",
+      "platforms": ["ios"]
+    }
+  ]
+}
