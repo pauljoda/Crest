@@ -10,5 +10,4 @@ enum CrestSpacing {
     static let extraLarge: CGFloat = 20
     static let extraExtraLarge: CGFloat = 24
     static let section: CGFloat = 32
-    static let screen: CGFloat = 40
 }

@@ -5933,6 +5933,10 @@
     "core-wire-leftovers": {
       "category": "internal",
       "message": "Messages only the core sends itself no longer cross the wire, engine registration keeps only the capabilities an engine supports, and test-only JSON entry points moved into the tests."
+    },
+    "remove-unused-shared-swift": {
+      "category": "internal",
+      "message": "Removed shared code nothing uses: an old setup page, unused design tokens, branding and identity helpers, a widget scope no one reads, and search sheet presentation."
     }
   }
 }

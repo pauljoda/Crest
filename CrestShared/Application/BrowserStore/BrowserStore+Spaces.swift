@@ -157,13 +157,6 @@ extension BrowserStore {
         return owner.family.send(intent, from: owner)
     }
 
-    func moveSpaces(from source: IndexSet, to destination: Int) {
-        var order = spaceModels.map(\.id)
-        order.move(fromOffsets: source, toOffset: destination)
-        family.send(
-            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: order), from: self)
-    }
-
     /// Sets a Space's browsing preferences through the core: when it cleans up
     /// current tabs, how it blocks content and how long it keeps what it
     /// browses, only when they differ from what the read model holds. What the

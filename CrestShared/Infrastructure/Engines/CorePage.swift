@@ -202,12 +202,6 @@ final class CorePage {
         _ = try? core.send(ShowHistoryEntry(pageID: id, entryID: entryID))
     }
 
-    /// Leaves the page's failed navigation for the document behind it.
-    func leaveFailure() {
-        guard !isReleased, live.failure != nil else { return }
-        _ = try? core?.send(LeavePageFailure(pageID: id))
-    }
-
     // MARK: - Actions - Engines
 
     /// The engines this device registered, as the core last published them,
