@@ -16,7 +16,7 @@ public abstract record StandaloneQuery<TAnswer> : Query<TAnswer> {
     #region Actions - Answering
 
     /// An app answers it as a host without one does.
-    internal sealed override TAnswer Answer(CrestApp app) => Answer(new StandaloneContext(DateTimeOffset.UtcNow));
+    internal sealed override TAnswer Answer(CrestApp app) => Answer(new StandaloneContext(app.Clock.Now));
 
     /// A host without an app answers it from the question alone.
     internal sealed override TAnswer AnswerWithoutApp(StandaloneContext context) => Answer(context);

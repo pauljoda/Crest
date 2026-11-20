@@ -6005,6 +6005,10 @@
     "generator-and-test-epoch": {
       "category": "internal",
       "message": "The contract generator reads a record's identity from its own fact, and the core reads the 2001 reference date from the session codec everywhere."
+    },
+    "core-reads-its-clock": {
+      "category": "internal",
+      "message": "The core takes the time from the turn or its clock everywhere, so tests can set it."
     }
   }
 }
