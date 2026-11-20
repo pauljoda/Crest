@@ -157,7 +157,10 @@ struct MobileBrowserSidebarTopChrome: View {
         BrowserSidebarAddressFieldConfiguration(
             text: configuration.address,
             isEditing: configuration.isAddressEditing,
-            isSecure: displayedURL?.scheme?.lowercased() == "https",
+            isSecure: PageSecurity.isSecure(
+                page: selectedPageActions?.activePage?.live,
+                storedAddress: configuration.context.browser.shownTab?.url
+            ),
             progress: selectedPageActions?.activePage?.estimatedProgress ?? 0,
             isLoading: selectedPageActions?.activePage?.live.isLoading == true,
             hasResidentPage: false,
@@ -186,11 +189,6 @@ struct MobileBrowserSidebarTopChrome: View {
         let browser = configuration.context.browser
         guard let tabID = browser.selectedTabID(in: selectedSpaceID) else { return false }
         return browser.spaceModel(selectedSpaceID)?.shownTab(tabID)?.url?.isEmpty == false
-    }
-
-    private var displayedURL: URL? {
-        selectedPageActions?.activeURL
-            ?? configuration.context.browser.shownTab?.url.flatMap(URL.init(string:))
     }
 
     /// The chrome sits above the pager, so the field and the toolbar belong

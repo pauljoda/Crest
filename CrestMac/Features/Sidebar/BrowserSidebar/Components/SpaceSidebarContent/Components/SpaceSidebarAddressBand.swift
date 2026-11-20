@@ -97,8 +97,7 @@ struct SpaceSidebarAddressBand: View {
     }
 
     private var isSecure: Bool {
-        if let page = displayedPage { return page.live.security.isSecure }
-        return selectedTab?.url.flatMap(URL.init(string:))?.scheme?.lowercased() == "https"
+        PageSecurity.isSecure(page: displayedPage?.live, storedAddress: selectedTab?.url)
     }
 
     /// The page the Copy URL button copies, while the person turned the
