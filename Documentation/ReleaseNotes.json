@@ -5837,6 +5837,10 @@
     "chromium-windows-desktop-host": {
       "category": "internal",
       "message": "Crest's Chromium builds for Windows and hosts Crest's own interface, which embeds each page's surface in the window"
+    },
+    "windows-desktop-interface": {
+      "category": "internal",
+      "message": "Crest's Windows interface draws the browser window in Crest's Chromium: the sidebar, Spaces and their pager, page cards, the command palette, the recent-tab switcher, downloads, prompts and settings"
     }
   }
 }

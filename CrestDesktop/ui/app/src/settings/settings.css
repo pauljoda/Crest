@@ -1,0 +1,866 @@
+/* Settings, as the Mac's BrowserSettingsView draws it in its tab: a 224-wide
+   sidebar of its pages and the Spaces, a divider, then the chosen page's
+   title over one centred column of grouped settings. */
+.settings {
+  --settings-canvas: rgb(236 236 236);
+  --settings-card: rgb(0 0 0 / 0.035);
+  --settings-ink: rgb(0 0 0 / 0.86);
+  --settings-secondary: rgb(0 0 0 / 0.5);
+  --settings-primary: 0 0 0;
+  --settings-hairline: rgb(0 0 0 / 0.1);
+  --settings-accent: rgb(0 103 192);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  background: var(--settings-canvas);
+  color: var(--settings-ink);
+  font: 13px var(--crest-font-system);
+  text-align: start;
+}
+
+@media (prefers-color-scheme: dark) {
+  .settings {
+    --settings-canvas: rgb(32 32 32);
+    --settings-card: rgb(255 255 255 / 0.05);
+    --settings-ink: rgb(255 255 255 / 0.9);
+    --settings-secondary: rgb(255 255 255 / 0.55);
+    --settings-primary: 255 255 255;
+    --settings-hairline: rgb(255 255 255 / 0.1);
+    --settings-accent: rgb(76 194 255);
+  }
+}
+
+.settings-sidebar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 224px;
+  min-height: 0;
+}
+
+.settings-build {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 0;
+}
+
+.settings-build img {
+  flex: none;
+}
+
+.settings-build-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.settings-build-detail {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+.settings-search,
+.settings-search-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: rgb(var(--settings-primary) / 0.06);
+  color: var(--settings-secondary);
+}
+
+.settings-search {
+  margin: 12px 10px 4px;
+}
+
+.settings-search input,
+.settings-search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--settings-ink);
+  font: inherit;
+}
+
+.settings-search button {
+  display: grid;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.settings-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0 12px;
+  scrollbar-width: thin;
+}
+
+.settings-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  min-height: 28px;
+  margin: 0 10px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  transition: background-color 120ms ease-in-out;
+}
+
+.settings-nav-row:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.settings-nav-row.selected {
+  background: rgb(var(--settings-primary) / 0.13);
+}
+
+.settings-nav-row.sub {
+  padding-inline-start: 22px;
+}
+
+.settings-nav-symbol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+}
+
+.settings-nav-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.settings-nav-lock {
+  flex: none;
+  color: var(--settings-secondary);
+}
+
+.settings-nav-heading {
+  margin: 12px 18px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--settings-secondary);
+}
+
+.settings-nav-gap {
+  height: 12px;
+}
+
+.settings-divider {
+  flex: none;
+  width: 1px;
+  background: var(--settings-hairline);
+}
+
+.settings-page {
+  position: relative;
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.settings-page-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--settings-hairline);
+}
+
+.settings-page-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-page-header.space {
+  padding: 0 20px;
+}
+
+.settings-space-name {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: 600 18px var(--crest-font-system);
+}
+
+.settings-space-tabs {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--settings-hairline);
+}
+
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.settings-column {
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 12px 32px;
+}
+
+.settings-group {
+  margin-bottom: 20px;
+}
+
+.settings-group-header {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 10px 6px;
+}
+
+/* A section's title in Crest's rounded heavy type, as the Mac's
+   CrestSettingsSectionHeading. */
+.settings-group-header h3 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--crest-font-display);
+  font-size: 13px;
+  font-weight: var(--crest-font-display-weight);
+}
+
+.settings-group-reset {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--settings-accent);
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-card {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--settings-card);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+}
+
+.settings-footer {
+  margin: 6px 10px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--settings-secondary);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 6px 10px 6px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.settings-row + .settings-row {
+  box-shadow: inset 0 0.5px 0 var(--settings-hairline);
+}
+
+.settings-row-text {
+  flex: 1;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.settings-row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-row-subtitle {
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+.settings-row-reset {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(var(--settings-primary) / 0.08);
+  color: var(--settings-secondary);
+}
+
+.settings-row-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.settings-link-row:hover {
+  background: rgb(var(--settings-primary) / 0.04);
+}
+
+.settings-link-row .settings-row-title {
+  flex: 1;
+}
+
+.settings-row-chevron {
+  color: var(--settings-secondary);
+}
+
+.settings-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  padding: 2px;
+  border: 0;
+  border-radius: 11px;
+  background: rgb(var(--settings-primary) / 0.18);
+  transition: background-color 120ms ease-in-out;
+}
+
+.settings-switch.on {
+  justify-content: flex-end;
+  background: var(--settings-accent);
+}
+
+.settings-switch:disabled {
+  opacity: 0.5;
+}
+
+.settings-switch-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.settings-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-select select {
+  appearance: none;
+  min-width: 120px;
+  max-width: 260px;
+  height: 26px;
+  padding: 0 26px 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: inherit;
+  font: inherit;
+}
+
+.settings-select.compact select {
+  min-width: 0;
+}
+
+.settings-select option {
+  background: var(--settings-canvas);
+  color: var(--settings-ink);
+}
+
+.settings-select-glyph {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  color: var(--settings-secondary);
+}
+
+.settings-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: rgb(var(--settings-primary) / 0.07);
+}
+
+.settings-segmented button {
+  min-width: 72px;
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.settings-segmented button.chosen {
+  background: var(--settings-canvas);
+  box-shadow: 0 0 0 0.5px var(--settings-hairline), 0 1px 2px rgb(0 0 0 / 0.12);
+  font-weight: 500;
+}
+
+.settings-button {
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: inherit;
+  font: inherit;
+}
+
+.settings-button:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.12);
+}
+
+.settings-button.destructive {
+  color: var(--danger, rgb(178 50 37));
+}
+
+.settings-button:disabled {
+  opacity: 0.45;
+}
+
+.settings-order {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.settings-order button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.settings-order button:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.settings-order button:disabled {
+  opacity: 0.35;
+}
+
+.settings-about {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 10px 22px;
+}
+
+.settings-about-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-about-version {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--settings-secondary);
+  user-select: text;
+}
+
+/* The shortcuts editor: a search over every command's keys, by section. */
+.shortcuts-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.shortcuts-editor .settings-group {
+  margin-bottom: 8px;
+}
+
+.shortcuts-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.shortcuts-controls .settings-search-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.shortcuts-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11px;
+  color: rgb(138 90 8);
+}
+
+.shortcuts-empty {
+  margin: 24px 0;
+  text-align: center;
+  color: var(--settings-secondary);
+}
+
+.shortcut-row {
+  min-height: 34px;
+  padding-block: 3px;
+}
+
+.shortcut-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.shortcut-custom {
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+/* The Mac's recorder is 116 wide for its key symbols; Windows spells its
+   keys out ("Ctrl+Shift+N", "Alt+Left Arrow"), so the recorder grows to fit. */
+.shortcut-recorder {
+  min-width: 116px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: inherit;
+  font: 500 12px var(--crest-font-system);
+  white-space: nowrap;
+}
+
+.shortcut-recorder.recording {
+  background: var(--settings-accent);
+  color: white;
+  outline: none;
+}
+
+.shortcut-actions {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.shortcut-actions:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.native-unknown {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+}
+
+/* Privacy: saved site permissions, website data, and the outcome of a clear. */
+.settings-secondary-text {
+  color: var(--settings-secondary);
+}
+
+.settings-truncates {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.settings-permission-symbol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  color: var(--settings-secondary);
+}
+
+.settings-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.settings-menu-button:hover {
+  background: rgb(var(--settings-primary) / 0.07);
+}
+
+.settings-menu-button svg {
+  color: var(--settings-secondary);
+}
+
+.settings-actions-row {
+  justify-content: space-between;
+}
+
+.settings-actions-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--settings-secondary);
+  transition: opacity 120ms ease-in-out;
+}
+
+.settings-row-search {
+  flex: 1;
+}
+
+.settings-progress-row {
+  justify-content: center;
+}
+
+.settings-progress {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(var(--settings-primary) / 0.15);
+  border-top-color: var(--settings-secondary);
+  border-radius: 50%;
+  animation: settings-spin 0.8s linear infinite;
+}
+
+@keyframes settings-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ad Blocking: the level's "Customized", the lists that wait while blocking
+   is off, the list address field, and the person's own filters. */
+.settings-customized {
+  font-size: 11px;
+  color: var(--settings-secondary);
+  transition: opacity 120ms ease-in-out;
+}
+
+.settings-waits {
+  transition: opacity 120ms ease-in-out;
+}
+
+.settings-waits.off {
+  opacity: 0.45;
+}
+
+.settings-text-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.06);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+}
+
+.settings-text-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--settings-ink);
+  font: inherit;
+}
+
+.settings-truncates-middle {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: ltr;
+}
+
+.settings-icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.settings-icon-button:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+  color: var(--settings-ink);
+}
+
+.settings-row > .settings-row-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-editor-row {
+  padding: 8px;
+}
+
+.settings-filter-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  max-height: 360px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  resize: vertical;
+  outline: none;
+  background: rgb(var(--settings-primary) / 0.04);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: var(--settings-ink);
+  font: 12px ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.settings-filter-editor::placeholder {
+  color: rgb(var(--settings-primary) / 0.3);
+}
+
+.settings-buttons {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* A Space's Extensions: each extension's row, its disclosure and details. */
+.settings-disclosure {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.settings-extension + .settings-extension {
+  box-shadow: inset 0 0.5px 0 var(--settings-hairline);
+}
+
+.settings-extension-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--settings-secondary);
+}
+
+.settings-extension-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.settings-extension-version {
+  flex: none;
+  font-size: 11px;
+  color: rgb(var(--settings-primary) / 0.35);
+}
+
+.settings-clamps {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.settings-extension-source {
+  font-size: 10px;
+  color: rgb(var(--settings-primary) / 0.35);
+}
+
+.settings-extension-details {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 0 14px 12px 64px;
+}
+
+.settings-extension-permissions {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--settings-secondary);
+}
+
+.settings-extension-permissions strong {
+  color: var(--settings-ink);
+}
+
+.settings-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--settings-accent);
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-link-button.destructive {
+  color: var(--danger, rgb(178 50 37));
+}
+
+.settings-buttons-row {
+  flex-wrap: wrap;
+}
+
+.settings-spacer {
+  flex: 1;
+}

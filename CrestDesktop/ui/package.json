@@ -1,0 +1,18 @@
+{
+  "name": "crest-desktop-ui",
+  "private": true,
+  "description": "Crest's Windows and Linux interface, rendered by Crest's own Chromium.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "app"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace app",
+    "build": "npm run build --workspace app",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

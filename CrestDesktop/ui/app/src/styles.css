@@ -1,0 +1,3999 @@
+/* Nunito, the brand's rounded display face where SF Pro Rounded isn't on
+   the system, as on Crest's website (OFL, assets/fonts/OFL.txt). */
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url("./assets/fonts/nunito-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url("./assets/fonts/nunito-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: light dark;
+  --window-inset: 10px;
+  --sidebar-width: 289px;
+  --ink: var(--crest-ink);
+  --paper: var(--crest-paper);
+  font-family: var(--crest-font-system);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: rgb(23 34 56);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: default;
+}
+
+.window-loading,
+.boot-failure {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--paper);
+  font-family: var(--crest-font-display);
+  font-weight: var(--crest-font-display-weight);
+  font-size: 15px;
+}
+
+/* The window: the Space's banner behind the sidebar and the page card. */
+.browser-window {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  gap: var(--window-inset);
+  padding: var(--window-inset) var(--window-inset) var(--window-inset) 0;
+}
+
+/* The title bar is the interface's: the window's banner around the sidebar
+   and the page card moves the window, as the Mac's window background does,
+   and so does the empty stretch of the sidebar's toolbar. */
+.browser-window {
+  -webkit-app-region: drag;
+}
+
+.sidebar > *,
+.page-card {
+  -webkit-app-region: no-drag;
+}
+
+.sidebar > .sidebar-toolbar {
+  -webkit-app-region: drag;
+}
+
+.sidebar-toolbar button {
+  -webkit-app-region: no-drag;
+}
+
+/* Chromium adds each box's drag area in document order, later boxes over
+   earlier ones, and children take their parent's. A layer laid over the
+   window, which comes after the sidebar and the card, would otherwise make
+   the whole window a handle that moves it, and no press would reach a row
+   or a page. Such a layer takes no part (initial is "none", which no other
+   value gives), and only what can be pressed in it says so. */
+.page-row-overlay,
+.space-content-overlay,
+.utility-fan,
+.download-flights,
+.tab-preview-layer,
+.split-focus-ring {
+  -webkit-app-region: initial;
+}
+
+.sheet-backdrop,
+.peek-scrim,
+.peek-stack,
+.notice,
+.tab-preview,
+.tab-preview-cover,
+.recent-tabs-layer,
+.crest-popover,
+.split-divider {
+  -webkit-app-region: no-drag;
+}
+
+.space-banner,
+.space-banner-layer,
+.space-banner-window,
+.space-banner-field,
+.space-banner-fade,
+.space-banner-grain {
+  position: absolute;
+  inset: 0;
+}
+
+.space-banner {
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Each Space's banner fades on a compositor layer of its own: set from
+   script each frame of a slide, an opacity on a layer Chromium hasn't
+   promoted repaints the whole window's banner every frame, which on a large
+   window costs two or three frames each. */
+.space-banner-layer {
+  will-change: opacity;
+}
+
+/* The system's window background, under the banner's own strength. */
+.space-banner-window {
+  background: rgb(236 236 236);
+}
+
+@media (prefers-color-scheme: dark) {
+  .space-banner-window {
+    background: rgb(50 50 50);
+  }
+}
+
+.space-banner-fade {
+  background: black;
+}
+
+.space-banner-grain {
+  mix-blend-mode: soft-light;
+}
+
+.browser-window.reads-light {
+  /* The Mac's primary colour over the Space's look: white text, or black. */
+  --primary-rgb: 255 255 255;
+  --fg: rgb(255 255 255 / 0.94);
+  --fg-secondary: rgb(255 255 255 / 0.62);
+  --surface: rgb(255 255 255 / var(--crest-opacity-hover));
+  --surface-selected: rgb(255 255 255 / 0.13);
+  --surface-border: rgb(255 255 255 / 0.12);
+  --field: rgb(0 0 0 / 0.18);
+}
+
+.browser-window.reads-dark {
+  --primary-rgb: 0 0 0;
+  --fg: rgb(23 34 56 / 0.94);
+  --fg-secondary: rgb(23 34 56 / 0.6);
+  --surface: rgb(23 34 56 / var(--crest-opacity-hover));
+  --surface-selected: rgb(255 255 255 / 0.55);
+  --surface-border: rgb(23 34 56 / 0.12);
+  --field: rgb(255 255 255 / 0.4);
+}
+
+/* The sidebar's place, as the Mac's: a column beside the page while docked;
+   a card over the page while floating, or off the window's leading edge while
+   collapsed, the page filling the window either way. */
+.sidebar-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sidebar-slot > .sidebar {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The page area, as the Mac's SpaceContentPagerView: the whole content area
+   beside the sidebar, the window's inset included, where each Space's card
+   stands in a page of its own. Pages slide a content width a Space, so the
+   cards keep the inset between them; the area clips only while they move. */
+.browser-window > .space-content {
+  position: relative;
+  grid-column: -2;
+  grid-row: -2;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--window-inset)) calc(-1 * var(--window-inset));
+  pointer-events: none;
+}
+
+.browser-window:not(.with-title-bar) > .space-content {
+  margin-top: calc(-1 * var(--window-inset));
+}
+
+.space-content.moving {
+  overflow: hidden;
+}
+
+.space-content-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: 0 var(--window-inset) var(--window-inset);
+}
+
+.browser-window:not(.with-title-bar) .space-content-page {
+  padding-top: var(--window-inset);
+}
+
+/* The cards a window shows for a Space, side by side: a Split View's
+   members, or a tab alone. Between two cards lies the page frame's gap,
+   which holds the divider; each card takes its share of the rest, none
+   narrower than the Mac's minimum, and a row too narrow for them clips. */
+.page-columns {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: auto;
+}
+
+.page-column {
+  position: relative;
+  display: grid;
+  flex: 1 1 0px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.page-columns.split > .page-column {
+  min-width: 240px;
+}
+
+/* The column a lift from the sidebar would take: that card's own surface,
+   drawn before it lands. */
+.page-placeholder {
+  pointer-events: none;
+}
+
+.page-placeholder-card {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--crest-radius-control);
+  background: rgb(255 255 255);
+  color: rgb(0 0 0 / 0.5);
+  font: 500 13px var(--crest-font-system);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 30px rgb(0 0 0 / 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  .page-placeholder-card {
+    background: rgb(30 30 32);
+    color: rgb(255 255 255 / 0.55);
+  }
+}
+
+/* The focused card lies over its neighbours while they settle. */
+.page-column.focused {
+  z-index: 1;
+}
+
+.page-column > .page-card {
+  min-height: 0;
+}
+
+.split-divider {
+  position: relative;
+  flex: none;
+  width: 8px;
+  z-index: 2;
+}
+
+/* The divider's target overhangs each card by 4, with a capsule that stays visible at rest. */
+.split-divider-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.split-divider-indicator {
+  width: 2px;
+  height: 46px;
+  border-radius: 1px;
+  background: rgb(var(--primary-rgb) / 0.18);
+}
+
+.split-divider-handle.active .split-divider-indicator {
+  background: rgb(var(--primary-rgb) / 0.28);
+}
+
+.split-divider-handle:focus-visible .split-divider-indicator {
+  box-shadow: 0 0 0 2px var(--focus-ring, Highlight);
+}
+
+/* The card the window's chrome speaks for, in the Space's colour, inside its edge. */
+.split-focus-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.split-focus-ring.focused {
+  border-color: var(--split-accent);
+}
+
+/* What the window asks over its cards: its dialogs, download approvals and notices. */
+.page-row-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: var(--crest-radius-control);
+  pointer-events: none;
+}
+
+.page-row-overlay .sheet-backdrop {
+  pointer-events: auto;
+}
+
+/* The recent-tab switcher, as the Mac's: a glass panel centred over the
+   window, each recent item a card of its pages' pictures and titles, and one
+   highlight that slides to the card the release will show. Its sizes are
+   RecentTabSwitcherMetrics'. */
+.browser-window.reads-light .recent-tabs-layer {
+  --switcher-surface: rgb(32 32 35 / 0.86);
+  --switcher-ink: rgb(255 255 255 / 0.92);
+  --switcher-primary: 255 255 255;
+  --switcher-edge: rgb(255 255 255 / 0.14);
+  --switcher-selected: rgb(255 255 255 / 0.1);
+}
+
+.browser-window.reads-dark .recent-tabs-layer {
+  --switcher-surface: rgb(248 248 250 / 0.88);
+  --switcher-ink: rgb(0 0 0 / 0.86);
+  --switcher-primary: 0 0 0;
+  --switcher-edge: rgb(0 0 0 / 0.1);
+  --switcher-selected: rgb(255 255 255 / 0.7);
+}
+
+.recent-tabs-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.recent-tabs-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.recent-tabs-panel {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--crest-radius-panel);
+  background: var(--switcher-surface);
+  color: var(--switcher-ink);
+  box-shadow: inset 0 0 0 0.5px var(--switcher-edge), 0 18px 50px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(40px) saturate(1.8);
+  pointer-events: auto;
+}
+
+.recent-tabs-cards {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  transform-origin: center;
+}
+
+.recent-tabs-highlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: var(--crest-radius-card);
+  background: var(--switcher-selected);
+  box-shadow: inset 0 0 0 2px rgb(var(--switcher-primary) / 0.1), 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.recent-tabs-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--crest-radius-card);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.recent-tabs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recent-tabs-thumbnail {
+  position: relative;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--crest-radius-compact);
+  background: rgb(var(--switcher-primary) / 0.055);
+  box-shadow: inset 0 0 0 1px rgb(var(--switcher-primary) / 0.12);
+}
+
+.recent-tabs-thumbnail > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.recent-tabs-thumbnail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(var(--switcher-primary) / 0.12);
+  pointer-events: none;
+}
+
+.recent-tabs-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  display: grid;
+  padding: 4px;
+  border-radius: var(--crest-radius-compact);
+  background: rgb(var(--switcher-primary) / 0.055);
+  box-shadow: inset 0 0 0 1px rgb(var(--switcher-primary) / 0.12);
+}
+
+.recent-tabs-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.recent-tabs-title > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-tabs-keys {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The card of the tab the pointer rests on, as the Mac's floating flyout:
+   dark glass, 280 wide, the tab's icon, title and site over its picture. */
+.tab-preview-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  pointer-events: none;
+}
+
+.tab-preview-cover {
+  position: fixed;
+  pointer-events: auto;
+}
+
+.tab-preview {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 280px;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 22px;
+  background: rgb(30 30 32 / 0.84);
+  color: rgb(255 255 255 / 0.95);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 6px 28px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(30px) saturate(1.6);
+  pointer-events: auto;
+}
+
+.tab-preview-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px;
+}
+
+.tab-preview-header .tab-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.tab-preview-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tab-preview-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tab-preview-site {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.6);
+}
+
+.tab-preview-picture {
+  display: block;
+  width: 264px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 14px;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.16);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .tab-preview {
+    background: rgb(30 30 32);
+    backdrop-filter: none;
+  }
+}
+
+/* A download starting flies as a file into the lists button, or says it started. */
+.download-flights {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.flying-file {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 46px;
+  border-radius: 8px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 0.5px var(--prompt-border), 0 2px 8px rgb(0 0 0 / 0.18);
+}
+
+.download-started {
+  position: absolute;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  font-weight: 500;
+  box-shadow: 0 0 0 0.5px var(--prompt-border), 0 10px 30px rgb(0 0 0 / 0.22);
+}
+
+/* What lies over the page area wherever the Space strip stands: the same box
+   as a Space's cards. */
+.space-content-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  padding: 0 var(--window-inset) var(--window-inset);
+  pointer-events: none;
+}
+
+.browser-window:not(.with-title-bar) .space-content-overlay {
+  padding-top: var(--window-inset);
+}
+
+/* A Peek, as the Mac's pointer arrangement draws it: the page area dimmed,
+   and over it, 24 in, the action bar above the card. */
+.peek-layer {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.peek-layer.hidden {
+  visibility: hidden;
+}
+
+.peek-scrim {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--crest-radius-control);
+  background: rgb(0 0 0 / 0.34);
+  pointer-events: auto;
+}
+
+.peek-stack {
+  position: absolute;
+  inset: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.peek-bar {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  width: 264px;
+  height: 48px;
+  pointer-events: auto;
+}
+
+.peek-close,
+.peek-destination {
+  border: 0;
+  color: rgb(0 0 0 / 0.85);
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.7), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.18);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+
+.peek-close {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.peek-destination {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(var(--peek-tint, transparent), var(--peek-tint, transparent)), rgb(255 255 255 / 0.62);
+}
+
+.peek-destination.reads-light {
+  color: rgb(255 255 255 / 0.95);
+}
+
+.peek-open-in {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.peek-destination-separator {
+  flex: none;
+  width: 0.5px;
+  height: 22px;
+  background: currentColor;
+  opacity: 0.16;
+}
+
+.peek-destination-menu {
+  flex: none;
+  width: 48px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.peek-close:hover,
+.peek-open-in:hover,
+.peek-destination-menu:hover {
+  background-color: rgb(var(--primary-rgb) / 0.06);
+}
+
+.peek-card {
+  position: relative;
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 15px;
+  background: rgb(246 246 246 / 0.86);
+  box-shadow: 0 14px 56px rgb(0 0 0 / 0.34);
+  backdrop-filter: blur(30px) saturate(1.4);
+  pointer-events: auto;
+}
+
+/* The card's edge lies over its page. */
+.peek-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .peek-close,
+  .peek-destination {
+    color: rgb(255 255 255 / 0.9);
+    background-color: rgb(40 40 42 / 0.62);
+  }
+
+  .peek-destination {
+    background: linear-gradient(var(--peek-tint, transparent), var(--peek-tint, transparent)), rgb(40 40 42 / 0.62);
+  }
+
+  .peek-destination:not(.reads-light) {
+    color: rgb(0 0 0 / 0.85);
+  }
+
+  .peek-card {
+    background: rgb(36 36 38 / 0.86);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .peek-scrim {
+    background: rgb(0 0 0 / 0.56);
+  }
+
+  .peek-card {
+    background: rgb(255 255 255);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
+
+.space-content.moving .space-content-page {
+  will-change: transform;
+}
+
+/* A change of Space the pager shows at once dissolves the card it leaves. */
+.space-content-page.dissolving {
+  animation: space-dissolve 320ms cubic-bezier(0.27, 1, 0.18, 1) forwards;
+}
+
+@keyframes space-dissolve {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.browser-window.sidebar-floating,
+.browser-window.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+  column-gap: 0;
+  padding-left: var(--window-inset);
+}
+
+.sidebar-slot.floating,
+.sidebar-slot.collapsed {
+  position: absolute;
+  z-index: 4;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+  left: 7px;
+  width: var(--sidebar-width);
+  padding-top: var(--crest-space-small);
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sidebar-slot.collapsed {
+  transform: translateX(calc(-100% - 21px));
+  transition-duration: 200ms;
+}
+
+/* The floating card's shadow, beside the card rather than on it, since the
+   card clips what it holds: on a layer of its own it slides with the card,
+   and fades as the card retreats, and as the sidebar leaves its seat or
+   takes it, without the card painting again. */
+.sidebar-card-shadow {
+  position: absolute;
+  z-index: 3;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+  left: 7px;
+  width: var(--sidebar-width);
+  border-radius: 18px;
+  box-shadow: 8px 8px 56px rgb(0 0 0 / 0.3);
+  pointer-events: none;
+  -webkit-app-region: initial;
+  will-change: transform, opacity;
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out;
+}
+
+.sidebar-card-shadow.collapsed {
+  transform: translateX(calc(-100% - 21px));
+  opacity: 0;
+  transition-duration: 200ms;
+}
+
+/* Leaving its seat, the sidebar becomes the card where it stands: the card's
+   shadow, backdrop, sheen and edge come in over the morph. Taking its seat,
+   they go over the last step into the column. Coming in, nothing holds the
+   last frame, which would hold the shadow over the card's own fade as it
+   retreats. */
+.sidebar-card-shadow.dressing-in,
+.sidebar-slot.dressing-in > .space-banner,
+.sidebar-slot.dressing-in > .sidebar-card-sheen,
+.sidebar-slot.dressing-in::after {
+  animation: sidebar-dressing-in 280ms ease-out backwards;
+}
+
+.sidebar-card-shadow.dressing-out,
+.sidebar-slot.dressing-out > .space-banner,
+.sidebar-slot.dressing-out > .sidebar-card-sheen {
+  animation: sidebar-dressing-out 160ms ease-out forwards;
+}
+
+.sidebar-slot.docked.dressing-out {
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Taking its seat, the card's edge goes with the rest of its dressing. */
+.sidebar-slot.docked.dressing-out::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.75px var(--surface-border);
+  pointer-events: none;
+  animation: sidebar-dressing-out 160ms ease-out forwards;
+}
+
+/* While it morphs, the sidebar stands over the page, which moves beside it
+   or beneath it (SidebarSlot.tsx). */
+.sidebar-slot.morphing {
+  z-index: 4;
+}
+
+/* Docked, the card's dressing waits unseen on layers of its own, which the
+   compositor keeps drawn. */
+.sidebar-slot > .space-banner,
+.sidebar-slot > .sidebar-card-sheen {
+  will-change: opacity;
+}
+
+.sidebar-slot.docked > .space-banner,
+.sidebar-slot.docked > .sidebar-card-sheen,
+.sidebar-card-shadow.docked {
+  opacity: 0;
+}
+
+@keyframes sidebar-dressing-in {
+  from { opacity: 0; }
+}
+
+@keyframes sidebar-dressing-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* The card's edge, drawn over what it holds. */
+.sidebar-slot.floating::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.75px var(--surface-border);
+  pointer-events: none;
+}
+
+.browser-window.reads-light .sidebar-slot.floating::after,
+.browser-window.reads-light .sidebar-slot.docked.dressing-out::after {
+  box-shadow: inset 0 0 0 0.75px rgb(255 255 255 / 0.2);
+}
+
+.browser-window.reads-dark .sidebar-slot.floating::after,
+.browser-window.reads-dark .sidebar-slot.docked.dressing-out::after {
+  box-shadow: inset 0 0 0 0.75px rgb(0 0 0 / 0.2);
+}
+
+/* Light from the top leading corner and shade toward the bottom trailing one. */
+.sidebar-card-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.055), transparent 50%, rgb(0 0 0 / 0.09));
+}
+
+/* Beside a floating card on the page's side: the pointer may stray this far
+   before the card goes. */
+.sidebar-retreat-margin {
+  position: absolute;
+  z-index: 4;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+  left: calc(7px + var(--sidebar-width));
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-retreat-zone {
+  position: absolute;
+  z-index: 3;
+  top: var(--title-bar-height, 0px);
+  right: 0;
+  bottom: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* The sidebar's edge beside the page resizes it, as the Mac's handle: a clear
+   grip that shows a thin bar while it moves. It rides above a floating card. */
+.sidebar-resize-handle {
+  position: absolute;
+  z-index: 3;
+  top: var(--title-bar-height, var(--window-inset));
+  bottom: var(--window-inset);
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  outline: none;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-resize-handle.floating {
+  z-index: 5;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+}
+
+.sidebar-resize-indicator {
+  width: 2px;
+  height: 46px;
+  border-radius: 1px;
+  background: var(--fg);
+  opacity: 0;
+  transition: opacity 140ms ease-in-out;
+}
+
+.sidebar-resize-handle.active .sidebar-resize-indicator,
+.sidebar-resize-handle:focus-visible .sidebar-resize-indicator {
+  opacity: 0.28;
+}
+
+/* While a resize is under way, the window shows the resize cursor wherever the pointer goes. */
+.browser-window:has(.sidebar-resize-handle.active) {
+  cursor: col-resize;
+}
+
+/* Resting the pointer here, or clicking, brings a collapsed sidebar out. */
+.sidebar-edge {
+  position: absolute;
+  z-index: 5;
+  top: var(--title-bar-height, 0px);
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  -webkit-app-region: no-drag;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-slot.floating,
+  .sidebar-slot.collapsed,
+  .sidebar-card-shadow {
+    transition: none;
+  }
+}
+
+/* Sidebar */
+.sidebar {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  padding: 2px var(--crest-space-small) 0 var(--crest-space-medium);
+  color: var(--fg);
+}
+
+.sidebar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 34px;
+}
+
+.window-drag {
+  flex: 1;
+  height: 100%;
+}
+
+/* Crest's own window on Windows: a title bar across the top, which moves the
+   window, holds the page's navigation over the sidebar, and ends in the
+   window's buttons, flush with the top right corner. */
+.browser-window.with-title-bar {
+  --title-bar-height: 40px;
+  grid-template-rows: var(--title-bar-height) minmax(0, 1fr);
+  row-gap: 0;
+  padding-top: 0;
+}
+
+.title-bar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: stretch;
+  height: var(--title-bar-height);
+  margin-inline-end: calc(-1 * var(--window-inset));
+  color: var(--fg);
+  -webkit-app-region: drag;
+}
+
+.title-bar button {
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-navigation {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline-start: calc(var(--crest-space-medium) - 4px);
+}
+
+.title-bar-drag {
+  flex: 1;
+}
+
+/* Windows 11's caption buttons, in the system's own glyphs. */
+.window-controls {
+  position: relative;
+  /* Windows' caption buttons stay above the command palette's scrim, as the
+     system draws them over everything else in the window. */
+  z-index: 11;
+  display: flex;
+  transition: opacity 140ms ease-in-out;
+}
+
+.window-controls.inactive {
+  opacity: 0.45;
+}
+
+.window-control {
+  width: 46px;
+  display: grid;
+  place-items: center;
+  color: var(--fg);
+  font: 10px "Segoe Fluent Icons", "Segoe MDL2 Assets";
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.window-control:hover {
+  background: var(--surface);
+}
+
+.window-control:active {
+  background: var(--surface-selected);
+}
+
+.window-control.close:hover {
+  background: rgb(196 43 28);
+  color: rgb(255 255 255);
+}
+
+.window-control.close:active {
+  background: rgb(196 43 28 / 0.9);
+  color: rgb(255 255 255 / 0.7);
+}
+
+.chrome-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--crest-radius-compact);
+  color: var(--fg-secondary);
+  transition: background 140ms ease-in-out, color 140ms ease-in-out;
+}
+
+.chrome-button:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+.chrome-button:disabled {
+  opacity: var(--crest-opacity-disabled, 0.5);
+}
+
+/* The shown tab's address, which opens the command palette to edit it. */
+.address-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 38px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--crest-radius-control);
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+  color: var(--fg);
+  text-align: start;
+  /* Back as the palette that grew out of it lands on it, as the Mac's
+     hand-off's trailing fade: the frame's travel less the fade. */
+  transition: box-shadow 140ms ease-in-out, opacity 120ms ease-out 160ms;
+}
+
+/* Handed off to the palette growing out of it, as the frame leaves it. */
+.address-field.handed-off {
+  opacity: 0;
+  transition: box-shadow 140ms ease-in-out, opacity 120ms ease-out;
+}
+
+.address-field:has(.address-summary:focus-visible) {
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.4), 0 0 0 3px rgb(255 255 255 / 0.12);
+}
+
+.address-summary {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  text-align: start;
+  outline: none;
+}
+
+/* The lock, or the glyph that stands in for it, and Site Controls: the Mac's
+   trailing controls, quiet until the pointer reaches them. */
+.address-glyph {
+  flex: none;
+  width: 26px;
+  color: var(--fg-secondary);
+}
+
+.address-security,
+.site-control-trigger {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--fg-secondary);
+  transition: background 140ms ease-in-out;
+}
+
+.address-security.insecure {
+  color: rgb(238 106 92);
+}
+
+.address-security:disabled {
+  opacity: 1;
+}
+
+.address-security:not(:disabled):hover,
+.site-control-trigger:hover,
+.site-control-trigger.open {
+  background: var(--surface);
+}
+
+/* A blocked pop-up turns the trigger to the warning tone, with a dot. */
+.site-control-trigger {
+  position: relative;
+}
+
+.site-control-trigger.warning {
+  color: rgb(236 190 92);
+}
+
+.site-control-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(236 190 92);
+  box-shadow: 0 0 0 1px var(--field);
+}
+
+.address-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: 600 13px var(--crest-font-system);
+}
+
+.address-text.placeholder {
+  color: var(--fg-secondary);
+  font-weight: 500;
+}
+
+.pinned-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: var(--crest-space-small);
+}
+
+.pinned-tile {
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--crest-radius-control);
+  background: var(--surface);
+  transition: background 140ms ease-in-out, box-shadow 140ms ease-in-out;
+}
+
+.pinned-tile:hover {
+  background: var(--surface-selected);
+}
+
+.pinned-tile.selected {
+  background: var(--surface-selected);
+  box-shadow: inset 0 0 0 1px var(--surface-border), 0 1px 3px rgb(0 0 0 / 0.16);
+}
+
+/* The Space header, as the Mac's BrowserSpaceHeader: a row as tall as a tab
+   row, its title the crest, name and lock, its hover the hover surface. */
+.space-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 4px 0 8px;
+  border-radius: 8px;
+  transition: background 120ms ease-in-out;
+}
+
+.space-header:hover {
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+.space-header-title {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--primary-rgb));
+  text-align: start;
+}
+
+.space-header-title::after {
+  content: "";
+  flex: 1;
+  min-width: 8px;
+}
+
+.space-header-identity {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.space-header-identity > * {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  transition: opacity 200ms cubic-bezier(0.2, 0.9, 0.3, 1), transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* Collapsing turns the chevron to point at the title as it fades in over the crest. */
+.space-header-chevron {
+  color: var(--fg-secondary);
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+.space-header-identity.collapsed .space-header-crest {
+  opacity: 0;
+}
+
+.space-header-identity.collapsed .space-header-chevron {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-header-chevron {
+    transform: none;
+  }
+}
+
+.space-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.space-header-lock {
+  display: grid;
+  place-items: center;
+}
+
+.space-header .space-header-actions {
+  width: 24px;
+  height: 24px;
+  color: rgb(var(--primary-rgb));
+}
+
+.tab-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: none;
+}
+
+.tab-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tab-list > .tab-section + .tab-section {
+  border-top: 1px solid var(--surface-border);
+  padding-top: var(--crest-space-small);
+  margin-top: var(--crest-space-small);
+}
+
+.sidebar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding-inline-end: 10px;
+  border-radius: var(--crest-radius-compact);
+  text-align: start;
+  color: var(--fg);
+  transition: background 140ms ease-in-out;
+}
+
+.sidebar-row:hover {
+  background: var(--surface);
+}
+
+.sidebar-row.selected:hover {
+  background: none;
+}
+
+.row-selection {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--crest-radius-compact);
+  background: var(--surface-selected);
+  box-shadow: inset 0 0 0 1px var(--surface-border), 0 1px 3px rgb(0 0 0 / 0.14);
+  z-index: 0;
+}
+
+.sidebar-row > :not(.row-selection) {
+  position: relative;
+  z-index: 1;
+}
+
+.row-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.folder-row .row-title {
+  font-weight: 600;
+}
+
+/* A tab's close button shows on hover and on the selected tab. */
+.row-close {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--fg-secondary);
+  opacity: 0;
+  transition: opacity 140ms ease-in-out, background 140ms ease-in-out;
+}
+
+.tab-row:hover .row-close,
+.tab-row.selected .row-close {
+  opacity: 1;
+}
+
+.row-close:hover {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+/* Lifting rows, as the Mac's sidebar lifts them: what the lift carries
+   collapses, a gap opens where it would land, and a folder or tab it would
+   nest in, or a Space it would move to, lights up. */
+.tab-row,
+.folder-row,
+.pinned-tile,
+.split-card {
+  user-select: none;
+}
+
+.lifted {
+  display: none !important;
+}
+
+/* What the window's selection holds for tab actions wears the row's hover,
+   as on the Mac: a tile with its edge too, and a split on its card. */
+.sidebar-row.unit-selected {
+  background: var(--surface);
+}
+
+.pinned-tile.unit-selected {
+  background: var(--surface-selected);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+}
+
+.split-card.unit-selected {
+  background: var(--surface-selected);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+}
+
+/* A pinned tab a lift let go of shakes, as the Mac's does. */
+.pinned-tile.shaken {
+  animation: tile-shake 360ms ease-in-out;
+}
+
+@keyframes tile-shake {
+  20%, 60% { translate: -3px 0; }
+  40%, 80% { translate: 3px 0; }
+}
+
+/* Where a lift would land: a 2pt line above the row it would land before, or
+   at the end of its list, as the Mac's insertion line; across in lists, and
+   upright between the pinned grid's tiles. Drawing it moves nothing, so the
+   rows the pointer aims at stay where they are. */
+.drop-before,
+.drop-at-end,
+.split-card {
+  position: relative;
+}
+
+.drop-before::before,
+.drop-at-end::after {
+  content: "";
+  position: absolute;
+  inset-inline: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(255 250 240 / 0.72);
+  pointer-events: none;
+}
+
+.drop-before::before {
+  top: -2px;
+}
+
+.drop-at-end::after {
+  bottom: -2px;
+}
+
+.pinned-tile.drop-before::before {
+  inset: 2px auto 2px -5px;
+  width: 2px;
+  height: auto;
+}
+
+.pinned-grid.drop-at-end::after {
+  inset: auto -3px 2px auto;
+  top: auto;
+  width: 2px;
+  height: 48px;
+}
+
+.folder-row.drop-into,
+.tab-row.drop-nest {
+  background: rgb(255 250 240 / 0.1);
+  box-shadow: inset 0 0 0 1.5px rgb(255 250 240 / 0.72);
+}
+
+.lift-preview {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: var(--crest-radius-compact);
+  color: var(--fg);
+  font: 500 13px var(--crest-font-system);
+  transform: scale(1.04);
+  box-shadow: inset 0 0 0 0.5px var(--surface-border), 0 5px 20px rgb(0 0 0 / 0.22);
+  pointer-events: none;
+}
+
+.browser-window.reads-light .lift-preview {
+  background: rgb(44 48 56 / 0.94);
+}
+
+.browser-window.reads-dark .lift-preview {
+  background: rgb(250 250 252 / 0.94);
+}
+
+.lift-preview.tile {
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--crest-radius-control);
+}
+
+/* Over the page area, the lift is the page card it would become. */
+.lift-preview.card {
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 13px;
+  text-align: center;
+  transform: none;
+  transition: width 180ms ease, height 180ms ease, border-radius 180ms ease, left 180ms ease, top 180ms ease;
+}
+
+.lift-preview.card .row-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  font-weight: 500;
+}
+
+.lift-preview .row-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lift-refusal {
+  position: fixed;
+  z-index: 51;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgb(32 32 35 / 0.94);
+  color: rgb(255 255 255 / 0.92);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+/* A tab's or folder's title being renamed in place. */
+.rename-field {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  margin-inline-end: 6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+  color: var(--fg);
+  font: 500 13px var(--crest-font-system);
+}
+
+.rename-field:focus {
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.45);
+}
+
+.new-tab-row {
+  color: var(--fg-secondary);
+  margin-top: var(--crest-space-extraSmall);
+}
+
+.new-tab-row:hover {
+  color: var(--fg);
+}
+
+.tab-icon {
+  flex: none;
+  border-radius: 4px;
+}
+
+.split-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 4px 4px;
+  border-radius: var(--crest-radius-control);
+  background: var(--surface);
+}
+
+/* A folder drawn as two flat faces in its own colour, which swing apart as
+   it opens (FolderArtwork.tsx). */
+.folder-artwork {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  margin-inline: -1px;
+}
+
+.folder-face {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  overflow: visible;
+}
+
+.folder-face.front {
+  display: grid;
+  place-items: center;
+  width: 18px;
+}
+
+.folder-face.front > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.folder-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* The split's own row, as a folder's header: its members' icons stacked in
+   the folder symbol's column, or a chevron while collapsed, its title, and
+   the trailing ellipsis that opens its menu. */
+.split-header {
+  position: relative;
+}
+
+.split-header-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 18px;
+}
+
+.split-chevron,
+.split-emoji {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.split-deck {
+  position: relative;
+  display: block;
+}
+
+.split-deck-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+}
+
+.split-deck-face {
+  display: grid;
+  place-items: center;
+  padding: 1px;
+  border-radius: 50%;
+  background: var(--surface-solid, rgb(var(--primary-rgb) / 0.06));
+  box-shadow: inset 0 0 0 1px rgb(var(--primary-rgb) / 0.12);
+}
+
+.split-deck-face .tab-icon {
+  border-radius: 50%;
+}
+
+.split-header-title {
+  flex: 1;
+}
+
+.split-header-actions {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-inline-end: 2px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.split-header-actions:hover {
+  opacity: 1;
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+/* A popover beside what it changes, such as a split's colour or icon. */
+.crest-popover {
+  position: fixed;
+  z-index: 60;
+  border-radius: var(--crest-radius-card);
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 1px var(--prompt-border), 0 16px 40px rgb(0 0 0 / 0.3);
+  transform-origin: left center;
+}
+
+.color-picker,
+.emoji-picker {
+  display: grid;
+  gap: 12px;
+  width: 246px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.picker-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.picker-reset {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: var(--prompt-ink-secondary);
+  opacity: 0.7;
+}
+
+.picker-reset:hover {
+  opacity: 1;
+  background: rgb(127 127 127 / 0.14);
+}
+
+.color-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 28px);
+  gap: 8px;
+}
+
+.color-swatch {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+}
+
+.color-swatch:hover {
+  background: rgb(127 127 127 / 0.14);
+}
+
+.color-swatch.chosen {
+  box-shadow: inset 0 0 0 2px rgb(127 127 127 / 0.55);
+}
+
+.color-swatch > span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.12);
+}
+
+.picker-divider {
+  height: 1px;
+  background: rgb(127 127 127 / 0.24);
+}
+
+.custom-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.custom-color input {
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.emoji-field {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgb(127 127 127 / 0.35);
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.emoji-choice {
+  height: 32px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  font-size: 18px;
+}
+
+.emoji-choice:hover,
+.emoji-choice.chosen {
+  background: rgb(127 127 127 / 0.16);
+}
+
+/* The Space pager: the sidebar's Space pages side by side across its whole
+   width, each sliding a sidebar width a Space, as the Mac's SpacePagerViewport. */
+.space-pages {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--crest-space-small)) 0 calc(-1 * var(--crest-space-medium));
+  overflow: hidden;
+}
+
+.space-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  padding: 0 var(--crest-space-small) 0 var(--crest-space-medium);
+}
+
+.space-pages.moving .space-page {
+  will-change: transform;
+}
+
+/* The Space switcher's strip, as the Mac's compact strip: a 50-point band
+   across the sidebar, its utilities 12 in from either edge, the picker
+   centred between them. */
+.space-strip {
+  position: relative;
+  flex: none;
+  height: 50px;
+  margin: 0 calc(-1 * var(--crest-space-small)) 0 calc(-1 * var(--crest-space-medium));
+}
+
+.space-strip-utilities {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+}
+
+.space-strip-spacer {
+  flex: 1;
+}
+
+.space-strip-utilities .chrome-button {
+  width: 32px;
+  height: 32px;
+}
+
+.space-picker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+}
+
+.space-picker-lane {
+  flex: none;
+  overflow: hidden;
+}
+
+/* The track: a well recessed into the sidebar, its black's strength set from
+   the picker's tone over each Space's sidebar (SpaceSwitcher.tsx). */
+.space-picker-track {
+  position: relative;
+  display: flex;
+  width: max-content;
+}
+
+.space-picker-track.dotted {
+  background: none;
+  box-shadow: none;
+}
+
+.space-segment {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.space-segment > * {
+  grid-area: 1 / 1;
+}
+
+.space-segment-icon {
+  display: grid;
+  place-items: center;
+}
+
+.space-dot-mark {
+  border-radius: 50%;
+}
+
+/* The selection follows the pager every frame. On a layer of its own, each
+   step repaints only itself, rather than the window's chrome around it. */
+.space-picker-selection,
+.space-picker-outline {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.space-picker-overflow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--primary-rgb) / 0.85);
+}
+
+.space-picker-overflow:disabled {
+  opacity: 0.3;
+}
+
+/* A Space's identity: its crest, or its symbol or emoji, and its lock. */
+.space-artwork {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.space-artwork-lock {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--window-background, rgb(236 236 236));
+  color: rgb(var(--primary-rgb));
+}
+
+.space-identity-symbol,
+.space-identity-emoji {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.space-crest {
+  display: block;
+}
+
+/* Questions a page asks: Crest's paper and ink, following the system's light
+   or dark appearance, with Crest's coral for the answer that goes ahead. */
+:root {
+  --prompt-surface: rgb(255 250 240);
+  --prompt-bar: rgb(243 234 214);
+  --prompt-ink: rgb(23 34 56);
+  --prompt-ink-secondary: rgb(23 34 56 / 0.7);
+  --prompt-border: rgb(23 34 56 / 0.13);
+  --prompt-field: rgb(255 255 255);
+  --prompt-accent: rgb(237 90 67);
+  --prompt-on-accent: rgb(23 34 56);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --prompt-surface: rgb(39 54 83);
+    --prompt-bar: rgb(31 44 69);
+    --prompt-ink: rgb(255 250 240);
+    --prompt-ink-secondary: rgb(255 250 240 / 0.72);
+    --prompt-border: rgb(255 250 240 / 0.14);
+    --prompt-field: rgb(23 34 56);
+    --prompt-accent: rgb(241 117 98);
+  }
+}
+
+/* A script dialog or sign-in, over the page it holds. */
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.3);
+}
+
+.sheet {
+  width: min(440px, 100%);
+  border-radius: var(--crest-radius-card);
+  overflow: hidden;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 1px var(--prompt-border), 0 24px 64px rgb(0 0 0 / 0.34);
+}
+
+.sheet form {
+  display: contents;
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 24px 20px;
+}
+
+.sheet-title {
+  margin: 0 0 2px;
+  font: 650 17px/1.3 var(--crest-font-system);
+  overflow-wrap: anywhere;
+}
+
+.sheet-message {
+  margin: 0;
+  max-height: 40vh;
+  overflow: auto;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--prompt-ink-secondary);
+}
+
+.sheet-field {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--prompt-border);
+  border-radius: var(--crest-radius-compact);
+  outline: none;
+  background: var(--prompt-field);
+  color: var(--prompt-ink);
+  font: inherit;
+  transition: border-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+}
+
+.sheet-field:focus {
+  border-color: var(--prompt-accent);
+  box-shadow: 0 0 0 3px rgb(237 90 67 / 0.22);
+}
+
+.sheet-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--prompt-border);
+  background: var(--prompt-bar);
+}
+
+.sheet-button,
+.permission-button {
+  height: 34px;
+  border-radius: var(--crest-radius-compact);
+  background: var(--prompt-surface);
+  box-shadow: inset 0 0 0 1px var(--prompt-border);
+  color: var(--prompt-ink);
+  font-weight: 600;
+  transition: filter 120ms ease-in-out;
+}
+
+.sheet-button:hover,
+.permission-button:hover {
+  filter: brightness(0.96);
+}
+
+.sheet-button.primary,
+.permission-button.primary {
+  background: var(--prompt-accent);
+  box-shadow: none;
+  color: var(--prompt-on-accent);
+}
+
+.sheet-button:focus-visible,
+.permission-button:focus-visible,
+.permission-dismiss:focus-visible {
+  outline: 2px solid var(--prompt-ink);
+  outline-offset: 2px;
+}
+
+/* A permission request, below the address field. */
+.address-area {
+  position: relative;
+  z-index: 3;
+}
+
+.permission-prompt {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--crest-radius-card);
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 1px var(--prompt-border), 0 16px 40px rgb(0 0 0 / 0.3);
+  transform-origin: top right;
+}
+
+/* Its arrow points at the site control, the field's accessory. */
+.permission-prompt::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  background: var(--prompt-surface);
+  box-shadow: -1px -1px 0 0 var(--prompt-border);
+  transform: rotate(45deg);
+}
+
+.permission-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Site Controls, below the address field where the permission prompt opens:
+   the Mac's popover sizes, on the prompts' paper and ink. It lines its
+   trailing edge up with the field's, as wide as the Mac's. */
+.site-control-panel {
+  --site-success: rgb(47 112 66);
+  --site-warning: rgb(138 90 8);
+  --site-danger: rgb(178 50 37);
+  position: absolute;
+  top: calc(100% + 10px);
+  left: max(0px, calc(100% - 292px));
+  width: 292px;
+  max-height: 560px;
+  overflow-y: auto;
+  border-radius: var(--crest-radius-card);
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 1px var(--prompt-border), 0 16px 40px rgb(0 0 0 / 0.3);
+  transform-origin: top right;
+  outline: none;
+  scrollbar-width: thin;
+}
+
+@media (prefers-color-scheme: dark) {
+  .site-control-panel {
+    --site-success: rgb(134 196 142);
+    --site-warning: rgb(236 190 92);
+    --site-danger: rgb(238 106 92);
+  }
+}
+
+.site-control-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-medium);
+  padding: var(--crest-space-medium);
+}
+
+.site-control-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-control-title,
+.site-control-host,
+.site-security-origin {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.site-control-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.site-control-host {
+  font-size: 11px;
+  color: var(--prompt-ink-secondary);
+}
+
+.site-control-actions {
+  display: flex;
+  gap: var(--crest-space-small);
+}
+
+/* The page's blocked pop-up, first in the panel, as the Mac's notice. */
+.site-popup-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--crest-space-small);
+  padding: var(--crest-space-small);
+  border-radius: var(--crest-radius-control);
+  background: color-mix(in srgb, var(--prompt-ink) 7%, transparent);
+  font-size: 11px;
+}
+
+.site-popup-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.site-popup-guidance {
+  color: var(--prompt-ink-secondary);
+}
+
+.site-popup-allow {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--crest-radius-compact);
+  background: var(--prompt-accent);
+  color: var(--prompt-on-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.site-popup-allow:hover {
+  filter: brightness(0.96);
+}
+
+.site-control-action {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--crest-radius-compact);
+  background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
+  color: var(--prompt-ink);
+  transition: background 120ms ease-in-out;
+}
+
+.site-control-action:hover {
+  background: color-mix(in srgb, var(--prompt-ink) 11%, transparent);
+}
+
+.site-control-action.labelled {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.site-control-divider {
+  flex: none;
+  height: 1px;
+  background: var(--prompt-border);
+}
+
+.site-security {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  font-size: 11px;
+}
+
+.site-security-origin {
+  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+.site-security-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.site-security-label.success { color: var(--site-success); }
+.site-security-label.warning { color: var(--site-warning); }
+.site-security-label.danger { color: var(--site-danger); }
+.site-security-label.quiet { color: var(--prompt-ink-secondary); }
+
+.site-security-review {
+  display: flex;
+  align-items: center;
+  gap: var(--crest-space-small);
+  width: 100%;
+  text-align: start;
+}
+
+.site-security-review .site-security-label {
+  flex: 1;
+}
+
+.site-security-certificate,
+.site-security-detail {
+  color: var(--prompt-ink-secondary);
+}
+
+.site-permissions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-medium);
+  font-size: 11px;
+}
+
+.site-permissions-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--prompt-ink-secondary);
+  font-weight: 600;
+}
+
+.site-permission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crest-space-small);
+}
+
+/* Whether the Space blocks ads and trackers on the site. */
+.site-blocking {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crest-space-small);
+}
+
+.site-blocking-switch {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--prompt-ink) 22%, transparent);
+  transition: background-color 120ms ease-in-out;
+}
+
+.site-blocking-switch.on {
+  justify-content: flex-end;
+  background: rgb(0 103 192);
+}
+
+.site-blocking-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.site-permission-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.site-permission-choice {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--prompt-ink);
+}
+
+.site-permission-choice:hover {
+  background: color-mix(in srgb, var(--prompt-ink) 8%, transparent);
+}
+
+.permission-symbol {
+  flex: none;
+  margin-top: 1px;
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.permission-origin {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.permission-request {
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-inside {
+  font-size: 11px;
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-dismiss {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-dismiss:hover {
+  background: var(--prompt-border);
+}
+
+.permission-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.permission-remember input {
+  margin: 0;
+  accent-color: var(--prompt-accent);
+}
+
+.permission-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* The window's notices, in the top trailing corner of the page, as the Mac's
+   stand: a capsule on Crest's dark flyout surface, outlined just inside its
+   edge so it stands apart from a page as dark as it. */
+.notices {
+  position: absolute;
+  top: 18px;
+  inset-inline: 18px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: min(520px, 100%);
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgb(42 42 44 / 0.94);
+  color: rgb(255 255 255 / 0.92);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 8px 32px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(30px) saturate(1.5);
+}
+
+.notice span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* A download in the Downloads list: what it is doing and what can be done with it. */
+.download-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline-end: 4px;
+  border-radius: var(--crest-radius-compact);
+  transition: background 140ms ease-in-out;
+}
+
+.download-row:hover {
+  background: var(--surface);
+}
+
+.download-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px 7px 8px;
+  text-align: start;
+  color: var(--fg);
+}
+
+.download-label:disabled {
+  color: var(--fg);
+}
+
+.download-icon {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.download-icon > * {
+  grid-area: 1 / 1;
+}
+
+.download-icon.tone-failed {
+  color: rgb(232 160 64);
+}
+
+.download-icon.tone-awaitingApproval,
+.download-icon.tone-blockedAutomaticDownload {
+  color: var(--prompt-accent);
+}
+
+.download-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.download-details {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fg-secondary);
+}
+
+.download-details.stacked {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-details > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.download-details .download-dot {
+  flex: none;
+  opacity: 0.6;
+}
+
+.download-danger {
+  color: var(--danger);
+}
+
+.download-action {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+
+.download-action.destructive:hover {
+  color: rgb(232 112 96);
+}
+
+.progress-ring-track {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  opacity: 0.22;
+}
+
+.progress-ring-value {
+  fill: none;
+  stroke: var(--prompt-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke-dasharray 300ms ease-out;
+}
+
+/* The page card: the page's own surface, inset from the window and rounded. */
+.page-card {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--crest-radius-control);
+  overflow: hidden;
+  background: rgb(255 255 255);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 30px rgb(0 0 0 / 0.22);
+}
+
+.page-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: white;
+}
+
+/* Find in page, as the Mac floats it over the page's top trailing corner: a
+   bordered panel in the window's own background, with borderless controls. */
+.find-bar {
+  --find-surface: rgb(255 255 255);
+  --find-ink: rgb(0 0 0 / 0.86);
+  --find-secondary: rgb(0 0 0 / 0.5);
+  --find-edge: rgb(0 0 0 / 0.16);
+  --find-danger: rgb(178 50 37);
+  position: absolute;
+  top: var(--crest-space-medium);
+  right: var(--crest-space-medium);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--find-surface);
+  box-shadow: inset 0 0 0 0.5px var(--find-edge), 0 5px 24px rgb(0 0 0 / 0.14);
+  color: var(--find-ink);
+  font-size: 13px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .find-bar {
+    --find-surface: rgb(30 30 32);
+    --find-ink: rgb(255 255 255 / 0.9);
+    --find-secondary: rgb(255 255 255 / 0.55);
+    --find-edge: rgb(255 255 255 / 0.16);
+    --find-danger: rgb(238 106 92);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .find-bar {
+    box-shadow: inset 0 0 0 0.5px var(--find-edge);
+  }
+}
+
+.find-field {
+  width: 190px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--find-ink);
+  font: inherit;
+}
+
+.find-field::placeholder {
+  color: var(--find-secondary);
+}
+
+.find-status {
+  min-width: 62px;
+  color: var(--find-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.find-status.failure {
+  color: var(--find-danger);
+}
+
+.find-control {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--find-ink);
+}
+
+.find-control:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--find-ink) 8%, transparent);
+}
+
+.find-control:disabled {
+  opacity: 0.35;
+}
+
+/* Over the page while a drag of the interface's holds the pointer, so the
+   page's surface does not take the drag's events. */
+.page-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* A card with no page to draw lets the Space's backdrop through. */
+.page-card.clear {
+  background: transparent;
+}
+
+/* A page's still (page-stills.ts): in place of the page as its card slides
+   on screen, then over the woken page until it has drawn, fading as it goes.
+   It keeps its own size, one of its pixels to each of the screen's. */
+.page-still {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-still.going {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+/* The Start Page, as the Mac's desktop layout measures it: a column of the
+   icon, the title, the private notice and the palette, centered on the
+   card. */
+.start-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.start-page-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 820px;
+  padding: 40px;
+}
+
+.start-page-mark {
+  display: block;
+  width: 60px;
+  height: 60px;
+}
+
+/* The Start Page's title in Crest's display type, rounded and heavy. */
+.start-page-title {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--crest-font-display);
+  font-size: 30px;
+  font-weight: var(--crest-font-display-weight);
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.start-page-private {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 520px;
+  text-align: center;
+}
+
+.start-page-private-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.start-page-private-detail {
+  color: var(--fg-secondary);
+  font-size: 12px;
+}
+
+/* The palette in place takes the column's width, up to the card's most. */
+.palette-card.embedded {
+  width: 100%;
+  max-width: 720px;
+}
+
+/* Under the overlay palette it blurs nothing but the Space's smooth banner,
+   so it drops the blur, which every frame of the overlay's morph would draw
+   again (palette-morph.ts). */
+.palette-card.embedded.overlaid {
+  backdrop-filter: none;
+}
+
+/* The command palette, as the Mac's overlay shows it: a scrim over the whole
+   window and a card centered over the page, in the Space's look. Its sizes are
+   BrowserCommandPaletteMetrics', in CSS pixels for the Mac's points. */
+.palette-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: inherit;
+  grid-template-rows: inherit;
+  column-gap: inherit;
+  row-gap: inherit;
+  padding: inherit;
+  -webkit-app-region: no-drag;
+}
+
+/* A light-ink Space reads dark, and a dark-ink one light, as the Mac's palette
+   takes the Space look's scheme, over the window or on a Start Page. What a
+   person selects or presses there is Crest blue, the brand's accent, lifted
+   on the dark scheme; the accent as text is a shade further from the ground. */
+.browser-window.reads-light .start-page,
+.browser-window.reads-light .palette-layer {
+  --pal-accent: rgb(var(--crest-accent-dark));
+  --pal-accent-text: rgb(var(--crest-accent-text-dark));
+  --pal-surface: rgb(32 32 35 / 0.86);
+  --pal-ink: rgb(255 255 255 / 0.92);
+  --pal-secondary: rgb(255 255 255 / 0.55);
+  --pal-primary: 255 255 255;
+  --pal-edge: rgb(255 255 255 / 0.14);
+}
+
+.browser-window.reads-dark .start-page,
+.browser-window.reads-dark .palette-layer {
+  --pal-accent: rgb(var(--crest-accent-light));
+  --pal-accent-text: rgb(var(--crest-accent-text-light));
+  --pal-surface: rgb(248 248 250 / 0.88);
+  --pal-ink: rgb(0 0 0 / 0.86);
+  --pal-secondary: rgb(0 0 0 / 0.5);
+  --pal-primary: 0 0 0;
+  --pal-edge: rgb(0 0 0 / 0.1);
+}
+
+.palette-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.18);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .palette-scrim {
+    background: rgb(0 0 0 / 0.56);
+  }
+}
+
+.palette-area {
+  position: relative;
+  grid-column: -2;
+  grid-row: -2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.palette-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 26px;
+  background: var(--pal-surface);
+  color: var(--pal-ink);
+  box-shadow: inset 0 0 0 0.5px var(--pal-edge), 0 18px 50px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(40px) saturate(1.8);
+  pointer-events: auto;
+}
+
+/* The overlay's card holds its glass apart from its contents, so the glass
+   can grow out of the address field while the contents keep their layout
+   and show through its frame (palette-morph.ts). The glass that moves has no
+   blur; the resting one, blur and all, comes in over it once it settles. */
+.palette-layer .palette-card {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.palette-glass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pal-surface);
+  box-shadow: inset 0 0 0 0.5px var(--pal-edge), 0 18px 50px rgb(0 0 0 / 0.28);
+}
+
+.palette-glass.resting {
+  backdrop-filter: blur(40px) saturate(1.8);
+}
+
+.palette-glass.moving {
+  visibility: hidden;
+  transform-origin: 0 0;
+}
+
+.palette-card.morphing > .palette-glass.moving {
+  visibility: visible;
+}
+
+.palette-reveal,
+.palette-contents {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.palette-reveal {
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.palette-contents {
+  transform-origin: 50% 0;
+}
+
+/* Waiting to fade in as the card grows, the contents but the query field,
+   which keeps the keyboard, are not drawn (palette-morph.ts). */
+.palette-contents.waiting > :not(.palette-field) {
+  visibility: hidden;
+}
+
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 0 20px;
+}
+
+.palette-glyph {
+  flex: none;
+  color: var(--pal-secondary);
+  stroke-width: 2.25;
+}
+
+.palette-input {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  overflow: hidden;
+}
+
+.palette-input input {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--pal-ink);
+  font: inherit;
+  font-size: 17px;
+}
+
+.palette-input input::placeholder {
+  color: var(--pal-secondary);
+}
+
+/* Measures what is typed, in the field's font, to place the completion after it. */
+.palette-mirror {
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  font-size: 17px;
+}
+
+.palette-suffix {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  overflow: hidden;
+  font-size: 17px;
+  pointer-events: none;
+  color: transparent;
+  background-image: linear-gradient(90deg,
+    rgb(var(--pal-primary) / 0.36) 0%, rgb(var(--pal-primary) / 0.36) 37.5%,
+    rgb(var(--pal-primary) / 0.52) 50%,
+    rgb(var(--pal-primary) / 0.36) 62.5%, rgb(var(--pal-primary) / 0.36) 100%);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: palette-shimmer 4s linear infinite;
+}
+
+/* One sweep every four seconds: still for 2.4s, then 1.6s across. */
+@keyframes palette-shimmer {
+  0%, 60% { background-position: 135% 0; }
+  100% { background-position: -35% 0; }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-contrast: more) {
+  .palette-suffix {
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .palette-suffix {
+    background-image: none;
+    color: var(--pal-secondary);
+  }
+}
+
+.palette-offer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--pal-secondary);
+  font: inherit;
+}
+
+.palette-tab-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--pal-secondary);
+}
+
+.palette-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--pal-secondary);
+}
+
+.palette-close:hover {
+  background: rgb(var(--pal-primary) / 0.07);
+}
+
+.palette-chip {
+  --chip-tint: var(--pal-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-tint) 82%, transparent);
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.palette-chip.interactive:hover {
+  background: var(--chip-tint);
+}
+
+.palette-chip-title.shortcut {
+  font-family: var(--crest-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+}
+
+.palette-chip-close {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.palette-provider-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: rgb(255 250 240);
+  color: rgb(0 0 0 / 0.55);
+}
+
+.palette-provider-chips {
+  display: flex;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.palette-divider {
+  flex: none;
+  height: 1px;
+  background: var(--pal-edge);
+}
+
+.palette-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--pal-primary) / 0.28) transparent;
+}
+
+.palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.palette-group-title {
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pal-secondary);
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  min-height: 54px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgb(var(--pal-primary) / 0.045);
+  cursor: default;
+}
+
+.palette-row.selected {
+  background: color-mix(in srgb, var(--pal-accent) 16%, transparent);
+}
+
+.palette-row-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgb(var(--pal-primary) / 0.08);
+  color: var(--pal-secondary);
+}
+
+.palette-row-icon.intent {
+  color: var(--pal-ink);
+}
+
+.palette-row-icon svg {
+  stroke-width: 2.25;
+}
+
+.palette-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.palette-row-title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-row-detail {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--pal-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-row-spacer {
+  flex: 1;
+  min-width: 12px;
+}
+
+.palette-row-kind {
+  flex: none;
+  font-size: 11px;
+  color: var(--pal-secondary);
+}
+
+.palette-row-opening {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pal-accent-text);
+}
+
+.palette-shortcut {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: rgb(var(--pal-primary) / 0.07);
+  color: var(--pal-secondary);
+  font-family: var(--crest-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.palette-row-end {
+  flex: none;
+  color: var(--pal-secondary);
+}
+
+/* The Common Lists button, as the Mac's: the list it opens, badged while
+   downloads finished unseen. */
+.common-lists-button {
+  position: relative;
+  overflow: visible;
+}
+
+.common-lists-symbol {
+  display: grid;
+  place-items: center;
+}
+
+/* BrowserUtilityNotificationBadge: at least 16 each way, 4 in from its ends,
+   raised 4 off the top trailing corner, ringed with a live download's progress. */
+.utility-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  z-index: 1;
+}
+
+.utility-badge-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: rgb(var(--primary-rgb) / 0.72);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The archive, history and downloads destinations fanned out beside the
+   sidebar: 44-point glass circles, the list on show prominent in the
+   Space's colour. */
+.utility-fan {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.utility-fan-button {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  pointer-events: auto;
+  color: rgb(0 0 0 / 0.85);
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.7), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.18);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-app-region: no-drag;
+}
+
+@media (prefers-color-scheme: dark) {
+  .utility-fan-button {
+    color: rgb(255 255 255 / 0.92);
+    background: rgb(40 40 44 / 0.62);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.22), 0 0 0 0.5px rgb(0 0 0 / 0.3), 0 6px 18px rgb(0 0 0 / 0.3);
+  }
+}
+
+.utility-fan-button.selected {
+  color: white;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.35), 0 6px 18px rgb(0 0 0 / 0.22);
+}
+
+/* A Space's utility list in place of its tabs: the search toolbar where the
+   address field stood, then the list grouped by when. */
+.utility-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.utility-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+/* The field stands in for the address field: 36 tall, the sidebar's layer
+   radius (14 at the default setting), 9 in from either end. */
+.utility-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 9px;
+  border-radius: 14px;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+  color: var(--fg);
+}
+
+.utility-search-glyph {
+  flex: none;
+  color: var(--fg-secondary);
+}
+
+.utility-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--fg);
+  font: 13px var(--crest-font-system);
+}
+
+.utility-search-input::placeholder {
+  color: var(--fg-secondary);
+}
+
+.utility-search-clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--primary-rgb) / 0.3);
+}
+
+.utility-filter {
+  flex: none;
+  width: 44px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--crest-radius-control);
+  background: none;
+  color: var(--fg);
+}
+
+.utility-filter:hover {
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+.utility-sections {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  margin: 0 -8px;
+}
+
+.utility-section-title {
+  margin: 0;
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+/* BrowserUtilityListRow: 2 above and below, 8 either side, the label 4 and 8
+   inside the hover surface. */
+.utility-row,
+.utility-row-download {
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+}
+
+.utility-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--fg);
+  text-align: start;
+  transition: background 120ms ease-in-out;
+}
+
+.utility-row:hover {
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+.utility-row-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.utility-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.utility-row-title,
+.utility-row-subtitle {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.utility-row-title {
+  font-size: 13px;
+}
+
+.utility-row-subtitle {
+  font-size: 10px;
+  color: var(--fg-secondary);
+}
+
+.utility-row-subtitle > svg {
+  vertical-align: -1px;
+}
+
+.utility-row-trailing {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.utility-row-trailing.tertiary {
+  color: rgb(var(--primary-rgb) / 0.3);
+}
+
+/* ContentUnavailableView: the symbol, the title and what to do, centred. */
+.utility-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--fg-secondary);
+  font-size: 13px;
+}
+
+.utility-empty > svg {
+  margin-bottom: 6px;
+}
+
+.utility-empty strong {
+  color: var(--fg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* The system colours an archive reason wears, as the sidebar's scheme reads them. */
+.browser-window.reads-dark {
+  --system-red: rgb(255 59 48);
+  --system-orange: rgb(255 149 0);
+  --system-purple: rgb(175 82 222);
+  --system-blue: rgb(0 122 255);
+  --system-indigo: rgb(88 86 214);
+  --system-teal: rgb(48 176 199);
+  --system-pink: rgb(255 45 85);
+  --system-green: rgb(52 199 89);
+  --danger: rgb(255 59 48);
+}
+
+.browser-window.reads-light {
+  --system-red: rgb(255 69 58);
+  --system-orange: rgb(255 159 10);
+  --system-purple: rgb(191 90 242);
+  --system-blue: rgb(10 132 255);
+  --system-indigo: rgb(94 92 230);
+  --system-teal: rgb(64 200 224);
+  --system-pink: rgb(255 55 95);
+  --system-green: rgb(48 209 88);
+  --danger: rgb(255 69 58);
+}
+
+/* Dialogs over the whole window, such as an extension's install review. The
+   layer itself takes no part in the window's drag areas; its sheets do. */
+.window-dialog-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+  -webkit-app-region: initial;
+}
+
+.window-dialog-layer > .sheet-backdrop {
+  pointer-events: auto;
+  z-index: auto;
+}
+
+/* The Mac's BrowserChromeWebStoreInstallView. */
+.extension-review {
+  width: min(460px, 100%);
+}
+
+.extension-review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.extension-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-icon.large {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
+}
+
+.extension-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.extension-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgb(52 168 83);
+}
+
+.extension-progress {
+  display: grid;
+  gap: 6px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-progress-track {
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--prompt-ink) 12%, transparent);
+}
+
+.extension-progress-track > span {
+  display: block;
+  height: 100%;
+  background: var(--prompt-accent);
+  transition: width 120ms linear;
+}
+
+.extension-preparing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.extension-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--prompt-ink) 15%, transparent);
+  border-top-color: var(--prompt-ink-secondary);
+  border-radius: 50%;
+  animation: settings-spin 0.8s linear infinite;
+}
+
+.extension-ready {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: rgb(52 168 83);
+}
+
+.extension-question {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.extension-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.extension-facts dt {
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-facts dd {
+  margin: 0;
+}
+
+.extension-caution {
+  margin: 0;
+  font-size: 12px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--prompt-ink);
+  font: 600 13px var(--crest-font-system);
+}
+
+.extension-access {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: var(--crest-radius-compact);
+  background: color-mix(in srgb, var(--prompt-ink) 5%, transparent);
+  font-size: 13px;
+}
+
+.extension-access ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-withhold,
+.extension-space {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.extension-other-spaces {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.extension-other-spaces .sheet-button {
+  height: 30px;
+  padding: 0 12px;
+}
+
+.extension-spaces {
+  display: grid;
+  gap: 8px;
+}
+
+.extension-failure {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: rgb(214 133 34);
+}
+
+.sheet-button:disabled {
+  opacity: 0.5;
+}
+
+/* The Mac's BrowserPinnedExtensionStrip: the Space's pinned extensions above
+   its tabs, 24-point tiles on the address field's surface. */
+.extension-strip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: var(--crest-radius-control);
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+}
+
+.extension-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  transition: background-color 120ms ease-in-out;
+}
+
+.extension-tile:hover {
+  background: var(--surface);
+}
+
+.extension-tile.unavailable,
+.site-extension-action.unavailable {
+  opacity: 0.45;
+}
+
+.extension-artwork {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.extension-artwork img {
+  object-fit: contain;
+}
+
+/* BrowserExtensionBadge: a red capsule at the icon's corner. */
+.extension-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: rgb(235 64 52);
+  color: white;
+  font: 700 8px/12px var(--crest-font-system);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* BrowserSiteExtensionsSection in Site Controls. */
+.site-extensions {
+  display: grid;
+  gap: 8px;
+}
+
+.site-extensions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--prompt-ink-secondary);
+  font-weight: 600;
+}
+
+.site-extensions-manage {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--prompt-ink) 8%, transparent);
+  color: var(--prompt-ink);
+}
+
+.site-extensions-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--prompt-ink-secondary);
+}
+
+.site-extensions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.site-extension {
+  position: relative;
+}
+
+.site-extension-action {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
+  transition: background-color 120ms ease-in-out;
+}
+
+.site-extension-action:hover {
+  background: color-mix(in srgb, var(--prompt-ink) 11%, transparent);
+}
+
+.site-extension-pin {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--prompt-surface);
+  box-shadow: 0 0 0 1px var(--prompt-border);
+  color: var(--prompt-ink-secondary);
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
+}
+
+.site-extension:hover .site-extension-pin,
+.site-extension-pin:focus-visible {
+  opacity: 1;
+}
+
+.site-extension-pin.pinned {
+  color: var(--prompt-accent);
+}
