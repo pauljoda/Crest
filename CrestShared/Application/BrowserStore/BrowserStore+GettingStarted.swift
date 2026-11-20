@@ -13,41 +13,37 @@ extension BrowserStore {
 
     @discardableResult
     func openGettingStarted() -> UUID? {
-        if let existing = shownSpace?.tabs.models.first(where: { $0.nativeTabContent == .gettingStarted }) {
-            selectTab(existing.id)
-            return existing.id
-        }
-        return openNativeTab(.gettingStarted)
+        openNativeTab(.gettingStarted)
     }
 
+    /// Opens the guide in the Space the core's finish of setup names.
     @discardableResult
     func openGettingStartedAfterSetup(matching assignment: BrowserSpaceRuntimeAssignment)
         -> BrowserTabRuntimeAssignment?
     {
-        guard !isPrivateBrowsing, let firstSpace = spaceModels.first,
-            BrowserSpaceRuntimeAssignment(space: firstSpace) == assignment
-        else { return nil }
-        selectSpace(firstSpace.id)
+        guard spaceModel(matching: assignment) != nil else { return nil }
+        selectSpace(assignment.spaceID)
         guard let tabID = openGettingStarted() else { return nil }
         return BrowserTabRuntimeAssignment(tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID)
     }
 
-    /// Settings is one ordinary, closable native tab per Space. Repeated menu
-    /// commands focus that tab without creating duplicates or opening WebKit.
     @discardableResult
     func openSettings() -> UUID? {
-        if let existing = shownSpace?.tabs.models.first(where: { $0.nativeTabContent == .settings }) {
+        openNativeTab(.settings)
+    }
+
+    /// Shows `view` in the Space this window shows: its tab there, for a view
+    /// a Space keeps one of, or a new tab in the section the view opens in.
+    /// Native documents enter the same session mutation and persistence path
+    /// as websites, and no page pool or second selection model is owned by the
+    /// document.
+    @discardableResult
+    func openNativeTab(_ view: NativeView) -> UUID? {
+        guard let space = shownSpace else { return nil }
+        if view.opensOnce, let existing = space.tabs.models.first(where: { $0.nativeView == view }) {
             selectTab(existing.id)
             return existing.id
         }
-        return openNativeTab(.settings, placement: .current)
-    }
-
-    /// Native documents enter the same session mutation and persistence path as
-    /// websites. No page pool or second selection model is owned by the document.
-    @discardableResult
-    func openNativeTab(_ view: NativeView, placement: TabPlacement = .saved) -> UUID? {
-        guard let space = shownSpace else { return nil }
-        return openSessionTab(.view(view), in: space.id, placement: placement)
+        return openSessionTab(.view(view), in: space.id, placement: view.placement)
     }
 }

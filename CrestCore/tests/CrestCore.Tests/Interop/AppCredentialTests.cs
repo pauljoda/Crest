@@ -14,7 +14,7 @@ public sealed class AppCredentialTests {
     [Fact]
     public void NoCredentialQueryCarriesAPassword() {
         Type[] queries = [typeof(CredentialCapture), typeof(CredentialFill), typeof(CredentialSaveCheck), typeof(MostRecentCredential),
-            typeof(CredentialSaveMatch), typeof(CredentialSave), typeof(StrongPassword)];
+            typeof(CredentialSaveMatch), typeof(CredentialSave), typeof(StrongPassword), typeof(CredentialAccess)];
         var found = new HashSet<Type>();
         var pending = new Queue<Type>(queries);
         var text = new SortedSet<string>(StringComparer.Ordinal);
