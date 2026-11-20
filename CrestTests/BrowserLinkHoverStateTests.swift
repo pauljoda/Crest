@@ -12,7 +12,3 @@ final class BrowserLinkHoverStateTests: XCTestCase {
         XCTAssertFalse(destination?.text.contains("\u{202E}") ?? true)
     }
 }
-
-@MainActor
-final class BrowserLinkHoverBridgeTests: XCTestCase {
-}

@@ -573,6 +573,3 @@ private actor RecordingCredentialKeychainStore: CredentialKeychainStoring {
         storage[service]?[account]
     }
 }
-
-final class BrowserCredentialInventoryTests: XCTestCase {
-}

@@ -527,9 +527,6 @@ final class BrowserPagePoolTests: XCTestCase {
 
 }
 
-final class BrowserPageLifecyclePolicyTests: XCTestCase {
-}
-
 /// One opener page, its pool, and the store that owns their tabs, so popup tests
 /// drive the real `WKUIDelegate` entry point instead of the pool's adoption API.
 @MainActor

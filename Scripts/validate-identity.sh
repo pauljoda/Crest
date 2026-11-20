@@ -10,7 +10,6 @@ required_paths=(
   CrestMobile
   CrestTests
   CrestMobileTests
-  CrestTestFixtures
   Documentation/ARCHITECTURE.md
   CrestShared/Resources/CrestIcon/Crest.icon
   project.yml
