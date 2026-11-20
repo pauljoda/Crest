@@ -14,20 +14,26 @@ const bridge = new URLSearchParams(location.search).get("bridge") ?? "ws://127.0
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  // A launch held for first-run Setup shows Setup until it finishes and opens the window.
-  const [settingUp, setSettingUp] = useState(false);
+  // A launch held for first-run Setup shows Setup until it finishes, then the window opens beneath it and Setup fades into it.
+  const [setup, setSetup] = useState<"showing" | "handingOver" | null>(null);
   useEffect(() => {
     boot(bridge).then((started) => {
       // Development builds expose the session for inspection from the console.
       if (import.meta.env.DEV) Object.assign(window, { crest: started });
-      setSettingUp(started.setup.current !== null);
+      setSetup(started.setup.current !== null ? "showing" : null);
       setSession(started);
     }, (error: unknown) => setFailure(String(error)));
   }, []);
   if (failure) return <div className="boot-failure">{failure}</div>;
   if (!session) return <div className="window-loading" />;
-  if (settingUp) return <SetupWindow session={session} onFinished={() => setSettingUp(false)} />;
-  return <BrowserWindow session={session} />;
+  return (
+    <>
+      {setup !== "showing" && <BrowserWindow session={session} />}
+      {setup !== null && (
+        <SetupWindow session={session} onOpened={() => setSetup("handingOver")} onHandedOver={() => setSetup(null)} />
+      )}
+    </>
+  );
 }
 
 createRoot(document.getElementById("root")!).render(

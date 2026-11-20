@@ -1,3 +1,5 @@
+import { motion as tokens } from "@crest/design";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { CSSProperties } from "react";
 
 import { setupSteps, type SetupStepName } from "./setup-walk";
@@ -18,6 +20,7 @@ export function StepChips({ walk, current, size, onOpen }: {
   onOpen: (step: SetupStepName) => void;
 }) {
   const reached = current ? walk.indexOf(current) : -1;
+  const reducesMotion = useReducedMotion() ?? false;
   return (
     <div className={`setup-chips ${size}`} role="group" aria-label="Setup steps">
       {walk.map((name, index) => {
@@ -31,7 +34,16 @@ export function StepChips({ walk, current, size, onOpen }: {
             style={{ "--chip-color": `rgb(${step.color.join(" ")})`, "--chip-tilt": `${tilts[index % tilts.length]}deg` } as CSSProperties}
             onClick={() => onOpen(name)}>
             <span className="setup-chip-number">{String(index + 1).padStart(2, "0")}</span>
-            {names && <span className="setup-chip-title">{step.title}</span>}
+            {/* The open step's name comes in from the number, as the Mac's grows from the leading edge. */}
+            <AnimatePresence initial={false}>
+              {names && (
+                <motion.span key="title" className="setup-chip-title"
+                  initial={{ width: 0, opacity: 0, scale: 0.8 }} animate={{ width: "auto", opacity: 1, scale: 1 }}
+                  exit={{ width: 0, opacity: 0, scale: 0.8 }} transition={reducesMotion ? { duration: 0 } : tokens.setupChips}>
+                  {step.title}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
         );
       })}

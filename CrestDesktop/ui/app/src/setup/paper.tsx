@@ -1,6 +1,8 @@
 import type { BrandColor, SpaceBranding } from "@crest/contracts";
 import { SpaceHouse } from "@crest/contracts";
-import { useSyncExternalStore } from "react";
+import { motion as tokens } from "@crest/design";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useSyncExternalStore } from "react";
 
 import { css } from "../branding";
 import { grainSamples } from "../shell/SpaceBanner";
@@ -89,9 +91,9 @@ const ground = {
  * BrowserSetupPaperRoom: the room behind the preview, the shown Space's
  * Background drawn 35% of the way toward the ground in OKLab, toward its
  * angle, under a finer grain. It follows the Space the preview shows, Crest's
- * own look before there is one.
+ * own look before there is one, each new look fading in over the last.
  */
-export function PaperRoom({ look }: { look: SpaceBranding | null }) {
+export function PaperRoom({ look, reducesMotion }: { look: SpaceBranding | null; reducesMotion: boolean }) {
   const dark = useReadsDark();
   const fill = backgroundFill(look ?? SpaceHouse.crest.look);
   const toward = dark ? ground.dark : ground.light;
@@ -99,8 +101,16 @@ export function PaperRoom({ look }: { look: SpaceBranding | null }) {
   const steps = mixed.colors.length < 2 ? [0] : Array.from({ length: 13 }, (_, step) => step / 12);
   const stops = steps.map((at) => `${css(fillColorAt(mixed, at))} ${Math.round(at * 100)}%`);
   const background = stops.length === 1 ? css(mixed.colors[0]) : `linear-gradient(${mixed.degrees + 90}deg, ${stops.join(", ")})`;
+  // Each look takes a layer above the one it replaces, which stays until the new one has come in.
+  const layers = useRef(new Map<string, number>());
+  if (!layers.current.has(background)) layers.current.set(background, layers.current.size + 1);
+  const transition = reducesMotion ? { duration: 0 } : tokens.onboardingBackdropChange;
   return (
-    <span className="setup-room" aria-hidden style={{ background }}>
+    <span className="setup-room" aria-hidden>
+      <AnimatePresence initial={false}>
+        <motion.span key={background} className="setup-room-layer" style={{ background, zIndex: layers.current.get(background) }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 1 }} transition={transition} />
+      </AnimatePresence>
       <TiledGrain density={1 / 60} opacity={0.45} />
     </span>
   );

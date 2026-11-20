@@ -164,6 +164,16 @@ export const motion = Object.freeze({
   contentNavigation: { type: "spring", visualDuration: 0.3, bounce: 0.19 } as const,
   /** The archive, history and downloads destinations coming out of the lists button. */
   utilityFanReveal: { type: "spring", visualDuration: 0.3, bounce: 0.05 } as const,
+  /** Setup's pages sliding from one step to the next. */
+  onboardingStep: snappy(0.26),
+  /** Setup's sheet drawing back from the welcome to the steps, the preview coming in beside it. */
+  onboardingSheet: smooth(0.4),
+  /** The room behind Setup's preview taking the shown Space's look. */
+  onboardingBackdropChange: { duration: 0.25, ease: "easeInOut" } as const,
+  /** Setup handing over to the browser window it held back. */
+  onboardingHandOver: smooth(0.32),
+  /** Setup's step chips as the walk moves: their color, lift and title. */
+  setupChips: smooth(0.45),
 });
 
 /**

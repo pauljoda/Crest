@@ -5921,6 +5921,10 @@
     "windows-crest-setup": {
       "category": "internal",
       "message": "A first launch on Windows opens Crest Setup before the browser: a welcome, then Your Space, Spaces and Make It Home, whose choices take effect when Start Browsing opens the window"
+    },
+    "windows-crest-setup-preview": {
+      "category": "internal",
+      "message": "Crest Setup on Windows shows Crest as each Space will look beside the steps, slides between them, and hands over to the browser window as it finishes"
     }
   }
 }

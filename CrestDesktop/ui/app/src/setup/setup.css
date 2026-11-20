@@ -26,10 +26,16 @@
   --surface-selected: rgb(0 0 0 / 0.1);
   position: absolute;
   inset: 0;
+  z-index: 50;
   overflow: hidden;
   color: var(--setup-ink);
   font: 13px var(--crest-font-system);
   -webkit-app-region: drag;
+}
+
+/* Handing over, Setup fades into the browser window beneath, which takes the pointer at once. */
+.setup-window.taking-over {
+  pointer-events: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -62,8 +68,19 @@
   pointer-events: none;
 }
 
+/* The room keeps its layers to itself, under the sheet and the preview. */
 .setup-room {
-  transition: background 250ms ease-in-out;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.setup-room-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.setup-room > .setup-grain {
+  z-index: 100000;
 }
 
 .setup-paper {
@@ -77,26 +94,34 @@
 }
 
 /* The sheet the steps lie on: the whole window on the welcome, then the
-   leading third, with a band of shadow past its edge over the room. */
+   leading third, with a band of shadow past its edge over the room. What
+   is on it keeps its width as the sheet draws back, so nothing lays out again. */
 .setup-sheet {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: var(--steps-width);
   -webkit-app-region: no-drag;
 }
 
-.setup-sheet.landing {
-  width: 100%;
+.setup-sheet-paper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
 }
 
-.setup-sheet-edge {
+.setup-sheet-edge-place {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 100%;
   width: 22px;
+  pointer-events: none;
+}
+
+.setup-sheet-edge {
+  position: absolute;
+  inset: 0;
   background: linear-gradient(to right, rgb(23 34 56 / 0.22) 0%, rgb(23 34 56 / 0.077) 35%, rgb(23 34 56 / 0) 100%);
   pointer-events: none;
 }
@@ -121,10 +146,39 @@
   -webkit-app-region: no-drag;
 }
 
+/* BrowserSetupLiveWindow's frame: 14-point corners, a hairline, and the ink shadow it casts on the room. */
+.setup-preview {
+  position: absolute;
+  pointer-events: none;
+}
+
+.setup-preview-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 18px 60px rgb(23 34 56 / 0.42);
+}
+
+.setup-preview-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(var(--settings-primary) / 0.14);
+}
+
+.setup-preview-window {
+  --sidebar-width: 289px;
+}
+
 /* BrowserSetupLanding: the mark, the steps, the welcome and Continue, centred. */
 .setup-landing {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -173,7 +227,6 @@
 .setup-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   border: 0;
   background: var(--setup-surface);
   box-shadow: inset 0 0 0 1px var(--setup-line), 0 1px 3px rgb(23 34 56 / 0.16);
@@ -211,6 +264,16 @@
   opacity: 0.7;
 }
 
+/* The name keeps its distance from the number inside itself, so the chip closes up as it goes. */
+.setup-chip-title {
+  display: inline-block;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding-left: 8px;
+  white-space: nowrap;
+  transform-origin: left center;
+}
+
 .setup-chips.welcome .setup-chip {
   height: 46px;
   padding: 0 18px;
@@ -236,7 +299,9 @@
 /* A step's page: the chips over it, then the page, which scrolls, then Back and the way forward. */
 .setup-steps {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
 }
@@ -249,9 +314,17 @@
   padding: 40px 30px 0;
 }
 
-.setup-page {
+/* BrowserSetupPageStack: pages slide past each other within the sheet. */
+.setup-page-stack {
+  position: relative;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.setup-page {
+  position: absolute;
+  inset: 0;
   overflow-y: auto;
   padding: 0 20px;
 }
