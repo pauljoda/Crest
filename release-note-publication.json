@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "sidebar-long-folder-scroll",
+    "development": "browser-import-http-passwords",
     "nightly": "palette-history-site-icons"
   }
 }
