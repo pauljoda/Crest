@@ -5961,6 +5961,10 @@
     "validation-scripts-current": {
       "category": "internal",
       "message": "The validation scripts pick a supported Python, the dead-code audit runs on current Periphery and scans the Chromium product, and the identity check keeps only the identities persistence relies on."
+    },
+    "core-unused-members-flagged": {
+      "category": "internal",
+      "message": "The core's analyzers now reject unused private members, and the twelve unused test members they found are gone."
     }
   }
 }

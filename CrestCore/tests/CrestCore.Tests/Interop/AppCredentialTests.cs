@@ -9,11 +9,6 @@ namespace CrestCore.Tests;
 /// The credentials area through the native app boundary: encoded queries in,
 /// encoded answers or one rejection out, and no password on either side.
 public sealed class AppCredentialTests {
-    private static readonly CredentialOrigin Login = new("https", "accounts.example.com", 443);
-
-    private static CredentialFormFacts Submit(CredentialOrigin frame) =>
-        new(CredentialCaptureEvent.Submit, frame, Login, true, true, false, true, CredentialPasswordKind.Current, null, true);
-
     /// Passwords never cross the boundary: the only text a credential question
     /// carries is an origin and, where accounts are matched, a username.
     [Fact]

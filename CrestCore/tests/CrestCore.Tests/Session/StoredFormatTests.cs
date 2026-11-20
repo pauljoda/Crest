@@ -22,8 +22,6 @@ public sealed class StoredFormatTests {
     private static JsonObject Fixture(string name) =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session", "Fixtures", name)))!.AsObject();
 
-    private static Guid? Id(JsonNode? value) => value is null ? null : Guid.Parse(value.GetValue<string>());
-
     private static NativeSessionAuthority Load(JsonObject session) => TestWorkspaces.Session(session);
 
     /// The checkpoint's core part with each Space's history part put back.

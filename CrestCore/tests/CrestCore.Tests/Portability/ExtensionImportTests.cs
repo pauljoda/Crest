@@ -12,7 +12,6 @@ namespace CrestCore.Tests;
 public sealed partial class BrowserContractsTests {
     private const string Ublock = "cjpalhdlnbpafiamejdnhcphjbkeiagm";
     private const string Dark = "eimadpbcbfnmbkopoojfekhnkhdbieeh";
-    private const string Hidden = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     /// The settings of an extension, with `inManifest` added inside its manifest.
     private static string Extension(string id, string name, string inManifest = "", string location = "1", string fromStore = "true",
