@@ -38,7 +38,8 @@ soft shadow. The mark is drawn on a 64-unit grid with a tile radius of 15.
   `header-2560x1440` — banners and headers for social accounts.
 - `github-social-preview.png` (1280 × 640) — the repository's social preview.
 
-Text in these files is Nunito outlined to paths, so the SVGs need no fonts.
+Text in these files is Allo, at its roundest, outlined to paths, so the SVGs
+need no fonts.
 
 ## Colors and type
 
@@ -48,15 +49,14 @@ text is ink `#172238`, and dark sections are slate `#2B3A5C`. Sky `#62A9D8`,
 butter `#F2C14E`, coral `#E9604B` and sage `#8DBF9A` are brand colors and never
 mark an action.
 
-Headings, buttons and labels use SF Pro Rounded where the system has it and
-Nunito elsewhere; body text uses the system font.
+On the web, headings, buttons and labels use Allo at its roundest and body
+text uses Allo at its friendly default. The app uses SF Pro Rounded and SF Pro.
 
 ## Third-party assets
 
-- `fonts/nunito-latin.woff2` and `fonts/nunito-latin-ext.woff2` — Nunito by the
-  Nunito Project Authors, under the SIL Open Font License 1.1
-  (`fonts/OFL.txt`). Served from this site so pages make no third-party font
-  requests.
+- `fonts/allo-variable.woff2` — Allo by Josh Puckett, built from Inter by the
+  Inter Project Authors, under the SIL Open Font License 1.1 (`fonts/OFL.txt`).
+  Served from this site so pages make no third-party font requests.
 
 The surrounding labels and destinations identify third-party services (the App
 Store, TestFlight, GitHub, Reddit, Discord and Ko-fi) without implying
