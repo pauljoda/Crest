@@ -5845,6 +5845,10 @@
     "settings-selected-icons": {
       "category": "fixed",
       "message": "Icons in the Settings sidebar turn white on the selected row, so they stay readable in light mode."
+    },
+    "sidebar-hover-active-consistency": {
+      "category": "improved",
+      "message": "Space, folder, and tab highlights match in the sidebar, with a stronger highlight for the active tab."
     }
   }
 }

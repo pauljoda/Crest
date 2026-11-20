@@ -9,6 +9,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
     var kind = BrowserFolderKind.folder
     var intensity: Double = 0
     var textColorMode: SpaceTextColorMode = .automatic
+    var hoverAccent: BrandColor = .indigo
     /// How many folders hold this one.
     var depth = 0
     var isSelected = false
@@ -22,6 +23,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
     private var isTargeted: Bool { folderID.map(reorder.isTargetedFolder) ?? false }
 
     @Environment(\.folderPreviewShowsHighlight) private var previewShowsHighlight
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
@@ -37,9 +39,13 @@ struct BrowserFolderSectionSurface: ViewModifier {
                 BrowserFolderHighlightSurface(
                     color: color, intensity: intensity,
                     textColorMode: textColorMode,
-                    showsFill: alwaysVisible || previewShowsHighlight || isHovered || isSelected || isTargeted,
+                    showsFill: alwaysVisible || previewShowsHighlight || isSelected || isTargeted,
                     showsBorders: showsBorders, depth: depth, insetsSurface: insetsSurface,
                     isSelected: isSelected,
+                    hoverFill: isHovered
+                        ? BrowserTabAppearanceSurface.hoverFill(
+                            appearance: appearance.tabs, accent: (appearance.tabs.color ?? hoverAccent).color,
+                            reduceTransparency: reduceTransparency) : nil,
                     emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
             )
             .onHover { isHovered = $0 }

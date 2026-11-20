@@ -18,6 +18,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                     color: configuration.tint ?? .folderDefault,
                     intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                     textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
+                    hoverAccent: configuration.displayBranding?.primaryColor ?? .indigo,
                     depth: depth,
                     isSelected: isMultiSelected,
                     folderID: nil,

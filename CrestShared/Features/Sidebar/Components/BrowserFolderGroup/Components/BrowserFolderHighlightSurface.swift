@@ -21,6 +21,7 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     /// depth, or fills content that already stands in place.
     var insetsSurface = true
     var isSelected = false
+    var hoverFill: Color? = nil
     var emphasisOpacity: Double = 0
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -71,6 +72,11 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                                 shape.strokeBorder(color.color.opacity(0.5), lineWidth: 1)
                             }
                         }
+                        .padding(.leading, insetsSurface ? BrowserFolderLayout.surfaceLeadingInset(depth: depth) : 0)
+                        .padding(.trailing, insetsSurface ? BrowserSidebarMetrics.layerInset : 0)
+                        .allowsHitTesting(false)
+                } else if let hoverFill {
+                    shape.fill(hoverFill)
                         .padding(.leading, insetsSurface ? BrowserFolderLayout.surfaceLeadingInset(depth: depth) : 0)
                         .padding(.trailing, insetsSurface ? BrowserSidebarMetrics.layerInset : 0)
                         .allowsHitTesting(false)

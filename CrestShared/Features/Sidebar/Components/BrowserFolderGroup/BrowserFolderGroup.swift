@@ -161,6 +161,7 @@ struct BrowserFolderGroup: View {
                 kind: folder.kind,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
+                hoverAccent: configuration.displayBranding?.primaryColor ?? .indigo,
                 depth: depth,
                 isSelected: BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context),
                 folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)

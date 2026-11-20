@@ -15,7 +15,10 @@ struct BrowserSpaceHeader: View {
     let actions: BrowserSpaceHeaderActions
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovering = false
 
     init(
         space: some BrowserSpaceIdentifying, isPrivateBrowsing: Bool, isSavedTabsExpanded: Binding<Bool>,
@@ -42,10 +45,21 @@ struct BrowserSpaceHeader: View {
             .padding(.leading, CrestSpacing.small)
             .padding(.trailing, CrestSpacing.extraSmall)
         )
-        .crestHoverSurface(
-            cornerRadius: CrestLayout.sidebarControlCornerRadius
+        .modifier(
+            CrestInteractiveSurfaceModifier(
+                isSelected: false, isHovering: isHovering && isEnabled,
+                cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), isPressed: false,
+                showsRestingSurface: false, selectedBorderColor: CrestColor.selectedBorder,
+                selectedBorderWidth: CrestInteractiveSurfaceMetrics.defaultSelectedBorderWidth,
+                customHoverFill: isHovering
+                    ? BrowserTabAppearanceSurface.hoverFill(
+                        appearance: BrowserDeviceAppearanceStore.shared.tabs,
+                        accent: (BrowserDeviceAppearanceStore.shared.tabs.color ?? space.branding.primaryColor).color,
+                        reduceTransparency: reduceTransparency) : nil
+            )
         )
-        .padding(.horizontal, CrestSpacing.small)
+        .onHover { isHovering = $0 }
+        .padding(.horizontal, BrowserSidebarMetrics.layerInset)
     }
 
     private var title: some View {
