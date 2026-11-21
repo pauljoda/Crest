@@ -26,10 +26,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: crest-product-site
-  cancel-in-progress: true
-
 jobs:
   # Only main may deploy to github-pages, so a tag push asks for a deploy from main.
   deploy-from-main:
@@ -47,6 +43,11 @@ jobs:
     if: >-
       github.ref_type != 'tag' &&
       (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    # Only a run that deploys joins the group, so one whose deploy is skipped,
+    # such as a release that published nothing, never cancels a deploy under way.
+    concurrency:
+      group: crest-product-site
+      cancel-in-progress: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
