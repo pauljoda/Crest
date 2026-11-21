@@ -6037,6 +6037,10 @@
     "swift-values-once": {
       "category": "internal",
       "message": "Swift reads web schemes, limits, waits, log categories, settings links and accessibility identifiers from one owner each, and a link opened in Split View takes its first title from the core."
+    },
+    "sidebar-reveals-opened-tab": {
+      "category": "new",
+      "message": "On Mac, the sidebar scrolls to show a tab you open when it lands out of view, such as a link opened in the background."
     }
   }
 }
