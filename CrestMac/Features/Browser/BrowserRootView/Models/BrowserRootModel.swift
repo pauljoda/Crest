@@ -680,15 +680,16 @@ extension BrowserRootModel {
             targetWindowID: windowID,
             layoutDirection: layoutDirection,
         )
-        .paletteRegistry(shortcuts: shortcuts) { [weak self] name in self?.openPaletteSettings(name, in: settings) }
+        .paletteRegistry(shortcuts: shortcuts) { [weak self] destination in
+            self?.openPaletteSettings(destination, in: settings)
+        }
     }
 
-    /// Opens Settings at the page the settings call `name`, which `settings`
-    /// presents.
-    func openPaletteSettings(_ name: String, in settings: BrowserSpaceSettingsPresentationState?) {
-        guard let destination = BrowserSettingsDestination.all.first(where: { $0.name == name }),
-            let space = browser.shownSpace
-        else { return }
+    /// Opens Settings at `destination`, which `settings` presents.
+    func openPaletteSettings(
+        _ destination: BrowserSettingsDestination, in settings: BrowserSpaceSettingsPresentationState?
+    ) {
+        guard let space = browser.shownSpace else { return }
         settings?.present(destination, assignment: BrowserSpaceRuntimeAssignment(space: space))
         browser.openSettings()
         pages.select()

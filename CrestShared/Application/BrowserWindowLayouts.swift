@@ -61,7 +61,7 @@ final class BrowserWindowLayouts {
             DiagnosticLog.windows.error("The core could not adopt the window records: \(DiagnosticLog.describe(error))")
             return
         }
-        for case .windowRecordsAdopted(let adopted) in changes {
+        for adopted in changes.compactMap(\.windowRecordsAdopted) {
             for layout in adopted.layouts where self.layout(for: layout.windowID) == nil {
                 save(
                     BrowserWindowState(

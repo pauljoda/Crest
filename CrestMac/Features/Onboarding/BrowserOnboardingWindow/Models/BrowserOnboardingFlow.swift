@@ -529,7 +529,7 @@ final class BrowserOnboardingFlow {
     /// holds.
     private static func logRefusal(_ error: any Error, of step: String, _ review: SetupImportReview) {
         var message = "Crest couldn’t \(step) the \(review.title) import: \(DiagnosticLog.describe(error))"
-        if case .unpreparedImport(let refusal) = error as? Rejection { message += " (\(refusal.cause))" }
+        if let refusal = (error as? Rejection)?.unpreparedImport { message += " (\(refusal.cause))" }
         DiagnosticLog.imports.error(message)
     }
 

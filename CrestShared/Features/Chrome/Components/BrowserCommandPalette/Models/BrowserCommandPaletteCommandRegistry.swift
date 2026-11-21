@@ -10,7 +10,7 @@ struct BrowserCommandPaletteCommandRegistry {
     let settingsPages: [PaletteSettingsPage]
     private let shortcutProvider: (ShortcutCommand) -> BrowserShortcut?
     private let performer: (ShortcutCommand) -> Void
-    private let settingsOpener: (String) -> Void
+    private let settingsOpener: (BrowserSettingsDestination) -> Void
     private let spaceSwitcher: (UUID) -> Void
     private let archiveReopener: (UUID) -> Void
     private let copier: (String) -> Void
@@ -20,7 +20,7 @@ struct BrowserCommandPaletteCommandRegistry {
         settingsPages: [PaletteSettingsPage] = [],
         shortcut: @escaping (ShortcutCommand) -> BrowserShortcut? = { _ in nil },
         perform: @escaping (ShortcutCommand) -> Void,
-        openSettings: @escaping (String) -> Void = { _ in },
+        openSettings: @escaping (BrowserSettingsDestination) -> Void = { _ in },
         switchSpace: @escaping (UUID) -> Void = { _ in },
         reopenArchivedTab: @escaping (UUID) -> Void = { _ in },
         copy: @escaping (String) -> Void = { _ in }
@@ -52,9 +52,11 @@ struct BrowserCommandPaletteCommandRegistry {
         performer(command)
     }
 
-    /// Opens Settings at the page the settings call `name`.
+    /// Opens Settings at the page the settings call `name`; a name no page
+    /// has opens nothing.
     func openSettings(_ name: String) {
-        settingsOpener(name)
+        guard let destination = BrowserSettingsDestination.all.first(where: { $0.name == name }) else { return }
+        settingsOpener(destination)
     }
 
     func switchSpace(_ id: UUID) {
