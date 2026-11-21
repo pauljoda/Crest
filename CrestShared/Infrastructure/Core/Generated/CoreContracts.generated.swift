@@ -9556,17 +9556,6 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case managedBrowserCapabilityRequired = 4
 }
 
-enum SystemTint: Int, CaseIterable, Sendable {
-    case red = 0
-    case orange = 1
-    case purple = 2
-    case blue = 3
-    case indigo = 4
-    case teal = 5
-    case pink = 6
-    case green = 7
-}
-
 enum TabSavedImageChange: Int, CaseIterable, Sendable {
     case keep = 0
     case restore = 1
@@ -9792,7 +9781,7 @@ struct ArchiveReason: Hashable, Sendable {
     var filterGroup: ArchiveFilterGroup { facts.filterGroup }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
-    var tint: SystemTint { facts.tint }
+    var tone: StatusTone? { facts.tone }
     var isExplicitDeletion: Bool { facts.isExplicitDeletion }
     var isCleanup: Bool { facts.isCleanup }
     var isReceived: Bool { facts.isReceived }
@@ -9806,7 +9795,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup,
         title: LocalizedStringResource,
         symbol: String,
-        tint: SystemTint,
+        tone: StatusTone?,
         isExplicitDeletion: Bool,
         isCleanup: Bool,
         isReceived: Bool
@@ -9819,7 +9808,7 @@ struct ArchiveReason: Hashable, Sendable {
             filterGroup: filterGroup,
             title: title,
             symbol: symbol,
-            tint: tint,
+            tone: tone,
             isExplicitDeletion: isExplicitDeletion,
             isCleanup: isCleanup,
             isReceived: isReceived
@@ -9834,7 +9823,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.automatic,
         title: LocalizedStringResource("Automatically cleaned"),
         symbol: "archivebox.fill",
-        tint: .orange,
+        tone: StatusTone.info,
         isExplicitDeletion: false,
         isCleanup: true,
         isReceived: false
@@ -9847,7 +9836,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.closed,
         title: LocalizedStringResource("Closed"),
         symbol: "xmark.circle.fill",
-        tint: .red,
+        tone: nil,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: false
@@ -9860,7 +9849,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.closed,
         title: LocalizedStringResource("Deleted"),
         symbol: "trash.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         isExplicitDeletion: true,
         isCleanup: false,
         isReceived: false
@@ -9873,7 +9862,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.synced,
         title: LocalizedStringResource("Deleted on another device"),
         symbol: "trash.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         isExplicitDeletion: true,
         isCleanup: false,
         isReceived: true
@@ -9886,7 +9875,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.quickWindow,
         title: LocalizedStringResource("Quick Window"),
         symbol: "timer",
-        tint: .purple,
+        tone: nil,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: false
@@ -9899,7 +9888,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.synced,
         title: LocalizedStringResource("Synced from another device"),
         symbol: "icloud.and.arrow.down.fill",
-        tint: .blue,
+        tone: StatusTone.info,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: true
@@ -9926,7 +9915,7 @@ struct ArchiveReason: Hashable, Sendable {
         let filterGroup: ArchiveFilterGroup
         let title: LocalizedStringResource
         let symbol: String
-        let tint: SystemTint
+        let tone: StatusTone?
         let isExplicitDeletion: Bool
         let isCleanup: Bool
         let isReceived: Bool
@@ -9938,7 +9927,7 @@ struct ArchiveReason: Hashable, Sendable {
             filterGroup: ArchiveFilterGroup,
             title: LocalizedStringResource,
             symbol: String,
-            tint: SystemTint,
+            tone: StatusTone?,
             isExplicitDeletion: Bool,
             isCleanup: Bool,
             isReceived: Bool
@@ -9949,7 +9938,7 @@ struct ArchiveReason: Hashable, Sendable {
             self.filterGroup = filterGroup
             self.title = title
             self.symbol = symbol
-            self.tint = tint
+            self.tone = tone
             self.isExplicitDeletion = isExplicitDeletion
             self.isCleanup = isCleanup
             self.isReceived = isReceived
@@ -11066,7 +11055,7 @@ struct CloudSyncPhase: Hashable, Sendable {
     var isRetryable: Bool { facts.isRetryable }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
-    var tint: SystemTint? { facts.tint }
+    var tone: StatusTone? { facts.tone }
     var keepsCloudOutOfReach: Bool { facts.keepsCloudOutOfReach }
     private let facts: Facts
 
@@ -11076,7 +11065,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: Bool,
         title: LocalizedStringResource,
         symbol: String,
-        tint: SystemTint?,
+        tone: StatusTone?,
         keepsCloudOutOfReach: Bool
     ) {
         self.tag = tag
@@ -11085,7 +11074,7 @@ struct CloudSyncPhase: Hashable, Sendable {
             isRetryable: isRetryable,
             title: title,
             symbol: symbol,
-            tint: tint,
+            tone: tone,
             keepsCloudOutOfReach: keepsCloudOutOfReach
         )
     }
@@ -11096,7 +11085,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Off"),
         symbol: "icloud.slash",
-        tint: nil,
+        tone: nil,
         keepsCloudOutOfReach: false
     )
     static let checking = CloudSyncPhase(
@@ -11105,7 +11094,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Checking iCloud"),
         symbol: "arrow.triangle.2.circlepath.icloud",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: true
     )
     static let ready = CloudSyncPhase(
@@ -11114,7 +11103,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Up to date"),
         symbol: "checkmark.icloud.fill",
-        tint: .green,
+        tone: StatusTone.success,
         keepsCloudOutOfReach: false
     )
     static let syncing = CloudSyncPhase(
@@ -11123,7 +11112,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Syncing"),
         symbol: "arrow.triangle.2.circlepath.icloud",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: false
     )
     static let needsReconciliation = CloudSyncPhase(
@@ -11132,7 +11121,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Choose which copy to keep"),
         symbol: "exclamationmark.icloud.fill",
-        tint: .orange,
+        tone: StatusTone.warning,
         keepsCloudOutOfReach: false
     )
     static let waitingForAccount = CloudSyncPhase(
@@ -11141,7 +11130,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: true,
         title: LocalizedStringResource("Waiting for iCloud"),
         symbol: "person.crop.circle.badge.exclamationmark",
-        tint: .orange,
+        tone: StatusTone.warning,
         keepsCloudOutOfReach: true
     )
     static let failed = CloudSyncPhase(
@@ -11150,7 +11139,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: true,
         title: LocalizedStringResource("Needs attention"),
         symbol: "xmark.icloud.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         keepsCloudOutOfReach: true
     )
     static let waitingToUpload = CloudSyncPhase(
@@ -11159,7 +11148,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Waiting to upload"),
         symbol: "icloud.and.arrow.up",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: false
     )
 
@@ -11191,7 +11180,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         let isRetryable: Bool
         let title: LocalizedStringResource
         let symbol: String
-        let tint: SystemTint?
+        let tone: StatusTone?
         let keepsCloudOutOfReach: Bool
 
         init(
@@ -11199,14 +11188,14 @@ struct CloudSyncPhase: Hashable, Sendable {
             isRetryable: Bool,
             title: LocalizedStringResource,
             symbol: String,
-            tint: SystemTint?,
+            tone: StatusTone?,
             keepsCloudOutOfReach: Bool
         ) {
             self.name = name
             self.isRetryable = isRetryable
             self.title = title
             self.symbol = symbol
-            self.tint = tint
+            self.tone = tone
             self.keepsCloudOutOfReach = keepsCloudOutOfReach
         }
     }
@@ -24222,28 +24211,19 @@ struct SitePermissionDecision: Hashable, Sendable {
 struct SpaceAccent: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
-    var tint: SystemTint { facts.tint }
     var legacyColors: [BrandColor] { facts.legacyColors }
     var house: SpaceBranding { facts.house }
     var swatch: BrandColor { facts.swatch }
     private let facts: Facts
 
-    private init(
-        tag: Int,
-        name: String,
-        tint: SystemTint,
-        legacyColors: [BrandColor],
-        house: SpaceBranding,
-        swatch: BrandColor
-    ) {
+    private init(tag: Int, name: String, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
         self.tag = tag
-        facts = Facts(name: name, tint: tint, legacyColors: legacyColors, house: house, swatch: swatch)
+        facts = Facts(name: name, legacyColors: legacyColors, house: house, swatch: swatch)
     }
 
     static let indigo = SpaceAccent(
         tag: 0,
         name: "indigo",
-        tint: .indigo,
         legacyColors: [
             BrandColor(red: 0.08, green: 0.15, blue: 0.23, alpha: 1),
             BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
@@ -24324,7 +24304,6 @@ struct SpaceAccent: Hashable, Sendable {
     static let orange = SpaceAccent(
         tag: 1,
         name: "orange",
-        tint: .orange,
         legacyColors: [
             BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1),
             BrandColor(red: 0.88, green: 0.67, blue: 0.25, alpha: 1),
@@ -24405,7 +24384,6 @@ struct SpaceAccent: Hashable, Sendable {
     static let teal = SpaceAccent(
         tag: 2,
         name: "teal",
-        tint: .teal,
         legacyColors: [
             BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1),
             BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
@@ -24481,7 +24459,6 @@ struct SpaceAccent: Hashable, Sendable {
     static let rose = SpaceAccent(
         tag: 3,
         name: "rose",
-        tint: .pink,
         legacyColors: [
             BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1),
             BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1),
@@ -24576,14 +24553,12 @@ struct SpaceAccent: Hashable, Sendable {
 
     private final class Facts: Sendable {
         let name: String
-        let tint: SystemTint
         let legacyColors: [BrandColor]
         let house: SpaceBranding
         let swatch: BrandColor
 
-        init(name: String, tint: SystemTint, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
+        init(name: String, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
             self.name = name
-            self.tint = tint
             self.legacyColors = legacyColors
             self.house = house
             self.swatch = swatch
@@ -26321,6 +26296,45 @@ struct StartupBehavior: Hashable, Sendable {
             self.title = title
             self.activatesRestoredTab = activatesRestoredTab
             self.opensNewTab = opensNewTab
+        }
+    }
+}
+
+/// The members of the core's `StatusTone`. A member's wire tag is its index in `all`.
+struct StatusTone: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let success = StatusTone(tag: 0, name: "success")
+    static let warning = StatusTone(tag: 1, name: "warning")
+    static let danger = StatusTone(tag: 2, name: "danger")
+    static let info = StatusTone(tag: 3, name: "info")
+
+    static let all: [StatusTone] = [success, warning, danger, info]
+
+    static func named(_ name: String?) -> StatusTone? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: StatusTone, rhs: StatusTone) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }

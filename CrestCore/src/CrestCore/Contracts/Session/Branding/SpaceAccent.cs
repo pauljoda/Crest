@@ -1,8 +1,8 @@
 namespace CrestCore.Contracts;
 
-/// The accent a Space shows in places too small for its branding: the system
-/// color it tints small marks with, the house look a new Space of the accent
-/// wears, and the look a Space stored before branding existed wears.
+/// The accent a Space was made with: the house look a new Space of the accent
+/// wears, the look a Space stored before branding existed wears, and the
+/// swatch a color from elsewhere is matched against.
 ///
 /// The stored session and synced Space records spell an accent as its `Name`,
 /// so a name never changes. An accent travels as its index in `All`, so `All`
@@ -11,16 +11,16 @@ public sealed class SpaceAccent {
     #region Static Variables
 
     /// Crest, the look a first Space wears.
-    public static readonly SpaceAccent Indigo = new(name: "indigo", tint: SystemTint.Indigo,
+    public static readonly SpaceAccent Indigo = new(name: "indigo",
         legacyColors: [Tincture.Ink, Tincture.Ocean, Tincture.Gold], house: SpaceHouse.Crest.Look, swatch: Tincture.Indigo);
     /// Sun.
-    public static readonly SpaceAccent Orange = new(name: "orange", tint: SystemTint.Orange,
+    public static readonly SpaceAccent Orange = new(name: "orange",
         legacyColors: [Tincture.Ember, Tincture.Gold, Tincture.Ocean], house: SpaceHouse.Sun.Look, swatch: Tincture.Ember);
     /// Meadow.
-    public static readonly SpaceAccent Teal = new(name: "teal", tint: SystemTint.Teal,
+    public static readonly SpaceAccent Teal = new(name: "teal",
         legacyColors: [Tincture.Teal, Tincture.Ocean, Tincture.Sand], house: SpaceHouse.Meadow.Look, swatch: Tincture.Teal);
     /// Lion.
-    public static readonly SpaceAccent Rose = new(name: "rose", tint: SystemTint.Pink,
+    public static readonly SpaceAccent Rose = new(name: "rose",
         legacyColors: [Tincture.Rose, Tincture.Indigo, Tincture.Sand], house: SpaceHouse.Lion.Look, swatch: Tincture.Rose);
 
     public static IReadOnlyList<SpaceAccent> All { get; } = [Indigo, Orange, Teal, Rose];
@@ -30,9 +30,6 @@ public sealed class SpaceAccent {
     #region Variables
 
     public string Name { get; }
-
-    /// The system color the accent tints small marks with.
-    public SystemTint Tint { get; }
 
     /// The palette a Space stored before branding existed wears: its
     /// background, primary and secondary color.
@@ -52,9 +49,8 @@ public sealed class SpaceAccent {
 
     #region Constructors
 
-    private SpaceAccent(string name, SystemTint tint, IReadOnlyList<Tincture> legacyColors, SpaceBranding house, Tincture swatch) {
+    private SpaceAccent(string name, IReadOnlyList<Tincture> legacyColors, SpaceBranding house, Tincture swatch) {
         Name = name;
-        Tint = tint;
         LegacyColors = [.. legacyColors.Select(tincture => tincture.Color)];
         House = house;
         Swatch = swatch.Color;
