@@ -18,14 +18,13 @@ struct BrowserPlatformEmojiVariantModifier: ViewModifier {
 }
 
 private struct BrowserEmojiVariantButtonStyle: PrimitiveButtonStyle {
-    private static let longPressDuration = 0.45
     let showVariants: () -> Void
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .contentShape(.rect)
             .gesture(
-                LongPressGesture(minimumDuration: Self.longPressDuration)
+                LongPressGesture(minimumDuration: CrestMotion.longPressRecognitionDelay)
                     .exclusively(before: TapGesture())
                     .onEnded { value in
                         switch value {

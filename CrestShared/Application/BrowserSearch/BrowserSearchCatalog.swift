@@ -27,12 +27,9 @@ final class BrowserSearchCatalog {
     /// Whether the default search suggests searches as a person types.
     var suggestionsEnabled: Bool { published?.catalog.suggestionsEnabled ?? false }
 
-    /// The providers a default may be, of every kind that may be one.
-    var defaultChoices: [SearchProvider] {
-        providers.filter {
-            $0.kind.canBeDefault && (isEnabled($0) || $0 == defaultProvider || $0 == privateDefaultProvider)
-        }
-    }
+    /// The providers Settings and setup offer as a default, as the core
+    /// lists them.
+    var defaultChoices: [SearchProvider] { published?.defaultChoices ?? [] }
 
     // MARK: - Initializers
 
@@ -60,10 +57,10 @@ final class BrowserSearchCatalog {
         providers.filter { $0.kind == kind }
     }
 
-    /// Whether the palette offers `provider` to Tab.
+    /// Whether the palette offers the provider of `provider`'s identity to
+    /// Tab, as the core keeps it.
     func isEnabled(_ provider: SearchProvider) -> Bool {
-        guard let builtIn = provider.builtIn else { return true }
-        return settings(builtIn)?.isEnabled ?? builtIn.isEnabledByDefault
+        published?.enabled.contains { $0.name == provider.name } == true
     }
 
     /// How the device keeps the built-in `provider`.

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "release-tools-one-source",
+      "category": "internal",
+      "message": "The Xcode Cloud guard reads its Xcode floor from project.yml, and the release tools read the repository and signing team from one place."
+    }
+  ]
+}

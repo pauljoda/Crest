@@ -7,6 +7,28 @@ import Observation
 /// here is persisted or shared between pages, Spaces, profiles, or private sessions.
 @Observable @MainActor
 final class BrowserPageTranslation {
+    // MARK: - Static Variables
+
+    /// How often detection reads the page once it settles, how long it waits
+    /// before the first read, and how long between the others.
+    private static let detectionAttempts = 3
+    private static let firstDetectionDelay: Duration = .milliseconds(1_500)
+    private static let detectionRetryDelay: Duration = .milliseconds(1_000)
+    /// The fewest letters a sample needs before its language is guessed.
+    nonisolated private static let minimumSampleLetters = 8
+    /// A long sample's guess counts at this length and confidence, and a
+    /// short one's at the lower pair when the page declares no language.
+    nonisolated private static let confidentSampleLength = 80
+    nonisolated private static let confidentGuess = 0.8
+    nonisolated private static let shortSampleLength = 20
+    nonisolated private static let shortSampleGuess = 0.6
+    /// How many translated texts, or how long, a delivery to the page waits
+    /// for before it goes.
+    nonisolated private static let deliveryBatchSize = 8
+    nonisolated private static let deliveryInterval: Duration = .milliseconds(60)
+
+    // MARK: - Variables
+
     /// The unsupported-language notice speaks for Detect Language only; a
     /// source the person picks from the menu is one Apple translates.
     var sourceID = "" {
@@ -137,8 +159,8 @@ final class BrowserPageTranslation {
         guard isActive, !hasDetected, !isWorking, let document else { return }
         let revision = documentRevision
         do {
-            for attempt in 0..<3 {
-                try await Task.sleep(for: .milliseconds(attempt == 0 ? 1500 : 1000))
+            for attempt in 0..<Self.detectionAttempts {
+                try await Task.sleep(for: attempt == 0 ? Self.firstDetectionDelay : Self.detectionRetryDelay)
                 guard isActive, revision == documentRevision, !isWorking else { return }
                 let sample = try await document.sample()
                 let detected = await Task.detached(priority: .utility) { Self.detectedLanguage(in: sample) }.value
@@ -166,10 +188,7 @@ final class BrowserPageTranslation {
                     return
                 }
                 sourceID = supported?.minimalIdentifier ?? detected
-                let preferred = Locale.Language(identifier: Locale.preferredLanguages.first ?? "en")
-                guard
-                    languageRules.decision(for: detected)?.target != nil
-                        || preferred.languageCode != detectedLanguage.languageCode
+                guard languageRules.decision(for: detected, preferring: Locale.preferredLanguages.first)?.offers == true
                 else { return }
                 if let target = languageRules.decision(for: sourceID)?.target, automaticallyTranslates {
                     targetID = target
@@ -187,19 +206,20 @@ final class BrowserPageTranslation {
     }
 
     nonisolated static func detectedLanguage(in sample: BrowserTranslationDocument.Sample) -> String? {
-        guard sample.text.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 8 else { return nil }
+        guard sample.text.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= minimumSampleLetters
+        else { return nil }
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(sample.text)
         let dominant = recognizer.dominantLanguage
         let confidence = dominant.map { recognizer.languageHypotheses(withMaximum: 1)[$0, default: 0] } ?? 0
-        if sample.text.count >= 80, confidence >= 0.8 { return dominant?.rawValue }
+        if sample.text.count >= confidentSampleLength, confidence >= confidentGuess { return dominant?.rawValue }
         // Search pages and other mixed-language interfaces can have a weak
         // statistical result while explicitly declaring the document language.
         let declared = Locale.Language(identifier: sample.declaredLanguage)
         if !sample.declaredLanguage.isEmpty, let code = declared.languageCode?.identifier, code != "und" {
             return declared.minimalIdentifier
         }
-        return sample.text.count >= 20 && confidence >= 0.6 ? dominant?.rawValue : nil
+        return sample.text.count >= shortSampleLength && confidence >= shortSampleGuess ? dominant?.rawValue : nil
     }
 
     func loadLanguages() async {
@@ -216,7 +236,8 @@ final class BrowserPageTranslation {
         }
         languageLoadTask = nil
         guard targetID.isEmpty else { return }
-        let preferred = Locale.Language(identifier: Locale.preferredLanguages.first ?? "en")
+        let preferred = Locale.Language(
+            identifier: Locale.preferredLanguages.first ?? TranslationChoice.fallbackPreferredLanguage)
         targetID = BrowserTranslationPreference.preferredTarget(in: languages, preferred: preferred).minimalIdentifier
     }
 
@@ -459,7 +480,9 @@ final class BrowserPageTranslation {
             else { continue }
             pending += (indices[texts[index]] ?? []).map { .init(index: $0, text: response.targetText) }
             let now = ContinuousClock.now
-            if lastDelivery == nil || pending.count >= 8 || lastDelivery!.duration(to: now) >= .milliseconds(60) {
+            if lastDelivery == nil || pending.count >= Self.deliveryBatchSize
+                || lastDelivery!.duration(to: now) >= Self.deliveryInterval
+            {
                 try await receive(pending)
                 pending.removeAll(keepingCapacity: true)
                 lastDelivery = now

@@ -1691,6 +1691,15 @@ struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
 struct ClearPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
 }
 
+struct ClearedTabs: Query, Equatable, Sendable {
+    typealias Answer = RemovedTabs
+
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let keepsShownTab: Bool
+}
+
 struct ClickPage: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -2014,6 +2023,20 @@ struct CreateSpace: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct CredentialAccess: Query, Equatable, Sendable {
+    typealias Answer = CredentialAccessAnswer
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let use: CredentialUse
+    let origin: CredentialOrigin?
+}
+
+struct CredentialAccessAnswer: Equatable, Sendable {
+    let refusal: CredentialRefusal?
+    let vaults: [UUID]
+}
+
 struct CredentialCapture: Query, Equatable, Sendable {
     typealias Answer = CredentialCaptureDecision
 
@@ -2112,6 +2135,8 @@ struct CredentialImportPreview: Query, Equatable, Sendable {
 }
 
 struct CredentialOrigin: Equatable, Sendable {
+    static let maximumFillCandidates: Int = 1024
+
     var scheme: String
     var host: String
     var port: Int
@@ -2129,6 +2154,10 @@ struct CredentialPreferences: Equatable, Sendable {
 }
 
 struct CredentialRecord: Equatable, Sendable, Identifiable {
+    static let maximumRecords: Int = 64
+    static let revealLifetime: Double = 30
+    static let clipboardLifetime: Double = 60
+
     var id: UUID
     var username: String?
     var updatedAt: Double
@@ -2340,6 +2369,10 @@ struct DetachedSession: Query, Equatable, Sendable {
     typealias Answer = SessionState
 
     let seed: SessionState.Seed
+}
+
+struct DevelopmentAddressVerdict: Equatable, Sendable {
+    let isLocal: Bool
 }
 
 struct DiscardStagedLink: Intent, PageIntent, Equatable, Sendable {
@@ -3169,6 +3202,14 @@ struct FolderAlreadyExists: Equatable, Sendable {
 }
 
 struct FolderCycle: Equatable, Sendable {
+    let folderID: UUID
+}
+
+struct FolderDeletionTabs: Query, Equatable, Sendable {
+    typealias Answer = RemovedTabs
+
+    let workspaceID: UUID
+    let spaceID: UUID
     let folderID: UUID
 }
 
@@ -4021,6 +4062,13 @@ struct LoadPage: Equatable, Sendable {
     let pageID: UUID
     let url: String
     let entryID: UUID?
+}
+
+struct LocalDevelopmentAddress: Query, Equatable, Sendable {
+    typealias Answer = DevelopmentAddressVerdict
+
+    let scheme: String?
+    let host: String?
 }
 
 struct LocalDocumentFacts: Equatable, Sendable {
@@ -4982,8 +5030,25 @@ struct PaletteGroup: Equatable, Sendable {
     let rows: [PaletteRow]
 }
 
+struct PaletteLimiting: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let limit: Int
+}
+
+struct PaletteOffering: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let isEnabled: Bool
+}
+
 struct PalettePreferences: Equatable, Sendable {
     static let maximumLimit: Int = 50
+    static let offeredLimits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
     static let `default` = PalettePreferences(
         layout: PaletteLayout.sections,
         sources: [
@@ -5074,6 +5139,20 @@ struct PaletteRow: Equatable, Sendable {
             httpFallback: httpFallback
         )
     }
+}
+
+struct PaletteSectionMove: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let index: Int
+}
+
+struct PaletteSectionOrder: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
 }
 
 struct PaletteSettingsPage: Equatable, Sendable {
@@ -5558,6 +5637,10 @@ struct RemoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct RemovedTabs: Equatable, Sendable {
+    let tabIDs: [UUID]
+}
+
 struct RenameFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -5832,6 +5915,8 @@ struct SearchCatalogChanged: CoreChange, Equatable, Sendable {
     let providers: [SearchProvider]
     let `default`: SearchProvider
     let privateDefault: SearchProvider
+    let enabled: [SearchProvider]
+    let defaultChoices: [SearchProvider]
 }
 
 struct SearchEngineLimitReached: Equatable, Sendable {
@@ -7491,13 +7576,17 @@ struct TransientPagePromoted: CoreChange, Equatable, Sendable {
 struct TranslationChoice: Query, Equatable, Sendable {
     typealias Answer = TranslationDecision
 
+    static let fallbackPreferredLanguage: String = "en"
+
     let rules: [TranslationRule]
     let sourceLanguage: String
+    let preferredLanguage: String?
 }
 
 struct TranslationDecision: Equatable, Sendable {
     let rule: TranslationRule?
     let target: String?
+    let offers: Bool
 }
 
 struct TranslationRule: Equatable, Sendable {
@@ -10413,6 +10502,44 @@ struct CredentialImportEffect: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CredentialRefusal`. A member's wire tag is its index in `all`.
+struct CredentialRefusal: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let privateBrowsing = CredentialRefusal(tag: 0, name: "privateBrowsing")
+    static let managerOff = CredentialRefusal(tag: 1, name: "managerOff")
+    static let insecureOrigin = CredentialRefusal(tag: 2, name: "insecureOrigin")
+
+    static let all: [CredentialRefusal] = [privateBrowsing, managerOff, insecureOrigin]
+
+    static func named(_ name: String?) -> CredentialRefusal? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialRefusal, rhs: CredentialRefusal) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
 /// The members of the core's `CredentialRowCaution`. A member's wire tag is its index in `all`.
 struct CredentialRowCaution: Hashable, Sendable {
     let tag: Int
@@ -10505,6 +10632,50 @@ struct CredentialRowFlaw: Hashable, Sendable {
         init(name: String, message: LocalizedStringResource) {
             self.name = name
             self.message = message
+        }
+    }
+}
+
+/// The members of the core's `CredentialUse`. A member's wire tag is its index in `all`.
+struct CredentialUse: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var needsManager: Bool { facts.needsManager }
+    var refusedInPrivate: Bool { facts.refusedInPrivate }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, needsManager: Bool, refusedInPrivate: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, needsManager: needsManager, refusedInPrivate: refusedInPrivate)
+    }
+
+    static let read = CredentialUse(tag: 0, name: "read", needsManager: false, refusedInPrivate: false)
+    static let fill = CredentialUse(tag: 1, name: "fill", needsManager: true, refusedInPrivate: false)
+    static let save = CredentialUse(tag: 2, name: "save", needsManager: true, refusedInPrivate: true)
+
+    static let all: [CredentialUse] = [read, fill, save]
+
+    static func named(_ name: String?) -> CredentialUse? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialUse, rhs: CredentialUse) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let needsManager: Bool
+        let refusedInPrivate: Bool
+
+        init(name: String, needsManager: Bool, refusedInPrivate: Bool) {
+            self.name = name
+            self.needsManager = needsManager
+            self.refusedInPrivate = refusedInPrivate
         }
     }
 }
@@ -15440,24 +15611,37 @@ struct NativeView: Hashable, Sendable {
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
+    var placement: TabPlacement { facts.placement }
+    var opensOnce: Bool { facts.opensOnce }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        placement: TabPlacement,
+        opensOnce: Bool
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, symbol: symbol)
+        facts = Facts(name: name, title: title, symbol: symbol, placement: placement, opensOnce: opensOnce)
     }
 
     static let settings = NativeView(
         tag: 0,
         name: "settings",
         title: LocalizedStringResource("Settings"),
-        symbol: "gearshape.fill"
+        symbol: "gearshape.fill",
+        placement: TabPlacement.current,
+        opensOnce: true
     )
     static let gettingStarted = NativeView(
         tag: 1,
         name: "getting-started",
         title: LocalizedStringResource("Getting Started"),
-        symbol: "book.closed.fill"
+        symbol: "book.closed.fill",
+        placement: TabPlacement.saved,
+        opensOnce: true
     )
 
     static let all: [NativeView] = [settings, gettingStarted]
@@ -15478,11 +15662,15 @@ struct NativeView: Hashable, Sendable {
         let name: String
         let title: LocalizedStringResource
         let symbol: String
+        let placement: TabPlacement
+        let opensOnce: Bool
 
-        init(name: String, title: LocalizedStringResource, symbol: String) {
+        init(name: String, title: LocalizedStringResource, symbol: String, placement: TabPlacement, opensOnce: Bool) {
             self.name = name
             self.title = title
             self.symbol = symbol
+            self.placement = placement
+            self.opensOnce = opensOnce
         }
     }
 }
@@ -16879,6 +17067,7 @@ struct PaletteSource: Hashable, Sendable {
     var isEnabledByDefault: Bool { facts.isEnabledByDefault }
     var restingSection: PaletteSection? { facts.restingSection }
     var defaultLimit: Int { facts.defaultLimit }
+    var isArranged: Bool { facts.isArranged }
     private let facts: Facts
 
     private init(
@@ -16890,7 +17079,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: Bool,
         isEnabledByDefault: Bool,
         restingSection: PaletteSection?,
-        defaultLimit: Int
+        defaultLimit: Int,
+        isArranged: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -16901,7 +17091,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: isSection,
             isEnabledByDefault: isEnabledByDefault,
             restingSection: restingSection,
-            defaultLimit: defaultLimit
+            defaultLimit: defaultLimit,
+            isArranged: isArranged
         )
     }
 
@@ -16914,7 +17105,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.recentTabs,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let openTabs = PaletteSource(
         tag: 1,
@@ -16925,7 +17117,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 8
+        defaultLimit: 8,
+        isArranged: true
     )
     static let saved = PaletteSource(
         tag: 2,
@@ -16936,7 +17129,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let history = PaletteSource(
         tag: 3,
@@ -16947,7 +17141,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 6
+        defaultLimit: 6,
+        isArranged: true
     )
     static let actions = PaletteSource(
         tag: 4,
@@ -16958,7 +17153,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.actions,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let spaces = PaletteSource(
         tag: 5,
@@ -16969,7 +17165,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: true
     )
     static let archivedTabs = PaletteSource(
         tag: 6,
@@ -16980,7 +17177,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let suggestions = PaletteSource(
         tag: 7,
@@ -16991,7 +17189,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let settingsPages = PaletteSource(
         tag: 8,
@@ -17002,7 +17201,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let scopes = PaletteSource(
         tag: 9,
@@ -17013,7 +17213,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
     static let calculator = PaletteSource(
         tag: 10,
@@ -17024,7 +17225,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 1
+        defaultLimit: 1,
+        isArranged: false
     )
     static let pasteAndGo = PaletteSource(
         tag: 11,
@@ -17035,7 +17237,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
 
     static let all: [PaletteSource] = [
@@ -17074,6 +17277,7 @@ struct PaletteSource: Hashable, Sendable {
         let isEnabledByDefault: Bool
         let restingSection: PaletteSection?
         let defaultLimit: Int
+        let isArranged: Bool
 
         init(
             name: String,
@@ -17083,7 +17287,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: Bool,
             isEnabledByDefault: Bool,
             restingSection: PaletteSection?,
-            defaultLimit: Int
+            defaultLimit: Int,
+            isArranged: Bool
         ) {
             self.name = name
             self.title = title
@@ -17093,6 +17298,7 @@ struct PaletteSource: Hashable, Sendable {
             self.isEnabledByDefault = isEnabledByDefault
             self.restingSection = restingSection
             self.defaultLimit = defaultLimit
+            self.isArranged = isArranged
         }
     }
 }

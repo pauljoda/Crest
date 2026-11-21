@@ -27,6 +27,9 @@ public sealed record PalettePreferences(PaletteLayout Layout, IReadOnlyList<Pale
     /// The most rows a person may have one kind show.
     public const int MaximumLimit = 50;
 
+    /// The numbers of rows Settings offers a section.
+    public static IReadOnlyList<int> OfferedLimits { get; } = [.. Enumerable.Range(1, 10), 15, 20];
+
     /// What a person who never chose sees: every kind in its default order,
     /// each on or off as `PaletteSource.IsEnabledByDefault` says.
     public static PalettePreferences Default { get; } = new(PaletteLayout.Sections,
@@ -56,6 +59,46 @@ public sealed record PalettePreferences(PaletteLayout Layout, IReadOnlyList<Pale
     /// The most rows `source` shows: the person's number, else the kind's own.
     public int Limit(PaletteSource source) =>
         Sources.FirstOrDefault(choice => choice.Source == source)?.Limit ?? source.DefaultLimit;
+
+    /// The kinds the person places among the sections, in their order (see
+    /// `PaletteSource.IsArranged`).
+    public IReadOnlyList<PaletteSourceChoice> Sections => [.. Sources.Where(choice => choice.Source.IsArranged)];
+
+    #endregion
+
+    #region Actions - Editing
+
+    /// These preferences with `source` offered or not.
+    public PalettePreferences Offering(PaletteSource source, bool isEnabled) => Editing(source, choice => choice with { IsEnabled = isEnabled });
+
+    /// These preferences with `source` showing at most `limit` rows, or its
+    /// own number when `limit` is that number.
+    public PalettePreferences Limiting(PaletteSource source, int limit) =>
+        Editing(source, choice => choice with { Limit = limit == source.DefaultLimit ? null : limit });
+
+    /// These preferences with the section `source` standing at `index` among
+    /// the sections, as a drag or a move command leaves it. A kind that is no
+    /// section stays where it is.
+    public PalettePreferences MovingSection(PaletteSource source, int index) {
+        var ordered = Sections.ToList();
+        int from = ordered.FindIndex(choice => choice.Source == source);
+        if (from < 0) return this;
+        var moving = ordered[from];
+        ordered.RemoveAt(from);
+        ordered.Insert(Math.Clamp(index, 0, ordered.Count), moving);
+        return this with { Sources = [.. ordered, .. Sources.Where(choice => ordered.All(section => section.Source != choice.Source))] };
+    }
+
+    /// These preferences with the sections in their default order, each kept
+    /// on or off as the person set it.
+    public PalettePreferences RestoringSectionOrder() {
+        IReadOnlyList<PaletteSourceChoice> ordered = [.. Default.Sections.Select(section =>
+            Sources.FirstOrDefault(choice => choice.Source == section.Source) ?? section)];
+        return this with { Sources = [.. ordered, .. Sources.Where(choice => ordered.All(section => section.Source != choice.Source))] };
+    }
+
+    private PalettePreferences Editing(PaletteSource source, Func<PaletteSourceChoice, PaletteSourceChoice> edit) =>
+        this with { Sources = [.. Sources.Select(choice => choice.Source == source ? edit(choice) : choice)] };
 
     #endregion
 
