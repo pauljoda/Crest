@@ -7,8 +7,9 @@ namespace CrestCore.Contracts;
 /// region aliases share it, the language such pages are translated into, and
 /// whether such a page is offered translation: when a rule translates it, or
 /// its language is not `PreferredLanguage`, the person's first language, else
-/// `FallbackPreferredLanguage`. It reads no state, so a host may ask it
-/// without an app.
+/// `FallbackPreferredLanguage`. A language written in another script, as
+/// Traditional Chinese is for a reader of Simplified, counts as another. It
+/// reads no state, so a host may ask it without an app.
 public sealed record TranslationChoice(IReadOnlyList<TranslationRule> Rules, string SourceLanguage, string? PreferredLanguage = null)
     : StandaloneQuery<TranslationDecision> {
     #region Static Variables
@@ -23,17 +24,9 @@ public sealed record TranslationChoice(IReadOnlyList<TranslationRule> Rules, str
     internal override TranslationDecision Answer(StandaloneContext context) {
         var rules = AutomaticTranslationRules.Restore(Rules);
         var target = rules.Target(SourceLanguage);
-        bool offers = target is not null || !SameLanguage(SourceLanguage, PreferredLanguage ?? FallbackPreferredLanguage);
+        bool offers = target is not null || !LanguageTag.Matches(SourceLanguage, PreferredLanguage ?? FallbackPreferredLanguage);
         return new(rules.Rule(SourceLanguage), target, offers);
     }
-
-    /// Whether two language tags name one language, whatever region or script
-    /// they add.
-    private static bool SameLanguage(string first, string second) =>
-        string.Equals(PrimaryLanguage(first), PrimaryLanguage(second), StringComparison.OrdinalIgnoreCase);
-
-    /// The language a tag names, without its script or region.
-    private static string PrimaryLanguage(string tag) => tag.Split('-', '_')[0];
 
     #endregion
 }
