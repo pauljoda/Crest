@@ -1,18 +1,23 @@
 import SwiftUI
 
+/// The count or word an extension shows on its action, on Crest's red, as a
+/// download badge needing attention is.
 struct BrowserExtensionBadge: View {
     let text: String
 
     var body: some View {
         Text(text)
-            .font(.system(size: 8, weight: .bold))
+            .font(CrestTypography.badge)
             .lineLimit(1)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 3)
-            .frame(minWidth: 12, minHeight: 12)
+            .browserReadableForeground(over: CrestColor.danger)
+            .padding(.horizontal, BrowserExtensionsMetrics.badgeHorizontalPadding)
+            .frame(
+                minWidth: BrowserExtensionsMetrics.badgeMinimumSize,
+                minHeight: BrowserExtensionsMetrics.badgeMinimumSize
+            )
             .fixedSize()
-            .background(.red, in: .capsule)
-            .offset(x: 5, y: -5)
+            .background(CrestColor.danger, in: .capsule)
+            .offset(x: BrowserExtensionsMetrics.badgeOffset, y: -BrowserExtensionsMetrics.badgeOffset)
     }
 }
 
