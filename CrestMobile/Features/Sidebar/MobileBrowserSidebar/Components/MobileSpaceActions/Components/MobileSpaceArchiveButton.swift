@@ -62,11 +62,7 @@ struct MobileSpaceArchiveButton: View {
             guard !newDownloads.isEmpty else { return state }
             return "\(state), \(newDownloads.count) new downloads"
         }
-        return BrowserChromeAccessibility.countValue(
-            archivedTabCount,
-            singular: "archived tab",
-            plural: "archived tabs"
-        )
+        return String(localized: "\(archivedTabCount) archived tabs")
     }
 
     private var inlineNotificationID: UUID? {

@@ -36,13 +36,4 @@ enum BrowserChromeAccessibility {
     static func folderValue(isExpanded: Bool) -> String {
         isExpanded ? "Expanded" : "Collapsed"
     }
-
-    static func countValue(
-        _ count: Int,
-        singular: String,
-        plural: String
-    ) -> String {
-        let boundedCount = max(0, count)
-        return "\(boundedCount) \(boundedCount == 1 ? singular : plural)"
-    }
 }

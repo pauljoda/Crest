@@ -567,10 +567,7 @@ final class BrowserDialogPresenter {
     func approveQuitWithDownloads(count: Int, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
-            alert.messageText =
-                count == 1
-                ? String(localized: "Quit and cancel the download in progress?")
-                : String(localized: "Quit and cancel \(count) downloads in progress?")
+            alert.messageText = String(localized: "Quit and cancel \(count) downloads in progress?")
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Keep Browsing"))
             alert.addButton(withTitle: String(localized: "Quit"))

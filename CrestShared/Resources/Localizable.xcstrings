@@ -658,6 +658,28 @@
     "%lld additional rejected rows are included in the final count." : {
 
     },
+    "%lld archived tabs" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld archived tab"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld archived tabs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld days ago" : {
       "localizations" : {
         "ar" : {
@@ -797,16 +819,76 @@
       }
     },
     "%lld identical duplicates will be skipped." : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld identical duplicate will be skipped."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld identical duplicates will be skipped."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld items selected" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item selected"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items selected"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld left out" : {
       "comment" : "How many of a browser's profiles or Spaces an import cannot bring, shown in the import review."
     },
     "%lld ms" : {
 
+    },
+    "%lld new downloads" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld new download"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld new downloads"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld of %lld" : {
       "localizations" : {
@@ -943,7 +1025,26 @@
 
     },
     "%lld saved passwords can’t be read" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld saved password can’t be read"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld saved passwords can’t be read"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld symbols" : {
 
@@ -1528,7 +1629,26 @@
       }
     },
     "%lld warnings" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld warning"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld warnings"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld weeks ago" : {
       "localizations" : {
@@ -1630,21 +1750,6 @@
 
     },
     "1 Day" : {
-
-    },
-    "1 identical duplicate will be skipped." : {
-
-    },
-    "1 item selected" : {
-
-    },
-    "1 saved password can’t be read" : {
-
-    },
-    "1 tab selected" : {
-
-    },
-    "1 warning" : {
 
     },
     "1 Week" : {
@@ -4891,10 +4996,36 @@
       }
     },
     "Delete “%@” and its %lld Sub-Spaces?" : {
-
-    },
-    "Delete “%@” and its Sub-Space?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete “%1$@” and its %2$#@subSpaces@?"
+          },
+          "substitutions" : {
+            "subSpaces" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "Sub-Space"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Sub-Spaces"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Delete “%@” and Its Sub-Spaces…" : {
 
@@ -4948,13 +5079,80 @@
       }
     },
     "Delete %lld Passwords" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld Password"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld Passwords"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete %lld selected passwords from %@? Crest will authenticate you and apply the deletion as one Keychain change. This cannot be undone." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %1$#@passwords@ from %2$@? Crest will authenticate you and apply the deletion as one Keychain change. This cannot be undone."
+          },
+          "substitutions" : {
+            "passwords" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg selected password"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg selected passwords"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Delete %lld Tabs" : {
-
-    },
-    "Delete 1 Password" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld Tab"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld Tabs"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Delete Folder" : {
       "localizations" : {
@@ -9502,7 +9700,26 @@
       "extractionState" : "manual"
     },
     "Pin %lld Tabs" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Pin Tab"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Pin %lld Tabs"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Pin everyday apps" : {
 
@@ -10054,10 +10271,26 @@
 
     },
     "Quit and cancel %lld downloads in progress?" : {
-
-    },
-    "Quit and cancel the download in progress?" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Quit and cancel the download in progress?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Quit and cancel %lld downloads in progress?"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Quit Crest" : {
 
@@ -11141,7 +11374,26 @@
       }
     },
     "Save %lld Tabs" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save Tab"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save %lld Tabs"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Save a tab" : {
 
@@ -14066,6 +14318,9 @@
     "This site’s certificate is not trusted. Information you send could be read by others." : {
 
     },
+    "this Space" : {
+
+    },
     "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts." : {
 
     },
@@ -14659,7 +14914,26 @@
 
     },
     "Unpin %lld Tabs" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unpin Tab"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unpin %lld Tabs"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Unpin Extension" : {
 
@@ -14671,7 +14945,26 @@
 
     },
     "Unsave %lld Tabs" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unsave Tab"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unsave %lld Tabs"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Unsave Tab" : {
 

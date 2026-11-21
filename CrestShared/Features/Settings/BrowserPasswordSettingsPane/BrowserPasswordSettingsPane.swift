@@ -426,8 +426,7 @@ struct BrowserPasswordSettingsPane: View {
     }
 
     private var passwordCountLabel: String {
-        let count = credentials.descriptors.count
-        return count == 1 ? "1 password" : "\(count) passwords"
+        String(localized: "\(credentials.descriptors.count) passwords")
     }
 
     private var deletionAlertIsPresented: Binding<Bool> {
@@ -441,25 +440,19 @@ struct BrowserPasswordSettingsPane: View {
     }
 
     private var selectionDeletionMessage: String {
-        let spaceName = space?.settings.name ?? "this Space"
-        let count = selectedCredentialIDs.count
-        let passwordLabel = count == 1 ? "password" : "passwords"
-        return
-            "Delete \(count) selected \(passwordLabel) from \(spaceName)? Crest will authenticate you and apply the deletion as one Keychain change. This cannot be undone."
+        let spaceName = space?.settings.name ?? String(localized: "this Space")
+        return String(
+            localized:
+                "Delete \(selectedCredentialIDs.count) selected passwords from \(spaceName)? Crest will authenticate you and apply the deletion as one Keychain change. This cannot be undone."
+        )
     }
 
     private var unreadablePasswordsLabel: String {
-        let count = credentials.unreadableCount
-        return count == 1
-            ? String(localized: "1 saved password can’t be read")
-            : String(localized: "\(count) saved passwords can’t be read")
+        String(localized: "\(credentials.unreadableCount) saved passwords can’t be read")
     }
 
     private var selectionDeletionButtonLabel: String {
-        let count = selectedCredentialIDs.count
-        return count == 1
-            ? String(localized: "Delete 1 Password")
-            : String(localized: "Delete \(count) Passwords")
+        String(localized: "Delete \(selectedCredentialIDs.count) Passwords")
     }
 
     private func prepareExport() {

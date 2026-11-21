@@ -138,10 +138,6 @@ struct MobileDownloadsMenuAccess {
     }
 
     var unreadAccessibilityValue: String {
-        BrowserChromeAccessibility.countValue(
-            newItemCount,
-            singular: "new download",
-            plural: "new downloads"
-        )
+        String(localized: "\(newItemCount) new downloads")
     }
 }
