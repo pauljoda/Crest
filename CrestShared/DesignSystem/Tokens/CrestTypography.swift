@@ -22,6 +22,9 @@ enum CrestTypography {
     /// A settings or setup section's title: rounded heavy, at the size the
     /// platform gives section headers.
     static var sectionHeading: Font { display(.headline, weight: .heavy) }
+    /// A glyph alone on a control a finger presses, as on the phone's and
+    /// iPad's chrome.
+    static let touchControlGlyph = Font.system(size: 17, weight: .medium)
     static let metadata = Font.caption
     static let compactMetadata = Font.caption2
     static let badge = Font.caption2.monospaced().weight(.semibold)

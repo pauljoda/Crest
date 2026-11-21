@@ -117,7 +117,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 systemImage: "ellipsis.circle",
                 isToolbarItem: isToolbarItem
             )
-            .font(.system(size: 17, weight: .medium))
+            .font(CrestTypography.touchControlGlyph)
         } else {
             Button(
                 "Page Actions",
@@ -125,7 +125,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 action: {}
             )
             .disabled(true)
-            .font(.system(size: 17, weight: .medium))
+            .font(CrestTypography.touchControlGlyph)
         }
     }
 

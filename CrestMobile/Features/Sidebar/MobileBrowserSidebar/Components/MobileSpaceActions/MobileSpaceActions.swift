@@ -21,7 +21,7 @@ struct MobileSpaceActions<Leading: View>: View {
             )
         }
         .labelStyle(.iconOnly)
-        .buttonStyle(.plain)
+        .buttonStyle(MobileSpaceUtilityButtonLabel.capsuleButtonStyle)
         .controlSize(.large)
         .padding(4)
         .glassEffect(.regular, in: .capsule)

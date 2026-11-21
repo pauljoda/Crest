@@ -81,7 +81,6 @@ struct MobileCompactPageToolbar: View {
                         systemImage: "square.on.square",
                         action: showTabViewer
                     )
-                    .glassEffect(.regular.interactive(), in: .circle)
                     .accessibilityIdentifier(BrowserMobileAccessibilityID.tabViewerButton)
                 }
             }
