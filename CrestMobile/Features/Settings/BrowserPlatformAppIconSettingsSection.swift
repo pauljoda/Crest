@@ -10,14 +10,16 @@ struct BrowserPlatformAppIconSettingsSection: View {
             "App icon",
             settings: [resettable]
         ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 12)], spacing: 16) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 78), spacing: CrestSpacing.medium)], spacing: CrestSpacing.large
+            ) {
                 iconChoice(name: nil, title: "Crest")
                 // A house that wears Crest's own icon is the choice above.
                 ForEach(SpaceHouse.all.filter { $0.appIconName != nil }, id: \.self) { house in
                     iconChoice(name: house.appIconName, title: house.title)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, CrestSpacing.small)
             .disabled(isChanging || !UIApplication.shared.supportsAlternateIcons)
         }
         .onAppear { selectedName = UIApplication.shared.alternateIconName }

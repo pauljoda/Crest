@@ -88,8 +88,8 @@ struct MobileSpaceSettingsView: View {
             if let space, !browser.isPrivateBrowsing {
                 groupCrestRow(for: space)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, CrestSpacing.extraLarge)
+                    .padding(.bottom, CrestSpacing.medium)
                     .background(CrestBrandTheme.flyout)
             }
             Divider()

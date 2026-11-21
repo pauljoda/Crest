@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct MobileBrowserSettingsDestinationList: View {
+    /// How wide the list's column may be beside a page on iPad.
+    private static let minimumColumnWidth: CGFloat = 220
+    private static let idealColumnWidth: CGFloat = 250
+    private static let maximumColumnWidth: CGFloat = 290
+
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
     /// The read model whose engines say which destinations exist.
@@ -36,8 +41,10 @@ struct MobileBrowserSettingsDestinationList: View {
             }
         }
         .listStyle(.sidebar)
-        .listRowSpacing(4)
-        .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 290)
+        .listRowSpacing(CrestSpacing.extraSmall)
+        .navigationSplitViewColumnWidth(
+            min: Self.minimumColumnWidth, ideal: Self.idealColumnWidth, max: Self.maximumColumnWidth
+        )
         .searchable(text: $searchText, prompt: "Search settings")
     }
 
