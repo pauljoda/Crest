@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-settings-word",
+      "category": "fixed",
+      "message": "Typing “settings” in the command palette lists the Settings pages, and a page is found with the word too, as in “privacy settings”."
+    }
+  ]
+}
