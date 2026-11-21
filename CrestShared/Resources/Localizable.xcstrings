@@ -5810,9 +5810,6 @@
     "Example folder" : {
 
     },
-    "EXAMPLE PAGE" : {
-
-    },
     "example.com" : {
       "localizations" : {
         "ar" : {
@@ -12646,9 +12643,6 @@
     "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split." : {
 
     },
-    "SPLIT VIEW PRACTICE" : {
-
-    },
     "Split View with %lld tabs" : {
       "localizations" : {
         "ar" : {
@@ -14371,9 +14365,6 @@
           }
         }
       }
-    },
-    "TRY IT" : {
-
     },
     "Try Passwords Again" : {
       "localizations" : {
