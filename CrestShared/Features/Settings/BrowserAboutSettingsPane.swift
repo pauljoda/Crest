@@ -4,6 +4,9 @@ struct BrowserAboutSettingsPane: View {
     var buildInformation = BrowserAboutBuildInformation.current
 
     @Environment(\.browserOpenWebsite) private var openWebsite
+    /// This build's release page, found when the pane appears, so What's New
+    /// opens it in the Space and Settings it was chosen from.
+    @State private var releasePage: BrowserReleasePage?
 
     var body: some View {
         BrowserSettingsPane(.about) {
@@ -15,11 +18,11 @@ struct BrowserAboutSettingsPane: View {
                 BrowserSoftwareUpdateSettingsSection()
             #endif
 
-            if let openWebsite {
+            if let openWebsite, let releasePage {
                 Section {
                     // This build's release page on the site lists what changed in it.
                     Button {
-                        Task { openWebsite(await BrowserReleasePage.current().url) }
+                        openWebsite(releasePage.url)
                     } label: {
                         BrowserAboutLinkLabel(
                             title: "What's New in Crest \(buildInformation.version)",
@@ -56,6 +59,7 @@ struct BrowserAboutSettingsPane: View {
                 CrestFormFootnote("Reddit is public. Leave out private details.")
             }
         }
+        .task { releasePage = await BrowserReleasePage.current() }
     }
 
     private var appIdentity: some View {
