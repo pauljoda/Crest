@@ -22,7 +22,7 @@ struct MobilePadSetup: View {
     let isTakingOver: Bool
     /// The live copy beside the steps, which setup keeps across a turn of
     /// the device.
-    let live: MobileSetupLiveSession
+    let live: BrowserSetupLiveSession
     @Binding var path: [BrowserSetupDestination]
     @Binding var shownSpaceID: UUID?
     let setUpWithoutCloud: () -> Void

@@ -22,8 +22,8 @@ public sealed class DevicePlatform {
 
     /// iPhone and iPad hold on under warning pressure and give back one page
     /// under critical pressure. Beyond that the system reclaims WebKit's page
-    /// processes itself, as it does for Safari, and a reclaimed page comes
-    /// back through crash recovery when it is shown. An unfinished manual setup
+    /// processes itself, as it does for every app's pages, and a reclaimed
+    /// page comes back through crash recovery when it is shown. An unfinished manual setup
     /// waits for the next launch, since the system may end the app while it is
     /// in the background. Setup asks which look its Spaces wear. First-run
     /// setup covers the browser, which opens beneath it as the person chose. No
@@ -79,7 +79,7 @@ public sealed class DevicePlatform {
 
     /// The `!#if` tokens that hold for the filter the core checks requests and
     /// documents against: Chromium's where Chromium checks each request
-    /// itself, Safari's on iPhone and iPad. The core's own rule.
+    /// itself, WebKit's on iPhone and iPad. The core's own rule.
     internal IReadOnlyList<string> EngineConditions { get; }
 
     /// The most pages pressure at each level may take back, from the number of

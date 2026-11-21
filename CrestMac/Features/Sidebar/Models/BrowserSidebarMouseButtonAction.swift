@@ -49,8 +49,8 @@ struct BrowserSidebarMouseButtonAction: Equatable, Sendable {
     }
 
     /// A swipe no page took goes back when it moves right, a positive
-    /// `deltaX`, and forward when it moves left, as WebKit's views and
-    /// Chrome's windows read it. A vertical swipe does neither.
+    /// `deltaX`, and forward when it moves left, as WebKit's views read it.
+    /// A vertical swipe does neither.
     init?(swipeDeltaX deltaX: CGFloat) {
         guard let action = Self.all.first(where: { $0.swipeSign * deltaX > 0 }) else { return nil }
         self = action

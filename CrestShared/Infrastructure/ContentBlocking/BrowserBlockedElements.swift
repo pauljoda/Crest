@@ -1,9 +1,9 @@
 import Foundation
 
 /// What the person blocked with Block Element on one page's site, and showing
-/// it again, as Safari's Show Hidden Items does: the core drops the site's
-/// rules from the person's filters, and once the rules without them are in
-/// force the page reloads to show what they hid.
+/// it again: the core drops the site's rules from the person's filters, and
+/// once the rules without them are in force the page reloads to show what
+/// they hid.
 @MainActor
 struct BrowserBlockedElements {
     // MARK: - Static Variables

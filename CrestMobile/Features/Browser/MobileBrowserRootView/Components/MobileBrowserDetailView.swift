@@ -382,15 +382,7 @@ struct MobileBrowserDetailView: View {
 
     /// The four questions the find bar asks, bound to the page it is over.
     private func findPort(for page: MobileBrowserPage) -> BrowserFindPort {
-        BrowserFindPort(
-            find: { query, direction in
-                page.find(query, direction: direction)
-            },
-            query: { page.findQuery },
-            matchState: { page.findMatchState },
-            focusRequest: { page.findFocusRequest },
-            dismiss: page.dismissFind
-        )
+        BrowserFindPort(page: page)
     }
 
     /// The four things a credential fill prompt asks, bound to the page it is
@@ -398,18 +390,7 @@ struct MobileBrowserDetailView: View {
     private func credentialFillPort(
         for page: MobileBrowserPage
     ) -> BrowserCredentialFillPort {
-        BrowserCredentialFillPort(
-            spaceID: page.spaceID,
-            contentScale: page.pageZoom,
-            siteIconData: page.faviconData,
-            fill: { credential, requestID in
-                try await page.fillCredential(credential, for: requestID)
-            },
-            fillGeneratedPassword: { password, requestID in
-                try await page.fillGeneratedPassword(password, for: requestID)
-            },
-            dismiss: page.dismissCredentialFillRequest
-        )
+        BrowserCredentialFillPort(page: page, contentScale: page.pageZoom)
     }
 
     /// What the save prompt asks of the page it is over. This shell can hand a
@@ -419,9 +400,7 @@ struct MobileBrowserDetailView: View {
         for page: MobileBrowserPage
     ) -> BrowserCredentialSavePort {
         BrowserCredentialSavePort(
-            spaceID: page.spaceID,
-            presentedCandidateID: { page.credentialSaveCandidate?.id },
-            dismiss: page.dismissCredentialSaveCandidate,
+            page: page,
             offerToSystemPasswords: { candidate, title in
                 try await BrowserSystemPasswordWriteThroughSystem.offer(
                     candidate: candidate,

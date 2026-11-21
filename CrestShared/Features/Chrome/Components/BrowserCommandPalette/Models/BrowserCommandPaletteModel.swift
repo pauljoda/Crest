@@ -130,6 +130,25 @@ final class BrowserCommandPaletteModel {
         return completionProposal?.continued(to: query)
     }
 
+    /// What the empty field says: the provider it searches with, the scope it
+    /// searches, or that it searches or opens what is typed.
+    var fieldPlaceholder: String {
+        activeProvider.map { "\($0.actionTitle)…" }
+            ?? activeScope.map { String(localized: "Search \(String(localized: $0.title))…") }
+            ?? String(localized: "Search or Enter URL…")
+    }
+
+    /// What assistive technology hears about the completion or provider offer
+    /// the field shows, or nil when it shows neither.
+    var completionHelp: String? {
+        if urlCompletion == nil, let provider = providerOffer {
+            return String(localized: "\(provider.actionTitle). Press Tab to enter a query.")
+        }
+        return urlCompletion.map {
+            String(localized: "URL completion: \($0.accepted). Press Tab or Right Arrow to accept.")
+        }
+    }
+
     var isCompletionSourceAvailable: Bool {
         if selectedTabID != nil { return availableSourceAssignment != nil }
         return availableDestination != nil

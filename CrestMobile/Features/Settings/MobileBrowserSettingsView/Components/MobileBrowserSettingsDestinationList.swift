@@ -39,7 +39,7 @@ struct MobileBrowserSettingsDestinationList: View {
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {
-        MobileSettingsDestinationFilter.destinations(
+        BrowserSettingsDestination.visible(
             matching: searchText,
             locale: locale,
             in: state

@@ -145,7 +145,7 @@ internal sealed class FilterLibrary {
     /// handed out again.
     private static readonly TimeSpan FetchLease = TimeSpan.FromMinutes(10);
 
-    /// The `!#if` tokens that hold in WebKit's content rules: Safari's, and
+    /// The `!#if` tokens that hold in WebKit's content rules: WebKit's own, and
     /// uBlock Origin's own syntax, which the engine reads.
     private static readonly string[] WebKitConditions = ["env_safari", "ext_ublock"];
 

@@ -11,10 +11,9 @@ struct MobileHistoryContent: View {
 
     var body: some View {
         NavigationStack {
-            MobileHistoryList(
-                space: space,
-                searchText: searchText,
-                openHistoryEntry: openAndDismiss
+            MobileUtilityList(
+                surface: .history, space: space, searchText: searchText,
+                actions: BrowserUtilityListActions(openHistoryEntry: { entry, _ in openAndDismiss(entry) })
             )
             .navigationTitle("\(space?.settings.name ?? "Space") History")
             .searchable(text: $searchText, prompt: "Search this Space")

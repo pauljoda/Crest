@@ -47,6 +47,8 @@ private final class BrowserMobileApplication {
     /// process's one core.
     let downloads: MobileBrowserDownloads
     let privateDownloads: MobileBrowserDownloads
+    /// Confirms each download that finishes while the app runs.
+    let downloadNotices: BrowserDownloadNotices
     let tabStateArchive: (any BrowserTabStateArchiving)?
     let windowLayouts: BrowserWindowLayouts
     let startupBehavior: StartupBehavior
@@ -62,8 +64,7 @@ private final class BrowserMobileApplication {
 
     init() throws {
         #if CREST_REVIEW_BUILD
-            setenv("CREST_ISOLATED_SESSION", "1", 1)
-            setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 0)
+            BrowserLaunchEnvironment.applyReviewBuildDefaults(persistenceID: "core-native-ui-review")
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
         let forceOnboarding = launchEnvironment.forcesOnboardingWelcome
@@ -120,6 +121,7 @@ private final class BrowserMobileApplication {
             core.addShowcaseDownloads(profileID: profileID)
         }
         let downloads = MobileBrowserDownloads(core: core, permissionCenter: permissionCenter)
+        downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess)
         let privateDownloads = MobileBrowserDownloads(
             core: core,
             browsingMode: .privateBrowsing,

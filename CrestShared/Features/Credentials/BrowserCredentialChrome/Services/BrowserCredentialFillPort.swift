@@ -45,3 +45,21 @@ struct BrowserCredentialFillPort {
     /// Closes the prompt without filling anything.
     let dismiss: () -> Void
 }
+
+extension BrowserCredentialFillPort {
+    // MARK: - Initializers
+
+    /// What a credential fill prompt asks of `page`, whose page content the
+    /// shell draws at `contentScale`.
+    init(page: BrowserPlatformPage, contentScale: CGFloat) {
+        self.init(
+            spaceID: page.spaceID,
+            contentScale: contentScale,
+            siteIconData: page.faviconData,
+            fill: { credential, requestID in try await page.fillCredential(credential, for: requestID) },
+            fillGeneratedPassword: { password, requestID in
+                try await page.fillGeneratedPassword(password, for: requestID)
+            },
+            dismiss: page.dismissCredentialFillRequest)
+    }
+}

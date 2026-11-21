@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "localized-ios-alerts-neutral-wording",
+      "category": "fixed",
+      "message": "On iPhone and iPad, page dialogs, sign-in prompts and the open-in-another-app question can be translated, and setup's Preview title is in the string catalog.",
+      "platforms": ["ios"]
+    }
+  ]
+}

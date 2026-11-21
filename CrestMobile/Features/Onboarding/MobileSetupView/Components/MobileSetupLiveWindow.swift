@@ -6,7 +6,7 @@ import SwiftUI
 struct MobileSetupLiveWindow: View {
     // MARK: - Variables
 
-    let session: MobileSetupLiveSession
+    let session: BrowserSetupLiveSession
     /// How round the copy's corners are; none once it fills the screen.
     var cornerRadius = MobileSetupLiveWindowMetrics.cornerRadius
 
@@ -39,7 +39,7 @@ struct MobileSetupLiveWindow: View {
     }
 
     /// Crest's browser over the copy, with the copy's own core.
-    private func browser(_ copy: MobileSetupLiveSession.Copy) -> some View {
+    private func browser(_ copy: BrowserPlatformSetupLiveCopy) -> some View {
         MobileBrowserRootView(
             browser: copy.store,
             pages: copy.pages,

@@ -28,7 +28,7 @@ enum BrowserEngineRegistration {
             .pages, .navigation, .find, .zoom, .interactionState, .pageResidency,
             .popups, .workspaceProfiles, .workspaceTransfer, .profileDeletion,
             .contentBlocking, .downloads, .permissions, .reader, .translation,
-            .selectionTranslation, .localFiles, .protectedMedia, .pdf, .webArchive,
+            .selectionTranslation, .localFiles, .protectedMedia, .pdf, .webArchive, .print,
         ] + desktopWebKit,
         archiveFormat: .webArchive)
 
@@ -70,7 +70,7 @@ enum BrowserEngineRegistration {
 
     private static var desktopWebKit: [EngineCapability] {
         #if os(macOS)
-            [.viewportCapture, .fullPageCapture, .print, .inspector, .featureFlags, .beforeUnload]
+            [.viewportCapture, .fullPageCapture, .inspector, .featureFlags, .beforeUnload]
         #else
             []
         #endif

@@ -100,10 +100,12 @@ struct PinnedTabTile: View {
                 context?.restoreSavedLocation?(tab.id)
             }
         )
-        .browserPinnedTabMiddleClick {
-            guard context?.isLoaded(tab.id) == true, isCurrentAndUnlocked else { return }
-            context?.unload(tab.id)
-        }
+        .modifier(
+            BrowserPlatformRowAuxiliaryClickModifier {
+                guard context?.isLoaded(tab.id) == true, isCurrentAndUnlocked else { return }
+                context?.unload(tab.id)
+            }
+        )
         .modifier(
             PinnedTabDragModifier(
                 tab: tab,

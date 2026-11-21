@@ -1,33 +1,22 @@
 import SwiftUI
 
-/// The browser setup builds, as a window of Crest itself runs it: a
-/// memory-only copy of the session setup would leave, in a core of its own,
-/// so nothing done in it reaches the person's Crest and no page in it keeps
-/// website data. Each change to setup reaches the copy: a new name or look
-/// as Crest applies one, and a Space or tab that comes or goes by opening
-/// the copy again. While changes come quickly, as a color is dragged, the
-/// copy, a whole browser to redraw, takes the first at once and then the
-/// newest at most every `changeInterval`, so the controls the person drags
-/// keep their pace.
+/// The browser setup builds, as Crest itself runs it: a memory-only copy of
+/// the session setup would leave, in a core of its own, so nothing done in it
+/// reaches the person's Crest and no page in it keeps website data. Each
+/// change to setup reaches the copy: a new name or look as Crest applies one,
+/// and a Space or tab that comes or goes by opening the copy again, keeping
+/// what the person changed in the copy's tabs and folders. While changes come
+/// quickly, as a color is dragged, the copy, a whole browser to redraw, takes
+/// the first at once and then the newest at most every `changeInterval`, so
+/// the controls the person drags keep their pace. Each platform builds the
+/// copy's browser as `BrowserPlatformSetupLiveCopy`.
 @MainActor
 @Observable
 final class BrowserSetupLiveSession {
-    // MARK: - Types
-
-    /// One opening of the copy: its window and what the window runs on.
-    @MainActor
-    struct Copy: Identifiable {
-        let id = UUID()
-        let store: BrowserStore
-        let pages: BrowserPagePool
-        let chrome = BrowserChromeState(sidebarIsPresented: true)
-        let transientBrowsing = BrowserTransientBrowsingCoordinator()
-    }
-
     // MARK: - Variables
 
-    /// The copy's window, once there is a session to show.
-    private(set) var copy: Copy?
+    /// The copy, once there is a session to show.
+    private(set) var copy: BrowserPlatformSetupLiveCopy?
     @ObservationIgnored private let core = CrestCore()
     /// The session the copy shows now.
     @ObservationIgnored private var shown: SessionState.Seed?
@@ -73,21 +62,21 @@ final class BrowserSetupLiveSession {
             copy?.store.close()
             let store = BrowserStore(seed: seed, images: images, showing: spaceID, core: core)
             carried?.replay(into: store)
-            copy = Copy(store: store, pages: BrowserPagePool(browser: store, usesEphemeralWebsiteDataStores: true))
+            copy = BrowserPlatformSetupLiveCopy(store: store)
         }
         shown = seed
         show(spaceID)
     }
 
-    /// Shows Space `spaceID` in the copy's window, on a Start Page, as Crest
-    /// enters a Space whose pages are not loaded: no page in the copy loads.
+    /// Shows Space `spaceID` in the copy, on a Start Page, as Crest enters a
+    /// Space whose pages are not loaded: no page in the copy loads.
     func show(_ spaceID: UUID?) {
         guard let spaceID else { return }
         copy?.store.showSetupSpace(spaceID)
     }
 
     /// Opens the Getting Started guide on the copy's first Space, as Crest
-    /// opens once setup finishes, so the preview grows into the window Crest
+    /// opens once setup finishes, so the copy grows into the browser Crest
     /// opens in its place.
     func showGettingStarted() {
         guard let store = copy?.store, let first = store.spaceModels.first else { return }

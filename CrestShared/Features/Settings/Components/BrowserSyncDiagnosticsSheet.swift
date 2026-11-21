@@ -44,9 +44,7 @@ struct BrowserSyncDiagnosticsSheet: View {
                 }
             }
         }
-        #if os(macOS)
-            .frame(minWidth: 460, minHeight: 420)
-        #endif
+        .crestSheetSize(minWidth: 460, minHeight: 420)
     }
 
     @ViewBuilder

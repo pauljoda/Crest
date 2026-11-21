@@ -24,7 +24,7 @@ extension MobileBrowserRootModel {
             MobileContentBlockingAction(browser: browser, pages: $0)
         }
         let blockedElements = pageActions.map {
-            BrowserBlockedElements(core: browser.core, pageURL: $0.activePage?.webView.url)
+            BrowserBlockedElements(core: browser.core, pageURL: $0.activePage?.live.documentURL)
         }
         return MobileBrowserCommandContext(
             isPrivateBrowsing: browser.isPrivateBrowsing,
