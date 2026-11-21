@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "chromium-upstream-157-0-8103-81-35a9bfb397cd",
+    "development": "remove-dead-tests-and-resources",
     "nightly": "palette-history-site-icons"
   }
 }

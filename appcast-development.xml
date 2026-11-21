@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.79</title>
-            <pubDate>Sat, 21 Nov 2026 02:00:23 +0000</pubDate>
+            <title>0.10.85</title>
+            <pubDate>Sat, 21 Nov 2026 02:45:58 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1661</sparkle:version>
-            <sparkle:shortVersionString>0.10.79</sparkle:shortVersionString>
+            <sparkle:version>1662</sparkle:version>
+            <sparkle:shortVersionString>0.10.85</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### Maintenance
 
-- Chromium is updated to 157.0.8103.81 with upstream security and compatibility fixes.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f02ab513c9d74a6d8d7b6b7f3ffacbe478665af7...3fdba21f1877e6997e85081687fea65010db4a9c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.79-2026-11-21-1661-r661.1/Installer-Crest-0.10.79-development-2026-11-21-3fdba21-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/3fdba21f1877e6997e85081687fea65010db4a9c...b4ca6f7fa90af357d0ca83be0ca902a3ba2145ac) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.85-2026-11-21-1662-r662.1/Installer-Crest-0.10.85-development-2026-11-21-b4ca6f7-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.79-2026-11-21-1661-r661.1/Installer-Crest-0.10.79-development-2026-11-21-3fdba21-arm64.dmg" length="241776774" type="application/octet-stream" sparkle:edSignature="LPLakZvDJwqCWOs0YcRXvq6itcaAVrel5Q8nVN9M/SRBW9+Nck4N9cknJ9tLqry1HTtieyFfpZGLwx5b3nAZAQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.85-2026-11-21-1662-r662.1/Installer-Crest-0.10.85-development-2026-11-21-b4ca6f7-arm64.dmg" length="241601158" type="application/octet-stream" sparkle:edSignature="N6MXiCFhBRUhZONWnmHstxECh2EuH7h9ZHPb2BvOdXjdEo/PkfSMDOEpRuO8gyozZVyeofHBjz/F8Gkbkx8nBg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: +W5hJRznF9nfrVkmLQUs/zpouDDGJsQCzRGGTaMPzCCKb06ZXyEm6rr2XcuIU6DlsjMRHUxwNzjjcmRYJqJGAw==
-length: 3983
+edSignature: SzaCZAISbH+dtBH28Gy+ugFxr0y2PRslGEHgz11I3W2IXE8G4kw+3tKkXWr3R9loHZ48gcBLuxPtwfbzWS7RAQ==
+length: 3943
 -->
