@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The sidebar's hover area, filled with the system accent while someone
+/// The sidebar's hover area, filled with Crest blue while someone
 /// adjusts its width and fading out about three seconds after the last change.
 ///
 /// It is drawn behind the strip itself, so it only shows where the strip is and
@@ -26,7 +26,7 @@ struct BrowserSidebarRevealZonePreview: View {
     private let preview = SidebarRevealWidthPreview.shared
 
     var body: some View {
-        Color.accentColor
+        CrestBrandTheme.accent
             .opacity(opacity)
             .allowsHitTesting(false)
             .accessibilityHidden(true)

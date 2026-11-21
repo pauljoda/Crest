@@ -88,7 +88,7 @@ struct MobilePageActionsMenu: View {
             if let downloadsAccess, downloadsAccess.newItemCount > 0 {
                 BrowserUtilityNotificationBadge(
                     count: downloadsAccess.newItemCount,
-                    tint: .accentColor,
+                    tint: CrestBrandTheme.accent,
                     progress: downloadsAccess.activeProgress
                 )
                 .offset(x: 9, y: -7)
