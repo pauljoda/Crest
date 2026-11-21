@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-private-web-store-install",
+      "category": "fixed",
+      "message": "On Chromium, a private or trusted-tester Chrome Web Store extension installs in a Space signed in to an account that can see it, instead of failing with HTTP 401.",
+      "platforms": ["mac"]
+    }
+  ]
+}

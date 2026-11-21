@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-frame-content-security-policy",
+      "category": "fixed",
+      "message": "Let websites an extension embeds in its side panel run under their own security policy instead of the extension’s"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "camera-microphone-allow-crash",
+      "category": "fixed",
+      "message": "Allowing a site to use your camera or microphone no longer quits Crest."
+    }
+  ]
+}

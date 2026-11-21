@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-hides-when-pointer-leaves-window",
+      "category": "fixed",
+      "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
+    }
+  ]
+}

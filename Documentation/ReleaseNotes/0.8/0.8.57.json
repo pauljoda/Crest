@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "space-slide-continues-forward",
+      "category": "fixed",
+      "message": "Pressing Next or Previous Space again while a Space is still sliding carries the slide on from where it is, without stepping back first, including around the ends."
+    }
+  ]
+}

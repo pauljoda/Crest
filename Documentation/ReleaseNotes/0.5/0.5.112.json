@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "website-camera-and-notification-permissions",
+      "category": "fixed",
+      "message": "Request camera and notification access from compact site controls, remember choices per Space, and stop camera capture when access is revoked"
+    }
+  ]
+}

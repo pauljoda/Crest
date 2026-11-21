@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "look-and-feel-card-headers",
+      "category": "improved",
+      "message": "Find settings and customize Spaces more easily with distinct card headers and icons"
+    },
+    {
+      "id": "responsive-settings-permission-checks",
+      "category": "fixed",
+      "message": "Keep General settings responsive while checking system permissions"
+    },
+    {
+      "id": "cleaner-about-app-summary",
+      "category": "improved",
+      "message": "See your chosen app icon, app details, and software updates together in a cleaner About page"
+    }
+  ]
+}

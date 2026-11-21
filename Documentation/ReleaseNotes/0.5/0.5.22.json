@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-02-sharp-canvas-rendering",
+      "category": "fixed",
+      "message": "Keep high-resolution canvas-based editors sharp on Retina displays"
+    }
+  ]
+}

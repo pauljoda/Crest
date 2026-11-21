@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "escaped-address-saved-password-origin",
+      "category": "fixed",
+      "message": "Passwords imported from another browser are no longer saved for the wrong site when the address contains escaped characters."
+    }
+  ]
+}

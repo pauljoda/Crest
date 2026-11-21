@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "address-bar-selects-url-on-tap",
+      "category": "fixed",
+      "message": "Tapping the address bar on iPhone selects the whole address, so typing replaces it or you can copy it right away.",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-address-drag-selects-text",
+      "category": "fixed",
+      "message": "Dragging across a Quick Window’s address field selects its text instead of moving the window. The space around the field still moves the window."
+    }
+  ]
+}

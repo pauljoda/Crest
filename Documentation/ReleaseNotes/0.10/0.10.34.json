@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "palette-keeps-typed-fragment",
+      "category": "fixed",
+      "message": "An address you type or paste in the command palette now opens at the #section you gave it, even on a page you've visited before, and changing only the #section of the page you're on moves within that page."
+    },
+    {
+      "id": "palette-searches-what-isnt-an-address",
+      "category": "improved",
+      "message": "Return in the command palette now searches anything that isn't an address, such as crest browser or a single word, with matching tabs, sites and history still listed below. An address such as github.com or localhost:3000 still opens, and the field completes one as you type it."
+    },
+    {
+      "id": "palette-history-site-icons",
+      "category": "improved",
+      "message": "History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart."
+    }
+  ]
+}

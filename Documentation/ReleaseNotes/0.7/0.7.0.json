@@ -1,0 +1,87 @@
+{
+  "release": {
+    "summary": "Crest 0.7 brings Chromium and WebKit together in one Mac app, with Chromium as the default and a shared browser core across Mac, iPhone, and iPad.",
+    "added": [
+      "Run Chrome Web Store extensions in each Mac Space, including popups, side panels, shortcuts, and supported native companion apps.",
+      {
+        "text": "Choose Chromium or WebKit for new pages, one page, or a website. Use WebKit for Reader, whole-page translation, built-in blocking, and supported FairPlay video.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "Pause and resume Chromium downloads, including interrupted transfers when the server supports recovery.",
+        "platforms": ["mac"]
+      },
+      "Receive local service-worker and extension notifications while Crest runs, with Space access and notification permissions respected."
+    ],
+    "changed": [
+      "Use one browser core for Space isolation, navigation, persistence, permissions, and synchronization across the Apple apps.",
+      {
+        "text": "Inspect Chromium pages with DevTools and save them as MHTML archives; WebKit keeps Web Inspector and web archives.",
+        "platforms": ["mac"]
+      },
+      "Check the exact release source and both platform builds before signing and publication."
+    ],
+    "fixed": [
+      {
+        "text": "Resume interrupted Chromium profile upgrades without losing track of existing profiles.",
+        "platforms": ["mac"]
+      },
+      "Honor unsaved-changes prompts before switching engines or restarting for an update.",
+      "Refuse unavailable page actions during engine startup instead of running them later unexpectedly.",
+      {
+        "text": "Advertise the macOS version required by the whole app when offering updates.",
+        "platforms": ["mac"]
+      }
+    ],
+    "upgrading": [
+      "Mac requires Apple silicon and macOS 26.1 or later. iPhone and iPad continue to use WebKit on iOS and iPadOS 26.1 or later.",
+      {
+        "text": "Spaces, tabs, history, and Crest Passwords carry over from the previous stable release. Chromium and WebKit keep separate website data, so switching engines can require signing in again.",
+        "platforms": ["mac"]
+      },
+      "Reinstall older WebKit extensions from the Chrome Web Store in the Spaces where you want them.",
+      "See the [engine guide](https://crestbrowser.com/guides/engines/) for feature differences, screen-sharing limits, and notification support."
+    ]
+  },
+  "entries": [
+    {
+      "id": "protected-video-consented-engine-switch",
+      "category": "fixed",
+      "message": "Protected-video pages still switch to WebKit automatically. Engine switches respect unsaved-changes prompts and remember the website only after the move is allowed."
+    },
+    {
+      "id": "chromium-profile-adoption-recovery",
+      "category": "fixed",
+      "message": "Interrupted Chromium profile upgrades resume safely without losing track of your existing browsing profiles.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-download-pause-and-recovery",
+      "category": "improved",
+      "message": "Pause and resume Chromium downloads, and recover interrupted transfers when the server supports it.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-local-background-notifications",
+      "category": "improved",
+      "message": "Chromium can show local service-worker and extension notifications while Crest runs, with Space access and notification permissions respected.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "release-source-validation-and-startup-contracts",
+      "category": "internal",
+      "message": "Validate the exact source before release, build the current native core with the Chromium host, and make startup cancellation and deferred requests explicit."
+    },
+    {
+      "id": "chromium-update-macos-requirement",
+      "category": "fixed",
+      "message": "Crest updates advertise the macOS version the whole app requires, so older Macs are not offered an incompatible update.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "crest-07-chromium-and-webkit",
+      "category": "new",
+      "message": "Crest 0.7 brings Chromium and WebKit together on Mac, with Chrome Web Store extensions and engine choices for each website. iPhone and iPad continue to use WebKit."
+    }
+  ]
+}

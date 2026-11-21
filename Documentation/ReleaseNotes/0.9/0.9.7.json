@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "cold-launch-link-opens-in-front",
+      "category": "fixed",
+      "message": "On Mac, a link from another app that opens Crest now shows in front, instead of behind the window Crest reopens, and Crest's windows reopen in the order you left them.",
+      "platforms": ["mac"]
+    }
+  ]
+}

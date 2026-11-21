@@ -42,15 +42,17 @@ has the details.
 
 ## Explicit release notes
 
-- Every committed app-code or architecture-significant change adds a new
-  stable entry to `Documentation/ReleaseNotes.json` in the same commit.
+- Every committed app-code or architecture-significant change adds its entries
+  to its version's file, `Documentation/ReleaseNotes/<major>.<minor>/<version>.json`,
+  in the same commit. Add `"platforms": ["mac"]` or `["ios"]` when a change
+  reaches only that platform.
 - Use a unique lowercase kebab-case ID and one of `new`, `improved`, `fixed`,
   or `internal`. Use `internal` only when the change should not appear in
   public release notes.
 - Write public entry messages as concise user-facing outcomes rather than
   commit subjects, implementation details, issue IDs, or test descriptions.
-- Never reuse, reorder, or delete an existing entry ID; append new entries at
-  the end. Stage the catalog with the task-owned files before running
+- Never reuse, change, move, or delete an existing entry. Stage the version's
+  notes file with the task-owned files before running
   `Scripts/check-version.sh --fix-commit`.
 
 ## Generated localization catalog
@@ -88,8 +90,8 @@ has the details.
   the checkout.
 - Documentation is for maintained product behavior and contributor
   instructions, not dated test totals, machine paths, investigation
-  transcripts, or cleanup narratives. `ReleaseNotes.json` and the generated
-  roadmap remain supported public records.
+  transcripts, or cleanup narratives. `Documentation/ReleaseNotes` and the
+  generated roadmap remain supported public records.
 - Keep the permanent suite focused on important, durable contracts: shared
   browsing and state behavior, persistence and migration, privacy and
   authorization boundaries, extension compatibility and recovery, and measured

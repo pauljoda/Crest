@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "space-picker-cloud-compiler-compatibility",
+      "category": "internal",
+      "message": "Avoid a Swift 6.3 compiler crash when archiving the Space settings pickers"
+    }
+  ]
+}

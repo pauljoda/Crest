@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-site-permission-prompts",
+      "category": "fixed",
+      "message": "Quick Windows now ask for camera, microphone, location and other site permissions instead of silently refusing them."
+    }
+  ]
+}

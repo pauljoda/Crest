@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-scroll-freeze",
+      "category": "fixed",
+      "message": "Scrolling the sidebar no longer makes Crest stop responding, with or without folders open."
+    }
+  ]
+}

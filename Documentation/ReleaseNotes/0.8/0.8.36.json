@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "mobile-cross-site-download-test-wait",
+      "category": "internal",
+      "message": "The iPhone and iPad test of a download from another site waits as long as WebKit takes in the Simulator to start it, so it no longer fails after other tests have run."
+    }
+  ]
+}

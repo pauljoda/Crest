@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "window-focus-bridge-release-format",
+      "category": "internal",
+      "message": "Format the browser window's focus bridge to the release lint rules."
+    }
+  ]
+}

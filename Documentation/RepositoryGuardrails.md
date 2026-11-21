@@ -36,28 +36,50 @@ Changing release lines uses `Scripts/set-version.sh --release X.Y.Z` and remains
 an explicit release-and-tag decision. Neither path changes
 `CURRENT_PROJECT_VERSION`; Xcode Cloud owns distributed build numbers.
 
-## Explicit release-note entries
+## Release notes
 
-`Documentation/ReleaseNotes.json` is the machine-readable source for GitHub and
-Sparkle release copy. Its `entries` object maps a stable lowercase kebab-case ID
-to exactly one category and message. `new`, `improved`, and `fixed` entries are
-public; `internal` records a commit that should not be announced. Messages state
-the user outcome directly and do not inherit commit wording.
+`Documentation/ReleaseNotes` is the source for the product site's release notes
+and for GitHub and Sparkle release copy. Each version Crest reaches has one
+file, `<major>.<minor>/<version>.json`, written by the commit that moves
+`MARKETING_VERSION` to it:
 
-The IDs, rather than commit hashes, survive rebases and history rewrites. Never
-reuse, rewrite, reorder, or delete an ID; append new entries so catalog order
-remains release order. The schema 2 `publicationBaselines` are immutable
-bootstrap cursors for the currently published stable, nightly, and development
-builds. Successful publications keep the live per-channel cursors in the
-workflow-owned `updates` branch and advance only the selected channel in the
-same commit as its signed appcast. Every product or architecture commit adds at
-least one new entry. `Scripts/check-version.sh --fix-commit` validates the staged
-catalog and rejects a patch bump without a new entry. Validate the working
-catalog directly with:
+```json
+{
+  "entries": [
+    { "id": "sidebar-long-folder-scroll", "category": "fixed", "message": "…", "platforms": ["mac"] }
+  ]
+}
+```
+
+`new`, `improved`, and `fixed` entries are public; `internal` records a change
+that should not be announced. Messages state the user outcome directly and do
+not inherit commit wording. `platforms` lists `mac` or `ios` for a change that
+reaches only that platform; leave it out for a change that reaches both. IDs
+are unique across every version and survive rebases and history rewrites. Never
+reuse, change, move, or delete an entry; release order is version order, then
+the order within a file.
+
+A version published as Stable carries its curated write-up as `release`: a
+`summary` and lists of `added`, `changed`, `fixed`, `security`, `removed`, and
+`upgrading` items. An item is text, or `{ "text": …, "platforms": [...] }`. The
+write-up may be written or edited after the version lands. A Stable release
+publishes it on GitHub and in Sparkle; other releases list the entries after
+their channel's cursor. Successful publications keep the per-channel cursors in
+the workflow-owned `updates` branch and advance only the selected channel in
+the same commit as its signed appcast.
+
+Every product or architecture commit adds at least one new entry.
+`Scripts/check-version.sh --fix-commit` rejects a patch bump unless the staged
+version's file holds new entries and no newer file exists. Validate the working
+notes directly with:
 
 ```sh
 python3 Scripts/release_note_catalog.py
 ```
+
+`Scripts/build-release-pages.py` turns the notes and the release tags into the
+site's `/releases/` pages when the site deploys. Run it locally to preview them
+in `Website/releases/`, which is not committed.
 
 ## Architecture and Xcode 27 compatibility
 

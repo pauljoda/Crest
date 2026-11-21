@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "webkit-page-closed-mid-load-crash",
+      "category": "fixed",
+      "message": "Fixed a crash when a page using the WebKit engine closed while it was loading another site."
+    }
+  ]
+}

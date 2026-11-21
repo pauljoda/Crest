@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "favicon-request-lifetime-isolation",
+      "category": "fixed",
+      "message": "Keep favicon updates tied to the current page and icon choice"
+    },
+    {
+      "id": "native-sidebar-input-adapters",
+      "category": "internal",
+      "message": "Keep native sidebar gestures and preview ownership in platform adapters"
+    },
+    {
+      "id": "showcase-house-templates",
+      "category": "internal",
+      "message": "Use Winter and Lion templates for Personal and Work in isolated preview and screenshot sessions"
+    },
+    {
+      "id": "regular-width-settings-canvas",
+      "category": "fixed",
+      "message": "Open Settings in the browsing canvas on wider windows, using a sheet only in compact layouts"
+    }
+  ]
+}

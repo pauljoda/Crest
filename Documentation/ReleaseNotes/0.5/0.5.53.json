@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-web-page-extension-last-error",
+      "category": "fixed",
+      "message": "Report unanswered website-to-extension messages the way Chrome does, so Claude finishes signing in from its side panel"
+    }
+  ]
+}

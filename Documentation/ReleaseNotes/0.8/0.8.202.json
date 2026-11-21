@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "settings-smooth-with-lots-of-data",
+      "category": "fixed",
+      "message": "On Mac, Settings stays smooth with hundreds of saved websites, passwords and site permissions: a Space’s Privacy and Passwords pages open quickly and scroll, search and remove without freezing.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "settings-search-field-takes-typing",
+      "category": "fixed",
+      "message": "On Mac, clicking the search field above saved passwords or website data now lets you type in it.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "open-subfolder-in-closed-folder",
+      "category": "fixed",
+      "message": "A folder inside a closed folder opens when you click it, showing everything in it while the folder around it stays closed."
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "id": "setup-walkthrough-with-live-preview",
+      "category": "new",
+      "message": "Setting up Crest is now a short walkthrough beside a live preview of the window you're building: bring tabs from another browser, choose your first Space's name, colors and icon, then add more Spaces. Close, move or file tabs in the preview and those changes carry into Crest when you start browsing."
+    },
+    {
+      "id": "space-background-and-accent-colors",
+      "category": "improved",
+      "message": "A Space's look is now a Background and an Accent, each one color or a gradient of up to three, chosen on a color wheel with brightness and texture or taken from a palette. Crests and sidebar patterns sit under More Customization, replacing the Heraldic, Modern and Simple styles."
+    },
+    {
+      "id": "sub-spaces-in-setup",
+      "category": "new",
+      "message": "Setup lists each Space with its Sub-Spaces and lets you add a Sub-Space to any Space before you start browsing."
+    },
+    {
+      "id": "search-chip-readable-text",
+      "category": "fixed",
+      "message": "Search provider chips in the command palette now show their text in white or black, whichever reads better on the chip's color."
+    },
+    {
+      "id": "color-dragging-keeps-pace",
+      "category": "improved",
+      "message": "Dragging a Space's colors stays smooth while the window redraws to show them, in setup and in Settings."
+    }
+  ]
+}

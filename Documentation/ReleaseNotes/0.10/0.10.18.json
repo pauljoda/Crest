@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pinned-saved-close-choices",
+      "category": "improved",
+      "message": "Settings › Tabs now lets you choose separately what pinned tabs and saved tabs do after you close them, so saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both."
+    }
+  ]
+}

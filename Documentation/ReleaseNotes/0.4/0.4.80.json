@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-25-loading-start-page-and-space-search",
+      "category": "fixed",
+      "message": "Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space"
+    }
+  ]
+}

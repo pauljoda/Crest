@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "zen-import-pinned-split-views",
+      "category": "fixed",
+      "message": "Importing from Zen no longer fails with “Crest could not recognize this browser’s tab-session data” when a Space has pinned tabs in a split view. Those tabs now come over as saved tabs: in the folder that held the split, or outside any folder when the split sat among the Space’s pinned tabs. A Zen session too large to import now says so."
+    }
+  ]
+}

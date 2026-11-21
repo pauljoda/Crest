@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-space-swipe-keeps-pages-rendering",
+      "category": "fixed",
+      "message": "Chromium pages keep rendering while you swipe between Spaces instead of turning gray.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "search-provider-fragment-address",
+      "category": "fixed",
+      "message": "You can now add a search provider whose address puts the search after a #, such as PubChem’s."
+    }
+  ]
+}

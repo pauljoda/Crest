@@ -1,0 +1,34 @@
+{
+  "entries": [
+    {
+      "id": "remove-unused-setup-look-path",
+      "category": "internal",
+      "message": "Removed the setup look choices and look storage queries that nothing uses since setup's overhaul, and the unused iCloud sync status query."
+    },
+    {
+      "id": "core-wire-leftovers",
+      "category": "internal",
+      "message": "Messages only the core sends itself no longer cross the wire, engine registration keeps only the capabilities an engine supports, and test-only JSON entry points moved into the tests."
+    },
+    {
+      "id": "remove-unused-shared-swift",
+      "category": "internal",
+      "message": "Removed shared code nothing uses: an old setup page, unused design tokens, branding and identity helpers, a widget scope no one reads, and search sheet presentation."
+    },
+    {
+      "id": "remove-unused-mac-setup-code",
+      "category": "internal",
+      "message": "Removed Mac setup code the overhaul left unused, permission fields nothing reads, and kept preview-only fixtures out of release builds."
+    },
+    {
+      "id": "remove-unused-compact-prompt",
+      "category": "internal",
+      "message": "Removed the iPhone sidebar's new-tab prompt, which no layout ever showed."
+    },
+    {
+      "id": "remove-dead-tests-and-resources",
+      "category": "internal",
+      "message": "Removed empty test classes and unused test helpers, old app-icon sources, an unused fixture corpus, a broken icon script, an empty test scheme and catalog strings no code uses."
+    }
+  ]
+}

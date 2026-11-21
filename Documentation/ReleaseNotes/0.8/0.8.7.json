@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-offscreen-page-resizing",
+      "category": "fixed",
+      "message": "Showing and hiding the sidebar is smoother when several Spaces are open."
+    }
+  ]
+}

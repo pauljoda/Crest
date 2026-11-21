@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "space-page-takes-input-after-late-switch",
+      "category": "fixed",
+      "message": "A page you send from a Quick Window to another Space responds to clicks and typing as soon as it appears, instead of only after you switch tabs."
+    }
+  ]
+}

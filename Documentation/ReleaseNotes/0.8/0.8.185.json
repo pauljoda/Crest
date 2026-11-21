@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-extension-badge-shows-blocked-count",
+      "category": "fixed",
+      "message": "On Chromium, an extension's toolbar icon shows the count its blocking rules report, such as uBlock Origin Lite's blocked requests.",
+      "platforms": ["mac"]
+    }
+  ]
+}

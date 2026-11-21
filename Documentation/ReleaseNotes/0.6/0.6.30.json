@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "settings-visible-during-space-switches",
+      "category": "fixed",
+      "message": "Settings remain fully visible while switching between Spaces."
+    }
+  ]
+}

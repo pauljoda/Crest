@@ -1,0 +1,225 @@
+{
+  "entries": [
+    {
+      "id": "2026-10-12-page-engine-events-own-behavior",
+      "category": "internal",
+      "message": "Let each engine event say what it does to its page"
+    },
+    {
+      "id": "2026-10-12-widget-actions-own-behavior",
+      "category": "internal",
+      "message": "Let sidebar widget actions and update phases say what they do"
+    },
+    {
+      "id": "2026-10-12-agent-messages-own-behavior",
+      "category": "internal",
+      "message": "Let agent messages and tool options say what they do"
+    },
+    {
+      "id": "2026-10-12-core-kinds-own-behavior",
+      "category": "internal",
+      "message": "Let core kinds say what each of them does"
+    },
+    {
+      "id": "2026-10-12-cloud-sync-steps-own-behavior",
+      "category": "internal",
+      "message": "Let each iCloud sync step take itself"
+    },
+    {
+      "id": "2026-10-12-core-changes-follow-themselves",
+      "category": "internal",
+      "message": "Let each core change say who follows it"
+    },
+    {
+      "id": "2026-10-12-page-edge-objects-own-behavior",
+      "category": "internal",
+      "message": "Let page and engine-edge objects carry what they do"
+    },
+    {
+      "id": "2026-10-12-settings-own-behavior",
+      "category": "internal",
+      "message": "Let settings pages, permissions and requests say what they do"
+    },
+    {
+      "id": "2026-10-12-setup-steps-own-behavior",
+      "category": "internal",
+      "message": "Let setup steps, outcomes and lessons say what they show and do"
+    },
+    {
+      "id": "2026-10-12-studio-and-choices-own-behavior",
+      "category": "internal",
+      "message": "Let studio steps, emblems and small choices carry their own behavior"
+    },
+    {
+      "id": "2026-10-12-sidebar-drop-targets-own-behavior",
+      "category": "internal",
+      "message": "Let sidebar drop targets and zones say what they take"
+    },
+    {
+      "id": "2026-10-12-sidebar-lift-previews-own-behavior",
+      "category": "internal",
+      "message": "Let sidebar lift previews size and place themselves"
+    },
+    {
+      "id": "2026-10-12-sidebar-pointer-actions-own-behavior",
+      "category": "internal",
+      "message": "Let sidebar pointer and row actions say what they do"
+    },
+    {
+      "id": "2026-10-12-download-actions-own-behavior",
+      "category": "internal",
+      "message": "Let download actions, destinations and feedback say what they do"
+    },
+    {
+      "id": "2026-10-12-credential-objects-own-behavior",
+      "category": "internal",
+      "message": "Let credential events, plans and sign-in answers say what they do"
+    },
+    {
+      "id": "2026-10-12-transient-requests-own-behavior",
+      "category": "internal",
+      "message": "Let transient requests, lease dispositions and pulls say what they do"
+    },
+    {
+      "id": "2026-10-12-mobile-layout-own-behavior",
+      "category": "internal",
+      "message": "Let window sizes, sidebar toggles and Settings styles carry what they do"
+    },
+    {
+      "id": "2026-10-12-widget-kinds-own-rules",
+      "category": "internal",
+      "message": "Let widget kinds, deck directions and gesture axes carry what they do"
+    },
+    {
+      "id": "2026-10-12-peek-measures-own-rules",
+      "category": "internal",
+      "message": "Let Peek's views and the card arrangement carry their own measures"
+    },
+    {
+      "id": "2026-10-12-mobile-layout-own-rules",
+      "category": "internal",
+      "message": "Let window sizes, viewports and pagers carry the iPhone and iPad layout"
+    },
+    {
+      "id": "2026-10-12-mobile-platform-own-rules",
+      "category": "internal",
+      "message": "Let the iPhone app's platform pieces hold their own rules"
+    },
+    {
+      "id": "2026-10-12-core-query-answers-own-rules",
+      "category": "internal",
+      "message": "Let core queries and page values carry the rules that judge them"
+    },
+    {
+      "id": "2026-10-12-tokens-and-shell-own-rules",
+      "category": "internal",
+      "message": "Let design tokens, Space colors, settings values and the Mac shell keep their own rules"
+    },
+    {
+      "id": "2026-10-12-credential-records-judge-themselves",
+      "category": "internal",
+      "message": "Let credential records judge themselves"
+    },
+    {
+      "id": "2026-10-12-link-preferences-judge-themselves",
+      "category": "internal",
+      "message": "Let link preferences, routes and schemes judge themselves"
+    },
+    {
+      "id": "2026-10-12-sync-records-decide-conflicts",
+      "category": "internal",
+      "message": "Let sync records, addresses and reasons decide their conflicts"
+    },
+    {
+      "id": "2026-10-12-download-media-launch-answers",
+      "category": "internal",
+      "message": "Let download, media and launch questions answer from their facts"
+    },
+    {
+      "id": "2026-10-12-pages-history-spaces-own-rules",
+      "category": "internal",
+      "message": "Let pages, history, Spaces and brandings keep their own rules"
+    },
+    {
+      "id": "2026-10-12-import-setup-repair-own-steps",
+      "category": "internal",
+      "message": "Let import reviews, setups and session repair carry their own steps"
+    },
+    {
+      "id": "2026-10-12-queries-answer-without-app",
+      "category": "internal",
+      "message": "Let each query say how it answers without an app"
+    },
+    {
+      "id": "2026-10-12-unsupported-address-rejection",
+      "category": "internal",
+      "message": "Refuse an address no Space holds as an unsupported address"
+    },
+    {
+      "id": "2026-10-12-branding-makes-imported-looks",
+      "category": "internal",
+      "message": "Let a branding make the looks imported Spaces wear"
+    },
+    {
+      "id": "2026-10-12-sidebar-chrome-tabs-own-rules",
+      "category": "internal",
+      "message": "Let sidebar rows, chrome, tabs, splits and Spaces carry their own rules"
+    },
+    {
+      "id": "2026-10-12-forwarders-retired",
+      "category": "internal",
+      "message": "Ask each rule's owner directly instead of through old forwarders"
+    },
+    {
+      "id": "2026-10-12-entitlement-extension-strip-own-rules",
+      "category": "internal",
+      "message": "Let the iCloud service and extension strip views keep their own measures"
+    },
+    {
+      "id": "2026-10-12-navigation-decisions-answer-webkit",
+      "category": "internal",
+      "message": "Let each navigation decision answer WebKit itself"
+    },
+    {
+      "id": "2026-10-12-commands-prompts-swipes-say-what-they-do",
+      "category": "internal",
+      "message": "Let engine commands, pending prompts and swipe decisions say what they do"
+    },
+    {
+      "id": "2026-10-12-cloud-receipts-note-themselves",
+      "category": "internal",
+      "message": "Let the core's answers to the cloud transport note what they tell it"
+    },
+    {
+      "id": "2026-10-12-iphone-welcome-card-width",
+      "category": "fixed",
+      "message": "The welcome card on iPhone lines up with the rest of the welcome page.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "2026-10-12-refuse-unexpected-edits-instead-of-quitting",
+      "category": "fixed",
+      "message": "Crest no longer quits when it can’t make an edit, such as one on a tab that just closed or a change only a Space’s owner may make."
+    },
+    {
+      "id": "2026-10-12-prompt-hosts-answer-every-question",
+      "category": "internal",
+      "message": "Every place that shows Crest's questions now handles each kind of question explicitly."
+    },
+    {
+      "id": "2026-10-12-refused-engine-report-safe",
+      "category": "fixed",
+      "message": "A page reporting something Crest can’t use no longer closes the app."
+    },
+    {
+      "id": "2026-10-12-concrete-pane-views",
+      "category": "internal",
+      "message": "Keep settings, studio and lesson panes as concrete views"
+    },
+    {
+      "id": "2026-10-12-extension-files-own-one-type",
+      "category": "internal",
+      "message": "Give each extension file one owner type"
+    }
+  ]
+}

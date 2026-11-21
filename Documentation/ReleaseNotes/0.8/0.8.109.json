@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "floating-sidebar-exit-margin",
+      "category": "improved",
+      "message": "The floating sidebar stays open when the pointer drifts just past its edge, and hides once the pointer moves further into the page."
+    }
+  ]
+}

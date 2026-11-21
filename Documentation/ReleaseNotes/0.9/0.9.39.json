@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-address-click-anywhere",
+      "category": "fixed",
+      "message": "A click anywhere in a Quick Window's address field opens it, including above and below the address or \"Search or enter website\" and on the lock before it, where clicks used to do nothing."
+    }
+  ]
+}

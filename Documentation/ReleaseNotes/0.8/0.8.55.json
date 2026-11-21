@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-edge-reveals-for-moving-pointer",
+      "category": "fixed",
+      "message": "The sidebar no longer slides back out under a pointer that is just resting at the screen edge, such as one left there by Universal Control. It reveals when you move the pointer to the edge."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "passkey-consent-during-sign-in",
+      "category": "fixed",
+      "message": "Request macOS passkey permission when you sign in on a website",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "selected-upload-file-access",
+      "category": "fixed",
+      "message": "Keep selected upload files accessible and explain blocked file access"
+    },
+    {
+      "id": "ipad-command-palette-standard-keyboard",
+      "category": "fixed",
+      "message": "Use the standard keyboard with a spacebar in the iPad command palette",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "native-webkit-passkey-sign-in",
+      "category": "fixed",
+      "message": "Let the system handle passkey sign-in directly without an extra permission check"
+    }
+  ]
+}

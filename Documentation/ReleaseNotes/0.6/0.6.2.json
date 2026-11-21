@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "pinned-outlines-skip-neutral-site-colors",
+      "category": "fixed",
+      "message": "Use favicon colors for pinned outlines when websites declare black, white, or neutral theme colors"
+    },
+    {
+      "id": "pinned-outline-color-transitions",
+      "category": "improved",
+      "message": "Fade smoothly between pinned-tab outline colors as website colors become available"
+    }
+  ]
+}

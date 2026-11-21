@@ -1,0 +1,39 @@
+{
+  "entries": [
+    {
+      "id": "honor-extension-permission-revocation",
+      "category": "fixed",
+      "message": "Keep blocked and expired extension permissions disabled after reloads and restarts"
+    },
+    {
+      "id": "review-extension-access-and-copy-between-spaces",
+      "category": "new",
+      "message": "Choose extension access during installation and install independent copies in multiple Spaces"
+    },
+    {
+      "id": "single-browser-window-after-setup",
+      "category": "fixed",
+      "message": "Open a single browser window when finishing setup"
+    },
+    {
+      "id": "revalidate-extension-access-during-pending-operations",
+      "category": "fixed",
+      "message": "Honor changed extension permissions and locked Spaces during pending operations"
+    },
+    {
+      "id": "report-partial-extension-installation-success",
+      "category": "fixed",
+      "message": "Show successful extension installations when copies in other Spaces cannot be completed"
+    },
+    {
+      "id": "extension-idle-recovery-preserves-page-and-session-state",
+      "category": "fixed",
+      "message": "Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state."
+    },
+    {
+      "id": "automatic-development-publication-after-pr-merge",
+      "category": "internal",
+      "message": "Dispatch the development release workflow when a pull request is merged into main."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "keep-newly-visible-pages-loaded",
+      "category": "fixed",
+      "message": "Keep pages loaded when you switch to them in another window during memory cleanup"
+    }
+  ]
+}

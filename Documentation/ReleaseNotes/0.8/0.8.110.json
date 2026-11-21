@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-space-switcher",
+      "category": "new",
+      "message": "Click the Space in a Quick Window’s address bar to switch Spaces. The page reloads in the Space you choose, with that Space’s cookies and passwords, and Crest remembers the choice for that site."
+    }
+  ]
+}

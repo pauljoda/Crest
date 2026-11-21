@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "setup-style-applies-to-spaces",
+      "category": "fixed",
+      "message": "Choosing Modern or Simple during setup now restyles your Spaces as choosing it in Settings does, including the Spaces you already had and the ones setup imports, instead of leaving them with crests. Setup also opens on the style you use, and imports from Settings bring Spaces in that style."
+    }
+  ]
+}

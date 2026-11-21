@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "narrow-sidebar-navigation",
+      "category": "fixed",
+      "message": "On Mac, a narrow sidebar keeps back, forward and reload, drawing them closer together instead of hiding Forward.",
+      "platforms": ["mac"]
+    }
+  ]
+}

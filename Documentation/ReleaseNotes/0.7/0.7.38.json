@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "find-next-shortcut",
+      "category": "fixed",
+      "message": "Command-G and Command-Shift-G move to the next and previous find-in-page match, and reopen the find bar with your last search."
+    }
+  ]
+}

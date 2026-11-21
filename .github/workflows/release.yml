@@ -142,7 +142,7 @@ jobs:
           previous_release_note_state="$RUNNER_TEMP/${release_note_state_filename}"
           release_note_state_arguments=(
             marker
-            --catalog Documentation/ReleaseNotes.json
+            --catalog Documentation/ReleaseNotes
             --channel "$channel"
           )
           if git cat-file -e "FETCH_HEAD:${release_note_state_filename}" 2>/dev/null; then
@@ -686,7 +686,7 @@ jobs:
             'This branch is written by the production release workflow. Its signed stable, nightly, and development appcasts point only to notarized assets in GitHub Releases.' \
             > "$updates_checkout/README.md"
           python3 Scripts/release_note_publication.py advance \
-            --catalog Documentation/ReleaseNotes.json \
+            --catalog Documentation/ReleaseNotes \
             --state "$updates_checkout/$release_note_state_filename" \
             --channel "$RELEASE_CHANNEL" \
             --output "$updates_checkout/$release_note_state_filename"

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "icloud-sync-catches-up-on-open",
+      "category": "fixed",
+      "message": "iCloud sync catches up each time Crest opens. Changes made on your other devices while Crest was closed arrive, and changes waiting on this device upload, without tapping Sync Now."
+    },
+    {
+      "id": "icloud-sync-status-shows-waiting-uploads",
+      "category": "improved",
+      "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet."
+    }
+  ]
+}

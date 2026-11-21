@@ -53,62 +53,101 @@ enum BrowserAboutReleaseNoteCategory: String, Decodable, Sendable {
     case `internal`
 }
 
+enum BrowserAboutReleasePlatform: String, Decodable, Sendable {
+    case mac
+    case ios
+
+    static var current: BrowserAboutReleasePlatform {
+        #if os(macOS)
+            .mac
+        #else
+            .ios
+        #endif
+    }
+}
+
 struct BrowserAboutReleaseNote: Equatable, Identifiable, Sendable {
     let id: String
     let category: BrowserAboutReleaseNoteCategory
     let message: String
 }
 
+/// The release notes bundled with Crest: one file per version, under a folder
+/// for each release line, as `Documentation/ReleaseNotes` keeps them.
 struct BrowserAboutReleaseNotes: Sendable {
+    // MARK: - Types
+
     private struct Document: Decodable {
-        let entries: [String: Entry]
+        let entries: [Entry]
     }
 
     private struct Entry: Decodable {
+        let id: String
         let category: BrowserAboutReleaseNoteCategory
         let message: String
+        let platforms: [BrowserAboutReleasePlatform]?
     }
 
-    private(set) var entries: [BrowserAboutReleaseNote]
+    // MARK: - Static Variables
 
-    static let bundled = loadBundled()
+    static let bundled = BrowserAboutReleaseNotes(
+        directory: Bundle.main.url(forResource: "ReleaseNotes", withExtension: nil)
+    )
 
-    init(data: Data) throws {
-        let document = try JSONDecoder().decode(Document.self, from: data)
-        entries = document.entries.map { id, entry in
-            BrowserAboutReleaseNote(
-                id: id,
-                category: entry.category,
-                message: entry.message
-            )
+    // MARK: - Variables
+
+    /// Each version's notes file, newest version first.
+    private let versionFiles: [URL]
+
+    // MARK: - Initializers
+
+    init(directory: URL?) {
+        let fileManager = FileManager.default
+        let lines =
+            directory.flatMap {
+                try? fileManager.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil)
+            } ?? []
+        let files = lines.flatMap {
+            (try? fileManager.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil)) ?? []
         }
+        versionFiles =
+            files
+            .compactMap { file in Self.versionNumbers(of: file).map { (file, $0) } }
+            .sorted { $1.1.lexicographicallyPrecedes($0.1) }
+            .map(\.0)
     }
 
-    init(entries: [BrowserAboutReleaseNote]) {
-        self.entries = entries
-    }
+    // MARK: - Actions - Highlights
 
-    func currentHighlights(limit: Int = 12) -> [BrowserAboutReleaseNote] {
-        guard limit > 0 else { return [] }
-        return Array(
-            entries
-                .filter { $0.category != .internal }
-                .sorted { $0.id > $1.id }
-                .prefix(limit)
-        )
-    }
-
-    private static func loadBundled() -> BrowserAboutReleaseNotes {
-        guard
-            let url = Bundle.main.url(
-                forResource: "ReleaseNotes",
-                withExtension: "json"
-            ),
-            let data = try? Data(contentsOf: url),
-            let releaseNotes = try? BrowserAboutReleaseNotes(data: data)
-        else {
-            return BrowserAboutReleaseNotes(entries: [])
+    /// The newest public notes that reach this platform, reading only as many
+    /// version files as it takes.
+    func currentHighlights(
+        limit: Int = 12,
+        platform: BrowserAboutReleasePlatform = .current
+    ) -> [BrowserAboutReleaseNote] {
+        var highlights: [BrowserAboutReleaseNote] = []
+        for file in versionFiles where highlights.count < limit {
+            guard
+                let data = try? Data(contentsOf: file),
+                let document = try? JSONDecoder().decode(Document.self, from: data)
+            else { continue }
+            highlights += document.entries
+                .filter { entry in
+                    entry.category != .internal && entry.platforms?.contains(platform) != false
+                }
+                .map { entry in
+                    BrowserAboutReleaseNote(id: entry.id, category: entry.category, message: entry.message)
+                }
         }
-        return releaseNotes
+        return Array(highlights.prefix(limit))
+    }
+
+    // MARK: - Actions - Versions
+
+    private static func versionNumbers(of file: URL) -> [Int]? {
+        guard file.pathExtension == "json" else { return nil }
+        let parts = file.deletingPathExtension().lastPathComponent.split(separator: ".")
+        let numbers = parts.compactMap { Int($0) }
+        return numbers.count == 3 && parts.count == 3 ? numbers : nil
     }
 }

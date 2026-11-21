@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-30-webpage-spell-checking",
+      "category": "improved",
+      "message": "Check spelling on webpages without changing what you type"
+    },
+    {
+      "id": "2026-08-30-cross-platform-native-messaging-build",
+      "category": "internal",
+      "message": "Keep native messaging capability handling available across supported platforms"
+    }
+  ]
+}

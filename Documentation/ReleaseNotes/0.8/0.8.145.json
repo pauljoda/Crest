@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "extension-icon-click-closes-popup",
+      "category": "fixed",
+      "message": "Clicking an extension's icon while its popup is open now closes the popup instead of opening it again."
+    }
+  ]
+}

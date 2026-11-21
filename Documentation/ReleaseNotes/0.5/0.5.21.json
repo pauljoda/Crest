@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-02-extension-layer-hardening",
+      "category": "improved",
+      "message": "Improve extension compatibility across background messaging, notifications, page menus, and installation"
+    }
+  ]
+}

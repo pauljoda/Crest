@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "login-button-federated-sign-in-crash",
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when you press a site’s Login or Continue with Google button. Crest doesn’t offer Chrome’s federated sign-in, so these sites use their own sign-in pop-up or page where they have one, as they do in Safari."
+    }
+  ]
+}
