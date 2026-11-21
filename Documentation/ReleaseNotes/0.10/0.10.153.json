@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "feature-corners-use-radius-roles",
+      "category": "internal",
+      "message": "Corners in the Forge, About, download and sidebar preview views come from the shared corner radii or one named value each, with no visible change."
+    }
+  ]
+}

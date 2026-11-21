@@ -105,6 +105,9 @@ struct BrowserDownloadFeedbackLayer: View {
 }
 
 private struct BrowserDownloadFeedbackIcon: View {
+    /// The corner of the tile the download flies on, a quarter of its side.
+    private static let tileCornerRadius: CGFloat = 9
+
     let filename: String
     let source: CGPoint
     let destination: CGPoint
@@ -140,7 +143,7 @@ private struct BrowserDownloadFeedbackIcon: View {
         }
         .foregroundStyle(.primary)
         .frame(width: 36, height: 36)
-        .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 9)) }
+        .background { CrestSurfaceLayer(shape: .rect(cornerRadius: Self.tileCornerRadius)) }
         .crestElevation(.lifted)
     }
 

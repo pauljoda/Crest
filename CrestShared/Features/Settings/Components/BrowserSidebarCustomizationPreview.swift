@@ -8,6 +8,10 @@ import SwiftUI
 /// nothing else — the sidebar here is for looking at, so it declines to be
 /// rearranged or organized.
 struct BrowserSidebarCustomizationPreview: View {
+    /// The corner of the sidebar the preview stands as, when it draws its
+    /// own background.
+    private static let cornerRadius: CGFloat = 14
+
     var space: BrowserSpaceAppearance? = nil
     var showsPins = true
     var showsCurrentTabs = true
@@ -51,7 +55,7 @@ struct BrowserSidebarCustomizationPreview: View {
         .padding(.vertical, 12)
         .frame(maxWidth: BrowserChromeLayout.sidebarMaximumWidth)
         .background { background(for: branding) }
-        .clipShape(.rect(cornerRadius: showsBackground ? 14 : 0))
+        .clipShape(.rect(cornerRadius: showsBackground ? Self.cornerRadius : 0))
         .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .environment(\.sidebarSpacePresentation, context.map { presentation(of: $0) })
         .environment(\.browserInteractionCapabilities, capabilities)

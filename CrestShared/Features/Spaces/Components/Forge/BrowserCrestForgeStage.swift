@@ -24,7 +24,7 @@ struct BrowserCrestForgeStage: View {
     var body: some View {
         stage
             .overlay(alignment: .topTrailing) { tools }
-            .clipShape(.rect(cornerRadius: 16, style: .continuous))
+            .clipShape(.rect(cornerRadius: CrestRadius.card, style: .continuous))
             .environment(\.colorScheme, .dark)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("space-forge-stage")
@@ -247,8 +247,10 @@ private struct BrowserCrestForgeSwatch: View {
             }
             .frame(width: columnWidth)
             .padding(.vertical, 6)
-            .crestInteractiveSurface(isSelected: isOpen, isHovering: isHovering, cornerRadius: 10)
-            .contentShape(.rect(cornerRadius: 10))
+            .crestInteractiveSurface(
+                isSelected: isOpen, isHovering: isHovering, cornerRadius: BrowserCrestForgeMetrics.swatchCornerRadius
+            )
+            .contentShape(.rect(cornerRadius: BrowserCrestForgeMetrics.swatchCornerRadius))
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
@@ -265,6 +267,9 @@ enum BrowserCrestForgeMetrics {
     static let stageHeight: CGFloat = 284
     static let stageSpacing: CGFloat = 28
     static let swatchSize: CGFloat = 28
+    /// A swatch's hover and selection surface, a step between the compact
+    /// and control corners.
+    static let swatchCornerRadius: CGFloat = 10
     static let swatchColumnWidth: CGFloat = 62
     static let compactSwatchColumnWidth: CGFloat = 52
     static let compactSidebarSwatchColumnWidth: CGFloat = 76

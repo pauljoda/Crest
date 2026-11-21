@@ -159,7 +159,7 @@ struct BrowserCrestForge: View {
         } artwork: {
             BrowserSpaceBannerBackground(branding: context.preview { $0.wearPattern(pattern) })
                 .frame(width: 56, height: 48)
-                .clipShape(.rect(cornerRadius: 8))
+                .clipShape(.rect(cornerRadius: CrestRadius.compact))
         }
     }
 
