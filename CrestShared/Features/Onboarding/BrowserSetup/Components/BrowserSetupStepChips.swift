@@ -97,7 +97,7 @@ struct BrowserSetupStepChips: View {
                     .font(CrestTypography.display(size.title))
                     .lineLimit(1)
                     .fixedSize()
-                    .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                    .transition(.opacity.combined(with: .scale(scale: CrestMotion.entranceScale, anchor: .leading)))
             }
         }
         .foregroundStyle(isColored ? AnyShapeStyle(CrestBrandPalette.ink) : AnyShapeStyle(.secondary))

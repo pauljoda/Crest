@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "entrances-grow-from-eighty-percent",
+      "category": "improved",
+      "message": "Sidebar preview cards and the lists fan now start at 80% of their size and grow the rest of the way as they fade in, instead of growing out of a point. Buttons and controls that appear in place, such as the reset buttons and the gradient controls in the color picker, grow by the same amount."
+    }
+  ]
+}

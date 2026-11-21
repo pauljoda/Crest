@@ -146,12 +146,12 @@ struct CrestColorPopover: View {
             HStack {
                 if draft.isGradient {
                     CrestAngleKnob(degrees: $draft.degrees, diameter: CrestColorPopoverMetrics.control.height)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                 }
                 Spacer(minLength: 0)
                 if draft.isGradient {
                     CrestColorLinkToggle(isLinked: $isLinked)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                 }
             }
         }

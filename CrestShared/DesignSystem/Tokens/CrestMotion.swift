@@ -20,6 +20,10 @@ enum CrestMotion {
     /// The deliberate hold that distinguishes a long press from an ordinary
     /// tap: as long as the system waits before it opens a menu.
     static let longPressRecognitionDelay: TimeInterval = 0.5
+    /// How large a card, preview or control starts when it appears in
+    /// place, as a share of its own size. It grows the rest of the way as it
+    /// fades in, a small, quick change rather than growth out of a point.
+    static let entranceScale: CGFloat = 0.8
     /// Advancing or retreating a step in a multi-step flow.
     static let stepTransition: TimeInterval = 0.22
     /// A control acknowledging a press.
