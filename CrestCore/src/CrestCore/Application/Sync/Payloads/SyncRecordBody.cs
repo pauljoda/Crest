@@ -17,7 +17,7 @@ internal sealed class SyncRecordBody {
     public const int NewestSchema = 3;
 
     /// How deep a body may nest, as the journal reads it.
-    private static readonly JsonDocumentOptions Document = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions Document = JsonDepth.Session.Options;
 
     /// How a body's bytes spell text: as UTF-8, as the Apple clients write it,
     /// escaping only what JSON requires.

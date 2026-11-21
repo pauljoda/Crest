@@ -38,7 +38,7 @@ internal static class SitePermissionDocument {
         if (document is null || document.Length == 0) return [];
         JsonDocument parsed;
         try {
-            parsed = JsonDocument.Parse(document, new() { MaxDepth = 8 });
+            parsed = JsonDocument.Parse(document, JsonDepth.Preferences.Options);
         } catch (JsonException) {
             return [];
         }

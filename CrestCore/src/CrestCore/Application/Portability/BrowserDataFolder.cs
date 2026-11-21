@@ -24,7 +24,7 @@ internal sealed record BrowserDataFolder(Guid Id, TabPlacement Location, string 
     /// The folder a Space keeps, with its new identity and parent. Throws
     /// `ArchiveInvalid` for a title or symbol a Space would not keep.
     public FolderState Materialize(Guid id, Guid? parentId) {
-        if (!ImportText.IsKept(Title, ImportText.MaximumFolderTitle) || !ImportText.IsKept(Symbol, ImportText.MaximumSymbol))
+        if (!ImportText.IsKept(Title, FolderState.MaximumTitleLength) || !ImportText.IsKept(Symbol, ImportText.MaximumSymbol))
             throw BrowserDataValue.Invalid();
         return new(id, Location, Title, Symbol, Color, parentId, IsCollapsed, CollapseModifiedAt: null, OrderAnchorTabId, IsGroup);
     }

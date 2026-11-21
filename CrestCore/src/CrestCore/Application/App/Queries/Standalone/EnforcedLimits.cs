@@ -10,7 +10,7 @@ public sealed record EnforcedLimits() : StandaloneQuery<CapacityLimits> {
     #region Actions - Answering
 
     internal override CapacityLimits Answer(StandaloneContext context) => new(FolderTree.MaximumCount, FolderTree.MaximumDepth,
-        HistoryEntryState.MaximumEntries, BrowserTabCollection.MaximumSplitMembers, SpaceBranding.MaximumColorCount,
+        HistoryEntryState.MaximumEntries, SplitGroupState.MaximumMembers, SpaceBranding.MaximumColorCount,
         SpaceBranding.MaximumCrestPaletteCount, SessionState.MaximumSpaces, BrowserTabCollection.MaximumTabs, NativeSyncJournal.MaximumRecords,
         CredentialFile.MaximumBytes);
 

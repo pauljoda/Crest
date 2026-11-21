@@ -16,7 +16,7 @@ public sealed record ReadWebsiteData(Guid RequestId, Guid ProfileId, bool Epheme
         app.Turn(changes => {
             app.Device.RefuseLockedProfile(ProfileId);
             var host = Host is null ? null : SiteDataReads.SiteName(Host);
-            if (host is { Length: 0 or > DataDeletions.MaximumHostLength }) throw new Rejected(new InvalidSiteHost());
+            if (host is { Length: 0 or > SiteOrigin.MaximumDnsHostLength }) throw new Rejected(new InvalidSiteHost());
             app.SiteDataReads.Start(RequestId, ProfileId, Ephemeral, host, app.Device, changes, app.Issue);
         });
 

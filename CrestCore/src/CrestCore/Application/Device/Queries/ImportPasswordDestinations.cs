@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// brings its passwords and that the password belongs with. A Space that is
 /// gone or locked takes none. Throws `Rejected` with `NoSetup` when setup
 /// holds no review for the workspace.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record ImportPasswordDestinations(Guid WorkspaceId, IReadOnlyList<ImportPasswordSource> Passwords)
     : Query<ImportPasswordRoutes> {
     #region Actions - Answering

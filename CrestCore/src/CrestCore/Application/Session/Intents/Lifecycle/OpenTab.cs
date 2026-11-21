@@ -26,7 +26,7 @@ public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid
             throw new Rejected(new TabAlreadyExists(TabId));
         var edited = BrowserTabCollection.Restore(space);
         var tab = BrowserTab.Restore(workspace.NewTab(TabId, Content, Placement, turn.Now));
-        var asNewTab = PlacesAsNewTab && Placement == TabPlacement.Current;
+        var asNewTab = PlacesAsNewTab && !Placement.IsDurable;
         edited.InsertTab(tab, asNewTab ? workspace.PositionForNewTabs(turn.Basis).InsertionIndex
             : AfterTabId is { } origin ? edited.InsertionIndexAfter(origin) : null);
         if (asNewTab && AfterTabId is { } from && workspace.NewTabsJoinFolder(turn.Basis))

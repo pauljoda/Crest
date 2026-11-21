@@ -17,6 +17,8 @@ public sealed partial class BrowserContractsTests {
     private static void ShowAll(TestDevice device, Guid window, Guid space, params Guid[] tabs) {
         Load(device, window, space, device.Tab(window, space));
         foreach (var tab in tabs) {
+            // Each tab is shown a moment after the last, as a person shows them.
+            device.Clock.Now = device.Clock.Now.AddSeconds(1);
             device.Send(new ShowTab(window, space, tab));
             Load(device, window, space, tab);
         }

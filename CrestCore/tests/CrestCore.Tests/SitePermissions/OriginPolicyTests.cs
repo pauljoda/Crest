@@ -38,7 +38,7 @@ public sealed class OriginPolicyTests {
         Assert.False(new ExternalWebLink("file", null).IsAccepted);
         Assert.False(new ExternalWebLink("javascript", "example.com").IsAccepted);
         Assert.False(new ExternalWebLink(null, "example.com").IsAccepted);
-        Assert.False(new ExternalWebLink("https", new string('a', ExternalWebLink.MaximumHostLength + 1)).IsAccepted);
+        Assert.False(new ExternalWebLink("https", new string('a', SiteOrigin.MaximumHostLength + 1)).IsAccepted);
     }
 
     [Fact]

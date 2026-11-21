@@ -26,13 +26,13 @@ public sealed record AddSubSpace(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
         IReadOnlyList<TabState> pins = from.Settings.SeparatesPinnedTabs
             ? [.. from.Tabs.Where(tab => tab.IsPinned).Select(tab => Copy(tab, turn.Ids.Next(), turn.Now))] : [];
         var space = made with {
-            Settings = from.Settings with { Name = basis.NextName(from.Settings.Name) },
+            Settings = from.Settings with { Name = SpaceCustomization.NextName(from.Settings.Name, basis.Spaces.Select(space => space.Settings.Name)) },
             Tabs = [.. pins, .. made.Tabs],
             Membership = SpaceMembership.Joining(primary, turn.Now)
         };
         var spaces = basis.Spaces.ToList();
         spaces.Insert(spaces.IndexOf(from) + 1, space);
-        var pending = basis.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = basis.DeletingSpaceIds;
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId)).ShowSpace(space.Id).ShowTab(space.Id, made.Tabs[0].Id);
         return new(basis with { Spaces = SpaceGroup.Regrouped(spaces, pending) }, SyncStaging.Creation, followUp);
     }

@@ -5997,6 +5997,42 @@
     "ci-release-test-build": {
       "category": "internal",
       "message": "Continuous integration compiles each app and its tests in one Release build, with the test fixtures compiled into that build only."
+    },
+    "core-values-one-spelling": {
+      "category": "internal",
+      "message": "The core spells each limit, document depth, stored key and web scheme once, on the type that owns it."
+    },
+    "generator-and-test-epoch": {
+      "category": "internal",
+      "message": "The contract generator reads a record's identity from its own fact, and the core reads the 2001 reference date from the session codec everywhere."
+    },
+    "core-reads-its-clock": {
+      "category": "internal",
+      "message": "The core takes the time from the turn or its clock everywhere, so tests can set it."
+    },
+    "session-rules-one-place": {
+      "category": "internal",
+      "message": "Closing and deleting tabs, the Spaces being deleted, and numbered Sub-Space names each follow one rule in the core."
+    },
+    "charge-kind-codec": {
+      "category": "internal",
+      "message": "Each crest figure kind reads and writes its own stored form."
+    },
+    "can-send-session-intents": {
+      "category": "internal",
+      "message": "Asking whether the core would take an action accepts only session intents, so the type says what the check covers."
+    },
+    "filter-library-typed-state": {
+      "category": "internal",
+      "message": "Page resource kinds carry the request kind the content filter matches, and the filter library's saved state has one codec."
+    },
+    "core-files-by-rule": {
+      "category": "internal",
+      "message": "Two lone rejections join their concept files, the capacity limits file takes its record's name, and the palette's layout and source sets get files of their own."
+    },
+    "placement-facts": {
+      "category": "internal",
+      "message": "Core rules ask a tab section for the fact they mean, such as whether it outlives the session, instead of naming the section."
     }
   }
 }

@@ -56,7 +56,7 @@ public sealed partial class NativeSessionAuthority {
         Func<SplitGroupState, SplitGroupState> choose, Func<SplitGroupState, DateTimeOffset, SplitGroupState> stamp) {
         var space = Editable(basis, spaceId);
         var run = space.Tabs.SkipWhile(tab => tab.SplitGroupId != groupId).TakeWhile(tab => tab.SplitGroupId == groupId);
-        if (run.Take(2).Count() < 2) throw new Rejected(new UnknownSplitGroup(groupId));
+        if (run.Take(SplitGroupState.MinimumMembers).Count() < SplitGroupState.MinimumMembers) throw new Rejected(new UnknownSplitGroup(groupId));
         var existing = space.SplitGroups.FirstOrDefault(group => group.Id == groupId);
         var current = existing ?? new SplitGroupState(groupId);
         var chosen = choose(current);

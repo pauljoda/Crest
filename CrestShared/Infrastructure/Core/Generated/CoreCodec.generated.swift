@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x11, 0xff, 0xb7, 0x9c, 0x99, 0x8e, 0xdc, 0xeb, 0x33, 0xa8, 0x29, 0xd2, 0xd1, 0xd8, 0xe4, 0x02, 0x0c, 0xed, 0x9f, 0x8d, 0x0f, 0xe9, 0x9c, 0x00, 0x2f, 0x77, 0x45, 0xc9, 0xe0, 0x90, 0x19, 0x60
+        0xae, 0x73, 0xed, 0x8e, 0x52, 0xaa, 0xe8, 0xac, 0xa7, 0x25, 0x8d, 0xb2, 0x68, 0xda, 0xa1, 0x65, 0xb3, 0x5f, 0xa7, 0x02, 0xa4, 0x7f, 0x46, 0xeb, 0x53, 0xe7, 0xea, 0x21, 0x7b, 0x01, 0xc9, 0x72
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -515,6 +515,97 @@ enum CoreCodec {
         case 122: return try ImportReviewedSpaces(from: &reader)
         case 123: return try ImportSpaces(from: &reader)
         default: throw WireError.malformed("Intent tag \(tag) is not a ImportWorkspace")
+        }
+    }
+
+    static func decodeSessionIntent(from reader: inout WireReader) throws(WireError) -> any SessionIntent {
+        let tag = try reader.readTag()
+        switch tag {
+        case 5: return try AddSubSpace(from: &reader)
+        case 24: return try ApplyManualSetup(from: &reader)
+        case 26: return try ArchiveTransientPage(from: &reader)
+        case 31: return try BeginDeletingSpace(from: &reader)
+        case 49: return try ChooseTabIcon(from: &reader)
+        case 51: return try CleanUpCurrentTabs(from: &reader)
+        case 52: return try ClearCurrentTabs(from: &reader)
+        case 53: return try ClearHistory(from: &reader)
+        case 55: return try CloseTab(from: &reader)
+        case 56: return try CloseTabs(from: &reader)
+        case 70: return try CollapseAllFolders(from: &reader)
+        case 71: return try CollapseFolder(from: &reader)
+        case 72: return try CollapseSplit(from: &reader)
+        case 75: return try CreateFolder(from: &reader)
+        case 76: return try CreateSpace(from: &reader)
+        case 81: return try DeleteFolder(from: &reader)
+        case 82: return try DeleteFolderAndContents(from: &reader)
+        case 85: return try DeleteTab(from: &reader)
+        case 86: return try DeleteTabs(from: &reader)
+        case 89: return try DissolveSplit(from: &reader)
+        case 90: return try DropAroundTab(from: &reader)
+        case 91: return try DropIntoList(from: &reader)
+        case 92: return try DropIntoSplit(from: &reader)
+        case 93: return try DropOnSpace(from: &reader)
+        case 94: return try DuplicateTab(from: &reader)
+        case 95: return try DuplicateTabs(from: &reader)
+        case 99: return try ExpandSavedTabs(from: &reader)
+        case 102: return try FileTabs(from: &reader)
+        case 108: return try FinishDeletingSpace(from: &reader)
+        case 114: return try FolderTabs(from: &reader)
+        case 115: return try FolderTabsAround(from: &reader)
+        case 121: return try ImportAppPreferences(from: &reader)
+        case 122: return try ImportReviewedSpaces(from: &reader)
+        case 123: return try ImportSpaces(from: &reader)
+        case 129: return try JoinSpace(from: &reader)
+        case 130: return try JoinSplit(from: &reader)
+        case 131: return try KeepPageLoaded(from: &reader)
+        case 132: return try KeepTabsLoaded(from: &reader)
+        case 134: return try LeaveSplit(from: &reader)
+        case 141: return try MoveFolder(from: &reader)
+        case 142: return try MoveFolderToSpace(from: &reader)
+        case 147: return try MoveSplitMember(from: &reader)
+        case 148: return try MoveTab(from: &reader)
+        case 149: return try MoveTabToSpace(from: &reader)
+        case 150: return try MoveTabToWindow(from: &reader)
+        case 151: return try MoveTabsToSpace(from: &reader)
+        case 152: return try NameSplit(from: &reader)
+        case 154: return try NavigateTab(from: &reader)
+        case 160: return try OpenAddress(from: &reader)
+        case 162: return try OpenLinkInSplit(from: &reader)
+        case 164: return try OpenTab(from: &reader)
+        case 173: return try PromoteTransientPage(from: &reader)
+        case 174: return try PutAwayTabs(from: &reader)
+        case 187: return try RemoveHistoryAddress(from: &reader)
+        case 192: return try RenameFolder(from: &reader)
+        case 193: return try RenameTab(from: &reader)
+        case 194: return try ReopenClosedTab(from: &reader)
+        case 195: return try ReorderSpaces(from: &reader)
+        case 196: return try ReplaceSavedAddress(from: &reader)
+        case 203: return try ResetPrivateBrowsing(from: &reader)
+        case 212: return try RestoreArchivedTab(from: &reader)
+        case 217: return try ReturnToSavedAddress(from: &reader)
+        case 223: return try SeparateSpace(from: &reader)
+        case 224: return try SeparateSplits(from: &reader)
+        case 227: return try SetAppPreferences(from: &reader)
+        case 228: return try SetBrowsingPreferences(from: &reader)
+        case 231: return try SetCredentialPreferences(from: &reader)
+        case 235: return try SetDefaultSpace(from: &reader)
+        case 238: return try SetFolderColor(from: &reader)
+        case 239: return try SetFolderGroup(from: &reader)
+        case 240: return try SetFolderSymbol(from: &reader)
+        case 247: return try SetSeparatePinnedTabs(from: &reader)
+        case 249: return try SetSpaceAccess(from: &reader)
+        case 250: return try SetSpaceBranding(from: &reader)
+        case 251: return try SetSpaceIdentity(from: &reader)
+        case 252: return try SetSpaceSearch(from: &reader)
+        case 253: return try SetSplitIcon(from: &reader)
+        case 254: return try SetTranslationRule(from: &reader)
+        case 264: return try ShowStartPage(from: &reader)
+        case 266: return try SplitTabs(from: &reader)
+        case 271: return try StepSplitMember(from: &reader)
+        case 274: return try SweepExpiredRecords(from: &reader)
+        case 275: return try TintSplit(from: &reader)
+        case 277: return try TogglePin(from: &reader)
+        default: throw WireError.malformed("Intent tag \(tag) is not a SessionIntent")
         }
     }
 }
@@ -4136,7 +4227,7 @@ extension CanReturnToSavedAddress {
 
 extension CanSend {
     init(from reader: inout WireReader) throws(WireError) {
-        let intent = try CoreCodec.decodeIntent(from: &reader)
+        let intent = try CoreCodec.decodeSessionIntent(from: &reader)
         self.init(intent: intent)
     }
 
@@ -27597,20 +27688,6 @@ extension PageMixedContent {
     }
 }
 
-extension PageResourceKind {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = PageResourceKind(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown PageResourceKind \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension PageScriptWorld {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -28846,6 +28923,20 @@ extension PagePresentation {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown PagePresentation \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension PageResourceKind {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown PageResourceKind \(tag)")
         }
         self = Self.all[tag]
     }

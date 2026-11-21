@@ -6,7 +6,7 @@ import Foundation
 struct BrowserTabBatch {
     // MARK: - Variables
 
-    let intent: any Intent
+    let intent: any SessionIntent
     /// What the window's multi-selection holds once the action is done.
     let reselection: BrowserTabReselection
     /// Whether the action closes the selected tabs' pages, which may first
@@ -19,7 +19,7 @@ struct BrowserTabBatch {
     // MARK: - Initializers
 
     init(
-        _ intent: any Intent, reselection: BrowserTabReselection, closesPages: Bool = false,
+        _ intent: any SessionIntent, reselection: BrowserTabReselection, closesPages: Bool = false,
         destination: BrowserSpaceRuntimeAssignment? = nil
     ) {
         self.intent = intent

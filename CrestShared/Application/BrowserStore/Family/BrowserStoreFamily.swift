@@ -202,7 +202,7 @@ final class BrowserStoreFamily {
     /// issues, asked without changing anything. This is how menus ask the
     /// core's rules, such as a folder's depth or a split's size, instead of
     /// keeping copies of them.
-    func canSend(_ intent: some Intent, from source: BrowserStore) -> Bool {
+    func canSend(_ intent: some SessionIntent, from source: BrowserStore) -> Bool {
         guard let permission = try? source.core.query(CanSend(intent: intent)) else { return false }
         return permission.refusal == nil
     }
@@ -210,7 +210,7 @@ final class BrowserStoreFamily {
     /// The rule that would refuse a session intent `source`'s window issues,
     /// asked without changing anything, or nil when the core would accept it
     /// or could not answer.
-    func refusal(of intent: some Intent, from source: BrowserStore) -> Rejection? {
+    func refusal(of intent: some SessionIntent, from source: BrowserStore) -> Rejection? {
         (try? source.core.query(CanSend(intent: intent)))?.refusal
     }
 

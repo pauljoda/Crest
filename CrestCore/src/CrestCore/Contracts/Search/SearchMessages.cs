@@ -85,6 +85,14 @@ public sealed record UnsuitableDefaultSearch() : Rejection {
 
 #endregion
 
+#region Rejections
+
+/// The Space has no usable custom search engine with this identity, or the
+/// intent named no engine or two.
+public sealed record UnknownSearchEngine(Guid? EngineId) : Rejection;
+
+#endregion
+
 #region Changes
 
 /// The device's search catalog, published whole whenever it changes, with

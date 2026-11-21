@@ -15,7 +15,7 @@ public sealed record ReorderSpaces(Guid WorkspaceId, IReadOnlyList<Guid> SpaceId
         var byId = turn.Basis.Spaces.ToDictionary(space => space.Id);
         if (SpaceIds.Count != byId.Count || SpaceIds.Distinct().Count() != byId.Count || SpaceIds.Any(id => !byId.ContainsKey(id)))
             throw new Rejected(new InvalidSpaceOrder());
-        var pending = turn.Basis.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = turn.Basis.DeletingSpaceIds;
         var spaces = SpaceGroup.Regrouped([.. SpaceIds.Select(id => byId[id])], pending);
         return new(turn.Basis.Spaces.SequenceEqual(spaces) ? turn.Basis : turn.Basis with { Spaces = spaces }, SyncStaging.Edit);
     }

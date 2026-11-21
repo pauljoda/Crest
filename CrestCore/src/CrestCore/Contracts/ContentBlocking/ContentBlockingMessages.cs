@@ -90,14 +90,6 @@ public sealed record FilterLists(ContentBlockingLevel Level, bool IsCustomized, 
 public sealed record SiteContentBlocking(Guid SpaceId, SiteOrigin Origin);
 
 /// What an element of a document loads from its address.
-public enum PageResourceKind {
-    /// A frame's document.
-    Frame,
-    /// An image.
-    Image,
-    /// An embedded object or plug-in.
-    Object
-}
 
 /// An element of a document that loads from `Url`, which the content filter
 /// may block, leaving the element an empty box.

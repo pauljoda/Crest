@@ -63,8 +63,11 @@ public sealed record SessionState(
             [.. new[] { space.OwnProfileId, space.ProfileId }.Distinct().Where(profile => !kept.Contains(profile))]);
     }
 
+    /// The Spaces this device is deleting, which every rule leaves as they are.
+    internal HashSet<Guid> DeletingSpaceIds => [.. SpaceDeletions.Select(deletion => deletion.SpaceId)];
+
     /// The groups of the Spaces, in order; see `SpaceGroup`.
-    internal IReadOnlyList<SpaceGroup> Groups => SpaceGroup.Of(Spaces, SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet());
+    internal IReadOnlyList<SpaceGroup> Groups => SpaceGroup.Of(Spaces, DeletingSpaceIds);
 
     /// The session with `edited` in place of its Space, and `setting` copied
     /// from it to every other Space of its group; see `GroupSetting`.
@@ -82,24 +85,12 @@ public sealed record SessionState(
     /// Whether the Space `spaceId` names leads a Sub-Space that stays.
     internal bool Leads(Guid spaceId) => Spaces.Any(space => space.PrimaryId == spaceId && PendingDeletion(space.Id) is null);
 
-    /// `name` with the next number no Space's name wears: "Work" and "Work 2"
-    /// both give "Work 2" while no Space is named that, else "Work 3", and on.
-    internal string NextName(string name) {
-        var trimmed = name.TrimEnd();
-        var space = trimmed.LastIndexOf(' ');
-        var stem = space > 0 && int.TryParse(trimmed.AsSpan(space + 1), out _) ? trimmed[..space] : trimmed;
-        var taken = Spaces.Select(candidate => candidate.Settings.Name.Trim()).ToHashSet(StringComparer.CurrentCultureIgnoreCase);
-        var number = 2;
-        while (taken.Contains($"{stem} {number}")) number++;
-        return $"{stem} {number}";
-    }
-
     /// The session once `successor` takes `group` over from its primary at
     /// `now`, as the primary's deletion begins; see `SpaceGroup.HandedTo`. The
     /// group then sits where its new primary does.
     internal SessionState HandingOver(SpaceGroup group, SpaceState successor, DateTimeOffset now) {
         var handed = Replacing([.. group.HandedTo(successor, now)]);
-        HashSet<Guid> pending = [.. SpaceDeletions.Select(deletion => deletion.SpaceId), group.Primary.Id];
+        HashSet<Guid> pending = [.. DeletingSpaceIds, group.Primary.Id];
         return handed with { Spaces = SpaceGroup.Regrouped(handed.Spaces, pending) };
     }
 

@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// `FallbackName` is the person's word for a Space, which names the file when
 /// the Space's name has no letters or digits. The core keeps nothing of it.
 [HoldsSecrets]
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record CredentialExport(IReadOnlyList<ExportedCredential> Credentials, string SpaceName, string FallbackName)
     : Query<CredentialExportFile> {
     #region Actions - Text

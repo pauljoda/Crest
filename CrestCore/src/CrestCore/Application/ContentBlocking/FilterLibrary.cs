@@ -26,7 +26,57 @@ internal sealed class FilterLibrary {
     /// list says a copy stays current; how many attempts in a row failed; and,
     /// for a list, what it calls itself.
     private sealed record Copy(string? Digest, string? EntityTag, string? LastModified, DateTimeOffset? UpdatedAt,
-        DateTimeOffset DueAt, TimeSpan Refresh, int Failures, string? Title = null, bool TooLarge = false);
+        DateTimeOffset DueAt, TimeSpan Refresh, int Failures, string? Title = null, bool TooLarge = false) {
+        #region Types
+
+        /// How the library's state file spells a copy's members.
+        private static class Key {
+            public const string Digest = "digest";
+            public const string EntityTag = "entityTag";
+            public const string LastModified = "lastModified";
+            public const string UpdatedAt = "updatedAt";
+            public const string DueAt = "dueAt";
+            public const string Refresh = "refresh";
+            public const string Failures = "failures";
+            public const string Title = "title";
+            public const string TooLarge = "tooLarge";
+        }
+
+        #endregion
+
+        #region Actions - Coding
+
+        /// The copy as the library's state file keeps it.
+        public JsonObject Encoded() => new() {
+            [Key.Digest] = Digest,
+            [Key.EntityTag] = EntityTag,
+            [Key.LastModified] = LastModified,
+            [Key.UpdatedAt] = UpdatedAt?.ToUnixTimeSeconds(),
+            [Key.DueAt] = DueAt.ToUnixTimeSeconds(),
+            [Key.Refresh] = (long)Refresh.TotalSeconds,
+            [Key.Failures] = Failures,
+            [Key.Title] = Title,
+            [Key.TooLarge] = TooLarge
+        };
+
+        /// The copy the state file kept in `state`; a member it lacks takes
+        /// its default, and a missing refresh takes `usualRefresh`.
+        public static Copy Decoded(JsonObject state, TimeSpan usualRefresh) {
+            long? updated = state[Key.UpdatedAt]?.GetValue<long>();
+            return new(state[Key.Digest]?.GetValue<string>(), state[Key.EntityTag]?.GetValue<string>(),
+                state[Key.LastModified]?.GetValue<string>(), updated is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null,
+                DateTimeOffset.FromUnixTimeSeconds(state[Key.DueAt]?.GetValue<long>() ?? 0),
+                TimeSpan.FromSeconds(state[Key.Refresh]?.GetValue<long>() ?? (long)usualRefresh.TotalSeconds),
+                state[Key.Failures]?.GetValue<int>() ?? 0, state[Key.Title]?.GetValue<string>(),
+                state[Key.TooLarge]?.GetValue<bool>() ?? false);
+        }
+
+        /// The digest a kept state names, read before the rest so a copy
+        /// whose text is gone can be left out.
+        public static string? DigestIn(JsonObject state) => state[Key.Digest]?.GetValue<string>();
+
+        #endregion
+    }
 
     /// One thing the library downloads: a catalog list or one the person
     /// added, named on the device by `Name` and on the wire by `Id`.
@@ -86,6 +136,11 @@ internal sealed class FilterLibrary {
     private static readonly TimeSpan UsualRefresh = TimeSpan.FromDays(4);
     private static readonly TimeSpan FirstRetry = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan LongestRetry = TimeSpan.FromHours(12);
+    /// The most times a failed download's retry wait doubles from the first.
+    private const int MostRetryDoublings = 16;
+    /// How much later than its refresh a copy is due at most, as a share of
+    /// the refresh, so devices do not all ask at once.
+    private const double RefreshSpread = 0.1;
     /// How long a download the core handed out keeps the list from being
     /// handed out again.
     private static readonly TimeSpan FetchLease = TimeSpan.FromMinutes(10);
@@ -375,7 +430,7 @@ internal sealed class FilterLibrary {
         lock (gate) {
             var copy = copies.GetValueOrDefault(source.Name) ?? new(null, null, null, null, now, UsualRefresh, 0);
             int failures = copy.Failures + 1;
-            var retry = TimeSpan.FromTicks(Math.Min(LongestRetry.Ticks, FirstRetry.Ticks << Math.Min(failures - 1, 16)));
+            var retry = TimeSpan.FromTicks(Math.Min(LongestRetry.Ticks, FirstRetry.Ticks << Math.Min(failures - 1, MostRetryDoublings)));
             copies[source.Name] = copy with { DueAt = now + retry, Failures = failures, TooLarge = tooLarge || copy.TooLarge };
             leases.Remove(source.Name);
             SaveState();
@@ -421,10 +476,10 @@ internal sealed class FilterLibrary {
         return refresh < ShortestRefresh ? ShortestRefresh : refresh > LongestRefresh ? LongestRefresh : refresh;
     }
 
-    /// When a copy brought up to date `now` is due, spread over a tenth of
-    /// its refresh so devices do not all ask at once.
+    /// When a copy brought up to date `now` is due, spread over
+    /// `RefreshSpread` of its refresh.
     private static DateTimeOffset Next(DateTimeOffset now, TimeSpan refresh) =>
-        now + refresh + TimeSpan.FromTicks((long)(refresh.Ticks * 0.1 * Random.Shared.NextDouble()));
+        now + refresh + TimeSpan.FromTicks((long)(refresh.Ticks * RefreshSpread * Random.Shared.NextDouble()));
 
     #endregion
 
@@ -687,7 +742,7 @@ internal sealed class FilterLibrary {
         var style = new StringBuilder();
         foreach (var selector in site.Concat(generic).Distinct())
             style.Append(selector).Append("{display:none!important}\n");
-        var collapse = resources.Where(resource => current.Blocks(new ContentFilter.Request(resource.Url, url, KindOf(resource.Kind))))
+        var collapse = resources.Where(resource => current.Blocks(new ContentFilter.Request(resource.Url, url, resource.Kind.RequestKind)))
             .Select(resource => resource.Url).Distinct();
         return new(true, style.ToString(), first ? page.ProceduralActions : [], [.. collapse]);
     }
@@ -724,12 +779,6 @@ internal sealed class FilterLibrary {
     }
 
     /// What the filter calls the load of an element of `kind`.
-    private static ContentFilter.RequestKind KindOf(PageResourceKind kind) => kind switch {
-        PageResourceKind.Frame => ContentFilter.RequestKind.Subdocument,
-        PageResourceKind.Image => ContentFilter.RequestKind.Image,
-        _ => ContentFilter.RequestKind.Object,
-    };
-
     /// Compiles the engine filter again unless the one in force matches the
     /// lists: at once from what an earlier compile saved, or on a worker. A
     /// stopped library compiles nothing.
@@ -882,17 +931,7 @@ internal sealed class FilterLibrary {
         if (folder is null || closed) return;
         var lists = new JsonObject();
         foreach (var (name, copy) in copies)
-            lists[name] = new JsonObject {
-                ["digest"] = copy.Digest,
-                ["entityTag"] = copy.EntityTag,
-                ["lastModified"] = copy.LastModified,
-                ["updatedAt"] = copy.UpdatedAt?.ToUnixTimeSeconds(),
-                ["dueAt"] = copy.DueAt.ToUnixTimeSeconds(),
-                ["refresh"] = (long)copy.Refresh.TotalSeconds,
-                ["failures"] = copy.Failures,
-                ["title"] = copy.Title,
-                ["tooLarge"] = copy.TooLarge
-            };
+            lists[name] = copy.Encoded();
         try {
             WriteAtomically(Path.Combine(folder, "state.json"), Encoding.UTF8.GetBytes(new JsonObject { ["lists"] = lists }.ToJsonString()));
             if (publishedKey is not null)
@@ -917,15 +956,8 @@ internal sealed class FilterLibrary {
             bool known = FilterList.Named(name) is not null || name == ResourcesName || name == LinkTrackingName
                 || name.StartsWith("custom-", StringComparison.Ordinal);
             if (!known || value is not JsonObject state) continue;
-            string? digest = state["digest"]?.GetValue<string>();
-            if (digest is not null && !File.Exists(Path.Combine(folder, "lists", name + ".txt"))) continue;
-            long? updated = state["updatedAt"]?.GetValue<long>();
-            copies[name] = new(digest, state["entityTag"]?.GetValue<string>(), state["lastModified"]?.GetValue<string>(),
-                updated is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null,
-                DateTimeOffset.FromUnixTimeSeconds(state["dueAt"]?.GetValue<long>() ?? 0),
-                TimeSpan.FromSeconds(state["refresh"]?.GetValue<long>() ?? (long)UsualRefresh.TotalSeconds),
-                state["failures"]?.GetValue<int>() ?? 0, state["title"]?.GetValue<string>(),
-                state["tooLarge"]?.GetValue<bool>() ?? false);
+            if (Copy.DigestIn(state) is not null && !File.Exists(Path.Combine(folder, "lists", name + ".txt"))) continue;
+            copies[name] = Copy.Decoded(state, UsualRefresh);
         }
     }
 

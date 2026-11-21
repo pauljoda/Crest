@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -37,7 +38,7 @@ internal sealed record BrowserDataTab(Guid Id, string Title, NativeTabContent? N
     /// it joins, which `folders` and `splits` map from the file's. Throws
     /// `ArchiveInvalid` for anything a Space would not keep.
     public TabState Materialize(Guid id, IReadOnlyDictionary<Guid, Guid> folders, IReadOnlyDictionary<Guid, Guid> splits) {
-        Require(ImportText.IsKept(Title, ImportText.MaximumTitle) && ImportText.IsKept(Symbol, ImportText.MaximumSymbol));
+        Require(ImportText.IsKept(Title, BrowserTab.MaximumTitleLength) && ImportText.IsKept(Symbol, ImportText.MaximumSymbol));
         if (NativeContent is { } native)
             Require(ImportText.IsKept(native.Kind, MaximumNativeKind) && Url is null && SavedUrl is null);
         Require(ImportAddress.TryReadStored(Url, removesFragment: false, out var url));

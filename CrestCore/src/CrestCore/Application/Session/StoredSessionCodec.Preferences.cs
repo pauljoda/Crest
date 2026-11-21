@@ -231,7 +231,7 @@ internal static partial class StoredSessionCodec {
     private static JsonNode? RawTranslationRules(string? text) {
         if (text is null) return null;
         try {
-            return JsonNode.Parse(text, documentOptions: new() { MaxDepth = 8 });
+            return JsonNode.Parse(text, documentOptions: JsonDepth.Preferences.Options);
         } catch (JsonException) {
             return null;
         }

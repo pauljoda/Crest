@@ -53,7 +53,7 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
 
     /// Whether a group may sit in `location` under `parent`: only at the top
     /// level of the open tabs.
-    public static bool PlacesGroup(TabPlacement location, Guid? parent) => location == TabPlacement.Current && parent is null;
+    public static bool PlacesGroup(TabPlacement location, Guid? parent) => !location.IsDurable && parent is null;
 
     /// `source` with every group that breaks a group's shape made a folder: one
     /// inside a folder, one holding a folder, or one outside the open tabs, as

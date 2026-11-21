@@ -121,7 +121,7 @@ public sealed partial class BrowserTabCollection {
     internal void NormalizeSplits(DateTimeOffset now) {
         RepairSplitMembership();
         foreach (var group in tabs.Where(t => t.SplitGroupId is not null).GroupBy(t => t.SplitGroupId))
-            if (group.Count() < 2) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
+            if (group.Count() < SplitGroupState.MinimumMembers) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
     }
 
     /// Files `tabId`, a tab just opened from `origin`, at the end of the folder
@@ -235,7 +235,7 @@ public sealed partial class BrowserTabCollection {
     /// blank one.
     private static string FolderName(string name) {
         var trimmed = name.Trim();
-        if (trimmed.Length > BrowserTabCollection.MaximumNameLength) throw new Rejected(new InvalidName(BrowserTabCollection.MaximumNameLength));
+        if (trimmed.Length > FolderState.MaximumTitleLength) throw new Rejected(new InvalidName(FolderState.MaximumTitleLength));
         return trimmed.Length == 0 ? FolderState.UntitledTitle : trimmed;
     }
 

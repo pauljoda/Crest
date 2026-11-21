@@ -7,9 +7,6 @@ namespace CrestCore.Application;
 internal static class ImportText {
     #region Static Variables
 
-    public const int MaximumSpaceName = 200;
-    public const int MaximumFolderTitle = 500;
-    public const int MaximumTitle = 4_096;
     public const int MaximumSymbol = 128;
 
     #endregion

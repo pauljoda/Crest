@@ -1493,7 +1493,7 @@ struct CanReturnToSavedAddress: Query, Equatable, Sendable {
 struct CanSend: Query, Sendable {
     typealias Answer = SendPermission
 
-    let intent: any Intent
+    let intent: any SessionIntent
 }
 
 struct CanTearOff: Query, Equatable, Sendable {
@@ -2111,8 +2111,6 @@ struct CredentialImportPreview: Query, Equatable, Sendable {
 }
 
 struct CredentialOrigin: Equatable, Sendable {
-    static let maximumHostLength: Int = 1024
-
     var scheme: String
     var host: String
     var port: Int
@@ -3185,6 +3183,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     static let maximumDepth: Int = 16
     static let defaultSymbol: String = "folder"
     static let untitledTitle: String = "Untitled Folder"
+    static let maximumTitleLength: Int = 500
     static let defaultColor = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
 
     let id: UUID
@@ -6753,6 +6752,7 @@ struct SpaceCrest: Equatable, Sendable {
 
 struct SpaceCustomization: Equatable, Sendable {
     static let untitledName: String = "Untitled Space"
+    static let maximumNameLength: Int = 200
 
     var name: String
     var symbol: String
@@ -6988,7 +6988,8 @@ struct SplitDropTarget: Equatable, Sendable {
 }
 
 struct SplitGroupState: Equatable, Sendable, Identifiable {
-    static let minimumShownMembers: Int = 2
+    static let minimumMembers: Int = 2
+    static let maximumMembers: Int = 4
 
     let id: UUID
     let customTitle: String?
@@ -8036,12 +8037,6 @@ struct PageMixedContent: OptionSet, Sendable {
     static let ran = PageMixedContent(rawValue: 1)
     static let displayed = PageMixedContent(rawValue: 2)
     static let form = PageMixedContent(rawValue: 4)
-}
-
-enum PageResourceKind: Int, CaseIterable, Sendable {
-    case frame = 0
-    case image = 1
-    case object = 2
 }
 
 enum PageScriptWorld: Int, CaseIterable, Sendable {
@@ -10721,7 +10716,7 @@ struct CrestBackplate: Hashable, Sendable {
 }
 
 /// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `normalize`.
+/// Core-only behavior, not emitted: `normalize`, `read`, `write`.
 struct CrestChargeKind: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
@@ -15983,6 +15978,44 @@ struct PagePresentation: Hashable, Sendable {
     }
 
     static func == (lhs: PagePresentation, rhs: PagePresentation) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `PageResourceKind`. A member's wire tag is its index in `all`.
+struct PageResourceKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let frame = PageResourceKind(tag: 0, name: "frame")
+    static let image = PageResourceKind(tag: 1, name: "image")
+    static let object = PageResourceKind(tag: 2, name: "object")
+
+    static let all: [PageResourceKind] = [frame, image, object]
+
+    static func named(_ name: String?) -> PageResourceKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PageResourceKind, rhs: PageResourceKind) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -26024,15 +26057,16 @@ struct WebScheme: Hashable, Sendable {
     var name: String { facts.name }
     var defaultPort: Int { facts.defaultPort }
     var isSecure: Bool { facts.isSecure }
+    var prefix: String { facts.prefix }
     private let facts: Facts
 
-    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool) {
+    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool, prefix: String) {
         self.tag = tag
-        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure)
+        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure, prefix: prefix)
     }
 
-    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false)
-    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true)
+    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false, prefix: "http://")
+    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true, prefix: "https://")
 
     static let all: [WebScheme] = [http, https]
 
@@ -26052,11 +26086,13 @@ struct WebScheme: Hashable, Sendable {
         let name: String
         let defaultPort: Int
         let isSecure: Bool
+        let prefix: String
 
-        init(name: String, defaultPort: Int, isSecure: Bool) {
+        init(name: String, defaultPort: Int, isSecure: Bool, prefix: String) {
             self.name = name
             self.defaultPort = defaultPort
             self.isSecure = isSecure
+            self.prefix = prefix
         }
     }
 }

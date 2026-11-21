@@ -63,7 +63,7 @@ internal static partial class StoredSessionCodec {
     /// the newest entries it may keep, or none when the bytes do not decode.
     internal static IReadOnlyList<HistoryEntryState> DecodeInstalledHistory(ReadOnlySpan<byte> entries) {
         try {
-            return JsonNode.Parse(entries, documentOptions: new() { MaxDepth = 64 }) is JsonArray history
+            return JsonNode.Parse(entries, documentOptions: JsonDepth.Session.Options) is JsonArray history
                 ? [.. history.Take(HistoryEntryState.MaximumEntries).Select(DecodeHistoryEntry)]
                 : [];
         } catch (Exception error) when (error is System.Text.Json.JsonException or BrowserRuleException or InvalidOperationException

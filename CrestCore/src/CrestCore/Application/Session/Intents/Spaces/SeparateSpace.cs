@@ -21,7 +21,7 @@ public sealed record SeparateSpace(Guid WorkspaceId, Guid SpaceId) : SessionInte
         var spaces = basis.Spaces.Where(candidate => candidate.Id != space.Id).ToList();
         var last = spaces.FindLastIndex(candidate => candidate.Id == primaryId || candidate.PrimaryId == primaryId);
         spaces.Insert(last + 1, separated);
-        var pending = basis.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = basis.DeletingSpaceIds;
         return new(basis with { Spaces = SpaceGroup.Regrouped(spaces, pending) }, SyncStaging.Edit);
     }
 
