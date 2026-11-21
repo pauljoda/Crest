@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// open in a new tab in front or behind. The page's tab, how a page with no
 /// tab presents, the gesture and this device's link preferences decide it. A
 /// page the core does not host loads the link itself.
-public sealed record LinkNavigation(Guid PageId, string? Url, LinkGesture Gesture) : Query<LinkNavigationAnswer> {
+internal sealed record LinkNavigation(Guid PageId, string? Url, LinkGesture Gesture) : Query<LinkNavigationAnswer> {
     #region Actions - Answering
 
     /// An engine's link activation asks the device the same question.

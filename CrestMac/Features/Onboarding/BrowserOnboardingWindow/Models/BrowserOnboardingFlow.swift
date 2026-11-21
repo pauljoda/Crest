@@ -84,30 +84,6 @@ final class BrowserOnboardingFlow {
         return spaces
     }
 
-    /// The Space the person is looking at in the review.
-    var shownReviewSpaceID: UUID? {
-        get { review?.shownSpaceID }
-        set {
-            guard let newValue, newValue != review?.shownSpaceID else { return }
-            send(ShowImportSpace(sourceSpaceID: newValue))
-        }
-    }
-
-    var completionSummary: [LocalizedStringResource] {
-        state?.summary.map(BrowserOnboardingSummary.completed) ?? []
-    }
-
-    /// What the review's last Space offers: importing and going on to the
-    /// next chosen browser, or importing alone.
-    var importReviewActionTitle: LocalizedStringResource {
-        state?.queue?.hasMoreAfterCurrent == true
-            ? LocalizedStringResource(
-                "Import & Continue",
-                comment: "Button that imports the current browser and continues to the next selected browser.")
-            : LocalizedStringResource(
-                "Import", comment: "Button that imports the reviewed data from the final browser.")
-    }
-
     // MARK: - Initializers
 
     /// A flow for `request` over `browser`'s workspace. It sends the core
@@ -229,13 +205,6 @@ final class BrowserOnboardingFlow {
         send(ShowSetupStep(step: step))
     }
 
-    /// Sets Spaces up by hand, leaving any read that has not finished.
-    func beginManualSetup() {
-        guard !isCommittingImport else { return }
-        abandonImportPreparation()
-        send(ShowSetupStep(step: .manualSetup))
-    }
-
     /// Finishes setup: the core applies the manual setup and completes setup
     /// on this device, and the guide opens where the core names it.
     func completeSetup(
@@ -271,12 +240,6 @@ final class BrowserOnboardingFlow {
         guard !isImportSelectionLocked else { return }
         send(ContinueImport())
         readCurrentSource()
-    }
-
-    func cancelImportRead() {
-        importReadCoordinator.cancel()
-        isChoosingDataAccess = false
-        send(CancelImportRead())
     }
 
     // MARK: - Actions - Reading
@@ -400,14 +363,6 @@ final class BrowserOnboardingFlow {
         send(IncludeImportTabs(sourceSpaceID: sourceSpaceID, tabIDs: Array(tabIDs), included: isIncluded))
     }
 
-    func setPlacement(_ placement: TabPlacement, for tabID: UUID, in sourceSpaceID: UUID) {
-        send(PlaceImportTab(sourceSpaceID: sourceSpaceID, tabID: tabID, placement: placement))
-    }
-
-    func setSpaceIncluded(_ isIncluded: Bool, in sourceSpaceID: UUID) {
-        send(IncludeImportSpace(sourceSpaceID: sourceSpaceID, included: isIncluded))
-    }
-
     /// Brings the reviewed Space `sourceSpaceID` in on its own rather than in
     /// a group with the Spaces it shared a session with.
     func separate(_ sourceSpaceID: UUID) {
@@ -444,23 +399,6 @@ final class BrowserOnboardingFlow {
         send(CustomizeImportSpace(sourceSpaceID: sourceSpaceID, customization: customization))
     }
 
-    func selectedReview(id: UUID?) -> BrowserImportSpaceReview? {
-        reviewSpaces.first { $0.id == id } ?? reviewSpaces.first
-    }
-
-    func passwordCountLabel(for review: BrowserImportSpaceReview) -> LocalizedStringResource {
-        BrowserOnboardingSummary.passwordCount(review.record.passwordCount)
-    }
-
-    func reviewSummary() -> LocalizedStringResource? {
-        review?.summary
-    }
-
-    /// What the core says the review's choices mean.
-    func reviewAnalysis() -> BrowserImportReviewAnalysis {
-        BrowserImportReviewAnalysis(review)
-    }
-
     /// The session the review would leave, or the rule that refused it. The
     /// core answers once each time the review's choices change, and a review
     /// that brings no Space has nothing to preview.
@@ -478,27 +416,6 @@ final class BrowserOnboardingFlow {
         return outcome
     }
 
-    /// Why the core can't build the session the review would leave, when it
-    /// can't. The review then says so and offers Back and Skip, since the
-    /// import would be refused alike.
-    var previewRefusal: Rejection? {
-        guard case .failure(let refusal) = reviewPreview() else { return nil }
-        return refusal
-    }
-
-    /// The images the tabs of the session the review would leave wear.
-    var previewFavicons: FaviconAssets {
-        (try? reviewPreview()?.get())?.favicons ?? FaviconAssets()
-    }
-
-    func previewDestinationSpace(for review: BrowserImportSpaceReview) -> SpaceModel? {
-        (try? reviewPreview()?.get())?.space(id: review.destination.spaceID ?? review.id)
-    }
-
-    func customizationPreviewSpace(_ spaceID: UUID) -> SpaceModel? {
-        reviewSpaces.first { $0.id == spaceID }.flatMap(previewDestinationSpace)
-    }
-
     func duplicateDestinationName(for review: BrowserImportSpaceReview) -> String? {
         review.destination.spaceID.flatMap { browser.spaceModel($0)?.settings.name }
     }
@@ -511,35 +428,6 @@ final class BrowserOnboardingFlow {
     /// The workspace's Spaces, which a reviewed Space may join.
     var destinationSpaces: [SpaceModel] {
         browser.workspaceModel?.spaces.models ?? []
-    }
-
-    /// Whether the workspace is still the first launch's disposable Spaces.
-    var hasDisposableSeedState: Bool {
-        browser.workspaceModel?.isDisposableSeed ?? false
-    }
-
-    func reviewProgressLabel(for review: BrowserImportSpaceReview) -> String {
-        let spaces = reviewSpaces
-        let index = spaces.firstIndex(where: { $0.id == review.id }) ?? 0
-        let spaceProgress = String(localized: "Space \(index + 1) of \(spaces.count)")
-        guard let queue = state?.queue, queue.sources.count > 1, queue.current != nil else { return spaceProgress }
-        let browserProgress = String(localized: "Browser \(queue.index + 1) of \(queue.sources.count)")
-        return String(localized: "\(browserProgress) · \(spaceProgress)")
-    }
-
-    /// What reading `source` takes, or nil before setup has read its data.
-    func importAccessLabel(for source: BrowserInstalledImportSource) -> String? {
-        if source.hasReadableDetectedData, let payload = source.detectedPayload {
-            let count = payload.profiles.count
-            return count > 1
-                ? String(localized: "\(count) profiles found · Review them")
-                : String(localized: "Browser data found · Review it")
-        }
-        if dataAccessProvider.hasSavedAccess(for: source.application) {
-            return String(localized: "Access saved · Ready to review")
-        }
-        guard source.detectedPayload != nil else { return nil }
-        return String(localized: "One-time macOS permission · No folder search")
     }
 
     // MARK: - Actions - Importing

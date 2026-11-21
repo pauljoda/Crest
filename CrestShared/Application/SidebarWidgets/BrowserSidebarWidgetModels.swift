@@ -74,14 +74,6 @@ extension BrowserSidebarWidgetRegistration {
     )
 }
 
-/// Who authored a widget. Sources still tag what they publish, but the deck is a
-/// single global layer: visibility never consults the scope, so a tab playing
-/// media in one profile stays on the card stack in every Space of every profile.
-enum BrowserSidebarWidgetScope: Equatable, Sendable {
-    case application
-    case profile(UUID)
-}
-
 enum BrowserMediaSessionPlaybackState: String, Encodable, Equatable, Sendable {
     case none
     case paused
@@ -154,7 +146,6 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
 
 struct BrowserSidebarWidgetInstance: Equatable, Identifiable, Sendable {
     let id: BrowserSidebarWidgetID
-    let scope: BrowserSidebarWidgetScope
     let orderingOrdinal: UInt64
     let presentation: BrowserSidebarWidgetPresentation
     let availableActions: Set<BrowserSidebarWidgetAction>

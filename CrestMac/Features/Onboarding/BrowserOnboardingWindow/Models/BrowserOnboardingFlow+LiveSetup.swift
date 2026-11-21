@@ -22,13 +22,6 @@ extension BrowserOnboardingFlow {
         Set(reviewSpaces.filter { $0.isIncluded && $0.destination.spaceID == nil }.map(\.id))
     }
 
-    /// What Bring Tabs holds now: the chosen browser and its tabs.
-    var bringValue: String {
-        guard let source = chosenSource else { return String(localized: "Nothing") }
-        guard let review, hasIncomingSpaces else { return source.title }
-        return String(localized: "\(source.title) · \(review.includedTabCount) tabs")
-    }
-
     /// The Space the preview opens on once the chosen browser's Spaces are
     /// read: the first one it brings.
     var firstIncomingPreviewSpaceID: UUID? {

@@ -11,10 +11,6 @@ namespace CrestCore.Application;
 public static class NativeSyncMaterializer {
     #region Actions - Materialization
 
-    public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now,
-        SpaceAccessAuthority? access = null) => StoredSessionCodec.Encode(Materialize(StoredSessionCodec.DecodeSession(session),
-            NativeSyncProjection.Preferences(preferences), records.Select(SyncSessionRecord.Read).ToArray(), StoredSessionCodec.Date(now), access));
-
     internal static SessionState Materialize(SessionState session, SyncPreferences policy, IReadOnlyList<SyncSessionRecord> records,
         DateTimeOffset now, SpaceAccessAuthority? access) {
         var owners = records.Where(record => record.Kind == SyncRecordKind.Folder).ToDictionary(record => record.Id, record => record.SpaceId);

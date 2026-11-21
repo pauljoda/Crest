@@ -1341,10 +1341,6 @@ struct AutomaticDownloadVerdict: Equatable, Sendable {
     let hasAllowedAutomaticDownload: Bool
 }
 
-struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
-}
-
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let proceeds: Bool
@@ -1385,10 +1381,6 @@ struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let requestID: UUID
-}
-
-struct BlockAutomaticDownload: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
 }
 
 struct BlockElement: Intent, Equatable, Sendable {
@@ -1642,10 +1634,6 @@ struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
 }
 
-struct ChooseSetupLook: Intent, SetupFlowIntent, Equatable, Sendable {
-    let look: SetupLook
-}
-
 struct ChooseShareSource: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -1826,11 +1814,6 @@ struct CloudStepFailed: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let step: CloudSyncStepKind
     let message: String
     let observedCloudRecords: Int?
-}
-
-struct CloudSync: Query, Equatable, Sendable {
-    typealias Answer = CloudSyncStatus
-
 }
 
 struct CloudSyncAdvanced: CoreChange, Equatable, Sendable {
@@ -2440,23 +2423,6 @@ struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
-struct DownloadProgress: Query, Equatable, Sendable {
-    typealias Answer = DownloadProgressReading
-
-    let estimator: DownloadTransferEstimator?
-    let completedUnitCount: Int64
-    let totalUnitCount: Int64
-    let fractionCompleted: Double
-    let isPaused: Bool
-    let uptime: Double
-}
-
-struct DownloadProgressReading: Equatable, Sendable {
-    let estimator: DownloadTransferEstimator
-    let telemetry: DownloadTelemetry
-    let progress: Double
-}
-
 struct DownloadRisk: Query, Equatable, Sendable {
     typealias Answer = DownloadRiskVerdict
 
@@ -2521,28 +2487,6 @@ struct DownloadTelemetry: Equatable, Sendable {
     var bytesPerSecond: Double?
     var estimatedTimeRemaining: Double?
     var isPaused: Bool
-}
-
-struct DownloadTransferEstimator: Equatable, Sendable {
-    static let minimumRateInterval: Double = 0.15
-    static let smoothingWeight: Double = 0.25
-    static let minimumUsefulEstimate: Double = 0.5
-    static let maximumUsefulEstimate: Double = 604800
-    static let initial = DownloadTransferEstimator(
-        publishedBytes: 0,
-        knownTotalBytes: nil,
-        totalIsUnreliable: false,
-        measurementBytes: nil,
-        measurementUptime: nil,
-        smoothedBytesPerSecond: nil
-    )
-
-    var publishedBytes: Int64
-    var knownTotalBytes: Int64?
-    var totalIsUnreliable: Bool
-    var measurementBytes: Int64?
-    var measurementUptime: Double?
-    var smoothedBytesPerSecond: Double?
 }
 
 struct DownloadUpdated: CoreChange, Equatable, Sendable {
@@ -4002,14 +3946,6 @@ struct LinkGesture: Equatable, Sendable {
 struct LinkHovered: Equatable, Sendable {
     let pageID: UUID
     let url: String?
-}
-
-struct LinkNavigation: Query, Equatable, Sendable {
-    typealias Answer = LinkNavigationAnswer
-
-    let pageID: UUID
-    let url: String?
-    let gesture: LinkGesture
 }
 
 struct LinkNavigationAnswer: Equatable, Sendable {
@@ -5743,12 +5679,6 @@ struct RestoreInteractionState: PageRequest, Equatable, Sendable {
     let expectedURL: String
 }
 
-struct RestoreLook: Query, Equatable, Sendable {
-    typealias Answer = RestoredLook
-
-    let text: String
-}
-
 struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
     let language: String?
     let region: String?
@@ -5759,10 +5689,6 @@ struct RestoreTabHistory: Intent, PageIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let archive: Data
-}
-
-struct RestoredLook: Equatable, Sendable {
-    let look: SpaceBranding?
 }
 
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -7249,19 +7175,9 @@ struct StoreInstallRequested: Equatable, Sendable {
     let extensionID: String
 }
 
-struct StoreLook: Query, Equatable, Sendable {
-    typealias Answer = StoredLook
-
-    let look: SpaceBranding
-}
-
 struct StoreRemovalRequested: Equatable, Sendable {
     let pageID: UUID
     let extensionID: String
-}
-
-struct StoredLook: Equatable, Sendable {
-    let text: String
 }
 
 struct StoredSessionClosed: Equatable, Sendable {
@@ -9561,48 +9477,6 @@ struct BuiltInSearchProvider: Hashable, Sendable {
             self.logo = logo
             self.isEnabledByDefault = isEnabledByDefault
             self.options = options
-        }
-    }
-}
-
-/// The members of the core's `CapabilityStatus`. A member's wire tag is its index in `all`.
-struct CapabilityStatus: Hashable, Sendable {
-    let tag: Int
-    var name: String { facts.name }
-    var isAvailable: Bool { facts.isAvailable }
-    private let facts: Facts
-
-    private init(tag: Int, name: String, isAvailable: Bool) {
-        self.tag = tag
-        facts = Facts(name: name, isAvailable: isAvailable)
-    }
-
-    static let supported = CapabilityStatus(tag: 0, name: "supported", isAvailable: true)
-    static let partial = CapabilityStatus(tag: 1, name: "partial", isAvailable: false)
-    static let unavailable = CapabilityStatus(tag: 2, name: "unavailable", isAvailable: false)
-    static let unverified = CapabilityStatus(tag: 3, name: "unverified", isAvailable: false)
-
-    static let all: [CapabilityStatus] = [supported, partial, unavailable, unverified]
-
-    static func named(_ name: String?) -> CapabilityStatus? {
-        all.first { $0.name == name }
-    }
-
-    static func == (lhs: CapabilityStatus, rhs: CapabilityStatus) -> Bool {
-        lhs.tag == rhs.tag
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(tag)
-    }
-
-    private final class Facts: Sendable {
-        let name: String
-        let isAvailable: Bool
-
-        init(name: String, isAvailable: Bool) {
-            self.name = name
-            self.isAvailable = isAvailable
         }
     }
 }
@@ -18915,76 +18789,33 @@ struct SetupFailureReason: Hashable, Sendable {
 /// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `newSpaceLook`.
 struct SetupLook: Hashable, Sendable {
-    enum Kinds: Sendable {
-        case heraldic
-        case modern
-        case simple
-    }
-
     let tag: Int
-    var kind: Kinds { facts.kind }
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var themeMode: SpaceThemeMode { facts.themeMode }
     var iconStyle: SpaceIconStyle { facts.iconStyle }
-    var gradientAngle: Double? { facts.gradientAngle }
-    var tint: Double? { facts.tint }
     private let facts: Facts
 
     private init(
         tag: Int,
-        kind: Kinds,
         name: String,
         title: LocalizedStringResource,
         themeMode: SpaceThemeMode,
-        iconStyle: SpaceIconStyle,
-        gradientAngle: Double?,
-        tint: Double?
+        iconStyle: SpaceIconStyle
     ) {
         self.tag = tag
-        facts = Facts(
-            kind: kind,
-            name: name,
-            title: title,
-            themeMode: themeMode,
-            iconStyle: iconStyle,
-            gradientAngle: gradientAngle,
-            tint: tint
-        )
+        facts = Facts(name: name, title: title, themeMode: themeMode, iconStyle: iconStyle)
     }
 
     static let heraldic = SetupLook(
         tag: 0,
-        kind: .heraldic,
         name: "heraldic",
         title: LocalizedStringResource("Heraldic (Full)"),
         themeMode: SpaceThemeMode.banner,
-        iconStyle: SpaceIconStyle.layeredCrest,
-        gradientAngle: nil,
-        tint: nil
-    )
-    static let modern = SetupLook(
-        tag: 1,
-        kind: .modern,
-        name: "modern",
-        title: LocalizedStringResource("Modern"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 90,
-        tint: nil
-    )
-    static let simple = SetupLook(
-        tag: 2,
-        kind: .simple,
-        name: "simple",
-        title: LocalizedStringResource("Simple"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 0,
-        tint: 1
+        iconStyle: SpaceIconStyle.layeredCrest
     )
 
-    static let all: [SetupLook] = [heraldic, modern, simple]
+    static let all: [SetupLook] = [heraldic]
 
     static func named(_ name: String?) -> SetupLook? {
         all.first { $0.name == name }
@@ -18999,30 +18830,16 @@ struct SetupLook: Hashable, Sendable {
     }
 
     private final class Facts: Sendable {
-        let kind: Kinds
         let name: String
         let title: LocalizedStringResource
         let themeMode: SpaceThemeMode
         let iconStyle: SpaceIconStyle
-        let gradientAngle: Double?
-        let tint: Double?
 
-        init(
-            kind: Kinds,
-            name: String,
-            title: LocalizedStringResource,
-            themeMode: SpaceThemeMode,
-            iconStyle: SpaceIconStyle,
-            gradientAngle: Double?,
-            tint: Double?
-        ) {
-            self.kind = kind
+        init(name: String, title: LocalizedStringResource, themeMode: SpaceThemeMode, iconStyle: SpaceIconStyle) {
             self.name = name
             self.title = title
             self.themeMode = themeMode
             self.iconStyle = iconStyle
-            self.gradientAngle = gradientAngle
-            self.tint = tint
         }
     }
 }

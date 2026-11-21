@@ -98,16 +98,18 @@ struct BrowserOnboardingWindow: View {
     }
 }
 
-#Preview("Onboarding Window") {
-    let fixture = BrowserOnboardingWindowPreviewFixture()
-    BrowserOnboardingWindow(
-        request: fixture.request,
-        cloudSync: fixture.cloudSync,
-        progress: fixture.progress,
-        spaceAccess: fixture.spaceAccess,
-        flow: fixture.flow,
-        closeWindow: {},
-        openBrowser: { _ in }
-    )
-    .frame(width: 980, height: 660)
-}
+#if DEBUG
+    #Preview("Onboarding Window") {
+        let fixture = BrowserOnboardingWindowPreviewFixture()
+        BrowserOnboardingWindow(
+            request: fixture.request,
+            cloudSync: fixture.cloudSync,
+            progress: fixture.progress,
+            spaceAccess: fixture.spaceAccess,
+            flow: fixture.flow,
+            closeWindow: {},
+            openBrowser: { _ in }
+        )
+        .frame(width: 980, height: 660)
+    }
+#endif

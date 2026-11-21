@@ -5953,6 +5953,30 @@
     "chromium-upstream-157-0-8103-81-35a9bfb397cd": {
       "category": "fixed",
       "message": "Chromium is updated to 157.0.8103.81 with upstream security and compatibility fixes."
+    },
+    "remove-unused-setup-look-path": {
+      "category": "internal",
+      "message": "Removed the setup look choices and look storage queries that nothing uses since setup's overhaul, and the unused iCloud sync status query."
+    },
+    "core-wire-leftovers": {
+      "category": "internal",
+      "message": "Messages only the core sends itself no longer cross the wire, engine registration keeps only the capabilities an engine supports, and test-only JSON entry points moved into the tests."
+    },
+    "remove-unused-shared-swift": {
+      "category": "internal",
+      "message": "Removed shared code nothing uses: an old setup page, unused design tokens, branding and identity helpers, a widget scope no one reads, and search sheet presentation."
+    },
+    "remove-unused-mac-setup-code": {
+      "category": "internal",
+      "message": "Removed Mac setup code the overhaul left unused, permission fields nothing reads, and kept preview-only fixtures out of release builds."
+    },
+    "remove-unused-compact-prompt": {
+      "category": "internal",
+      "message": "Removed the iPhone sidebar's new-tab prompt, which no layout ever showed."
+    },
+    "remove-dead-tests-and-resources": {
+      "category": "internal",
+      "message": "Removed empty test classes and unused test helpers, old app-icon sources, an unused fixture corpus, a broken icon script, an empty test scheme and catalog strings no code uses."
     }
   }
 }

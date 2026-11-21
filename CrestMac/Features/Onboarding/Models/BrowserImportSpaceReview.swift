@@ -42,12 +42,6 @@ struct BrowserImportSpaceReview: Identifiable, Equatable {
     /// it joins, or else the reviewed Space that leads the Spaces it shared a
     /// session with where it came from, or itself.
     var groupID: UUID { record.joinsGroupOf ?? record.source.membership?.primaryID ?? record.source.id }
-    /// The primary of the workspace's group the Space comes into, when it
-    /// joins one.
-    var existingGroupID: UUID? { record.joinsGroupOf }
-    /// Whether the Space comes in as a new Space, which is when it may come in
-    /// with its group.
-    var comesInNew: Bool { isIncluded && destination == .newSpace }
 
     // MARK: - Initializers
 
@@ -69,32 +63,5 @@ struct BrowserImportSpaceReview: Identifiable, Equatable {
     /// is read from the record.
     static func == (lhs: BrowserImportSpaceReview, rhs: BrowserImportSpaceReview) -> Bool {
         lhs.record == rhs.record
-    }
-}
-
-/// What the core says the review's choices mean: the tabs each destination
-/// already holds, the destination tabs each Space matches, and the pinned
-/// tabs that move to a saved folder.
-struct BrowserImportReviewAnalysis: Equatable {
-    // MARK: - Variables
-
-    let duplicateTabIDs: Set<UUID>
-    let overflowTabIDs: Set<UUID>
-    private let matchedTabIDsBySourceSpace: [UUID: Set<UUID>]
-
-    // MARK: - Initializers
-
-    init(_ review: SetupImportReview?) {
-        duplicateTabIDs = Set(review?.spaces.flatMap(\.duplicateTabIDs) ?? [])
-        overflowTabIDs = Set(review?.overflowTabIDs ?? [])
-        matchedTabIDsBySourceSpace = Dictionary(
-            (review?.spaces ?? []).map { ($0.source.id, Set($0.matchedTabIDs)) },
-            uniquingKeysWith: { first, _ in first })
-    }
-
-    // MARK: - Actions - Tabs
-
-    func matchedTabIDs(for sourceSpaceID: UUID) -> Set<UUID> {
-        matchedTabIDsBySourceSpace[sourceSpaceID] ?? []
     }
 }

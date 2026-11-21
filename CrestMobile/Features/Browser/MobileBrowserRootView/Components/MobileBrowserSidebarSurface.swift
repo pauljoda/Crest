@@ -51,10 +51,8 @@ struct MobileBrowserSidebarSurface: View {
     let submitAddress: () -> Void
     let openURL: (URL) -> Void
     let openNewTab: () -> Void
-    let showsCompactAddressBar: Bool
     let showsBottomSpaceSwitcher: Bool
     let compactPageIsFullyPresented: Bool
-    let compactTransitionEnded: (CGSize) -> Void
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
     let toggleSidebar: () -> Void
@@ -166,10 +164,8 @@ struct MobileBrowserSidebarSurface: View {
             selectTab: selectTab,
             submitAddress: submitAddress,
             openNewTab: openNewTab,
-            showsCompactAddressBar: showsCompactAddressBar,
             showsBottomSpaceSwitcher: showsBottomSpaceSwitcher,
             compactPageIsFullyPresented: compactPageIsFullyPresented,
-            compactTransitionEnded: compactTransitionEnded,
             closePrivateBrowsing: closePrivateBrowsing,
             toggleSidebar: toggleSidebar,
             showsSidebarToggle: showsSidebarToggle,
@@ -269,10 +265,8 @@ struct MobileBrowserSidebarSurface: View {
         submitAddress: {},
         openURL: { _ in },
         openNewTab: {},
-        showsCompactAddressBar: false,
         showsBottomSpaceSwitcher: true,
         compactPageIsFullyPresented: false,
-        compactTransitionEnded: { _ in },
         togglePrivateBrowsing: {},
         closePrivateBrowsing: {},
         toggleSidebar: {},

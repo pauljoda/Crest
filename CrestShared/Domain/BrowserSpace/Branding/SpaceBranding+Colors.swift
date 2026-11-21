@@ -5,9 +5,6 @@ import Foundation
 extension SpaceBranding {
     // MARK: - Static Variables
 
-    /// The most colors a Space's banner holds, as the core enforces it.
-    static var maximumColorCount: Int { CapacityLimits.current.brandColors }
-
     // MARK: - Variables
 
     var backgroundColor: BrandColor {
@@ -20,12 +17,6 @@ extension SpaceBranding {
 
     var secondaryColor: BrandColor {
         color(for: .pattern) ?? primaryColor
-    }
-
-    /// The icon's own color, or the Space's primary color, which it follows
-    /// as the palette changes, when it has none.
-    var resolvedSymbolColor: BrandColor {
-        symbolColor ?? primaryColor
     }
 
     // MARK: - Actions - Text

@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Contracts;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -49,7 +51,7 @@ public sealed partial class BrowserContractsTests {
             ["placement"] = "current",
             ["lastActivatedAt"] = At(100)
         });
-        local = NativeSessionMaintenance.Repair(Canonical(local), At(100), ids: new TestIds())["session"]!.AsObject();
+        local = StoredSessionMaintenance.Repair(Canonical(local), At(100), ids: new TestIds())["session"]!.AsObject();
         using var device = new SyncingDevice(local, Fixed(1_710));
         var journal = device.Journal;
         Assert.Equal(6, journal.Values(SyncRecordKind.Tab).Count);
