@@ -9,10 +9,7 @@ enum BrowserVisitedLinkStyler {
     )
 
     nonisolated static func supports(_ pageURL: URL) -> Bool {
-        guard let scheme = pageURL.scheme?.lowercased(), pageURL.host() != nil else {
-            return false
-        }
-        return scheme == "http" || scheme == "https"
+        pageURL.webScheme != nil && pageURL.host() != nil
     }
 
     nonisolated static func normalizedVisitedURLStrings(

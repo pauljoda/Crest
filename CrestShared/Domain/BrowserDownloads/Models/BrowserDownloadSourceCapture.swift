@@ -25,6 +25,9 @@ private struct BrowserDownloadActivationMessage: Decodable {
 /// content world. Only geometry and the already-owned download destination are
 /// retained, and only long enough to match the ensuing download callback.
 struct BrowserDownloadSourceCapture: Equatable, Sendable {
+    /// The longest link an activation may name.
+    private static let maximumLinkLength = 4_096
+
     let destinationURL: URL
     let normalizedSourceRect: CGRect
     let normalizedTouchPoint: CGPoint
@@ -63,7 +66,7 @@ struct BrowserDownloadSourceCapture: Equatable, Sendable {
             let data = try? JSONSerialization.data(withJSONObject: messageBody),
             let message = try? JSONDecoder().decode(BrowserDownloadActivationMessage.self, from: data),
             message.version == 1,
-            message.href.count <= 4_096,
+            message.href.count <= Self.maximumLinkLength,
             let destinationURL = URL(string: message.href),
             ExternalWebLink.accepts(destinationURL)
         else { return nil }
@@ -93,11 +96,13 @@ struct BrowserDownloadSourceStore: Equatable, Sendable {
     }
 
     private static let maximumEntries = 8
+    /// How long, in seconds, an activation waits for the download it starts.
+    static let defaultMaximumAge: TimeInterval = 8
 
     let maximumAge: TimeInterval
     private var entries: [Entry] = []
 
-    init(maximumAge: TimeInterval = 8) {
+    init(maximumAge: TimeInterval = defaultMaximumAge) {
         precondition(maximumAge > 0)
         self.maximumAge = maximumAge
     }

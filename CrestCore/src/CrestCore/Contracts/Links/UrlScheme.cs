@@ -1,11 +1,12 @@
-using CrestCore.Contracts;
+using CrestCore.Domain;
 
-namespace CrestCore.Domain;
+namespace CrestCore.Contracts;
 
 /// A scheme Crest decides about itself: whether the engine keeps a request in
 /// it or nothing may load it, for a request web content made and for a load
 /// Crest itself initiated. A scheme no member names belongs to another
-/// application.
+/// application. The platforms read the set to name a URL's scheme. A scheme
+/// travels as its index in `All`, so `All` is append-only.
 public sealed class UrlScheme {
     #region Static Variables
 

@@ -39,7 +39,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(BrowserSettingsCanvas.card)
-        .accessibilityIdentifier("space-settings-toolbar")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsToolbar)
     }
 
     private var identity: some View {
@@ -86,7 +86,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         .layoutPriority(1)
         .accessibilityLabel("Space")
         .accessibilityValue(selectedSpaceID.flatMap { browser.spaceModel($0)?.settings.name } ?? "")
-        .accessibilityIdentifier("space-settings-picker")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsPicker)
     }
 
     private var sectionPicker: some View {
@@ -96,7 +96,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
             }
         }
         .pickerStyle(.segmented)
-        .accessibilityIdentifier("space-settings-section-picker")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsSectionPicker)
     }
 
     /// What can be done to the selected Space's group: a new Sub-Space,
@@ -119,7 +119,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         }
         .buttonStyle(.crestIcon())
         .disabled(selectedSpaceID == nil)
-        .accessibilityIdentifier("space-settings-actions")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsActions)
     }
 
     private var addSpaceButton: some View {

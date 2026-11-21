@@ -61,7 +61,7 @@ final class MobileBrowserWindowSceneModel {
         let navigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented,
             initiallyShowsCompactPage: !sidebarIsPresented,
-            allowsCompactFloatingSidebar: MobileBrowserRootPreferences.allowsFloatingSidebar
+            allowsCompactFloatingSidebar: BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar
         )
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(
@@ -195,7 +195,7 @@ final class MobileBrowserWindowSceneModel {
         let privateBrowser = BrowserStore.privateBrowsing(core: core)
         let privateNavigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented,
-            allowsCompactFloatingSidebar: MobileBrowserRootPreferences.allowsFloatingSidebar
+            allowsCompactFloatingSidebar: BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar
         )
         let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
         let privatePages = MobileBrowserPageStore(

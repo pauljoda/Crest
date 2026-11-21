@@ -498,8 +498,7 @@ extension BrowserStore {
             sendCopying(
                 OpenLinkInSplit(
                     workspaceID: family.workspaceID, windowID: windowID, spaceID: assignment.spaceID,
-                    tabID: openedID, targetTabID: targetTabID, address: url.absoluteString,
-                    title: url.host() ?? url.absoluteString),
+                    tabID: openedID, targetTabID: targetTabID, address: url.absoluteString),
                 in: assignment.spaceID) != nil
         else { return nil }
         return openedID
@@ -523,7 +522,7 @@ extension BrowserStore {
         return family.canSend(
             OpenLinkInSplit(
                 workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id, tabID: UUID(),
-                targetTabID: tabID, address: "about:blank", title: ""),
+                targetTabID: tabID, address: OpenLinkInSplit.probeAddress),
             from: self)
     }
 

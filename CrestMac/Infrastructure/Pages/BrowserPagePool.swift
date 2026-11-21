@@ -13,10 +13,7 @@ final class BrowserPagePool:
     /// How long a window a page asked for waits for its Quick Window to take
     /// its page before the page goes.
     private static let popupWindowWait: Duration = .seconds(30)
-    @ObservationIgnored private static let lifecycleSignposter = OSSignposter(
-        subsystem: "com.pauldavis.crest",
-        category: "WebKitLifecycle"
-    )
+    @ObservationIgnored private static let lifecycleSignposter = DiagnosticLog.webKitLifecycle.signposter
 
     typealias HTTPAuthenticationCredentialLoader =
         @MainActor (

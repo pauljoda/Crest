@@ -27,10 +27,9 @@ struct BrowserAgentPointer: Equatable, Sendable {
 final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     // MARK: - Static Variables
 
-    @ObservationIgnored static let lifecycleSignposter = OSSignposter(
-        subsystem: "com.pauldavis.crest",
-        category: "WebKitLifecycle"
-    )
+    @ObservationIgnored static let lifecycleSignposter = DiagnosticLog.webKitLifecycle.signposter
+    /// How long Share waits before it shows the sharing picker over the page.
+    @ObservationIgnored private static let sharePickerDelay: Duration = .milliseconds(100)
 
     // MARK: - Variables
 
@@ -1002,7 +1001,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         picker.delegate = self
         sharingPicker = picker
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(for: Self.sharePickerDelay)
             guard let self, self.nativeView.window != nil, self.sharingPicker === picker else { return }
             let anchor = NSRect(
                 x: self.nativeView.bounds.maxX - 1,

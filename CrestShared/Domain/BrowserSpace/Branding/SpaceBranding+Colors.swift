@@ -5,10 +5,14 @@ import Foundation
 extension SpaceBranding {
     // MARK: - Static Variables
 
+    /// The color a Space whose palette is empty, or a view with no Space,
+    /// draws with.
+    static let fallbackColor = BrandColor.indigo
+
     // MARK: - Variables
 
     var backgroundColor: BrandColor {
-        color(for: .background) ?? .indigo
+        color(for: .background) ?? Self.fallbackColor
     }
 
     var primaryColor: BrandColor {
@@ -27,7 +31,7 @@ extension SpaceBranding {
     func foregroundTone(system: BrowserSpaceForegroundTone) -> BrowserSpaceForegroundTone {
         if let override = textColorMode.foregroundTone(system: system) { return override }
         let painted = paintedColors
-        return ColorPalette(colors: painted.isEmpty ? [.indigo] : painted).foregroundTone(
+        return ColorPalette(colors: painted.isEmpty ? [Self.fallbackColor] : painted).foregroundTone(
             strength: bannerStrength, readabilityFade: readabilityFade, system: system)
     }
 

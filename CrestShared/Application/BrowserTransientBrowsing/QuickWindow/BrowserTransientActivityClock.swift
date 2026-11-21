@@ -4,6 +4,10 @@ import Observation
 @Observable
 @MainActor
 final class BrowserTransientActivityClock {
+    /// The least time, in seconds, between two activities the clock
+    /// publishes.
+    static let defaultPublicationInterval: TimeInterval = 15
+
     private(set) var revision = 0
 
     @ObservationIgnored private var lastActivityAt: Date
@@ -12,7 +16,7 @@ final class BrowserTransientActivityClock {
 
     init(
         now: Date = Date(),
-        publicationInterval: TimeInterval = 15
+        publicationInterval: TimeInterval = defaultPublicationInterval
     ) {
         precondition(publicationInterval >= 0)
         lastActivityAt = now

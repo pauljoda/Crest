@@ -50,7 +50,7 @@ final class BrowserCosmeticFilterSession {
     /// Answers one message from the bridge in `frame`'s document.
     func receive(_ body: Any, from frame: BrowserContentFrame) {
         guard let message = body as? [String: Any], let documentURL = message["url"] as? String,
-            let site = siteURL(), ["http", "https"].contains(site.scheme?.lowercased() ?? "")
+            let site = siteURL(), site.webScheme != nil
         else { return }
         if frame.isMainFrame {
             mainFrame = frame

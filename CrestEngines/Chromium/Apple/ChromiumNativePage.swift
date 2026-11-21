@@ -303,7 +303,7 @@
         /// `/detail/<name>/<id>`, and its reviews and support pages add a segment
         /// after the identifier.
         static func webStoreExtensionID(_ url: URL?) -> String? {
-            guard let url, url.scheme == "https", url.host == "chromewebstore.google.com"
+            guard let url, url.webScheme == .https, url.host == "chromewebstore.google.com"
             else { return nil }
             let parts = Array(url.pathComponents.dropFirst())
             guard parts.count >= 2, parts[0] == "detail" else { return nil }

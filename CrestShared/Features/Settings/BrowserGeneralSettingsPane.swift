@@ -7,9 +7,7 @@ struct BrowserGeneralSettingsPane: View {
 
     @Bindable private var appPreferences = BrowserAppPreferenceStore.shared
     #if os(iOS)
-        @AppStorage(
-            MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
-        private var allowsFloatingSidebar = false
+        @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
     #endif
 
     init(browser: BrowserStore, spaceAccess: BrowserSpaceAccessController) {
@@ -43,7 +41,7 @@ struct BrowserGeneralSettingsPane: View {
 
             #if os(iOS)
                 Section("Sidebar") {
-                    Toggle("Allow floating sidebar", isOn: $allowsFloatingSidebar)
+                    Toggle("Allow floating sidebar", isOn: $appearance.allowsFloatingSidebar)
                         .accessibilityIdentifier("allow-floating-sidebar")
                 }
             #endif

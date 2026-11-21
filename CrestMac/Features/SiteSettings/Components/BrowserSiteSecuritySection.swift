@@ -50,7 +50,7 @@ struct BrowserSiteSecuritySection: View {
     /// secure; the engine's warnings for other states still stand.
     private var isUnconfirmedSecure: Bool {
         security.isSecure
-            && page.live.displayURL?.scheme?.lowercased() == "https"
+            && page.live.displayURL?.webScheme?.isSecure == true
             && !canReviewCertificate
     }
 

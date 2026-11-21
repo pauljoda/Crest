@@ -22,7 +22,7 @@ struct MobileBrowserCompactSettingsLayout: View {
                         NavigationLink(value: destination) {
                             MobileSettingsDestinationRow(destination: destination)
                         }
-                        .accessibilityIdentifier("settings-\(destination.name)")
+                        .accessibilityIdentifier(BrowserMobileAccessibilityID.settingsDestination(destination))
                     }
                 }
             }

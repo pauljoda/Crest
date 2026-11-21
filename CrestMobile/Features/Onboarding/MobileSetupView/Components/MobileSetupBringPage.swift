@@ -35,7 +35,7 @@ struct MobileSetupBringPage: View {
                     in: .rect(cornerRadius: CrestRadius.panel, style: .continuous)
                 )
                 .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("setup-bring-on-mac")
+                .accessibilityIdentifier(BrowserSetupAccessibilityID.bringOnMac)
                 Text("You can still make and name Spaces on this device.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

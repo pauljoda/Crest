@@ -162,7 +162,7 @@ final class WebKitEngineBinding: EngineBinding {
     /// has no public way to hand another view a form body, the initiating
     /// origin, user activation or sandbox flags.
     func stageLink(_ request: URLRequest, from page: WebKitEnginePage) -> BrowserEngineNavigation? {
-        guard let url = request.url, ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+        guard let url = request.url, url.webScheme != nil,
             (request.httpMethod ?? "GET").uppercased() == "GET",
             request.httpBody == nil, request.httpBodyStream == nil
         else { return nil }

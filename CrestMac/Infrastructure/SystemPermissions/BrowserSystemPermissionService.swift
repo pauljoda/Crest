@@ -56,14 +56,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
 
     func requestLocation() async throws {
         guard await location.requestAuthorization() == .notDetermined else { return }
-        throw NSError(
-            domain: "BrowserSystemPermission", code: 1,
-            userInfo: [
-                NSLocalizedDescriptionKey: String(
-                    localized:
-                        "macOS has not returned a location decision. Respond to its prompt, or open System Settings > Privacy & Security > Location Services to allow Crest."
-                )
-            ])
+        throw BrowserSystemPermissionFailure.locationUndecided
     }
 
     func notificationStatus() async -> BrowserSystemPermissionStatus {

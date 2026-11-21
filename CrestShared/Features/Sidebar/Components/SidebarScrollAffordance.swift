@@ -26,6 +26,9 @@ private struct SidebarScrollContentExtent: ViewModifier {
 /// The same vertical-scroll affordance in windowed and touch sidebars. Its
 /// geometry updates are observed only by the indicator, never the tab rows.
 struct SidebarScrollAffordance: ViewModifier {
+    /// How long the scroll a press of the indicator asks for takes.
+    private static let pageScrollDuration: TimeInterval = 0.22
+
     var isDragging = false
     @State private var activity = SidebarScrollActivity()
     @State private var position = ScrollPosition()
@@ -49,7 +52,7 @@ struct SidebarScrollAffordance: ViewModifier {
             .onScrollPhaseChange { _, phase in activity.setScrolling(phase != .idle) }
             .overlay {
                 SidebarScrollIndicator(activity: activity, isDragging: isDragging) {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: Self.pageScrollDuration)) {
                         position.scrollTo(
                             y: min(
                                 activity.metrics.maximumOffset,
@@ -72,6 +75,9 @@ private struct SidebarScrollMetrics: Equatable {
 @MainActor
 @Observable
 private final class SidebarScrollActivity {
+    /// How long the indicator stays once scrolling stops.
+    private static let indicatorIdleDelay: Duration = .milliseconds(600)
+
     var contentHeight: CGFloat = 0
     var hasMoreBelow: Bool { contentHeight > metrics.visibleBottom + 1 }
     private(set) var metrics = SidebarScrollMetrics()
@@ -108,7 +114,7 @@ private final class SidebarScrollActivity {
     private func scheduleIdle() {
         idleTask?.cancel()
         idleTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(600)) } catch { return }
+            do { try await Task.sleep(for: Self.indicatorIdleDelay) } catch { return }
             self?.showsIndicator = false
             self?.idleTask = nil
         }
@@ -120,6 +126,8 @@ private struct SidebarScrollIndicator: View {
     /// bubble itself sits just above the sidebar's foot.
     private static let bubbleDiameter: CGFloat = 22
     private static let bubbleDrop: CGFloat = 5
+    /// How long the indicator and its bubble take to show or hide.
+    private static let fadeDuration: TimeInterval = 0.2
 
     let activity: SidebarScrollActivity
     let isDragging: Bool
@@ -169,8 +177,8 @@ private struct SidebarScrollIndicator: View {
                 .accessibilityLabel("Show more tabs")
                 .accessibilityIdentifier("sidebar-more-tabs")
             }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: activity.showsIndicator)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showsBubble)
+            .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration), value: activity.showsIndicator)
+            .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration), value: showsBubble)
             .clipped()
         }
     }

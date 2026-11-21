@@ -447,7 +447,7 @@ struct MobileBrowserDetailView: View {
         }
         ToolbarItemGroup(placement: .bottomBar) {
             Button("Tabs", systemImage: "square.on.square", action: showTabViewer)
-                .accessibilityIdentifier("tab-viewer-button")
+                .accessibilityIdentifier(BrowserMobileAccessibilityID.tabViewerButton)
         }
     }
 

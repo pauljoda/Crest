@@ -145,9 +145,7 @@ final class BrowserDialogPresenter {
         }
         alert.addButton(withTitle: String(localized: "OK"))
         present(alert) { response in
-            if denied, response == .alertFirstButtonReturn,
-                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")
-            {
+            if denied, response == .alertFirstButtonReturn, let url = BrowserSystemPermission.files.settingsURL {
                 NSWorkspace.shared.open(url)
             }
             completion()
@@ -256,12 +254,7 @@ final class BrowserDialogPresenter {
     /// The caller keeps the page's original request pending, then rechecks the
     /// system authorization after Crest becomes active again.
     func recoverGeolocationSystemAuthorization() async {
-        guard
-            let settingsURL = URL(
-                string:
-                    "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices"
-            )
-        else { return }
+        guard let settingsURL = BrowserSystemPermission.location.settingsURL else { return }
         await presentSystemPermissionRecovery(
             title: String(localized: "Location Access Is Off for Crest"),
             message: String(
@@ -274,13 +267,7 @@ final class BrowserDialogPresenter {
     }
 
     func recoverNotificationSystemAuthorization() async {
-        var components = URLComponents(
-            string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "id", value: Bundle.main.bundleIdentifier)
-        ]
-        guard let settingsURL = components?.url else { return }
+        guard let settingsURL = BrowserSystemPermission.notifications.settingsURL else { return }
         await presentSystemPermissionRecovery(
             title: String(localized: "Notifications Are Off for Crest"),
             message: String(
@@ -315,14 +302,17 @@ final class BrowserDialogPresenter {
         await waitForApplicationReturn()
     }
 
+    /// Waits for Crest to step aside for System Settings, then to come back.
     private func waitForApplicationReturn() async {
-        var observedInactiveApplication = !NSApp.isActive
-        while !observedInactiveApplication {
-            try? await Task.sleep(for: .milliseconds(100))
-            observedInactiveApplication = !NSApp.isActive
+        if NSApp.isActive {
+            for await _ in NotificationCenter.default.notifications(named: NSApplication.didResignActiveNotification) {
+                break
+            }
         }
-        while !NSApp.isActive {
-            try? await Task.sleep(for: .milliseconds(100))
+        if !NSApp.isActive {
+            for await _ in NotificationCenter.default.notifications(named: NSApplication.didBecomeActiveNotification) {
+                break
+            }
         }
     }
 

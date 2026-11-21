@@ -7,6 +7,12 @@
     /// page.
     @MainActor
     final class ChromiumPageAdapter: BrowserPageEngineAdapter {
+        // MARK: - Static Variables
+
+        /// How long automatic Picture in Picture gives the renderer to float a
+        /// video before it reads whether one floats.
+        fileprivate static let automaticPictureInPictureCheckDelay: Duration = .milliseconds(600)
+
         // MARK: - Variables
 
         let native: ChromiumNativePage
@@ -140,7 +146,9 @@
             check = Task { @MainActor [weak self] in
                 // Media Session sends the request to the renderer. Check its
                 // resulting browser state before releasing the reservation.
-                do { try await Task.sleep(for: .milliseconds(600)) } catch { return }
+                do { try await Task.sleep(for: ChromiumPageAdapter.automaticPictureInPictureCheckDelay) } catch {
+                    return
+                }
                 guard let self else { return }
                 DiagnosticLog.pages.notice(
                     "Chromium page \(self.page.id) floats in Picture in Picture: \(self.isPictureInPictureActive)")

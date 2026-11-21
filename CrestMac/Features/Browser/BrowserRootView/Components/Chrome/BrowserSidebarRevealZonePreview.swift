@@ -7,6 +7,18 @@ import SwiftUI
 /// never takes input: the strip and the page underneath keep answering the
 /// pointer.
 struct BrowserSidebarRevealZonePreview: View {
+    // MARK: - Static Variables
+
+    /// How long the area stays at full strength after the last change before
+    /// it fades, and how long the fade takes.
+    private static let fadeDelay: Duration = .seconds(0.5)
+    private static let fadeDuration: TimeInterval = 2.5
+    /// How long Reduce Motion holds the area before it goes at once: about as
+    /// long as the hold and fade together.
+    private static let reducedMotionHold: Duration = .seconds(3)
+
+    // MARK: - Variables
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var opacity = 0.0
     @State private var fade: Task<Void, Never>?
@@ -31,13 +43,13 @@ struct BrowserSidebarRevealZonePreview: View {
         withTransaction(instant) { opacity = 1 }
         fade = Task {
             if reduceMotion {
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: Self.reducedMotionHold)
                 guard !Task.isCancelled else { return }
                 opacity = 0
             } else {
-                try? await Task.sleep(for: .seconds(0.5))
+                try? await Task.sleep(for: Self.fadeDelay)
                 guard !Task.isCancelled else { return }
-                withAnimation(.easeOut(duration: 2.5)) { opacity = 0 }
+                withAnimation(.easeOut(duration: Self.fadeDuration)) { opacity = 0 }
             }
         }
     }

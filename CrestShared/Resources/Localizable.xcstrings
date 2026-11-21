@@ -2270,6 +2270,12 @@
         }
       }
     },
+    "Apple limits default-browser checks. Try again after %@." : {
+
+    },
+    "Apple limits how often Crest can check this status. Review it in Default Apps Settings." : {
+
+    },
     "Apple translates page text on this device. Languages may need to download first; Apple asks before downloading. Downloaded languages are shared with other apps and remain available after Private Browsing ends." : {
 
     },

@@ -177,6 +177,7 @@ final class BrowserDeviceAppearanceStore {
     static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
     static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
     static let spaceIconsKey = "crest.appearance.space-icons"
+    static let allowsFloatingSidebarKey = "crest.sidebar.allows-floating"
     static let maximumCornerRadius: Double = 40
     /// How long the choices stay still before the store writes them out.
     static let settleDelay = Duration.milliseconds(300)
@@ -240,6 +241,12 @@ final class BrowserDeviceAppearanceStore {
     /// length its every motion is measured against; zero puts it in place
     /// at once.
     var peekOpenDuration: Double {
+        didSet { saveSoon() }
+    }
+    /// Whether a narrow window may float its sidebar over the page instead of
+    /// keeping the full-screen tab viewer. Off unless the person allows it;
+    /// only iPhone and iPad offer it.
+    var allowsFloatingSidebar: Bool {
         didSet { saveSoon() }
     }
     /// Whether a sidebar tab or pin the pointer rests on shows its preview
@@ -405,6 +412,7 @@ final class BrowserDeviceAppearanceStore {
                 $0 == Self.legacySidebarSlideDefault ? nil : $0
             }
             ?? BrowserLookAndFeelDefaults.sidebarSlideDuration
+        allowsFloatingSidebar = chrome.bool(forKey: Self.allowsFloatingSidebarKey)
         previewsTabsOnHover =
             defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover
         previewsFoldersOnHover =
@@ -563,6 +571,7 @@ final class BrowserDeviceAppearanceStore {
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
         write(sidebarRevealDelay, forKey: Self.sidebarRevealDelayKey, in: chrome)
         write(sidebarSlideDuration, forKey: Self.sidebarSlideDurationKey, in: chrome)
+        write(allowsFloatingSidebar, forKey: Self.allowsFloatingSidebarKey, in: chrome)
     }
 
     /// Writes the choices once they have stayed still for ``settleDelay``.

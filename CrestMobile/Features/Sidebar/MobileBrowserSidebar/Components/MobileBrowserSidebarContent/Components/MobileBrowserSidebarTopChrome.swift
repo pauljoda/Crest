@@ -97,7 +97,7 @@ struct MobileBrowserSidebarTopChrome: View {
                     .crestMenuActionLabelStyle()
                 }
             }
-            .accessibilityIdentifier("reload-control")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.reloadControl)
         }
         .collapsing(at: .navigation)
         ToolbarItem(placement: controlPlacement.pageControlsPlacement) {

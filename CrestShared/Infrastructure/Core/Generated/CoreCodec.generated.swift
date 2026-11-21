@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xae, 0x73, 0xed, 0x8e, 0x52, 0xaa, 0xe8, 0xac, 0xa7, 0x25, 0x8d, 0xb2, 0x68, 0xda, 0xa1, 0x65, 0xb3, 0x5f, 0xa7, 0x02, 0xa4, 0x7f, 0x46, 0xeb, 0x53, 0xe7, 0xea, 0x21, 0x7b, 0x01, 0xc9, 0x72
+        0x7c, 0x95, 0x22, 0x5a, 0x3b, 0x0c, 0xdd, 0x43, 0x83, 0xe2, 0x60, 0x9d, 0x34, 0x02, 0x01, 0xa1, 0xab, 0xe0, 0x8a, 0xc1, 0x76, 0xc1, 0x15, 0x01, 0x45, 0xf4, 0xe0, 0x40, 0xe1, 0xb6, 0x95, 0x81
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -4410,7 +4410,8 @@ extension CapacityLimits {
         let tabsPerSpace = try reader.readInt()
         let syncRecords = try reader.readInt()
         let credentialFileBytes = try reader.readInt()
-        self.init(folders: folders, folderDepth: folderDepth, historyEntries: historyEntries, splitMembers: splitMembers, brandColors: brandColors, crestPalette: crestPalette, spaces: spaces, tabsPerSpace: tabsPerSpace, syncRecords: syncRecords, credentialFileBytes: credentialFileBytes)
+        let filterListBytes = try reader.readInt()
+        self.init(folders: folders, folderDepth: folderDepth, historyEntries: historyEntries, splitMembers: splitMembers, brandColors: brandColors, crestPalette: crestPalette, spaces: spaces, tabsPerSpace: tabsPerSpace, syncRecords: syncRecords, credentialFileBytes: credentialFileBytes, filterListBytes: filterListBytes)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -4424,6 +4425,7 @@ extension CapacityLimits {
         writer.writeInt(tabsPerSpace)
         writer.writeInt(syncRecords)
         writer.writeInt(credentialFileBytes)
+        writer.writeInt(filterListBytes)
     }
 }
 
@@ -15348,8 +15350,7 @@ extension OpenLinkInSplit {
         let tabID = try reader.readUUID()
         let targetTabID = try reader.readUUID()
         let address = try reader.readString()
-        let title = try reader.readString()
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, targetTabID: targetTabID, address: address, title: title)
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, targetTabID: targetTabID, address: address)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15359,7 +15360,6 @@ extension OpenLinkInSplit {
         writer.writeUUID(tabID)
         writer.writeUUID(targetTabID)
         writer.writeString(address)
-        writer.writeString(title)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -29693,6 +29693,20 @@ extension TransientPresentation {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown TransientPresentation \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension UrlScheme {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown UrlScheme \(tag)")
         }
         self = Self.all[tag]
     }

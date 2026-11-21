@@ -32,7 +32,7 @@ struct BrowserMediaSessionPageEvent: Equatable, Sendable {
 
 enum BrowserMediaSessionPageEventDecoder {
     static let maximumTextLength = 512
-    static let maximumDocumentIdentifierLength = 128
+    static let maximumDocumentIdentifierLength = BrowserContentMessage.maximumIdentityBytes
     static let maximumLocationLength = 4_096
     /// Preserve standards-provided artwork bytes whenever they fit the bounded
     /// native payload. Only a larger page resource is rasterized by the bridge.

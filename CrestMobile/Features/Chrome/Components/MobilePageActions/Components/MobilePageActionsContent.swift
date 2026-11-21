@@ -22,7 +22,7 @@ struct MobilePageActionsContent: View {
                     plural: "new downloads"
                 )
             )
-            .accessibilityIdentifier("page-actions-downloads")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsDownloads)
         }
 
         if let notice = pages.blockedPopupNotice {
@@ -42,7 +42,7 @@ struct MobilePageActionsContent: View {
                     .accessibilityHint(
                         notice.allowActionAccessibilityHint
                     )
-                    .accessibilityIdentifier("allow-blocked-automatic-popups")
+                    .accessibilityIdentifier(BrowserMobileAccessibilityID.allowBlockedAutomaticPopups)
                 } else {
                     Label(notice.title, systemImage: notice.status.symbol)
                         .accessibilityLabel(
@@ -76,7 +76,7 @@ struct MobilePageActionsContent: View {
             Button("Add to Home Screen", systemImage: "plus.app") {
                 pages.addToHomeScreen(from: source)
             }
-            .accessibilityIdentifier("page-actions-add-to-home-screen")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsAddToHomeScreen)
         }
 
         Button(

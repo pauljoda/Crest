@@ -35,7 +35,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
 
     private var appearance: BrowserAddressAppearance { BrowserDeviceAppearanceStore.shared.address }
     private var accent: Color {
-        appearance.color?.color ?? spaceAccent ?? (branding?.primaryColor ?? .indigo).color
+        appearance.color?.color ?? spaceAccent ?? (branding?.primaryColor ?? SpaceBranding.fallbackColor).color
     }
 
     private var fieldShape: RoundedRectangle {

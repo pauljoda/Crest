@@ -10,11 +10,11 @@ import OSLog
 final class CorePage {
     // MARK: - Static Variables
 
-    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
+    private static let logger = DiagnosticLog.pages.logger
 
     /// Times each step through a page's history, from the person's input to
     /// the command the core hands its engine, for Instruments.
-    static let historySignposter = OSSignposter(subsystem: "com.pauldavis.crest", category: "PageHistory")
+    static let historySignposter = DiagnosticLog.pageHistory.signposter
 
     // MARK: - Variables
 

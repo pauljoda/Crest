@@ -138,7 +138,7 @@ actor BrowserFaviconFallbackLoader {
     }
 
     private static func defaultIconURL(for pageURL: URL) -> URL? {
-        guard pageURL.scheme?.lowercased() == "https" || pageURL.scheme?.lowercased() == "http",
+        guard pageURL.webScheme != nil,
             var components = URLComponents(url: pageURL, resolvingAgainstBaseURL: false),
             components.host != nil
         else { return nil }

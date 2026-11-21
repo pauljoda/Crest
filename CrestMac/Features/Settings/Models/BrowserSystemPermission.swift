@@ -32,7 +32,7 @@ struct BrowserSystemPermission: Hashable, Identifiable, Sendable {
     static let notifications = BrowserSystemPermission(
         name: "notifications", title: "Notifications",
         settingsPane:
-            "com.apple.Notifications-Settings.extension?id=\(Bundle.main.bundleIdentifier ?? "com.pauldavis.crest")",
+            "com.apple.Notifications-Settings.extension?id=\(Bundle.main.bundleIdentifier ?? ProductIdentity.bundleIdentifier)",
         status: { service, _ in await service.notificationStatus() },
         request: { _, _ in
             _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])

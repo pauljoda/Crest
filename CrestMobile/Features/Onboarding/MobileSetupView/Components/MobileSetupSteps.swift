@@ -160,7 +160,7 @@ struct MobileSetupSteps: View {
         }
         .buttonStyle(.crestPrimary)
         .disabled(isCheckingCloud)
-        .accessibilityIdentifier("setup-continue")
+        .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
     }
 
     /// What the welcome offers beside the way in: Cancel when setup was
@@ -172,13 +172,13 @@ struct MobileSetupSteps: View {
                 Text("Cancel").frame(maxWidth: fillsWidth ? .infinity : nil)
             }
             .buttonStyle(.crestSecondary)
-            .accessibilityIdentifier("setup-cancel")
+            .accessibilityIdentifier(BrowserSetupAccessibilityID.cancel)
         } else if welcome.opensCrest {
             Button(action: openCrest) {
                 Text("Start Browsing").frame(maxWidth: fillsWidth ? .infinity : nil)
             }
             .buttonStyle(.crestSecondary)
-            .accessibilityIdentifier("setup-open-crest")
+            .accessibilityIdentifier(BrowserSetupAccessibilityID.openCrest)
         }
     }
 
@@ -280,7 +280,7 @@ struct MobileSetupSteps: View {
                 Button("Back", systemImage: "chevron.left", action: goBack)
                     .buttonStyle(.crestSecondary)
                     .glassEffect(.regular, in: .capsule)
-                    .accessibilityIdentifier("setup-back")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.back)
                 Spacer(minLength: 0)
                 if isFinishing { ProgressView() }
                 forward
@@ -297,13 +297,13 @@ struct MobileSetupSteps: View {
         if let current = path.last {
             if current.stepPage != nil {
                 Button("Done", action: goBack)
-                    .accessibilityIdentifier("setup-done")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.done)
             } else if let next = walk.page(after: current) {
                 Button("Continue") { go(to: next, replacing: true) }
-                    .accessibilityIdentifier("setup-continue")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
             } else {
                 Button("Start Browsing", action: startBrowsing)
-                    .accessibilityIdentifier("setup-start-browsing")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.startBrowsing)
             }
         }
     }

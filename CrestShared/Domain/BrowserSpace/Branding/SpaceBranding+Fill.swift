@@ -75,7 +75,8 @@ extension SpaceBranding {
 
     /// The palette's color at `slot`, with the gradient it runs into.
     func slotFill(_ slot: Int) -> CrestColorFill {
-        let base = colors.colors.indices.contains(slot) ? colors.colors[slot] : (colors.colors.last ?? .indigo)
+        let base =
+            colors.colors.indices.contains(slot) ? colors.colors[slot] : (colors.colors.last ?? Self.fallbackColor)
         let gradients = colorGradients?.slots ?? []
         return Self.fill(base, into: gradients.indices.contains(slot) ? gradients[slot] : nil)
     }

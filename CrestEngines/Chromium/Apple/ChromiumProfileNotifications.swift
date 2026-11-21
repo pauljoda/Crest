@@ -13,6 +13,12 @@
             let notification: ProfileNotificationPosted
         }
 
+        // MARK: - Static Variables
+
+        /// The most notifications Crest keeps up for the profiles at once; a
+        /// new one past it is declined.
+        private static let maximumPosted = 256
+
         // MARK: - Variables
 
         private let core: CrestCore
@@ -33,7 +39,7 @@
 
         func show(_ notification: ProfileNotificationPosted) {
             let identifier = identifier(profileID: notification.profileID, notificationID: notification.notificationID)
-            guard allows(notification), posted[identifier] != nil || posted.count < 256 else {
+            guard allows(notification), posted[identifier] != nil || posted.count < Self.maximumPosted else {
                 answer(notification, .declined)
                 return
             }

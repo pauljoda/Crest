@@ -226,7 +226,8 @@ extension BrowserStore {
             family.send(
                 CreateFolder(
                     workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID,
-                    placement: .saved, parentID: parentID, title: title, color: color, symbol: "folder",
+                    placement: .saved, parentID: parentID, title: title, color: color,
+                    symbol: FolderState.defaultSymbol,
                     tabIDs: [], leavesSplits: false, isGroup: false),
                 from: self)
         else { return nil }

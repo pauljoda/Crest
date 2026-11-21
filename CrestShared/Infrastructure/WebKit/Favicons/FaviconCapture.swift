@@ -318,7 +318,7 @@ enum BrowserFaviconCapture {
         var visited: Set<URL> = []
         return strings.compactMap { string in
             guard let url = URL(string: string, relativeTo: pageURL)?.absoluteURL,
-                isHTTPFamily(url) || url.scheme?.lowercased() == "data",
+                isHTTPFamily(url) || url.urlScheme == .data,
                 visited.insert(url).inserted
             else { return nil }
             return url
@@ -337,7 +337,7 @@ enum BrowserFaviconCapture {
             value -> IconCandidate? in
             guard let source = value["url"] as? String,
                 let url = URL(string: source, relativeTo: pageURL)?.absoluteURL,
-                isHTTPFamily(url) || url.scheme?.lowercased() == "data"
+                isHTTPFamily(url) || url.urlScheme == .data
             else { return nil }
             let relationships = Set(
                 (value["rel"] as? String ?? "")
@@ -382,8 +382,7 @@ enum BrowserFaviconCapture {
     }
 
     private static func isHTTPFamily(_ url: URL?) -> Bool {
-        url?.scheme?.lowercased() == "https"
-            || url?.scheme?.lowercased() == "http"
+        url?.webScheme != nil
     }
 
     private static let script = #"""

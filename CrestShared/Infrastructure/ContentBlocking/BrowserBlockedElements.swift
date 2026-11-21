@@ -25,7 +25,7 @@ struct BrowserBlockedElements {
     }
 
     private var webAddress: String? {
-        guard let pageURL, ["http", "https"].contains(pageURL.scheme?.lowercased() ?? "") else { return nil }
+        guard let pageURL, pageURL.webScheme != nil else { return nil }
         return pageURL.absoluteString
     }
 

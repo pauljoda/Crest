@@ -20,7 +20,7 @@ struct MobileSpaceCustomizationSection: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("mobile-space-customize")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceCustomize)
         }
     }
 
