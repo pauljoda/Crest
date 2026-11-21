@@ -47,9 +47,9 @@ struct BrowserSpaceBannerBackground: View {
                 }
 
                 if branding.textureStrength > 0 {
-                    CrestGrain()
-                        .blendMode(.softLight)
-                        .opacity(textureOpacity)
+                    CrestGrain(style: .fine)
+                        .blendMode(effectiveReduceTransparency ? .normal : .softLight)
+                        .opacity(branding.textureStrength * CrestGrainMetrics.fullOpacity)
                 }
             }
             .clipped()
@@ -75,15 +75,6 @@ struct BrowserSpaceBannerBackground: View {
     private var fieldOpacity: Double {
         effectiveReduceTransparency
             ? max(branding.bannerStrength, 0.85) : branding.bannerStrength
-    }
-
-    /// How strongly the grain lies over the sidebar, whatever its mode: the
-    /// look's texture strength of a full grain, which is fainter while the
-    /// system reduces transparency.
-    private var textureOpacity: Double {
-        branding.textureStrength
-            * (effectiveReduceTransparency
-                ? CrestGrainMetrics.reducedTransparencyOpacity : CrestGrainMetrics.fullOpacity)
     }
 
     private var readabilityOpacity: Double {

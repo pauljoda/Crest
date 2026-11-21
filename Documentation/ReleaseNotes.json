@@ -6037,6 +6037,10 @@
     "swift-values-once": {
       "category": "internal",
       "message": "Swift reads web schemes, limits, waits, log categories, settings links and accessibility identifiers from one owner each, and a link opened in Split View takes its first title from the core."
+    },
+    "sidebar-texture-reduced-transparency": {
+      "category": "fixed",
+      "message": "Sidebar texture stays visible as fine film grain when Reduce Transparency is on."
     }
   }
 }
