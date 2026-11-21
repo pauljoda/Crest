@@ -129,10 +129,7 @@ extension BrowserStore {
     func send(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) throws(Rejection) {
         let sources = spaceModel(matching: request.assignment).map(BrowserTabCopySources.init)
         let changes = try family.commit(batch.intent, from: self)
-        let copies: [TabCopied] = changes.compactMap {
-            guard case .tabCopied(let copied) = $0, copied.workspaceID == family.workspaceID else { return nil }
-            return copied
-        }
+        let copies = changes.compactMap(\.tabCopied).filter { $0.workspaceID == family.workspaceID }
         if let sources { prepareAcceptedCopies(copies, from: sources) }
         // The window followed the tabs when the core moved it to their Space.
         pendingMovedTabActivation = batch.destination.flatMap { destination in

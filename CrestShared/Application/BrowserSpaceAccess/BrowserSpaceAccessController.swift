@@ -139,7 +139,7 @@ final class BrowserSpaceAccessController {
         do throws(Rejection) {
             try core.send(BeginUnlockingSpace(workspaceID: workspace, spaceID: space, requestID: request))
         } catch {
-            if case .authenticationBusy = error { return false }
+            if error.authenticationBusy != nil { return false }
             failure = .authenticationUnavailable
             return false
         }

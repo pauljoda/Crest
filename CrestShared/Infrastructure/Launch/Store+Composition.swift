@@ -140,7 +140,7 @@ extension BrowserStore {
                 stored = opened
             } else {
                 let adoption = AdoptLegacySession(installed: legacy.values, seed: seed)
-                for case .sessionAdopted(let adopted) in try core.send(adoption) {
+                for adopted in try core.send(adoption).compactMap(\.sessionAdopted) {
                     for favicon in adopted.favicons {
                         favicons.reconcile(favicon.image, tabID: favicon.tabID)
                     }
@@ -161,7 +161,7 @@ extension BrowserStore {
         do {
             return try BrowserCoreSessionAuthority.openStored(in: core, favicons: favicons)
         } catch {
-            guard case .noStoredSession = error else { throw error }
+            guard error.noStoredSession != nil else { throw error }
             return nil
         }
     }

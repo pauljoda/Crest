@@ -191,7 +191,7 @@ final class BrowserStoreFamily {
         do {
             return try source.core.send(intent)
         } catch {
-            if case .saveFailed(let failed) = error {
+            if let failed = error.saveFailed {
                 source.localSyncErrorDescription = CoreState.description(of: failed.reason)
             }
             throw error

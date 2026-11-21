@@ -98,7 +98,7 @@ final class BrowserCoreSessionAuthority {
                 if tab.savedURL != nil { saved[tab.id] = favicons.savedFavicon(tabID: tab.id) }
             }
         }
-        for case .tabCopied(let copied) in changes where copied.workspaceID == opened.workspaceID {
+        for copied in changes.compactMap(\.tabCopied) where copied.workspaceID == opened.workspaceID {
             images[copied.copyTabID] = favicons.favicon(tabID: copied.sourceTabID)
             saved[copied.copyTabID] = favicons.savedFavicon(tabID: copied.sourceTabID)
             repaired.insert(copied.copyTabID)

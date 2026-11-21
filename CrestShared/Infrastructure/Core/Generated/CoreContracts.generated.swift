@@ -195,6 +195,371 @@ enum Change: Equatable, Sendable {
     case workspaceChanged(WorkspaceChanged)
     case workspaceClosed(WorkspaceClosed)
     case workspaceOpened(WorkspaceOpened)
+
+    /// The `AgentPreferencesChanged` this change carries, or nil for another member.
+    var agentPreferencesChanged: AgentPreferencesChanged? {
+        if case .agentPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSessionsChanged` this change carries, or nil for another member.
+    var agentSessionsChanged: AgentSessionsChanged? {
+        if case .agentSessionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AppPreferencesChanged` this change carries, or nil for another member.
+    var appPreferencesChanged: AppPreferencesChanged? {
+        if case .appPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveChanged` this change carries, or nil for another member.
+    var archiveChanged: ArchiveChanged? {
+        if case .archiveChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AuthenticationAsked` this change carries, or nil for another member.
+    var authenticationAsked: AuthenticationAsked? {
+        if case .authenticationAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `CloseReady` this change carries, or nil for another member.
+    var closeReady: CloseReady? {
+        if case .closeReady(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudMergeBegan` this change carries, or nil for another member.
+    var cloudMergeBegan: CloudMergeBegan? {
+        if case .cloudMergeBegan(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudSyncAdvanced` this change carries, or nil for another member.
+    var cloudSyncAdvanced: CloudSyncAdvanced? {
+        if case .cloudSyncAdvanced(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudTransportChanged` this change carries, or nil for another member.
+    var cloudTransportChanged: CloudTransportChanged? {
+        if case .cloudTransportChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ContentRuleListsChanged` this change carries, or nil for another member.
+    var contentRuleListsChanged: ContentRuleListsChanged? {
+        if case .contentRuleListsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `DataDeleted` this change carries, or nil for another member.
+    var dataDeleted: DataDeleted? {
+        if case .dataDeleted(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadApprovalAsked` this change carries, or nil for another member.
+    var downloadApprovalAsked: DownloadApprovalAsked? {
+        if case .downloadApprovalAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadDestinationAsked` this change carries, or nil for another member.
+    var downloadDestinationAsked: DownloadDestinationAsked? {
+        if case .downloadDestinationAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadStarted` this change carries, or nil for another member.
+    var downloadStarted: DownloadStarted? {
+        if case .downloadStarted(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadUpdated` this change carries, or nil for another member.
+    var downloadUpdated: DownloadUpdated? {
+        if case .downloadUpdated(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadsRemoved` this change carries, or nil for another member.
+    var downloadsRemoved: DownloadsRemoved? {
+        if case .downloadsRemoved(let value) = self { value } else { nil }
+    }
+
+    /// The `EnginePreferencesChanged` this change carries, or nil for another member.
+    var enginePreferencesChanged: EnginePreferencesChanged? {
+        if case .enginePreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `EnginesChanged` this change carries, or nil for another member.
+    var enginesChanged: EnginesChanged? {
+        if case .enginesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionInstallAsked` this change carries, or nil for another member.
+    var extensionInstallAsked: ExtensionInstallAsked? {
+        if case .extensionInstallAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionInstallChanged` this change carries, or nil for another member.
+    var extensionInstallChanged: ExtensionInstallChanged? {
+        if case .extensionInstallChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `FilterListsChanged` this change carries, or nil for another member.
+    var filterListsChanged: FilterListsChanged? {
+        if case .filterListsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `FoldersChanged` this change carries, or nil for another member.
+    var foldersChanged: FoldersChanged? {
+        if case .foldersChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `HistoryChanged` this change carries, or nil for another member.
+    var historyChanged: HistoryChanged? {
+        if case .historyChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `InstalledExtensionsChanged` this change carries, or nil for another member.
+    var installedExtensionsChanged: InstalledExtensionsChanged? {
+        if case .installedExtensionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkPreferencesChanged` this change carries, or nil for another member.
+    var linkPreferencesChanged: LinkPreferencesChanged? {
+        if case .linkPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `NavigationRecorded` this change carries, or nil for another member.
+    var navigationRecorded: NavigationRecorded? {
+        if case .navigationRecorded(let value) = self { value } else { nil }
+    }
+
+    /// The `OfferedPageAdopted` this change carries, or nil for another member.
+    var offeredPageAdopted: OfferedPageAdopted? {
+        if case .offeredPageAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `OfferedWindowAdopted` this change carries, or nil for another member.
+    var offeredWindowAdopted: OfferedWindowAdopted? {
+        if case .offeredWindowAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `PageChanged` this change carries, or nil for another member.
+    var pageChanged: PageChanged? {
+        if case .pageChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `PageOpened` this change carries, or nil for another member.
+    var pageOpened: PageOpened? {
+        if case .pageOpened(let value) = self { value } else { nil }
+    }
+
+    /// The `PageRehosted` this change carries, or nil for another member.
+    var pageRehosted: PageRehosted? {
+        if case .pageRehosted(let value) = self { value } else { nil }
+    }
+
+    /// The `PageRemoved` this change carries, or nil for another member.
+    var pageRemoved: PageRemoved? {
+        if case .pageRemoved(let value) = self { value } else { nil }
+    }
+
+    /// The `PageUnloaded` this change carries, or nil for another member.
+    var pageUnloaded: PageUnloaded? {
+        if case .pageUnloaded(let value) = self { value } else { nil }
+    }
+
+    /// The `PermissionAsked` this change carries, or nil for another member.
+    var permissionAsked: PermissionAsked? {
+        if case .permissionAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `PromptSettled` this change carries, or nil for another member.
+    var promptSettled: PromptSettled? {
+        if case .promptSettled(let value) = self { value } else { nil }
+    }
+
+    /// The `QuitWithDownloadsAsked` this change carries, or nil for another member.
+    var quitWithDownloadsAsked: QuitWithDownloadsAsked? {
+        if case .quitWithDownloadsAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `ReleaseNotesDue` this change carries, or nil for another member.
+    var releaseNotesDue: ReleaseNotesDue? {
+        if case .releaseNotesDue(let value) = self { value } else { nil }
+    }
+
+    /// The `Saved` this change carries, or nil for another member.
+    var saved: Saved? {
+        if case .saved(let value) = self { value } else { nil }
+    }
+
+    /// The `ScriptDialogAsked` this change carries, or nil for another member.
+    var scriptDialogAsked: ScriptDialogAsked? {
+        if case .scriptDialogAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `SearchCatalogChanged` this change carries, or nil for another member.
+    var searchCatalogChanged: SearchCatalogChanged? {
+        if case .searchCatalogChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionAdopted` this change carries, or nil for another member.
+    var sessionAdopted: SessionAdopted? {
+        if case .sessionAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupCompletedChanged` this change carries, or nil for another member.
+    var setupCompletedChanged: SetupCompletedChanged? {
+        if case .setupCompletedChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupDraftChanged` this change carries, or nil for another member.
+    var setupDraftChanged: SetupDraftChanged? {
+        if case .setupDraftChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupFinished` this change carries, or nil for another member.
+    var setupFinished: SetupFinished? {
+        if case .setupFinished(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupFlowChanged` this change carries, or nil for another member.
+    var setupFlowChanged: SetupFlowChanged? {
+        if case .setupFlowChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ShortcutsChanged` this change carries, or nil for another member.
+    var shortcutsChanged: ShortcutsChanged? {
+        if case .shortcutsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SidebarChanged` this change carries, or nil for another member.
+    var sidebarChanged: SidebarChanged? {
+        if case .sidebarChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SiteContentBlockingChanged` this change carries, or nil for another member.
+    var siteContentBlockingChanged: SiteContentBlockingChanged? {
+        if case .siteContentBlockingChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SitePermissionsChanged` this change carries, or nil for another member.
+    var sitePermissionsChanged: SitePermissionsChanged? {
+        if case .sitePermissionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLockChanged` this change carries, or nil for another member.
+    var spaceLockChanged: SpaceLockChanged? {
+        if case .spaceLockChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceSettingsChanged` this change carries, or nil for another member.
+    var spaceSettingsChanged: SpaceSettingsChanged? {
+        if case .spaceSettingsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpacesChanged` this change carries, or nil for another member.
+    var spacesChanged: SpacesChanged? {
+        if case .spacesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitGroupsChanged` this change carries, or nil for another member.
+    var splitGroupsChanged: SplitGroupsChanged? {
+        if case .splitGroupsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageFailed` this change carries, or nil for another member.
+    var storageFailed: StorageFailed? {
+        if case .storageFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncJournalChanged` this change carries, or nil for another member.
+    var syncJournalChanged: SyncJournalChanged? {
+        if case .syncJournalChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncRecordsSkipped` this change carries, or nil for another member.
+    var syncRecordsSkipped: SyncRecordsSkipped? {
+        if case .syncRecordsSkipped(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncStagingFailed` this change carries, or nil for another member.
+    var syncStagingFailed: SyncStagingFailed? {
+        if case .syncStagingFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `TabCopied` this change carries, or nil for another member.
+    var tabCopied: TabCopied? {
+        if case .tabCopied(let value) = self { value } else { nil }
+    }
+
+    /// The `TabFaviconAssigned` this change carries, or nil for another member.
+    var tabFaviconAssigned: TabFaviconAssigned? {
+        if case .tabFaviconAssigned(let value) = self { value } else { nil }
+    }
+
+    /// The `TabPagePutAway` this change carries, or nil for another member.
+    var tabPagePutAway: TabPagePutAway? {
+        if case .tabPagePutAway(let value) = self { value } else { nil }
+    }
+
+    /// The `TabSavedImageChanged` this change carries, or nil for another member.
+    var tabSavedImageChanged: TabSavedImageChanged? {
+        if case .tabSavedImageChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `TabsChanged` this change carries, or nil for another member.
+    var tabsChanged: TabsChanged? {
+        if case .tabsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `TabsImported` this change carries, or nil for another member.
+    var tabsImported: TabsImported? {
+        if case .tabsImported(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientPageClosed` this change carries, or nil for another member.
+    var transientPageClosed: TransientPageClosed? {
+        if case .transientPageClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientPagePromoted` this change carries, or nil for another member.
+    var transientPagePromoted: TransientPagePromoted? {
+        if case .transientPagePromoted(let value) = self { value } else { nil }
+    }
+
+    /// The `WebsiteDataRead` this change carries, or nil for another member.
+    var websiteDataRead: WebsiteDataRead? {
+        if case .websiteDataRead(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowBroughtForward` this change carries, or nil for another member.
+    var windowBroughtForward: WindowBroughtForward? {
+        if case .windowBroughtForward(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowChanged` this change carries, or nil for another member.
+    var windowChanged: WindowChanged? {
+        if case .windowChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowClosed` this change carries, or nil for another member.
+    var windowClosed: WindowClosed? {
+        if case .windowClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowRecordsAdopted` this change carries, or nil for another member.
+    var windowRecordsAdopted: WindowRecordsAdopted? {
+        if case .windowRecordsAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceChanged` this change carries, or nil for another member.
+    var workspaceChanged: WorkspaceChanged? {
+        if case .workspaceChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceClosed` this change carries, or nil for another member.
+    var workspaceClosed: WorkspaceClosed? {
+        if case .workspaceClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceOpened` this change carries, or nil for another member.
+    var workspaceOpened: WorkspaceOpened? {
+        if case .workspaceOpened(let value) = self { value } else { nil }
+    }
 }
 
 /// The rule that refused an intent or a query.
@@ -379,6 +744,906 @@ enum Rejection: Equatable, Error, Sendable {
     case windowNotOpen(WindowNotOpen)
     case workspaceBusy(WorkspaceBusy)
     case wrongDeletionOperation(WrongDeletionOperation)
+
+    /// The `AgentNotApproved` this rejection carries, or nil for another member.
+    var agentNotApproved: AgentNotApproved? {
+        if case .agentNotApproved(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSessionsFull` this rejection carries, or nil for another member.
+    var agentSessionsFull: AgentSessionsFull? {
+        if case .agentSessionsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSpaceUnavailable` this rejection carries, or nil for another member.
+    var agentSpaceUnavailable: AgentSpaceUnavailable? {
+        if case .agentSpaceUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentTabStopped` this rejection carries, or nil for another member.
+    var agentTabStopped: AgentTabStopped? {
+        if case .agentTabStopped(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentTabUnavailable` this rejection carries, or nil for another member.
+    var agentTabUnavailable: AgentTabUnavailable? {
+        if case .agentTabUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsFull` this rejection carries, or nil for another member.
+    var agentsFull: AgentsFull? {
+        if case .agentsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsOff` this rejection carries, or nil for another member.
+    var agentsOff: AgentsOff? {
+        if case .agentsOff(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsUnavailable` this rejection carries, or nil for another member.
+    var agentsUnavailable: AgentsUnavailable? {
+        if case .agentsUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AlreadyInSpace` this rejection carries, or nil for another member.
+    var alreadyInSpace: AlreadyInSpace? {
+        if case .alreadyInSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `AlreadyInSplit` this rejection carries, or nil for another member.
+    var alreadyInSplit: AlreadyInSplit? {
+        if case .alreadyInSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveInvalid` this rejection carries, or nil for another member.
+    var archiveInvalid: ArchiveInvalid? {
+        if case .archiveInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveTooLarge` this rejection carries, or nil for another member.
+    var archiveTooLarge: ArchiveTooLarge? {
+        if case .archiveTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `AuthenticationBusy` this rejection carries, or nil for another member.
+    var authenticationBusy: AuthenticationBusy? {
+        if case .authenticationBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksHaveNoLinks` this rejection carries, or nil for another member.
+    var bookmarksHaveNoLinks: BookmarksHaveNoLinks? {
+        if case .bookmarksHaveNoLinks(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksOverLimits` this rejection carries, or nil for another member.
+    var bookmarksOverLimits: BookmarksOverLimits? {
+        if case .bookmarksOverLimits(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksTooLarge` this rejection carries, or nil for another member.
+    var bookmarksTooLarge: BookmarksTooLarge? {
+        if case .bookmarksTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksUnrecognized` this rejection carries, or nil for another member.
+    var bookmarksUnrecognized: BookmarksUnrecognized? {
+        if case .bookmarksUnrecognized(let value) = self { value } else { nil }
+    }
+
+    /// The `BorrowedProfileRequiresOwner` this rejection carries, or nil for another member.
+    var borrowedProfileRequiresOwner: BorrowedProfileRequiresOwner? {
+        if case .borrowedProfileRequiresOwner(let value) = self { value } else { nil }
+    }
+
+    /// The `BorrowedWorkspaceRequiresSpace` this rejection carries, or nil for another member.
+    var borrowedWorkspaceRequiresSpace: BorrowedWorkspaceRequiresSpace? {
+        if case .borrowedWorkspaceRequiresSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotBecomeGroup` this rejection carries, or nil for another member.
+    var cannotBecomeGroup: CannotBecomeGroup? {
+        if case .cannotBecomeGroup(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotDeleteLastSpace` this rejection carries, or nil for another member.
+    var cannotDeleteLastSpace: CannotDeleteLastSpace? {
+        if case .cannotDeleteLastSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotMoveSplitAcrossSpaces` this rejection carries, or nil for another member.
+    var cannotMoveSplitAcrossSpaces: CannotMoveSplitAcrossSpaces? {
+        if case .cannotMoveSplitAcrossSpaces(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotPinSplit` this rejection carries, or nil for another member.
+    var cannotPinSplit: CannotPinSplit? {
+        if case .cannotPinSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ClosePreparationUnderway` this rejection carries, or nil for another member.
+    var closePreparationUnderway: ClosePreparationUnderway? {
+        if case .closePreparationUnderway(let value) = self { value } else { nil }
+    }
+
+    /// The `ContentRuleListUnavailable` this rejection carries, or nil for another member.
+    var contentRuleListUnavailable: ContentRuleListUnavailable? {
+        if case .contentRuleListUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `CredentialRecordLimitReached` this rejection carries, or nil for another member.
+    var credentialRecordLimitReached: CredentialRecordLimitReached? {
+        if case .credentialRecordLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `CurrentTabsOnly` this rejection carries, or nil for another member.
+    var currentTabsOnly: CurrentTabsOnly? {
+        if case .currentTabsOnly(let value) = self { value } else { nil }
+    }
+
+    /// The `CustomFilterListLimitReached` this rejection carries, or nil for another member.
+    var customFilterListLimitReached: CustomFilterListLimitReached? {
+        if case .customFilterListLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `CustomFiltersTooLarge` this rejection carries, or nil for another member.
+    var customFiltersTooLarge: CustomFiltersTooLarge? {
+        if case .customFiltersTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `DefaultEngineAlreadyRegistered` this rejection carries, or nil for another member.
+    var defaultEngineAlreadyRegistered: DefaultEngineAlreadyRegistered? {
+        if case .defaultEngineAlreadyRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadLimitReached` this rejection carries, or nil for another member.
+    var downloadLimitReached: DownloadLimitReached? {
+        if case .downloadLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateCredential` this rejection carries, or nil for another member.
+    var duplicateCredential: DuplicateCredential? {
+        if case .duplicateCredential(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateDownload` this rejection carries, or nil for another member.
+    var duplicateDownload: DuplicateDownload? {
+        if case .duplicateDownload(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateMediaSession` this rejection carries, or nil for another member.
+    var duplicateMediaSession: DuplicateMediaSession? {
+        if case .duplicateMediaSession(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicatePage` this rejection carries, or nil for another member.
+    var duplicatePage: DuplicatePage? {
+        if case .duplicatePage(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateSearchEngineName` this rejection carries, or nil for another member.
+    var duplicateSearchEngineName: DuplicateSearchEngineName? {
+        if case .duplicateSearchEngineName(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateSearchShortcut` this rejection carries, or nil for another member.
+    var duplicateSearchShortcut: DuplicateSearchShortcut? {
+        if case .duplicateSearchShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `ElementSelectorInvalid` this rejection carries, or nil for another member.
+    var elementSelectorInvalid: ElementSelectorInvalid? {
+        if case .elementSelectorInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineAlreadyRegistered` this rejection carries, or nil for another member.
+    var engineAlreadyRegistered: EngineAlreadyRegistered? {
+        if case .engineAlreadyRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineLacksCapability` this rejection carries, or nil for another member.
+    var engineLacksCapability: EngineLacksCapability? {
+        if case .engineLacksCapability(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineNotRegistered` this rejection carries, or nil for another member.
+    var engineNotRegistered: EngineNotRegistered? {
+        if case .engineNotRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionNotChangeable` this rejection carries, or nil for another member.
+    var extensionNotChangeable: ExtensionNotChangeable? {
+        if case .extensionNotChangeable(let value) = self { value } else { nil }
+    }
+
+    /// The `FileUnreadable` this rejection carries, or nil for another member.
+    var fileUnreadable: FileUnreadable? {
+        if case .fileUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `FilterListAddressInvalid` this rejection carries, or nil for another member.
+    var filterListAddressInvalid: FilterListAddressInvalid? {
+        if case .filterListAddressInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderAlreadyExists` this rejection carries, or nil for another member.
+    var folderAlreadyExists: FolderAlreadyExists? {
+        if case .folderAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderCycle` this rejection carries, or nil for another member.
+    var folderCycle: FolderCycle? {
+        if case .folderCycle(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderDepthLimitReached` this rejection carries, or nil for another member.
+    var folderDepthLimitReached: FolderDepthLimitReached? {
+        if case .folderDepthLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderLimitReached` this rejection carries, or nil for another member.
+    var folderLimitReached: FolderLimitReached? {
+        if case .folderLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `GroupHoldsOnlyTabs` this rejection carries, or nil for another member.
+    var groupHoldsOnlyTabs: GroupHoldsOnlyTabs? {
+        if case .groupHoldsOnlyTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `GuideSpaceLocked` this rejection carries, or nil for another member.
+    var guideSpaceLocked: GuideSpaceLocked? {
+        if case .guideSpaceLocked(let value) = self { value } else { nil }
+    }
+
+    /// The `IncompleteSplit` this rejection carries, or nil for another member.
+    var incompleteSplit: IncompleteSplit? {
+        if case .incompleteSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidAgent` this rejection carries, or nil for another member.
+    var invalidAgent: InvalidAgent? {
+        if case .invalidAgent(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidBlockedPopup` this rejection carries, or nil for another member.
+    var invalidBlockedPopup: InvalidBlockedPopup? {
+        if case .invalidBlockedPopup(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialDate` this rejection carries, or nil for another member.
+    var invalidCredentialDate: InvalidCredentialDate? {
+        if case .invalidCredentialDate(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialFile` this rejection carries, or nil for another member.
+    var invalidCredentialFile: InvalidCredentialFile? {
+        if case .invalidCredentialFile(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialOrigin` this rejection carries, or nil for another member.
+    var invalidCredentialOrigin: InvalidCredentialOrigin? {
+        if case .invalidCredentialOrigin(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialRecord` this rejection carries, or nil for another member.
+    var invalidCredentialRecord: InvalidCredentialRecord? {
+        if case .invalidCredentialRecord(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialUsername` this rejection carries, or nil for another member.
+    var invalidCredentialUsername: InvalidCredentialUsername? {
+        if case .invalidCredentialUsername(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadIdentity` this rejection carries, or nil for another member.
+    var invalidDownloadIdentity: InvalidDownloadIdentity? {
+        if case .invalidDownloadIdentity(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadProgress` this rejection carries, or nil for another member.
+    var invalidDownloadProgress: InvalidDownloadProgress? {
+        if case .invalidDownloadProgress(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadSample` this rejection carries, or nil for another member.
+    var invalidDownloadSample: InvalidDownloadSample? {
+        if case .invalidDownloadSample(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadText` this rejection carries, or nil for another member.
+    var invalidDownloadText: InvalidDownloadText? {
+        if case .invalidDownloadText(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidFolderPlacement` this rejection carries, or nil for another member.
+    var invalidFolderPlacement: InvalidFolderPlacement? {
+        if case .invalidFolderPlacement(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidFolderSymbol` this rejection carries, or nil for another member.
+    var invalidFolderSymbol: InvalidFolderSymbol? {
+        if case .invalidFolderSymbol(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidImport` this rejection carries, or nil for another member.
+    var invalidImport: InvalidImport? {
+        if case .invalidImport(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidLinkRouteEdit` this rejection carries, or nil for another member.
+    var invalidLinkRouteEdit: InvalidLinkRouteEdit? {
+        if case .invalidLinkRouteEdit(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidMediaSessionCount` this rejection carries, or nil for another member.
+    var invalidMediaSessionCount: InvalidMediaSessionCount? {
+        if case .invalidMediaSessionCount(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidName` this rejection carries, or nil for another member.
+    var invalidName: InvalidName? {
+        if case .invalidName(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidNewPrimary` this rejection carries, or nil for another member.
+    var invalidNewPrimary: InvalidNewPrimary? {
+        if case .invalidNewPrimary(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidPasswordLength` this rejection carries, or nil for another member.
+    var invalidPasswordLength: InvalidPasswordLength? {
+        if case .invalidPasswordLength(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidRetentionLifetime` this rejection carries, or nil for another member.
+    var invalidRetentionLifetime: InvalidRetentionLifetime? {
+        if case .invalidRetentionLifetime(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSearchEngine` this rejection carries, or nil for another member.
+    var invalidSearchEngine: InvalidSearchEngine? {
+        if case .invalidSearchEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSearchShortcut` this rejection carries, or nil for another member.
+    var invalidSearchShortcut: InvalidSearchShortcut? {
+        if case .invalidSearchShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSession` this rejection carries, or nil for another member.
+    var invalidSession: InvalidSession? {
+        if case .invalidSession(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidShortcut` this rejection carries, or nil for another member.
+    var invalidShortcut: InvalidShortcut? {
+        if case .invalidShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteHost` this rejection carries, or nil for another member.
+    var invalidSiteHost: InvalidSiteHost? {
+        if case .invalidSiteHost(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteOrigin` this rejection carries, or nil for another member.
+    var invalidSiteOrigin: InvalidSiteOrigin? {
+        if case .invalidSiteOrigin(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSitePermissionDetail` this rejection carries, or nil for another member.
+    var invalidSitePermissionDetail: InvalidSitePermissionDetail? {
+        if case .invalidSitePermissionDetail(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSitePermissionGrant` this rejection carries, or nil for another member.
+    var invalidSitePermissionGrant: InvalidSitePermissionGrant? {
+        if case .invalidSitePermissionGrant(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSpaceOrder` this rejection carries, or nil for another member.
+    var invalidSpaceOrder: InvalidSpaceOrder? {
+        if case .invalidSpaceOrder(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSplitColumnShares` this rejection carries, or nil for another member.
+    var invalidSplitColumnShares: InvalidSplitColumnShares? {
+        if case .invalidSplitColumnShares(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSplitIcon` this rejection carries, or nil for another member.
+    var invalidSplitIcon: InvalidSplitIcon? {
+        if case .invalidSplitIcon(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSyncRecords` this rejection carries, or nil for another member.
+    var invalidSyncRecords: InvalidSyncRecords? {
+        if case .invalidSyncRecords(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidTabContent` this rejection carries, or nil for another member.
+    var invalidTabContent: InvalidTabContent? {
+        if case .invalidTabContent(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidTabIcon` this rejection carries, or nil for another member.
+    var invalidTabIcon: InvalidTabIcon? {
+        if case .invalidTabIcon(let value) = self { value } else { nil }
+    }
+
+    /// The `LanguageTooLong` this rejection carries, or nil for another member.
+    var languageTooLong: LanguageTooLong? {
+        if case .languageTooLong(let value) = self { value } else { nil }
+    }
+
+    /// The `LastStartPage` this rejection carries, or nil for another member.
+    var lastStartPage: LastStartPage? {
+        if case .lastStartPage(let value) = self { value } else { nil }
+    }
+
+    /// The `LegacyCloudStateUnreadable` this rejection carries, or nil for another member.
+    var legacyCloudStateUnreadable: LegacyCloudStateUnreadable? {
+        if case .legacyCloudStateUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkPatternTooLong` this rejection carries, or nil for another member.
+    var linkPatternTooLong: LinkPatternTooLong? {
+        if case .linkPatternTooLong(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkRouteExists` this rejection carries, or nil for another member.
+    var linkRouteExists: LinkRouteExists? {
+        if case .linkRouteExists(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkRoutesFull` this rejection carries, or nil for another member.
+    var linkRoutesFull: LinkRoutesFull? {
+        if case .linkRoutesFull(let value) = self { value } else { nil }
+    }
+
+    /// The `MediaSessionLimitReached` this rejection carries, or nil for another member.
+    var mediaSessionLimitReached: MediaSessionLimitReached? {
+        if case .mediaSessionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `NoArchivedTabs` this rejection carries, or nil for another member.
+    var noArchivedTabs: NoArchivedTabs? {
+        if case .noArchivedTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `NoBrowsingDataCategory` this rejection carries, or nil for another member.
+    var noBrowsingDataCategory: NoBrowsingDataCategory? {
+        if case .noBrowsingDataCategory(let value) = self { value } else { nil }
+    }
+
+    /// The `NoCurrentTabs` this rejection carries, or nil for another member.
+    var noCurrentTabs: NoCurrentTabs? {
+        if case .noCurrentTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `NoIncludedSpaces` this rejection carries, or nil for another member.
+    var noIncludedSpaces: NoIncludedSpaces? {
+        if case .noIncludedSpaces(let value) = self { value } else { nil }
+    }
+
+    /// The `NoManualSetup` this rejection carries, or nil for another member.
+    var noManualSetup: NoManualSetup? {
+        if case .noManualSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSavedAddress` this rejection carries, or nil for another member.
+    var noSavedAddress: NoSavedAddress? {
+        if case .noSavedAddress(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSetup` this rejection carries, or nil for another member.
+    var noSetup: NoSetup? {
+        if case .noSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSplitStep` this rejection carries, or nil for another member.
+    var noSplitStep: NoSplitStep? {
+        if case .noSplitStep(let value) = self { value } else { nil }
+    }
+
+    /// The `NoStoredSession` this rejection carries, or nil for another member.
+    var noStoredSession: NoStoredSession? {
+        if case .noStoredSession(let value) = self { value } else { nil }
+    }
+
+    /// The `NotAnArchive` this rejection carries, or nil for another member.
+    var notAnArchive: NotAnArchive? {
+        if case .notAnArchive(let value) = self { value } else { nil }
+    }
+
+    /// The `NotPrivateWorkspace` this rejection carries, or nil for another member.
+    var notPrivateWorkspace: NotPrivateWorkspace? {
+        if case .notPrivateWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `PageNotLoadable` this rejection carries, or nil for another member.
+    var pageNotLoadable: PageNotLoadable? {
+        if case .pageNotLoadable(let value) = self { value } else { nil }
+    }
+
+    /// The `PageProfileMismatch` this rejection carries, or nil for another member.
+    var pageProfileMismatch: PageProfileMismatch? {
+        if case .pageProfileMismatch(let value) = self { value } else { nil }
+    }
+
+    /// The `PersistentWorkspaceRequired` this rejection carries, or nil for another member.
+    var persistentWorkspaceRequired: PersistentWorkspaceRequired? {
+        if case .persistentWorkspaceRequired(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsDragAlone` this rejection carries, or nil for another member.
+    var pinnedTabsDragAlone: PinnedTabsDragAlone? {
+        if case .pinnedTabsDragAlone(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsFull` this rejection carries, or nil for another member.
+    var pinnedTabsFull: PinnedTabsFull? {
+        if case .pinnedTabsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsStayPut` this rejection carries, or nil for another member.
+    var pinnedTabsStayPut: PinnedTabsStayPut? {
+        if case .pinnedTabsStayPut(let value) = self { value } else { nil }
+    }
+
+    /// The `PinsOneTabAtATime` this rejection carries, or nil for another member.
+    var pinsOneTabAtATime: PinsOneTabAtATime? {
+        if case .pinsOneTabAtATime(let value) = self { value } else { nil }
+    }
+
+    /// The `PrimaryCannotJoin` this rejection carries, or nil for another member.
+    var primaryCannotJoin: PrimaryCannotJoin? {
+        if case .primaryCannotJoin(let value) = self { value } else { nil }
+    }
+
+    /// The `PrimaryCannotSeparate` this rejection carries, or nil for another member.
+    var primaryCannotSeparate: PrimaryCannotSeparate? {
+        if case .primaryCannotSeparate(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateSpaceCannotLock` this rejection carries, or nil for another member.
+    var privateSpaceCannotLock: PrivateSpaceCannotLock? {
+        if case .privateSpaceCannotLock(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateSpaceCannotShare` this rejection carries, or nil for another member.
+    var privateSpaceCannotShare: PrivateSpaceCannotShare? {
+        if case .privateSpaceCannotShare(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateWorkspaceBoundary` this rejection carries, or nil for another member.
+    var privateWorkspaceBoundary: PrivateWorkspaceBoundary? {
+        if case .privateWorkspaceBoundary(let value) = self { value } else { nil }
+    }
+
+    /// The `ProfileInUse` this rejection carries, or nil for another member.
+    var profileInUse: ProfileInUse? {
+        if case .profileInUse(let value) = self { value } else { nil }
+    }
+
+    /// The `PromptAnswerMismatch` this rejection carries, or nil for another member.
+    var promptAnswerMismatch: PromptAnswerMismatch? {
+        if case .promptAnswerMismatch(let value) = self { value } else { nil }
+    }
+
+    /// The `RecoveryCheckpointUnusable` this rejection carries, or nil for another member.
+    var recoveryCheckpointUnusable: RecoveryCheckpointUnusable? {
+        if case .recoveryCheckpointUnusable(let value) = self { value } else { nil }
+    }
+
+    /// The `SaveFailed` this rejection carries, or nil for another member.
+    var saveFailed: SaveFailed? {
+        if case .saveFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `SearchEngineLimitReached` this rejection carries, or nil for another member.
+    var searchEngineLimitReached: SearchEngineLimitReached? {
+        if case .searchEngineLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SelectionChanged` this rejection carries, or nil for another member.
+    var selectionChanged: SelectionChanged? {
+        if case .selectionChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SelectionHoldsFolders` this rejection carries, or nil for another member.
+    var selectionHoldsFolders: SelectionHoldsFolders? {
+        if case .selectionHoldsFolders(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionEncrypted` this rejection carries, or nil for another member.
+    var sessionEncrypted: SessionEncrypted? {
+        if case .sessionEncrypted(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionHasNoTabs` this rejection carries, or nil for another member.
+    var sessionHasNoTabs: SessionHasNoTabs? {
+        if case .sessionHasNoTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionOverLimits` this rejection carries, or nil for another member.
+    var sessionOverLimits: SessionOverLimits? {
+        if case .sessionOverLimits(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionTooLarge` this rejection carries, or nil for another member.
+    var sessionTooLarge: SessionTooLarge? {
+        if case .sessionTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionUnrecognized` this rejection carries, or nil for another member.
+    var sessionUnrecognized: SessionUnrecognized? {
+        if case .sessionUnrecognized(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupBusy` this rejection carries, or nil for another member.
+    var setupBusy: SetupBusy? {
+        if case .setupBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `ShortcutInUse` this rejection carries, or nil for another member.
+    var shortcutInUse: ShortcutInUse? {
+        if case .shortcutInUse(let value) = self { value } else { nil }
+    }
+
+    /// The `SitePermissionLimitReached` this rejection carries, or nil for another member.
+    var sitePermissionLimitReached: SitePermissionLimitReached? {
+        if case .sitePermissionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceAlreadyExists` this rejection carries, or nil for another member.
+    var spaceAlreadyExists: SpaceAlreadyExists? {
+        if case .spaceAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceBeingDeleted` this rejection carries, or nil for another member.
+    var spaceBeingDeleted: SpaceBeingDeleted? {
+        if case .spaceBeingDeleted(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceDataNotErased` this rejection carries, or nil for another member.
+    var spaceDataNotErased: SpaceDataNotErased? {
+        if case .spaceDataNotErased(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceDeletionUnderway` this rejection carries, or nil for another member.
+    var spaceDeletionUnderway: SpaceDeletionUnderway? {
+        if case .spaceDeletionUnderway(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceIsPrivate` this rejection carries, or nil for another member.
+    var spaceIsPrivate: SpaceIsPrivate? {
+        if case .spaceIsPrivate(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLimitReached` this rejection carries, or nil for another member.
+    var spaceLimitReached: SpaceLimitReached? {
+        if case .spaceLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLocked` this rejection carries, or nil for another member.
+    var spaceLocked: SpaceLocked? {
+        if case .spaceLocked(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceProfileChanged` this rejection carries, or nil for another member.
+    var spaceProfileChanged: SpaceProfileChanged? {
+        if case .spaceProfileChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitBoundary` this rejection carries, or nil for another member.
+    var splitBoundary: SplitBoundary? {
+        if case .splitBoundary(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitLimitReached` this rejection carries, or nil for another member.
+    var splitLimitReached: SplitLimitReached? {
+        if case .splitLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitNeedsTwoTabs` this rejection carries, or nil for another member.
+    var splitNeedsTwoTabs: SplitNeedsTwoTabs? {
+        if case .splitNeedsTwoTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `StagedLinkElsewhere` this rejection carries, or nil for another member.
+    var stagedLinkElsewhere: StagedLinkElsewhere? {
+        if case .stagedLinkElsewhere(let value) = self { value } else { nil }
+    }
+
+    /// The `StaleCredentialComparison` this rejection carries, or nil for another member.
+    var staleCredentialComparison: StaleCredentialComparison? {
+        if case .staleCredentialComparison(let value) = self { value } else { nil }
+    }
+
+    /// The `StaleUnlockRequest` this rejection carries, or nil for another member.
+    var staleUnlockRequest: StaleUnlockRequest? {
+        if case .staleUnlockRequest(let value) = self { value } else { nil }
+    }
+
+    /// The `StartPageNotCopied` this rejection carries, or nil for another member.
+    var startPageNotCopied: StartPageNotCopied? {
+        if case .startPageNotCopied(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageFromNewerApp` this rejection carries, or nil for another member.
+    var storageFromNewerApp: StorageFromNewerApp? {
+        if case .storageFromNewerApp(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageRestoreInterrupted` this rejection carries, or nil for another member.
+    var storageRestoreInterrupted: StorageRestoreInterrupted? {
+        if case .storageRestoreInterrupted(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageUnreadable` this rejection carries, or nil for another member.
+    var storageUnreadable: StorageUnreadable? {
+        if case .storageUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `StoredSessionClosed` this rejection carries, or nil for another member.
+    var storedSessionClosed: StoredSessionClosed? {
+        if case .storedSessionClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncStagingRefused` this rejection carries, or nil for another member.
+    var syncStagingRefused: SyncStagingRefused? {
+        if case .syncStagingRefused(let value) = self { value } else { nil }
+    }
+
+    /// The `TabAlreadyExists` this rejection carries, or nil for another member.
+    var tabAlreadyExists: TabAlreadyExists? {
+        if case .tabAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `TabAlreadyHasPage` this rejection carries, or nil for another member.
+    var tabAlreadyHasPage: TabAlreadyHasPage? {
+        if case .tabAlreadyHasPage(let value) = self { value } else { nil }
+    }
+
+    /// The `TabLimitReached` this rejection carries, or nil for another member.
+    var tabLimitReached: TabLimitReached? {
+        if case .tabLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientAlreadyCompleted` this rejection carries, or nil for another member.
+    var transientAlreadyCompleted: TransientAlreadyCompleted? {
+        if case .transientAlreadyCompleted(let value) = self { value } else { nil }
+    }
+
+    /// The `TranslationRuleLimitReached` this rejection carries, or nil for another member.
+    var translationRuleLimitReached: TranslationRuleLimitReached? {
+        if case .translationRuleLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownAgentSession` this rejection carries, or nil for another member.
+    var unknownAgentSession: UnknownAgentSession? {
+        if case .unknownAgentSession(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownArchivedTab` this rejection carries, or nil for another member.
+    var unknownArchivedTab: UnknownArchivedTab? {
+        if case .unknownArchivedTab(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownCloudMerge` this rejection carries, or nil for another member.
+    var unknownCloudMerge: UnknownCloudMerge? {
+        if case .unknownCloudMerge(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownExtension` this rejection carries, or nil for another member.
+    var unknownExtension: UnknownExtension? {
+        if case .unknownExtension(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownFolder` this rejection carries, or nil for another member.
+    var unknownFolder: UnknownFolder? {
+        if case .unknownFolder(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownLinkRoute` this rejection carries, or nil for another member.
+    var unknownLinkRoute: UnknownLinkRoute? {
+        if case .unknownLinkRoute(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownPage` this rejection carries, or nil for another member.
+    var unknownPage: UnknownPage? {
+        if case .unknownPage(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownPrompt` this rejection carries, or nil for another member.
+    var unknownPrompt: UnknownPrompt? {
+        if case .unknownPrompt(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSearchEngine` this rejection carries, or nil for another member.
+    var unknownSearchEngine: UnknownSearchEngine? {
+        if case .unknownSearchEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSearchOption` this rejection carries, or nil for another member.
+    var unknownSearchOption: UnknownSearchOption? {
+        if case .unknownSearchOption(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSpace` this rejection carries, or nil for another member.
+    var unknownSpace: UnknownSpace? {
+        if case .unknownSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSplitGroup` this rejection carries, or nil for another member.
+    var unknownSplitGroup: UnknownSplitGroup? {
+        if case .unknownSplitGroup(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownTab` this rejection carries, or nil for another member.
+    var unknownTab: UnknownTab? {
+        if case .unknownTab(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownWorkspace` this rejection carries, or nil for another member.
+    var unknownWorkspace: UnknownWorkspace? {
+        if case .unknownWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnpreparedImport` this rejection carries, or nil for another member.
+    var unpreparedImport: UnpreparedImport? {
+        if case .unpreparedImport(let value) = self { value } else { nil }
+    }
+
+    /// The `UnregisteredEngine` this rejection carries, or nil for another member.
+    var unregisteredEngine: UnregisteredEngine? {
+        if case .unregisteredEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `UnrelatedWorkspaces` this rejection carries, or nil for another member.
+    var unrelatedWorkspaces: UnrelatedWorkspaces? {
+        if case .unrelatedWorkspaces(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsavedWorkspace` this rejection carries, or nil for another member.
+    var unsavedWorkspace: UnsavedWorkspace? {
+        if case .unsavedWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsuitableDefaultSearch` this rejection carries, or nil for another member.
+    var unsuitableDefaultSearch: UnsuitableDefaultSearch? {
+        if case .unsuitableDefaultSearch(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsupportedAddress` this rejection carries, or nil for another member.
+    var unsupportedAddress: UnsupportedAddress? {
+        if case .unsupportedAddress(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsupportedArchiveVersion` this rejection carries, or nil for another member.
+    var unsupportedArchiveVersion: UnsupportedArchiveVersion? {
+        if case .unsupportedArchiveVersion(let value) = self { value } else { nil }
+    }
+
+    /// The `WebPagesOnly` this rejection carries, or nil for another member.
+    var webPagesOnly: WebPagesOnly? {
+        if case .webPagesOnly(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowNotOpen` this rejection carries, or nil for another member.
+    var windowNotOpen: WindowNotOpen? {
+        if case .windowNotOpen(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceBusy` this rejection carries, or nil for another member.
+    var workspaceBusy: WorkspaceBusy? {
+        if case .workspaceBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `WrongDeletionOperation` this rejection carries, or nil for another member.
+    var wrongDeletionOperation: WrongDeletionOperation? {
+        if case .wrongDeletionOperation(let value) = self { value } else { nil }
+    }
 
     var message: LocalizedStringResource? {
         switch self {

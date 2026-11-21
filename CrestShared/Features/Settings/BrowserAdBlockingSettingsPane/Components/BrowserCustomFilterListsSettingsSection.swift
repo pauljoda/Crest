@@ -90,7 +90,7 @@ struct BrowserCustomFilterListsSettingsSection: View {
             newListAddress = ""
             addError = nil
         } catch {
-            if case .customFilterListLimitReached(let limit) = error {
+            if let limit = error.customFilterListLimitReached {
                 addError = String(localized: "You can add up to \(limit.limit) lists.")
             } else {
                 addError = String(localized: "Enter an https address.")

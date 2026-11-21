@@ -80,10 +80,9 @@ extension BrowserStore {
         let promotion = PromoteTransientPage(
             workspaceID: family.workspaceID, windowID: windowID, pageID: page.id, spaceID: spaceID,
             placement: .current)
-        return family.perform(promotion, from: self)?.changes.lazy.compactMap {
-            guard case .transientPagePromoted(let promoted) = $0, promoted.pageID == page.id else { return nil }
-            return promoted
-        }.first
+        return family.perform(promotion, from: self)?.changes.compactMap(\.transientPagePromoted).first {
+            $0.pageID == page.id
+        }
     }
 
     /// Opens a tab showing `content` in `placement`'s section and answers its
@@ -124,8 +123,7 @@ extension BrowserStore {
     func closingLeavesOnlyTheWindow(_ id: UUID, in spaceID: UUID) -> Bool {
         let closing = CloseTab(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id, returnTabID: nil)
-        guard case .lastStartPage = family.refusal(of: closing, from: self) else { return false }
-        return true
+        return family.refusal(of: closing, from: self)?.lastStartPage != nil
     }
 
     @discardableResult
