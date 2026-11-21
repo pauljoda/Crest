@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Shared hover and press treatment for compact browser chrome controls.
 struct CrestChromeButtonStyle: ButtonStyle {
+    // MARK: - Variables
+
     /// The control's fixed size, or `nil` for a tile that takes the size its
     /// label and container give it.
     var controlSize: CGSize? = CGSize(
@@ -25,6 +27,25 @@ struct CrestChromeButtonStyle: ButtonStyle {
     /// How far past its surface the control takes presses on every side, for
     /// a small control that still needs a full hit target.
     var hitOutset: CGFloat = 0
+
+    // MARK: - Actions - Shapes
+
+    /// A round control `diameter` across, such as a glyph on a card or the
+    /// control that clears a field, taking presses `hitOutset` past its edge.
+    static func circle(
+        diameter: CGFloat = CrestLayout.minimumHitTarget,
+        showsRestingFill: Bool = false,
+        hitOutset: CGFloat = 0
+    ) -> CrestChromeButtonStyle {
+        CrestChromeButtonStyle(
+            controlSize: CGSize(width: diameter, height: diameter),
+            cornerRadius: diameter / 2,
+            showsRestingFill: showsRestingFill,
+            hitOutset: hitOutset
+        )
+    }
+
+    // MARK: - Actions - Drawing
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

@@ -38,12 +38,8 @@ struct BrowserCredentialImportReviewView: View {
                                                 "Review every valid account. Choose which password to keep, or skip any account."
                                         )
 
-                                        BrowserCredentialSearchField(
-                                            title: "Search imported passwords",
-                                            text: $searchText,
-                                            accessibilityIdentifier:
-                                                "imported-password-search"
-                                        )
+                                        CrestSearchField("Search imported passwords", text: $searchText)
+                                            .accessibilityIdentifier("imported-password-search")
                                     }
 
                                     let matchingGroups = review.groups(matching: searchText)
