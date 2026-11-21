@@ -45,10 +45,7 @@ struct CrestColorSlider: View {
                 Circle()
                     .fill(thumb.color)
                     .overlay { Circle().strokeBorder(.white, lineWidth: 3) }
-                    .shadow(
-                        color: .black.opacity(isDragging ? 0.4 : 0.3), radius: isDragging ? 6 : 3,
-                        y: isDragging ? 3 : 1
-                    )
+                    .crestElevation(isDragging ? .heldHandle : .handle)
                     .frame(width: CrestColorSliderMetrics.thumb, height: CrestColorSliderMetrics.thumb)
                     .scaleEffect(isDragging ? CrestColorSliderMetrics.liftedScale : 1)
                     .animation(CrestMotion.press.unlessReducingMotion(reduceMotion), value: isDragging)

@@ -37,7 +37,7 @@ struct BrowserGettingStartedPracticeWindow: View {
             .background(CrestBrandTheme.canvas)
             .clipShape(.rect(cornerRadius: 18))
             .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(CrestBrandTheme.line))
-            .shadow(color: .black.opacity(0.10), radius: 18, y: 8)
+            .crestElevation(.panel)
             #if os(macOS)
                 .background { liftPreview }
             #endif

@@ -45,7 +45,7 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
             RoundedRectangle(cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous)
                 .strokeBorder(.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
         }
-        .shadow(color: .black.opacity(0.45), radius: 30, y: 24)
+        .crestElevation(.window)
         .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: true))
         .accessibilityElement(children: editableName == nil ? .ignore : .contain)
@@ -65,7 +65,7 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
                 page
             }
             .clipShape(shape)
-            .background { shape.fill(CrestBrandPalette.paper).shadow(color: .black.opacity(0.18), radius: 6, y: 2) }
+            .background { shape.fill(CrestBrandPalette.paper).crestElevation(.page) }
         }
         .padding(.vertical, BrowserChromeLayout.pageFrameInset)
         .padding(.trailing, BrowserChromeLayout.pageFrameInset)

@@ -13,11 +13,7 @@ struct BrowserDragSourceLiftStyle: ViewModifier {
         content
             .scaleEffect(isDragging ? 1.04 : 1)
             .opacity(isDragging ? 0.42 : 1)
-            .shadow(
-                color: .black.opacity(isDragging ? 0.24 : 0),
-                radius: isDragging ? 10 : 0,
-                y: isDragging ? 5 : 0
-            )
+            .crestElevation(isDragging ? .dragged : nil)
             .zIndex(isDragging ? 2 : 0)
             .animation(
                 CrestMotion.dragSource.unlessReducingMotion(reduceMotion),

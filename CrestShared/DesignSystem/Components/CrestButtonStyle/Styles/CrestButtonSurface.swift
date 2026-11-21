@@ -92,10 +92,7 @@ struct CrestButtonSurface: View {
                     lineWidth: CrestButtonMetrics.strokeWidth
                 )
             }
-            .shadow(
-                color: .black.opacity(CrestButtonMetrics.primaryShadowOpacity),
-                radius: CrestButtonMetrics.primaryShadowRadius, y: 1
-            )
+            .crestElevation(.control)
             .crestCapsuleInteractionShape()
     }
 

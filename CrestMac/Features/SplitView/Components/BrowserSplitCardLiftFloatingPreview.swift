@@ -70,11 +70,7 @@ struct BrowserSplitCardLiftFloatingPreview: View {
         .overlay {
             shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
         }
-        .shadow(
-            color: .black.opacity(0.28),
-            radius: 18,
-            y: 10
-        )
+        .crestElevation(.dragged)
         .animation(crossfadeMotion, value: content.snapshot != nil)
     }
 

@@ -35,9 +35,7 @@ struct BrowserSetupLiveWindow: View {
     private var shadow: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(CrestBrandPalette.ink)
-            .shadow(
-                color: CrestBrandPalette.ink.opacity(cornerRadius > 0 ? BrowserSetupLiveWindowMetrics.shadow : 0),
-                radius: BrowserSetupLiveWindowMetrics.shadowRadius, y: BrowserSetupLiveWindowMetrics.shadowOffset)
+            .crestElevation(.window, scale: cornerRadius > 0 ? 1 : 0)
     }
 
     /// Crest's browser over the copy, with the copy's own core, a line where
@@ -106,9 +104,6 @@ extension BrowserSetupLiveWindow {
 
 enum BrowserSetupLiveWindowMetrics {
     static let cornerRadius: CGFloat = 14
-    static let shadow = 0.42
-    static let shadowRadius: CGFloat = 30
-    static let shadowOffset: CGFloat = 18
     static let windowButton: CGFloat = 13
     static let windowButtonSpacing: CGFloat = 9
     static let windowButtonInset = EdgeInsets(top: 18, leading: 20, bottom: 0, trailing: 0)

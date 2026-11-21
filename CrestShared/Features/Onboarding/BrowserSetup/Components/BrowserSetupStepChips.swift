@@ -111,11 +111,7 @@ struct BrowserSetupStepChips: View {
                     .overlay { shape.strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
             }
         }
-        .shadow(
-            color: CrestBrandPalette.ink.opacity(
-                isOpen ? BrowserSetupStepChipsMetrics.liftedShadow : BrowserSetupStepChipsMetrics.restingShadow),
-            radius: isOpen ? 5 : 1.5, y: isOpen ? 3 : 1
-        )
+        .crestElevation(isOpen ? .lifted : .control)
         .scaleEffect(isOpen && !size.namesEvery ? BrowserSetupStepChipsMetrics.liftedScale : 1)
         .zIndex(isOpen ? 1 : 0)
     }
@@ -126,9 +122,6 @@ enum BrowserSetupStepChipsMetrics {
     static let tilts: [Double] = [-2, 1.5, -1, 2]
     static let numberSpacing: CGFloat = 8
     static let numberOpacity = 0.7
-    /// The paper shadow a chip casts lying flat, and lifted while open.
-    static let restingShadow = 0.16
-    static let liftedShadow = 0.28
     static let liftedScale: CGFloat = 1.06
     /// How the chips move as the walk does.
     static let motion = Animation.smooth(duration: 0.45)

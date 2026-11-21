@@ -64,8 +64,8 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
                 top: page.top + pointerMargin, leading: page.leading + pointerMargin,
                 bottom: page.bottom + pointerMargin, trailing: page.trailing + pointerMargin)
         },
-        cardCornerRadius: 15, cardBorderOpacity: 0.16, cardShadowOpacity: 0.34, cardShadowRadius: 28,
-        cardShadowOffsetY: 14, fadesScrim: true)
+        cardCornerRadius: 15, cardBorderOpacity: 0.16, cardElevation: .floatingPage,
+        fadesScrim: true)
 
     /// A card filling a handheld screen's safe area, closed with the control
     /// bar beneath it or by tapping the ground its insets leave showing. The
@@ -84,8 +84,8 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         },
         // A thumb-sized card is held closer and rounded more heavily than one
         // read at pointer distance.
-        cardCornerRadius: 24, cardBorderOpacity: 0.18, cardShadowOpacity: 0.32, cardShadowRadius: 24,
-        cardShadowOffsetY: 12, fadesScrim: false)
+        cardCornerRadius: 24, cardBorderOpacity: 0.18, cardElevation: .floatingPage,
+        fadesScrim: false)
 
     /// A card floating at a fraction of a large touch screen, with room left
     /// around it for the scrim to be a deliberate target.
@@ -106,8 +106,8 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
                 minimumVertical: 28
             )
         },
-        cardCornerRadius: 15, cardBorderOpacity: 0.18, cardShadowOpacity: 0.32, cardShadowRadius: 24,
-        cardShadowOffsetY: 12, fadesScrim: false)
+        cardCornerRadius: 15, cardBorderOpacity: 0.18, cardElevation: .floatingPage,
+        fadesScrim: false)
 
     /// Every arrangement.
     static let all: [BrowserTransientCardArrangement] = [pointer, sheet, canvas]
@@ -141,9 +141,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
 
     let cardCornerRadius: CGFloat
     let cardBorderOpacity: Double
-    let cardShadowOpacity: Double
-    let cardShadowRadius: CGFloat
-    let cardShadowOffsetY: CGFloat
+    let cardElevation: CrestElevation
 
     /// Whether the ground fades in with the card instead of appearing at once.
     let fadesScrim: Bool
@@ -169,8 +167,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?,
         sizesCard: @escaping @Sendable (CGSize) -> CGSize?,
         insetsContent: @escaping @Sendable (EdgeInsets, EdgeInsets) -> EdgeInsets,
-        cardCornerRadius: CGFloat, cardBorderOpacity: Double, cardShadowOpacity: Double, cardShadowRadius: CGFloat,
-        cardShadowOffsetY: CGFloat, fadesScrim: Bool
+        cardCornerRadius: CGFloat, cardBorderOpacity: Double, cardElevation: CrestElevation, fadesScrim: Bool
     ) {
         self.name = name
         self.entranceTarget = entranceTarget
@@ -184,9 +181,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         self.insetsContent = insetsContent
         self.cardCornerRadius = cardCornerRadius
         self.cardBorderOpacity = cardBorderOpacity
-        self.cardShadowOpacity = cardShadowOpacity
-        self.cardShadowRadius = cardShadowRadius
-        self.cardShadowOffsetY = cardShadowOffsetY
+        self.cardElevation = cardElevation
         self.fadesScrim = fadesScrim
     }
 

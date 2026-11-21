@@ -39,7 +39,7 @@ struct BrowserSplitGroupDragPreview: View {
         .overlay {
             shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
         }
-        .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
+        .crestElevation(.dragged)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Split View with \(members.count) tabs")
         .modifier(SurfaceToneAppearance())

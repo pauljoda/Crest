@@ -65,11 +65,7 @@ struct BrowserTabDragPreview: View {
             }
         }
         .frame(width: metrics.width, height: metrics.height)
-        .shadow(
-            color: .black.opacity(0.22),
-            radius: 10,
-            y: 5
-        )
+        .crestElevation(.dragged)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.shownTitle)
         .modifier(BrowserTabDragPreviewTone(style: isSelected ? selectedStyle : nil))

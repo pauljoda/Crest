@@ -12,13 +12,7 @@ struct BrowserDeveloperCaptureFeedbackView: View {
             )
             .frame(height: BrowserWebPageSurfaceMetrics.feedbackHeight)
             .background { CrestSurfaceLayer(shape: Capsule()) }
-            .shadow(
-                color: .black.opacity(
-                    BrowserWebPageSurfaceMetrics.feedbackShadowOpacity
-                ),
-                radius: BrowserWebPageSurfaceMetrics.feedbackShadowRadius,
-                y: BrowserWebPageSurfaceMetrics.feedbackShadowY
-            )
+            .crestElevation(.panel)
             .padding(.top, BrowserWebPageSurfaceMetrics.feedbackTopPadding)
             .allowsHitTesting(false)
             .accessibilityAddTraits(.isStaticText)

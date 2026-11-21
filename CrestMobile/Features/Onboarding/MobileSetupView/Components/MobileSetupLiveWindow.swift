@@ -33,9 +33,7 @@ struct MobileSetupLiveWindow: View {
     private var shadow: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(CrestBrandPalette.ink)
-            .shadow(
-                color: CrestBrandPalette.ink.opacity(cornerRadius > 0 ? MobileSetupLiveWindowMetrics.shadow : 0),
-                radius: MobileSetupLiveWindowMetrics.shadowRadius, y: MobileSetupLiveWindowMetrics.shadowOffset)
+            .crestElevation(.window, scale: cornerRadius > 0 ? 1 : 0)
     }
 
     /// Crest's browser over the copy, with the copy's own core.
@@ -62,7 +60,4 @@ struct MobileSetupLiveWindow: View {
 
 enum MobileSetupLiveWindowMetrics {
     static let cornerRadius: CGFloat = 22
-    static let shadow = 0.36
-    static let shadowRadius: CGFloat = 26
-    static let shadowOffset: CGFloat = 14
 }

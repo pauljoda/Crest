@@ -3,11 +3,6 @@ import SwiftUI
 /// Shared card geometry, appearance, and drag thresholds.
 enum BrowserSidebarWidgetDeckStyle {
     static let cardStrokeWidth: CGFloat = 0.5
-    static let contactShadowOpacity = 0.22
-    static let contactShadowRadius: CGFloat = 1
-    static let contactShadowOffset: CGFloat = 0.5
-    static let ambientShadowRadius: CGFloat = 8
-    static let ambientShadowOffset: CGFloat = 3
     static let underCardShadowScale = 0.45
 
     /// Visible slots: the front card plus the two cards it will flip to.

@@ -141,7 +141,7 @@ private struct BrowserDownloadFeedbackIcon: View {
         .foregroundStyle(.primary)
         .frame(width: 36, height: 36)
         .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 9)) }
-        .shadow(color: .black.opacity(0.16), radius: 5, y: 2)
+        .crestElevation(.lifted)
     }
 
     private var position: CGPoint {

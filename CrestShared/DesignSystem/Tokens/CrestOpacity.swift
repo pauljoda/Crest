@@ -34,7 +34,6 @@ enum CrestOpacity {
     /// Chrome that belongs to a part of the window without focus but stays
     /// usable, such as the bar of a split card another card has focus over.
     static let unfocusedChrome = 0.5
-    static let controlShadow = 0.16
     /// A status drawn across a sidebar row, under its title.
     static let statusSurface = 0.35
     /// A status drawn across a pinned tile, which is small and sits on its

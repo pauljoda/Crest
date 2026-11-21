@@ -28,8 +28,6 @@ enum CrestButtonMetrics {
     /// The primary pill at rest, short of full so hovering lifts it.
     static let primaryRestFill = 0.92
     static let sheenOpacity = 0.3
-    static let primaryShadowOpacity = 0.18
-    static let primaryShadowRadius: CGFloat = 2
     /// The secondary pill's fill at rest, under the pointer and pressed, and
     /// its rim.
     static let quietRestFill = 0.07

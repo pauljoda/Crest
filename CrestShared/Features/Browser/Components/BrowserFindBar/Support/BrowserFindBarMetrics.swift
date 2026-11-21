@@ -98,10 +98,4 @@ struct BrowserFindBarMetrics: Equatable, Sendable {
     ) -> BrowserFindBarMetrics {
         capabilities.supportsTouch ? .touch : .pointer
     }
-
-    /// The lift under the bar. Both shells draw it identically, and neither
-    /// draws it once the reader has asked for reduced transparency.
-    static let shadowOpacity = 0.14
-    static let shadowRadius: CGFloat = 12
-    static let shadowOffset: CGFloat = 5
 }

@@ -27,7 +27,6 @@ struct BrowserFindBar: View {
     let capabilities: BrowserInteractionCapabilities
     let isPageActive: Bool
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @FocusState private var focusedField: BrowserFindBarField?
 
     var body: some View {
@@ -64,13 +63,7 @@ struct BrowserFindBar: View {
             )
         )
         .modifier(BrowserPlatformFindBarStyle())
-        .shadow(
-            color: .black.opacity(
-                reduceTransparency ? 0 : BrowserFindBarMetrics.shadowOpacity
-            ),
-            radius: BrowserFindBarMetrics.shadowRadius,
-            y: BrowserFindBarMetrics.shadowOffset
-        )
+        .crestElevation(.panel)
         .task(
             id: FocusTaskID(
                 request: port.focusRequest(),

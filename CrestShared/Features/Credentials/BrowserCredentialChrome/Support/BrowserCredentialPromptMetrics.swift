@@ -307,12 +307,7 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
 
     static let suggestionRowSpacerLength: CGFloat = 10
 
-    /// The panel's corner, stroke, and lift. A band draws none of them, and
-    /// neither shell draws the lift once the reader has asked for reduced
-    /// transparency.
+    /// The panel's corner and stroke. A band draws neither.
     static let cornerRadius = CrestRadius.control
     static let strokeWidth: CGFloat = 0.5
-    static let shadowOpacity = CrestOpacity.controlShadow
-    static let shadowRadius: CGFloat = 14
-    static let shadowOffset: CGFloat = 6
 }

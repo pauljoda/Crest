@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "shared-elevation-shadows",
+      "category": "improved",
+      "message": "Panels, notices, drag previews, Peeks and setup's windows now cast one consistent set of shadows, so surfaces at the same height look the same everywhere."
+    }
+  ]
+}
