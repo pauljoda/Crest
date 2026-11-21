@@ -6,29 +6,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.100</title>
-            <pubDate>Sat, 21 Nov 2026 10:11:32 +0000</pubDate>
+            <title>0.10.107</title>
+            <pubDate>Sat, 21 Nov 2026 17:29:35 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1665</sparkle:version>
-            <sparkle:shortVersionString>0.10.100</sparkle:shortVersionString>
+            <sparkle:version>1669</sparkle:version>
+            <sparkle:shortVersionString>0.10.107</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### Improved
 
-- Reliability and internal improvements.
+- Update notes leave out changes that only reach iPhone and iPad, and link to the release's page on crestbrowser.com.
+- Every long press takes the same half second, and a Sub-Space sits the same distance in from its Space in every list.
+- Addresses ending in .test count as local everywhere: the developer toolbar turns on for them, and a typed one opens over HTTP first.
+
+### Fixed
+
+- What's New in Settings › About lists the newest changes in your version of Crest, and only the ones that reach your device.
+- A page in a language written in another script, such as Traditional Chinese for a reader of Simplified Chinese, is offered translation.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/2e5e8c07990afc2e43117731fab1ce422a8ae754...d9af59726a7b3786b9284aa4ede9ca89b62e8e17) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.100-2026-11-21-1665-r665.1/Installer-Crest-0.10.100-development-2026-11-21-d9af597-arm64.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.107/) · [View all changes](https://github.com/pauljoda/Crest/compare/d9af59726a7b3786b9284aa4ede9ca89b62e8e17...339cf9283231251ccaddecb29a93b81db52126b9) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.107-2026-11-21-1669-r669.1/Installer-Crest-0.10.107-development-2026-11-21-339cf92-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.100-2026-11-21-1665-r665.1/Installer-Crest-0.10.100-development-2026-11-21-d9af597-arm64.dmg" length="241656458" type="application/octet-stream" sparkle:edSignature="V0Kw7XW5F4DwpD3O/6+O1u2Nfo9E4kC1Z2/9iwvz65w7uBHv/ly4Uzi+GNqoZJeK7aD2bwreOsJg4k8ghvqHBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.107-2026-11-21-1669-r669.1/Installer-Crest-0.10.107-development-2026-11-21-339cf92-arm64.dmg" length="242068107" type="application/octet-stream" sparkle:edSignature="8GitbgLl1kVQX7TwMwdNYbHWuH21Us1QBrWm2gIvRj39ewnViRVTwHPatwkANAKiRvQGmx2EEqOhPKVWJ3DJDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +67,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: BBlKGlMfyeOgcVLTSKleni1NC+qlhuBF+yn5rwx9MlubFlCuENeNqMS9qz9U29TC4gRVikplibi0fzqUmeiADw==
-length: 3949
+edSignature: uusBelwJzbhmSuBoi4CDxIz+wOgt2VA4wG/bfIa/Jr/Y9BnQSbLFcS+IuErl8/6RNbsjDPhvhfqaDfGXbRN5Aw==
+length: 4635
 -->
