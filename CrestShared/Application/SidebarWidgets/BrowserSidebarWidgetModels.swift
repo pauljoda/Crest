@@ -131,7 +131,6 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
     let title: String
     let version: String?
     let build: String?
-    let releaseNotes: String?
     let informationURL: URL?
     let message: String?
     let progress: Double?

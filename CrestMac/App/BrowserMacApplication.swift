@@ -257,6 +257,7 @@ final class BrowserMacApplication {
         // The device store keeps whether setup was completed here, carried
         // once from what an older release kept in its defaults.
         _ = try? core.send(AdoptSetupCompletion(completed: legacyDevice.setupCompleted))
+        BrowserReleasePage.noteLaunch(in: core, environment: launchEnvironment)
         let onboardingProgress = BrowserOnboardingProgressStore(
             core: core, environment: launchEnvironment.coreEnvironment,
             forcesSetup: launchEnvironment.forcesMacOnboardingSetup)
@@ -339,6 +340,18 @@ final class BrowserMacApplication {
         }
     }
 
+    /// Opens the release page of the update the card presents, on the channel
+    /// it came from, as a new tab in the Space the window of `browser` shows.
+    private func updateReleasePage(
+        owner: AnyObject, browser: BrowserStore, pages: BrowserPagePool
+    ) -> BrowserSoftwareUpdateReleasePageAction {
+        BrowserSoftwareUpdateReleasePageAction(owner: owner) { [softwareUpdates] version in
+            let page = BrowserReleasePage(version: version, channel: softwareUpdates.channel.releaseChannel)
+            guard browser.openNewTab(url: page.url) != nil else { return }
+            pages.select()
+        }
+    }
+
     /// What the browser window `model` shows.
     func browserWindowContent(_ model: BrowserMacWindowModel) -> some View {
         BrowserMacWindowScene(
@@ -362,7 +375,10 @@ final class BrowserMacApplication {
         .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
         .environment(\.filterListUpdater, filterLists)
-        .modifier(BrowserSoftwareUpdateDetailsPresentation())
+        .environment(
+            \.browserSoftwareUpdateReleasePage,
+            updateReleasePage(owner: model, browser: model.browser, pages: model.pages)
+        )
     }
 
     var privateWindowContent: some View {
@@ -394,7 +410,10 @@ final class BrowserMacApplication {
         )
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
         .environment(\.filterListUpdater, filterLists)
-        .modifier(BrowserSoftwareUpdateDetailsPresentation())
+        .environment(
+            \.browserSoftwareUpdateReleasePage,
+            updateReleasePage(owner: privateBrowser, browser: privateBrowser, pages: privatePages)
+        )
         .background(
             BrowserMacWindowAttachment(
                 attach: { window in

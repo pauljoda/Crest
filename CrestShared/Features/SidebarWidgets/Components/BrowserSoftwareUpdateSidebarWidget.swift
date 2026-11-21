@@ -7,7 +7,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
     let update: BrowserSoftwareUpdateWidgetSnapshot
     let perform: (BrowserSidebarWidgetAction, BrowserSidebarWidgetID) -> Void
 
-    @Environment(\.browserSoftwareUpdateDetails) private var showDetails
+    @Environment(\.browserSoftwareUpdateReleasePage) private var openReleasePage
 
     var body: some View {
         VStack(alignment: .leading, spacing: BrowserSidebarWidgetDeckStyle.contentSpacing) {
@@ -68,13 +68,13 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
                         .lineLimit(1)
                 }
 
-                if hasDetails, let showDetails {
-                    Button("What's New") { showDetails() }
+                if let version = update.version, let openReleasePage {
+                    Button("What's New") { openReleasePage(version: version) }
                         .buttonStyle(.plain)
                         .font(CrestTypography.metadata.weight(.medium))
                         .foregroundStyle(CrestBrandTheme.accent)
-                        .accessibilityLabel("Review update details")
-                        .help("Review update details")
+                        .accessibilityLabel("Open the update's release notes")
+                        .help("Open the update's release notes")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,13 +184,6 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         }
     }
 
-    private var hasDetails: Bool {
-        if let releaseNotes = update.releaseNotes, !releaseNotes.isEmpty {
-            return true
-        }
-        return update.informationURL != nil
-    }
-
     private var headerTitle: Text {
         update.phase.isTitledByUpdate ? Text(verbatim: update.title) : Text(update.phase.title)
     }
@@ -228,7 +221,7 @@ private struct BrowserSoftwareUpdateApplicationIcon: View {
 }
 
 extension EnvironmentValues {
-    /// Opens the full release notes for the update a card presents. Nil where
-    /// the shell has no window to show them in, which leaves out What's New.
-    @Entry var browserSoftwareUpdateDetails: BrowserSoftwareUpdateDetailsAction? = nil
+    /// Opens the release page of the update a card presents. Nil where the
+    /// shell has no window to open it in, which leaves out What's New.
+    @Entry var browserSoftwareUpdateReleasePage: BrowserSoftwareUpdateReleasePageAction? = nil
 }

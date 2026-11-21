@@ -115,8 +115,14 @@ into New, Improved, and Fixed highlights, omit `internal` entries, and limit
 long ranges to the 12 most recent highlights. Because entry identity and cursor
 position are independent of commit hashes, rebases and other history rewrites
 do not repeat published copy or block a nightly. The same concise notes appear
-on GitHub and as structured Markdown in Sparkle's update interface, and each
-links to the release's page on the product site.
+on GitHub and in the appcast, and each links to the release's page on the
+product site.
+
+The apps show no release notes of their own. What's New in Settings › About
+opens the running release's page, and the Mac's update card opens the page of
+the update it offers, each in a new tab. After an update, the first window
+opens the new release's page; the core keeps the release each device launched
+last and decides when a launch follows an update.
 
 The product site builds its release notes from the same files and the release
 tags each time it deploys, which it does after every Mac publication: a page for

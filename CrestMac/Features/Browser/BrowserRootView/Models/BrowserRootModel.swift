@@ -156,6 +156,11 @@ extension BrowserRootModel {
             browser.presentStartPageForLaunch()
             address = ""
         }
+        // After an update, the first window opens the release's notes, in
+        // the launch's Start Page when it shows one.
+        if let releasePage = await BrowserReleasePage.dueAtLaunch(in: browser) {
+            browser.openExternalURL(releasePage.url)
+        }
         // Crest's own pages load no web content, so a window opening on one,
         // such as Getting Started after setup, shows it without waiting for
         // the rule lists to compile.

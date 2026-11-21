@@ -81,6 +81,12 @@ extension MobileBrowserRootModel {
         hasPreparedBrowser = true
         // Pages opened while the rules compiled were built without them.
         await pages.reconcileContentBlocking()
+        // After an update, the first window opens the release's notes in
+        // place of the launch's own choice.
+        if let releasePage = await BrowserReleasePage.dueAtLaunch(in: browser) {
+            openURL(releasePage.url)
+            return false
+        }
         if startupBehavior.opensNewTab {
             return showDefaultSpaceForNewTab()
         }

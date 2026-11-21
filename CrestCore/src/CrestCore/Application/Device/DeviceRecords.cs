@@ -21,8 +21,8 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
-/// persistent Space's palette remembers, the agent preferences, and whether a
-/// launch is reopening its windows' pages.
+/// persistent Space's palette remembers, the agent preferences, whether a
+/// launch is reopening its windows' pages, and the release launched last.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
@@ -48,6 +48,10 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// A launch is reopening its windows' pages, which it does until they
     /// settle or the person agrees to quit.
     public bool ReopeningPages { get; init; }
+
+    /// The release this device launched last, or null before a release that
+    /// keeps it launched here.
+    public string? LaunchedRelease { get; init; }
 
     /// The level ad blocking blocks at, or null before one was chosen or first
     /// answered.
@@ -94,6 +98,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
         && Agents.Equals(other.Agents)
         && ReopeningPages == other.ReopeningPages
+        && LaunchedRelease == other.LaunchedRelease
         && ContentBlockingLevel == other.ContentBlockingLevel
         && FilterListChoices.Count == other.FilterListChoices.Count
         && FilterListChoices.All(entry => other.FilterListChoices.TryGetValue(entry.Key, out bool isOn) && isOn == entry.Value)

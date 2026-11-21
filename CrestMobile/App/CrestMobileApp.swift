@@ -137,6 +137,7 @@ private final class BrowserMobileApplication {
         // The device store keeps whether setup was completed here, carried
         // once from what an older release kept in its defaults.
         _ = try? core.send(AdoptSetupCompletion(completed: legacyDevice.setupCompleted))
+        BrowserReleasePage.noteLaunch(in: core, environment: launchEnvironment)
         onboardingProgress = BrowserOnboardingProgressStore(
             core: core, environment: launchEnvironment.coreEnvironment,
             forcesSetup: launchEnvironment.forcesMobileOnboardingSetup)

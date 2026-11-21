@@ -234,4 +234,48 @@ public sealed partial class BrowserContractsTests {
         Assert.False(again.Query(new LaunchWindows(installed)).QuitWhileReopening);
     }
 
+    private static IEnumerable<ReleaseNotesDue> TakenNotes(CrestApp app) => app.Send(new TakeReleaseNotes()).OfType<ReleaseNotesDue>();
+
+    [Fact]
+    public void ALaunchThatFollowsAnUpdateShowsItsReleaseNotesOnceAndTheStoreKeepsTheReleaseLaunchedLast() {
+        using var directory = new StorageDirectory();
+        {
+            // Before setup is completed, a launch shows no notes, but its release is kept.
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            app.Send(new NoteLaunchRelease("0.10.100"));
+            Assert.Empty(TakenNotes(app));
+            _ = DrainUntil(app, _ => app.Query(new PendingSave()).Revision is null);
+        }
+        {
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            app.Send(new AdoptSetupCompletion(Completed: true));
+            app.Send(new NoteLaunchRelease("0.10.100"));
+            Assert.Empty(TakenNotes(app));
+            // A later release's notes go to the first window that asks, and only to it.
+            app.Send(new NoteLaunchRelease("0.10.101"));
+            Assert.Equal([new ReleaseNotesDue("0.10.101")], TakenNotes(app));
+            Assert.Empty(TakenNotes(app));
+            _ = DrainUntil(app, _ => app.Query(new PendingSave()).Revision is null);
+        }
+        {
+            // The same release again, then an earlier one, shows none.
+            var (app, _, _) = DeviceApp(directory);
+            using var disposal = app;
+            app.Send(new NoteLaunchRelease("0.10.101"));
+            Assert.Empty(TakenNotes(app));
+            app.Send(new NoteLaunchRelease("0.10.99"));
+            Assert.Empty(TakenNotes(app));
+        }
+
+        // A device that completed setup under a release that kept none was updated.
+        using var updatedDirectory = new StorageDirectory();
+        var (updated, _, _) = DeviceApp(updatedDirectory);
+        using var updatedDisposal = updated;
+        updated.Send(new AdoptSetupCompletion(Completed: true));
+        updated.Send(new NoteLaunchRelease("0.10.101"));
+        Assert.Equal([new ReleaseNotesDue("0.10.101")], TakenNotes(updated));
+    }
+
 }

@@ -158,6 +158,7 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_search_catalog (id INTEGER PRIMARY KEY CHECK (id = 0), document TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_setup (id INTEGER PRIMARY KEY CHECK (id = 0), completed INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_launch (id INTEGER PRIMARY KEY CHECK (id = 0), reopening_pages INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_release (id INTEGER PRIMARY KEY CHECK (id = 0), version TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_tab_group (id TEXT PRIMARY KEY, space TEXT NOT NULL, engine TEXT NOT NULL, "
             + "title TEXT NOT NULL, color TEXT NOT NULL, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_agents (id INTEGER PRIMARY KEY CHECK (id = 0), is_on INTEGER NOT NULL, "
@@ -182,6 +183,7 @@ internal sealed class SqliteConnection : IDisposable {
         SearchCatalog = ReadSearchCatalog(),
         Agents = ReadAgents(),
         ReopeningPages = ReadReopeningPages(),
+        LaunchedRelease = ReadLaunchedRelease(),
         ContentBlockingLevel = ReadContentBlockingLevel(),
         FilterListChoices = ReadFilterListChoices(),
         BlockingSites = ReadBlockingSites(),
@@ -437,6 +439,13 @@ internal sealed class SqliteConnection : IDisposable {
         return reopening;
     }
 
+    /// The release this device launched last, or null before one was kept.
+    private string? ReadLaunchedRelease() {
+        string? version = null;
+        Rows("SELECT version FROM device_release", statement => version = Sqlite.ColumnText(statement, 0));
+        return version;
+    }
+
     private HashSet<DeviceAdoption> ReadAdoptions() {
         var adoptions = new HashSet<DeviceAdoption>();
         foreach (var table in new[] { "device_marker", "device_adoption" })
@@ -465,6 +474,7 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
         if (written is null || !records.Agents.Equals(written.Agents)) WriteAgents(records.Agents);
         if (written is null || records.ReopeningPages != written.ReopeningPages) WriteReopeningPages(records.ReopeningPages);
+        if (written is null || records.LaunchedRelease != written.LaunchedRelease) WriteLaunchedRelease(records.LaunchedRelease);
         if (written is null || records.ContentBlockingLevel != written.ContentBlockingLevel)
             WriteContentBlockingLevel(records.ContentBlockingLevel);
         if (written is null || !SameChoices(records.FilterListChoices, written.FilterListChoices))
@@ -724,6 +734,13 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("DELETE FROM device_launch");
         Insert("INSERT INTO device_launch(id, reopening_pages) VALUES(0,?)",
             statement => Checked(Sqlite.sqlite3_bind_int64(statement, 1, reopening ? 1 : 0)));
+    }
+
+    /// The release launched last, or no row before one was kept.
+    private void WriteLaunchedRelease(string? version) {
+        Execute("DELETE FROM device_release");
+        if (version is null) return;
+        Insert("INSERT INTO device_release(id, version) VALUES(0,?)", statement => Bind(statement, 1, version));
     }
 
     private void WriteSetupCompleted(bool completed) {
