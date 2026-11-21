@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "ci-release-test-build",
+    "development": "swift-values-once",
     "nightly": "palette-history-site-icons"
   }
 }

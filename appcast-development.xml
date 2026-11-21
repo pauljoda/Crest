@@ -6,12 +6,12 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.90</title>
-            <pubDate>Sat, 21 Nov 2026 03:49:04 +0000</pubDate>
+            <title>0.10.100</title>
+            <pubDate>Sat, 21 Nov 2026 10:11:27 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1663</sparkle:version>
-            <sparkle:shortVersionString>0.10.90</sparkle:shortVersionString>
+            <sparkle:version>1665</sparkle:version>
+            <sparkle:shortVersionString>0.10.100</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
@@ -24,11 +24,11 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/b4ca6f7fa90af357d0ca83be0ca902a3ba2145ac...2e5e8c07990afc2e43117731fab1ce422a8ae754) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.90-2026-11-21-1663-r663.1/Installer-Crest-0.10.90-development-2026-11-21-2e5e8c0-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/2e5e8c07990afc2e43117731fab1ce422a8ae754...d9af59726a7b3786b9284aa4ede9ca89b62e8e17) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.100-2026-11-21-1665-r665.1/Installer-Crest-0.10.100-development-2026-11-21-d9af597-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.90-2026-11-21-1663-r663.1/Installer-Crest-0.10.90-development-2026-11-21-2e5e8c0-arm64.dmg" length="241636486" type="application/octet-stream" sparkle:edSignature="JrQN6d+onZ3igleA5ciW4PIVlUIE3njN4Z2/wd9MQWc7D7lZwIfk5szS/KMeXkH/QKflQJ7kxX+NaDPn5Ge7DQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.100-2026-11-21-1665-r665.1/Installer-Crest-0.10.100-development-2026-11-21-d9af597-arm64.dmg" length="241656458" type="application/octet-stream" sparkle:edSignature="V0Kw7XW5F4DwpD3O/6+O1u2Nfo9E4kC1Z2/9iwvz65w7uBHv/ly4Uzi+GNqoZJeK7aD2bwreOsJg4k8ghvqHBw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ee6swSEMRPxknMz41wW+Lz9bX9HS/DQfhBL0xwR0jG1d7RyIE+4dhUEq472Yhj7mYqBn44KxIDk/698oxTJVAA==
-length: 3943
+edSignature: GT50zWKTUWGKbWeqf8a83sKlpnL5n46Kg2GDT+BCd86G1u278rXghR3RXkUox0AeP5o2e8UFPyAymxSQfAnDBg==
+length: 3949
 -->
