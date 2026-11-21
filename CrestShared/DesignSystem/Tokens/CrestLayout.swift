@@ -6,7 +6,6 @@ enum CrestLayout {
     static let focusRing: CGFloat = 3
     /// Default drawn diameter for stand-alone Liquid Glass icon controls.
     static let glassIconButtonDiameter: CGFloat = 44
-    static let sidebarControlCornerRadius = CrestRadius.compact
     static let reloadQuarterTurn: CGFloat = 90
     static let pinnedAccentBorderWidth: CGFloat = 2
 

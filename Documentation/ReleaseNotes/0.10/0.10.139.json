@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "disabled-glyphs-match",
+      "category": "improved",
+      "message": "Disabled glyph buttons, such as reload and the round glass buttons, now fade to the same strength as every other disabled glyph."
+    }
+  ]
+}

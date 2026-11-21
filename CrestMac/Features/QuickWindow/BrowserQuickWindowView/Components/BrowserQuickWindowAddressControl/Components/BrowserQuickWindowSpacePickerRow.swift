@@ -29,7 +29,7 @@ struct BrowserQuickWindowSpacePickerRow: View {
         .crestInteractiveSurface(
             isSelected: isSelected,
             isHovering: isHovering,
-            cornerRadius: CrestLayout.sidebarControlCornerRadius
+            cornerRadius: CrestRadius.compact
         )
         .onHover { isHovering = $0 }
         .accessibilityLabel(space.name)

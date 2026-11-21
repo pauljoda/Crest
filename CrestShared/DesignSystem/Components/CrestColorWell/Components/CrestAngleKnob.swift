@@ -49,7 +49,7 @@ struct CrestAngleKnob: View {
                 .animation(CrestMotion.press.unlessReducingMotion(reduceMotion), value: isTurning)
         }
         .frame(width: diameter, height: diameter)
-        .opacity(isEnabled ? 1 : CrestOpacity.disabled)
+        .opacity(isEnabled ? 1 : CrestOpacity.disabledControl)
         .contentShape(.circle)
         .gesture(turn)
         .sensoryFeedback(.alignment, trigger: degrees) { old, new in

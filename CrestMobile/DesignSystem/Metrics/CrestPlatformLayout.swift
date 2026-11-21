@@ -4,4 +4,6 @@ import CoreGraphics
 enum CrestPlatformLayout {
     static let minimumHitTarget: CGFloat = 44
     static let sidebarRowHeight: CGFloat = 44
+    static let buttonHeight: CGFloat = 44
+    static let largeButtonHeight: CGFloat = 54
 }
