@@ -6,7 +6,6 @@ enum BrowserSettingsLayout {
     static let sidebarIdealWidth: CGFloat = 236
     static let sidebarMaximumWidth: CGFloat = 260
     static let sidebarIconSize: CGFloat = 24
-    static let showsSidebarSubtitles = false
     static let maximumReadableContentWidth: CGFloat = 700
     /// The width of a settings page's one column of grouped rows.
     static let formColumnWidth: CGFloat = 640

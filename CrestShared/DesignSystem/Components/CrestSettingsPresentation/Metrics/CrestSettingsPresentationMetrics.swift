@@ -8,6 +8,5 @@ enum CrestSettingsPresentationMetrics {
     static let regularSymbolSize: CGFloat = 15
     static let compactIconCornerRadius: CGFloat = 6
     static let regularIconCornerRadius: CGFloat = 9
-    static let titleSpacing: CGFloat = 1
     static let statusSpacing: CGFloat = CrestSpacing.large
 }

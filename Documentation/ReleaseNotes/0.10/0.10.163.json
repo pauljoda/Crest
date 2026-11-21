@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "settings-destinations-name-and-icon",
+      "category": "improved",
+      "message": "The list of Settings pages on iPhone and iPad shows each page's icon and name without a line of description under it.",
+      "platforms": ["ios"]
+    }
+  ]
+}
