@@ -5949,6 +5949,10 @@
     "browser-import-http-passwords": {
       "category": "fixed",
       "message": "Importing another browser's passwords brings those for sites without HTTPS too, and setup says Crest won't fill them in, instead of leaving them out without a word."
+    },
+    "chromium-upstream-157-0-8103-81-35a9bfb397cd": {
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.81 with upstream security and compatibility fixes."
     }
   }
 }
