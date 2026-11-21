@@ -42,7 +42,7 @@ struct BrowserSetupSpacesPage: View {
                             Label("Add Sub-Space", systemImage: "plus")
                         }
                         .buttonStyle(.crestTertiary)
-                        .padding(.leading, BrowserSetupSpacesPageMetrics.subSpaceIndent)
+                        .padding(.leading, BrowserSidebarMetrics.subSpaceIndent)
                         .accessibilityLabel(Text("Add a Sub-Space to \(group.primary.name)"))
                         .accessibilityIdentifier("setup-add-sub-space")
                     }
@@ -97,7 +97,7 @@ struct BrowserSetupSpacesPage: View {
                 Spacer(minLength: CrestSpacing.small)
                 CrestFormDisclosureChevron()
             }
-            .padding(.leading, isSubSpace ? BrowserSetupSpacesPageMetrics.subSpaceIndent - CrestSpacing.large : 0)
+            .padding(.leading, isSubSpace ? BrowserSidebarMetrics.subSpaceIndent - CrestSpacing.large : 0)
             .contentShape(.rect)
         }
         .buttonStyle(.browserSetupRow)
@@ -164,6 +164,4 @@ struct BrowserSetupSpacesPage: View {
 enum BrowserSetupSpacesPageMetrics {
     static let icon: CGFloat = 26
     static let subSpaceIcon: CGFloat = 22
-    /// How far a Sub-Space's row and the row adding one sit in from a Space's.
-    static let subSpaceIndent: CGFloat = 30
 }

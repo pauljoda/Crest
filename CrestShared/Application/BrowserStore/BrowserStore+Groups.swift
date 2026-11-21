@@ -79,10 +79,9 @@ extension BrowserStore {
 
     /// The Spaces whose passwords the group of `spaceID` reads, the one that
     /// keeps its new passwords first: the group's primary, then the Sub-Spaces,
-    /// which keep what they saved before they joined.
+    /// which keep what they saved before they joined, as the core answers.
     func credentialSpaceIDs(of spaceID: UUID) -> [UUID] {
-        guard let space = spaceModel(spaceID) else { return [spaceID] }
-        return groupMembers(of: space).map(\.id)
+        (try? credentialAccess(.read, in: spaceID).vaults) ?? [spaceID]
     }
 
     // MARK: - Actions - Changing groups

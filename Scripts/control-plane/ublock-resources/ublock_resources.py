@@ -30,6 +30,9 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+from repository import REPOSITORY as GITHUB_REPOSITORY  # noqa: E402
+
 REPOSITORY = HERE.parents[2]
 LOCK = HERE / "resources.lock.json"
 LIBRARY = REPOSITORY / "CrestCore/src/CrestCore/Application/ContentBlocking/FilterLibrary.cs"
@@ -104,7 +107,7 @@ def main():
     build_command.add_argument("--output", type=Path, help="Copy the built file here")
     build_command.add_argument("--update", action="store_true", help="Record a new digest in the lock")
     publish_command = commands.add_parser("publish", help="Build and release the resources once per tag")
-    publish_command.add_argument("--repository", default="pauljoda/Crest")
+    publish_command.add_argument("--repository", default=GITHUB_REPOSITORY)
     publish_command.add_argument("--dry-run", action="store_true", help="Verify without uploading")
     commands.add_parser("url", help="Print the address the core downloads")
     args = parser.parse_args()
@@ -112,7 +115,7 @@ def main():
     lock = read_lock()
     check_core(lock)
     if args.command == "url":
-        print(f"https://github.com/pauljoda/Crest/releases/download/{lock['tag']}/{lock['asset']}")
+        print(f"https://github.com/{GITHUB_REPOSITORY}/releases/download/{lock['tag']}/{lock['asset']}")
         return
     with tempfile.TemporaryDirectory(prefix="crest-ublock-") as temporary:
         folder = Path(temporary)

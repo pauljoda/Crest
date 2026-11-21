@@ -6037,6 +6037,30 @@
     "swift-values-once": {
       "category": "internal",
       "message": "Swift reads web schemes, limits, waits, log categories, settings links and accessibility identifiers from one owner each, and a link opened in Split View takes its first title from the core."
+    },
+    "one-hold-one-indent": {
+      "category": "improved",
+      "message": "Every long press takes the same half second, and a Sub-Space sits the same distance in from its Space in every list."
+    },
+    "release-tools-one-source": {
+      "category": "internal",
+      "message": "The Xcode Cloud guard reads its Xcode floor from project.yml, and the release tools read the repository and signing team from one place."
+    },
+    "core-answers-store-gates": {
+      "category": "internal",
+      "message": "The core answers which tabs Clear and Delete Folder remove, which search providers may be a default, where native views open, and whether a Space's passwords may be read, filled or saved and from which vaults."
+    },
+    "core-feature-rules": {
+      "category": "internal",
+      "message": "The core publishes the password reveal and clipboard lifetimes, answers whether a page is offered translation, and edits the palette's section order and row limits for Settings."
+    },
+    "translation-offer-other-script": {
+      "category": "fixed",
+      "message": "A page in a language written in another script, such as Traditional Chinese for a reader of Simplified Chinese, is offered translation."
+    },
+    "local-development-from-core": {
+      "category": "improved",
+      "message": "Addresses ending in .test count as local everywhere: the developer toolbar turns on for them, and a typed one opens over HTTP first."
     }
   }
 }

@@ -153,9 +153,10 @@ extension BrowserStore {
 // MARK: - Metadata
 
 extension BrowserStore {
-    /// The open tabs of `space` that clearing puts away: all of them, or,
-    /// keeping the shown tab, all but the tab this window shows there and the
-    /// rest of its split, as the core keeps them.
+    /// The open tabs of `space` that clearing puts away, as the sidebar offers
+    /// Clear from the read model: all of them, or, keeping the shown tab, all
+    /// but the tab this window shows there and the rest of its split. Clearing
+    /// itself asks the core (see `ClearedTabs`).
     func clearedTabIDs(of space: SpaceModel, keepingShownTab: Bool) -> Set<UUID> {
         let open = space.tabs.models.filter { $0.placement == .current }
         guard keepingShownTab, let shown = selectedTabID(in: space.id).flatMap({ space.tabs.model($0) }) else {
@@ -194,13 +195,19 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment,
         keepingShownTab: Bool
     ) -> Bool {
-        guard let space = spaceModel(matching: assignment) else { return false }
-        let ids = clearedTabIDs(of: space, keepingShownTab: keepingShownTab)
-        guard !ids.isEmpty else { return false }
-        let tabs = ids.map { BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID) }
+        guard spaceModel(matching: assignment) != nil else { return false }
+        let clearing = ClearedTabs(
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: assignment.spaceID,
+            keepsShownTab: keepingShownTab)
+        guard let ids = try? core.query(clearing).tabIDs, !ids.isEmpty else { return false }
+        let tabs = ids.map {
+            BrowserTabRuntimeAssignment(tabID: $0, spaceID: assignment.spaceID, profileID: assignment.profileID)
+        }
         return performPageDismissal(of: tabs) { [weak self] in
-            guard let self, let current = self.spaceModel(matching: assignment),
-                self.clearedTabIDs(of: current, keepingShownTab: keepingShownTab) == ids,
+            // A tab that opened or went while its pages were asked was not
+            // asked itself, so the Space stays as it is.
+            guard let self, self.spaceModel(matching: assignment) != nil,
+                Set((try? self.core.query(clearing).tabIDs) ?? []) == Set(ids),
                 self.clearSessionTabs(in: assignment.spaceID, keepingShownTab: keepingShownTab)
             else { return false }
             return true

@@ -89,11 +89,11 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             }
 
-            for xcode_version, build_version, expected_return_code in (
-                ("26.6", "17F113", 0),
-                ("27.0", "27A266a", 0),
-                ("27.0", "27A5228h", 64),
-                ("27.0", "27A266b", 64),
+            for xcode_version, build_version, expected_return_code, expected_error in (
+                ("26.6", "17F113", 64, "requires Xcode 27 or newer"),
+                ("27.0", "27A266a", 0, None),
+                ("27.0", "27A5228h", 64, "beta or prerelease"),
+                ("27.0", "27A266b", 64, "beta or prerelease"),
             ):
                 with self.subTest(build_version=build_version):
                     fake_xcodebuild.write_text(
@@ -112,8 +112,8 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                     )
 
                     self.assertEqual(result.returncode, expected_return_code)
-                    if expected_return_code:
-                        self.assertIn("beta or prerelease", result.stderr)
+                    if expected_error:
+                        self.assertIn(expected_error, result.stderr)
 
 
     @REQUIRES_PLUTIL

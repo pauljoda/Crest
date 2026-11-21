@@ -96,16 +96,17 @@ public sealed record UnknownSearchEngine(Guid? EngineId) : Rejection;
 #region Changes
 
 /// The device's search catalog, published whole whenever it changes, with
-/// every provider it holds as the device searches with it, and the default
+/// every provider it holds as the device searches with it, the default
 /// search a Space that follows it searches with, in an ordinary window and in
-/// a private one.
+/// a private one, the providers the palette offers to Tab, and those Settings
+/// and setup offer as a default.
 public sealed record SearchCatalogChanged(SearchCatalog Catalog, IReadOnlyList<SearchProvider> Providers, SearchProvider Default,
-    SearchProvider PrivateDefault) : Change {
+    SearchProvider PrivateDefault, IReadOnlyList<SearchProvider> Enabled, IReadOnlyList<SearchProvider> DefaultChoices) : Change {
     #region Constructors
 
     /// `catalog` as the platform reads it.
     internal static SearchCatalogChanged Of(SearchCatalog catalog) =>
-        new(catalog, catalog.Providers, catalog.Default, catalog.PrivateDefault);
+        new(catalog, catalog.Providers, catalog.Default, catalog.PrivateDefault, [.. catalog.Enabled], [.. catalog.DefaultChoices]);
 
     #endregion
 }

@@ -51,11 +51,11 @@ struct MobileSpaceSelectionSection: View {
                         .accessibilityHidden(true)
                 }
             }
-            .padding(.leading, browser.isSubSpace(space) ? MobileSpaceSelectionMetrics.subSpaceIndent : 0)
+            .padding(.leading, browser.isSubSpace(space) ? BrowserSidebarMetrics.subSpaceIndent : 0)
             .contentShape(Rectangle())
         }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityIdentifier("space-settings-row-\(space.id)")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsRow(space.id))
         .contextMenu {
             Group {
                 let order = BrowserSpaceOrderActions(browser: browser, spaceID: space.id)
@@ -70,10 +70,4 @@ struct MobileSpaceSelectionSection: View {
             .crestMenuActionLabelStyle()
         }
     }
-}
-
-private enum MobileSpaceSelectionMetrics {
-    /// How far a Sub-Space's row sits in from its primary's: past the
-    /// primary's icon, as a tab sits in a folder.
-    static let subSpaceIndent: CGFloat = 28
 }

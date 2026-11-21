@@ -8,9 +8,9 @@ extension CrestCore {
     // MARK: - Variables
 
     /// The most records one recency or account question may carry.
-    private nonisolated static let credentialBatchLimit = 64
+    private nonisolated static let credentialBatchLimit = CredentialRecord.maximumRecords
     /// The most saved origins one fill question may carry.
-    private nonisolated static let fillBatchLimit = 1_024
+    private nonisolated static let fillBatchLimit = CredentialOrigin.maximumFillCandidates
 
     // MARK: - Actions - Filling
 
