@@ -92,6 +92,32 @@ struct BrowserTabAppearanceGroup: View {
                     .labelsHidden()
             }
             .browserAppearanceSetting(.selectedTabOutline)
+            CrestSettingRow("Selected tab", setting: selectedStyle.resettable("Selected tab")) {
+                Picker("Selected tab", selection: selectedStyle.binding) {
+                    ForEach(BrowserSelectedTabStyle.all) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("selected-tab-style")
+            }
+            .browserAppearanceSetting(.selectedTabStyle)
+            CrestSettingSlider(
+                "Selected tab opacity", value: selectedOpacity, range: BrowserTabAppearance.selectedTabOpacityRange,
+                readout: .percent(naming: [1: "Opaque"]), identifier: "selected-tab-opacity"
+            )
+            // The material sets its own opacity.
+            .disabled(!appearance.tabs.selectedTabStyle.liesOnPaper)
+            .browserAppearanceSetting(.selectedTabOpacity)
+            CrestSettingRow("Tint selected pins", setting: pinTint.resettable("Tint selected pins")) {
+                Toggle("Tint selected pins", isOn: pinTint.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("selected-pin-tint")
+            }
+            .disabled(!appearance.tabs.selectedTabStyle.liesOnPaper)
+            .browserAppearanceSetting(.selectedPinTint)
             CrestSettingRow("Website colors for pins", setting: websiteColors.resettable("Website colors for pins")) {
                 Toggle("Website colors for pins", isOn: websiteColors.binding)
                     .labelsHidden()
@@ -141,6 +167,24 @@ struct BrowserTabAppearanceGroup: View {
             default: BrowserLookAndFeelDefaults.tabs.outlinesSelectedTabs)
     }
 
+    private var selectedStyle: CrestSettingValue<BrowserSelectedTabStyle> {
+        CrestSettingValue(
+            $appearance.tabs.selectedTabStyle,
+            default: BrowserLookAndFeelDefaults.tabs.selectedTabStyle)
+    }
+
+    private var selectedOpacity: CrestSettingValue<Double> {
+        CrestSettingValue(
+            $appearance.tabs.selectedTabOpacity,
+            default: BrowserLookAndFeelDefaults.tabs.selectedTabOpacity)
+    }
+
+    private var pinTint: CrestSettingValue<Bool> {
+        CrestSettingValue(
+            $appearance.tabs.tintsSelectedPins,
+            default: BrowserLookAndFeelDefaults.tabs.tintsSelectedPins)
+    }
+
     private var websiteColors: CrestSettingValue<Bool> {
         CrestSettingValue(
             $appearance.tabs.usesWebsitePinColor,
@@ -174,6 +218,9 @@ struct BrowserTabAppearanceGroup: View {
             (.pinsFillRow, fillsRow.resettable("Stretch pins to fill the row")),
             (.colorBorders, borders.resettable("Color borders")),
             (.selectedTabOutline, outlines.resettable("Accent outline on selected tabs")),
+            (.selectedTabStyle, selectedStyle.resettable("Selected tab")),
+            (.selectedTabOpacity, selectedOpacity.resettable("Selected tab opacity")),
+            (.selectedPinTint, pinTint.resettable("Tint selected pins")),
             (.websitePinColors, websiteColors.resettable("Website colors for pins")),
             (.dimUnloadedTabs, dimming.resettable("Dim unloaded tabs")),
             (.pinnedFill, pinFill.resettable("Pinned fill")),

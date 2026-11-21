@@ -8653,6 +8653,9 @@
     "Opacity" : {
 
     },
+    "Opaque" : {
+
+    },
     "Open" : {
       "localizations" : {
         "ar" : {
@@ -11716,7 +11719,13 @@
     "Selected for tab actions" : {
 
     },
+    "Selected tab" : {
+
+    },
     "Selected tab glow" : {
+
+    },
+    "Selected tab opacity" : {
 
     },
     "Selected tabs, pins, the address field and the Space picker" : {
@@ -14104,6 +14113,9 @@
     "Tint Folder Title" : {
 
     },
+    "Tint selected pins" : {
+
+    },
     "Titles" : {
 
     },
@@ -15200,6 +15212,9 @@
       }
     },
     "When URL" : {
+
+    },
+    "White" : {
 
     },
     "Wide Desktop" : {

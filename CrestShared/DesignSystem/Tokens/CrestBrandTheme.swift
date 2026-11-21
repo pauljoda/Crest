@@ -93,6 +93,10 @@ enum CrestBrandTheme {
     /// A flyout floating over a page or the window: paper in the light,
     /// charcoal in the dark, opaque so nothing behind it shows through.
     static let flyout = dynamic(light: surfaceLightComponents, dark: CrestBrandPalette.charcoalComponents)
+    /// A page in Crest's neutrals rather than its blues: the cream canvas in
+    /// the light, and in the dark the warm near-black under charcoal panels,
+    /// so the page and the flyouts over it read in black and white.
+    static let neutralCanvas = dynamic(light: canvasLightComponents, dark: CrestBrandPalette.cinderComponents)
     /// Display and body text on `canvas` or `surface`.
     static let textDisplay = dynamic(
         light: textDisplayLightComponents,

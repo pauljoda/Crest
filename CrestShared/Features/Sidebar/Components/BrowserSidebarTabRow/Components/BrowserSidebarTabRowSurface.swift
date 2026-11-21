@@ -209,8 +209,10 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
     }
 }
 
-/// A selected row is a sheet of Crest's light paper with ink text on every
-/// Space. Any other row keeps the Space's ink.
+/// A selected row reads as its selected tab style draws it: ink on Crest's
+/// white paper on every Space, or on the device's material, the label color
+/// in the scheme its material color gives it. Any other row keeps the
+/// Space's ink.
 ///
 /// Both states set the same modifiers, so selecting a row changes values
 /// rather than the row's structure.
@@ -218,13 +220,17 @@ private struct BrowserSelectedTabRowAppearance: ViewModifier {
     let isSelected: Bool
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.spaceChromeForeground) private var spaceForeground
 
     func body(content: Content) -> some View {
+        // Only the selected row reads the style, so changing it leaves the rest be.
+        let style = isSelected ? BrowserDeviceAppearanceStore.shared.tabs.selectedTabStyle : .standard
+        let materialScheme = CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
         content
-            .foregroundStyle(isSelected ? AnyShapeStyle(CrestBrandTheme.textDisplay) : AnyShapeStyle(.primary))
+            .foregroundStyle(isSelected ? AnyShapeStyle(style.foreground) : AnyShapeStyle(.primary))
             .environment(\.spaceChromeForeground, isSelected ? nil : spaceForeground)
-            .environment(\.colorScheme, isSelected ? .light : colorScheme)
+            .environment(\.colorScheme, isSelected ? style.contentScheme(onMaterial: materialScheme) : colorScheme)
     }
 }
 
