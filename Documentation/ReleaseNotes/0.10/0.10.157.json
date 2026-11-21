@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "setup-window-outline-and-peek-scrim-roles",
+      "category": "internal",
+      "message": "The outline of setup's live window on Mac, iPhone and iPad and the dim behind an opening Peek or Quick Window on iPhone and iPad come from named opacity roles, with no visible change."
+    }
+  ]
+}

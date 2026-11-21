@@ -26,6 +26,12 @@ enum CrestOpacity {
     static let darkSelectionBorder = 0.18
     static let chromeSurface = 0.055
     static let border = 0.12
+    /// The hairline round a window Crest draws inside its own, such as
+    /// setup's live window.
+    static let windowOutline = 0.14
+    /// The dim over the page behind a preview brought up over it, such as
+    /// the one a Peek or Quick Window shows while it opens.
+    static let scrim = 0.28
     /// The faint fill of the vacant slot a dragged item will drop into, such
     /// as the gap a sidebar row leaves or a pinned tile's open slot.
     static let dropSlot = 0.035

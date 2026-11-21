@@ -17,7 +17,9 @@ struct MobileSetupLiveWindow: View {
             MobileSetupLiveWindowHost(content: browser(copy), cornerRadius: cornerRadius)
                 .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
+                        .strokeBorder(
+                            Color.primary.opacity(CrestOpacity.windowOutline), lineWidth: CrestLayout.hairline
+                        )
                         .allowsHitTesting(false)
                 }
                 .background { shadow }
