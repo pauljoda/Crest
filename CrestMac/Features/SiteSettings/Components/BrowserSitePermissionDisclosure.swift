@@ -18,12 +18,7 @@ struct BrowserSitePermissionDisclosure: View {
                     Text("Permissions")
                         .font(.caption.weight(.semibold))
                     Spacer(minLength: CrestSpacing.small)
-                    Image(
-                        systemName: isExpanded
-                            ? "chevron.down"
-                            : "chevron.right"
-                    )
-                    .font(.system(size: 9, weight: .semibold))
+                    CrestFormDisclosureChevron(isExpanded: isExpanded)
                 }
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)

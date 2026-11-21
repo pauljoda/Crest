@@ -17,9 +17,7 @@ struct BrowserSiteSecuritySection: View {
                         Spacer(minLength: CrestSpacing.small)
                         Text("Certificate")
                             .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                        CrestFormDisclosureChevron()
                     }
                     .contentShape(.rect)
                 }
