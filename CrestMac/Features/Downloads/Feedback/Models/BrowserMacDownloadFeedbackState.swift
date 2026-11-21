@@ -8,6 +8,8 @@ import Observation
 final class BrowserMacDownloadFeedbackState {
     struct Flight: Identifiable {
         let id: UUID
+        /// Where the download's icon flies, or nil when it has nowhere to
+        /// fly and the window posts a notice instead.
         let path: BrowserMacDownloadFlightPath?
     }
 
@@ -17,17 +19,19 @@ final class BrowserMacDownloadFeedbackState {
     @ObservationIgnored private var observedIDs: Set<UUID> = []
     @ObservationIgnored private var previousContext: BrowserMacDownloadFeedbackContext?
 
+    /// Takes the starts among `events` this window presents in `context`,
+    /// and answers the ones new since the last call.
     @discardableResult
     func reconcile(
         events: [BrowserDownloadFeedbackEvent],
         context: BrowserMacDownloadFeedbackContext
-    ) -> Bool {
+    ) -> [Flight] {
         let currentIDs = Set(events.map(\.id))
         defer {
             observedIDs = currentIDs
             previousContext = context
         }
-        guard previousContext != nil else { return false }
+        guard previousContext != nil else { return [] }
         if previousContext != context { cancel() }
         if let arrivalID, !currentIDs.contains(arrivalID) { self.arrivalID = nil }
         // The flights are worked out apart and stored only when they differ:
@@ -35,18 +39,15 @@ final class BrowserMacDownloadFeedbackState {
         // flights to the window even when there are none.
         var next = flights.filter { currentIDs.contains($0.id) }
         defer { if next.map(\.id) != flights.map(\.id) { flights = next } }
-        guard context.isVisible, let window = context.windowIdentifier else { return false }
-        let newEvents = events.filter {
+        guard context.isVisible, let window = context.windowIdentifier else { return [] }
+        let started = events.filter {
             !observedIDs.contains($0.id)
                 && $0.source.windowIdentifier == window
                 && $0.spaceID == context.spaceID
                 && $0.profileID == context.profileID
-        }
-        for event in newEvents {
-            next.append(Flight(id: event.id, path: path(for: event, context: context)))
-        }
-        next = Array(next.suffix(BrowserDownloadFeedbackEvent.maximumVisible))
-        return !newEvents.isEmpty
+        }.map { Flight(id: $0.id, path: path(for: $0, context: context)) }
+        next = Array((next + started).suffix(BrowserDownloadFeedbackEvent.maximumVisible))
+        return started
     }
 
     func arrive(_ id: UUID) {

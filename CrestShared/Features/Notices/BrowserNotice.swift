@@ -23,6 +23,13 @@ struct BrowserNotice: Equatable, Hashable {
         systemImage: "plus.square.on.square"
     )
 
+    /// A download started in a window where its icon has nowhere to fly: the
+    /// sidebar is hidden or Reduce Motion is on.
+    static let downloadStarted = BrowserNotice(
+        message: String(localized: "Download started"),
+        systemImage: "arrow.down.circle"
+    )
+
     // MARK: - Variables
 
     let message: String
