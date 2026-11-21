@@ -135,7 +135,9 @@ struct BrowserSpaceAccessView: View {
                 Rectangle().fill(CrestBrandTheme.canvas)
             }
             BrowserSpaceBannerBackground(branding: space.branding)
-                .opacity(reduceTransparency ? 0.04 : 0.1)
+                .opacity(
+                    reduceTransparency
+                        ? BrowserSpaceAccessLayout.opaqueBackgroundOpacity : BrowserSpaceAccessLayout.backgroundOpacity)
         }
         .ignoresSafeArea()
     }

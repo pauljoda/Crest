@@ -126,6 +126,8 @@ private struct SidebarScrollIndicator: View {
     /// bubble itself sits just above the sidebar's foot.
     private static let bubbleDiameter: CGFloat = 22
     private static let bubbleDrop: CGFloat = 5
+    /// How strongly the scroll indicator's bar draws.
+    private static let barOpacity = 0.45
     /// How long the indicator and its bubble take to show or hide.
     private static let fadeDuration: TimeInterval = 0.2
 
@@ -146,7 +148,7 @@ private struct SidebarScrollIndicator: View {
             let fraction = min(1, max(0, metrics.offset / max(1, metrics.maximumOffset)))
             ZStack(alignment: .bottom) {
                 Capsule()
-                    .fill(.primary.opacity(0.45))
+                    .fill(.primary.opacity(Self.barOpacity))
                     .frame(width: 3, height: height)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .padding(.trailing, 3)

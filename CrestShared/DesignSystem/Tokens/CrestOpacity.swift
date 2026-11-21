@@ -26,6 +26,11 @@ enum CrestOpacity {
     static let darkSelectionBorder = 0.18
     static let chromeSurface = 0.055
     static let border = 0.12
+    /// The faint fill of the vacant slot a dragged item will drop into, such
+    /// as the gap a sidebar row leaves or a pinned tile's open slot.
+    static let dropSlot = 0.035
+    /// The track a progress ring or bar fills along.
+    static let progressTrack = 0.25
     /// A disabled glyph, drawn in the secondary label color at this
     /// opacity so it stays visible against both page and sidebar glass.
     static let disabledGlyph = 0.5

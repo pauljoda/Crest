@@ -8,6 +8,9 @@ extension EnvironmentValues {
 
 /// Shared by live folder groups and the inline settings preview.
 struct BrowserFolderHighlightSurface: ViewModifier {
+    /// How strongly the edge round a folder's surface wears its color.
+    private static let edgeOpacity = 0.5
+
     let color: BrandColor
     let intensity: Double
     var textColorMode: SpaceTextColorMode = .automatic
@@ -68,7 +71,7 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                         }
                         .overlay {
                             if showsBorders {
-                                shape.strokeBorder(color.color.opacity(0.5), lineWidth: 1)
+                                shape.strokeBorder(color.color.opacity(Self.edgeOpacity), lineWidth: 1)
                             }
                         }
                         .padding(.leading, insetsSurface ? BrowserFolderLayout.surfaceLeadingInset(depth: depth) : 0)

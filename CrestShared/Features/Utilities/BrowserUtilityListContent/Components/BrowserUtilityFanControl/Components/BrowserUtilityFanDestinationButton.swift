@@ -107,7 +107,7 @@ struct BrowserUtilityNotificationBadge: View {
                             to: max(min(progress, 1), 0.04)
                         )
                         .stroke(
-                            .primary.opacity(0.72),
+                            .primary.opacity(BrowserUtilitySwitcherLayout.notificationBadgeProgressOpacity),
                             style: StrokeStyle(
                                 lineWidth: 1.5,
                                 lineCap: .round

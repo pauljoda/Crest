@@ -2,6 +2,11 @@ import SwiftUI
 
 /// Drawn at the native caret without becoming part of the editable value.
 struct BrowserURLCompletionSuffix: View {
+    /// How strongly the suggested rest of the address reads, and how bright
+    /// the shimmer that crosses it gets at its peak.
+    private static let restingOpacity = 0.65
+    private static let shimmerPeakOpacity = 0.95
+
     let text: String
     let font: Font
     var isVisible = true
@@ -13,16 +18,16 @@ struct BrowserURLCompletionSuffix: View {
         Group {
             if isVisible {
                 if reduceMotion || contrast == .increased {
-                    label.foregroundStyle(Color.secondary.opacity(contrast == .increased ? 1 : 0.65))
+                    label.foregroundStyle(Color.secondary.opacity(contrast == .increased ? 1 : Self.restingOpacity))
                 } else {
                     label.phaseAnimator([false, true]) { content, sweepsRight in
                         let position = sweepsRight ? 1.35 : -0.35
                         content.foregroundStyle(
                             LinearGradient(
                                 colors: [
-                                    Color.secondary.opacity(0.65),
-                                    Color.secondary.opacity(0.95),
-                                    Color.secondary.opacity(0.65),
+                                    Color.secondary.opacity(Self.restingOpacity),
+                                    Color.secondary.opacity(Self.shimmerPeakOpacity),
+                                    Color.secondary.opacity(Self.restingOpacity),
                                 ],
                                 startPoint: UnitPoint(x: position - 0.25, y: 0.5),
                                 endPoint: UnitPoint(x: position + 0.25, y: 0.5)

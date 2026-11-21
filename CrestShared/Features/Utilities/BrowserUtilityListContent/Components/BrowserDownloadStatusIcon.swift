@@ -11,7 +11,7 @@ struct BrowserDownloadStatusIcon: View {
                 Image(systemName: BrowserDownloadFileKind(filename: item.filename).symbol)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Circle().stroke(.secondary.opacity(0.25), lineWidth: 2)
+                Circle().stroke(.secondary.opacity(CrestOpacity.progressTrack), lineWidth: 2)
                 Circle()
                     .trim(from: 0, to: max(item.progress, 0.02))
                     .stroke(.tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
