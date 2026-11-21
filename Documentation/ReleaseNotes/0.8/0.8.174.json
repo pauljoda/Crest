@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-drag-right-after-a-drop-lands-where-aimed",
+      "category": "fixed",
+      "message": "Dragging a sidebar row right after another drop lands it where you aim, instead of a row off or back where it started."
+    }
+  ]
+}

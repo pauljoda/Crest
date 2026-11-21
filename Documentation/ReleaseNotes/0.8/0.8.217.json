@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "floating-sidebar-hide-arrow-removed",
+      "category": "improved",
+      "message": "On iPhone and iPad, a floating sidebar no longer has an arrow to hide it, on the sidebar or in the side toolbar; scroll or tap the page to put it away.",
+      "platforms": ["ios"]
+    }
+  ]
+}

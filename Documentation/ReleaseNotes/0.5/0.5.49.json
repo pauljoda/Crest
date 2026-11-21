@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-externally-connectable-chrome-runtime",
+      "category": "fixed",
+      "message": "Let websites that work with an installed extension message it the way they do in Chrome, so Claude can finish signing in from its side panel"
+    }
+  ]
+}

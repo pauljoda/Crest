@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "peek-opens-bracketed-links",
+      "category": "fixed",
+      "message": "Links on Facebook, and other links with brackets in their address, open in Peek instead of a blank page or an error page."
+    }
+  ]
+}

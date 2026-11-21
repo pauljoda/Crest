@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-shortcut-from-any-app",
+      "category": "new",
+      "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "quick-window-shortcut-opens-over-your-window",
+      "category": "improved",
+      "message": "On Mac, the New Quick Window shortcut pressed in another app opens the Quick Window over the window you're in there, and brings only the Quick Window forward.",
+      "platforms": ["mac"]
+    }
+  ]
+}

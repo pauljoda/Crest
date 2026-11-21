@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sync-merge-save-freeze",
+      "category": "fixed",
+      "message": "Crest no longer freezes when an iCloud sync arrives while it’s saving a change, such as deleting a Space, moving or closing several tabs, or importing from another browser."
+    }
+  ]
+}

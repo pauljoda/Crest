@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "storage-pressure-crash",
+      "category": "fixed",
+      "message": "On Mac, Crest no longer quits when your disk is almost full and a site saves data.",
+      "platforms": ["mac"]
+    }
+  ]
+}

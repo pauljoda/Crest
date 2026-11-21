@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "appearance-preview-concentric-page-corners",
+      "category": "fixed",
+      "message": "On iPhone and iPad, the page in the Appearance window preview rounds its corners with the preview's, so the window border keeps its width all the way around.",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "choose-inactive-tab-scheduling",
+      "category": "improved",
+      "message": "Choose whether inactive tabs prioritize lower resource use or faster responsiveness."
+    }
+  ]
+}

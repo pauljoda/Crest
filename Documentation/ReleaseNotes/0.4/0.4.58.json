@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-21-icloud-sync-feedback-loop",
+      "category": "fixed",
+      "message": "Prevent iCloud Sync from re-uploading acknowledged browsing records and repeatedly triggering throttling"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-frame-cookie-access",
+      "category": "fixed",
+      "message": "Let sites an extension embeds in its own pages see their session within that Space, as they do in Chrome"
+    }
+  ]
+}

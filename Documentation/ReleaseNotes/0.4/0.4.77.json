@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-24-blocked-popup-site-controls",
+      "category": "fixed",
+      "message": "Show blocked pop-ups in Site Controls with a one-step allow action"
+    }
+  ]
+}

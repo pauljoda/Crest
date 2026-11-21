@@ -106,16 +106,28 @@ notarizing, creating a release, or advancing an appcast. If no nightly appcast
 exists, preflight builds even if a GitHub Release exists, because that release
 may belong to an interrupted publication.
 
-Release notes come from the explicit `Documentation/ReleaseNotes.json` catalog.
-Every product or architecture commit adds a stable entry ID, category, and
-purpose-written message. The generator reads the selected channel's cursor,
-groups the later public entries into New, Improved, and Fixed highlights, omits
-`internal` entries, and limits long ranges to the 12 most recent highlights.
-The catalog's immutable publication baselines name each channel's starting
-entry until the workflow writes the live cursor file. Because entry identity and cursor position are independent
-of commit hashes, rebases and other history rewrites do not repeat published
-copy or block a nightly. The same concise notes appear on GitHub and as
-structured Markdown in Sparkle's update interface.
+Release notes come from `Documentation/ReleaseNotes`, one file per version.
+Every product or architecture commit adds entries, each with a stable ID,
+category, and purpose-written message, to the file for its version. A Stable
+release publishes its version's curated write-up. Other releases read the
+selected channel's cursor, group the later public entries that reach the Mac
+into New, Improved, and Fixed highlights, omit `internal` entries, and limit
+long ranges to the 12 most recent highlights. Because entry identity and cursor
+position are independent of commit hashes, rebases and other history rewrites
+do not repeat published copy or block a nightly. The same concise notes appear
+on GitHub and as structured Markdown in Sparkle's update interface, and each
+links to the release's page on the product site.
+
+The product site builds its release notes from the same files and the release
+tags each time it deploys, which it does after every Mac publication: a page for
+every Stable, Nightly, and Development release at
+`https://crestbrowser.com/releases/mac/<channel>/<version>/`, and for iPhone and
+iPad, App Store releases from `ios-v<version>` tags and a TestFlight timeline of
+every version with iPhone and iPad changes, at
+`https://crestbrowser.com/releases/ios/<app-store|testflight>/<version>/`. Each
+page opens the channel's timeline at that release, with `release.json` beside
+it. An address for a version without its own page goes to the release that
+contains it, then to the channel.
 
 ## Publication order
 
@@ -193,8 +205,8 @@ the old signing path retained long enough to update installed copies safely.
 
 Before publishing a stable tag:
 
-1. confirm `CHANGELOG.md`, `Documentation/ReleaseNotes.json`, and the marketing
-   version are ready;
+1. confirm the version's write-up in `Documentation/ReleaseNotes` and the
+   marketing version are ready;
 2. complete local app and release-script tests for the commit being published;
 3. confirm **Build Crest** passed on the intended `main` commit and the Pages
    workflow is green. The stable release will validate its exact source again;
@@ -216,7 +228,8 @@ Before publishing a stable tag:
 For a new release line, explicitly set the intended version with
 `Scripts/set-version.sh --release X.Y.Z`. Routine fixes use
 `Scripts/set-version.sh --patch`. Keep `CURRENT_PROJECT_VERSION` unchanged;
-the distribution workflows own build numbers. Update the changelog, refresh
+the distribution workflows own build numbers. Write the version's `release`
+write-up in its notes file, refresh
 the public roadmap with `Scripts/render-roadmap.py --write`, and review the
 maintained [iPhone and iPad listing](../Marketing/AppStore/README.md) against
 the release's mobile capabilities.
@@ -224,10 +237,12 @@ the release's mobile capabilities.
 Commit the version and release documentation together, push that commit to
 `main`, and wait for a **Build Crest** run on it to pass before creating and
 pushing an annotated `vX.Y.Z` tag at that same commit. A new release line uses
-`Scripts/check-version.sh` and the release-note catalog check;
+`Scripts/check-version.sh` and the release notes check;
 `--fix-commit` applies only to patch increases on the existing line.
 Pushing the stable tag starts macOS publication. App Store build selection,
-submission, and release are separate steps in App Store Connect.
+submission, and release are separate steps in App Store Connect. When an App
+Store version goes live, push an annotated `ios-vX.Y.Z` tag at the commit it was
+built from; the product site then lists it under App Store.
 
 Nightly, development, and experimental builds use the same signing,
 notarization, and verification gates as a stable build. Each prerelease retains

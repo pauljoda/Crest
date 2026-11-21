@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "id": "onboarding-guide-first-space",
+      "category": "fixed",
+      "message": "Open Getting Started in the first Space when setup finishes"
+    },
+    {
+      "id": "restart-onboarding-from-advanced",
+      "category": "improved",
+      "message": "Rerun onboarding from the Welcome screen in Advanced settings"
+    },
+    {
+      "id": "space-order-controls",
+      "category": "improved",
+      "message": "Reorder Spaces directly in Settings with Up and Down controls"
+    },
+    {
+      "id": "space-appearance-scroll-responsiveness",
+      "category": "fixed",
+      "message": "Keep Space appearance settings responsive while scrolling"
+    },
+    {
+      "id": "space-appearance-preview-reuse",
+      "category": "improved",
+      "message": "Reduce unnecessary icon and thumbnail redraws while adjusting Space appearance"
+    }
+  ]
+}

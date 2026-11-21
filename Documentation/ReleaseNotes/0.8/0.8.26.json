@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "settings-narrow-window-sidebar-clicks",
+      "category": "fixed",
+      "message": "In a narrow window, a Space’s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
+    }
+  ]
+}

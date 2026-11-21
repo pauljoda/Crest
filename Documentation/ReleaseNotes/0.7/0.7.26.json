@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-tab-history-across-updates",
+      "category": "improved",
+      "message": "On Mac, tabs that use Chromium keep their back and forward history when Crest or macOS updates.",
+      "platforms": ["mac"]
+    }
+  ]
+}

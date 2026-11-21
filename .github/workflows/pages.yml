@@ -3,28 +3,61 @@ name: Deploy product site
 on:
   push:
     branches: [main]
+    # An App Store release is recorded by pushing its ios-v<version> tag.
+    tags: ["ios-v*"]
     paths:
       - "Website/**"
+      - "Documentation/ReleaseNotes/**"
+      - "Scripts/build-release-pages.py"
+      - "Scripts/release_note_catalog.py"
       - ".github/workflows/pages.yml"
+  # Each published Mac release adds a release page.
+  workflow_run:
+    workflows: ["Publish macOS release"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: crest-product-site
   cancel-in-progress: true
 
 jobs:
+  # Only main may deploy to github-pages, so a tag push asks for a deploy from main.
+  deploy-from-main:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Deploy the product site from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+
   deploy:
+    if: >-
+      github.ref_type != 'tag' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Release pages read every release tag, and the history of the
+          # marketing version for the day each version landed.
+          fetch-depth: 0
+
+      - name: Build the release notes pages
+        run: python3 Scripts/build-release-pages.py
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 

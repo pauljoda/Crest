@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-30-mobile-search-engine-settings",
+      "category": "fixed",
+      "message": "Keep Search Engine settings open and usable on iPhone and iPad with clear, evenly spaced provider controls",
+      "platforms": ["ios"]
+    }
+  ]
+}

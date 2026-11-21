@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-shared-sidebar-multi-selection",
+      "category": "improved",
+      "message": "Select multiple tabs and folders on iPhone and iPad using shared sidebar menus and VoiceOver actions",
+      "platforms": ["ios"]
+    }
+  ]
+}

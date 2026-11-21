@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-10-12-capsule-corners",
+      "category": "improved",
+      "message": "With Capsule corners, single tabs are capsules, and Split Views and open folders round their corners to match."
+    }
+  ]
+}

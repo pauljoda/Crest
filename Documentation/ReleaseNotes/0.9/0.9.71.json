@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "id": "address-bar-on-top",
+      "category": "new",
+      "message": "On Mac, you can put the address bar on top: choose Top under Address bar in Settings › Appearance, and the address field with back, forward and reload moves above the page.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "split-view-card-bars",
+      "category": "new",
+      "message": "On Mac, each page in Split View carries its own bar with back, forward, its address, Site Controls and pinned extensions, wherever the address bar is.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "split-view-resizes-into-place",
+      "category": "improved",
+      "message": "On Mac, pages slide and resize into place as they join or leave Split View instead of jumping.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "folder-menu-button-clears-name",
+      "category": "fixed",
+      "message": "On Mac, a folder's … button no longer covers the end of its name when you point at it. The name fades out beneath the button.",
+      "platforms": ["mac"]
+    }
+  ]
+}

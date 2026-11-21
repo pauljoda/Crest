@@ -25,47 +25,50 @@ def load_script_module(name: str, filename: str):
 class ReleaseNotePublicationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        cls.catalog_module = load_script_module("release_note_catalog", "release_note_catalog.py")
         cls.publication = load_script_module(
             "release_note_publication",
             "release_note_publication.py",
         )
 
-    def catalog_contents(self) -> str:
+    def catalog(self):
+        return self.catalog_module.assemble(
+            [
+                (
+                    "0.1/0.1.1.json",
+                    json.dumps(
+                        {
+                            "entries": [
+                                {"id": "stable-boundary", "category": "internal", "message": "Stable boundary"},
+                                {"id": "development-boundary", "category": "internal", "message": "Development boundary"},
+                                {"id": "nightly-boundary", "category": "internal", "message": "Nightly boundary"},
+                            ]
+                        }
+                    ),
+                ),
+                (
+                    "0.1/0.1.2.json",
+                    json.dumps({"entries": [{"id": "new-change", "category": "new", "message": "Open a second page"}]}),
+                ),
+            ]
+        )
+
+    def state_contents(self, **channels: str) -> str:
         return json.dumps(
             {
-                "schemaVersion": 2,
-                "publicationBaselines": {
+                "schemaVersion": 1,
+                "channels": {
                     "stable": "stable-boundary",
                     "development": "development-boundary",
                     "nightly": "nightly-boundary",
-                },
-                "entries": {
-                    "stable-boundary": {
-                        "category": "internal",
-                        "message": "Record the stable publication boundary",
-                    },
-                    "development-boundary": {
-                        "category": "internal",
-                        "message": "Record the development publication boundary",
-                    },
-                    "nightly-boundary": {
-                        "category": "internal",
-                        "message": "Record the nightly publication boundary",
-                    },
-                    "new-change": {
-                        "category": "new",
-                        "message": "Open a second page beside the first",
-                    },
-                },
+                }
+                | channels,
             }
         )
 
     def test_each_channel_advances_without_consuming_the_other_channels(self) -> None:
-        catalog = self.publication.parse_catalog_document(
-            self.catalog_contents(),
-            "catalog",
-        )
-        state = self.publication.effective_publication_state(catalog, None)
+        catalog = self.catalog()
+        state = self.publication.effective_publication_state(catalog, self.state_contents())
 
         advanced = self.publication.advance_channel(catalog, state, "nightly")
 
@@ -74,26 +77,11 @@ class ReleaseNotePublicationTests(unittest.TestCase):
         self.assertEqual(advanced.channels["stable"], "stable-boundary")
 
     def test_state_rejects_a_cursor_that_is_not_in_the_catalog(self) -> None:
-        catalog = self.publication.parse_catalog_document(
-            self.catalog_contents(),
-            "catalog",
-        )
-        invalid_state = json.dumps(
-            {
-                "schemaVersion": 1,
-                "channels": {
-                    "stable": "stable-boundary",
-                    "development": "missing-entry",
-                    "nightly": "nightly-boundary",
-                },
-            }
-        )
-
         with self.assertRaisesRegex(ValueError, "missing-entry"):
             self.publication.parse_publication_state(
-                invalid_state,
+                self.state_contents(development="missing-entry"),
                 "state",
-                catalog,
+                self.catalog(),
             )
 
 

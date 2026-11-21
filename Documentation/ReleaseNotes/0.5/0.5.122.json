@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "compact-sidebar-archive-divider",
+      "category": "fixed",
+      "message": "Clear open tabs from a compact archive control on the sidebar divider, with the New Tab row aligned to your tabs"
+    }
+  ]
+}

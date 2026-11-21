@@ -1,0 +1,63 @@
+{
+  "release": {
+    "summary": "Crest 0.6.33 is a stability release with stronger permission boundaries, more reliable extension and window behavior, and smoother browsing with large sessions.",
+    "added": [
+      "Choose extension access during installation and install independent copies in multiple Spaces.",
+      "Middle-click a split title to close the split and all its tabs.",
+      "Choose to return saved tabs to their saved URL with one favicon click on Mac."
+    ],
+    "changed": [
+      "Find settings and customize Spaces more easily with distinct card headers and icons.",
+      "See your chosen app icon, app details, and software updates together in a cleaner About page.",
+      "Keep extensions responsive when browsing with many tabs and windows.",
+      "Check installed translation languages more efficiently in Settings.",
+      "Reduce delays when opening and closing large tab folders.",
+      "Scroll more smoothly through long lists of saved and current tabs.",
+      "Open and search large browsing histories with fewer pauses.",
+      "Choose whether unloaded tabs appear dimmed in Look and Feel settings.",
+      "Quick Window Space indicators now use balanced padding.",
+      "Choose whether Now Playing appears in the sidebar."
+    ],
+    "fixed": [
+      {
+        "text": "Rename Spaces without freezing Settings on macOS.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "Open new tabs and search from empty Spaces on macOS.",
+        "platforms": ["mac"]
+      },
+      "Keep selected search results visible when navigating with arrow keys.",
+      "Keep the selected pinned tab's glow from being cut off below the address bar.",
+      "Keep site controls and permission prompts readable in light-colored Spaces.",
+      "Keep General settings responsive while checking system permissions.",
+      "Keep browsing responsive while large sessions and history sync in the background.",
+      "Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate.",
+      "Move large tab selections between Spaces reliably.",
+      "Reduce memory growth when repeatedly opening the address bar.",
+      "Avoid repeated background requests and memory growth on pages without a site icon.",
+      "Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit.",
+      "Stop sharing your location immediately when you block or reset a site's location permission.",
+      "Keep blocked and expired extension permissions disabled after reloads and restarts.",
+      "Open a single browser window when finishing setup.",
+      "Honor changed extension permissions and locked Spaces during pending operations.",
+      "Show successful extension installations when copies in other Spaces cannot be completed.",
+      "Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state.",
+      "Keep permissions and private data separate when importing unsigned Firefox extensions.",
+      "Select webpage text and use controls near the top edge without moving the window.",
+      "Save the displayed PDF directly from the built-in preview.",
+      "Quick Windows follow your browser border size while keeping balanced spacing around their controls.",
+      "Image-converter extensions can save JPEGs repeatedly and keep their image menus after restarting Crest.",
+      "Return from Picture in Picture to the tab and browser window that started playback.",
+      "Prevent password manager popups and login-field suggestions from repeatedly reloading webpages.",
+      "Settings remain fully visible while switching between Spaces."
+    ]
+  },
+  "entries": [
+    {
+      "id": "choose-sidebar-widget-visibility",
+      "category": "improved",
+      "message": "Choose whether Now Playing appears in the sidebar."
+    }
+  ]
+}

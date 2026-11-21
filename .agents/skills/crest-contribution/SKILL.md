@@ -142,8 +142,10 @@ type you touch. The rules that matter most:
 ## Pull request
 
 - **Version and release note.** Every commit that changes app code runs
-  `Scripts/set-version.sh --patch`, appends a new entry with a unique
-  lowercase kebab-case ID to `Documentation/ReleaseNotes.json`, stages
+  `Scripts/set-version.sh --patch`, writes its entries, each with a unique
+  lowercase kebab-case `id`, in the new version's file under
+  `Documentation/ReleaseNotes/<major>.<minor>/`, marks a change that reaches
+  only one platform with `"platforms": ["mac"]` or `["ios"]`, stages
   `Config/Version.xcconfig` with the change, and passes
   `Scripts/check-version.sh --fix-commit`. Never change
   `CURRENT_PROJECT_VERSION`.

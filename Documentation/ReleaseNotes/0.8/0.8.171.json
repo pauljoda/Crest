@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "core-dotnet-10-0-14-security-update",
+      "category": "internal",
+      "message": "Build the core with the .NET 10.0.14 security update."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-tab-keeps-the-space-on-ipad",
+      "category": "fixed",
+      "message": "On iPad with a keyboard, pressing Tab in a webpage's form no longer switches to another Space.",
+      "platforms": ["ios"]
+    }
+  ]
+}

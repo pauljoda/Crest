@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "toggle-command-bar-shortcut",
+      "category": "improved",
+      "message": "Pressing Command-T while the command bar is open closes it."
+    }
+  ]
+}

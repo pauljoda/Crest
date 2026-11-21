@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "folder-title-color-tint",
+      "category": "new",
+      "message": "Optionally match folder title colors to their folder artwork"
+    }
+  ]
+}

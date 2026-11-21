@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "link-route-address-field-editable",
+      "category": "fixed",
+      "message": "A link route’s address field takes clicks and typing, with “example.com” shown as a hint inside it instead of a fixed label beside it."
+    }
+  ]
+}

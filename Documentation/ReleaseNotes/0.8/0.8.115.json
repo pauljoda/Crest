@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "browser-window-focus-redraw",
+      "category": "improved",
+      "message": "On Mac, a browser window responds sooner when an alert closes and when the window comes back to the front.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "history-across-engine-moves",
+      "category": "fixed",
+      "message": "Back and Forward keep working after a page opens in another engine, and take each page back to the engine it was shown in."
+    },
+    {
+      "id": "history-refused-step-keeps-site-engine",
+      "category": "internal",
+      "message": "A step through history the engine refuses no longer keeps a later visit to that address on the same engine instead of the one chosen for the site."
+    }
+  ]
+}

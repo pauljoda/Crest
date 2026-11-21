@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-05-mobile-empty-launch-selection",
+      "category": "fixed",
+      "message": "Start fresh mobile sessions on the sidebar or start page without automatically selecting a saved tab or split view"
+    }
+  ]
+}

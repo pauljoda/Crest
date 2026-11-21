@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "empty-space-new-tab-launcher",
+      "category": "fixed",
+      "message": "Open new tabs and search from empty Spaces on macOS",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "command-palette-keyboard-scrolling",
+      "category": "fixed",
+      "message": "Keep selected search results visible when navigating with arrow keys"
+    }
+  ]
+}

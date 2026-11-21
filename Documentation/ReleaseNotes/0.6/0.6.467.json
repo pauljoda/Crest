@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "folder-symbol-follows-tinted-title",
+      "category": "improved",
+      "message": "Folder symbols take the folder color when tinted folder titles are turned on."
+    }
+  ]
+}

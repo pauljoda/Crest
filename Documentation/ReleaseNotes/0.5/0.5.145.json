@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "window-titles-and-drag-previews",
+      "category": "fixed",
+      "message": "Keep dragged tabs visible outside the window and give blank windows the normal browser appearance"
+    },
+    {
+      "id": "blank-and-quick-window-shortcuts",
+      "category": "improved",
+      "message": "Open blank windows with Command-Option-N and Quick Windows with Command-Option-Shift-N"
+    }
+  ]
+}

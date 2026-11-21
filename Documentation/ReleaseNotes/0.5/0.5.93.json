@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-09-mobile-folder-color-space-swiping",
+      "category": "fixed",
+      "message": "Keep swiping between Spaces working after changing a folder color on iPhone and iPad",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-tab-size-steps",
+      "category": "improved",
+      "message": "Tab size in Settings › Appearance is now a slider with nine steps, from Thin to Large, and a thin tab keeps its title readable while losing the room around it. The Space header grows and shrinks with your tabs."
+    },
+    {
+      "id": "sidebar-spacing",
+      "category": "new",
+      "message": "Choose how much room the sidebar keeps between tabs, the address field, pins and section headers with Spacing in Settings › Appearance: None, Tight, Default or Relaxed. It appears in every customization style."
+    },
+    {
+      "id": "snappier-sidebar-slide",
+      "category": "improved",
+      "message": "On Mac, the sidebar slides in and out a third faster by default. Choose its speed in Settings › Appearance › Sidebar slide time.",
+      "platforms": ["mac"]
+    }
+  ]
+}

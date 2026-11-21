@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "preserve-pinned-tab-glow-below-address-bar",
+      "category": "fixed",
+      "message": "Keep the selected pinned tab's glow from being cut off below the address bar"
+    }
+  ]
+}

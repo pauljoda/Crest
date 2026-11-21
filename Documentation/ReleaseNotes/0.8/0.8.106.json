@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "find-shift-return-previous-match",
+      "category": "fixed",
+      "message": "Pressing Shift-Return in Find moves to the previous match."
+    }
+  ]
+}

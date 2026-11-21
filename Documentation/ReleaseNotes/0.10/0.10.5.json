@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "open-folder-archive-icon",
+      "category": "improved",
+      "message": "The button on a group's or an open folder's header that archives all its tabs now shows an archive box instead of a −. Saved folders keep their −, which unloads their tabs."
+    }
+  ]
+}

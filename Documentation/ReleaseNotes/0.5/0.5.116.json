@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "ipad-saved-tab-icon-picker-placement",
+      "category": "fixed",
+      "message": "Keep the saved tab icon picker visible on either side of the iPad screen without opening the tab",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-peek-grows-from-held-link",
+      "category": "fixed",
+      "message": "On iPhone and iPad, holding a link grows its Peek out of the link again, and closing the Peek shrinks it back into the link.",
+      "platforms": ["ios"]
+    }
+  ]
+}

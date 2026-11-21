@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "function-keys-make-shortcuts-alone",
+      "category": "improved",
+      "message": "A shortcut can be a function key on its own, such as F12 for Show Web Inspector."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "dismissed-address-shows-page",
+      "category": "fixed",
+      "message": "On iPhone and in a Mac Quick Window, leaving the address bar without going anywhere, by tapping or clicking away or pressing Escape, puts the page's address back instead of what you typed."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-discord-stays-signed-in",
+      "category": "fixed",
+      "message": "On Chromium pages, Discord stays signed in after Crest restarts, updates or unloads its tab, and a page unloaded to save memory can still save its work before it goes.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "entries": [
+    {
+      "id": "sub-spaces",
+      "category": "new",
+      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
+    },
+    {
+      "id": "sub-spaces-pinned-tabs",
+      "category": "new",
+      "message": "The Spaces of a group show their primary's pinned tabs, and one pinned tab opens the same page in each. Turn on Separate Pinned Tabs for each to show its own."
+    },
+    {
+      "id": "sub-spaces-delete-and-lock",
+      "category": "new",
+      "message": "Deleting a Space that leads Sub-Spaces asks which of them keeps the group, with its sign-ins, history, passwords and pinned tabs, or deletes the whole group. Locking any Space of a group locks the group."
+    },
+    {
+      "id": "open-link-in-space",
+      "category": "new",
+      "message": "Open Link in opens a link in a Quick Window in another Space's session, and Site Controls can open the current page in another Space, for the same site under another account. Keep moves it into that Space."
+    },
+    {
+      "id": "sub-spaces-import-groups",
+      "category": "new",
+      "message": "Importing from Arc brings the Spaces of one Arc profile as one group, and importing from Zen brings a profile's workspaces as one. The review outlines each group and can bring a Space in on its own."
+    },
+    {
+      "id": "sub-spaces-older-devices",
+      "category": "improved",
+      "message": "Devices that run an earlier Crest keep syncing and show each Sub-Space on its own, signed out, until they update. The first group you make reminds you to update Crest on your other devices."
+    },
+    {
+      "id": "sub-spaces-group-records",
+      "category": "internal",
+      "message": "A Space keeps its own profile while it browses with its group's, so separating it brings its own data back. Site permission choices, saved passwords, history and protection settings are kept for the group, and deleting a Sub-Space erases only what is its own."
+    },
+    {
+      "id": "space-picker-stronger-selection",
+      "category": "improved",
+      "message": "The selected Space in the Space picker has a bolder outline, so it stays clear on a Space of the same colour."
+    }
+  ]
+}

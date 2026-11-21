@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "middle-click-split-title-to-close",
+      "category": "new",
+      "message": "Middle-click a split title to close the split and all its tabs."
+    }
+  ]
+}

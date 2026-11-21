@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-stays-hidden-after-focus-moves-away",
+      "category": "fixed",
+      "message": "A hidden sidebar no longer slides back out on its own when you click into another app or another Mac with the pointer at the window edge."
+    }
+  ]
+}

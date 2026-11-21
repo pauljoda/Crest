@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-31-sidebar-software-updates",
+      "category": "fixed",
+      "message": "Keep software update progress and actions in the sidebar, with release notes available on demand"
+    }
+  ]
+}

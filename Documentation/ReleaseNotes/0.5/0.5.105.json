@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-11-native-settings-tabs",
+      "category": "improved",
+      "message": "Open Settings in a browser tab on Mac and iPad, with more room for controls and live sidebar customization"
+    },
+    {
+      "id": "2026-09-11-crest-studio-customization",
+      "category": "new",
+      "message": "Design Space crests with more heraldic artwork, shapes, patterns, independent colors, emoji, monograms, and a searchable SF Symbols picker"
+    },
+    {
+      "id": "2026-09-11-responsive-crest-editing",
+      "category": "improved",
+      "message": "Keep crest previews visible while editing, with faster updates and color choices beside each part of the design"
+    },
+    {
+      "id": "2026-09-11-settings-layout-refinements",
+      "category": "improved",
+      "message": "Use clearer route cards, full-width settings lists, matching icon pickers, and labeled data-retention choices"
+    }
+  ]
+}

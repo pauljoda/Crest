@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-list-reaches-bottom-corner",
+      "category": "fixed",
+      "message": "On iPad and iPhone Duo, the sidebar's tabs scroll on to the bottom of the screen and into its corner instead of stopping short above it.",
+      "platforms": ["ios"]
+    }
+  ]
+}

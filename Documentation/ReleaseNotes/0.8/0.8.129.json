@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "chromium-extension-sign-in-tab",
+      "category": "fixed",
+      "message": "An extension's sign-in tab on Mac now shows its page instead of staying dark, and finishing the sign-in closes only that tab."
+    }
+  ]
+}

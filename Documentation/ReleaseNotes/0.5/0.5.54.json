@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-header-rule-emulation",
+      "category": "fixed",
+      "message": "Apply the request header rules extensions declare even when WebKit refuses the header names, so Claude can reach its API from the side panel"
+    }
+  ]
+}

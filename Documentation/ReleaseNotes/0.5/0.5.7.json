@@ -1,0 +1,26 @@
+{
+  "release": {
+    "added": [
+      "Added a public Crest 0.5 project and milestone, clear Reddit/GitHub/security support routes, maintainer governance, a documentation index, and Ko-fi and GitHub Sponsors links.",
+      "Added simple monthly sponsor levels with optional public recognition and clear boundaries around access, endorsement, and roadmap influence."
+    ],
+    "fixed": [
+      "Made setup request Safari access before reading protected data, stopped empty Arc records from tripping the Space limit, and kept browser import to only the Spaces explicitly reviewed, finishing setup without an extra blank Space or manual-customization detour.",
+      {
+        "text": "Made a site's allowed location request resume immediately with a real Core Location result, and surfaced the macOS system-privacy block with a direct Settings recovery path instead of failing invisibly or asking again after refresh.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "Delivered allowed website notifications through macOS Notification Center, while keeping Crest's per-site decision boundary and surfacing the system notification setting when macOS blocks delivery.",
+        "platforms": ["mac"]
+      }
+    ]
+  },
+  "entries": [
+    {
+      "id": "2026-08-27-newest-eligible-software-update",
+      "category": "fixed",
+      "message": "Refresh available updates to the newest eligible build before downloading"
+    }
+  ]
+}

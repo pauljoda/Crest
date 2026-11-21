@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-12-reference-browser-sidebar-behavior",
+      "category": "fixed",
+      "message": "Firefox sidebars follow the selected tab, and extension panels close reliably without affecting other tabs"
+    },
+    {
+      "id": "2026-09-12-tab-panel-favicon-badges",
+      "category": "improved",
+      "message": "Identify tabs with their own side panels by an extension badge on the favicon, including pinned tabs"
+    }
+  ]
+}

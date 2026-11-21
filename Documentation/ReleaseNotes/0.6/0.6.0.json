@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "crest-060-release-documentation",
+      "category": "internal",
+      "message": "Prepare the Crest 0.6 release version, changelog, roadmap, and App Store release copy"
+    },
+    {
+      "id": "open-location-preserves-collapsed-sidebar",
+      "category": "fixed",
+      "message": "Keep the Mac sidebar collapsed when opening the address editor with Command-L"
+    },
+    {
+      "id": "system-dark-app-icon-background",
+      "category": "fixed",
+      "message": "Match the system dark background across Crest's app icon color palettes"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-26-extension-webpage-context-menus",
+      "category": "fixed",
+      "message": "Use compatible browser extension actions directly from webpage context menus"
+    }
+  ]
+}

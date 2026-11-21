@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-extension-debugger-domains",
+      "category": "improved",
+      "message": "Let approved extensions read console output, network activity, page navigation and dialogs, and drive pages with synthesized input"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "imported-ip-address-passwords-fill",
+      "category": "fixed",
+      "message": "Imported passwords for sites at an IP address written in a long or unusual form, such as 127.1, now fill on that site and merge with passwords already saved for it."
+    }
+  ]
+}

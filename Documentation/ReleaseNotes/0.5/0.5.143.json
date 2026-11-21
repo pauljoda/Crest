@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "shared-state-and-runtime-ownership",
+      "category": "internal",
+      "message": "Consolidate tab updates, import parsing, extension events, and WebKit runtime ownership"
+    }
+  ]
+}
