@@ -18025,7 +18025,7 @@ struct PaletteRowKind: Hashable, Sendable {
     static let tab = PaletteRowKind(
         tag: 3,
         name: "tab",
-        symbol: "globe",
+        symbol: "rectangle.stack.fill",
         action: LocalizedStringResource("Switch to Tab"),
         label: LocalizedStringResource("Open Tab"),
         isPrimary: false,
@@ -18045,7 +18045,7 @@ struct PaletteRowKind: Hashable, Sendable {
     static let savedTab = PaletteRowKind(
         tag: 5,
         name: "savedTab",
-        symbol: "bookmark",
+        symbol: "bookmark.fill",
         action: LocalizedStringResource("Switch to Tab"),
         label: LocalizedStringResource("Saved"),
         isPrimary: false,
@@ -18237,7 +18237,7 @@ struct PaletteScope: Hashable, Sendable {
         name: "saved",
         keyword: "@saved",
         title: LocalizedStringResource("Pinned & Saved"),
-        symbol: "pin",
+        symbol: "pin.fill",
         source: PaletteSource.saved
     )
     static let history = PaletteScope(
