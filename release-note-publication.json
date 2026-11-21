@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "remove-dead-tests-and-resources",
+    "development": "ci-release-test-build",
     "nightly": "palette-history-site-icons"
   }
 }
