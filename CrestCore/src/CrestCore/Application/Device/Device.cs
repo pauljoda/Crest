@@ -120,6 +120,9 @@ internal sealed partial class Device {
         paletteMemories = records.PaletteMemories.ToImmutableDictionary();
         searchCatalog = records.SearchCatalog;
         RestoreContentBlocking(records);
+        pages = records.Pages;
+        downloads.AddRange(records.Downloads);
+        syncsWithICloud = records.SyncsWithICloud;
     }
 
     #endregion
@@ -353,7 +356,10 @@ internal sealed partial class Device {
         FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
         BlockingSites = [.. keptBlockingSites],
         CustomFilterLists = [.. customFilterLists],
-        CustomFilters = customFilters
+        CustomFilters = customFilters,
+        Pages = pages,
+        Downloads = [.. downloads],
+        SyncsWithICloud = syncsWithICloud
     };
 
     #endregion
