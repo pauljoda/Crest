@@ -222,17 +222,19 @@ buy roadmap priority or private access.
 ## Sponsors
 
 Monthly support helps pay for hosting, signing, testing, and development across
-Paul's open source projects. Sponsors can be recognized in the public
-[sponsor roll](SPONSORS.md) at one of three levels:
+Paul's open source projects. Monthly supporters are listed on the
+[credits page](https://crestbrowser.com/credits/#supporters) at one of three
+levels:
 
 - **Sponsor — $25/month:** top placement with an optional approved link.
 - **Sustainer — $10/month:** higher placement with an optional approved link.
-- **Supporter — $3/month:** name in the public roll.
+- **Supporter — $3/month:** name on the credits page.
 
-Every level can also have a sponsor flair on
-[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Recognition is
-optional. A listing is a thank-you, not an endorsement or a way to buy roadmap
-priority, private support, or project ownership. See the membership tiers on
+Supporters are listed by their Ko-fi or Patreon name. Ask there to add a link,
+change your listing, or be hidden. Every level can also have a sponsor flair on
+[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). A listing is a
+thank-you, not an endorsement or a way to buy roadmap priority, private support,
+or project ownership. See the membership tiers on
 [Ko-fi](https://ko-fi.com/pauljoda/tiers) or
 [Patreon](https://www.patreon.com/CrestBrowser) to become a monthly sponsor.
 
