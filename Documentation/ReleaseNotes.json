@@ -5993,6 +5993,10 @@
     "core-unused-members-flagged": {
       "category": "internal",
       "message": "The core's analyzers now reject unused private members, and the twelve unused test members they found are gone."
+    },
+    "ci-release-test-build": {
+      "category": "internal",
+      "message": "Continuous integration compiles each app and its tests in one Release build, with the test fixtures compiled into that build only."
     }
   }
 }

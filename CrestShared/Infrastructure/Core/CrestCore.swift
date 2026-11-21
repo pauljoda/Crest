@@ -103,7 +103,8 @@ final class CrestCore {
     @ObservationIgnored private var dataDeletionWaiters: [UUID: @MainActor (Bool) -> Void] = [:]
     /// What waits for each website data reading to end, by its request.
     @ObservationIgnored private var websiteDataWaiters: [UUID: @MainActor (WebsiteDataRead?) -> Void] = [:]
-    #if DEBUG
+    // A test hook: Debug builds, and CI's Release test build, which alone passes CREST_TEST_FIXTURES.
+    #if DEBUG || CREST_TEST_FIXTURES
         /// Hears each batch of changes once `state` has applied it, so a test
         /// can apply the same batch again.
         @ObservationIgnored var batchApplied: (([Change]) -> Void)?
@@ -380,7 +381,7 @@ final class CrestCore {
         if !batch.broughtForward.isEmpty { windowsBroughtForward(batch.broughtForward) }
         if !batch.adoptedWindows.isEmpty { windowsAdopted(batch.adoptedWindows) }
         if !batch.closedTransientPages.isEmpty { transientPagesClosed(batch.closedTransientPages) }
-        #if DEBUG
+        #if DEBUG || CREST_TEST_FIXTURES
             batchApplied?(changes)
         #endif
         // Last, because a waiter may send the intent its close was waiting for.

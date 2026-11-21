@@ -45,7 +45,8 @@ enum BrowserVisitedLinkStyler {
     }
 
     #if os(macOS)
-        #if DEBUG
+        // A test hook: Debug builds, and CI's Release test build, which alone passes CREST_TEST_FIXTURES.
+        #if DEBUG || CREST_TEST_FIXTURES
             static func containsVisitedURL(_ url: URL, in webView: WKWebView) -> Bool {
                 BrowserNativeVisitedLinkStore(webView: webView)?.contains(url) == true
             }
