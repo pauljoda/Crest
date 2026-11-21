@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "extension-action-menu-icons",
+      "category": "improved",
+      "message": "Every row of an extension's action menu now shows an icon.",
+      "platforms": ["mac"]
+    }
+  ]
+}

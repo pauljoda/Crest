@@ -393,12 +393,13 @@ final class ChromiumExtensionStore {
         let opensSettings = spaceChanges && (record.map { !$0.options.isEmpty && $0.enabled } ?? true)
         let changeable = spaceChanges && (record?.changeable ?? true)
         if let openSidePanel {
-            menu.addItem(handler.item(String(localized: "Open Side Panel")) { openSidePanel() })
+            menu.addItem(
+                handler.item(String(localized: "Open Side Panel"), symbol: "sidebar.right") { openSidePanel() })
             menu.addItem(.separator())
         }
         if opensSettings {
             menu.addItem(
-                handler.item(String(localized: "Extension Settings…")) { [weak self] in
+                handler.item(String(localized: "Extension Settings…"), symbol: "gearshape") { [weak self] in
                     self?.command(.options, extensionID: action.id, space: space)
                 })
         }
@@ -407,6 +408,7 @@ final class ChromiumExtensionStore {
                 handler.item(
                     action.isPinned
                         ? String(localized: "Unpin from Toolbar") : String(localized: "Pin to Toolbar"),
+                    symbol: action.isPinned ? "pin.slash" : "pin",
                     keepsSource: true
                 ) { [weak self] in
                     self?.togglePin(action, space: space)
@@ -415,7 +417,8 @@ final class ChromiumExtensionStore {
                 menu.addItem(
                     handler.item(
                         record.enabled
-                            ? String(localized: "Disable Extension") : String(localized: "Enable Extension")
+                            ? String(localized: "Disable Extension") : String(localized: "Enable Extension"),
+                        symbol: record.enabled ? "nosign" : "checkmark.circle"
                     ) { [weak self] in
                         self?.command(record.enabled ? .disable : .enable, extensionID: action.id, space: space)
                     })
@@ -423,23 +426,23 @@ final class ChromiumExtensionStore {
         }
         if opensSettings || changeable { menu.addItem(.separator()) }
         menu.addItem(
-            handler.item(String(localized: "Manage Extension…")) { [weak self] in
+            handler.item(String(localized: "Manage Extension…"), symbol: "slider.horizontal.3") { [weak self] in
                 self?.command(.details, extensionID: action.id, space: space)
             })
         menu.addItem(
-            handler.item(String(localized: "Manage Extensions…")) { [weak self] in
+            handler.item(String(localized: "Manage Extensions…"), symbol: "puzzlepiece.extension") { [weak self] in
                 self?.command(.manage, space: space)
             })
         if record?.webStore ?? false {
             menu.addItem(
-                handler.item(String(localized: "View on Chrome Web Store")) { [weak self] in
+                handler.item(String(localized: "View on Chrome Web Store"), symbol: "bag") { [weak self] in
                     self?.command(.store, extensionID: action.id, space: space)
                 })
         }
         if changeable, let record {
             menu.addItem(.separator())
             menu.addItem(
-                handler.item(String(localized: "Remove Extension…")) { [weak self] in
+                handler.item(String(localized: "Remove Extension…"), symbol: "trash") { [weak self] in
                     self?.confirmRemoval(record, space: space)
                 })
         }
@@ -723,10 +726,14 @@ extension ChromiumExtensionStore: BrowserImportedExtensionInstalling {}
         self.closeSource = closeSource
     }
 
+    /// - Parameter symbol: The SF Symbol the row shows beside its title.
     /// - Parameter keepsSource: The item changes something the source surface
     ///   shows, so the surface stays open after it runs.
-    func item(_ title: String, keepsSource: Bool = false, perform: @escaping () -> Void) -> NSMenuItem {
+    func item(
+        _ title: String, symbol: String, keepsSource: Bool = false, perform: @escaping () -> Void
+    ) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(invoke(_:)), keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         item.target = self
         item.isEnabled = true
         item.tag = handlers.count
