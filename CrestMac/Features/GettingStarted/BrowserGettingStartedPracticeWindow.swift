@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct BrowserGettingStartedPracticeWindow: View {
+    /// The practice window's corner, rounder than a card and less round than
+    /// a panel, as a window's is.
+    private static let cornerRadius: CGFloat = 18
+
     @Bindable var practice: BrowserGettingStartedPractice
     let showsSplit: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,8 +39,8 @@ struct BrowserGettingStartedPracticeWindow: View {
                 }
             }
             .background(CrestBrandTheme.canvas)
-            .clipShape(.rect(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(CrestBrandTheme.line))
+            .clipShape(.rect(cornerRadius: Self.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Self.cornerRadius).strokeBorder(CrestBrandTheme.line))
             .crestElevation(.panel)
             #if os(macOS)
                 .background { liftPreview }

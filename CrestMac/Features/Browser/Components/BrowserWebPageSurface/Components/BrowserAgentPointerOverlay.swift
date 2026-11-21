@@ -37,7 +37,7 @@ struct BrowserAgentPointerOverlay: View {
             Image(systemName: "cursorarrow")
                 .font(.system(size: BrowserWebPageSurfaceMetrics.agentPointerSize, weight: .semibold))
                 .foregroundStyle(colour)
-                .shadow(radius: 1)
+                .shadow(radius: BrowserWebPageSurfaceMetrics.agentPointerShadowRadius)
             Text(verbatim: session.name)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)

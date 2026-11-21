@@ -134,7 +134,7 @@ struct BrowserSettingsSidebar: View {
             }
         }
         .buttonStyle(CrestChromeButtonStyle(controlSize: BrowserSettingsSidebarMetrics.headerButtonSize))
-        .font(.system(size: 12, weight: .medium))
+        .font(CrestTypography.note.weight(.medium))
         .padding(.trailing, BrowserSettingsSidebarMetrics.headerTrailingInset)
         .accessibilityElement(children: .contain)
     }

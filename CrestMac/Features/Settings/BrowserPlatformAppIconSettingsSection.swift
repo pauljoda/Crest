@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct BrowserPlatformAppIconSettingsSection: View {
+    /// An icon's corner, as the icon's own rounding draws it at the size the
+    /// choice shows it.
+    private static let iconCornerRadius: CGFloat = 13
+
     @AppStorage(BrowserMacAppIconAssets.preferenceKey, store: BrowserMacDockTile.shared.defaults)
     private var selectedName = ""
     @State private var appearanceRevision = 0
@@ -54,7 +58,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
                 .resizable().scaledToFit()
                 .id(appearanceRevision)
                 .frame(width: 58, height: 58)
-                .clipShape(.rect(cornerRadius: 13))
+                .clipShape(.rect(cornerRadius: Self.iconCornerRadius))
                 Text(title).font(.caption).foregroundStyle(.primary)
             }
         }

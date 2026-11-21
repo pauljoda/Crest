@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "mac-shortcut-recorder-brand-accent",
+      "category": "improved",
+      "message": "On Mac, a shortcut button you're recording a shortcut into is tinted Crest blue instead of the system accent color.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "mac-views-use-design-tokens",
+      "category": "internal",
+      "message": "Corners, glyph and label sizes, fills and the frosted cover in Mac views come from the shared design tokens or one named value each, with no other visible change.",
+      "platforms": ["mac"]
+    }
+  ]
+}
