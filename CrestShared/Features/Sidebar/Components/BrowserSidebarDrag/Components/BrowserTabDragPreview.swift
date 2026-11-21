@@ -37,8 +37,10 @@ struct BrowserTabDragPreview: View {
         let rowOpacity = 1 - Double(metrics.cardContentWeight)
 
         ZStack(alignment: .leading) {
-            // A selected tab stays the sheet of paper it is in the sidebar.
-            CrestSurfaceLayer(shape: shape, isPaper: isSelected)
+            // A selected tab keeps the style it is drawn in in the sidebar.
+            // Its paper is solid here, where it floats over the page under a
+            // shadow of its own, which would grey translucent paper.
+            CrestSurfaceLayer(shape: shape, paper: isSelected && selectedStyle.liesOnPaper ? .opaque : nil)
                 .overlay {
                     shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
                 }
@@ -70,7 +72,12 @@ struct BrowserTabDragPreview: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.shownTitle)
-        .modifier(BrowserTabDragPreviewTone(isSelected: isSelected))
+        .modifier(BrowserTabDragPreviewTone(style: isSelected ? selectedStyle : nil))
+    }
+
+    /// How the selected tab is drawn on this device.
+    private var selectedStyle: BrowserSelectedTabStyle {
+        BrowserDeviceAppearanceStore.shared.tabs.selectedTabStyle
     }
 
     private var rowIconCenter: CGFloat {
@@ -96,24 +103,25 @@ struct BrowserTabDragPreview: View {
     }
 }
 
-/// The scheme and ink a dragged tab reads in: ink on light paper for the
-/// selected tab, as its row has them, and otherwise the label color in the
-/// scheme the device's material color gives the material.
+/// The scheme and ink a dragged tab reads in: the selected tab's as its
+/// row has them, ink on paper or the material's on the material, and
+/// otherwise the label color in the scheme the device's material color
+/// gives the material.
 ///
 /// Both states set the same modifiers, so picking up the selected tab
 /// changes values rather than the preview's structure.
 private struct BrowserTabDragPreviewTone: ViewModifier {
-    let isSelected: Bool
+    /// The selected tab's style, or nil for any other tab.
+    let style: BrowserSelectedTabStyle?
 
     @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
+        let materialScheme = CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
         content
-            .foregroundStyle(isSelected ? CrestBrandTheme.textDisplay : Color.primary)
+            .foregroundStyle(style?.foreground ?? Color.primary)
             .environment(\.spaceChromeForeground, nil)
-            .environment(
-                \.colorScheme,
-                isSelected ? .light : CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme))
+            .environment(\.colorScheme, style?.contentScheme(onMaterial: materialScheme) ?? materialScheme)
     }
 }

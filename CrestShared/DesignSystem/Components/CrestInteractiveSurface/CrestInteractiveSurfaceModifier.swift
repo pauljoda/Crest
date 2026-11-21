@@ -25,10 +25,10 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     var customHoverFill: Color? = nil
     var customRestingFill: Color? = nil
     var restingBorderColor: Color = .clear
-    /// Whether a selected or pressed surface is a sheet of Crest's light
-    /// paper, casting the paper's shadow, rather than a layer of the
-    /// device's material.
-    var selectsOnPaper = false
+    /// The sheet of Crest's light paper a selected or pressed surface is,
+    /// casting the paper's shadow, or nil for a layer of the device's
+    /// material.
+    var selectionPaper: CrestPaperSheet? = nil
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -79,8 +79,11 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     /// Whether the surface draws the device's material under the content.
     private var showsMaterial: Bool { isSelected || isPressed || showsRestingSurface }
 
+    /// The sheet of paper the surface is now, or nil where it is material.
+    private var paper: CrestPaperSheet? { isSelected || isPressed ? selectionPaper : nil }
+
     /// Whether the surface is a sheet of paper now, rather than material.
-    private var isPaper: Bool { selectsOnPaper && (isSelected || isPressed) }
+    private var isPaper: Bool { paper != nil }
 
     /// The scheme content reads in: light on paper, the material's on the
     /// material, else the surroundings'.
@@ -100,8 +103,17 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
                 shape: shape,
                 tint: isSelected || isPressed ? customSelectedFill : customRestingFill,
                 hoverTint: isHovering ? hoverFill : nil,
-                isPaper: isPaper
+                paper: paper
             )
+            .background {
+                // Paper that lets light through lies over the surface as it
+                // rests, in the scheme it rests in, unless it brings a ground
+                // of its own.
+                if showsRestingSurface, paper?.showsRestingSurface == true {
+                    CrestSurfaceLayer(shape: shape, tint: customRestingFill)
+                        .environment(\.colorScheme, colorScheme)
+                }
+            }
         } else if isHovering {
             shape.fill(hoverFill)
         }
@@ -163,7 +175,7 @@ private struct CrestHoverSurfaceModifier: ViewModifier {
                     showsRestingSurface: showsRestingSurface,
                     selectedBorderColor: selectedBorderColor,
                     selectedBorderWidth: selectedBorderWidth,
-                    selectsOnPaper: selectsOnPaper
+                    selectionPaper: selectsOnPaper ? .opaque : nil
                 )
             )
             .onHover { isHovering = $0 }

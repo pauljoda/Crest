@@ -12,12 +12,31 @@ import SwiftUI
 /// whenever a choice changes.
 @MainActor @Observable
 final class BrowserTabAppearance {
+    // MARK: - Static Variables
+
+    /// The opacities the paper under a selected tab may take: never so clear
+    /// that its ink text falls below 4.5:1, even over the darkest sidebar.
+    nonisolated static let selectedTabOpacityRange = 0.5...1.0
+
+    // MARK: - Types
+
     enum Borders: String, Codable, CaseIterable { case selected, pinned, all }
     /// How a tab shows a status its page is in, such as playing sound: as a
     /// badge on its icon, or in place of its icon.
     enum StatusStyle: String, Codable, CaseIterable { case badge, icon }
+
+    // MARK: - Variables
+
     var borders: Borders = .selected { didSet { changed() } }
     var outlinesSelectedTabs = false { didSet { changed() } }
+    /// What the selected tab and the selected pin are drawn on.
+    var selectedTabStyle = BrowserSelectedTabStyle.standard { didSet { changed() } }
+    /// How opaque the paper under the selected tab and pin is, where
+    /// ``selectedTabStyle`` lies on paper.
+    var selectedTabOpacity = CrestOpacity.selectedTabPaper { didSet { changed() } }
+    /// Whether a selected pin's paper takes the pin's color, under it and
+    /// washed over it, rather than staying the white a selected tab is.
+    var tintsSelectedPins = true { didSet { changed() } }
     var usesWebsitePinColor = true { didSet { changed() } }
     var dimsUnloadedTabs = true { didSet { changed() } }
     var pinFill: Double = 0 { didSet { changed() } }
@@ -30,10 +49,21 @@ final class BrowserTabAppearance {
     /// Called after any choice changes, so its owner can save it.
     @ObservationIgnored var changed: () -> Void = {}
 
+    // MARK: - Initializers
+
     init() {}
+
+    // MARK: - Actions - Limits
 
     nonisolated static func intensity(_ value: Double) -> Double {
         value.isFinite ? min(max(value, 0), 1) : 0
+    }
+
+    /// `value` held to ``selectedTabOpacityRange``, or the standard opacity
+    /// where it is not a number.
+    nonisolated static func selectedTabOpacity(_ value: Double) -> Double {
+        guard value.isFinite else { return CrestOpacity.selectedTabPaper }
+        return min(max(value, selectedTabOpacityRange.lowerBound), selectedTabOpacityRange.upperBound)
     }
 }
 
@@ -73,8 +103,9 @@ final class BrowserAddressAppearance {
 
 extension BrowserTabAppearance: @MainActor Codable {
     private enum CodingKeys: String, CodingKey {
-        case borders, outlinesSelectedTabs, usesWebsitePinColor, dimsUnloadedTabs
-        case pinFill, pinGlow, hoverFill, color, statusStyle, showsAudioVisualizer
+        case borders, outlinesSelectedTabs, selectedTabStyle, selectedTabOpacity, tintsSelectedPins
+        case usesWebsitePinColor, dimsUnloadedTabs, pinFill, pinGlow, hoverFill, color, statusStyle
+        case showsAudioVisualizer
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -82,6 +113,13 @@ extension BrowserTabAppearance: @MainActor Codable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         borders = (try? values.decode(Borders.self, forKey: .borders)) ?? .selected
         outlinesSelectedTabs = (try? values.decode(Bool.self, forKey: .outlinesSelectedTabs)) ?? false
+        // Choices saved before the style existed, or by a later build with a
+        // style this one does not know, take the standard style.
+        selectedTabStyle =
+            (try? values.decode(BrowserSelectedTabStyle.self, forKey: .selectedTabStyle)) ?? .standard
+        selectedTabOpacity = Self.selectedTabOpacity(
+            (try? values.decode(Double.self, forKey: .selectedTabOpacity)) ?? CrestOpacity.selectedTabPaper)
+        tintsSelectedPins = (try? values.decode(Bool.self, forKey: .tintsSelectedPins)) ?? true
         usesWebsitePinColor = (try? values.decode(Bool.self, forKey: .usesWebsitePinColor)) ?? true
         dimsUnloadedTabs = (try? values.decode(Bool.self, forKey: .dimsUnloadedTabs)) ?? true
         pinFill = Self.intensity((try? values.decode(Double.self, forKey: .pinFill)) ?? 0)
@@ -96,6 +134,9 @@ extension BrowserTabAppearance: @MainActor Codable {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(borders, forKey: .borders)
         try values.encode(outlinesSelectedTabs, forKey: .outlinesSelectedTabs)
+        try values.encode(selectedTabStyle, forKey: .selectedTabStyle)
+        try values.encode(selectedTabOpacity, forKey: .selectedTabOpacity)
+        try values.encode(tintsSelectedPins, forKey: .tintsSelectedPins)
         try values.encode(usesWebsitePinColor, forKey: .usesWebsitePinColor)
         try values.encode(dimsUnloadedTabs, forKey: .dimsUnloadedTabs)
         try values.encode(pinFill, forKey: .pinFill)

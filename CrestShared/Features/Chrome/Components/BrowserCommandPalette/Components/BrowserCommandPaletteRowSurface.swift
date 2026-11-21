@@ -29,7 +29,7 @@ struct BrowserCommandPaletteRowSurface: ViewModifier {
                     isSelected: isSelected, isHovering: false,
                     cornerRadius: BrowserCommandPaletteMetrics.rowCornerRadius, isPressed: false,
                     showsRestingSurface: false, selectedBorderColor: selectedBorder, selectedBorderWidth: 1,
-                    customSelectedFill: selectedFill, selectsOnPaper: true)
+                    customSelectedFill: selectedFill, selectionPaper: .opaque)
             )
     }
 

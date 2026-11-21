@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "selected-tab-translucent-white-or-material",
+      "category": "improved",
+      "message": "The selected tab is now a sheet of translucent white, and a selected pin shows its site's color through the white. In Settings › Appearance › More Customization you can set how opaque the white is, turn off the pin's tint, or choose Material to bring back the earlier look in your material color."
+    },
+    {
+      "id": "settings-dark-black-and-charcoal",
+      "category": "improved",
+      "message": "Settings in dark mode are drawn in black and charcoal, like Crest's pop-up panels, instead of navy."
+    }
+  ]
+}

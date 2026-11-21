@@ -7,6 +7,11 @@ enum CrestColor {
     static let hover = Color.primary.opacity(CrestOpacity.hover)
     static let subtleBorder = Color.primary.opacity(CrestOpacity.border)
     static let selectedBorder = Color.primary.opacity(CrestOpacity.selectedBorder)
+    /// The lift a selected tab on dark glass takes toward white.
+    static let darkSelectionLift = Color.white.opacity(CrestOpacity.darkSelectionLift)
+    /// The edge a selected tab on dark glass wears, where the standard
+    /// hairline disappears into a dark sidebar.
+    static let darkSelectionBorder = Color.white.opacity(CrestOpacity.darkSelectionBorder)
     static let dropIndicator = CrestBrandPalette.paper.opacity(CrestOpacity.dropIndicator)
     static let textPrimary = Color.primary
     static let textSecondary = Color.secondary

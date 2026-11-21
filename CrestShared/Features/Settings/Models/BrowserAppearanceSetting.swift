@@ -27,6 +27,10 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case pinsFillRow
     case colorBorders
     case selectedTabOutline
+    /// Drawing the selected tab on white paper or on the material.
+    case selectedTabStyle
+    case selectedTabOpacity
+    case selectedPinTint
     case websitePinColors
     case dimUnloadedTabs
     case pinnedFill

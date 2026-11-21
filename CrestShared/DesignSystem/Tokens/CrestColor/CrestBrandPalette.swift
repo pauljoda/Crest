@@ -12,6 +12,9 @@ enum CrestBrandPalette {
     /// The warm dark neutral that stands for paper in the dark, under paper
     /// text: the hue of the brand's warm neutrals, nearly as deep as ink.
     static let charcoalComponents = CrestColorComponents(red: 40, green: 37, blue: 31)
+    /// The warm near-black a dark page lies on, under charcoal panels: the
+    /// hue of charcoal, deeper.
+    static let cinderComponents = CrestColorComponents(red: 24, green: 22, blue: 18)
     static let creamComponents = CrestColorComponents(red: 251, green: 245, blue: 230)
     static let paperComponents = CrestColorComponents(red: 255, green: 253, blue: 247)
     /// The warm ground under a control on cream, such as a segmented
@@ -30,6 +33,7 @@ enum CrestBrandPalette {
     static let ink = inkComponents.color
     static let slate = slateComponents.color
     static let charcoal = charcoalComponents.color
+    static let cinder = cinderComponents.color
     static let cream = creamComponents.color
     static let paper = paperComponents.color
     static let parchment = parchmentComponents.color
