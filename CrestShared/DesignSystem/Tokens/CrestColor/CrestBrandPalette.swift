@@ -17,9 +17,6 @@ enum CrestBrandPalette {
     static let cinderComponents = CrestColorComponents(red: 24, green: 22, blue: 18)
     static let creamComponents = CrestColorComponents(red: 251, green: 245, blue: 230)
     static let paperComponents = CrestColorComponents(red: 255, green: 253, blue: 247)
-    /// The warm ground under a control on cream, such as a segmented
-    /// picker's track.
-    static let parchmentComponents = CrestColorComponents(red: 246, green: 238, blue: 219)
     /// The warm hairline round a card on cream.
     static let hairlineComponents = CrestColorComponents(red: 234, green: 223, blue: 198)
     static let crestBlueComponents = CrestColorComponents(red: 43, green: 108, blue: 196)
@@ -33,20 +30,12 @@ enum CrestBrandPalette {
     static let markShadowComponents = CrestColorComponents(red: 6, green: 10, blue: 20)
 
     static let ink = inkComponents.color
-    static let slate = slateComponents.color
-    static let charcoal = charcoalComponents.color
     static let cinder = cinderComponents.color
-    static let cream = creamComponents.color
     static let paper = paperComponents.color
-    static let parchment = parchmentComponents.color
-    static let hairline = hairlineComponents.color
     static let crestBlue = crestBlueComponents.color
     static let butter = butterComponents.color
     static let coral = coralComponents.color
     static let sky = skyComponents.color
     static let sage = sageComponents.color
-    static let gold = goldComponents.color
     static let markShadow = markShadowComponents.color
-    static let match = sage
-    static let line = ink.opacity(CrestOpacity.brandHairline)
 }

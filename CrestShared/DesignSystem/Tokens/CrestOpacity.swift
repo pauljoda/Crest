@@ -1,6 +1,5 @@
 /// Shared opacity roles for custom interaction and accessibility states.
 enum CrestOpacity {
-    static let brandHairline = 0.18
     static let dropIndicator = 0.72
     static let hover = 0.08
     static let interactionSelection = 0.13
@@ -25,7 +24,6 @@ enum CrestOpacity {
     static let darkSelectionBorder = 0.18
     static let selection = interactionSelection
     static let chromeSurface = 0.055
-    static let selectedSurface = selection
     static let border = 0.12
     static let selectedBorder = interactionSelectionBorder
     static let disabled = 0.5

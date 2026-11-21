@@ -49,19 +49,8 @@ enum CrestBrandTheme {
     static let labelLightComponents = CrestBrandPalette.goldComponents
     static let labelDarkComponents = CrestBrandPalette.butterComponents
 
-    /// The ground under a control's choices, such as a segmented picker's
-    /// track: parchment on cream, a wash of paper on ink.
-    static let trackLightComponents = CrestBrandPalette.parchmentComponents
-    static let trackDarkComponents = CrestBrandPalette.paperComponents
-    static let trackDarkOpacity = 0.08
-
     static let textDisplayLightComponents = CrestBrandPalette.inkComponents
     static let textDisplayDarkComponents = CrestBrandPalette.paperComponents
-    /// Display text held back for supporting copy. Ink at 0.7 keeps 5.4:1 or
-    /// more on paper and parchment; paper at 0.6 keeps 5.2:1 or more on ink
-    /// and its soft surface.
-    static let textSecondaryLightOpacity = 0.7
-    static let textSecondaryDarkOpacity = 0.6
 
     static let lineLightComponents = CrestBrandPalette.hairlineComponents
     static let lineDarkComponents = CrestBrandPalette.paperComponents
@@ -69,11 +58,6 @@ enum CrestBrandTheme {
     /// because paper on ink loses definition faster than ink on paper.
     static let lineLightOpacity = 1.0
     static let lineDarkOpacity = 0.22
-
-    /// A wash of display ink, faint enough to sit under text without taking
-    /// from its contrast.
-    static let quietFillLightOpacity = 0.05
-    static let quietFillDarkOpacity = 0.08
 
     // Semantic roles
 
@@ -102,18 +86,8 @@ enum CrestBrandTheme {
         light: textDisplayLightComponents,
         dark: textDisplayDarkComponents
     )
-    /// Supporting text beside `textDisplay`: captions, counts, hints and notes.
-    static let textSecondary = dynamic(
-        light: textDisplayLightComponents,
-        lightOpacity: textSecondaryLightOpacity,
-        dark: textDisplayDarkComponents,
-        darkOpacity: textSecondaryDarkOpacity
-    )
     /// Small caps labels over a section or a group.
     static let label = dynamic(light: labelLightComponents, dark: labelDarkComponents)
-    /// The ground under a control's choices.
-    static let track = dynamic(
-        light: trackLightComponents, lightOpacity: 1, dark: trackDarkComponents, darkOpacity: trackDarkOpacity)
     /// Hairline separators and control borders.
     static let line = dynamic(
         light: lineLightComponents,
@@ -121,33 +95,12 @@ enum CrestBrandTheme {
         dark: lineDarkComponents,
         darkOpacity: lineDarkOpacity
     )
-    /// The quiet ground of a panel or control that sits on `canvas` without
-    /// rising to `surface`.
-    static let quietFill = dynamic(
-        light: textDisplayLightComponents,
-        lightOpacity: quietFillLightOpacity,
-        dark: textDisplayDarkComponents,
-        darkOpacity: quietFillDarkOpacity
-    )
-
     // MARK: - Actions - Resolving
 
     /// The role values as flat colors, for surfaces that already know which
     /// appearance they render in.
     static func accent(_ colorScheme: ColorScheme) -> Color {
         components(accentLightComponents, accentDarkComponents, colorScheme).color
-    }
-
-    static func accentText(_ colorScheme: ColorScheme) -> Color {
-        components(accentTextLightComponents, accentTextDarkComponents, colorScheme).color
-    }
-
-    static func canvas(_ colorScheme: ColorScheme) -> Color {
-        components(canvasLightComponents, canvasDarkComponents, colorScheme).color
-    }
-
-    static func surface(_ colorScheme: ColorScheme) -> Color {
-        components(surfaceLightComponents, surfaceDarkComponents, colorScheme).color
     }
 
     static func textDisplay(_ colorScheme: ColorScheme) -> Color {
