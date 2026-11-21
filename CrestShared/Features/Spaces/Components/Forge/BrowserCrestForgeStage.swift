@@ -45,7 +45,7 @@ struct BrowserCrestForgeStage: View {
 
     private var wideStage: some View {
         HStack(spacing: BrowserCrestForgeMetrics.stageSpacing) {
-            VStack(spacing: 12) {
+            VStack(spacing: CrestSpacing.medium) {
                 mark(size: BrowserCrestForgeMetrics.crestSize)
                 nameField
             }
@@ -53,7 +53,7 @@ struct BrowserCrestForgeStage: View {
             Spacer(minLength: 0)
         }
         .padding(.leading, 28)
-        .padding(.trailing, 16)
+        .padding(.trailing, CrestSpacing.large)
         .frame(maxWidth: .infinity, minHeight: BrowserCrestForgeMetrics.stageHeight, alignment: .leading)
         .background { field(shadeFrom: .leading, to: .trailing) }
     }
@@ -67,7 +67,7 @@ struct BrowserCrestForgeStage: View {
                 sidebarColumnWidth: BrowserCrestForgeMetrics.compactSidebarSwatchColumnWidth)
         }
         .padding(.top, 48)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, CrestSpacing.small)
         .padding(.bottom, 14)
         .frame(maxWidth: .infinity)
         .background { field(shadeFrom: .top, to: .bottom) }
@@ -90,7 +90,7 @@ struct BrowserCrestForgeStage: View {
     /// The colors in columns of `columnWidth`: the Space's, which take wider
     /// columns where that keeps their names whole, then the crest's parts.
     private func swatches(columnWidth: CGFloat, sidebarColumnWidth: CGFloat? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: CrestSpacing.large) {
             swatchGroup("Colors") {
                 ForEach(shownRoles) { role in
                     sidebarSwatch(role, columnWidth: sidebarColumnWidth ?? columnWidth)
@@ -157,7 +157,7 @@ struct BrowserCrestForgeStage: View {
         }
         .crestGlassButtonStyle()
         .controlSize(.small)
-        .padding(12)
+        .padding(CrestSpacing.medium)
     }
 
     private func swatchGroup<Content: View>(
@@ -168,7 +168,7 @@ struct BrowserCrestForgeStage: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .accessibilityAddTraits(.isHeader)
-            HStack(alignment: .top, spacing: 2) { content() }
+            HStack(alignment: .top, spacing: CrestSpacing.extraExtraSmall) { content() }
         }
     }
 

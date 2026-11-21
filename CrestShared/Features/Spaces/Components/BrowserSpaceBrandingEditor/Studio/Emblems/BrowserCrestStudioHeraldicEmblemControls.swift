@@ -12,7 +12,7 @@ struct BrowserCrestStudioHeraldicEmblemControls: View {
         }
         let visible = search.isEmpty && !showsAll ? Array(matches.prefix(12)) : matches
         BrowserCrestStudioTextField(title: "Find an emblem", symbol: "magnifyingglass", text: $search)
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: CrestSpacing.small) {
             ForEach(visible, id: \.self) { choice in
                 BrowserCrestStudioChoice(
                     title: choice.title, selected: context.value.crest.resolvedCharge == .heraldic(choice)

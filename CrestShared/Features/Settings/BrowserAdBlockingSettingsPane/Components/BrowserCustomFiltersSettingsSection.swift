@@ -28,7 +28,7 @@ struct BrowserCustomFiltersSettingsSection: View {
                     Text(verbatim: "example.com##.banner\n||ads.example.com^")
                         .font(.system(.callout, design: .monospaced))
                         .foregroundStyle(.tertiary)
-                        .padding(.top, 8)
+                        .padding(.top, CrestSpacing.small)
                         .padding(.leading, 5)
                         .opacity((draft ?? saved).isEmpty ? 1 : 0)
                         .allowsHitTesting(false)

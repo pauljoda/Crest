@@ -45,11 +45,11 @@ struct BrowserTranslationSettingsSection: View {
                 Text("No downloaded languages")
                     .foregroundStyle(.secondary)
             }
-            HStack(spacing: 12) { languageActions }
+            HStack(spacing: CrestSpacing.medium) { languageActions }
         } header: {
             Text("Translate automatically from")
         } footer: {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
                 #if os(macOS)
                     CrestFormFootnote("Add languages in System Settings › General › Language & Region.")
                 #else
@@ -106,7 +106,7 @@ struct BrowserTranslationSettingsSection: View {
         let enabled = saved?.isEnabled ?? false
         let available = targets.contains(target)
         return LabeledContent {
-            HStack(spacing: 12) {
+            HStack(spacing: CrestSpacing.medium) {
                 destinationPicker(source, target: target, targets: targets, enabled: enabled)
                     .labelsHidden()
                     .fixedSize()
@@ -114,7 +114,7 @@ struct BrowserTranslationSettingsSection: View {
                     .labelsHidden()
             }
         } label: {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 Text(BrowserTranslationLanguageCatalog.name(source))
                 if !target.isEmpty && !available && catalog.hasChecked {
                     Text("Download both languages to translate")

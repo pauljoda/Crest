@@ -248,7 +248,7 @@ private struct BrowserDownloadRowLabel: View {
             }
             .lineLimit(1)
         case .stacked:
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 primaryLine(presentation)
                 secondaryLine(presentation)
             }

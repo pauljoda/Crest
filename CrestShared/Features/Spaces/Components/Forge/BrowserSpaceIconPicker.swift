@@ -99,7 +99,10 @@ struct BrowserSpaceIconPicker: View {
                     Text(style.title)
                         .crestCapsLabel()
                         .accessibilityAddTraits(.isHeader)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 80), spacing: CrestSpacing.small)],
+                        spacing: CrestSpacing.small
+                    ) {
                         ForEach(SpaceHouse.all.filter { $0.style == style }, id: \.self) { house in
                             crest(of: house)
                         }
@@ -107,7 +110,7 @@ struct BrowserSpaceIconPicker: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, CrestSpacing.extraSmall)
         .accessibilityIdentifier("space-starter-crests")
     }
 

@@ -49,7 +49,7 @@ struct BrowserSpacePalettePicker: View {
                 .accessibilityIdentifier("space-palette-\(palette.name)")
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, CrestSpacing.extraExtraSmall)
         .accessibilityIdentifier("space-palettes")
     }
 

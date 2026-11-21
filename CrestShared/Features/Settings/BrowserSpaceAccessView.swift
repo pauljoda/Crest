@@ -26,7 +26,7 @@ struct BrowserSpaceAccessView: View {
         ScrollView {
             accessContent
                 .frame(maxWidth: BrowserSpaceAccessLayout.maximumContentWidth)
-                .padding(24)
+                .padding(CrestSpacing.extraExtraLarge)
                 .frame(maxWidth: .infinity)
         }
         .defaultScrollAnchor(.top, for: .initialOffset)
@@ -42,8 +42,8 @@ struct BrowserSpaceAccessView: View {
     }
 
     private var accessContent: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
+        VStack(spacing: CrestSpacing.extraExtraLarge) {
+            VStack(spacing: CrestSpacing.large) {
                 BrowserSpaceSymbolArtwork(
                     identity: space,
                     size: BrowserSpaceAccessLayout.iconSize,
@@ -68,7 +68,7 @@ struct BrowserSpaceAccessView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: CrestSpacing.medium) {
                 Button {
                     Task { await accessController.unlock(space) }
                 } label: {

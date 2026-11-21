@@ -73,7 +73,7 @@ struct BrowserAboutSettingsPane: View {
                 .clipShape(.rect(cornerRadius: Self.appIconCornerRadius))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 Text(ProductIdentity.name)
                     .font(.title3.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
@@ -91,7 +91,7 @@ struct BrowserAboutSettingsPane: View {
                     .help(buildInformation.bundleIdentifier)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, CrestSpacing.extraExtraSmall)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 

@@ -45,7 +45,7 @@ struct BrowserFolderHeaderControl: View {
                         nameField
                     }
 
-                    Spacer(minLength: 8)
+                    Spacer(minLength: CrestSpacing.small)
                 }
                 .browserSavedFolderHeaderLayout(configuration: configuration)
             } else {
@@ -80,7 +80,7 @@ struct BrowserFolderHeaderControl: View {
                             BrowserGroupHeaderTitle(folder: folder, tintsTitle: tintsTitle)
                         }
 
-                        Spacer(minLength: 8)
+                        Spacer(minLength: CrestSpacing.small)
                         if showsTabCounts {
                             BrowserFolderTabCount(folder: folder, space: configuration.context.space).equatable()
                                 // Where the `…` button waits for hover, the count

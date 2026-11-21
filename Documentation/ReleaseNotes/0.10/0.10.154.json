@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "feature-spacing-uses-spacing-scale",
+      "category": "internal",
+      "message": "Gaps and padding in the shared Settings, Space studio, translation, permission and download views come from the shared spacing scale, with no visible change."
+    }
+  ]
+}

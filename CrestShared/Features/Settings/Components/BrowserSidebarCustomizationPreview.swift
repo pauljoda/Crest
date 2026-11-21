@@ -34,7 +34,7 @@ struct BrowserSidebarCustomizationPreview: View {
     var body: some View {
         let context = sample.listContext(capabilities: capabilities)
         let branding = context.map(\.space.settings.look) ?? sample.fallbackBranding
-        VStack(spacing: 8) {
+        VStack(spacing: CrestSpacing.small) {
             if let context {
                 if showsPins {
                     let space = context.space
@@ -44,7 +44,7 @@ struct BrowserSidebarCustomizationPreview: View {
                         select: { sample.browser.selectTab($0.tabID) }, context: context,
                         siteThemeAccent: sample.siteThemeAccent, capabilities: capabilities
                     )
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, CrestSpacing.small)
                 }
                 BrowserSavedTabsDropSection(context: context)
                 if showsCurrentTabs {
@@ -52,7 +52,7 @@ struct BrowserSidebarCustomizationPreview: View {
                 }
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, CrestSpacing.medium)
         .frame(maxWidth: BrowserChromeLayout.sidebarMaximumWidth)
         .background { background(for: branding) }
         .clipShape(.rect(cornerRadius: showsBackground ? Self.cornerRadius : 0))

@@ -113,19 +113,21 @@ struct BrowserCrestForge: View {
             }
         )
         .textCase(nil)
-        .padding(.bottom, 4)
+        .padding(.bottom, CrestSpacing.extraSmall)
     }
 
     // MARK: - Sidebar
 
     @ViewBuilder private var sidebarSections: some View {
         Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 80), spacing: CrestSpacing.small)], spacing: CrestSpacing.small
+            ) {
                 ForEach(SpaceBannerPattern.all, id: \.self) { pattern in
                     patternChoice(pattern)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, CrestSpacing.extraSmall)
             .accessibilityIdentifier("space-sidebar-patterns")
         } header: {
             CrestSettingsSectionHeading(title: "Sidebar")
@@ -286,10 +288,12 @@ struct BrowserCrestForge: View {
         _ items: [Item], id: KeyPath<Item, ID>, @ViewBuilder tile: @escaping (Item) -> Tile
     ) -> some View {
         Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 80), spacing: CrestSpacing.small)], spacing: CrestSpacing.small
+            ) {
                 ForEach(items, id: id) { item in tile(item) }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, CrestSpacing.extraSmall)
             .accessibilityIdentifier("space-forge-gallery")
         } header: {
             stepHeader

@@ -17,7 +17,7 @@ struct BrowserDownloadStatusIcon: View {
                     .stroke(.tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
-            .padding(2)
+            .padding(CrestSpacing.extraExtraSmall)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Download Progress")
             .accessibilityValue(
