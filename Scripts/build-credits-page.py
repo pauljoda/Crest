@@ -335,26 +335,33 @@ def resolve_supporters(
             )
     supporters: list[Supporter] = []
     if patrons is None:
-        supporters = list(entries.values())
+        supporters = [entry for key, entry in entries.items() if key not in hidden]
     else:
-        active: dict[str, Supporter] = {}
+        # Each listed patron by member ID, so two patrons with one name stay
+        # two, and each file entry a patron took or a hidden patron stands for.
+        listed: dict[str, Supporter] = {}
+        claimed: set[str] = set()
         for patron in patrons:
-            tier = tier_for(patron.amount_cents, tiers)
             member, key = patron.id.casefold(), patron.name.casefold()
-            if not tier or member in active or member in hidden or key in hidden:
+            if member in hidden or key in hidden:
+                claimed.update((member, key))
+                continue
+            tier = tier_for(patron.amount_cents, tiers)
+            if not tier or member in listed:
                 continue
             found = member if member in entries else key
-            entry = entries.get(found)
-            active[found] = Supporter(
+            entry = entries.get(found) if found not in claimed else None
+            claimed.add(found)
+            listed[member] = Supporter(
                 entry.name if entry else short_name(patron.name),
                 tier.id,
                 entry.link if entry else None,
                 SOURCES["patreon"],
             )
-        supporters = list(active.values()) + [
+        supporters = list(listed.values()) + [
             entry
             for key, entry in entries.items()
-            if key not in active and entry.source is not SOURCES["patreon"]
+            if key not in claimed and key not in hidden and entry.source is not SOURCES["patreon"]
         ]
     by_tier: dict[str, list[Supporter]] = {tier.id: [] for tier in tiers}
     for supporter in supporters:

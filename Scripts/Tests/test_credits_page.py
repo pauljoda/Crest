@@ -76,6 +76,32 @@ class CreditsPageTests(unittest.TestCase):
             self.assertFalse(any(shown.startswith(name) for shown in listed), name)
             self.assertNotIn(name, page)
 
+    def test_hidden_member_ids_hold_without_patreon_and_over_entries_of_the_same_name(self) -> None:
+        supporters = {
+            "people": [
+                {"name": "Chris F", "patreon": "9", "tier": "supporter"},
+                {"name": "Blake Sustainer", "source": "ko-fi", "tier": "supporter"},
+            ],
+            "hidden": ["9", "2"],
+        }
+        tiers = credits.read_tiers(json.loads((REPOSITORY_ROOT / "Documentation" / "Credits.json").read_text())["supporters"])
+        # Without Patreon, the entry that holds a hidden member ID is left out;
+        # nothing yet ties the Ko-fi entry to patron 2.
+        offline = credits.resolve_supporters(supporters, tiers, None)
+        self.assertEqual(["Blake Sustainer"], [person.name for people in offline.values() for person in people])
+        # With Patreon, an entry with the name of a patron hidden by member ID
+        # is left out too.
+        live = credits.resolve_supporters(supporters, tiers, credits.patrons_on_page(patreon_page()))
+        names = [person.name for people in live.values() for person in people]
+        self.assertFalse(any(name.startswith(("Blake", "Chris")) for name in names), names)
+
+    def test_two_patrons_with_one_name_stay_two(self) -> None:
+        page = patreon_page()
+        page["data"].append(dict(page["data"][1], id="7"))
+        tiers = credits.read_tiers(json.loads((REPOSITORY_ROOT / "Documentation" / "Credits.json").read_text())["supporters"])
+        live = credits.resolve_supporters({"people": [], "hidden": []}, tiers, credits.patrons_on_page(page))
+        self.assertEqual(2, [person.name for person in live["sustainer"]].count("Blake S"))
+
     def test_patrons_are_listed_live_with_the_links_the_file_gives(self) -> None:
         page, document = self.build({
             "people": [
