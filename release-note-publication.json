@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "device-settings-kept-by-the-core",
+    "development": "settings-dark-black-and-charcoal",
     "nightly": "palette-history-site-icons"
   }
 }

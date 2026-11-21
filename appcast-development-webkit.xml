@@ -6,29 +6,30 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.119</title>
-            <pubDate>Sat, 21 Nov 2026 21:26:25 +0000</pubDate>
+            <title>0.10.121</title>
+            <pubDate>Sat, 21 Nov 2026 22:03:11 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1676</sparkle:version>
-            <sparkle:shortVersionString>0.10.119</sparkle:shortVersionString>
+            <sparkle:version>1677</sparkle:version>
+            <sparkle:shortVersionString>0.10.121</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### Improved
 
-- Reliability and internal improvements.
+- The selected tab is now a sheet of translucent white, and a selected pin shows its site's color through the white. In Settings › Appearance › More Customization you can set how opaque the white is, turn off the pin's tint, or choose Material to bring back the earlier look in your material color.
+- Settings in dark mode are drawn in black and charcoal, like Crest's pop-up panels, instead of navy.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.10.119/) · [View all changes](https://github.com/pauljoda/Crest/compare/6c6ff7ee84b31e5df9475dc339569a20b91c2382...d5e150547694b32b085fbf752d4dc4b5dd85c1f9) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.119-2026-11-21-1676-r676.1/Installer-Crest-0.10.119-development-2026-11-21-d5e1505-arm64.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.121/) · [View all changes](https://github.com/pauljoda/Crest/compare/d5e150547694b32b085fbf752d4dc4b5dd85c1f9...f9f4869d4217ec72b7f1f408d38867f7cfa03cd2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.121-2026-11-21-1677-r677.1/Installer-Crest-0.10.121-development-2026-11-21-f9f4869-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.119-2026-11-21-1676-r676.1/Installer-Crest-0.10.119-development-2026-11-21-d5e1505-arm64.dmg" length="241525386" type="application/octet-stream" sparkle:edSignature="OEYOYUM2Sg5+nif3o5WA6rFga5jrFfpDDJpj1zNTLoGQgg5gqysloQVr8oV1psb8wlo76JV+wR5l1G+mvHLmCA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.121-2026-11-21-1677-r677.1/Installer-Crest-0.10.121-development-2026-11-21-f9f4869-arm64.dmg" length="241603722" type="application/octet-stream" sparkle:edSignature="b0lZkgj0OCY7NVZKqxaX5jGY8+FYYqbmUJQvqsbYXs/NjWya8G/xDm/+OgJFbArdKutPAPc4irC6Xm+VGn9SAw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +61,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: RlAV0DV8fAy9cJ0aNVcNwsHttrTZk2+RqpsU9uy+L2EgRbP5tM11MT/0jDm2lYpzF9myAi31SXmHZBlJ4dnzCA==
-length: 4029
+edSignature: jmekVR3LUhsPrQB9+dT1Kj/iBPOEgt5k22K8z3AtND9EZyDFQ6i9c11tjAWllpHbdd771aPCbmKItdrp66T8DA==
+length: 4390
 -->
