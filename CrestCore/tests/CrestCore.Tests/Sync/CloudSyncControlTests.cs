@@ -15,7 +15,7 @@ public sealed partial class BrowserContractsTests {
         var app = new CrestApp();
         app.Send(new OpenCloudTransport(TransportSchema, Legacy: null));
         if (awaitsAccountDecision) app.Send(new ObserveCloudAccountChange(CloudAccountTransition.SwitchAccounts));
-        app.Send(new ConfigureCloudSync(IsEnabled: true, canReachCloud));
+        app.Send(new ConfigureCloudSync(canReachCloud));
         return app;
     }
 
@@ -122,7 +122,7 @@ public sealed partial class BrowserContractsTests {
         _ = TestWorkspaces.OpenStored(app);
         app.Send(new OpenCloudTransport(TransportSchema, Legacy: null));
         app.Send(new SaveCloudEngineState([1]));
-        app.Send(new ConfigureCloudSync(IsEnabled: true, CanReachCloud: true));
+        app.Send(new ConfigureCloudSync(CanReachCloud: true));
         long start = Advance(app, new StartCloudSync()).Steps[0].Attempt;
         Advance(app, new CloudEntitlementChecked(start, Granted: true));
         Assert.Equal([CloudSyncStepKind.ReplaceSeed], Kinds(Advance(app, new CloudAccountChecked(start, CloudAccountState.Available)).Steps));

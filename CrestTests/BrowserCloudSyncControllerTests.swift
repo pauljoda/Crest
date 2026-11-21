@@ -11,12 +11,10 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     /// with nothing to keep, which would take the cloud's content instead.
     func testAComparisonTheCoreRefusesStopsSyncWithoutTakingTheCloud() async throws {
         let core = try awaitingAccountDecision(CrestCore())
-        let preferences = TestBrowserCloudSyncPreferences()
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
             core: core,
             configuration: testConfiguration,
-            preferences: preferences,
             remoteService: TestBrowserCloudSyncRemoteService(
                 accountState: .available,
                 snapshot: try await cloudRecords(of: SessionState.Seed(spaces: [.blank(number: 1)]))),
@@ -47,21 +45,6 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         let other = try BrowserStoredSessionHarness(
             seed: session, syncDeviceID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!)
         return try await other.pendingRecords()
-    }
-}
-
-@MainActor
-private final class TestBrowserCloudSyncPreferences: BrowserCloudSyncPreferences {
-    var storedIsEnabled: Bool?
-
-    init(storedIsEnabled: Bool? = nil) {
-        self.storedIsEnabled = storedIsEnabled
-    }
-
-    func loadIsEnabled() -> Bool? { storedIsEnabled }
-
-    func saveIsEnabled(_ isEnabled: Bool) {
-        storedIsEnabled = isEnabled
     }
 }
 

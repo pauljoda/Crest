@@ -57,6 +57,9 @@ protocol CloudTransportIntent: Intent {}
 /// The members of `Intent` that derive from the core's `DataDeletionIntent`.
 protocol DataDeletionIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `DevicePreferenceIntent`.
+protocol DevicePreferenceIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `DownloadIntent`.
 protocol DownloadIntent: Intent {}
 
@@ -135,6 +138,7 @@ enum Change: Equatable, Sendable {
     case dataDeleted(DataDeleted)
     case downloadApprovalAsked(DownloadApprovalAsked)
     case downloadDestinationAsked(DownloadDestinationAsked)
+    case downloadPreferencesChanged(DownloadPreferencesChanged)
     case downloadStarted(DownloadStarted)
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
@@ -152,6 +156,7 @@ enum Change: Equatable, Sendable {
     case offeredWindowAdopted(OfferedWindowAdopted)
     case pageChanged(PageChanged)
     case pageOpened(PageOpened)
+    case pagePreferencesChanged(PagePreferencesChanged)
     case pageRehosted(PageRehosted)
     case pageRemoved(PageRemoved)
     case pageUnloaded(PageUnloaded)
@@ -261,6 +266,11 @@ enum Change: Equatable, Sendable {
         if case .downloadDestinationAsked(let value) = self { value } else { nil }
     }
 
+    /// The `DownloadPreferencesChanged` this change carries, or nil for another member.
+    var downloadPreferencesChanged: DownloadPreferencesChanged? {
+        if case .downloadPreferencesChanged(let value) = self { value } else { nil }
+    }
+
     /// The `DownloadStarted` this change carries, or nil for another member.
     var downloadStarted: DownloadStarted? {
         if case .downloadStarted(let value) = self { value } else { nil }
@@ -344,6 +354,11 @@ enum Change: Equatable, Sendable {
     /// The `PageOpened` this change carries, or nil for another member.
     var pageOpened: PageOpened? {
         if case .pageOpened(let value) = self { value } else { nil }
+    }
+
+    /// The `PagePreferencesChanged` this change carries, or nil for another member.
+    var pagePreferencesChanged: PagePreferencesChanged? {
+        if case .pagePreferencesChanged(let value) = self { value } else { nil }
     }
 
     /// The `PageRehosted` this change carries, or nil for another member.
@@ -1863,6 +1878,7 @@ extension Change {
         case .dataDeleted(let change): change.apply(to: state)
         case .downloadApprovalAsked(let change): change.apply(to: state)
         case .downloadDestinationAsked(let change): change.apply(to: state)
+        case .downloadPreferencesChanged(let change): change.apply(to: state)
         case .downloadStarted(let change): change.apply(to: state)
         case .downloadUpdated(let change): change.apply(to: state)
         case .downloadsRemoved(let change): change.apply(to: state)
@@ -1880,6 +1896,7 @@ extension Change {
         case .offeredWindowAdopted(let change): change.apply(to: state)
         case .pageChanged(let change): change.apply(to: state)
         case .pageOpened(let change): change.apply(to: state)
+        case .pagePreferencesChanged(let change): change.apply(to: state)
         case .pageRehosted(let change): change.apply(to: state)
         case .pageRemoved(let change): change.apply(to: state)
         case .pageUnloaded(let change): change.apply(to: state)
@@ -1943,6 +1960,7 @@ extension Change {
         case .dataDeleted(let change): change.apply(to: core, in: &batch)
         case .downloadApprovalAsked(let change): change.apply(to: core, in: &batch)
         case .downloadDestinationAsked(let change): change.apply(to: core, in: &batch)
+        case .downloadPreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .downloadStarted(let change): change.apply(to: core, in: &batch)
         case .downloadUpdated(let change): change.apply(to: core, in: &batch)
         case .downloadsRemoved(let change): change.apply(to: core, in: &batch)
@@ -1960,6 +1978,7 @@ extension Change {
         case .offeredWindowAdopted(let change): change.apply(to: core, in: &batch)
         case .pageChanged(let change): change.apply(to: core, in: &batch)
         case .pageOpened(let change): change.apply(to: core, in: &batch)
+        case .pagePreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .pageRehosted(let change): change.apply(to: core, in: &batch)
         case .pageRemoved(let change): change.apply(to: core, in: &batch)
         case .pageUnloaded(let change): change.apply(to: core, in: &batch)
@@ -2023,6 +2042,7 @@ extension Change {
         case .dataDeleted(let change): change.note(in: &receipts)
         case .downloadApprovalAsked(let change): change.note(in: &receipts)
         case .downloadDestinationAsked(let change): change.note(in: &receipts)
+        case .downloadPreferencesChanged(let change): change.note(in: &receipts)
         case .downloadStarted(let change): change.note(in: &receipts)
         case .downloadUpdated(let change): change.note(in: &receipts)
         case .downloadsRemoved(let change): change.note(in: &receipts)
@@ -2040,6 +2060,7 @@ extension Change {
         case .offeredWindowAdopted(let change): change.note(in: &receipts)
         case .pageChanged(let change): change.note(in: &receipts)
         case .pageOpened(let change): change.note(in: &receipts)
+        case .pagePreferencesChanged(let change): change.note(in: &receipts)
         case .pageRehosted(let change): change.note(in: &receipts)
         case .pageRemoved(let change): change.note(in: &receipts)
         case .pageUnloaded(let change): change.note(in: &receipts)
@@ -2139,6 +2160,14 @@ struct AddressCompletion: Equatable, Sendable {
     let typed: String
     let suffix: String
     let accepted: String
+}
+
+struct AdoptDevicePreferences: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let defaultPageZoom: Double?
+    let backgroundPageActivity: String?
+    let allowsHighFrameRate: Bool?
+    let syncsWithICloud: Bool?
+    let downloads: [SpaceDownloadPreferences]
 }
 
 struct AdoptLegacySession: Intent, Equatable, Sendable {
@@ -3187,7 +3216,6 @@ struct ColorPalette: Equatable, Sendable {
 }
 
 struct ConfigureCloudSync: Intent, CloudSyncControlIntent, Equatable, Sendable {
-    let isEnabled: Bool
     let canReachCloud: Bool
 }
 
@@ -3720,8 +3748,17 @@ struct DownloadExtension: Equatable, Sendable {
     let extensionID: String
 }
 
+struct DownloadFolder: Equatable, Sendable {
+    var name: String
+    var token: Data
+}
+
 struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
+}
+
+struct DownloadPreferencesChanged: CoreChange, Equatable, Sendable {
+    let spaces: [SpaceDownloadPreferences]
 }
 
 struct DownloadRisk: Query, Equatable, Sendable {
@@ -6138,6 +6175,21 @@ struct PagePoint: Equatable, Sendable {
     var y: Double
 }
 
+struct PagePreferences: Equatable, Sendable {
+    static let standardZoom: Double = 1
+    static let minimumZoom: Double = 0.25
+    static let maximumZoom: Double = 5
+    static let `default` = PagePreferences(defaultZoom: 1, backgroundActivity: BackgroundPageActivity.suspend, allowsHighFrameRate: false)
+
+    let defaultZoom: Double
+    let backgroundActivity: BackgroundPageActivity
+    let allowsHighFrameRate: Bool
+}
+
+struct PagePreferencesChanged: CoreChange, Equatable, Sendable {
+    let preferences: PagePreferences
+}
+
 struct PagePresented: Equatable, Sendable {
     let presentation: PagePresentation
 }
@@ -7443,6 +7495,10 @@ struct SetAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let preferences: AppPreferences
 }
 
+struct SetBackgroundPageActivity: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let activity: BackgroundPageActivity
+}
+
 struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -7472,6 +7528,10 @@ struct SetCustomFilterList: Intent, Equatable, Sendable, Identifiable {
 
 struct SetCustomFilters: Intent, Equatable, Sendable {
     let text: String
+}
+
+struct SetDefaultPageZoom: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let zoom: Double
 }
 
 struct SetDefaultSearch: Intent, SearchCatalogIntent, Equatable, Sendable {
@@ -7513,6 +7573,10 @@ struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let folderID: UUID
     let symbol: String
+}
+
+struct SetHighFrameRate: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let allowed: Bool
 }
 
 struct SetLinkBehavior: Intent, LinkIntent, Equatable, Sendable {
@@ -7574,6 +7638,10 @@ struct SetSpaceBranding: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let branding: SpaceBranding
+}
+
+struct SetSpaceDownloads: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let preferences: SpaceDownloadPreferences
 }
 
 struct SetSpaceIdentity: Intent, SessionIntent, Equatable, Sendable {
@@ -8164,6 +8232,12 @@ struct SpaceDeletionUnderway: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest will quit once the Space is deleted.")
     }
+}
+
+struct SpaceDownloadPreferences: Equatable, Sendable {
+    var spaceID: UUID
+    var asksWhereToSave: Bool
+    var folder: DownloadFolder?
 }
 
 struct SpaceIsPrivate: Equatable, Sendable {
@@ -9966,6 +10040,43 @@ struct AutomaticDownloadAction: Hashable, Sendable {
 
         init(kind: Kinds, name: String) {
             self.kind = kind
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `BackgroundPageActivity`. A member's wire tag is its index in `all`.
+struct BackgroundPageActivity: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let suspend = BackgroundPageActivity(tag: 0, name: "suspend")
+    static let throttle = BackgroundPageActivity(tag: 1, name: "throttle")
+
+    static let all: [BackgroundPageActivity] = [suspend, throttle]
+
+    static func named(_ name: String?) -> BackgroundPageActivity? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: BackgroundPageActivity, rhs: BackgroundPageActivity) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
             self.name = name
         }
     }

@@ -95,7 +95,7 @@ private struct BrowserWebKitPerformanceSettings: View {
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-                inactiveSchedulingPolicyPicker
+                backgroundActivityPicker
 
                 if store.canConfigureAllow120FPS {
                     Toggle("Allow 120 FPS", isOn: $store.allows120FPS)
@@ -110,17 +110,17 @@ private struct BrowserWebKitPerformanceSettings: View {
         .accessibilityIdentifier("webkit-performance-settings")
     }
 
-    private var inactiveSchedulingPolicyPicker: some View {
+    private var backgroundActivityPicker: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
             Picker(
                 "Background tab activity",
                 selection: Binding(
-                    get: { store.inactiveSchedulingPolicy },
-                    set: { store.setInactiveSchedulingPolicy($0) }
+                    get: { store.backgroundActivity },
+                    set: { store.setBackgroundActivity($0) }
                 )
             ) {
-                Text("Suspend").tag(BrowserInactiveSchedulingPolicy.suspend)
-                Text("Throttle").tag(BrowserInactiveSchedulingPolicy.throttle)
+                Text("Suspend").tag(BackgroundPageActivity.suspend)
+                Text("Throttle").tag(BackgroundPageActivity.throttle)
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier(

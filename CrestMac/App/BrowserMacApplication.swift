@@ -103,9 +103,6 @@ final class BrowserMacApplication {
         let usesEphemeralProfileStorage =
             launchEnvironment.usesEphemeralProfileStorage
         BrowserMacWebTextAssistancePreference.configure()
-        BrowserWebKitFeatureFlagStore.configureForLaunch(
-            usesIsolatedLaunch: usesIsolatedLaunch
-        )
         let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
         presentsInstalledApplicationUI =
             launchEnvironment.presentsInstalledApplicationUI
@@ -127,6 +124,12 @@ final class BrowserMacApplication {
         // window's store reads them.
         let legacyDevice = BrowserLegacyDeviceDefaults.read(for: launchEnvironment)
         BrowserLinkPreferenceStore.adopt(legacyDevice.linkPreferences, into: core)
+        // The page and download preferences come next, since every page reads
+        // them.
+        _ = try? core.send(legacyDevice.preferences)
+        BrowserDefaultPageZoomStore.configure(core: core)
+        BrowserWebKitFeatureFlagStore.configureForLaunch(usesIsolatedLaunch: usesIsolatedLaunch, core: core)
+        BrowserPlatformDownloadPreferences.configure(core: core)
         let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
         // The search catalog carries the engines the Spaces chose before the
         // device kept one, so it restores once the stored session is open.

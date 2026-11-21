@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "device-settings-kept-by-the-core",
+      "category": "internal",
+      "message": "The default page zoom, background tab activity, 120 FPS, the iCloud sync switch and each Space's download choices are kept with Crest's other device settings, carried over once from earlier versions."
+    }
+  ]
+}

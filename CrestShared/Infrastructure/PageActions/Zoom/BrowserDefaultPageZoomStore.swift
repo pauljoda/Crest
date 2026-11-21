@@ -7,51 +7,8 @@ protocol BrowserDefaultPageZoomObserving: AnyObject {
     func defaultPageZoomDidChange(to zoom: CGFloat)
 }
 
-protocol BrowserDefaultPageZoomPersisting {
-    func load() -> CGFloat?
-    func save(_ zoom: CGFloat)
-}
-
-final class UserDefaultsBrowserDefaultPageZoomPersistence:
-    BrowserDefaultPageZoomPersisting
-{
-    static let key = "crest.page-zoom.default"
-
-    private let defaults: UserDefaults
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-    }
-
-    func load() -> CGFloat? {
-        guard defaults.object(forKey: Self.key) != nil else { return nil }
-        return CGFloat(defaults.double(forKey: Self.key))
-    }
-
-    func save(_ zoom: CGFloat) {
-        defaults.set(Double(zoom), forKey: Self.key)
-    }
-}
-
-final class InMemoryBrowserDefaultPageZoomPersistence:
-    BrowserDefaultPageZoomPersisting
-{
-    private var zoom: CGFloat?
-
-    init(zoom: CGFloat? = nil) {
-        self.zoom = zoom
-    }
-
-    func load() -> CGFloat? {
-        zoom
-    }
-
-    func save(_ zoom: CGFloat) {
-        self.zoom = zoom
-    }
-}
-
-/// The one persisted global zoom baseline shared by every browser runtime.
+/// The zoom every page starts at on this device, which the core's device
+/// store keeps, and the pages that follow it.
 ///
 /// Pages subscribe weakly so changing Settings can update every resident page
 /// without making their lifetimes part of the preference's lifetime. A page with
@@ -60,49 +17,39 @@ final class InMemoryBrowserDefaultPageZoomPersistence:
 @MainActor
 final class BrowserDefaultPageZoomStore {
     /// The baseline a page starts at when nothing else is saved.
-    nonisolated static let defaultLevel: CGFloat = 1
-    /// The baselines a saved preference may hold.
-    nonisolated static let defaultRange: ClosedRange<CGFloat> = 0.25...5
+    nonisolated static let defaultLevel = CGFloat(PagePreferences.standardZoom)
+    /// The baselines a saved preference may hold, which the core keeps it
+    /// within.
+    nonisolated static let defaultRange = CGFloat(PagePreferences.minimumZoom)...CGFloat(PagePreferences.maximumZoom)
 
-    static let shared: BrowserDefaultPageZoomStore = {
-        let environment = BrowserLaunchEnvironment.current
-        guard environment.requiresIsolation else {
-            return BrowserDefaultPageZoomStore(persistence: UserDefaultsBrowserDefaultPageZoomPersistence())
-        }
-        if let id = environment.persistentIsolationID,
-            let defaults = UserDefaults(
-                suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id)
-            )
-        {
-            return BrowserDefaultPageZoomStore(
-                persistence: UserDefaultsBrowserDefaultPageZoomPersistence(defaults: defaults)
-            )
-        }
-        return BrowserDefaultPageZoomStore(persistence: InMemoryBrowserDefaultPageZoomPersistence())
-    }()
+    /// The store every page and Settings share: over the launch's core once
+    /// the launch configures it, and before that over a memory-only core of
+    /// its own, made on first use, as previews and tests use.
+    static var shared: BrowserDefaultPageZoomStore {
+        if let configured { return configured }
+        let store = BrowserDefaultPageZoomStore(core: CrestCore())
+        configured = store
+        return store
+    }
 
-    private var storedDefaultZoom: CGFloat
+    /// The store `shared` answers, once there is one.
+    private static var configured: BrowserDefaultPageZoomStore?
 
-    @ObservationIgnored private let persistence: any BrowserDefaultPageZoomPersisting
+    @ObservationIgnored private let core: CrestCore
     @ObservationIgnored private let observers = NSHashTable<AnyObject>.weakObjects()
 
     var defaultZoom: CGFloat {
-        get { storedDefaultZoom }
+        get { CGFloat(core.state.pagePreferences.defaultZoom) }
         set { setDefaultZoom(newValue) }
     }
 
-    init(persistence: any BrowserDefaultPageZoomPersisting) {
-        self.persistence = persistence
-        let persisted = persistence.load()
-        let normalized = Self.normalized(
-            persisted ?? Self.defaultLevel
-        )
-        storedDefaultZoom = normalized
-        if let persisted,
-            persisted != normalized
-        {
-            persistence.save(normalized)
-        }
+    init(core: CrestCore) {
+        self.core = core
+    }
+
+    /// Has every page and Settings share the store over `core`, the launch's.
+    static func configure(core: CrestCore) {
+        configured = BrowserDefaultPageZoomStore(core: core)
     }
 
     /// Preserve the continuous multiplier, bounding only out-of-range values.
@@ -114,19 +61,16 @@ final class BrowserDefaultPageZoomStore {
 
     func register(_ observer: any BrowserDefaultPageZoomObserving) {
         observers.add(observer)
-        observer.defaultPageZoomDidChange(to: storedDefaultZoom)
+        observer.defaultPageZoomDidChange(to: defaultZoom)
     }
 
     private func setDefaultZoom(_ proposed: CGFloat) {
-        let normalized = Self.normalized(proposed)
-        guard normalized != storedDefaultZoom else {
-            return
-        }
-        storedDefaultZoom = normalized
-        persistence.save(normalized)
+        let previous = defaultZoom
+        _ = try? core.send(SetDefaultPageZoom(zoom: Double(proposed)))
+        let zoom = defaultZoom
+        guard zoom != previous else { return }
         for observer in observers.allObjects {
-            (observer as? any BrowserDefaultPageZoomObserving)?
-                .defaultPageZoomDidChange(to: normalized)
+            (observer as? any BrowserDefaultPageZoomObserving)?.defaultPageZoomDidChange(to: zoom)
         }
     }
 }

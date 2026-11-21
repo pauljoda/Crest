@@ -70,6 +70,16 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// The person's own filters.
     public string CustomFilters { get; init; } = "";
 
+    /// How this device shows pages.
+    public PagePreferences Pages { get; init; } = PagePreferences.Default;
+
+    /// Where each Space's downloads go, for the Spaces that do not keep the
+    /// device's Downloads folder.
+    public IReadOnlyList<SpaceDownloadPreferences> Downloads { get; init; } = [];
+
+    /// Whether this device syncs with iCloud.
+    public bool SyncsWithICloud { get; init; } = true;
+
     #endregion
 
     #region Actions - Adoption
@@ -81,29 +91,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
 
     #region Actions - Equality
 
-    public bool Equals(DeviceRecords? other) => other is not null
-        && Windows.SequenceEqual(other.Windows)
-        && Reopening.SequenceEqual(other.Reopening)
-        && SitePermissions.SequenceEqual(other.SitePermissions)
-        && SiteEngines.SequenceEqual(other.SiteEngines)
-        && DefaultEngine == other.DefaultEngine
-        && Shortcuts.SameAs(other.Shortcuts)
-        && Links.Equals(other.Links)
-        && KeptSetupDraft.Same(SetupDraft, other.SetupDraft)
-        && SetupCompleted == other.SetupCompleted
-        && Adopted.SetEquals(other.Adopted)
-        && TabGroups.SequenceEqual(other.TabGroups)
-        && Equals(SearchCatalog, other.SearchCatalog)
-        && PaletteMemories.Count == other.PaletteMemories.Count
-        && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
-        && Agents.Equals(other.Agents)
-        && ReopeningPages == other.ReopeningPages
-        && LaunchedRelease == other.LaunchedRelease
-        && ContentBlockingLevel == other.ContentBlockingLevel
-        && FilterListChoices.Count == other.FilterListChoices.Count
-        && FilterListChoices.All(entry => other.FilterListChoices.TryGetValue(entry.Key, out bool isOn) && isOn == entry.Value)
-        && BlockingSites.SequenceEqual(other.BlockingSites)
-        && CustomFilterLists.SequenceEqual(other.CustomFilterLists) && CustomFilters == other.CustomFilters;
+    public bool Equals(DeviceRecords? other) => other is not null && DevicePart.All.All(part => part.Same(this, other));
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 
