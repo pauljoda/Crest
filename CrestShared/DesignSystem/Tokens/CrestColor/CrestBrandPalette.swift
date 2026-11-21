@@ -29,6 +29,8 @@ enum CrestBrandPalette {
     static let sageComponents = CrestColorComponents(red: 141, green: 191, blue: 154)
     /// The gold of small caps labels on cream.
     static let goldComponents = CrestColorComponents(red: 138, green: 106, blue: 34)
+    /// The near-black the mark's paper banners cast their shadows in.
+    static let markShadowComponents = CrestColorComponents(red: 6, green: 10, blue: 20)
 
     static let ink = inkComponents.color
     static let slate = slateComponents.color
@@ -44,6 +46,7 @@ enum CrestBrandPalette {
     static let sky = skyComponents.color
     static let sage = sageComponents.color
     static let gold = goldComponents.color
+    static let markShadow = markShadowComponents.color
     static let match = sage
     static let line = ink.opacity(CrestOpacity.brandHairline)
 }

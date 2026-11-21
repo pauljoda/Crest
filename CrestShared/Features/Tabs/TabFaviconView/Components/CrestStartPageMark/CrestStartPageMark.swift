@@ -81,7 +81,7 @@ struct CrestStartPageMark: View {
             CrestMarkBannerShape()
                 .fill(layer.color)
                 .shadow(
-                    color: CrestStartPageMarkMetrics.shadow.opacity(layer.shadowOpacity),
+                    color: CrestBrandPalette.markShadow.opacity(layer.shadowOpacity),
                     radius: layer.shadowRadius * unit, y: layer.shadowOffset * unit
                 )
         }

@@ -1,4 +1,4 @@
-import SwiftUI
+import CoreGraphics
 
 enum CrestStartPageMarkMetrics {
     /// The grid the mark is drawn on, in points at its full size.
@@ -11,6 +11,4 @@ enum CrestStartPageMarkMetrics {
     static let flatSide: CGFloat = 32
     /// The keyline's width on the grid; only its outer half shows.
     static let keylineWidth: CGFloat = 2.6
-    /// The near-black the paper layers' shadows fall in.
-    static let shadow = Color(red: 0.024, green: 0.039, blue: 0.078)
 }
