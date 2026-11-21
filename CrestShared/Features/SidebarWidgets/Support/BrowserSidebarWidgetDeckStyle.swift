@@ -39,7 +39,6 @@ enum BrowserSidebarWidgetDeckStyle {
     static var quietControlHitTarget: CGFloat {
         max(quietControlDiameter, CrestLayout.minimumHitTarget)
     }
-    static let actionHeight: CGFloat = 28
     static let headerTileSize: CGFloat = 30
     static let badgeVerticalPadding: CGFloat = 1
     static let stepperBadgeHorizontalPadding: CGFloat = 2

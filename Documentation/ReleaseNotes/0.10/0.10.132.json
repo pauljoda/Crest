@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "widget-translation-artwork-controls",
+      "category": "improved",
+      "message": "The sidebar's update and Now Playing cards, the translation bar and the symbol and emoji pickers use Crest's standard buttons, with the same hover and press highlights as the rest of Crest."
+    }
+  ]
+}

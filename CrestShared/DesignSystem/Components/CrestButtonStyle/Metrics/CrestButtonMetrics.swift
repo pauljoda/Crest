@@ -19,6 +19,9 @@ enum CrestButtonMetrics {
         static let largeHeight: CGFloat = 54
     #endif
     static let largeHorizontalPadding: CGFloat = 28
+    /// A button in a compact space, such as a card in the sidebar.
+    static let compactHeight: CGFloat = 28
+    static let compactHorizontalPadding: CGFloat = CrestSpacing.medium
     static let prominentHorizontalPadding: CGFloat = 18
     static let standardHorizontalPadding: CGFloat = 16
     static let quietHorizontalPadding: CGFloat = CrestSpacing.small

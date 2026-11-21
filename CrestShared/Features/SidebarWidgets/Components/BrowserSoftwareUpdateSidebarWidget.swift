@@ -149,9 +149,11 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         let primary = buttonActions.first { $0.cardButton?.isProminent == true }
         ForEach(buttonActions, id: \.self) { action in
             if let button = action.cardButton {
-                actionButton(action, button, emphasis: action == primary ? .prominent : .quiet)
+                actionButton(action, button, style: action == primary ? .crestPrimary : .crestSecondary)
             }
         }
+        // The design system's buttons at the card's compact size.
+        .controlSize(.small)
     }
 
     /// The card's button for `action`, as `button` shows it: a link to the
@@ -160,17 +162,21 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
     private func actionButton(
         _ action: BrowserSidebarWidgetAction,
         _ button: BrowserSidebarWidgetAction.CardButton,
-        emphasis: BrowserSidebarWidgetActionEmphasis
+        style: CrestButtonStyle
     ) -> some View {
         let label = Label {
             Text(button.title)
         } icon: {
             Image(systemName: button.symbol)
         }
+        .labelStyle(.titleAndIcon)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
         if button.opensReleasePage {
             if let informationURL = update.informationURL {
                 Link(destination: informationURL) { label }
-                    .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
+                    .buttonStyle(style)
             }
         } else {
             Button {
@@ -178,7 +184,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
             } label: {
                 label
             }
-            .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
+            .buttonStyle(style)
             .accessibilityLabel(Text(button.accessibilityLabel ?? button.title))
             .help(Text(button.accessibilityLabel ?? button.title))
         }
