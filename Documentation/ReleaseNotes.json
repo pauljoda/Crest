@@ -5977,6 +5977,26 @@
     "remove-dead-tests-and-resources": {
       "category": "internal",
       "message": "Removed empty test classes and unused test helpers, old app-icon sources, an unused fixture corpus, a broken icon script, an empty test scheme and catalog strings no code uses."
+    },
+    "ci-builds-swift-tests": {
+      "category": "internal",
+      "message": "Continuous integration compiles the Mac and iOS test targets, so a test that no longer builds fails the change."
+    },
+    "guard-engine-imports": {
+      "category": "internal",
+      "message": "The architecture guard keeps WebKit imports to the WebKit adapters and the Chromium host condition to the engine, and now also checks the agents and the Chromium shell."
+    },
+    "validation-scripts-current": {
+      "category": "internal",
+      "message": "The validation scripts pick a supported Python, the dead-code audit runs on current Periphery and scans the Chromium product, and the identity check keeps only the identities persistence relies on."
+    },
+    "core-unused-members-flagged": {
+      "category": "internal",
+      "message": "The core's analyzers now reject unused private members, and the twelve unused test members they found are gone."
+    },
+    "ci-release-test-build": {
+      "category": "internal",
+      "message": "Continuous integration compiles each app and its tests in one Release build, with the test fixtures compiled into that build only."
     }
   }
 }

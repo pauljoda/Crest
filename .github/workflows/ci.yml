@@ -128,17 +128,7 @@ jobs:
 
       - uses: ./.github/actions/prepare-apple-build
 
-      - name: Check Swift formatting
-        run: |
-          python3 - <<'PYTHON'
-          import subprocess
-          paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
-          paths = [path for path in paths if path and "/Generated/" not in path]
-          subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
-          PYTHON
-
-      - name: Test script contracts with macOS tools
-        run: python3 -m unittest discover -s Scripts/Tests
+      - uses: ./.github/actions/check-sources
 
       - name: Build Chromium product host
         run: |
@@ -180,15 +170,21 @@ jobs:
 
       - uses: ./.github/actions/prepare-apple-build
 
-      - name: Build macOS
+      # One Release build compiles the app and CrestTests without launching the
+      # hosted suite, which stays a manual run. CREST_TEST_FIXTURES compiles in
+      # the fixtures the tests use; only this command passes it, so shipped
+      # builds never carry them.
+      - name: Build macOS and its tests
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project Crest.xcodeproj \
             -scheme Crest \
             -configuration Release \
-            -destination 'generic/platform=macOS' \
+            -destination 'platform=macOS,arch=arm64' \
             -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_TESTABILITY=YES \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) CREST_TEST_FIXTURES'
 
       - name: Remove generated build data
         if: always()
@@ -211,29 +207,22 @@ jobs:
       # The Chromium host job lints Swift and tests the script contracts with
       # macOS tools whenever it runs; an iOS-only change skips that job, so
       # this one does both instead.
-      - name: Check Swift formatting
+      - uses: ./.github/actions/check-sources
         if: needs.changes.outputs.mac != 'true'
-        run: |
-          python3 - <<'PYTHON'
-          import subprocess
-          paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
-          paths = [path for path in paths if path and "/Generated/" not in path]
-          subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
-          PYTHON
 
-      - name: Test script contracts with macOS tools
-        if: needs.changes.outputs.mac != 'true'
-        run: python3 -m unittest discover -s Scripts/Tests
-
-      - name: Build iOS
+      # One Release build compiles the app and CrestMobileTests without running
+      # them, with the test fixtures compiled in as in the macOS job.
+      - name: Build iOS and its tests
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project Crest.xcodeproj \
             -scheme CrestMobile \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_TESTABILITY=YES \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) CREST_TEST_FIXTURES'
 
       - name: Remove generated build data
         if: always()

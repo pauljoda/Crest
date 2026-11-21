@@ -1,0 +1,19 @@
+name: Check sources with macOS tools
+description: Lints every tracked Swift file with swift-format and runs the script contract tests with macOS tools.
+
+runs:
+  using: composite
+  steps:
+    - name: Check Swift formatting
+      shell: bash
+      run: |
+        python3 - <<'PYTHON'
+        import subprocess
+        paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
+        paths = [path for path in paths if path and "/Generated/" not in path]
+        subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
+        PYTHON
+
+    - name: Test script contracts with macOS tools
+      shell: bash
+      run: python3 -m unittest discover -s Scripts/Tests

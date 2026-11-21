@@ -6,8 +6,6 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed class OriginPolicyTests {
-    private static readonly SiteOrigin Site = new("https", "site.example", 443);
-
     [Theory]
     [InlineData("https", "maps.example", true)]
     [InlineData("http", "localhost", true)]

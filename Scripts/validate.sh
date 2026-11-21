@@ -19,7 +19,17 @@ cleanup() {
 trap cleanup EXIT INT TERM HUP
 
 cd "$repository_root"
-python3 -m unittest discover -s Scripts/Tests
+# The script tests need Python 3.11 or newer; Xcode's own python3 is older.
+python=""
+for candidate in python3.13 python3.12 python3.11 python3; do
+  if command -v "$candidate" >/dev/null \
+    && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
+    python="$candidate"
+    break
+  fi
+done
+[[ -n "$python" ]] || { print -u2 "error: the script tests need Python 3.11 or newer on PATH."; exit 69; }
+"$python" -m unittest discover -s Scripts/Tests
 Scripts/bootstrap.sh
 
 xcodebuild \

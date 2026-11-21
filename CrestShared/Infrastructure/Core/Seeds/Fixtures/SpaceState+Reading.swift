@@ -1,4 +1,5 @@
-#if DEBUG
+// Test fixtures: Debug builds, and CI's Release test build, which alone passes CREST_TEST_FIXTURES.
+#if DEBUG || CREST_TEST_FIXTURES
     import Foundation
 
     /// What a test reads back from a seed it built, in the words it reads a
