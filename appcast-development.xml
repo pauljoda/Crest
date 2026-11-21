@@ -6,36 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.107</title>
-            <pubDate>Sat, 21 Nov 2026 17:29:30 +0000</pubDate>
+            <title>0.10.108</title>
+            <pubDate>Sat, 21 Nov 2026 18:32:47 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1669</sparkle:version>
-            <sparkle:shortVersionString>0.10.107</sparkle:shortVersionString>
+            <sparkle:version>1670</sparkle:version>
+            <sparkle:shortVersionString>0.10.108</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- After Crest updates, the first window opens the new release's notes in a new tab.
+
 ### Improved
 
-- Update notes leave out changes that only reach iPhone and iPad, and link to the release's page on crestbrowser.com.
-- Every long press takes the same half second, and a Sub-Space sits the same distance in from its Space in every list.
-- Addresses ending in .test count as local everywhere: the developer toolbar turns on for them, and a typed one opens over HTTP first.
-
-### Fixed
-
-- What's New in Settings › About lists the newest changes in your version of Crest, and only the ones that reach your device.
-- A page in a language written in another script, such as Traditional Chinese for a reader of Simplified Chinese, is offered translation.
+- What's New in Settings › About and on the update card opens the release's notes on crestbrowser.com in a new tab.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.10.107/) · [View all changes](https://github.com/pauljoda/Crest/compare/d9af59726a7b3786b9284aa4ede9ca89b62e8e17...339cf9283231251ccaddecb29a93b81db52126b9) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.107-2026-11-21-1669-r669.1/Installer-Crest-0.10.107-development-2026-11-21-339cf92-arm64.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.108/) · [View all changes](https://github.com/pauljoda/Crest/compare/339cf9283231251ccaddecb29a93b81db52126b9...7121a86ebeacadaeba84d306c73d069ef5f71558) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.10.108-2026-11-21-1670-r670.1/Installer-Crest-0.10.108-development-2026-11-21-7121a86-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.107-2026-11-21-1669-r669.1/Installer-Crest-0.10.107-development-2026-11-21-339cf92-arm64.dmg" length="242068107" type="application/octet-stream" sparkle:edSignature="8GitbgLl1kVQX7TwMwdNYbHWuH21Us1QBrWm2gIvRj39ewnViRVTwHPatwkANAKiRvQGmx2EEqOhPKVWJ3DJDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.10.108-2026-11-21-1670-r670.1/Installer-Crest-0.10.108-development-2026-11-21-7121a86-arm64.dmg" length="241552522" type="application/octet-stream" sparkle:edSignature="klkocgmb49Ihd1/Yxn9qFHCCWmtHY/r5kOBD2OhSmpV5rLvYRL7weS7IWTLHDI4Y1RCAIMg9wBoWhhKNFuZzBA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -67,6 +64,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: T6nmjHRdT79W97XatugB4yrizp9X/8aP1cXWkeqMXM3DPNZGOpLi9SPdYriVuklCFFuGnZ9hSAvAxctalEt8AA==
-length: 4635
+edSignature: jAuRBxnATWS5wO8TXlWK0vE+u92e7oz/ljs6P5BVKwDF0edFDlxZ6zFkBb66+WUzaPVtpQeMJPlPLXCn5D+6Dw==
+length: 4197
 -->

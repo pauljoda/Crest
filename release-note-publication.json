@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "local-development-from-core",
+    "development": "launched-release-in-core",
     "nightly": "palette-history-site-icons"
   }
 }
