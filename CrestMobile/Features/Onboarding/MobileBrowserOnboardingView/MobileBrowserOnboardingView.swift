@@ -65,9 +65,9 @@ struct MobileBrowserOnboardingView: View {
 
     var body: some View {
         ZStack {
-            // Clear as setup hands over, so Crest shows through as the steps
-            // slide away.
-            Color(uiColor: .systemBackground)
+            // Crest's paper, which setup draws on too. Clear as setup hands
+            // over, so Crest shows through as the steps slide away.
+            BrowserSetupPaper()
                 .ignoresSafeArea()
                 .opacity(isTakingOver ? 0 : 1)
 
