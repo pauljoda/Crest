@@ -106,9 +106,6 @@ targetTemplates:
     type: framework
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes
-        type: folder
-        buildPhase: resources
       # The WebKit composition (its entry point and the shell's WebKit host),
       # engine selection and engine-contributed views; the Chromium sources
       # supply their own.
@@ -190,9 +187,6 @@ targets:
     type: application
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes
-        type: folder
-        buildPhase: resources
       - path: CrestShared
       - path: CrestMac
       - path: CrestAgents
@@ -298,9 +292,6 @@ targets:
     type: application
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes
-        type: folder
-        buildPhase: resources
       - path: CrestShared
       - path: CrestMac
       - path: CrestAgents
@@ -403,9 +394,6 @@ targets:
     # committed schemes instead of emitting CrestMobile.app.
     productName: CrestNativeCore
     sources:
-      - path: Documentation/ReleaseNotes
-        type: folder
-        buildPhase: resources
       - path: CrestShared
       - path: CrestMobile
     dependencies:
@@ -458,9 +446,6 @@ targets:
     # committed schemes instead of emitting CrestMobile.app.
     productName: Crest
     sources:
-      - path: Documentation/ReleaseNotes
-        type: folder
-        buildPhase: resources
       - path: CrestShared
       - path: CrestMobile
     dependencies:

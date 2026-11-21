@@ -6690,9 +6690,6 @@
     "Hides its options" : {
 
     },
-    "Hides recent changes" : {
-
-    },
     "History" : {
       "localizations" : {
         "ar" : {
@@ -8906,6 +8903,9 @@
     "Open tabs cleared" : {
 
     },
+    "Open the update's release notes" : {
+
+    },
     "Open this “%@” link in another app?" : {
 
     },
@@ -10222,9 +10222,6 @@
     "Relaxed" : {
 
     },
-    "Release Notes" : {
-
-    },
     "Relevance" : {
 
     },
@@ -10953,9 +10950,6 @@
           }
         }
       }
-    },
-    "Review update details" : {
-
     },
     "right arrow" : {
       "localizations" : {
@@ -12151,9 +12145,6 @@
 
     },
     "Shows its options" : {
-
-    },
-    "Shows recent changes" : {
 
     },
     "Shuffle" : {
@@ -14982,9 +14973,6 @@
     "View Release" : {
 
     },
-    "View the full release notes" : {
-
-    },
     "View the Roadmap" : {
 
     },
@@ -15157,9 +15145,6 @@
 
     },
     "What's New" : {
-
-    },
-    "What's New in Crest" : {
 
     },
     "What's New in Crest %@" : {

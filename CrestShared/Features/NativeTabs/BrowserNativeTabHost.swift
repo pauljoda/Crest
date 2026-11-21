@@ -24,6 +24,9 @@ struct BrowserNativeTabHost: View {
                 case .settings?:
                     if let settingsContent {
                         settingsContent.makeView(runtime)
+                            .environment(
+                                \.browserOpenWebsite,
+                                BrowserOpenWebsiteAction { url in actions.openURL(assignment, content, url) })
                     } else {
                         ContentUnavailableView("Settings unavailable", systemImage: "gearshape")
                     }

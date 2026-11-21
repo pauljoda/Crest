@@ -114,6 +114,7 @@ internal sealed partial class Device {
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         reopeningPages = quitWhileReopening = records.ReopeningPages;
+        launchedRelease = records.LaunchedRelease;
         adopted.UnionWith(records.Adopted);
         keptTabGroups.AddRange(records.TabGroups);
         paletteMemories = records.PaletteMemories.ToImmutableDictionary();
@@ -347,6 +348,7 @@ internal sealed partial class Device {
         SearchCatalog = searchCatalog,
         Agents = agents,
         ReopeningPages = reopeningPages,
+        LaunchedRelease = launchedRelease,
         ContentBlockingLevel = contentBlockingLevel,
         FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
         BlockingSites = [.. keptBlockingSites],

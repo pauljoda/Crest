@@ -17,7 +17,6 @@ final class BrowserSoftwareUpdateModel {
     private(set) var updateTitle: String?
     private(set) var updateVersion: String?
     private(set) var updateBuild: String?
-    private(set) var releaseNotes: String?
     private(set) var informationURL: URL?
     private(set) var message: String?
     private(set) var progress: Double?
@@ -64,7 +63,6 @@ final class BrowserSoftwareUpdateModel {
             title: updateTitle ?? "Crest Update",
             version: updateVersion,
             build: updateBuild,
-            releaseNotes: releaseNotes,
             informationURL: informationURL,
             message: message,
             progress: progress,
@@ -175,7 +173,6 @@ final class BrowserSoftwareUpdateModel {
         title: String,
         version: String?,
         build: String? = nil,
-        releaseNotes: String? = nil,
         informationURL: URL? = nil,
         isInformationOnly: Bool,
         isFixture: Bool = false,
@@ -189,7 +186,6 @@ final class BrowserSoftwareUpdateModel {
         updateTitle = title
         updateVersion = version
         updateBuild = build
-        self.releaseNotes = releaseNotes
         self.informationURL = informationURL
         self.isInformationOnly = isInformationOnly
         self.isAutomaticUpdate = false
@@ -203,17 +199,6 @@ final class BrowserSoftwareUpdateModel {
             ? "This release is available from the Crest website."
             : "A new version of Crest is ready to download."
         present()
-    }
-
-    func setReleaseNotes(_ releaseNotes: String) {
-        self.releaseNotes = releaseNotes
-        publishWidgetState()
-    }
-
-    func presentReleaseNotesFailure(_ description: String) {
-        guard releaseNotes == nil else { return }
-        releaseNotes = description
-        publishWidgetState()
     }
 
     func installUpdate() {
@@ -253,7 +238,6 @@ final class BrowserSoftwareUpdateModel {
         title: String,
         version: String?,
         build: String,
-        releaseNotes: String?,
         informationURL: URL?,
         isFixture: Bool = false
     ) -> Bool {
@@ -268,7 +252,6 @@ final class BrowserSoftwareUpdateModel {
         updateTitle = title
         updateVersion = version
         updateBuild = build
-        self.releaseNotes = releaseNotes
         self.informationURL = informationURL
         message = "Downloading the update automatically…"
         progress = nil
@@ -355,7 +338,6 @@ final class BrowserSoftwareUpdateModel {
         title: String,
         version: String?,
         build: String,
-        releaseNotes: String?,
         informationURL: URL?,
         isFixture: Bool = false,
         installAndRelaunch: @escaping () -> Void
@@ -365,7 +347,6 @@ final class BrowserSoftwareUpdateModel {
         updateTitle = title
         updateVersion = version
         updateBuild = build
-        self.releaseNotes = releaseNotes
         self.informationURL = informationURL
         message = Self.automaticReadyMessage
         progress = nil
@@ -487,7 +468,6 @@ final class BrowserSoftwareUpdateModel {
         updateTitle = nil
         updateVersion = nil
         updateBuild = nil
-        releaseNotes = nil
         informationURL = nil
         message = nil
         progress = nil

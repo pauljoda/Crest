@@ -8,7 +8,7 @@ struct BrowserSoftwareUpdateStatusRow: View {
 
     let model: BrowserSoftwareUpdateModel
 
-    @Environment(\.browserSoftwareUpdateDetails) private var showDetails
+    @Environment(\.browserSoftwareUpdateReleasePage) private var openReleasePage
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
@@ -22,10 +22,10 @@ struct BrowserSoftwareUpdateStatusRow: View {
                     }
                 }
                 Spacer(minLength: CrestSpacing.small)
-                if hasDetails, let showDetails {
-                    Button("What's New") { showDetails() }
+                if let version = model.updateVersion, let openReleasePage {
+                    Button("What's New") { openReleasePage(version: version) }
                         .buttonStyle(.link)
-                        .accessibilityLabel("Review update details")
+                        .accessibilityLabel("Open the update's release notes")
                 }
             }
 
@@ -57,10 +57,5 @@ struct BrowserSoftwareUpdateStatusRow: View {
     private var versionLine: String? {
         guard !model.phase.isTitledByUpdate, let version = model.updateVersion else { return nil }
         return String(localized: "Version \(version)")
-    }
-
-    private var hasDetails: Bool {
-        if let releaseNotes = model.releaseNotes, !releaseNotes.isEmpty { return true }
-        return model.informationURL != nil
     }
 }

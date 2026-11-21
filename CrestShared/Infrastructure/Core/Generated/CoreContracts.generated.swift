@@ -158,6 +158,7 @@ enum Change: Equatable, Sendable {
     case permissionAsked(PermissionAsked)
     case promptSettled(PromptSettled)
     case quitWithDownloadsAsked(QuitWithDownloadsAsked)
+    case releaseNotesDue(ReleaseNotesDue)
     case saved(Saved)
     case scriptDialogAsked(ScriptDialogAsked)
     case searchCatalogChanged(SearchCatalogChanged)
@@ -620,6 +621,7 @@ extension Change {
         case .permissionAsked(let change): change.apply(to: state)
         case .promptSettled(let change): change.apply(to: state)
         case .quitWithDownloadsAsked(let change): change.apply(to: state)
+        case .releaseNotesDue(let change): change.apply(to: state)
         case .saved(let change): change.apply(to: state)
         case .scriptDialogAsked(let change): change.apply(to: state)
         case .searchCatalogChanged(let change): change.apply(to: state)
@@ -699,6 +701,7 @@ extension Change {
         case .permissionAsked(let change): change.apply(to: core, in: &batch)
         case .promptSettled(let change): change.apply(to: core, in: &batch)
         case .quitWithDownloadsAsked(let change): change.apply(to: core, in: &batch)
+        case .releaseNotesDue(let change): change.apply(to: core, in: &batch)
         case .saved(let change): change.apply(to: core, in: &batch)
         case .scriptDialogAsked(let change): change.apply(to: core, in: &batch)
         case .searchCatalogChanged(let change): change.apply(to: core, in: &batch)
@@ -778,6 +781,7 @@ extension Change {
         case .permissionAsked(let change): change.note(in: &receipts)
         case .promptSettled(let change): change.note(in: &receipts)
         case .quitWithDownloadsAsked(let change): change.note(in: &receipts)
+        case .releaseNotesDue(let change): change.note(in: &receipts)
         case .saved(let change): change.note(in: &receipts)
         case .scriptDialogAsked(let change): change.note(in: &receipts)
         case .searchCatalogChanged(let change): change.note(in: &receipts)
@@ -4412,6 +4416,10 @@ struct NoteAgentActivity: Intent, AgentIntent, Equatable, Sendable {
     let subject: String
 }
 
+struct NoteLaunchRelease: Intent, WindowIntent, Equatable, Sendable {
+    let version: String
+}
+
 struct NotificationDisplayCheck: Query, Equatable, Sendable {
     typealias Answer = NotificationDisplayVerdict
 
@@ -5574,6 +5582,10 @@ struct RehostPage: Intent, PageIntent, Equatable, Sendable {
 
 struct RejectOfferedPage: Equatable, Sendable {
     let offerID: UUID
+}
+
+struct ReleaseNotesDue: CoreChange, Equatable, Sendable {
+    let version: String
 }
 
 struct ReleasePage: Intent, PageIntent, Equatable, Sendable {
@@ -7533,6 +7545,9 @@ struct TabsChanged: CoreChange, Equatable, Sendable {
 struct TabsImported: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let tabs: [ImportedTab]
+}
+
+struct TakeReleaseNotes: Intent, WindowIntent, Equatable, Sendable {
 }
 
 struct TearOffPermission: Equatable, Sendable {
