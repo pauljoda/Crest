@@ -6,13 +6,6 @@ import Foundation
 struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
-    /// The color a phase's symbol takes, which the view that draws it names.
-    enum Tones: Sendable {
-        case accent
-        case success
-        case warning
-    }
-
     /// A button in the update window, with the card action it performs.
     struct WindowButton: Sendable {
         let title: LocalizedStringResource
@@ -172,7 +165,9 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     let informationOnlyStatusLabel: LocalizedStringResource?
 
     let symbol: String
-    let tone: Tones
+    /// How the phase reads: info while an update is under way or waits, and
+    /// the settled outcome's tone once it ends.
+    let tone: CrestStatusTone
 
     /// Whether the card shows the update's message under the phase. A phase
     /// whose progress says enough leaves it out.
@@ -204,8 +199,8 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     private init(
         name: String, title: LocalizedStringResource, statusLabel: LocalizedStringResource,
         informationOnlyStatusLabel: LocalizedStringResource? = nil, isTitledByUpdate: Bool = false,
-        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, tone: Tones = .accent, showsMessage: Bool = true,
-        isTransferring: Bool = false, isWorking: Bool = false, isHideable: Bool = false,
+        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, tone: CrestStatusTone = .info,
+        showsMessage: Bool = true, isTransferring: Bool = false, isWorking: Bool = false, isHideable: Bool = false,
         cardActions: @escaping CardOffer = { _ in [] },
         windowButtons: @escaping WindowOffer = { _ in nil }
     ) {
