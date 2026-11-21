@@ -72,6 +72,7 @@ struct BrowserDeveloperViewportMenu: View {
                     .tag(Selection.custom)
             }
             .pickerStyle(.inline)
+            .crestMenuActionLabelStyle()
         } label: {
             Label("Viewport Preview", systemImage: "macbook.and.iphone")
                 .labelStyle(.iconOnly)
