@@ -53,8 +53,10 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
 
 
     @REQUIRES_PLUTIL
-    def test_post_clone_guard_accepts_submission_xcode_and_rejects_unknown_prerelease(self) -> None:
+    def test_post_clone_guard_accepts_submission_xcode_from_crest_and_rejects_the_rest(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_clone.sh"
+        organization_origin = "https://github.com/crest-browser/Crest.git"
+        previous_origin = "http://github.com/pauljoda/Crest.git"
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             fake_bin = pathlib.Path(temporary_directory)
@@ -66,7 +68,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "#!/bin/sh\n"
                 "case \"$*\" in\n"
                 "    *' remote get-url origin')\n"
-                "        printf '%s\\n' 'http://github.com/pauljoda/Crest.git'\n"
+                "        printf '%s\\n' \"$FAKE_ORIGIN_URL\"\n"
                 "        ;;\n"
                 "    *)\n"
                 f"        exec {shlex.quote(real_git)} \"$@\"\n"
@@ -89,13 +91,15 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             }
 
-            for xcode_version, build_version, expected_return_code, expected_error in (
-                ("26.6", "17F113", 64, "requires Xcode 27 or newer"),
-                ("27.0", "27A266a", 0, None),
-                ("27.0", "27A5228h", 64, "beta or prerelease"),
-                ("27.0", "27A266b", 64, "beta or prerelease"),
+            for xcode_version, build_version, origin, expected_return_code, expected_error in (
+                ("26.6", "17F113", organization_origin, 64, "requires Xcode 27 or newer"),
+                ("27.0", "27A266a", organization_origin, 0, None),
+                ("27.0", "27A266a", previous_origin, 0, None),
+                ("27.0", "27A266a", "https://github.com/someone/Crest.git", 64, "primary repository"),
+                ("27.0", "27A5228h", organization_origin, 64, "beta or prerelease"),
+                ("27.0", "27A266b", organization_origin, 64, "beta or prerelease"),
             ):
-                with self.subTest(build_version=build_version):
+                with self.subTest(build_version=build_version, origin=origin):
                     fake_xcodebuild.write_text(
                         "#!/bin/sh\n"
                         'printf \'Xcode %s\\nBuild version %s\\n\'\n'
@@ -105,7 +109,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                     result = subprocess.run(
                         [str(guard)],
                         cwd=REPOSITORY_ROOT,
-                        env=environment,
+                        env=environment | {"FAKE_ORIGIN_URL": origin},
                         capture_output=True,
                         text=True,
                         check=False,
