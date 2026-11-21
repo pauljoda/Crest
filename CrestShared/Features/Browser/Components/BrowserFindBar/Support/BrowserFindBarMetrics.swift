@@ -69,21 +69,16 @@ struct BrowserFindBarMetrics: Equatable, Sendable {
         matchStatusWidth: 62
     )
 
-    /// A touch shell: a bar that spans the chrome it is placed in, full 44pt
+    /// A touch shell: a bar that spans the chrome it is placed in, touch
     /// targets, and a symbol where the pointer shell has room for a word.
-    ///
-    /// The targets are literals rather than `CrestLayout.minimumHitTarget`, for
-    /// the same reason the touch sidebar profiles' are: this profile is
-    /// compared against from a suite hosted on macOS, where that token resolves
-    /// to the pointer shell's 28, and a touch control still has to be 44.
     static let touch = BrowserFindBarMetrics(
         itemSpacing: 6,
         leadingPadding: 14,
         trailingPadding: 4,
         queryWidth: nil,
-        barHeight: 44,
+        barHeight: CrestLayout.touchHitTarget,
         growsWithContent: true,
-        controlSize: CGSize(width: 40, height: 44),
+        controlSize: CGSize(width: 40, height: CrestLayout.touchHitTarget),
         matchStatusStyle: .symbol,
         matchStatusWidth: 24
     )

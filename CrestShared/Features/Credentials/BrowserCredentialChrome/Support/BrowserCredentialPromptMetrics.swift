@@ -177,7 +177,7 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionRowHighlightCornerRadius: CrestRadius.compact,
         suggestionRowHighlightBleed: 6,
         suggestionRowShowsAccountDetail: true,
-        closeControlSize: 28,
+        closeControlSize: CrestLayout.pointerHitTarget,
         actionMinimumWidth: 44,
         actionMaximumWidth: nil,
         savePromptWidth: .bounded(560),
@@ -187,13 +187,8 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         saveCrossOriginSubject: .definiteCredential
     )
 
-    /// A touch shell: a band across the top of the page, full 44pt targets, and
-    /// a list that scrolls rather than pushing the page further down.
-    ///
-    /// The targets are literals rather than `CrestLayout.minimumHitTarget`, for
-    /// the same reason `BrowserFindBarMetrics.touch`'s are: this profile is
-    /// compared against from a suite hosted on macOS, where that token resolves
-    /// to the pointer shell's 28, and a touch control still has to be 44.
+    /// A touch shell: a band across the top of the page, touch targets, and a
+    /// list that scrolls rather than pushing the page further down.
     static let touch = BrowserCredentialPromptMetrics(
         surfaceStyle: .band,
         horizontalPadding: CrestSpacing.large,
@@ -204,18 +199,18 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         chromeInset: 0,
         suggestionListMaximumHeight: 176,
         suggestionRowVerticalPadding: 0,
-        suggestionRowMinimumHeight: 44,
-        suggestionStateMinimumHeight: 44,
+        suggestionRowMinimumHeight: CrestLayout.touchHitTarget,
+        suggestionStateMinimumHeight: CrestLayout.touchHitTarget,
         suggestionEmptyStatePresentation: .sentence,
         suggestionRowHighlightCornerRadius: nil,
         suggestionRowHighlightBleed: 0,
         suggestionRowShowsAccountDetail: false,
-        closeControlSize: 44,
+        closeControlSize: CrestLayout.touchHitTarget,
         actionMinimumWidth: nil,
         actionMaximumWidth: .infinity,
         savePromptWidth: .flexible,
         saveActionPlacement: .belowContent,
-        saveBusyIndicatorSize: 44,
+        saveBusyIndicatorSize: CrestLayout.touchHitTarget,
         destinationPresentation: .combinedStatus,
         saveCrossOriginSubject: .currentCredential
     )

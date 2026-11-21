@@ -88,18 +88,13 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
         clearControlFont: nil
     )
 
-    /// A touch shell: a full 44pt floor, a wider gutter, and controls sized for
-    /// a finger.
-    ///
-    /// The floor is a literal rather than `CrestLayout.sidebarRowHeight`, for
-    /// the same reason the touch trailing control is: this profile is compared
-    /// against from a suite hosted on macOS, where that token resolves to the
-    /// pointer shell's height, and the touch field still has to be 44.
+    /// A touch shell: a floor a finger can land on, a wider gutter, and
+    /// controls sized for a finger.
     static let touch = BrowserSidebarAddressFieldMetrics(
         contentSpacing: 8,
         accessorySpacing: 4,
         horizontalPadding: 12,
-        height: 44,
+        height: CrestLayout.touchHitTarget,
         growsWithContent: true,
         editingRingColor: CrestBrandTheme.accent.opacity(0.7),
         editingRingWidth: 1,

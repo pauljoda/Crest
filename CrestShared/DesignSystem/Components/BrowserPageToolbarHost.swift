@@ -23,9 +23,11 @@ struct BrowserPageToolbarSurface<Controls: View, Background: View>: View {
     @ViewBuilder let controls: () -> Controls
     @ViewBuilder let background: () -> Background
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         controls()
-            .frame(minHeight: controlHeight)
+            .frame(minHeight: capabilities.minimumHitTarget)
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -34,13 +36,5 @@ struct BrowserPageToolbarSurface<Controls: View, Background: View>: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(label))
             .accessibilityIdentifier(identifier)
-    }
-
-    private var controlHeight: CGFloat {
-        #if os(macOS)
-            28
-        #else
-            44
-        #endif
     }
 }

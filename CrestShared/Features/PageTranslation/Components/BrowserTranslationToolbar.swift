@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserTranslationToolbar: View {
     let translation: BrowserPageTranslation
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.browserInteractionCapabilities) private var capabilities
     @State private var availableWidth: CGFloat = 0
 
     private var usesCompactControls: Bool {
@@ -195,5 +196,5 @@ struct BrowserTranslationToolbar: View {
         Divider().frame(height: 22).padding(.horizontal, 2).accessibilityHidden(true)
     }
 
-    private var controlHeight: CGFloat { CrestLayout.minimumHitTarget }
+    private var controlHeight: CGFloat { capabilities.minimumHitTarget }
 }
