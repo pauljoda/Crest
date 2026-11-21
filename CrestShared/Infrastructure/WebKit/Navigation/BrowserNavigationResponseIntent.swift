@@ -63,9 +63,11 @@ struct BrowserDirectMediaNavigation: Equatable {
             )
         ).replacingOccurrences(of: reportedType, with: "<strong>\(reportedType)</strong>")
         let download = Self.escapeHTML(String(localized: "Download media"))
+        // The language the page's text was localized into.
+        let language = Self.escapeHTML(Bundle.main.preferredLocalizations.first ?? "en")
         return """
             <!doctype html>
-            <html lang="en">
+            <html lang="\(language)">
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -146,9 +148,4 @@ struct BrowserDirectMediaNavigation: Equatable {
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
     }
-}
-
-enum BrowserPopupTrigger: Equatable {
-    case explicitUserNavigation
-    case scripted
 }
