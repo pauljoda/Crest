@@ -237,7 +237,7 @@ final class BrowserMacApplication {
         )
         let privatePages = BrowserPagePool(
             browser: privateBrowser,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             permissionCenter: permissionCenter,
             passkeyAccess: passkeyAccess,
             openModifiedLink: { url, spaceID, selecting in

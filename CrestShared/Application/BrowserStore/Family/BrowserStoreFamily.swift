@@ -38,15 +38,15 @@ final class BrowserStoreFamily {
     var isOpen: Bool { core.isOpen }
 
     /// A family over a workspace `crest` opens in memory from `seed`, of the
-    /// kind `browsingMode` browses in, whose tabs wear the images `images`
+    /// kind `workspaceKind`, whose tabs wear the images `images`
     /// holds for the seed's tabs. It keeps nothing: it is never saved or synced.
     convenience init(
-        seed: SessionState.Seed, images: [UUID: Data] = [:], browsingMode: BrowserBrowsingMode = .standard,
+        seed: SessionState.Seed, images: [UUID: Data] = [:], workspaceKind: WorkspaceKind = .persistent,
         core crest: CrestCore
     ) {
-        let kind: WorkspaceKind = browsingMode.isPrivate ? .private : .persistent
         do {
-            self.init(memory: try BrowserCoreSessionAuthority.open(kind, seed: seed, images: images, in: crest))
+            self.init(
+                memory: try BrowserCoreSessionAuthority.open(workspaceKind, seed: seed, images: images, in: crest))
         } catch {
             preconditionFailure("The core refused to open a workspace over a session it was given: \(error)")
         }

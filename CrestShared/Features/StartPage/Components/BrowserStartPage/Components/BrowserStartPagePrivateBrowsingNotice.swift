@@ -8,7 +8,7 @@ struct BrowserStartPagePrivateBrowsingNotice: View {
         VStack(spacing: spacing) {
             Label(
                 "Private Browsing",
-                systemImage: BrowserPrivateBrowsingAppearance.symbol
+                systemImage: ShortcutCommand.newPrivateWindow.symbol
             )
             .font(.headline)
             .foregroundStyle(.primary)

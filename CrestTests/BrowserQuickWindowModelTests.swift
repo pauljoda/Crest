@@ -66,19 +66,19 @@ final class BrowserQuickWindowModelTests: XCTestCase {
     private func makeContext(
         startsEmpty: Bool = false,
         supportsLivePagePromotion: Bool = false,
-        browsingMode: BrowserBrowsingMode = .privateBrowsing
+        workspaceKind: WorkspaceKind = .private
     ) throws -> QuickWindowTestContext {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             seed: SessionState.Seed(spaces: [source, destination]),
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             core: .hostingPages()
         )
         let pages = BrowserPagePool(
             browser: browser,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: true
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: source)

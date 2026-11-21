@@ -18,3 +18,21 @@ extension MediaSessionAction {
         self = action
     }
 }
+
+extension MediaPlaybackState {
+    /// The state as the page's Media Session API spells it, which Crest's page
+    /// bridge reports.
+    var pageName: String {
+        switch self {
+        case .none: "none"
+        case .paused: "paused"
+        case .playing: "playing"
+        }
+    }
+
+    /// The state a page bridge names, or nil for one the API does not define.
+    init?(pageName: String) {
+        guard let state = Self.allCases.first(where: { $0.pageName == pageName }) else { return nil }
+        self = state
+    }
+}

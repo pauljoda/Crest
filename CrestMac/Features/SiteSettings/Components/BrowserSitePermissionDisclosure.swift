@@ -33,7 +33,8 @@ struct BrowserSitePermissionDisclosure: View {
             .accessibilityLabel("Permissions")
             .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
 
-            ForEach(isExpanded ? SitePermission.all : [], id: \.self) { permission in
+            ForEach(isExpanded ? SitePermission.all.filter { $0.platforms.contains(.current) } : [], id: \.self) {
+                permission in
                 BrowserSitePermissionRow(
                     permission: permission,
                     origin: origin,

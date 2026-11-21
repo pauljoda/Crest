@@ -642,7 +642,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         selectAdjacentSpace(.next)
     }
 
-    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) {
+    func selectAdjacentSpace(_ direction: AdjacentDirection) {
         guard browser.selectAdjacentSpace(direction) != nil else { return }
         pages.selectSpace(in: browser)
     }

@@ -25,7 +25,7 @@ final class BrowserContentRuleListProvider: BrowserContentRuleListProviding {
 
     private let core: CrestCore
     private let ruleListStore: WKContentRuleListStore?
-    private let compiler: any BrowserContentRuleListCompiling
+    private let compiler = BrowserContentRuleListCompilerAdapter()
     private var cached: (set: ContentRuleListSet, lists: [WKContentRuleList])?
     /// The set compiled before the cached one this launch, whose lists stay
     /// in the store.
@@ -33,15 +33,9 @@ final class BrowserContentRuleListProvider: BrowserContentRuleListProviding {
 
     // MARK: - Initializers
 
-    init(
-        core: CrestCore,
-        ruleListStore: WKContentRuleListStore? = .default(),
-        compiler: any BrowserContentRuleListCompiling =
-            BrowserContentRuleListCompilerAdapter()
-    ) {
+    init(core: CrestCore, ruleListStore: WKContentRuleListStore? = .default()) {
         self.core = core
         self.ruleListStore = ruleListStore
-        self.compiler = compiler
     }
 
     /// The provider a launch uses: an isolated launch compiles into a store of

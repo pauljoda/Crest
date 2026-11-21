@@ -8,7 +8,7 @@ struct BrowserSidebarMouseButtonDisposition: Equatable {
     typealias Taking =
         @MainActor (
             BrowserSidebarMouseButtonAction, BrowserSidebarPointerNavigationView,
-            (any BrowserSidebarMouseNavigationTarget)?
+            BrowserPage?
         ) -> Void
 
     // MARK: - Static Variables
@@ -41,7 +41,7 @@ struct BrowserSidebarMouseButtonDisposition: Equatable {
 
     /// Takes the press on `view`, over `page`.
     @MainActor
-    func take(on view: BrowserSidebarPointerNavigationView, page: (any BrowserSidebarMouseNavigationTarget)?) {
+    func take(on view: BrowserSidebarPointerNavigationView, page: BrowserPage?) {
         guard let action else { return }
         taking(action, view, page)
     }

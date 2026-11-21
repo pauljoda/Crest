@@ -23736,6 +23736,7 @@ struct SitePermission: Hashable, Sendable {
     var isEngineEnforced: Bool { facts.isEngineEnforced }
     var isAskedBySystem: Bool { facts.isAskedBySystem }
     var components: [SitePermission] { facts.components }
+    var platforms: [DevicePlatform] { facts.platforms }
     private let facts: Facts
 
     private init(
@@ -23749,7 +23750,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: Bool,
         isEngineEnforced: Bool,
         isAskedBySystem: Bool,
-        components: [SitePermission]
+        components: [SitePermission],
+        platforms: [DevicePlatform]
     ) {
         self.tag = tag
         facts = Facts(
@@ -23762,7 +23764,8 @@ struct SitePermission: Hashable, Sendable {
             isMedia: isMedia,
             isEngineEnforced: isEngineEnforced,
             isAskedBySystem: isAskedBySystem,
-            components: components
+            components: components,
+            platforms: platforms
         )
     }
 
@@ -23777,7 +23780,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: true,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let microphone = SitePermission(
         tag: 1,
@@ -23790,7 +23794,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: true,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let cameraAndMicrophone = SitePermission(
         tag: 2,
@@ -23803,7 +23808,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: true,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: [SitePermission.camera, SitePermission.microphone]
+        components: [SitePermission.camera, SitePermission.microphone],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let location = SitePermission(
         tag: 3,
@@ -23816,7 +23822,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let notifications = SitePermission(
         tag: 4,
@@ -23829,7 +23836,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let popups = SitePermission(
         tag: 5,
@@ -23842,7 +23850,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let automaticDownloads = SitePermission(
         tag: 6,
@@ -23855,7 +23864,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let externalApplications = SitePermission(
         tag: 7,
@@ -23868,7 +23878,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let screenSharing = SitePermission(
         tag: 8,
@@ -23881,7 +23892,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: true,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop]
     )
 
     static let all: [SitePermission] = [
@@ -23919,6 +23931,7 @@ struct SitePermission: Hashable, Sendable {
         let isEngineEnforced: Bool
         let isAskedBySystem: Bool
         let components: [SitePermission]
+        let platforms: [DevicePlatform]
 
         init(
             name: String,
@@ -23930,7 +23943,8 @@ struct SitePermission: Hashable, Sendable {
             isMedia: Bool,
             isEngineEnforced: Bool,
             isAskedBySystem: Bool,
-            components: [SitePermission]
+            components: [SitePermission],
+            platforms: [DevicePlatform]
         ) {
             self.name = name
             self.title = title
@@ -23942,6 +23956,7 @@ struct SitePermission: Hashable, Sendable {
             self.isEngineEnforced = isEngineEnforced
             self.isAskedBySystem = isAskedBySystem
             self.components = components
+            self.platforms = platforms
         }
     }
 }

@@ -4,7 +4,7 @@ import WebKit
 @MainActor
 final class BrowserDesktopWebView: WKWebView {
     /// The page that owns this view. Weak because the page owns it.
-    weak var menuHost: (any BrowserDesktopWebViewMenuHost)?
+    weak var menuHost: BrowserPage?
     /// The page-owned record of this view's public AppKit editing responder.
     weak var focusRestoration: BrowserWebFocusRestorationController?
     weak var linkHover: BrowserLinkHoverController?

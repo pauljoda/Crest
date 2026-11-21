@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Suggestion Loading
 
-extension BrowserStore: BrowserCredentialSuggestionLoading {
+extension BrowserStore {
     func credentialSuggestions(
         for origin: CredentialOrigin,
         in spaceID: UUID

@@ -28,7 +28,7 @@ import Foundation
             BrowserStore(
                 seed: SessionState.Seed(spaces: [sourceSpace, destinationSpace]),
                 credentialVault: InMemoryCredentialVault(),
-                browsingMode: .privateBrowsing
+                workspaceKind: .private
             )
         }
 

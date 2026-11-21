@@ -4,7 +4,7 @@ import CoreLocation
 import UserNotifications
 
 @MainActor
-final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
+final class BrowserSystemPermissionService {
     private let location = BrowserGeolocationSystemService()
     let folderAccess = BrowserSystemFolderAccess()
     let passkeyAccess: BrowserPasskeyAccessController

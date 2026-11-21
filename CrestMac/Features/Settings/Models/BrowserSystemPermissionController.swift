@@ -1,24 +1,16 @@
 import Foundation
 import Observation
 
-@MainActor
-protocol BrowserSystemPermissionServicing {
-    func status(for permission: BrowserSystemPermission, spaceID: UUID?) async -> BrowserSystemPermissionStatus
-    func request(_ permission: BrowserSystemPermission, spaceID: UUID?) async throws
-    func chooseFolder(spaceID: UUID) async throws
-    func openSettings(for permission: BrowserSystemPermission) -> Bool
-}
-
 @Observable @MainActor
 final class BrowserSystemPermissionController {
     private(set) var statuses: [BrowserSystemPermission: BrowserSystemPermissionStatus] = [:]
     private(set) var errors: [BrowserSystemPermission: String] = [:]
     private(set) var working: Set<BrowserSystemPermission> = []
-    @ObservationIgnored private let service: any BrowserSystemPermissionServicing
+    @ObservationIgnored private let service: BrowserSystemPermissionService
     @ObservationIgnored private var refreshID = UUID()
     @ObservationIgnored private var currentSpaceID: UUID?
 
-    init(service: any BrowserSystemPermissionServicing) {
+    init(service: BrowserSystemPermissionService) {
         self.service = service
     }
 

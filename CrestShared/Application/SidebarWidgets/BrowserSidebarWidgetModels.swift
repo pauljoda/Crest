@@ -74,12 +74,6 @@ extension BrowserSidebarWidgetRegistration {
     )
 }
 
-enum BrowserMediaSessionPlaybackState: String, Encodable, Equatable, Sendable {
-    case none
-    case paused
-    case playing
-}
-
 struct BrowserMediaSessionID: Hashable, Identifiable, Sendable {
     let tabID: UUID
     let documentIdentifier: String
@@ -99,7 +93,7 @@ struct BrowserMediaSessionSnapshot: Equatable, Identifiable, Sendable {
     let artist: String?
     let album: String?
     let artworkData: Data?
-    let playbackState: BrowserMediaSessionPlaybackState
+    let playbackState: MediaPlaybackState
     let isAudible: Bool
     /// Every media element the page has surfaced is muted. Distinct from
     /// `isAudible`, which also goes false for paused or zero-volume playback.

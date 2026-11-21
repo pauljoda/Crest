@@ -351,10 +351,6 @@ final class BrowserOnboardingFlow {
 
     // MARK: - Actions - Reviewing
 
-    func setDestination(_ destination: BrowserImportDestination, for sourceSpaceID: UUID) {
-        send(ChooseImportDestination(sourceSpaceID: sourceSpaceID, destinationSpaceID: destination.spaceID))
-    }
-
     func setIncluded(_ tabID: UUID, _ isIncluded: Bool, in sourceSpaceID: UUID) {
         setIncluded([tabID], isIncluded, in: sourceSpaceID)
     }
@@ -417,12 +413,7 @@ final class BrowserOnboardingFlow {
     }
 
     func duplicateDestinationName(for review: BrowserImportSpaceReview) -> String? {
-        review.destination.spaceID.flatMap { browser.spaceModel($0)?.settings.name }
-    }
-
-    func destinationName(for destination: BrowserImportDestination) -> String {
-        guard let spaceID = destination.spaceID else { return String(localized: "New Space") }
-        return browser.spaceModel(spaceID)?.settings.name ?? String(localized: "Existing Space")
+        review.destinationSpaceID.flatMap { browser.spaceModel($0)?.settings.name }
     }
 
     /// The workspace's Spaces, which a reviewed Space may join.

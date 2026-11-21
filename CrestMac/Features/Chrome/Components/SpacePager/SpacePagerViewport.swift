@@ -398,12 +398,12 @@ final class SpacePagerViewport<Content: View>: NSView {
         return true
     }
 
-    func step(_ direction: BrowserSpaceSwipeDirection) {
+    func step(_ direction: AdjacentDirection) {
         guard !isInteractionLocked else { return }
         guard let token = beginInteractiveMotion(), let current = motion,
             let next = BrowserChromeAccessibility.adjacentSpaceID(
                 spaces: spaces, selectedSpaceID: current.origin.spaceID,
-                direction: direction == .next ? .next : .previous)
+                direction: direction)
         else {
             if let current = motion, current.settledDestination == nil {
                 settleMotion(to: current.origin.spaceID)

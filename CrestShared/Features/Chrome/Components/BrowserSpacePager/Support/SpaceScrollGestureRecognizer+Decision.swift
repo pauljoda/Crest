@@ -15,12 +15,12 @@ extension SpaceScrollGestureRecognizer {
 
         let consumesEvent: Bool
         /// The direction of the Space the event steps to.
-        let direction: BrowserSpaceSwipeDirection?
+        let direction: AdjacentDirection?
 
         // MARK: - Actions - Decisions
 
         /// The event completes a swipe to the Space in `direction`.
-        static func step(_ direction: BrowserSpaceSwipeDirection) -> Decision {
+        static func step(_ direction: AdjacentDirection) -> Decision {
             Decision(consumesEvent: true, direction: direction)
         }
     }

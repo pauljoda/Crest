@@ -44,11 +44,6 @@ final class InMemoryBrowserSidebarWidgetPreferencePersistence:
     }
 }
 
-@MainActor
-protocol BrowserSidebarWidgetPreferenceObserving: AnyObject {
-    func sidebarWidgetPreferencesDidChange()
-}
-
 /// The device-local widget visibility choice shared by every Space, profile,
 /// and window. Stable kind identifiers are persisted independently of the
 /// localized labels that Settings presents.
@@ -117,12 +112,12 @@ final class BrowserSidebarWidgetPreferenceStore {
         notifyObservers()
     }
 
-    func register(_ observer: any BrowserSidebarWidgetPreferenceObserving) {
+    func register(_ observer: BrowserSidebarWidgetRuntime) {
         observers.add(observer)
     }
 
     private func notifyObservers() {
-        for case let observer as BrowserSidebarWidgetPreferenceObserving in observers.allObjects {
+        for case let observer as BrowserSidebarWidgetRuntime in observers.allObjects {
             observer.sidebarWidgetPreferencesDidChange()
         }
     }

@@ -124,7 +124,7 @@ private final class BrowserMobileApplication {
         downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess)
         let privateDownloads = MobileBrowserDownloads(
             core: core,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             permissionCenter: permissionCenter
         )
         let pages = MobileBrowserPageStore(

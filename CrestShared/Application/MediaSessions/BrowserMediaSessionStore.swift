@@ -24,7 +24,7 @@ struct BrowserMediaSessionPageEvent: Equatable, Sendable {
     let artist: String?
     let album: String?
     let artworkData: Data?
-    let playbackState: BrowserMediaSessionPlaybackState
+    let playbackState: MediaPlaybackState
     let isAudible: Bool
     let isMuted: Bool
     let availableActions: Set<MediaSessionAction>
@@ -62,9 +62,7 @@ enum BrowserMediaSessionPageEventDecoder {
             )
         )
         let playbackState =
-            BrowserMediaSessionPlaybackState(
-                rawValue: body["playbackState"] as? String ?? ""
-            ) ?? .none
+            MediaPlaybackState(pageName: body["playbackState"] as? String ?? "") ?? MediaPlaybackState.none
         return BrowserMediaSessionPageEvent(
             documentIdentifier: documentIdentifier,
             sequence: sequenceNumber.uint64Value,
@@ -177,11 +175,11 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
         let question = MediaSessionReport(
             event: MediaSessionEvent(
                 sequence: event.sequence, isInvalidated: event.isInvalidated, hasActiveSession: event.hasActiveSession,
-                playback: event.playbackState.core, isMuted: event.isMuted,
+                playback: event.playbackState, isMuted: event.isMuted,
                 actions: Array(event.availableActions)),
             identity: MediaSessionIdentity(
                 isRetired: retiredIDs.contains(id), lastSequence: lastSequenceByID[id], ordinal: ordinalByID[id],
-                isDismissed: dismissedIDs.contains(id), previousPlayback: snapshotsByID[id]?.playbackState.core),
+                isDismissed: dismissedIDs.contains(id), previousPlayback: snapshotsByID[id]?.playbackState),
             retainedIdentities: lastSequenceByID.count, nextOrdinal: nextOrdinal)
         guard let decision = try? CrestCore.answer(question), decision.accepted, decision.evictOldest >= 0 else {
             return nil
@@ -394,7 +392,7 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
     }
 }
 
-extension BrowserMediaSessionStore: BrowserNowPlayingActionPerformer {
+extension BrowserMediaSessionStore {
     func dismissCard(of session: BrowserMediaSessionSnapshot) {
         // Hiding a card is Crest's own state, so it does not need the page to
         // still be reachable.

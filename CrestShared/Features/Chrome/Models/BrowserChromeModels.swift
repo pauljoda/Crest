@@ -1,8 +1,3 @@
-enum BrowserChromeAccessibilityDirection {
-    case previous
-    case next
-}
-
 struct BrowserKeyboardModifierFlags: OptionSet, Equatable, Sendable {
     let rawValue: UInt
 

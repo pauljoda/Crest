@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MobilePageActionsMenu: View {
     let browser: BrowserStore
-    let pages: any MobilePageActions
+    let pages: MobileSelectedPageActionPort
     let systemImage: String
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil

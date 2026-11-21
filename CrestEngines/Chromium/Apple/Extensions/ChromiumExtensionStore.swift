@@ -259,7 +259,7 @@ final class ChromiumExtensionStore {
                 sourceWindow: fallback)
         guard let host = ChromiumComposition.engineHost,
             let source = anchor.presentationSource(fallbackWindow: fallback),
-            let windowID = source.view.window?.identifier.flatMap({ UUID(uuidString: $0.rawValue) }),
+            let windowID = (source.view.window as? BrowserMacWindow)?.windowID,
             host.runExtension(
                 action.id, profile: space.profileID, window: windowID,
                 anchorView: source.view, anchorRect: source.rect)
@@ -295,7 +295,7 @@ final class ChromiumExtensionStore {
         DispatchQueue.main.async { [weak self, weak window] in
             MainActor.assumeIsolated {
                 guard let self, let window, let host = ChromiumComposition.engineHost,
-                    let windowID = window.identifier.flatMap({ UUID(uuidString: $0.rawValue) })
+                    let windowID = (window as? BrowserMacWindow)?.windowID
                 else { return }
                 switch self.popupCycle(for: space, page: page).step(showing: host.extensionPopup(inWindow: windowID)) {
                 case nil:

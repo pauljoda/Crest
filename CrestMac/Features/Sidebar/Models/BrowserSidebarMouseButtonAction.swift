@@ -23,16 +23,16 @@ struct BrowserSidebarMouseButtonAction: Equatable, Sendable {
     /// The sign of a swipe's `deltaX` that asks for the action.
     let swipeSign: CGFloat
     /// The way the action steps through the window's Spaces.
-    let spaceDirection: BrowserSpaceSwipeDirection
-    private let canNavigatePage: @MainActor @Sendable (any BrowserSidebarMouseNavigationTarget) -> Bool
-    private let navigatePage: @MainActor @Sendable (any BrowserSidebarMouseNavigationTarget) -> Void
+    let spaceDirection: AdjacentDirection
+    private let canNavigatePage: @MainActor @Sendable (BrowserPage) -> Bool
+    private let navigatePage: @MainActor @Sendable (BrowserPage) -> Void
 
     // MARK: - Initializers
 
     private init(
-        name: String, buttonNumber: Int, swipeSign: CGFloat, spaceDirection: BrowserSpaceSwipeDirection,
-        canNavigate: @escaping @MainActor @Sendable (any BrowserSidebarMouseNavigationTarget) -> Bool,
-        navigate: @escaping @MainActor @Sendable (any BrowserSidebarMouseNavigationTarget) -> Void
+        name: String, buttonNumber: Int, swipeSign: CGFloat, spaceDirection: AdjacentDirection,
+        canNavigate: @escaping @MainActor @Sendable (BrowserPage) -> Bool,
+        navigate: @escaping @MainActor @Sendable (BrowserPage) -> Void
     ) {
         self.name = name
         self.buttonNumber = buttonNumber
@@ -60,13 +60,13 @@ struct BrowserSidebarMouseButtonAction: Equatable, Sendable {
 
     /// Whether `page` can move the way the action asks.
     @MainActor
-    func canNavigate(_ page: any BrowserSidebarMouseNavigationTarget) -> Bool {
+    func canNavigate(_ page: BrowserPage) -> Bool {
         canNavigatePage(page)
     }
 
     /// Moves `page` the way the action asks.
     @MainActor
-    func navigate(_ page: any BrowserSidebarMouseNavigationTarget) {
+    func navigate(_ page: BrowserPage) {
         navigatePage(page)
     }
 

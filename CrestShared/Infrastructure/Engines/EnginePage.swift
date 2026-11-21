@@ -300,14 +300,3 @@ final class EnginePage: BrowserFindExecuting {
         presentation.deliver(to: self)
     }
 }
-
-extension InspectorPanel {
-    /// The engine's panel for Crest's developer panel.
-    init(_ panel: BrowserDeveloperPanel) {
-        switch panel {
-        case .console: self = .console
-        case .elements: self = .elements
-        case .network: self = .network
-        }
-    }
-}

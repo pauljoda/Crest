@@ -29,8 +29,10 @@ public sealed class SitePermission {
     public static readonly SitePermission ExternalApplications = new(name: "externalApplications", title: "External Apps",
         symbol: "arrow.up.forward.app", requestTitle: "Requests permission");
     // The system's sharing picker asks each time; a site can only be blocked.
+    // A page on iPhone or iPad cannot share the screen at all.
     public static readonly SitePermission ScreenSharing = new(name: "screenSharing", title: "Screen Sharing",
-        symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen", isAskedBySystem: true);
+        symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen", isAskedBySystem: true,
+        platforms: [DevicePlatform.Desktop]);
 
     public static IReadOnlyList<SitePermission> All { get; } =
         [Camera, Microphone, CameraAndMicrophone, Location, Notifications, Popups, AutomaticDownloads, ExternalApplications,
@@ -80,13 +82,17 @@ public sealed class SitePermission {
     /// them, and a block on any of them blocks the combination.
     public IReadOnlyList<SitePermission> Components { get; }
 
+    /// The devices whose pages can use the capability, which are the ones
+    /// that offer a choice for it.
+    public IReadOnlyList<DevicePlatform> Platforms { get; }
+
     #endregion
 
     #region Constructors
 
     private SitePermission(string name, string title, string symbol, string requestTitle, bool isMedia = false,
         IReadOnlyList<SitePermission>? components = null, string askTitle = "Ask", string askChoiceTitle = "Ask",
-        bool isEngineEnforced = false, bool isAskedBySystem = false) {
+        bool isEngineEnforced = false, bool isAskedBySystem = false, IReadOnlyList<DevicePlatform>? platforms = null) {
         Name = name;
         Title = title;
         Symbol = symbol;
@@ -97,6 +103,7 @@ public sealed class SitePermission {
         IsEngineEnforced = isEngineEnforced;
         IsAskedBySystem = isAskedBySystem;
         Components = components ?? [];
+        Platforms = platforms ?? DevicePlatform.All;
     }
 
     #endregion

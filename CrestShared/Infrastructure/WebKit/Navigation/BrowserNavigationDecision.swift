@@ -68,10 +68,7 @@ struct BrowserNavigationDecision: Equatable, Sendable {
             page.externalSchemeCoordinator.handOff(
                 destinationURL: url,
                 trigger: BrowserPopupTrigger.classify(navigationAction.navigationType),
-                origin: page.externalSchemeCoordinator.sourceOrigin(
-                    for: navigationAction,
-                    currentURL: page.live.displayURL
-                )
+                origin: navigationAction.requestingOrigin(fallingBackTo: page.live.displayURL)
             )
             decisionHandler(.cancel)
         }
