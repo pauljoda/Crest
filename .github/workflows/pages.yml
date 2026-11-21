@@ -8,13 +8,19 @@ on:
     paths:
       - "Website/**"
       - "Documentation/ReleaseNotes/**"
+      - "Documentation/Credits.json"
       - "Scripts/build-release-pages.py"
+      - "Scripts/build-credits-page.py"
       - "Scripts/release_note_catalog.py"
+      - "Scripts/site_page.py"
       - ".github/workflows/pages.yml"
   # Each published Mac release adds a release page.
   workflow_run:
     workflows: ["Publish macOS release"]
     types: [completed]
+  # The credits list each day's supporters and contributors.
+  schedule:
+    - cron: "23 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -58,6 +64,14 @@ jobs:
 
       - name: Build the release notes pages
         run: python3 Scripts/build-release-pages.py
+
+      - name: Build the credits page
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # The campaign's creator access token; without it the credits list
+          # the supporters Documentation/Credits.json names.
+          PATREON_ACCESS_TOKEN: ${{ secrets.PATREON_ACCESS_TOKEN }}
+        run: python3 Scripts/build-credits-page.py
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 

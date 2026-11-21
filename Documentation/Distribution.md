@@ -135,6 +135,21 @@ page opens the channel's timeline at that release, with `release.json` beside
 it. An address for a version without its own page goes to the release that
 contains it, then to the channel.
 
+The site's credits page, `https://crestbrowser.com/credits/`, is built from
+`Documentation/Credits.json` on each deploy and once a day: the developer, the
+community, the code contributors GitHub lists for the repository without bots,
+any other roles, and the supporters by tier, each marked with the service they
+give through. When the repository secret `PATREON_ACCESS_TOKEN` holds the
+Patreon campaign's creator access token, its active patrons are listed at the
+highest tier their pledge reaches, by their first names and the initial of their
+last. A file entry whose `patreon` holds a patron's member ID gives them the
+name and link they asked for, without putting their Patreon name in the file,
+and drops out once that membership ends. Ko-fi offers no way to list members,
+so Ko-fi supporters are file entries marked `"source": "ko-fi"`. Anyone
+`supporters.hidden` names, by the name the page shows, their Patreon name or
+their member ID, never appears. The page saves each avatar and site icon beside it, so it loads
+nothing from other sites, and `credits.json` beside it lists the same people.
+
 ## Publication order
 
 Before publication, run the affected retained app tests and release-script

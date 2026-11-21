@@ -46,5 +46,6 @@ project is useful to you, you can support the work through
 [one-time contribution](https://ko-fi.com/pauljoda), or use
 [GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not buy
 roadmap priority, private support, or access to security information. Active
-monthly sponsors who want public recognition are listed in
-[SPONSORS.md](SPONSORS.md), and can have a sponsor flair on r/CrestBrowser.
+monthly supporters are listed on the
+[credits page](https://crestbrowser.com/credits/#supporters) unless they ask to
+be hidden, and can have a sponsor flair on r/CrestBrowser.

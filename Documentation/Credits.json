@@ -1,0 +1,90 @@
+{
+  "developer": {
+    "name": "Paul Davis",
+    "role": "Creator and developer",
+    "github": "pauljoda",
+    "links": [
+      "https://github.com/pauljoda"
+    ]
+  },
+  "community": [],
+  "contributors": {
+    "repository": "pauljoda/Crest",
+    "exclude": [
+      "pauljoda"
+    ]
+  },
+  "roles": [],
+  "supporters": {
+    "tiers": [
+      {
+        "id": "sponsor",
+        "title": "Sponsor",
+        "monthly": 25,
+        "showsLinks": true
+      },
+      {
+        "id": "sustainer",
+        "title": "Sustainer",
+        "monthly": 10,
+        "showsLinks": true
+      },
+      {
+        "id": "supporter",
+        "title": "Supporter",
+        "monthly": 3,
+        "showsLinks": false
+      }
+    ],
+    "people": [
+      {
+        "name": "James Q. Berry",
+        "patreon": "3e211b95-89cc-4550-a2ba-63f8c16c277c",
+        "tier": "sponsor",
+        "link": "https://www.youtube.com/GuamPhotography"
+      },
+      {
+        "name": "Jesus Rojas",
+        "source": "ko-fi",
+        "tier": "sponsor",
+        "link": "https://jesusvr.dev/"
+      },
+      {
+        "name": "yeliaBdE",
+        "patreon": "9c148463-fb68-4ea9-b745-c07d97692b1c",
+        "tier": "sustainer"
+      },
+      {
+        "name": "Chris F",
+        "patreon": "cfc09d4d-1d84-4526-a582-3b40bd2058c2",
+        "tier": "supporter"
+      },
+      {
+        "name": "Chris Youngers",
+        "source": "ko-fi",
+        "tier": "supporter"
+      },
+      {
+        "name": "mikepictor",
+        "patreon": "fb1b4bdf-5776-4bbc-b861-1c8fe5782585",
+        "tier": "supporter"
+      },
+      {
+        "name": "Patrick McCarron",
+        "source": "ko-fi",
+        "tier": "supporter"
+      },
+      {
+        "name": "techfreaktwo",
+        "source": "ko-fi",
+        "tier": "supporter"
+      },
+      {
+        "name": "Turbo51",
+        "source": "ko-fi",
+        "tier": "supporter"
+      }
+    ],
+    "hidden": []
+  }
+}
