@@ -28,7 +28,7 @@ struct BrowserSettingsCompactPageIdentity: View {
         }
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
         .padding(.horizontal, CrestSpacing.large)
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
         .overlay(alignment: .bottom) { Divider() }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("settings-page-header")

@@ -90,7 +90,7 @@ struct MobileSpaceSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 12)
-                    .background(BrowserSettingsCanvas.card)
+                    .background(CrestBrandTheme.flyout)
             }
             Divider()
             if let space {
@@ -121,7 +121,7 @@ struct MobileSpaceSettingsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
     }
 
     /// The crests of `space`'s group, which pick the Space these settings

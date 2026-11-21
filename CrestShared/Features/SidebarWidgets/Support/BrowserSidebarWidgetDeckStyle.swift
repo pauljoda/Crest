@@ -36,7 +36,6 @@ enum BrowserSidebarWidgetDeckStyle {
     }
     static let headerTileSize: CGFloat = 30
     static let badgeVerticalPadding: CGFloat = 1
-    static let stepperBadgeHorizontalPadding: CGFloat = 2
     static let indicatorDotDiameter: CGFloat = 5
     static let indicatorHitWidth: CGFloat = 24
     static let indicatorHitHeight: CGFloat = 24

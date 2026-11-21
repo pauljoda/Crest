@@ -93,10 +93,7 @@ struct BrowserUtilityNotificationBadge: View {
             .font(.caption2.weight(.bold))
             .monospacedDigit()
             .browserReadableForeground(over: tint)
-            .padding(
-                .horizontal,
-                BrowserUtilitySwitcherLayout.notificationBadgeHorizontalPadding
-            )
+            .padding(.horizontal, CrestSpacing.extraSmall)
             .frame(
                 minWidth: BrowserUtilitySwitcherLayout.notificationBadgeMinimumSize,
                 minHeight: BrowserUtilitySwitcherLayout.notificationBadgeMinimumSize

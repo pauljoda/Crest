@@ -39,7 +39,7 @@ struct BrowserSettingsSidebar: View {
             .scrollContentBackground(.hidden)
             .browserNativeScrollState(tabState.sidebarScroll)
         }
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
         .browserSpaceDeletionConfirmation(
             $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
         )

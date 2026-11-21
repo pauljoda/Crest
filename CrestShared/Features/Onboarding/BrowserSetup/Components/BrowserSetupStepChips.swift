@@ -87,7 +87,7 @@ struct BrowserSetupStepChips: View {
         let isOpen = index == reached
         let isColored = size.namesEvery || index <= reached
         let shape = RoundedRectangle(cornerRadius: size.radius, style: .continuous)
-        return HStack(spacing: BrowserSetupStepChipsMetrics.numberSpacing) {
+        return HStack(spacing: CrestSpacing.small) {
             Text(verbatim: String(format: "%02d", index + 1))
                 .font(CrestTypography.display(size.number))
                 .fixedSize()
@@ -120,7 +120,6 @@ struct BrowserSetupStepChips: View {
 enum BrowserSetupStepChipsMetrics {
     /// The angles the chips sit at, in turn, as if laid down by hand.
     static let tilts: [Double] = [-2, 1.5, -1, 2]
-    static let numberSpacing: CGFloat = 8
     static let numberOpacity = 0.7
     static let liftedScale: CGFloat = 1.06
     /// How the chips move as the walk does.

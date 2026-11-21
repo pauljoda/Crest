@@ -16,11 +16,7 @@ struct BrowserSpaceSidebarSection: View {
                 Text(title)
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.secondary)
-                    .padding(
-                        .horizontal,
-                        BrowserManualSetupSidebarPreviewMetrics
-                            .sectionHorizontalPadding
-                    )
+                    .padding(.horizontal, CrestSpacing.small)
                 ForEach(tabs) { tab in
                     BrowserSpaceSidebarTabRow(
                         tab: tab,

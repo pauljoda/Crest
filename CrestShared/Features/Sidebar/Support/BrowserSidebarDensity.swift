@@ -27,8 +27,8 @@ struct BrowserSidebarDensity: Equatable, Sendable {
     private static let minimumPointerPinHeight: CGFloat = 32
     private static let basePinHeight: CGFloat = 47
     private static let basePinWidth: CGFloat = 36
-    private static let basePinSpacing: CGFloat = 8
-    private static let minimumSpacing: CGFloat = 2
+    private static let basePinSpacing = CrestSpacing.small
+    private static let minimumSpacing = CrestSpacing.extraExtraSmall
 
     // MARK: - Variables
 

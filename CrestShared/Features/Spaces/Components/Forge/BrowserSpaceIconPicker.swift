@@ -95,7 +95,7 @@ struct BrowserSpaceIconPicker: View {
     private var starterCrests: some View {
         VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.styleSpacing) {
             ForEach(SpaceHouseStyle.all, id: \.self) { style in
-                VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.titleSpacing) {
+                VStack(alignment: .leading, spacing: CrestSpacing.small) {
                     Text(style.title)
                         .crestCapsLabel()
                         .accessibilityAddTraits(.isHeader)
@@ -187,7 +187,6 @@ enum BrowserSpaceIconPickerMetrics {
     static let symbol = "sparkles"
     /// The room between the simple and heraldic crests, and under each name.
     static let styleSpacing: CGFloat = 14
-    static let titleSpacing: CGFloat = 8
 }
 
 #if DEBUG

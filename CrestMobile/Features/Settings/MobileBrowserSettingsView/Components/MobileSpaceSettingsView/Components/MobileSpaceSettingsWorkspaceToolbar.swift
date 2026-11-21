@@ -38,7 +38,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(BrowserSettingsCanvas.card)
+        .background(CrestBrandTheme.flyout)
         .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsToolbar)
     }
 

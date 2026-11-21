@@ -12,7 +12,7 @@ struct BrowserSpaceSidebarTabRowContent: View {
     let appearance: BrowserTabAppearance
 
     var body: some View {
-        HStack(spacing: BrowserManualSetupSidebarPreviewMetrics.tabSpacing) {
+        HStack(spacing: CrestSpacing.small) {
             TabStateFaviconView(
                 tab: tab,
                 favicons: favicons,

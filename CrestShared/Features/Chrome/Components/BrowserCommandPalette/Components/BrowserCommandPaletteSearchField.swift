@@ -19,7 +19,7 @@ struct BrowserCommandPaletteSearchField: View {
     }
 
     var body: some View {
-        HStack(spacing: BrowserCommandPaletteMetrics.searchFieldSpacing) {
+        HStack(spacing: CrestSpacing.medium) {
             if presentation.input.showsSearchGlyph {
                 Image(systemName: "magnifyingglass")
                     .font(.system(presentation.input.textStyle, weight: .medium))

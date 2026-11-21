@@ -30,7 +30,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     static let windowContentFraction: CGFloat = 0.8
 
     /// The room a pointer card keeps from the page it floats over.
-    static let pointerMargin: CGFloat = 24
+    static let pointerMargin = CrestSpacing.extraExtraLarge
 
     /// The shares of the room its controls and margins leave a pointer card
     /// that a person can give it: from the share a Quick Window takes of its

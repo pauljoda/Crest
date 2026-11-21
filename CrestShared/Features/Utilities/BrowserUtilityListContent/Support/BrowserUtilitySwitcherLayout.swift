@@ -7,7 +7,6 @@ enum BrowserUtilitySwitcherLayout {
     static let destinationGap: CGFloat = 18
     static let staggerInterval = 0.045
     static let notificationBadgeMinimumSize: CGFloat = 16
-    static let notificationBadgeHorizontalPadding: CGFloat = 4
     static let notificationBadgeOffset: CGFloat = 4
 
     static var expansionSteps: [any BrowserUtilityFanExpansionStep] {

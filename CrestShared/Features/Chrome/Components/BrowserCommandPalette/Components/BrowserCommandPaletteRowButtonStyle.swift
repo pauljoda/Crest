@@ -8,7 +8,7 @@ struct BrowserCommandPaletteRowButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, BrowserCommandPaletteMetrics.rowHorizontalPadding)
+            .padding(.horizontal, CrestSpacing.medium)
             .frame(minHeight: BrowserCommandPaletteMetrics.resultRowHeight)
             .contentShape(.rect)
             .modifier(BrowserCommandPaletteRowSurface(isSelected: isSelected, accent: accent))

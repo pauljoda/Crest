@@ -10,6 +10,4 @@ enum BrowserNavigationFailureMetrics {
     static let contentSpacing: CGFloat = 26
     static let maximumContentWidth: CGFloat = 660
     static let surfacePadding: CGFloat = 18
-    static let surfaceCornerRadius: CGFloat = 16
-    static let surfaceOpacity = 0.055
 }

@@ -17,7 +17,7 @@ struct BrowserCommandPaletteRowSurface: ViewModifier {
     // MARK: - Actions - Drawing
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: BrowserCommandPaletteMetrics.rowCornerRadius)
+        let shape = RoundedRectangle(cornerRadius: CrestRadius.control)
         content
             .background {
                 if !isSelected {
@@ -27,7 +27,7 @@ struct BrowserCommandPaletteRowSurface: ViewModifier {
             .modifier(
                 CrestInteractiveSurfaceModifier(
                     isSelected: isSelected, isHovering: false,
-                    cornerRadius: BrowserCommandPaletteMetrics.rowCornerRadius, isPressed: false,
+                    cornerRadius: CrestRadius.control, isPressed: false,
                     showsRestingSurface: false, selectedBorderColor: selectedBorder, selectedBorderWidth: 1,
                     customSelectedFill: selectedFill, selectionPaper: .opaque)
             )

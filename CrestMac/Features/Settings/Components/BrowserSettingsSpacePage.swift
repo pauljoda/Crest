@@ -48,7 +48,7 @@ struct BrowserSettingsSpacePage: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
         .browserSpaceDeletionConfirmation(
             $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
         )

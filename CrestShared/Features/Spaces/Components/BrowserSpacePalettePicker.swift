@@ -37,7 +37,7 @@ struct BrowserSpacePalettePicker: View {
                 ) {
                     choose(palette)
                 } content: {
-                    VStack(spacing: BrowserSpacePalettePickerMetrics.titleSpacing) {
+                    VStack(spacing: CrestSpacing.extraSmall) {
                         swatch(palette)
                         Text(palette.title)
                             .font(.caption2)
@@ -78,7 +78,6 @@ struct BrowserSpacePalettePicker: View {
 enum BrowserSpacePalettePickerMetrics {
     static let column: CGFloat = 64
     static let swatchHeight: CGFloat = 24
-    static let titleSpacing: CGFloat = 4
     static let cornerRadius: CGFloat = 6
     static let accentDot: CGFloat = 10
     static let accentInset: CGFloat = 7
