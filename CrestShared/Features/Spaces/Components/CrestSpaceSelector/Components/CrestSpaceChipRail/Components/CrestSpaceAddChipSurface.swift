@@ -17,12 +17,7 @@ struct CrestSpaceAddChipSurface<LabelContent: View>: View {
 
     var body: some View {
         label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: .semibold
-                )
-            )
+            .font(CrestTypography.label)
             .foregroundStyle(tint)
             .padding(.horizontal, CrestSpaceChipMetrics.horizontalPadding)
             .frame(height: CrestSpaceChipMetrics.height)

@@ -129,12 +129,7 @@ struct CrestButtonSurface: View {
     private var destructive: some View {
         let tint = resolvedTint
         return configuration.label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: .semibold
-                )
-            )
+            .font(CrestTypography.label)
             .foregroundStyle(resolvedTextTint)
             .padding(.horizontal, CrestButtonMetrics.standardHorizontalPadding)
             .frame(minHeight: CrestButtonMetrics.height)

@@ -50,7 +50,7 @@ struct BrowserGettingStartedView: View {
         .onAppear {
             if isInBrowserWindow { Self.presentations += 1 }
         }
-        .font(CrestTypography.sans(14))
+        .font(CrestTypography.supportingBody)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: chapter)
     }
 
@@ -89,7 +89,7 @@ struct BrowserGettingStartedView: View {
     private var heading: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(chapter.title).font(CrestTypography.display(34))
-            Text(chapter.introduction).font(CrestTypography.sans(14)).foregroundStyle(.secondary)
+            Text(chapter.introduction).font(CrestTypography.supportingBody).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -97,7 +97,7 @@ struct BrowserGettingStartedView: View {
     private var masthead: some View {
         HStack(spacing: 9) {
             CrestStartPageMark().frame(width: 24, height: 28)
-            Text("Getting Started").font(CrestTypography.sans(13, weight: .semibold))
+            Text("Getting Started").font(CrestTypography.label)
             Spacer()
             Button("Reset practice", systemImage: "arrow.counterclockwise") {
                 practice.reset()
@@ -124,7 +124,7 @@ struct BrowserGettingStartedView: View {
             HStack(spacing: 7) {
                 Text(verbatim: String(format: "%02d", option.number)).font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                Text(option.pickerTitle).font(CrestTypography.sans(13, weight: .semibold))
+                Text(option.pickerTitle).font(CrestTypography.label)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, CrestSpacing.extraSmall)
@@ -187,13 +187,13 @@ struct BrowserGettingStartedView: View {
 
     private var footer: some View {
         HStack {
-            Text("Practice changes affect only this example Space.").font(CrestTypography.sans(12)).foregroundStyle(
+            Text("Practice changes affect only this example Space.").font(CrestTypography.note).foregroundStyle(
                 .secondary)
             Spacer()
             if let next = chapter.next {
                 Button("Next chapter", systemImage: "arrow.right") { selectChapter(next) }.buttonStyle(.plain)
             } else {
-                Text("This guide stays in your Saved tabs.").font(CrestTypography.sans(12, weight: .semibold))
+                Text("This guide stays in your Saved tabs.").font(CrestTypography.note.weight(.semibold))
             }
         }
     }

@@ -14,7 +14,7 @@ struct BrowserExtensionPinButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
-                .font(CrestTypography.sans(Self.glyphSize, weight: .semibold))
+                .font(.system(size: Self.glyphSize, weight: .semibold))
         }
         .buttonStyle(
             CrestChromeButtonStyle(

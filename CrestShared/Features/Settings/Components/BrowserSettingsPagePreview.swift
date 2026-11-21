@@ -9,11 +9,11 @@ struct BrowserSettingsPagePreview: View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 10) {
                 Text("Sample page")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(CrestTypography.sans(18, weight: .semibold))
                 Text("A little room to read")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(CrestTypography.sans(14, weight: .medium))
                 Text("Text and images grow together. Choose a comfortable size for your everyday browsing.")
-                    .font(.system(size: 12))
+                    .font(CrestTypography.sans(12))
                     .fixedSize(horizontal: false, vertical: true)
                 RoundedRectangle(cornerRadius: 6)
                     .fill(CrestBrandPalette.crestBlue.opacity(0.16))

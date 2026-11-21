@@ -39,6 +39,4 @@ enum CrestButtonMetrics {
     static let tintPressedFill = 0.22
     static let tintRestStroke = 0.28
     static let tintEmphasizedStroke = 0.55
-
-    static let standardLabelSize: CGFloat = 13
 }
