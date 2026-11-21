@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "translation-offer-other-script",
+      "category": "fixed",
+      "message": "A page in a language written in another script, such as Traditional Chinese for a reader of Simplified Chinese, is offered translation."
+    }
+  ]
+}
