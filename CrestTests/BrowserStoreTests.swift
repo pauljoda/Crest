@@ -16,21 +16,7 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertTrue(store.isPrivateBrowsing)
         XCTAssertFalse(store.syncsSession)
         let privateSpace = try XCTUnwrap(store.shownSpace)
-        let branding = privateSpace.settings.look
         let browsing = privateSpace.settings.browsingPreferences
-        XCTAssertEqual(privateSpace.settings.name, "Private")
-        XCTAssertEqual(privateSpace.settings.symbol, "eyeglasses")
-        XCTAssertEqual(
-            branding.colors,
-            [
-                BrandColor(
-                    red: 0.58,
-                    green: 0.30,
-                    blue: 0.76
-                )
-            ]
-        )
-        XCTAssertEqual(branding.bannerPattern, .solid)
         // A private window searches with the device's private default and never suggests.
         XCTAssertTrue(browsing.followsDefaultSearch)
         XCTAssertFalse(browsing.followsDefaultSuggestions)

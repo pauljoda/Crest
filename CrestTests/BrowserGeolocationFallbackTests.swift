@@ -151,18 +151,6 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         ) as? String
     }
 
-    private func waitUntil(
-        _ description: String,
-        timeout: Duration = .seconds(5),
-        condition: () async throws -> Bool
-    ) async throws {
-        let deadline = ContinuousClock.now.advanced(by: timeout)
-        while ContinuousClock.now < deadline {
-            if try await condition() { return }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-        XCTFail("Timed out waiting for \(description).")
-    }
 }
 
 @MainActor

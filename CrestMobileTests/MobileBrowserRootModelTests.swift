@@ -82,12 +82,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
 
     private func makeSpace(index: Int) -> SpaceState.Seed {
         let tab = TabState.Seed.startPage(
-            id: fixedUUID(index * 10 + 1),
+            id: UUID(fixed: index * 10 + 1),
             placement: .current
         )
         return SpaceState.Seed(
-            id: fixedUUID(index * 10 + 2),
-            profileID: fixedUUID(index * 10 + 3),
+            id: UUID(fixed: index * 10 + 2),
+            profileID: UUID(fixed: index * 10 + 3),
             name: "Space \(index)",
             symbol: "circle",
             accent: .indigo,
@@ -96,14 +96,6 @@ final class MobileBrowserRootModelTests: XCTestCase {
         )
     }
 
-    private func fixedUUID(_ value: Int) -> UUID {
-        UUID(
-            uuidString: String(
-                format: "00000000-0000-0000-0000-%012x",
-                value
-            )
-        )!
-    }
 }
 
 @MainActor

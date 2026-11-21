@@ -201,7 +201,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testPageStoreCriticalPressureUnloadsOnlyTheOldestEligibleTab() async throws {
         let tabs = (1...8).map { index in
             TabState.Seed(
-                id: fixedUUID(460 + index),
+                id: UUID(fixed: 460 + index),
                 title: "Tab \(index)",
                 url: nil,
                 symbol: "globe",
@@ -209,8 +209,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         }
         let space = SpaceState.Seed(
-            id: fixedUUID(470),
-            profileID: fixedUUID(471),
+            id: UUID(fixed: 470),
+            profileID: UUID(fixed: 471),
             name: "Coalescing",
             symbol: "memorychip",
             accent: .teal,
@@ -276,29 +276,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
         try await waitUntil(timeout: .seconds(5)) { page.corePage.live.url != nil && !page.corePage.live.isLoading }
     }
 
-    private func waitUntil(
-        timeout: Duration = .seconds(3),
-        condition: @escaping @MainActor () -> Bool
-    ) async throws {
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: timeout)
-        while !condition() {
-            guard clock.now < deadline else {
-                XCTFail("Timed out waiting for the browser state to change.")
-                return
-            }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private func makeSpace(index: Int) -> SpaceState.Seed {
         let tab = TabState.Seed.startPage(
-            id: fixedUUID(index * 10 + 1),
+            id: UUID(fixed: index * 10 + 1),
             placement: .current
         )
         return SpaceState.Seed(
-            id: fixedUUID(index * 10 + 2),
-            profileID: fixedUUID(index * 10 + 3),
+            id: UUID(fixed: index * 10 + 2),
+            profileID: UUID(fixed: index * 10 + 3),
             name: "Space \(index)",
             symbol: "circle",
             accent: .indigo,
@@ -315,10 +300,6 @@ final class MobileBrowserNavigationTests: XCTestCase {
             shown[space.id] = tabs[space.id] ?? space.tabs.first?.id
         }
         return shown
-    }
-
-    private func fixedUUID(_ value: Int) -> UUID {
-        UUID(uuidString: String(format: "00000000-0000-0000-0000-%012x", value))!
     }
 
     /// Hosts a compact browser surface in a window whose safe area stands in for

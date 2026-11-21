@@ -407,7 +407,7 @@ internal static class SwiftEmitter {
     /// Every record marked `[HoldsSecrets]`, and every record that holds one
     /// through a field, a list, an optional, another record or a union one of
     /// whose members holds one.
-    private static HashSet<Type> SecretRecords(ContractSchema schema) {
+    internal static HashSet<Type> SecretRecords(ContractSchema schema) {
         var secrets = schema.Records.Where(record => record.HoldsSecrets).Select(record => record.Type).ToHashSet();
         bool changed = true;
         while (changed) {

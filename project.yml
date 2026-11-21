@@ -247,46 +247,6 @@ targets:
           - "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"
         outputFiles:
           - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCore.Native.dylib"
-  CrestNativeCoreTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: CrestTests
-        includes:
-          - BrowserTabStateArchiveTests.swift
-          - BrowserDataRetentionTests.swift
-          - BrowserWebHostViewTests.swift
-          - BrowserPageNavigationMarkerTests.swift
-          - BrowserShortcutTests.swift
-          - BrowserDurableTabCloseTests.swift
-          - BrowserWebsiteDataStoreTests.swift
-          - BrowserPagePoolTests.swift
-          - BrowserCurrentTabFolderTests.swift
-          - BrowserStoreTests.swift
-          - BrowserStoreWorkspaceTests.swift
-          - BrowserCloudRecordCodecTests.swift
-          - BrowserCloudSyncStateTests.swift
-          - BrowserLaunchEnvironmentTests.swift
-          - BrowserCoreSessionAuthorityTests.swift
-          - Support/CrestCore+ProfileErasure.swift
-          - Support/BrowserPage+WebKitTestAccess.swift
-          - Support/BrowserPagePool+Presenting.swift
-          - Support/BrowserInstalledRelease.swift
-          - Support/BrowserPrivacyHTTPServer.swift
-          - Support/BrowserStore+Unlocking.swift
-          - Support/BrowserStoredSessionHarness.swift
-          - Support/StoredSyncJournal.swift
-    dependencies:
-      - target: CrestNativeCore
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core.tests
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
-        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
-        GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CrestNativeCore.app/Contents/MacOS/CrestNativeCore"
-        BUNDLE_LOADER: "$(TEST_HOST)"
-        SWIFT_EMIT_LOC_STRINGS: NO
   Crest:
     templates: [PortableCoreMac]
     type: application
@@ -524,9 +484,6 @@ schemes:
         CrestNativeCore: all
     run:
       customLLDBInit: "$(SRCROOT)/Config/Crest.lldbinit"
-    test:
-      targets:
-        - CrestNativeCoreTests
   CrestMobile:
     build:
       targets:

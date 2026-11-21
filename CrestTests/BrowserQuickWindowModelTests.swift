@@ -126,21 +126,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         )
     }
 
-    private func waitUntil(
-        timeout: Duration = .seconds(3),
-        condition: @escaping @MainActor () -> Bool
-    ) async throws {
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: timeout)
-        while !condition() {
-            guard clock.now < deadline else {
-                XCTFail("Timed out waiting for Quick Window state to change.")
-                return
-            }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct QuickWindowTestContext {
         let source: SpaceState.Seed
         let destination: SpaceState.Seed

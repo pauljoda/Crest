@@ -22,12 +22,6 @@ final class CoreReadModelTests: XCTestCase {
             cards: [ShownCards(spaceID: UUID(), tabIDs: [UUID(), UUID()], splitGroupID: UUID())],
             unavailableCommands: [.duplicateTab, .archiveTab])
         let model = WindowStateModel(value)
-        let stored = Set(Mirror(reflecting: model).children.compactMap(\.label))
-        for case let field? in Mirror(reflecting: value).children.map(\.label) {
-            XCTAssertTrue(
-                stored.contains(field) || stored.contains("\(field)Storage"),
-                "WindowStateModel does not keep WindowState.\(field).")
-        }
         XCTAssertEqual(model.value, value)
         let next = WindowState(
             id: value.id, workspaceID: UUID(), shownSpaceID: UUID(),

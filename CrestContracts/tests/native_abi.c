@@ -287,49 +287,10 @@ static void engine_boundary(void) {
     assert(crest_app_drain(app, &buffer) == CREST_OK && buffer.bytes[0] == 2 && buffer.bytes[1] == CREST_CHANGE_ENGINES_CHANGED);
     crest_buffer_free(&buffer);
 
-    /* A workspace opened from a seed, with a window open over it. */
-    uint8_t seed[160];
-    size_t size = session_seed(seed, sizeof(seed), 0);
-    uint8_t workspace[16];
-    open_seeded(app, persistent_kind, seed, size, workspace);
-    /* OpenWindow: the window, the workspace, not saved, nothing to copy or show,
-     * RestoresTabs. It answers its own WindowChanged. */
-    uint8_t opening[42] = { 0 };
-    size_t window_tag = put_tag(opening, CREST_INTENT_OPEN_WINDOW);
-    memset(opening + window_tag, 0x42, 16);
-    memcpy(opening + window_tag + 16, workspace, 16);
-    opening[window_tag + 36] = 1;
-    assert(crest_app_dispatch(app, opening, window_tag + 37, &buffer) == CREST_OK);
-    assert(buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_WINDOW_CHANGED);
-    crest_buffer_free(&buffer);
-
-    /* OpenPage: the page, the workspace, the Space (all 0x44), no tab, the
-     * window, no transient presentation and no opener. The dispatch returns once the
-     * binding ran CreatePage: the page, the Space's profile (all 0x55),
-     * whether it is private, the window and no state to restore. */
-    uint8_t page[71] = { 0 };
-    size_t page_tag = put_tag(page, CREST_INTENT_OPEN_PAGE);
-    memset(page + page_tag, 0x61, 16);
-    memcpy(page + page_tag + 16, workspace, 16);
-    memset(page + page_tag + 32, 0x44, 16);
-    page[page_tag + 48] = 0;
-    memset(page + page_tag + 49, 0x42, 16);
-    page[page_tag + 65] = 0;
-    page[page_tag + 66] = 0;
-    assert(crest_app_dispatch(app, page, page_tag + 67, &buffer) == CREST_OK);
-    assert(buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_PAGE_OPENED);
-    crest_buffer_free(&buffer);
-    assert(fixture.commands == 1 && fixture.last_length == 51 && fixture.last[0] == CREST_ENGINE_COMMAND_CREATE_PAGE);
-    assert(memcmp(fixture.last + 1, page + page_tag, 16) == 0 && fixture.last[17] == 0x55 && fixture.last[33] == 0);
-    assert(memcmp(fixture.last + 34, page + page_tag + 49, 16) == 0 && fixture.last[50] == 0);
-
-    /* PageCreated for that page goes through the drain; one for a page the
-     * core does not know is fine and changes nothing. */
+    /* A report for a page the core does not know is fine and changes nothing.
+     * The walk from opening a page to the binding running CreatePage goes
+     * through the generated codec in engine_abi.cc. */
     uint8_t created[17] = { CREST_ENGINE_EVENT_PAGE_CREATED };
-    memcpy(created + 1, page + page_tag, 16);
-    assert(fixture.report(app, engine, created, sizeof(created)) == CREST_OK);
-    assert(crest_app_drain(app, &buffer) == CREST_OK && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_PAGE_CHANGED);
-    crest_buffer_free(&buffer);
     memset(created + 1, 0x77, 16);
     assert(crest_engine_report(app, engine, created, sizeof(created)) == CREST_OK);
     assert(crest_app_drain(app, &buffer) == CREST_OK && buffer.length == 1 && buffer.bytes[0] == 0);

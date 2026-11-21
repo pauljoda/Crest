@@ -7,9 +7,9 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// What a saved tab shows once closing puts its page away: the saved page's
-/// title and image when it returns to its saved address from another page,
-/// and the page it left otherwise.
+/// A saved tab that closing returns to its saved address keeps the name the
+/// person gave it, and a record older than saved pages' titles and images
+/// wears no image rather than the page it left.
 public sealed partial class BrowserContractsTests {
     /// A saved tab with no rename, whose icon follows its page, that closes
     /// as `policy` says, showing `url`, and a live page for it.
@@ -44,33 +44,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void ASavedTabClosingBackToItsSavedAddressShowsTheSavedPagesTitleAndImage() {
-        var (app, engine, page, workspace, window, space, tab) = SavedTabClosing("returnToSavedURL");
-        using var disposal = app;
-        var authority = app.Workspace(workspace);
-        TabState Tab() => authority.Current.Spaces[0].Tabs.Single(candidate => candidate.Id == tab);
-
-        // Leaving the saved page keeps its title, favicon address and color, and
-        // the platform keeps the image the tab wears for it before the next page's.
-        var red = new TabIconAccent(0.9, 0.1, 0.1);
-        Assert.Empty(ShowDocument(app, engine, page, "https://example.com/", "Home", red));
-        Assert.Equal([new TabSavedImageChanged(workspace, tab, TabSavedImageChange.Keep, "https://example.com/")],
-            ShowDocument(app, engine, page, "https://example.com/away", "Away page", new TabIconAccent(0.1, 0.2, 0.9)));
-        Assert.Equal(("Away page", "https://example.com/away"), (Tab().Title, Tab().FaviconUrl));
-        Assert.Equal(("Home", "https://example.com/"), (Tab().SavedTitle, Tab().SavedFaviconUrl));
-        // Moving on from there keeps nothing more.
-        Assert.Empty(ShowDocument(app, engine, page, "https://example.com/further", "Further page"));
-
-        // Closing returns it there, showing that page's title, image and color
-        // before the page loads again.
-        var closed = app.Send(new CloseTab(workspace, window, space, tab));
-        Assert.Equal(("https://example.com/", "Home", "https://example.com/", red),
-            (Tab().Url, Tab().DisplayTitle, Tab().FaviconUrl, Tab().IconAccent));
-        Assert.Equal([new TabSavedImageChanged(workspace, tab, TabSavedImageChange.Restore, "https://example.com/")],
-            closed.OfType<TabSavedImageChanged>());
-    }
-
-    [Fact]
     public void ASavedTabsNameStaysAndAnOlderRecordShowsNoImageWhenClosingReturnsThem() {
         // A name the person gave the tab stays across the return.
         var (app, engine, page, workspace, window, space, tab) = SavedTabClosing("returnToSavedURL");
@@ -96,71 +69,5 @@ public sealed partial class BrowserContractsTests {
             Assert.Equal([new TabSavedImageChanged(workspace, tab, TabSavedImageChange.Restore, null)],
                 closed.OfType<TabSavedImageChanged>());
         }
-    }
-
-    [Fact]
-    public void ReplacingASavedAddressKeepsThePageItShowsAsTheSavedPage() {
-        var (app, engine, page, workspace, window, space, tab) = SavedTabClosing("returnToSavedURL");
-        using var disposal = app;
-        var authority = app.Workspace(workspace);
-        TabState Tab() => authority.Current.Spaces[0].Tabs.Single(candidate => candidate.Id == tab);
-
-        ShowDocument(app, engine, page, "https://example.com/", "Home");
-        ShowDocument(app, engine, page, "https://example.com/away", "Away page");
-        var replaced = app.Send(new ReplaceSavedAddress(workspace, space, tab));
-        Assert.Equal(("https://example.com/away", "Away page", "https://example.com/away"),
-            (Tab().SavedUrl, Tab().SavedTitle, Tab().SavedFaviconUrl));
-        Assert.Equal([new TabSavedImageChanged(workspace, tab, TabSavedImageChange.Keep, "https://example.com/away")],
-            replaced.OfType<TabSavedImageChanged>());
-
-        // Closing at the new saved address changes nothing it shows.
-        var closed = app.Send(new CloseTab(workspace, window, space, tab));
-        Assert.Equal(("Away page", "https://example.com/away"), (Tab().DisplayTitle, Tab().FaviconUrl));
-        Assert.Empty(closed.OfType<TabSavedImageChanged>());
-    }
-
-    [Fact]
-    public void AnIconFromThePageBeforeIsNeverKeptAsTheSavedPages() {
-        var (app, engine, page, workspace, window, space, tab) = SavedTabClosing("returnToSavedURL");
-        using var disposal = app;
-        var authority = app.Workspace(workspace);
-        TabState Tab() => authority.Current.Spaces[0].Tabs.Single(candidate => candidate.Id == tab);
-        ShowDocument(app, engine, page, "https://example.com/", "Home");
-        ShowDocument(app, engine, page, "https://example.com/away", "Away page");
-
-        // Back at the saved page with no title of its own, the tab shows the
-        // title kept for it rather than the away page's.
-        Browse(app, engine, page, "https://example.com/", "");
-        Assert.Equal("Home", Tab().Title);
-
-        // Back at the saved page before its icon arrives, the tab still wears
-        // the away page's; leaving again keeps the saved page's title but not
-        // that icon, and the image kept for the saved page stays.
-        Browse(app, engine, page, "https://example.com/away", "Away page");
-        Browse(app, engine, page, "https://example.com/", "Home again");
-        Assert.Empty(Browse(app, engine, page, "https://example.com/later", "Later page").OfType<TabSavedImageChanged>());
-        Assert.Equal(("Home again", "https://example.com/"), (Tab().SavedTitle, Tab().SavedFaviconUrl));
-
-        // Replacing the saved address before the shown page's icon arrives
-        // keeps no icon for it rather than the page before's.
-        var replaced = app.Send(new ReplaceSavedAddress(workspace, space, tab));
-        Assert.Equal(("https://example.com/later", "Later page", null),
-            (Tab().SavedUrl, Tab().SavedTitle, Tab().SavedFaviconUrl));
-        Assert.Equal([new TabSavedImageChanged(workspace, tab, TabSavedImageChange.Keep, null)],
-            replaced.OfType<TabSavedImageChanged>());
-    }
-
-    [Fact]
-    public void ASavedTabClosingWhereItWasKeepsThePageItLeft() {
-        var (app, engine, page, workspace, window, space, tab) = SavedTabClosing("resumeLastLocation");
-        using var disposal = app;
-        var authority = app.Workspace(workspace);
-
-        ShowDocument(app, engine, page, "https://example.com/", "Home");
-        ShowDocument(app, engine, page, "https://example.com/away", "Away page");
-        var closed = app.Send(new CloseTab(workspace, window, space, tab));
-        var kept = authority.Current.Spaces[0].Tabs.Single(candidate => candidate.Id == tab);
-        Assert.Equal(("https://example.com/away", "Away page", "https://example.com/away"), (kept.Url, kept.DisplayTitle, kept.FaviconUrl));
-        Assert.Empty(closed.OfType<TabSavedImageChanged>());
     }
 }

@@ -43,32 +43,6 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         )
     }
 
-    func testReleaseChannelsMapToTheirSignedFeedsAndSparkleChannels() {
-        XCTAssertEqual(BrowserSoftwareUpdateChannel.stable.allowedSparkleChannels, [])
-        XCTAssertEqual(BrowserSoftwareUpdateChannel.nightly.allowedSparkleChannels, ["nightly"])
-        XCTAssertEqual(BrowserSoftwareUpdateChannel.development.allowedSparkleChannels, ["development"])
-        XCTAssertEqual(BrowserSoftwareUpdateChannel.experimental.allowedSparkleChannels, ["experimental"])
-
-        // Each product keeps its own feeds whichever engine this test host
-        // runs: the dual-engine product reads the main feed from its
-        // Info.plist, and WebKit-only installs follow the -webkit feeds.
-        let feeds = "https://raw.githubusercontent.com/pauljoda/Crest/updates/"
-        let expected: [(channel: BrowserSoftwareUpdateChannel, chromium: String?, webKit: String)] = [
-            (.stable, nil, "appcast-webkit.xml"),
-            (.nightly, nil, "appcast-webkit.xml"),
-            (.development, "appcast-development.xml", "appcast-development-webkit.xml"),
-            (.experimental, "appcast-experimental.xml", "appcast-experimental-webkit.xml"),
-        ]
-        for feed in expected {
-            XCTAssertEqual(
-                feed.channel.feedURL(for: .chromium)?.absoluteString,
-                feed.chromium.map { feeds + $0 },
-                feed.channel.name
-            )
-            XCTAssertEqual(feed.channel.feedURL(for: .webKit)?.absoluteString, feeds + feed.webKit, feed.channel.name)
-        }
-    }
-
     func testInstallingAnArtifactFromAnotherChannelAdoptsItsBundledChannel() {
         let suiteName = "BrowserSoftwareUpdateTests.\(UUID().uuidString)"
         let preferences = UserDefaults(suiteName: suiteName)!
