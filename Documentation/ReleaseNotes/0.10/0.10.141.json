@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "dark-page-opens-without-white-flash",
-      "category": "fixed",
-      "message": "Pages opening in dark mode go straight from the loading screen to the page, without a flash of white in between.",
+      "id": "update-feeds-at-crestbrowser",
+      "category": "internal",
+      "message": "Crest for Mac checks for updates at updates.crestbrowser.com, which serves the same signed feeds it read before.",
       "platforms": ["mac"]
     }
   ]
