@@ -35,9 +35,10 @@ internal sealed class PaletteLeadRule {
                 int.MaxValue, Place: null, MayLead: true)
             : null);
 
-    /// The address the field completes, as its open tab when the person
-    /// prefers open tabs and one shows it. For a word that names no address,
-    /// the person names the site, so the tab is the best one on that site.
+    /// The address the field completes, as the tab that shows it when the
+    /// person prefers open tabs and one does: an open tab before a pinned or
+    /// saved one, then the strongest. For a word that names no address, the
+    /// person names the site, so any tab on that site shows it.
     public static readonly PaletteLeadRule Completion = new((context, leading) => {
         if (!leading.Completes || leading.Completion is not { } completion) return null;
         string? place = PaletteMemory.Place(completion.Opens);
@@ -45,7 +46,9 @@ internal sealed class PaletteLeadRule {
         bool Shows(PaletteCandidate entry) => entry.Place is { } shown
             && (leading.Searches ? PaletteMemory.Site(shown) == site : shown == place);
         if (context.Preferences.PrefersOpenTabs
-            && leading.Ranked.Where(entry => entry.Row.TabId is not null && Shows(entry)).MaxBy(entry => entry.Score) is { } open)
+            && leading.Ranked.Where(entry => entry.Row.TabId is not null && Shows(entry))
+                .OrderByDescending(entry => entry.Source == PaletteSource.OpenTabs).ThenByDescending(entry => entry.Score)
+                .FirstOrDefault() is { } open)
             return open with { Row = open.Row with { Reason = PaletteReason.Completion } };
         string host = completion.Text.Contains("://", StringComparison.Ordinal) ? completion.Text : completion.Text.TrimEnd('/');
         return new(PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", completion.Opens, address: completion.Opens,
