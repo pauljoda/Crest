@@ -71,30 +71,34 @@ internal sealed class PaletteContext {
     #region Actions - Evidence
 
     /// What ranking reads of a place whose row `row` shows `title` at `url`,
-    /// for `query`: how well the text matches it and whether it starts the
-    /// title or the address, or for an open or kept tab the name of the site
-    /// its title ends with, how much the page was used, when its tab was,
-    /// whether it is open or kept, and what earlier picks add. Null when the
-    /// text matches neither; with nothing typed, as when the person narrowed
-    /// the palette to a kind, every place matches with no text points.
+    /// for `query`: how well the text matches it, or the page's own
+    /// `pageTitle` behind a name the person gave its tab, and whether it
+    /// starts the title or the address, or for an open or kept tab a name it
+    /// goes by: the site name its title ends with, or its page's own title;
+    /// how much the page was used, when its tab was, whether it is open or
+    /// kept, and what earlier picks add. Null when the text matches neither;
+    /// with nothing typed, as when the person narrowed the palette to a kind,
+    /// every place matches with no text points.
     public PaletteEvidence? Evidence(PaletteQuery query, PaletteRow row, string title, string? url, DateTimeOffset? lastUsed = null,
-        bool isOpen = false, bool isKept = false, HistoryEntryState? entry = null) {
+        bool isOpen = false, bool isKept = false, HistoryEntryState? entry = null, string? pageTitle = null) {
         string address = url is null ? "" : PaletteMemory.Place(url) ?? "";
         bool prefixesTitle = query.Prefixes(title);
         bool prefixes = prefixesTitle || address.Length > 0 && query.Prefixes(address);
         int? score = query.IsEmpty ? 0 : query.Score(title, address);
+        if (!query.IsEmpty && pageTitle is not null && query.Score(pageTitle, address) is { } page) score = Math.Max(score ?? 0, page);
         if (prefixes) score = Math.Max(score ?? 0, TextMatch.TextStart.Points);
         if (score is not { } matched) return null;
-        bool prefixesSiteName = (isOpen || isKept) && query.PrefixesSiteName(title);
+        bool prefixesName = (isOpen || isKept)
+            && (query.PrefixesSiteName(title) || pageTitle is not null && (query.Prefixes(pageTitle) || query.PrefixesSiteName(pageTitle)));
         entry ??= url is not null && new WebAddress(url).Normalized is { } normalized ? History?.Entry(normalized) : null;
         double frecency = url is null ? 0 : Memory.Frecency(url, entry, Now);
-        return new(matched, prefixes, prefixesTitle, prefixesSiteName, frecency, lastUsed, isOpen, isKept, Learned(query, row));
+        return new(matched, prefixes, prefixesTitle, prefixesName, frecency, lastUsed, isOpen, isKept, Learned(query, row));
     }
 
     /// What ranking reads of a row that matched with `score` and is no
     /// place: only the match and what earlier picks add.
     public PaletteEvidence Matched(PaletteQuery query, PaletteRow row, int score) =>
-        new(score, Prefixes: false, PrefixesTitle: query.Prefixes(row.Title), PrefixesSiteName: false, Frecency: 0, LastUsed: null,
+        new(score, Prefixes: false, PrefixesTitle: query.Prefixes(row.Title), PrefixesName: false, Frecency: 0, LastUsed: null,
             IsOpen: false, IsKept: false, Learned(query, row));
 
     /// What the person's earlier picks for what was typed add to `row`.
@@ -151,9 +155,10 @@ internal sealed class PaletteContext {
 }
 
 /// What ranking reads of one row: how well the text matched it, whether the
-/// text starts its title or address, whether it starts the name of the site
-/// an open or kept tab's title ends with, how much its page was used, when
+/// text starts its title or address, whether it starts another name an open
+/// or kept tab goes by (the site name its title ends with, or its page's own
+/// title behind a name the person gave it), how much its page was used, when
 /// its tab was last used, whether it is open or kept, and what the person's
 /// earlier picks for the same text add.
-internal sealed record PaletteEvidence(int Match, bool Prefixes, bool PrefixesTitle, bool PrefixesSiteName, double Frecency,
+internal sealed record PaletteEvidence(int Match, bool Prefixes, bool PrefixesTitle, bool PrefixesName, double Frecency,
     DateTimeOffset? LastUsed, bool IsOpen, bool IsKept, double Learned);

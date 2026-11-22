@@ -72,12 +72,13 @@ public sealed partial class BrowserContractsTests {
     /// the field completes: a word that names a site the field completes
     /// leads from two letters, as the tab on that site, an open one before a
     /// saved one however much more the saved one was used, and a word that
-    /// starts a tab's title, or the site name its title ends with, from
-    /// three. Every other text that names no address searches first: a single
-    /// letter, a word followed by a space, a match inside a word or with its
-    /// letters out of order, a phrase, a word further into a title, a page
-    /// history knows only by its title, and a site visited too little to
-    /// complete. An address, a partial one and a calculation lead as before.
+    /// starts a tab's title, the site name its title ends with, or the page
+    /// title behind a name the person gave it, from three. Every other text
+    /// that names no address searches first: a single letter, a word followed
+    /// by a space, a match inside a word or with its letters out of order, a
+    /// phrase, a word further into a title, a page history knows only by its
+    /// title, and a site visited too little to complete. An address, a
+    /// partial one and a calculation lead as before.
     private static readonly Dictionary<string, (PaletteRowKind Kind, string? Title, string? Completes)> LeadingCases = new() {
         ["pa"] = (PaletteRowKind.Tab, "#general - Parlor", "parlor.example"),
         ["parl"] = (PaletteRowKind.Tab, "#general - Parlor", "parlor.example"),
@@ -86,6 +87,7 @@ public sealed partial class BrowserContractsTests {
         ["mail"] = (PaletteRowKind.Tab, "Inbox (3) – Post", "mail.post.example"),
         ["inbox"] = (PaletteRowKind.Tab, "Inbox (3) – Post", null),
         ["post"] = (PaletteRowKind.Tab, "Inbox (3) – Post", null),
+        ["mixer"] = (PaletteRowKind.Tab, "Studio", null),
         ["cal"] = (PaletteRowKind.PinnedTab, "Calendar", "calendar.post.example"),
         ["meeting"] = (PaletteRowKind.SavedTab, "Meeting notes | Pages", null),
         ["news"] = (PaletteRowKind.OpenAddress, "Open news.example", "news.example"),
@@ -182,13 +184,13 @@ public sealed partial class BrowserContractsTests {
         return (document["session"]!, space);
     }
 
-    /// A Space showing a home page, with open tabs on a chat, a code forge and
-    /// a mail site, a pinned calendar, saved meeting notes and the forge's
-    /// settings, saved and used more than its open tab, and a history the
-    /// palette has no memory of yet: the chat, a news site and the forge's
-    /// settings visited often, an article about the chat once, Crest's notes
-    /// twelve times and a weather site three times. Answers the session, the
-    /// Space and the tab it shows.
+    /// A Space showing a home page, with open tabs on a chat, a code forge, a
+    /// mail site and a music board the person renamed "Studio", a pinned
+    /// calendar, saved meeting notes and the forge's settings, saved and used
+    /// more than its open tab, and a history the palette has no memory of
+    /// yet: the chat, a news site and the forge's settings visited often, an
+    /// article about the chat once, Crest's notes twelve times and a weather
+    /// site three times. Answers the session, the Space and the tab it shows.
     private static (JsonNode Session, Guid Space, Guid Shown) RankingSpace() {
         Guid shown = Guid.NewGuid();
         JsonObject Tab(Guid id, string title, string url, string placement, double hoursAgo) {
@@ -198,11 +200,16 @@ public sealed partial class BrowserContractsTests {
             if (placement != "current") tab["savedURL"] = url;
             return tab;
         }
+        static JsonObject Renamed(JsonObject tab, string name) {
+            tab["customTitle"] = name;
+            return tab;
+        }
         var (session, space) = PaletteSession([
                 Tab(shown, "Home", "https://home.example/", "current", 0),
                 Tab(Guid.NewGuid(), "#general - Parlor", "https://parlor.example/channels/1/2", "current", 3),
                 Tab(Guid.NewGuid(), "Pull requests · crest · Forge", "https://forge.example/crest/pulls", "current", 0.3),
                 Tab(Guid.NewGuid(), "Inbox (3) – Post", "https://mail.post.example/inbox", "current", 1),
+                Renamed(Tab(Guid.NewGuid(), "Mixer - Board | Tunes", "https://tunes.example/board", "current", 2), "Studio"),
                 Tab(Guid.NewGuid(), "Calendar", "https://calendar.post.example/", "pinned", 30),
                 Tab(Guid.NewGuid(), "Meeting notes | Pages", "https://pages.example/doc/1", "saved", 72),
                 Tab(Guid.NewGuid(), "Settings | Forge", "https://forge.example/settings", "saved", 0.05)

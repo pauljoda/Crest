@@ -20,8 +20,9 @@ internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completi
 /// least twice for this text, then a strongly used place whose title or
 /// address starts with the text. A word that names no address leads only
 /// with a place it names: a site the field completes, as the tab that shows
-/// it, or a tab whose title, or the site name its title ends with, starts
-/// with it, never a page only history holds. While the field may not
+/// it, or a tab whose title, the site name its title ends with, or the page
+/// title behind a name the person gave it, starts with it, never a page only
+/// history holds. While the field may not
 /// complete, as for a phrase, a single letter, a word followed by a space,
 /// or after the person deleted a completion, only a calculation leads, so
 /// Return runs what they typed: its search, or the address it names.
