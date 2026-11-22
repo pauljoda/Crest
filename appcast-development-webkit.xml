@@ -6,28 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.140</title>
-            <pubDate>Sun, 22 Nov 2026 20:52:49 +0000</pubDate>
+            <title>0.10.141</title>
+            <pubDate>Sun, 22 Nov 2026 21:52:07 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1686</sparkle:version>
-            <sparkle:shortVersionString>0.10.140</sparkle:shortVersionString>
+            <sparkle:version>1687</sparkle:version>
+            <sparkle:shortVersionString>0.10.141</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Maintenance
 
-- Crest for Mac now runs on macOS 15 Sequoia and later on Mac computers with Apple silicon. On macOS 15, controls that stand on Liquid Glass on macOS 26 stand on Crest's own material instead, and pages translate when you choose Translate rather than automatically.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.10.140/) · [View all changes](https://github.com/crest-browser/Crest/compare/b69b647fcbda142b645b371c135e05154bd075fd...c4cb4f99f6cfdfa91b3f9d5a1e9891bb0a4d00a6) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.140-2026-11-22-1686-r686.1/Installer-Crest-0.10.140-development-2026-11-22-c4cb4f9.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.141/) · [View all changes](https://github.com/crest-browser/Crest/compare/c4cb4f99f6cfdfa91b3f9d5a1e9891bb0a4d00a6...bf34ab3b28e92f8b0fc4b9eb0fe25bc4bc467eab) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.141-2026-11-22-1687-r687.1/Installer-Crest-0.10.141-development-2026-11-22-bf34ab3.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.140-2026-11-22-1686-r686.1/Installer-Crest-0.10.140-development-2026-11-22-c4cb4f9.dmg" length="401142262" type="application/octet-stream" sparkle:edSignature="ReCOl3VPUuShM1pcs58GT1kYDcF6kJU2MSMeDxZGtbpEkxNhIZhG4Ip4GNV7ttVnTvXAjU3XtCT9MBV7PHRkBA=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.141-2026-11-22-1687-r687.1/Installer-Crest-0.10.141-development-2026-11-22-bf34ab3.dmg" length="401180663" type="application/octet-stream" sparkle:edSignature="sGOTyK3J9i31XEwDTT0XWh6HvikV94XAOs/wAM0vyvuh2j6JV87lB7sq4LcglAi1lixiHymV7F70v5DYFcxRAA=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: PAXlcy9/Ja+dEudaGTlgZNMh3K198Geg9C+/P0nHcP2bw0oBHMkZ05PpRc2zUvtElFRGebg84dyGmYz3T73GAw==
-length: 6994
+edSignature: wKsbl51ryaffxSIm3mkPuVhqIcuezQPfIOp07Q8nZebLKelIFD0EbwBUSje4pdMR30jC+QKPOp+9htqFxRRkCQ==
+length: 6778
 -->
